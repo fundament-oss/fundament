@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create SecurityPolicy</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Create SecurityPolicy</h1>
+      <p class="plugin-text" id="intro">Loading…</p>
+
+      <form id="form" class="plugin-form" hidden>
+        <div class="plugin-error" id="error" hidden></div>
+
+        <nldd-form-field label="Name">
+          <nldd-text-field id="name" name="name" required maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="cors" error-message="name-error"></nldd-text-field>
+          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <div id="namespace-field"></div>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Attach to (targetRef)</legend>
+          <nldd-form-field label="Kind">
+            <nldd-dropdown>
+              <select id="target-kind" name="target-kind" aria-label="Target kind">
+                <option value="Gateway">Gateway</option>
+                <option value="HTTPRoute">HTTPRoute</option>
+                <option value="GRPCRoute">GRPCRoute</option>
+              </select>
+            </nldd-dropdown>
+          </nldd-form-field>
+          <nldd-form-field label="Name">
+            <nldd-text-field id="target-name" name="target-name" required placeholder="demo" error-message="target-name-error"></nldd-text-field>
+            <nldd-form-field-error-text id="target-name-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+        </fieldset>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">CORS (optional)</legend>
+          <nldd-form-field label="Allowed origins">
+            <nldd-text-field id="cors-origins" name="cors-origins" placeholder="https://app.example.com, https://*.example.com"></nldd-text-field>
+            <nldd-form-field-help-text>Comma-separated origins. Leave blank to skip CORS.</nldd-form-field-help-text>
+          </nldd-form-field>
+          <nldd-form-field label="Allowed methods">
+            <nldd-text-field id="cors-methods" name="cors-methods" placeholder="GET, POST, PUT, DELETE"></nldd-text-field>
+            <nldd-form-field-help-text>Comma-separated HTTP methods.</nldd-form-field-help-text>
+          </nldd-form-field>
+        </fieldset>
+
+        <div class="plugin-actions">
+          <nldd-button id="submit" type="button" variant="primary" text="Create SecurityPolicy"></nldd-button>
+          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+        </div>
+      </form>
+    </div>
+
+    <script type="module" src="/src/securitypolicies-create.ts"></script>
+  </body>
+</html>

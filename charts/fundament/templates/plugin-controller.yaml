@@ -78,7 +78,23 @@ rules:
       - get
       - list
       - watch
+      - create
+      - update
+      - patch
+      - delete
       - bind
+      # Plugin-scope ClusterRoles carry rules materialised from the pinned
+      # PluginDefinition (FUN-17). Escalate is required to write rules the
+      # controller SA doesn't itself hold.
+      #
+      # Escalation is bounded by the definition-hash gate:
+      # `spec.definitionRef.definitionHash` MUST match the plugin's actual
+      # GetDefinition (see hashDefinition in reconciler.go). The only way to
+      # skip that check is the operator-set `PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH`
+      # env var on the controller Deployment — no CR field can bypass it.
+      # Combine this with a Kyverno/OPA policy that restricts the RBAC rules
+      # allowed inside plugin-scope ClusterRoles for defence-in-depth.
+      - escalate
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
@@ -138,18 +154,18 @@ spec:
               value: {{ $.Release.Name }}
             - name: FUNDAMENT_ORGANIZATION_ID
               value: {{ $.Release.Name }}
+            - name: ORGANIZATION_API_URL
+              value: {{ $.Values.pluginController.organizationApiUrl | default "http://organization-api:8080" }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
-          livenessProbe:
-            httpGet:
-              path: /livez
-              port: 8097
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8097
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            {{- if $.Values.pluginController.allowUnpinnedHash }}
+            # Local dev only: lets PluginInstallations with an unpinned
+            # definitionHash materialise their scope from the fetched
+            # PluginDefinition manifest without hash verification. Never set in
+            # production.
+            - name: PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH
+              value: "true"
+            {{- end }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
 {{- end }}

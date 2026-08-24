@@ -1,0 +1,24 @@
+# NodePort exposing organization-api's Connect port so the plugin-controller in
+# the network-isolated sandbox cluster (k3d-fundament-plugin) can fetch
+# PluginDefinitions (FUN-19). Applied by `just plugin-sandbox-orgapi`.
+#
+# Local dev only: production reaches organization-api over its normal external
+# URL. Here the two k3d clusters are isolated, so a relay container bridges the
+# sandbox to this NodePort (see the Justfile recipe).
+apiVersion: v1
+kind: Service
+metadata:
+  name: organization-api-sandbox-np
+  namespace: fundament
+  labels:
+    fundament.io/purpose: sandbox-plugin-controller-egress
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: fundament-organization-api
+    app.kubernetes.io/name: organization-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30080

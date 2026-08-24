@@ -4,7 +4,7 @@
       <p class="text-gray-600 dark:text-gray-300">Loading limits…</p>
     </div>
   } @else {
-    <nldd-form class="card" (submit)="save($event)">
+    <div class="card">
       <div class="card-header">
         <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -15,95 +15,34 @@
       </div>
 
       <div class="card-body-lg">
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <!-- Default memory request -->
-          <div>
-            <nldd-form-field label="Default memory request (MiB)">
-              <nldd-number-field
-                id="defaultMemoryRequest"
-                full-width="true"
-                min="1"
-                step="1"
-                [attr.max]="defaultMemoryLimitMi() ?? null"
-                [value]="defaultMemoryRequestMi()"
-                (input)="
-                  $any($event).detail &&
-                    defaultMemoryRequestMi.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
+        <nldd-form (submit)="save($event)">
+          <app-namespace-resource-defaults
+            [defaults]="namespaceDefaults()"
+            [(memoryLimited)]="memoryLimited"
+            [(memoryRequestMi)]="defaultMemoryRequestMi"
+            [(memoryLimitMi)]="defaultMemoryLimitMi"
+            [(cpuLimited)]="cpuLimited"
+            [(cpuRequestM)]="defaultCpuRequestM"
+            [(cpuLimitM)]="defaultCpuLimitM"
+          ></app-namespace-resource-defaults>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <nldd-button
+              type="submit"
+              [disabled]="saving()"
+              [text]="saving() ? 'Saving…' : 'Save namespace defaults'"
+              variant="primary"
+            ></nldd-button>
+            <nldd-button
+              type="button"
+              (click)="resetNamespaceLimits()"
+              [disabled]="saving()"
+              text="Reset to defaults"
+              variant="secondary"
+            ></nldd-button>
           </div>
-
-          <!-- Default memory limit -->
-          <div>
-            <nldd-form-field label="Default memory limit (MiB)">
-              <nldd-number-field
-                id="defaultMemoryLimit"
-                full-width="true"
-                [min]="defaultMemoryRequestMi() ?? 1"
-                step="1"
-                [value]="defaultMemoryLimitMi()"
-                (input)="
-                  $any($event).detail && defaultMemoryLimitMi.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-
-          <!-- Default CPU request -->
-          <div>
-            <nldd-form-field label="Default CPU request (m)">
-              <nldd-number-field
-                id="defaultCpuRequest"
-                full-width="true"
-                min="1"
-                step="1"
-                [attr.max]="defaultCpuLimitM() ?? null"
-                [value]="defaultCpuRequestM()"
-                (input)="
-                  $any($event).detail && defaultCpuRequestM.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-
-          <!-- Default CPU limit -->
-          <div>
-            <nldd-form-field label="Default CPU limit (m)">
-              <nldd-number-field
-                id="defaultCpuLimit"
-                full-width="true"
-                [min]="defaultCpuRequestM() ?? 1"
-                step="1"
-                [value]="defaultCpuLimitM()"
-                (input)="
-                  $any($event).detail && defaultCpuLimitM.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-        </div>
-
-        <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          Memory is in mebibytes (MiB). CPU is in millicores (m) — 1000 m = 1 vCPU.
-        </p>
-
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          <nldd-button
-            type="submit"
-            [disabled]="saving()"
-            [text]="saving() ? 'Saving…' : 'Save namespace defaults'"
-            variant="primary"
-          ></nldd-button>
-          <nldd-button
-            type="button"
-            (click)="resetNamespaceLimits()"
-            [disabled]="saving()"
-            text="Reset to defaults"
-            variant="secondary"
-          ></nldd-button>
-        </div>
+        </nldd-form>
       </div>
-    </nldd-form>
+    </div>
   }
 </div>

@@ -16,9 +16,9 @@ import (
 
 func (s *Server) GetPluginDetail(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetPluginDetailRequest],
-) (*connect.Response[organizationv1.GetPluginDetailResponse], error) {
-	pluginID, err := uuid.Parse(req.Msg.GetPluginId())
+	req *organizationv1.GetPluginDetailRequest,
+) (*organizationv1.GetPluginDetailResponse, error) {
+	pluginID, err := uuid.Parse(req.GetPluginId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid plugin_id: %w", err))
 	}
@@ -70,9 +70,9 @@ func (s *Server) GetPluginDetail(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get plugin details: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetPluginDetailResponse_builder{
+	return organizationv1.GetPluginDetailResponse_builder{
 		Plugin: pluginDetailFromRow(&plugin, tags, categories, docLinks),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func pluginDetailFromRow(
@@ -135,5 +135,7 @@ func pluginDetailFromRow(
 		Author:             author,
 		RepositoryUrl:      repositoryUrl,
 		DocumentationLinks: protoDocLinks,
+		PluginVersion:      plugin.LatestVersion,
+		DefinitionHash:     plugin.LatestHash,
 	}.Build()
 }

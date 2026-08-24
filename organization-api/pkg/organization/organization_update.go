@@ -16,9 +16,9 @@ import (
 
 func (s *Server) UpdateOrganization(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateOrganizationRequest],
-) (*connect.Response[organizationv1.UpdateOrganizationResponse], error) {
-	organizationID := uuid.MustParse(req.Msg.GetId())
+	req *organizationv1.UpdateOrganizationRequest,
+) (*organizationv1.UpdateOrganizationResponse, error) {
+	organizationID := uuid.MustParse(req.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Organization(organizationID)); err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (s *Server) UpdateOrganization(
 
 	params := db.OrganizationUpdateParams{
 		ID:    organizationID,
-		Alias: req.Msg.GetAlias(),
+		Alias: req.GetAlias(),
 	}
 
 	organization, err := s.queries.OrganizationUpdate(ctx, params)
@@ -39,5 +39,5 @@ func (s *Server) UpdateOrganization(
 
 	s.logger.InfoContext(ctx, "organization updated", "organization_id", organization.ID, "name", organization.Name, "alias", organization.Alias)
 
-	return connect.NewResponse(organizationv1.UpdateOrganizationResponse_builder{}.Build()), nil
+	return organizationv1.UpdateOrganizationResponse_builder{}.Build(), nil
 }

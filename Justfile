@@ -47,12 +47,15 @@ setup-certs:
     #!/usr/bin/env bash
     set -e
     which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
-    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
+    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/developer/fundament/getting-started.md for installation instructions."; exit 1; }
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
-    until kubectl get ns cert-manager > /dev/null 2>&1; do
-        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for cert-manager namespace"; exit 1; }
+    # Wait for the Deployments themselves, not just the namespace: k3s creates the
+    # namespace before the helm-install Job creates their contents, and `kubectl wait`
+    # errors immediately on a resource that does not exist yet instead of polling.
+    until kubectl get deployment cert-manager cert-manager-webhook -n cert-manager > /dev/null 2>&1; do
+        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for the cert-manager deployments"; exit 1; }
         sleep 5
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
@@ -102,6 +105,111 @@ dev-debug:
 # Deploy to an environment (e.g. local, production)
 deploy env:
     skaffold run --profile env-{{ env }}
+
+# --- Docs commands ---
+
+# Sync docs/ into docs-frontend and run the docs dev server
+docs-dev:
+    cd docs-frontend && bun install && node scripts/sync-docs.mjs && bun start
+
+# Sync docs/ and build the docs site; fails on broken links
+docs-build:
+    cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && bun run build
+
+# Build the docs site and additionally verify external http(s) links
+docs-build-external:
+    cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && DOCS_CHECK_EXTERNAL=1 bun run build
+
+# Create/update the Secret plugin-proxy uses to reach the k3d-fundament-plugin
+# sandbox cluster. Bridges the two k3d Docker networks (each cluster runs on
+# its own by default) by connecting the plugin cluster's serverlb container to
+# the main cluster's network, then rewrites the kubeconfig's server URL to
+# that in-network IP so plugin-proxy pods can dial it. Idempotent.
+plugin-sandbox-kubeconfig:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KUBECONFIG_TMP=$(mktemp)
+    trap 'rm -f "$KUBECONFIG_TMP"' EXIT
+    k3d kubeconfig get fundament-plugin > "$KUBECONFIG_TMP"
+
+    # Attach the plugin cluster's serverlb to the main cluster's Docker
+    # network (no-op if already connected) so its container IP is reachable
+    # from plugin-proxy pods.
+    docker network connect k3d-fundament k3d-fundament-plugin-serverlb 2>/dev/null || true
+
+    # Get the IP the plugin serverlb now holds on k3d-fundament. The k3s API
+    # server listens on port 6443 inside the container regardless of any host
+    # port mapping.
+    ip=$(docker inspect k3d-fundament-plugin-serverlb \
+        --format '{{{{ (index .NetworkSettings.Networks "k3d-fundament").IPAddress }}')
+    if [ -z "$ip" ]; then
+        echo "Error: could not resolve k3d-fundament-plugin-serverlb IP on k3d-fundament network"
+        exit 1
+    fi
+    echo "- plugin sandbox reachable at https://${ip}:6443 from k3d-fundament pods"
+
+    # Replace the host-side server URL (https://0.0.0.0:PORT) with the
+    # in-network address (https://IP:6443).
+    sed -i.bak -E "s|server: https://0\\.0\\.0\\.0:[0-9]+|server: https://${ip}:6443|" "$KUBECONFIG_TMP"
+    rm -f "${KUBECONFIG_TMP}.bak"
+
+    # Skip TLS verification — k3d's server cert doesn't cover the in-network
+    # IP. Local-dev shortcut; production uses proper cluster CAs via Gardener.
+    # Delete any certificate-authority-data line and add insecure-skip-tls-verify
+    # right after the server line (a stable anchor regardless of yaml indent).
+    sed -i.bak -E '/^[[:space:]]*certificate-authority-data:/d' "$KUBECONFIG_TMP"
+    sed -i.bak -E 's|^([[:space:]]*)server: (.*)|\1server: \2\n\1insecure-skip-tls-verify: true|' "$KUBECONFIG_TMP"
+    rm -f "${KUBECONFIG_TMP}.bak"
+    kubectl --context k3d-fundament -n fundament create secret generic plugin-sandbox-kubeconfig \
+        --from-file=kubeconfig="$KUBECONFIG_TMP" \
+        --dry-run=client -o yaml | \
+        kubectl --context k3d-fundament apply -f -
+
+    # The FUN-17 "user half" runs a SubjectAccessReview on the sandbox for the
+    # caller's per-user SA (system:serviceaccount:fundament-system:fundament-<id>).
+    # On real clusters cluster-worker provisions those SAs and their RBAC, but
+    # it is disabled in the sandbox — so grant the whole fundament-system SA
+    # group cluster-admin here, otherwise every plugin request 403s. Sandbox
+    # only; production relies on Gardener + per-user RBAC.
+    kubectl --context k3d-fundament-plugin create clusterrolebinding fundament-sandbox-user-access \
+        --clusterrole=cluster-admin \
+        --group=system:serviceaccounts:fundament-system \
+        --dry-run=client -o yaml | \
+        kubectl --context k3d-fundament-plugin apply -f -
+
+    # The console refuses a plugin install unless the cluster reports RUNNING, which
+    # organization-api derives from tenant.clusters.shoot_status = 'ready'. Locally there is
+    # no Gardener to set it, so the seeded row stays NULL and the cluster shows as
+    # provisioning forever. Every cluster id routes to the sandbox here (see
+    # kube-api-proxy/pkg/kube/sandbox_proxy.go), so the sandbox just wired up is what those
+    # rows stand for — which makes this the point where "ready" becomes true. A db.reset
+    # clears it again, and re-running this recipe is already the documented step after one.
+    echo "- marking the local cluster(s) ready so the console allows plugin installs"
+    kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
+        psql -U postgres -d fundament -qc \
+        "UPDATE tenant.clusters SET shoot_status = 'ready', shoot_status_updated = now() \
+         WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" \
+        || echo "  (could not reach the database — the console will still show provisioning)" >&2
+
+    # Both consumers read the Secret only at startup, and Reloader does not reliably pick
+    # this one up, so restart them here rather than leave a Secret that has no effect.
+    echo "- restarting plugin-proxy and kube-api-proxy to pick the Secret up"
+    kubectl --context k3d-fundament -n fundament rollout restart \
+        deployment/plugin-proxy deployment/kube-api-proxy > /dev/null
+    kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
+
+    # Confirm the new pod actually switched off the in-memory mock. `rollout status`
+    # returns slightly before the logs are attached, so poll rather than read once.
+    for i in $(seq 1 30); do
+        if kubectl --context k3d-fundament -n fundament logs deployment/kube-api-proxy 2>/dev/null \
+            | grep -q "plugin sandbox cluster"; then
+            echo "- kube-api-proxy is proxying to the sandbox (mock disabled)"
+            exit 0
+        fi
+        sleep 2
+    done
+    echo "kube-api-proxy did not report the sandbox proxy; check: kubectl -n fundament logs deployment/kube-api-proxy" >&2
+    exit 1
 
 # Delete deployment, can also be used to remove the deployment created by `just dev`.
 undeploy env:

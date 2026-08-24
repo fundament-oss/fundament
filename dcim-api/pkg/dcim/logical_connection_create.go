@@ -18,23 +18,23 @@ import (
 
 func (s *Server) CreateConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateConnectionRequest],
-) (*connect.Response[dcimv1.CreateConnectionResponse], error) {
+	req *dcimv1.CreateConnectionRequest,
+) (*dcimv1.CreateConnectionResponse, error) {
 	params := db.LogicalConnectionCreateParams{
-		LogicalDesignID:  uuid.MustParse(req.Msg.GetDesignId()),
-		ALogicalDeviceID: uuid.MustParse(req.Msg.GetSourceDeviceId()),
-		APortRole:        pgtype.Text{String: req.Msg.GetSourcePortRole(), Valid: true},
-		BLogicalDeviceID: uuid.MustParse(req.Msg.GetTargetDeviceId()),
-		BPortRole:        pgtype.Text{String: req.Msg.GetTargetPortRole(), Valid: true},
-		ConnectionType:   logicalConnectionTypeToDB(req.Msg.GetConnectionType()),
+		LogicalDesignID:  uuid.MustParse(req.GetDesignId()),
+		ALogicalDeviceID: uuid.MustParse(req.GetSourceDeviceId()),
+		APortRole:        pgtype.Text{String: req.GetSourcePortRole(), Valid: true},
+		BLogicalDeviceID: uuid.MustParse(req.GetTargetDeviceId()),
+		BPortRole:        pgtype.Text{String: req.GetTargetPortRole(), Valid: true},
+		ConnectionType:   logicalConnectionTypeToDB(req.GetConnectionType()),
 	}
 
-	if req.Msg.HasRequirements() {
-		params.Requirements = pgtype.Text{String: req.Msg.GetRequirements(), Valid: true}
+	if req.HasRequirements() {
+		params.Requirements = pgtype.Text{String: req.GetRequirements(), Valid: true}
 	}
 
-	if req.Msg.HasLabel() {
-		params.Label = pgtype.Text{String: req.Msg.GetLabel(), Valid: true}
+	if req.HasLabel() {
+		params.Label = pgtype.Text{String: req.GetLabel(), Valid: true}
 	}
 
 	id, err := s.queries.LogicalConnectionCreate(ctx, params)
@@ -57,7 +57,7 @@ func (s *Server) CreateConnection(
 
 	s.logger.InfoContext(ctx, "connection created", "connection_id", id)
 
-	return connect.NewResponse(dcimv1.CreateConnectionResponse_builder{
+	return dcimv1.CreateConnectionResponse_builder{
 		ConnectionId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

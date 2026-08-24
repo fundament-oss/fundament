@@ -1,0 +1,46 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Typecheck the console UI.
+typecheck:
+    cd console-ui && bun install && bun run typecheck
+
+# Run the console UI unit tests.
+ui-test:
+    cd console-ui && bun install && bun run test
+
+# Verify the install: PluginInstallation Running, the eg GatewayClass Accepted,
+# and a sample Gateway is programmed by the controller.
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    k="kubectl --context {{ kube_context }}"
+    echo "Waiting for PluginInstallation/gateway-api-envoy to be Running (first install pulls images)..."
+    $k wait --for=jsonpath='{.status.phase}'=Running plugininstallation/gateway-api-envoy --timeout=600s
+    echo "Waiting for the eg GatewayClass to be Accepted..."
+    $k wait --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gatewayclass/eg --timeout=120s
+    echo "Creating a sample Gateway..."
+    $k create namespace eg-demo --dry-run=client -o yaml | $k apply -f -
+    $k apply -f - <<'EOF'
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: demo
+      namespace: eg-demo
+    spec:
+      gatewayClassName: eg
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+    EOF
+    echo "Waiting for the Gateway to be Programmed..."
+    $k wait --for=jsonpath='{.status.conditions[?(@.type=="Programmed")].status}'=True gateway/demo -n eg-demo --timeout=300s
+    $k get gateway,gatewayclass -A
+
+# Remove the sample Gateway and its namespace.
+test-cleanup:
+    kubectl --context {{ kube_context }} delete gateway/demo -n eg-demo --ignore-not-found
+    kubectl --context {{ kube_context }} delete namespace eg-demo --ignore-not-found

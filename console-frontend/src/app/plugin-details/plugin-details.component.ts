@@ -13,13 +13,17 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
+import InstallPluginModalComponent, {
+  type PluginVersionOption,
+  type InstallSelection,
+  type RetrySelection,
+} from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   GetPluginDetailRequestSchema,
-  ListPluginsRequestSchema,
+  ListPluginDefinitionsRequestSchema,
   type PluginDetail,
 } from '../../generated/v1/plugin_pb';
 import {
@@ -71,8 +75,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private idempotency = createIdempotencyRef();
 
-  private pluginImage = '';
-
   pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
@@ -80,6 +82,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   plugin = signal<PluginDetail | null>(null);
 
   clusters = signal<ClusterWithState[]>([]);
+
+  // Published versions of this plugin, offered in the install modal.
+  installVersions = signal<PluginVersionOption[]>([]);
+
+  // True when fetching the versions failed, so the modal can show an error
+  // state instead of the "no published version" notice.
+  installVersionsError = signal(false);
 
   isLoading = signal<boolean>(true);
 
@@ -99,12 +108,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     this.pluginId.set(id);
 
     try {
-      const [pluginResponse, clustersResponse, pluginsResponse] = await Promise.all([
+      const [pluginResponse, clustersResponse] = await Promise.all([
         firstValueFrom(
           this.pluginClient.getPluginDetail(create(GetPluginDetailRequestSchema, { pluginId: id })),
         ),
         firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
       ]);
 
       if (!pluginResponse.plugin) {
@@ -117,7 +125,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.titleService.setTitle(`${displayNameOf(pluginResponse.plugin)} — Plugins`);
 
       const pluginName = pluginResponse.plugin.name;
-      this.pluginImage = pluginsResponse.plugins.find((p) => p.id === id)?.image ?? '';
 
       const installResults = await Promise.all(
         clustersResponse.clusters.map((cluster) =>
@@ -164,12 +171,39 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     return this.sanitizer.sanitize(1, html) || '';
   }
 
-  openInstallModal(): void {
+  async openInstallModal(): Promise<void> {
+    const plugin = this.plugin();
+    this.installVersionsError.set(false);
+    if (!plugin) {
+      this.installVersions.set([]);
+      this.showInstallModal.set(true);
+      return;
+    }
+    try {
+      this.installVersions.set(await this.fetchPluginVersions(plugin.id));
+    } catch {
+      this.installVersions.set([]);
+      this.installVersionsError.set(true);
+    }
     this.showInstallModal.set(true);
+  }
+
+  // Fetches the plugin's published versions (latest first) for the install
+  // modal's version picker. Throws on failure so the caller can tell a fetch
+  // error apart from a plugin that simply has nothing published yet.
+  private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
+    const resp = await firstValueFrom(
+      this.pluginClient.listPluginDefinitions(
+        create(ListPluginDefinitionsRequestSchema, { pluginId }),
+      ),
+    );
+    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
   }
 
   closeInstallModal(): void {
     this.showInstallModal.set(false);
+    this.installVersions.set([]);
+    this.installVersionsError.set(false);
   }
 
   ngOnDestroy() {
@@ -252,11 +286,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onInstallOnClusters(clusterIds: string[]): Promise<void> {
+  async onInstallOnClusters(selection: InstallSelection): Promise<void> {
     const plugin = this.plugin();
     if (!plugin) return;
 
-    const targets = clusterIds.filter(
+    const targets = selection.clusterIds.filter(
       (id) => this.clusters().find((c) => c.id === id)?.phase === null,
     );
     if (targets.length === 0) return;
@@ -265,7 +299,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     const results = await Promise.allSettled(
       targets.map((id) =>
-        this.pluginInstallationService.installPlugin(id, plugin.name, this.pluginImage),
+        this.pluginInstallationService.installPlugin(
+          id,
+          plugin.name,
+          selection.version,
+          selection.hash,
+        ),
       ),
     );
 
@@ -295,15 +334,21 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onRetryInstall(clusterId: string): Promise<void> {
+  async onRetryInstall(retry: RetrySelection): Promise<void> {
     const plugin = this.plugin();
     if (!plugin) return;
 
+    const clusterId = retry.clusterId;
     this.setPhase(clusterId, 'Pending');
     try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
       await this.waitForUninstall(clusterId, plugin.name);
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
+      await this.pluginInstallationService.installPlugin(
+        clusterId,
+        plugin.name,
+        retry.version,
+        retry.hash,
+      );
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(

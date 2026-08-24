@@ -83,3 +83,32 @@ func TestBuildShootSpec_RegionFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "local", shoot.Spec.Region)
 }
+
+// A cluster with a catalog region overrides the provider defaults: the shoot
+// uses the region's cloud profile and its region-name INSIDE that profile
+// (which may differ from the user-facing catalog region name).
+func TestBuildShootSpec_CatalogRegion(t *testing.T) {
+	r := testClient(ProviderConfig{Type: "metal", CloudProfile: "env-profile", Region: "env-region"})
+
+	cluster := testCluster()
+	cluster.Region = "groenekan-1" // user-facing catalog name
+	cluster.CloudProfile = "metal"
+	cluster.CloudProfileRegion = "local"
+
+	shoot, err := r.buildShootSpec(cluster)
+	require.NoError(t, err)
+	require.Equal(t, "metal", shoot.Spec.CloudProfile.Name)
+	require.Equal(t, "local", shoot.Spec.Region)
+}
+
+// Without catalog fields the provider env defaults still apply (legacy cluster).
+func TestBuildShootSpec_LegacyClusterUsesProviderDefaults(t *testing.T) {
+	r := testClient(ProviderConfig{Type: "metal", CloudProfile: "metal", Region: "local"})
+
+	cluster := testCluster()
+
+	shoot, err := r.buildShootSpec(cluster)
+	require.NoError(t, err)
+	require.Equal(t, "metal", shoot.Spec.CloudProfile.Name)
+	require.Equal(t, "local", shoot.Spec.Region)
+}

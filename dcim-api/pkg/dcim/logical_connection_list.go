@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListConnections(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListConnectionsRequest],
-) (*connect.Response[dcimv1.ListConnectionsResponse], error) {
-	designID := uuid.MustParse(req.Msg.GetDesignId())
+	req *dcimv1.ListConnectionsRequest,
+) (*dcimv1.ListConnectionsResponse, error) {
+	designID := uuid.MustParse(req.GetDesignId())
 
 	rows, err := s.queries.LogicalConnectionList(ctx, db.LogicalConnectionListParams{LogicalDesignID: designID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) ListConnections(
 		connections = append(connections, logicalConnectionFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListConnectionsResponse_builder{
+	return dcimv1.ListConnectionsResponse_builder{
 		Connections: connections,
-	}.Build()), nil
+	}.Build(), nil
 }

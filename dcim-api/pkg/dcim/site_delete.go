@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteSite(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteSiteRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	siteID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteSiteRequest,
+) (*emptypb.Empty, error) {
+	siteID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.SiteDelete(ctx, db.SiteDeleteParams{ID: siteID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteSite(
 
 	s.logger.InfoContext(ctx, "site deleted", "site_id", siteID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

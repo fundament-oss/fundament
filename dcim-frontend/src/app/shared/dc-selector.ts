@@ -35,6 +35,7 @@ export default class DcSelectorComponent {
 
   readonly datacenters = input.required<DatacenterInfo[]>();
 
+  // A bare indicator dot on a tab, not a tag — keeps its own Tailwind palette.
   readonly statusDotClass = (status: DatacenterStatus): string => {
     switch (status) {
       case 'operational':

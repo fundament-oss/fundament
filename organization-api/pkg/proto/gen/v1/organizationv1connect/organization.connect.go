@@ -53,15 +53,15 @@ const (
 // OrganizationServiceClient is a client for the organization.v1.OrganizationService service.
 type OrganizationServiceClient interface {
 	// ListOrganizations lists all organizations the current user belongs to
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
 	// GetOrganization retrieves the user's organization by ID
-	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
-	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
 	// GetOrganizationLimits retrieves the resource limits for an organization
-	GetOrganizationLimits(context.Context, *connect.Request[v1.GetOrganizationLimitsRequest]) (*connect.Response[v1.GetOrganizationLimitsResponse], error)
+	GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error)
 	// UpdateOrganizationLimits sets the resource limits for an organization
-	UpdateOrganizationLimits(context.Context, *connect.Request[v1.UpdateOrganizationLimitsRequest]) (*connect.Response[v1.UpdateOrganizationLimitsResponse], error)
+	UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error)
 }
 
 // NewOrganizationServiceClient constructs a client for the organization.v1.OrganizationService
@@ -118,43 +118,63 @@ type organizationServiceClient struct {
 }
 
 // ListOrganizations calls organization.v1.OrganizationService.ListOrganizations.
-func (c *organizationServiceClient) ListOrganizations(ctx context.Context, req *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
-	return c.listOrganizations.CallUnary(ctx, req)
+func (c *organizationServiceClient) ListOrganizations(ctx context.Context, req *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error) {
+	response, err := c.listOrganizations.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetOrganization calls organization.v1.OrganizationService.GetOrganization.
-func (c *organizationServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
-	return c.getOrganization.CallUnary(ctx, req)
+func (c *organizationServiceClient) GetOrganization(ctx context.Context, req *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error) {
+	response, err := c.getOrganization.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateOrganization calls organization.v1.OrganizationService.UpdateOrganization.
-func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
-	return c.updateOrganization.CallUnary(ctx, req)
+func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error) {
+	response, err := c.updateOrganization.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetOrganizationLimits calls organization.v1.OrganizationService.GetOrganizationLimits.
-func (c *organizationServiceClient) GetOrganizationLimits(ctx context.Context, req *connect.Request[v1.GetOrganizationLimitsRequest]) (*connect.Response[v1.GetOrganizationLimitsResponse], error) {
-	return c.getOrganizationLimits.CallUnary(ctx, req)
+func (c *organizationServiceClient) GetOrganizationLimits(ctx context.Context, req *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error) {
+	response, err := c.getOrganizationLimits.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateOrganizationLimits calls organization.v1.OrganizationService.UpdateOrganizationLimits.
-func (c *organizationServiceClient) UpdateOrganizationLimits(ctx context.Context, req *connect.Request[v1.UpdateOrganizationLimitsRequest]) (*connect.Response[v1.UpdateOrganizationLimitsResponse], error) {
-	return c.updateOrganizationLimits.CallUnary(ctx, req)
+func (c *organizationServiceClient) UpdateOrganizationLimits(ctx context.Context, req *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error) {
+	response, err := c.updateOrganizationLimits.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // OrganizationServiceHandler is an implementation of the organization.v1.OrganizationService
 // service.
 type OrganizationServiceHandler interface {
 	// ListOrganizations lists all organizations the current user belongs to
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
 	// GetOrganization retrieves the user's organization by ID
-	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
+	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
-	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
 	// GetOrganizationLimits retrieves the resource limits for an organization
-	GetOrganizationLimits(context.Context, *connect.Request[v1.GetOrganizationLimitsRequest]) (*connect.Response[v1.GetOrganizationLimitsResponse], error)
+	GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error)
 	// UpdateOrganizationLimits sets the resource limits for an organization
-	UpdateOrganizationLimits(context.Context, *connect.Request[v1.UpdateOrganizationLimitsRequest]) (*connect.Response[v1.UpdateOrganizationLimitsResponse], error)
+	UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error)
 }
 
 // NewOrganizationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -164,31 +184,31 @@ type OrganizationServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	organizationServiceMethods := v1.File_v1_organization_proto.Services().ByName("OrganizationService").Methods()
-	organizationServiceListOrganizationsHandler := connect.NewUnaryHandler(
+	organizationServiceListOrganizationsHandler := connect.NewUnaryHandlerSimple(
 		OrganizationServiceListOrganizationsProcedure,
 		svc.ListOrganizations,
 		connect.WithSchema(organizationServiceMethods.ByName("ListOrganizations")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceGetOrganizationHandler := connect.NewUnaryHandler(
+	organizationServiceGetOrganizationHandler := connect.NewUnaryHandlerSimple(
 		OrganizationServiceGetOrganizationProcedure,
 		svc.GetOrganization,
 		connect.WithSchema(organizationServiceMethods.ByName("GetOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceUpdateOrganizationHandler := connect.NewUnaryHandler(
+	organizationServiceUpdateOrganizationHandler := connect.NewUnaryHandlerSimple(
 		OrganizationServiceUpdateOrganizationProcedure,
 		svc.UpdateOrganization,
 		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceGetOrganizationLimitsHandler := connect.NewUnaryHandler(
+	organizationServiceGetOrganizationLimitsHandler := connect.NewUnaryHandlerSimple(
 		OrganizationServiceGetOrganizationLimitsProcedure,
 		svc.GetOrganizationLimits,
 		connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationLimits")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceUpdateOrganizationLimitsHandler := connect.NewUnaryHandler(
+	organizationServiceUpdateOrganizationLimitsHandler := connect.NewUnaryHandlerSimple(
 		OrganizationServiceUpdateOrganizationLimitsProcedure,
 		svc.UpdateOrganizationLimits,
 		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganizationLimits")),
@@ -215,22 +235,22 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 // UnimplementedOrganizationServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedOrganizationServiceHandler struct{}
 
-func (UnimplementedOrganizationServiceHandler) ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
+func (UnimplementedOrganizationServiceHandler) ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.ListOrganizations is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
+func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
+func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) GetOrganizationLimits(context.Context, *connect.Request[v1.GetOrganizationLimitsRequest]) (*connect.Response[v1.GetOrganizationLimitsResponse], error) {
+func (UnimplementedOrganizationServiceHandler) GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganizationLimits is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) UpdateOrganizationLimits(context.Context, *connect.Request[v1.UpdateOrganizationLimitsRequest]) (*connect.Response[v1.UpdateOrganizationLimitsResponse], error) {
+func (UnimplementedOrganizationServiceHandler) UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganizationLimits is not implemented"))
 }

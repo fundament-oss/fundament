@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: "."
+      build-args:
+        required: false
+        type: string
+        default: ""
 
 env:
   REGISTRY: ghcr.io
@@ -45,5 +49,6 @@ jobs:
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
+          build-args: ${{ inputs.build-args }}
           push: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
           tags: ${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:latest,${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:${{ github.sha }}-${{ steps.sanitize.outputs.ref_name }}-${{ github.run_number }}

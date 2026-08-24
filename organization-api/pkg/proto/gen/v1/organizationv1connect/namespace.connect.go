@@ -56,17 +56,17 @@ const (
 // NamespaceServiceClient is a client for the organization.v1.NamespaceService service.
 type NamespaceServiceClient interface {
 	// List namespaces for a cluster
-	ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error)
+	ListClusterNamespaces(context.Context, *v1.ListClusterNamespacesRequest) (*v1.ListClusterNamespacesResponse, error)
 	// List all namespaces belonging to a project
-	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
+	ListProjectNamespaces(context.Context, *v1.ListProjectNamespacesRequest) (*v1.ListProjectNamespacesResponse, error)
 	// Get a namespace by ID
-	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
+	GetNamespace(context.Context, *v1.GetNamespaceRequest) (*v1.GetNamespaceResponse, error)
 	// Get a namespace by project name and namespace name
-	GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error)
+	GetNamespaceByProjectAndName(context.Context, *v1.GetNamespaceByProjectAndNameRequest) (*v1.GetNamespaceByProjectAndNameResponse, error)
 	// Create a namespace in a project
-	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
+	CreateNamespace(context.Context, *v1.CreateNamespaceRequest) (*v1.CreateNamespaceResponse, error)
 	// Delete a namespace
-	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
+	DeleteNamespace(context.Context, *v1.DeleteNamespaceRequest) (*v1.DeleteNamespaceResponse, error)
 }
 
 // NewNamespaceServiceClient constructs a client for the organization.v1.NamespaceService service.
@@ -130,49 +130,73 @@ type namespaceServiceClient struct {
 }
 
 // ListClusterNamespaces calls organization.v1.NamespaceService.ListClusterNamespaces.
-func (c *namespaceServiceClient) ListClusterNamespaces(ctx context.Context, req *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error) {
-	return c.listClusterNamespaces.CallUnary(ctx, req)
+func (c *namespaceServiceClient) ListClusterNamespaces(ctx context.Context, req *v1.ListClusterNamespacesRequest) (*v1.ListClusterNamespacesResponse, error) {
+	response, err := c.listClusterNamespaces.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListProjectNamespaces calls organization.v1.NamespaceService.ListProjectNamespaces.
-func (c *namespaceServiceClient) ListProjectNamespaces(ctx context.Context, req *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
-	return c.listProjectNamespaces.CallUnary(ctx, req)
+func (c *namespaceServiceClient) ListProjectNamespaces(ctx context.Context, req *v1.ListProjectNamespacesRequest) (*v1.ListProjectNamespacesResponse, error) {
+	response, err := c.listProjectNamespaces.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetNamespace calls organization.v1.NamespaceService.GetNamespace.
-func (c *namespaceServiceClient) GetNamespace(ctx context.Context, req *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
-	return c.getNamespace.CallUnary(ctx, req)
+func (c *namespaceServiceClient) GetNamespace(ctx context.Context, req *v1.GetNamespaceRequest) (*v1.GetNamespaceResponse, error) {
+	response, err := c.getNamespace.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetNamespaceByProjectAndName calls organization.v1.NamespaceService.GetNamespaceByProjectAndName.
-func (c *namespaceServiceClient) GetNamespaceByProjectAndName(ctx context.Context, req *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error) {
-	return c.getNamespaceByProjectAndName.CallUnary(ctx, req)
+func (c *namespaceServiceClient) GetNamespaceByProjectAndName(ctx context.Context, req *v1.GetNamespaceByProjectAndNameRequest) (*v1.GetNamespaceByProjectAndNameResponse, error) {
+	response, err := c.getNamespaceByProjectAndName.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateNamespace calls organization.v1.NamespaceService.CreateNamespace.
-func (c *namespaceServiceClient) CreateNamespace(ctx context.Context, req *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
-	return c.createNamespace.CallUnary(ctx, req)
+func (c *namespaceServiceClient) CreateNamespace(ctx context.Context, req *v1.CreateNamespaceRequest) (*v1.CreateNamespaceResponse, error) {
+	response, err := c.createNamespace.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteNamespace calls organization.v1.NamespaceService.DeleteNamespace.
-func (c *namespaceServiceClient) DeleteNamespace(ctx context.Context, req *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error) {
-	return c.deleteNamespace.CallUnary(ctx, req)
+func (c *namespaceServiceClient) DeleteNamespace(ctx context.Context, req *v1.DeleteNamespaceRequest) (*v1.DeleteNamespaceResponse, error) {
+	response, err := c.deleteNamespace.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // NamespaceServiceHandler is an implementation of the organization.v1.NamespaceService service.
 type NamespaceServiceHandler interface {
 	// List namespaces for a cluster
-	ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error)
+	ListClusterNamespaces(context.Context, *v1.ListClusterNamespacesRequest) (*v1.ListClusterNamespacesResponse, error)
 	// List all namespaces belonging to a project
-	ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error)
+	ListProjectNamespaces(context.Context, *v1.ListProjectNamespacesRequest) (*v1.ListProjectNamespacesResponse, error)
 	// Get a namespace by ID
-	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
+	GetNamespace(context.Context, *v1.GetNamespaceRequest) (*v1.GetNamespaceResponse, error)
 	// Get a namespace by project name and namespace name
-	GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error)
+	GetNamespaceByProjectAndName(context.Context, *v1.GetNamespaceByProjectAndNameRequest) (*v1.GetNamespaceByProjectAndNameResponse, error)
 	// Create a namespace in a project
-	CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error)
+	CreateNamespace(context.Context, *v1.CreateNamespaceRequest) (*v1.CreateNamespaceResponse, error)
 	// Delete a namespace
-	DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error)
+	DeleteNamespace(context.Context, *v1.DeleteNamespaceRequest) (*v1.DeleteNamespaceResponse, error)
 }
 
 // NewNamespaceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -182,37 +206,37 @@ type NamespaceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewNamespaceServiceHandler(svc NamespaceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	namespaceServiceMethods := v1.File_v1_namespace_proto.Services().ByName("NamespaceService").Methods()
-	namespaceServiceListClusterNamespacesHandler := connect.NewUnaryHandler(
+	namespaceServiceListClusterNamespacesHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceListClusterNamespacesProcedure,
 		svc.ListClusterNamespaces,
 		connect.WithSchema(namespaceServiceMethods.ByName("ListClusterNamespaces")),
 		connect.WithHandlerOptions(opts...),
 	)
-	namespaceServiceListProjectNamespacesHandler := connect.NewUnaryHandler(
+	namespaceServiceListProjectNamespacesHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceListProjectNamespacesProcedure,
 		svc.ListProjectNamespaces,
 		connect.WithSchema(namespaceServiceMethods.ByName("ListProjectNamespaces")),
 		connect.WithHandlerOptions(opts...),
 	)
-	namespaceServiceGetNamespaceHandler := connect.NewUnaryHandler(
+	namespaceServiceGetNamespaceHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceGetNamespaceProcedure,
 		svc.GetNamespace,
 		connect.WithSchema(namespaceServiceMethods.ByName("GetNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
-	namespaceServiceGetNamespaceByProjectAndNameHandler := connect.NewUnaryHandler(
+	namespaceServiceGetNamespaceByProjectAndNameHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceGetNamespaceByProjectAndNameProcedure,
 		svc.GetNamespaceByProjectAndName,
 		connect.WithSchema(namespaceServiceMethods.ByName("GetNamespaceByProjectAndName")),
 		connect.WithHandlerOptions(opts...),
 	)
-	namespaceServiceCreateNamespaceHandler := connect.NewUnaryHandler(
+	namespaceServiceCreateNamespaceHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceCreateNamespaceProcedure,
 		svc.CreateNamespace,
 		connect.WithSchema(namespaceServiceMethods.ByName("CreateNamespace")),
 		connect.WithHandlerOptions(opts...),
 	)
-	namespaceServiceDeleteNamespaceHandler := connect.NewUnaryHandler(
+	namespaceServiceDeleteNamespaceHandler := connect.NewUnaryHandlerSimple(
 		NamespaceServiceDeleteNamespaceProcedure,
 		svc.DeleteNamespace,
 		connect.WithSchema(namespaceServiceMethods.ByName("DeleteNamespace")),
@@ -241,26 +265,26 @@ func NewNamespaceServiceHandler(svc NamespaceServiceHandler, opts ...connect.Han
 // UnimplementedNamespaceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedNamespaceServiceHandler struct{}
 
-func (UnimplementedNamespaceServiceHandler) ListClusterNamespaces(context.Context, *connect.Request[v1.ListClusterNamespacesRequest]) (*connect.Response[v1.ListClusterNamespacesResponse], error) {
+func (UnimplementedNamespaceServiceHandler) ListClusterNamespaces(context.Context, *v1.ListClusterNamespacesRequest) (*v1.ListClusterNamespacesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.ListClusterNamespaces is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) ListProjectNamespaces(context.Context, *connect.Request[v1.ListProjectNamespacesRequest]) (*connect.Response[v1.ListProjectNamespacesResponse], error) {
+func (UnimplementedNamespaceServiceHandler) ListProjectNamespaces(context.Context, *v1.ListProjectNamespacesRequest) (*v1.ListProjectNamespacesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.ListProjectNamespaces is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
+func (UnimplementedNamespaceServiceHandler) GetNamespace(context.Context, *v1.GetNamespaceRequest) (*v1.GetNamespaceResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.GetNamespace is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) GetNamespaceByProjectAndName(context.Context, *connect.Request[v1.GetNamespaceByProjectAndNameRequest]) (*connect.Response[v1.GetNamespaceByProjectAndNameResponse], error) {
+func (UnimplementedNamespaceServiceHandler) GetNamespaceByProjectAndName(context.Context, *v1.GetNamespaceByProjectAndNameRequest) (*v1.GetNamespaceByProjectAndNameResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.GetNamespaceByProjectAndName is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) CreateNamespace(context.Context, *connect.Request[v1.CreateNamespaceRequest]) (*connect.Response[v1.CreateNamespaceResponse], error) {
+func (UnimplementedNamespaceServiceHandler) CreateNamespace(context.Context, *v1.CreateNamespaceRequest) (*v1.CreateNamespaceResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.CreateNamespace is not implemented"))
 }
 
-func (UnimplementedNamespaceServiceHandler) DeleteNamespace(context.Context, *connect.Request[v1.DeleteNamespaceRequest]) (*connect.Response[v1.DeleteNamespaceResponse], error) {
+func (UnimplementedNamespaceServiceHandler) DeleteNamespace(context.Context, *v1.DeleteNamespaceRequest) (*v1.DeleteNamespaceResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.NamespaceService.DeleteNamespace is not implemented"))
 }

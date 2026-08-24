@@ -17,11 +17,14 @@ import {
 import { PROJECT } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { positive, toInt } from '../utils/limits';
+import { pairLimited, positive } from '../utils/limits';
+import NamespaceResourceDefaultsComponent, {
+  type NamespaceDefaults,
+} from '../namespace-resource-defaults/namespace-resource-defaults.component';
 
 @Component({
   selector: 'app-project-limits',
-  imports: [],
+  imports: [NamespaceResourceDefaultsComponent],
   templateUrl: './project-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -45,22 +48,21 @@ export default class ProjectLimitsComponent implements OnInit {
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
+  // Owned here rather than in the fields component so a load or a reset can put
+  // the switches back on what is actually stored.
+  memoryLimited = signal(false);
+
+  cpuLimited = signal(false);
+
   saving = signal(false);
 
   // Platform defaults returned by the API, used by the "Reset to defaults" action.
-  private namespaceDefaults = signal<{
-    defaultMemoryRequestMi: number | undefined;
-    defaultMemoryLimitMi: number | undefined;
-    defaultCpuRequestM: number | undefined;
-    defaultCpuLimitM: number | undefined;
-  }>({
+  protected namespaceDefaults = signal<NamespaceDefaults>({
     defaultMemoryRequestMi: undefined,
     defaultMemoryLimitMi: undefined,
     defaultCpuRequestM: undefined,
     defaultCpuLimitM: undefined,
   });
-
-  protected readonly toInt = toInt;
 
   constructor() {
     this.titleService.setTitle('Limits');
@@ -91,6 +93,7 @@ export default class ProjectLimitsComponent implements OnInit {
       this.defaultMemoryLimitMi.set(positive(limits?.defaultMemoryLimitMi));
       this.defaultCpuRequestM.set(positive(limits?.defaultCpuRequestM));
       this.defaultCpuLimitM.set(positive(limits?.defaultCpuLimitM));
+      this.syncToggles();
     } catch {
       this.toastService.error('Failed to load project limits');
     } finally {
@@ -107,6 +110,12 @@ export default class ProjectLimitsComponent implements OnInit {
     this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
     this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
     this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    this.syncToggles();
+  }
+
+  private syncToggles(): void {
+    this.memoryLimited.set(pairLimited(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi()));
+    this.cpuLimited.set(pairLimited(this.defaultCpuRequestM(), this.defaultCpuLimitM()));
   }
 
   async save(event?: Event) {

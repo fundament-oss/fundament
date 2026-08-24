@@ -125,12 +125,11 @@
 
         <!-- Status badge -->
         <div role="cell" class="w-24">
-          <span
-            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-            [class]="statusBadgeClass(design.status)"
-          >
-            {{ statusLabel(design.status) }}
-          </span>
+          <nldd-tag
+            size="sm"
+            [attr.color]="statusTagColor(design.status)"
+            [attr.text]="statusLabel(design.status)"
+          ></nldd-tag>
         </div>
 
         <!-- Created date -->
@@ -193,7 +192,7 @@
      NEW DESIGN SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #designSheet accessible-label="New design" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="New design"
@@ -211,6 +210,7 @@
       <nldd-form-field label="Design name">
         <nldd-text-field
           #fDesignName
+          autofocus
           value=""
           placeholder="E.g. AMS-01 Compute Cluster v2"
           (keydown.enter)="saveDesign()"
@@ -241,20 +241,20 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #deleteModal
-  [attr.text]="'Delete \'' + (deleteDesign()?.name ?? '') + '\'?'"
-  supporting-text="All devices and connections in this design will be permanently removed."
+  [attr.text]="'Delete design ' + (deleteDesign()?.name ?? '') + '?'"
+  supporting-text="All devices and connections in this design are permanently removed. This cannot be undone."
   accessible-label="Confirm design deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteDesign()"
+    variant="secondary"
+    text="Keep design"
+    (click)="cancelDeleteDesign()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteDesign()"
+    variant="destructive"
+    text="Delete design"
+    (click)="confirmDeleteDesign()"
   ></nldd-button>
 </nldd-modal-dialog>

@@ -26,16 +26,21 @@ const PluginTokenExpiry = 15 * time.Minute
 // PluginInstallation CR by kube-api-proxy.
 func (s *AuthnServer) MintPluginToken(
 	ctx context.Context,
-	req *connect.Request[authnv1.MintPluginTokenRequest],
-) (*connect.Response[authnv1.MintPluginTokenResponse], error) {
-	claims, err := s.validator.Validate(req.Header())
+	req *authnv1.MintPluginTokenRequest,
+) (*authnv1.MintPluginTokenResponse, error) {
+	callInfo, ok := connect.CallInfoForHandlerContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("missing call info in context"))
+	}
+
+	claims, err := s.validator.Validate(callInfo.RequestHeader())
 	if err != nil {
 		s.logger.Debug("mint plugin token: user token validation failed", "error", err)
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid user token"))
 	}
 
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
-	installationID := uuid.MustParse(req.Msg.GetInstallationId())
+	clusterID := uuid.MustParse(req.GetClusterId())
+	installationID := uuid.MustParse(req.GetInstallationId())
 	userID := claims.UserID()
 
 	manifest, err := s.resolveInstallation(ctx, userID, clusterID, installationID)
@@ -57,11 +62,11 @@ func (s *AuthnServer) MintPluginToken(
 		"plugin_version", manifest.PluginVersion,
 	)
 
-	return connect.NewResponse(authnv1.MintPluginTokenResponse_builder{
+	return authnv1.MintPluginTokenResponse_builder{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   int64(PluginTokenExpiry.Seconds()),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // resolveInstallation runs the two-gate check: OpenFGA can_view on the
@@ -115,11 +120,12 @@ func (s *AuthnServer) signPluginToken(
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(PluginTokenExpiry)),
 		},
-		ClusterID:      clusterID.String(),
-		InstallationID: installationID.String(),
-		PluginName:     manifest.PluginName,
-		PluginVersion:  manifest.PluginVersion,
-		DefinitionHash: manifest.DefinitionHash,
+		ClusterID:        clusterID.String(),
+		InstallationID:   installationID.String(),
+		InstallationName: manifest.InstallationName,
+		PluginName:       manifest.PluginName,
+		PluginVersion:    manifest.PluginVersion,
+		DefinitionHash:   manifest.DefinitionHash,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

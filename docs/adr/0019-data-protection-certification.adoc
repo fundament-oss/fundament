@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 19
 :state: proposed
 
 = ADR-0019: Data protection certification

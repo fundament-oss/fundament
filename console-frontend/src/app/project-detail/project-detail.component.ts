@@ -15,8 +15,9 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import AutofocusDirective from '../autofocus.directive';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
 import { PROJECT, NAMESPACE, CLUSTER } from '../../connect/tokens';
 import {
@@ -35,7 +36,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [LoadingIndicatorComponent, DialogSyncDirective, AutofocusDirective],
+  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -186,9 +187,34 @@ export default class ProjectDetailComponent implements OnInit {
     }
   }
 
+  deleteConfirmationInput = signal<string>('');
+
+  /**
+   * The full slug ("orgname/clustername/projectname") the user must type to confirm deletion.
+   * Empty until all parts are known, so a partial slug can never be confirmed.
+   */
+  deleteConfirmationSlug(): string {
+    const orgName = this.organizationDataService.organizations()[0]?.name;
+    const currentProject = this.project();
+    if (!orgName || !currentProject) return '';
+    const clusterName = this.clusters().find((c) => c.id === currentProject.clusterId)?.name;
+    if (!clusterName) return '';
+    return `${orgName}/${clusterName}/${currentProject.name}`;
+  }
+
+  isDeleteConfirmed(): boolean {
+    const slug = this.deleteConfirmationSlug();
+    return slug !== '' && this.deleteConfirmationInput().trim() === slug;
+  }
+
+  onDeleteConfirmationInput(event: Event): void {
+    this.deleteConfirmationInput.set((event as CustomEvent<{ value: string }>).detail.value);
+  }
+
   async deleteProject() {
     const currentProject = this.project();
     if (!currentProject) return;
+    if (!this.isDeleteConfirmed()) return;
 
     try {
       const request = create(DeleteProjectRequestSchema, {
@@ -218,16 +244,10 @@ export default class ProjectDetailComponent implements OnInit {
     }
   }
 
-  editDialogRef = viewChild<ElementRef<HTMLElement>>('editDialog');
-
-  onEditModalOpen(): void {
-    const el = this.editDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
-  }
-
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
+    this.deleteConfirmationInput.set('');
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

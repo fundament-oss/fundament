@@ -1,5 +1,7 @@
 {
   "authnApiUrl": "",
   "organizationApiUrl": "",
-  "kubeApiProxyUrl": ""
+  "kubeApiProxyUrl": "",
+  "pluginProxyUrl": "",
+  "consoleDemoUrl": ""
 }

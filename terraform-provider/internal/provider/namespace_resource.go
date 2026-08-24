@@ -135,25 +135,25 @@ func (r *NamespaceResource) resolveProjectID(ctx context.Context, state *Namespa
 	}
 
 	// Resolve project_name to project_id
-	getReq := connect.NewRequest(organizationv1.GetProjectByNameRequest_builder{
+	getReq := organizationv1.GetProjectByNameRequest_builder{
 		Name: state.ProjectName.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.ProjectService.GetProjectByName(ctx, getReq)
 	if err != nil {
 		return "", fmt.Errorf("unable to find project with name %q: %s", state.ProjectName.ValueString(), err.Error())
 	}
 
-	return getResp.Msg.GetProject().GetId(), nil
+	return getResp.GetProject().GetId(), nil
 }
 
 // populateClusterFields populates both cluster_id and cluster_name on the state from the given cluster_id.
 func (r *NamespaceResource) populateClusterFields(ctx context.Context, state *NamespaceResourceModel, clusterID string) {
 	state.ClusterID = types.StringValue(clusterID)
 
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -166,16 +166,16 @@ func (r *NamespaceResource) populateClusterFields(ctx context.Context, state *Na
 		return
 	}
 
-	state.ClusterName = types.StringValue(getResp.Msg.GetCluster().GetName())
+	state.ClusterName = types.StringValue(getResp.GetCluster().GetName())
 }
 
 // populateProjectFields populates both project_id and project_name on the state from the given project_id.
 func (r *NamespaceResource) populateProjectFields(ctx context.Context, state *NamespaceResourceModel, projectID string) {
 	state.ProjectID = types.StringValue(projectID)
 
-	getReq := connect.NewRequest(organizationv1.GetProjectRequest_builder{
+	getReq := organizationv1.GetProjectRequest_builder{
 		ProjectId: projectID,
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.ProjectService.GetProject(ctx, getReq)
 	if err != nil {
@@ -188,7 +188,7 @@ func (r *NamespaceResource) populateProjectFields(ctx context.Context, state *Na
 		return
 	}
 
-	state.ProjectName = types.StringValue(getResp.Msg.GetProject().GetName())
+	state.ProjectName = types.StringValue(getResp.GetProject().GetName())
 }
 
 // Create creates a new namespace.
@@ -223,10 +223,10 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	})
 
 	// Create the namespace
-	createReq := connect.NewRequest(organizationv1.CreateNamespaceRequest_builder{
+	createReq := organizationv1.CreateNamespaceRequest_builder{
 		ProjectId: projectID,
 		Name:      plan.Name.ValueString(),
-	}.Build())
+	}.Build()
 
 	createResp, err := createIdempotent(ctx, r.client.NamespaceService.CreateNamespace, createReq)
 	if err != nil {
@@ -261,13 +261,13 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.GetNamespaceId())
+	plan.ID = types.StringValue(createResp.GetNamespaceId())
 
 	// Read back the namespace to get created and other computed fields.
 	// Retry on permission_denied, OpenFGA needs time to sync
-	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
+	getReq := organizationv1.GetNamespaceRequest_builder{
 		NamespaceId: plan.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
 	if err != nil {
@@ -278,9 +278,9 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	plan.Created = types.StringValue(getResp.Msg.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))
-	r.populateClusterFields(ctx, &plan, getResp.Msg.GetNamespace().GetClusterId())
-	r.populateProjectFields(ctx, &plan, getResp.Msg.GetNamespace().GetProjectId())
+	plan.Created = types.StringValue(getResp.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))
+	r.populateClusterFields(ctx, &plan, getResp.GetNamespace().GetClusterId())
+	r.populateProjectFields(ctx, &plan, getResp.GetNamespace().GetProjectId())
 
 	tflog.Info(ctx, "Created namespace", map[string]any{
 		"id":      plan.ID.ValueString(),
@@ -311,9 +311,9 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		"id": state.ID.ValueString(),
 	})
 
-	getReq := connect.NewRequest(organizationv1.GetNamespaceRequest_builder{
+	getReq := organizationv1.GetNamespaceRequest_builder{
 		NamespaceId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.NamespaceService.GetNamespace(ctx, getReq)
 	if err != nil {
@@ -333,7 +333,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 		}
 	}
 
-	ns := getResp.Msg.GetNamespace()
+	ns := getResp.GetNamespace()
 	state.Name = types.StringValue(ns.GetName())
 	state.Created = types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339))
 	r.populateClusterFields(ctx, &state, ns.GetClusterId())
@@ -376,9 +376,9 @@ func (r *NamespaceResource) Delete(ctx context.Context, req resource.DeleteReque
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(organizationv1.DeleteNamespaceRequest_builder{
+	deleteReq := organizationv1.DeleteNamespaceRequest_builder{
 		NamespaceId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	_, err := r.client.NamespaceService.DeleteNamespace(ctx, deleteReq)
 	if err != nil {

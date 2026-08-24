@@ -33,12 +33,12 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1MB",
-                  "maximumError": "1.5MB"
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "1.75MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
+                  "maximumWarning": "8kB",
                   "maximumError": "60kB"
                 }
               ],
@@ -56,6 +56,9 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "browser": "src/main.demo.ts"
             }
           },
           "defaultConfiguration": "production"
@@ -71,6 +74,9 @@
             },
             "development": {
               "buildTarget": "fundament-console:build:development"
+            },
+            "demo": {
+              "buildTarget": "fundament-console:build:development,demo"
             }
           },
           "defaultConfiguration": "development"

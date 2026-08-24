@@ -60,8 +60,10 @@ WHERE name = $1 AND deleted IS NULL;
 -- Create a cluster if no active or pending-delete cluster with the same name exists.
 -- Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 -- Returns NULL if blocked (caller should check for pgx.ErrNoRows).
-INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-SELECT $1, $2, $3, $4
+-- region_id/kubernetes_version_id are the catalog references (expand phase: the
+-- legacy text columns are written alongside them).
+INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id, kubernetes_version_id)
+SELECT $1, $2, $3, $4, sqlc.narg('region_id'), sqlc.narg('kubernetes_version_id')
 WHERE NOT EXISTS (
     SELECT 1
     FROM tenant.clusters
@@ -72,8 +74,11 @@ WHERE NOT EXISTS (
 RETURNING id;
 
 -- name: ClusterUpdate :execrows
+-- kubernetes_version_id is resolved server-side from the catalog together with
+-- the version text (expand phase: both columns updated in lockstep).
 UPDATE tenant.clusters
-SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version)
+SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version),
+    kubernetes_version_id = COALESCE(sqlc.narg('kubernetes_version_id'), kubernetes_version_id)
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: ClusterDelete :execrows

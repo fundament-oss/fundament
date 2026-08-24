@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteConnectionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteConnectionRequest,
+) (*emptypb.Empty, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.LogicalConnectionDelete(ctx, db.LogicalConnectionDeleteParams{ID: connID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteConnection(
 
 	s.logger.InfoContext(ctx, "connection deleted", "connection_id", connID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

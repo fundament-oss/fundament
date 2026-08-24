@@ -85,8 +85,20 @@
       </h1>
     </div>
 
-    <!-- Right: dark/light toggle + user account -->
+    <!-- Right: walkthrough + dark/light toggle + user account -->
     <div class="flex items-center gap-2">
+      @if (tourUrl()) {
+        <nldd-icon-button
+          [attr.href]="tourUrl()"
+          target="_blank"
+          rel="noopener noreferrer"
+          icon="play"
+          size="sm"
+          variant="secondary"
+          accessible-label="Take a tour"
+        ></nldd-icon-button>
+      }
+
       <nldd-segmented-control
         [value]="isDarkMode() ? 'dark' : 'light'"
         variant="icon"
@@ -178,7 +190,7 @@
     @if (!isLoginPage()) {
       <nldd-split-view-pane slot="sidebar" class="bg-white dark:bg-gray-950">
         <!-- Context selector -->
-        <div class="px-3 pt-4">
+        <div class="shrink-0 grow-0 px-3 pt-4">
           <div
             class="mb-1.5 px-2 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400"
           >
@@ -187,7 +199,7 @@
           <button
             (click)="openSelectorModal()"
             type="button"
-            class="ring-accent-500 flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            class="ring-accent-500 flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800"
           >
             <div class="flex min-w-0 flex-1 items-center">
               @if (selectedItemDisplay(); as selected) {
@@ -201,14 +213,14 @@
                 }
                 <span class="truncate font-medium">{{ selected.name }}</span>
               } @else {
-                <span class="text-gray-400 dark:text-gray-500">Select...</span>
+                <span class="text-gray-500 dark:text-gray-400">Select...</span>
               }
             </div>
             <nldd-icon name="chevron-right-small" class="ml-2 h-3.5 w-3.5 shrink-0"></nldd-icon>
           </button>
         </div>
 
-        <nav class="overflow-y-auto px-3 pb-6">
+        <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
           @if (selectedType()) {
             <div class="mb-1.5 pt-5">
               <p
@@ -239,7 +251,7 @@
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
-                  <nldd-icon name="folder-stack" class="mr-3 h-5 w-5"></nldd-icon>
+                  <nldd-icon name="folder-on-folder" class="mr-3 h-5 w-5"></nldd-icon>
                   Projects
                 </a>
               </li>
@@ -291,7 +303,7 @@
                 <a
                   routerLink="/organization"
                   routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
+                  [routerLinkActiveOptions]="exactPath"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
@@ -304,7 +316,7 @@
                 <a
                   [routerLink]="['/projects', selectedProjectId()]"
                   routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
+                  [routerLinkActiveOptions]="exactPath"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >

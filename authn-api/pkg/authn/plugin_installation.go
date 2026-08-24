@@ -15,9 +15,13 @@ import (
 // InstallationManifest is the identity slice plugin-proxy returns at mint
 // time. authn-api signs these fields into the PluginToken.
 type InstallationManifest struct {
-	PluginName     string
-	PluginVersion  string
-	DefinitionHash string
+	// InstallationName is the CR's metadata.name — signed into the token so
+	// kube-api-proxy can address the plugin SA (plugin-{name}) without a
+	// UID-keyed lookup.
+	InstallationName string
+	PluginName       string
+	PluginVersion    string
+	DefinitionHash   string
 }
 
 // ErrInstallationNotFound is returned by PluginInstallationLookup when no
@@ -44,11 +48,11 @@ func NewPluginProxyLookup(client pluginproxyv1connect.PluginInstallationServiceC
 func (l *pluginProxyLookup) GetInstallationManifest(
 	ctx context.Context, clusterID, installationID uuid.UUID,
 ) (*InstallationManifest, error) {
-	resp, err := l.client.GetInstallationManifest(ctx, connect.NewRequest(
+	resp, err := l.client.GetInstallationManifest(ctx,
 		pluginproxyv1.GetInstallationManifestRequest_builder{
 			ClusterId:      clusterID.String(),
 			InstallationId: installationID.String(),
-		}.Build()))
+		}.Build())
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {
 			return nil, ErrInstallationNotFound
@@ -56,10 +60,10 @@ func (l *pluginProxyLookup) GetInstallationManifest(
 		return nil, fmt.Errorf("plugin-proxy get installation manifest: %w", err)
 	}
 
-	msg := resp.Msg
 	return &InstallationManifest{
-		PluginName:     msg.GetPluginName(),
-		PluginVersion:  msg.GetPluginVersion(),
-		DefinitionHash: msg.GetDefinitionHash(),
+		InstallationName: resp.GetInstallationName(),
+		PluginName:       resp.GetPluginName(),
+		PluginVersion:    resp.GetPluginVersion(),
+		DefinitionHash:   resp.GetDefinitionHash(),
 	}, nil
 }

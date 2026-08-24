@@ -16,13 +16,13 @@ import (
 
 func (s *Server) CreateRack(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateRackRequest],
-) (*connect.Response[dcimv1.CreateRackResponse], error) {
+	req *dcimv1.CreateRackRequest,
+) (*dcimv1.CreateRackResponse, error) {
 	params := db.RackCreateParams{
-		RackRowID:     uuid.MustParse(req.Msg.GetRowId()),
-		Name:          req.Msg.GetName(),
-		TotalUnits:    req.Msg.GetTotalUnits(),
-		PositionInRow: req.Msg.GetPositionInRow(),
+		RackRowID:     uuid.MustParse(req.GetRowId()),
+		Name:          req.GetName(),
+		TotalUnits:    req.GetTotalUnits(),
+		PositionInRow: req.GetPositionInRow(),
 	}
 
 	id, err := s.queries.RackCreate(ctx, params)
@@ -41,7 +41,7 @@ func (s *Server) CreateRack(
 
 	s.logger.InfoContext(ctx, "rack created", "rack_id", id)
 
-	return connect.NewResponse(dcimv1.CreateRackResponse_builder{
+	return dcimv1.CreateRackResponse_builder{
 		RackId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

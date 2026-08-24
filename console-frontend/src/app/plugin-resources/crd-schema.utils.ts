@@ -213,6 +213,25 @@ export function kindToLabel(kind: string): string {
 }
 
 /**
+ * Convert a CRD reference as it appears in a plugin menu ("certificates.cert-manager.io")
+ * to a human-readable label: "Certificates".
+ *
+ * Unlike kindToLabel this must not pluralize — the reference already carries the
+ * plural resource name, so running it through kindToLabel would yield
+ * "certificates.cert-manager.ios". The group suffix is dropped; a plural is
+ * lowercase by Kubernetes' rules, so its words cannot be recovered any further.
+ */
+export function crdRefToLabel(crdRef: string): string {
+  const words = splitWords(crdRef.split('.')[0]);
+  if (words.length === 0) return '';
+  const sentenceCased = words.map((word, i) =>
+    i === 0 || isAcronym(word) ? word : word.toLowerCase(),
+  );
+  sentenceCased[0] = sentenceCased[0].charAt(0).toUpperCase() + sentenceCased[0].slice(1);
+  return sentenceCased.join(' ');
+}
+
+/**
  * Convert a CRD property name to a human-readable label.
  * Examples: "selfAddress" → "Self Address", "peerID" → "Peer ID",
  * "controllerURL" → "Controller URL"

@@ -103,9 +103,9 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(organizationv1.GetProjectByNameRequest_builder{
+	getReq := organizationv1.GetProjectByNameRequest_builder{
 		Name: config.Name.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := d.client.ProjectService.GetProjectByName(ctx, getReq)
 	if err != nil {
@@ -134,7 +134,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	project := getResp.Msg.GetProject()
+	project := getResp.GetProject()
 
 	// Map response to state
 	config.ID = types.StringValue(project.GetId())
@@ -143,9 +143,9 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.ClusterID = types.StringValue(project.GetClusterId())
 
 	// Resolve cluster name
-	clusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	clusterReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: project.GetClusterId(),
-	}.Build())
+	}.Build()
 
 	clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
 	if err != nil {
@@ -155,7 +155,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		})
 		return
 	} else {
-		config.ClusterName = types.StringValue(clusterResp.Msg.GetCluster().GetName())
+		config.ClusterName = types.StringValue(clusterResp.GetCluster().GetName())
 	}
 
 	if project.GetCreated().CheckValid() == nil {

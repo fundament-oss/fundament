@@ -11,7 +11,9 @@ data:
     {
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
-      "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}"
+      "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
+      "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
+      "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}"
     }
 
 ---
@@ -35,8 +37,14 @@ spec:
         - name: console-frontend
           image: {{ $.Values.images.consoleFrontend }}
           env:
+            # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
               value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }}"
+            # frame-src in nginx.conf. Plugin console UIs are iframed from the
+            # dedicated plugin-proxy origin (FUN-17); the console never fetches
+            # from it, so it stays out of connect-src.
+            - name: FRAME_SRC
+              value: "{{ $.Values.externalUrls.pluginProxy }}"
           ports:
             - name: http
               containerPort: 80

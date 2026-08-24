@@ -15,9 +15,9 @@ import (
 
 func (s *Server) ListProjectMembers(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListProjectMembersRequest],
-) (*connect.Response[organizationv1.ListProjectMembersResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.ListProjectMembersRequest,
+) (*organizationv1.ListProjectMembersResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanListMembers(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -33,9 +33,9 @@ func (s *Server) ListProjectMembers(
 		result = append(result, projectMemberFromListRow(&members[i]))
 	}
 
-	return connect.NewResponse(organizationv1.ListProjectMembersResponse_builder{
+	return organizationv1.ListProjectMembersResponse_builder{
 		Members: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func projectMemberFromListRow(row *db.ProjectMemberListRow) *organizationv1.ProjectMember {

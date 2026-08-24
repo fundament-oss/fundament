@@ -1,10 +1,8 @@
 import type { Loader, LoaderContext } from 'astro/loaders';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import Asciidoctor from '@asciidoctor/core';
+import { load as loadAsciidoc } from '@asciidoctor/core';
 import { fileURLToPath } from 'node:url';
-
-const asciidoctor = Asciidoctor();
 
 interface AsciidocLoaderOptions {
   directory: string;
@@ -49,7 +47,7 @@ export function asciidocLoader(options: AsciidocLoaderOptions): Loader {
 
           // Parse AsciiDoc
           // Note: We set 'showtitle' to false because Starlight displays the title separately
-          const doc = asciidoctor.load(content, {
+          const doc = await loadAsciidoc(content, {
             safe: 'server',
             attributes: {
               showtitle: false, // Don't include title in rendered output
@@ -84,13 +82,13 @@ export function asciidocLoader(options: AsciidocLoaderOptions): Loader {
           // Extract headings from sections
           const sections = doc.getSections();
           const headings = sections.map((section) => ({
-            depth: section.getLevel() + 1, // Starlight expects h2=depth 2
+            depth: (section.getLevel() ?? 0) + 1, // Starlight expects h2=depth 2
             slug: section.getId() || '',
             text: section.getTitle() || '',
           }));
 
           // Convert to HTML
-          const html = doc.convert({ standalone: false }) as string;
+          const html = (await doc.convert({ standalone: false })) as string;
 
           // Store the entry with rendered HTML in body
           // We wrap it in a div to ensure proper rendering

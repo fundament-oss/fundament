@@ -13,8 +13,8 @@ import (
 
 func (s *Server) ListInvitations(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListInvitationsRequest],
-) (*connect.Response[organizationv1.ListInvitationsResponse], error) {
+	req *organizationv1.ListInvitationsRequest,
+) (*organizationv1.ListInvitationsResponse, error) {
 	userID, ok := UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
@@ -38,7 +38,7 @@ func (s *Server) ListInvitations(
 		}.Build())
 	}
 
-	return connect.NewResponse(organizationv1.ListInvitationsResponse_builder{
+	return organizationv1.ListInvitationsResponse_builder{
 		Invitations: invitations,
-	}.Build()), nil
+	}.Build(), nil
 }

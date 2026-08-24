@@ -18,9 +18,9 @@ import (
 // (rack -> rack_row -> room -> site) to human-readable names.
 func (s *Server) GetAssetLocation(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetAssetLocationRequest],
-) (*connect.Response[dcimv1.GetAssetLocationResponse], error) {
-	assetID := uuid.MustParse(req.Msg.GetAssetId())
+	req *dcimv1.GetAssetLocationRequest,
+) (*dcimv1.GetAssetLocationResponse, error) {
+	assetID := uuid.MustParse(req.GetAssetId())
 
 	loc, err := s.queries.PlacementResolveLocationByAsset(ctx, db.PlacementResolveLocationByAssetParams{
 		AssetID: assetID,
@@ -40,12 +40,12 @@ func (s *Server) GetAssetLocation(
 					"rack_id", uuid.UUID(rackRef.RackID.Bytes),
 				)
 			}
-			return connect.NewResponse(dcimv1.GetAssetLocationResponse_builder{}.Build()), nil
+			return dcimv1.GetAssetLocationResponse_builder{}.Build(), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve asset location: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetAssetLocationResponse_builder{
+	return dcimv1.GetAssetLocationResponse_builder{
 		Location: dcimv1.AssetLocation_builder{
 			SiteName:      loc.SiteName,
 			RoomName:      loc.RoomName,
@@ -55,5 +55,5 @@ func (s *Server) GetAssetLocation(
 			RackId:        uuid.UUID(loc.RackID.Bytes).String(),
 			RackSlotType:  rackSlotTypeToProto(loc.SlotType.String),
 		}.Build(),
-	}.Build()), nil
+	}.Build(), nil
 }

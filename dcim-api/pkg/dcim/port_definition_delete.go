@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeletePortDefinition(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeletePortDefinitionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	portDefID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeletePortDefinitionRequest,
+) (*emptypb.Empty, error) {
+	portDefID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.PortDefinitionDelete(ctx, db.PortDefinitionDeleteParams{ID: portDefID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeletePortDefinition(
 
 	s.logger.InfoContext(ctx, "port definition deleted", "port_definition_id", portDefID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

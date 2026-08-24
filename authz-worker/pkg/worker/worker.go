@@ -22,6 +22,8 @@ import (
 const (
 	listenChannel = "authz_outbox"
 
+	storeCheckTimeout = 5 * time.Second
+
 	// finalizeTimeout bounds the post-dispatch DB work (mark processed/retry
 	// + commit) when running on a context that may already have been cancelled
 	// by SIGTERM. The OpenFGA write has already happened at that point; if we
@@ -29,6 +31,9 @@ const (
 	// OpenFGA rejects it as a duplicate.
 	finalizeTimeout = 10 * time.Second
 )
+
+// errStoreUnavailable lets Run distinguish a failed store check from a lost DB connection.
+var errStoreUnavailable = errors.New("openfga store unavailable")
 
 // Config holds configuration for the outbox worker.
 type Config struct {
@@ -45,9 +50,19 @@ type Worker struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	handler *handler.Handler
+	fga     *client.OpenFgaClient
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
+
+	// dispatch processes a single locked outbox item within tx. It defaults to
+	// dispatchItem and exists as a field so tests can substitute failure
+	// scenarios, including ones that abort tx (SQLSTATE 25P02).
+	dispatch func(ctx context.Context, tx pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error
+
+	// verify gates each drain on the OpenFGA store. Defaults to verifyStore and
+	// exists as a field so tests can stub it.
+	verify func(ctx context.Context) error
 }
 
 // New creates a new authz worker with sensible defaults.
@@ -57,13 +72,20 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 	hostname, _ := os.Hostname()
 	workerID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
 
-	return &Worker{
+	w := &Worker{
 		pool:    pool,
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, logger),
+		fga:     fgaClient,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
+	w.dispatch = func(ctx context.Context, _ pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error {
+		return w.dispatchItem(ctx, qtx, item)
+	}
+	w.verify = w.verifyStore
+
+	return w
 }
 
 // IsReady returns whether the worker has an active LISTEN connection and is processing.
@@ -105,7 +127,11 @@ func (w *Worker) Run(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return fmt.Errorf("worker stopped: %w", ctx.Err())
 		}
-		w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
+		if errors.Is(err, errStoreUnavailable) {
+			w.logger.Error("openfga store unavailable, holding outbox", "error", err, "delay", w.cfg.BackoffDelay)
+		} else {
+			w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
+		}
 		w.ready.Store(false)
 		select {
 		case <-ctx.Done():
@@ -122,6 +148,11 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 	defer conn.Release()
 
+	// Ready only once the store checks out — a worker without its store makes no progress.
+	if err := w.verify(ctx); err != nil {
+		return err
+	}
+
 	w.ready.Store(true)
 
 	// Reset permanently-failed items so they are retried after a worker restart.
@@ -132,14 +163,34 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	w.processBatch(ctx)
 
 	for {
-		notified, err := w.waitForNotification(ctx, conn)
-		if err != nil {
+		// The bool reports whether a NOTIFY arrived (true) or the poll interval
+		// elapsed (false); we drain the outbox on both. Polling matters because
+		// the outbox_notify trigger only fires AFTER INSERT: a row left in
+		// 'retrying' emits no NOTIFY when its retry_after elapses, so without a
+		// timeout-driven pass it would lag forever and trip the consumer's
+		// circuit breaker.
+		if _, err := w.waitForNotification(ctx, conn); err != nil {
 			return err
 		}
-		if notified {
-			w.processBatch(ctx)
+		if err := w.verify(ctx); err != nil {
+			return err
 		}
+		w.processBatch(ctx)
 	}
+}
+
+// verifyStore gates a drain on the store existing: OpenFGA's Write does not
+// check store existence, so writes to a wiped store falsely succeed. GetStore
+// bypasses the typesystem cache and sees the wipe.
+func (w *Worker) verifyStore(ctx context.Context) error {
+	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
+	defer cancel()
+
+	if _, err := w.fga.GetStore(checkCtx).Execute(); err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	return nil
 }
 
 func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {
@@ -263,7 +314,7 @@ func (w *Worker) processOneItem(ctx context.Context) (found bool, err error) {
 		return false, fmt.Errorf("get next outbox row: %w", err)
 	}
 
-	dispatchErr := w.dispatchItem(ctx, qtx, &item)
+	dispatchErr := w.dispatch(ctx, tx, qtx, &item)
 
 	// Past this point the side effect on OpenFGA has already happened (success
 	// or partial), so the outbox row MUST be marked + committed even if the
@@ -273,12 +324,16 @@ func (w *Worker) processOneItem(ctx context.Context) (found bool, err error) {
 	defer cancel()
 
 	if dispatchErr != nil {
-		if err := w.handleProcessingError(finalizeCtx, qtx, &item, dispatchErr); err != nil {
-			return true, fmt.Errorf("handle processing error: %w", err)
+		// dispatchItem may have failed on a SQL statement, which aborts the
+		// transaction (SQLSTATE 25P02) and makes it unusable for any further
+		// query. Roll back to release the row lock, then record the retry or
+		// failure via a fresh pool connection instead of the aborted tx.
+		if err := tx.Rollback(finalizeCtx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return true, fmt.Errorf("rollback after dispatch error: %w", err)
 		}
 
-		if err := tx.Commit(finalizeCtx); err != nil {
-			return true, fmt.Errorf("dispatch item commit: %w", err)
+		if err := w.handleProcessingError(finalizeCtx, w.queries, &item, dispatchErr); err != nil {
+			return true, fmt.Errorf("handle processing error: %w", err)
 		}
 
 		return true, dispatchErr
@@ -349,6 +404,8 @@ func (w *Worker) dispatchItem(ctx context.Context, qtx *db.Queries, item *db.Get
 		return w.handler.Namespace(ctx, qtx, item.NamespaceID.Bytes)
 	case item.ApiKeyID.Valid:
 		return w.handler.ApiKey(ctx, qtx, item.ApiKeyID.Bytes)
+	case item.PluginID.Valid:
+		return w.handler.Plugin(ctx, qtx, item.PluginID.Bytes)
 	default:
 		return fmt.Errorf("unknown outbox subject FK")
 	}

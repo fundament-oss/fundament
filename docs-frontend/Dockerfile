@@ -1,5 +1,10 @@
 # Build stage
-FROM oven/bun:1-alpine AS build
+# Use a real Node.js (>= v24.15) for the Astro build; the tooling rejects Bun's
+# Node-compat version (24.3.0). Bun is still used as the package manager.
+FROM oven/bun:1.3.14-alpine AS bun
+
+FROM node:24.17-alpine AS build
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
 # Copy package files
@@ -11,25 +16,26 @@ RUN bun install --frozen-lockfile
 # Copy source files
 COPY docs-frontend/ .
 
-# Copy docs, FUNs, and ADRs into their respective content directories
-# Serve assets statically to avoid Astro/Vite processing large SVGs
+# Copy docs, FUNs, ADRs and assets into their respective content directories and
+# rewrite the links that are written for GitHub so they work on the site too.
+# See docs-frontend/scripts/sync-docs.mjs for the link conventions this implies.
 COPY docs/ /tmp/docs/
-RUN mv /tmp/docs/funs ./src/content/docs/funs \
- && mv /tmp/docs/adr ./src/content/docs/adr \
- && cp -r /tmp/docs/assets public/assets \
- && mv /tmp/docs ./src/content/docs/docs \
- && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
+RUN node scripts/sync-docs.mjs --source /tmp/docs && rm -rf /tmp/docs
 
 # Disable Astro telemetry
 ENV ASTRO_TELEMETRY_DISABLED=1
 
-# Build the application
+# Build the application. src/links-validator.ts runs at the end of the build and
+# fails it on any link that does not resolve — broken links are otherwise
+# invisible in production, since nginx.conf falls back to `/index.html` and
+# serves the home page with a 200.
 RUN bun run build
 
-# Run pagefind explicitly via bunx to ensure the search index is generated.
-# Starlight's internal pagefind hook uses `npx` which may fail silently in bun
-# environments; bunx uses the already-installed package and fails the build loudly.
-RUN bunx pagefind --site dist
+# Run pagefind explicitly to ensure the search index is generated.
+# Starlight's internal pagefind hook uses `npx` which may fail silently; `bun x`
+# uses the already-installed package and fails the build loudly.
+# Note: `bun x` rather than `bunx`, since only the `bun` binary is copied above.
+RUN bun x pagefind --site dist
 
 # Production stage
 FROM nginx:alpine

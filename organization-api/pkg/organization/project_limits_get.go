@@ -16,9 +16,9 @@ import (
 
 func (s *Server) GetProjectLimits(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetProjectLimitsRequest],
-) (*connect.Response[organizationv1.GetProjectLimitsResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.GetProjectLimitsRequest,
+) (*organizationv1.GetProjectLimitsResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -27,18 +27,18 @@ func (s *Server) GetProjectLimits(
 	row, err := s.queries.ProjectLimitsGet(ctx, db.ProjectLimitsGetParams{ProjectID: projectID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return connect.NewResponse(organizationv1.GetProjectLimitsResponse_builder{
+			return organizationv1.GetProjectLimitsResponse_builder{
 				Limits:   organizationv1.ProjectLimits_builder{}.Build(),
 				Defaults: projectLimitDefaults(),
-			}.Build()), nil
+			}.Build(), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project limits: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetProjectLimitsResponse_builder{
+	return organizationv1.GetProjectLimitsResponse_builder{
 		Limits:   projectLimitsFromRow(&row),
 		Defaults: projectLimitDefaults(),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func projectLimitsFromRow(row *db.ProjectLimitsGetRow) *organizationv1.ProjectLimits {

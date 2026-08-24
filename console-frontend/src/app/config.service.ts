@@ -4,6 +4,13 @@ export interface AppConfiguration {
   authnApiUrl: string;
   organizationApiUrl: string;
   kubeApiProxyUrl: string;
+  pluginProxyUrl: string;
+  /**
+   * Public URL of the walkthrough (console-demo subdomain). Optional: the demo
+   * build is not deployed in every environment, and the header's "Take a tour"
+   * button is hidden when this is empty.
+   */
+  consoleDemoUrl?: string;
 }
 
 @Injectable({
@@ -32,6 +39,7 @@ export class ConfigService {
         authnApiUrl: '',
         organizationApiUrl: '',
         kubeApiProxyUrl: '',
+        pluginProxyUrl: '',
       };
 
       return this.config;

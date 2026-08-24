@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -25,28 +27,69 @@ const (
 	bytesPerMB  = 1_000_000.0
 )
 
-// promClient returns the appropriate Prometheus client based on the server's configured
-// prometheusURL: empty or "mock" → MockClient (if configured) or StubClient,
-// otherwise HTTPClient targeting the given URL.
-func (s *Server) promClient() prom.Client {
+// promClientFor selects the Prometheus backend for one cluster:
+//   - "per-shoot" → the cluster's per-shoot Prometheus at the monitoring
+//     secret's prometheus-url annotation;
+//   - "mock" (or empty/unset) → generated data (local dev, CI);
+//   - anything else → one global backend at that URL (dev/shared override).
+//
+// "per-shoot" is an explicit sentinel rather than the empty string because
+// the env layer (caarlos0/env) substitutes envDefault for set-but-empty
+// variables, silently collapsing "" into "mock" — found live via the console.
+//
+// In per-shoot mode the error wraps gardener.ErrNotFound while the shoot or
+// its monitoring stack does not exist yet; callers degrade to empty metrics
+// (cluster level) or mark the cluster unavailable (org level) instead of
+// failing. Streaming snapshots use the same resolution: the live load check
+// passed (21 concurrent queries in 442ms against a real shoot, ADR-0026),
+// and one dashboard tick is the same query burst as an interactive page load.
+func (s *Server) promClientFor(ctx context.Context, clusterID uuid.UUID) (prom.Client, error) {
 	switch s.prometheusURL {
+	case "per-shoot":
+		return s.perShoot.clientFor(ctx, clusterID)
 	case "", "mock":
 		if s.mockPromClient != nil {
-			return s.mockPromClient
+			return s.mockPromClient, nil
 		}
-		return prom.StubClient{}
+		return prom.StubClient{}, nil
 	default:
-		return prom.NewHTTPClient(s.prometheusURL)
+		return prom.NewHTTPClientWithAuth(s.prometheusURL, "", "", s.promOpts...), nil
 	}
+}
+
+// isPromBadQuery reports whether err is Prometheus rejecting the query itself
+// (HTTP 400 malformed parameters, 422 unexecutable expression) — a programmer
+// error in our PromQL that must surface instead of degrading: the mock and
+// stub clients never execute real PromQL, so a degraded response would
+// disguise a broken query as "this cluster has no metrics" forever. Anything
+// else (5xx, network errors, 401/403/404 from the ingress) is environmental
+// and keeps degrading.
+func isPromBadQuery(err error) bool {
+	var statusErr *prom.StatusError
+	if !errors.As(err, &statusErr) {
+		return false
+	}
+	return statusErr.StatusCode == http.StatusBadRequest || statusErr.StatusCode == http.StatusUnprocessableEntity
+}
+
+// logPromUnavailable records why a cluster has no metrics backend. A missing
+// shoot/monitoring stack is expected while a cluster is provisioning and logs
+// at debug; anything else is a real resolution failure.
+func (s *Server) logPromUnavailable(ctx context.Context, clusterID uuid.UUID, err error) {
+	if errors.Is(err, gardener.ErrNotFound) {
+		s.logger.DebugContext(ctx, "per-shoot prometheus not available yet", "cluster_id", clusterID)
+		return
+	}
+	s.logger.WarnContext(ctx, "resolve per-shoot prometheus", "cluster_id", clusterID, "error", err)
 }
 
 // -- Cluster-level RPCs --
 
 func (s *Server) GetClusterWorkloadMetrics(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterWorkloadMetricsRequest],
-) (*connect.Response[organizationv1.GetClusterWorkloadMetricsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetClusterWorkloadMetricsRequest,
+) (*organizationv1.GetClusterWorkloadMetricsResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -59,7 +102,16 @@ func (s *Server) GetClusterWorkloadMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.promClient()
+	client, err := s.promClientFor(ctx, clusterID)
+	if err != nil {
+		// Spec: a cluster whose monitoring stack is not (yet) reachable gets
+		// empty metrics, not an error.
+		s.logPromUnavailable(ctx, clusterID, err)
+		return organizationv1.GetClusterWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
+	}
 	now := time.Now()
 
 	var (
@@ -124,8 +176,19 @@ func (s *Server) GetClusterWorkloadMetrics(
 	qs(&nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
 	qs(&nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
-	if err := g.Wait(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+	err = g.Wait()
+	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("cluster metrics: %w", err))
+		}
+		// A resolvable but unreachable backend (hibernated shoot, ingress
+		// 5xx) degrades the same as an unresolvable one: empty metrics, not
+		// an error that breaks the page or kills a stream tick.
+		s.logger.WarnContext(ctx, "cluster metrics queries failed", "cluster_id", clusterID, "error", err)
+		return organizationv1.GetClusterWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
 	}
 
 	totals := organizationv1.ResourceUsageInfo_builder{
@@ -134,18 +197,18 @@ func (s *Server) GetClusterWorkloadMetrics(
 		Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 	}.Build()
 
-	return connect.NewResponse(organizationv1.GetClusterWorkloadMetricsResponse_builder{
+	return organizationv1.GetClusterWorkloadMetricsResponse_builder{
 		Totals:     totals,
 		Nodes:      buildNodeMetrics(nodeCPUUsed, nodeCPUTotal, nodeMemUsed, nodeMemTotal, nodePodsUsed, nodePodsTotal),
 		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetClusterWorkloadTimeSeries(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterWorkloadTimeSeriesRequest],
-) (*connect.Response[organizationv1.GetWorkloadTimeSeriesResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetClusterWorkloadTimeSeriesRequest,
+) (*organizationv1.GetWorkloadTimeSeriesResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -158,8 +221,12 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.promClient()
-	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
+	client, err := s.promClientFor(ctx, clusterID)
+	if err != nil {
+		s.logPromUnavailable(ctx, clusterID, err)
+		client = prom.StubClient{}
+	}
+	start, end, step := resolveTimeRange(req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	var (
 		cpuSeries, memSeries, podSeries []prom.TimeSeries
@@ -185,25 +252,32 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 	qr(&netRxSeries, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
 	qr(&netTxSeries, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
 
-	if err := g.Wait(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+	err = g.Wait()
+	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("cluster time-series: %w", err))
+		}
+		// Same degradation as GetClusterWorkloadMetrics: empty series, not
+		// an error.
+		s.logger.WarnContext(ctx, "cluster time-series queries failed", "cluster_id", clusterID, "error", err)
+		return organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build(), nil
 	}
 
-	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
+	return organizationv1.GetWorkloadTimeSeriesResponse_builder{
 		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
 		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
 		PodCount:           timeSeriesFirstToProto(podSeries, 1),
 		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
 		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // -- Org-level RPCs --
 
 func (s *Server) GetOrgWorkloadMetrics(
 	ctx context.Context,
-	_ *connect.Request[organizationv1.GetOrgWorkloadMetricsRequest],
-) (*connect.Response[organizationv1.GetOrgWorkloadMetricsResponse], error) {
+	_ *organizationv1.GetOrgWorkloadMetricsRequest,
+) (*organizationv1.GetOrgWorkloadMetricsResponse, error) {
 	clusters, err := s.queries.ClusterList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list clusters: %w", err))
@@ -214,6 +288,7 @@ func (s *Server) GetOrgWorkloadMetrics(
 	type clusterResult struct {
 		id                   string
 		name                 string
+		unavailable          bool
 		cpuUsed, cpuTotal    float64
 		memUsed, memTotal    float64
 		podsUsed, podsTotal  float64
@@ -225,17 +300,27 @@ func (s *Server) GetOrgWorkloadMetrics(
 
 	results := make([]clusterResult, len(clusters))
 	g, gctx := errgroup.WithContext(ctx)
-	// Limit outer concurrency to avoid overwhelming Prometheus and connection pools
-	// when an org has many clusters (each cluster fans out to ~15 sub-queries).
+	// Cap concurrent clusters. In per-shoot mode each cluster has its own
+	// backend, so this bounds org-api-side fan-out (each cluster still fans
+	// out to ~15 sub-queries); with a single shared backend it also protects
+	// that backend's connection pool.
 	g.SetLimit(10)
 
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.promClient()
 			r := &results[i]
 			r.id = cl.ID.String()
 			r.name = cl.Name
+
+			client, err := s.promClientFor(gctx, cl.ID)
+			if err != nil {
+				// Spec: one unreachable cluster must not blank the org view;
+				// mark it unavailable and keep going.
+				s.logPromUnavailable(gctx, cl.ID, err)
+				r.unavailable = true
+				return nil
+			}
 
 			sub, subCtx := errgroup.WithContext(gctx)
 
@@ -277,7 +362,14 @@ func (s *Server) GetOrgWorkloadMetrics(
 			qs(&r.nsNetRx, "query per-namespace net rx", `sum(rate(container_network_receive_bytes_total[5m])) by (namespace)`)
 			qs(&r.nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
-			return sub.Wait()
+			if err := sub.Wait(); err != nil {
+				if isPromBadQuery(err) {
+					return err
+				}
+				s.logger.WarnContext(gctx, "cluster metrics queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
+				*r = clusterResult{id: r.id, name: r.name, unavailable: true}
+			}
+			return nil
 		})
 	}
 
@@ -307,11 +399,12 @@ func (s *Server) GetOrgWorkloadMetrics(
 		podsTotal += r.podsTotal
 
 		clusterSummaries = append(clusterSummaries, organizationv1.ClusterWorkloadSummary_builder{
-			ClusterId:   r.id,
-			ClusterName: r.name,
-			Cpu:         makeResourceUsage(r.cpuUsed, r.cpuTotal, "cores"),
-			Memory:      makeResourceUsage(r.memUsed/bytesPerGiB, r.memTotal/bytesPerGiB, "GiB"),
-			Pods:        makeResourceUsage(r.podsUsed, r.podsTotal, "pods"),
+			ClusterId:          r.id,
+			ClusterName:        r.name,
+			Cpu:                makeResourceUsage(r.cpuUsed, r.cpuTotal, "cores"),
+			Memory:             makeResourceUsage(r.memUsed/bytesPerGiB, r.memTotal/bytesPerGiB, "GiB"),
+			Pods:               makeResourceUsage(r.podsUsed, r.podsTotal, "pods"),
+			MetricsUnavailable: r.unavailable,
 		}.Build())
 
 		allNsCPU[i] = r.nsCPU
@@ -341,23 +434,23 @@ func (s *Server) GetOrgWorkloadMetrics(
 	nsNetRx := mergeSamples(allNsNetRx, "namespace")
 	nsNetTx := mergeSamples(allNsNetTx, "namespace")
 
-	return connect.NewResponse(organizationv1.GetOrgWorkloadMetricsResponse_builder{
+	return organizationv1.GetOrgWorkloadMetricsResponse_builder{
 		Totals:     totals,
 		Clusters:   clusterSummaries,
 		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetOrgWorkloadTimeSeries(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetOrgWorkloadTimeSeriesRequest],
-) (*connect.Response[organizationv1.GetWorkloadTimeSeriesResponse], error) {
+	req *organizationv1.GetOrgWorkloadTimeSeriesRequest,
+) (*organizationv1.GetWorkloadTimeSeriesResponse, error) {
 	clusters, err := s.queries.ClusterList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list clusters: %w", err))
 	}
 
-	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
+	start, end, step := resolveTimeRange(req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	type clusterTSResult struct {
 		cpu, mem, pods, netRx, netTx []prom.TimeSeries
@@ -370,8 +463,15 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	for i, cl := range clusters {
 		i, cl := i, cl
 		g.Go(func() error {
-			client := s.promClient()
 			r := &results[i]
+
+			client, err := s.promClientFor(gctx, cl.ID)
+			if err != nil {
+				// An unreachable cluster contributes nothing to the summed
+				// series instead of failing the whole org view.
+				s.logPromUnavailable(gctx, cl.ID, err)
+				return nil
+			}
 
 			sub, subCtx := errgroup.WithContext(gctx)
 
@@ -392,7 +492,14 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 			qr(&r.netRx, "query net rx time-series", `sum(rate(container_network_receive_bytes_total[5m]))`)
 			qr(&r.netTx, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
 
-			return sub.Wait()
+			if err := sub.Wait(); err != nil {
+				if isPromBadQuery(err) {
+					return err
+				}
+				s.logger.WarnContext(gctx, "cluster time-series queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
+				*r = clusterTSResult{}
+			}
+			return nil
 		})
 	}
 
@@ -413,22 +520,22 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 		allNetTx[i] = r.netTx
 	}
 
-	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
+	return organizationv1.GetWorkloadTimeSeriesResponse_builder{
 		CpuCores:           timeSeriesFirstToProto(sumTimeSeries(allCPU), 1),
 		MemoryGib:          timeSeriesFirstToProto(sumTimeSeries(allMem), 1.0/bytesPerGiB),
 		PodCount:           timeSeriesFirstToProto(sumTimeSeries(allPods), 1),
 		NetworkReceiveMbS:  timeSeriesFirstToProto(sumTimeSeries(allNetRx), 1.0/bytesPerMB),
 		NetworkTransmitMbS: timeSeriesFirstToProto(sumTimeSeries(allNetTx), 1.0/bytesPerMB),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // -- Project-level RPCs --
 
 func (s *Server) GetProjectWorkloadMetrics(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetProjectWorkloadMetricsRequest],
-) (*connect.Response[organizationv1.GetProjectWorkloadMetricsResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.GetProjectWorkloadMetricsRequest,
+) (*organizationv1.GetProjectWorkloadMetricsResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -440,10 +547,10 @@ func (s *Server) GetProjectWorkloadMetrics(
 	}
 
 	if len(namespaces) == 0 {
-		return connect.NewResponse(organizationv1.GetProjectWorkloadMetricsResponse_builder{
+		return organizationv1.GetProjectWorkloadMetricsResponse_builder{
 			Totals:     organizationv1.ResourceUsageInfo_builder{}.Build(),
 			Namespaces: nil,
-		}.Build()), nil
+		}.Build(), nil
 	}
 
 	// All namespaces in a project are expected to live on the same cluster.
@@ -460,7 +567,14 @@ func (s *Server) GetProjectWorkloadMetrics(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.promClient()
+	client, err := s.promClientFor(ctx, clusterID)
+	if err != nil {
+		s.logPromUnavailable(ctx, clusterID, err)
+		return organizationv1.GetProjectWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
+	}
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
 
@@ -515,25 +629,35 @@ func (s *Server) GetProjectWorkloadMetrics(
 	qs(&nsNetRx, "query per-namespace net rx", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
 	qs(&nsNetTx, "query per-namespace net tx", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m])) by (namespace)`, nsFilter))
 
-	if err := g.Wait(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+	err = g.Wait()
+	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project metrics: %w", err))
+		}
+		// Same degradation as GetClusterWorkloadMetrics: empty metrics, not
+		// an error.
+		s.logger.WarnContext(ctx, "project metrics queries failed", "project_id", projectID, "cluster_id", clusterID, "error", err)
+		return organizationv1.GetProjectWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
 	}
 
-	return connect.NewResponse(organizationv1.GetProjectWorkloadMetricsResponse_builder{
+	return organizationv1.GetProjectWorkloadMetricsResponse_builder{
 		Totals: organizationv1.ResourceUsageInfo_builder{
 			Cpu:    makeResourceUsage(cpuUsed, cpuTotal, "cores"),
 			Memory: makeResourceUsage(memUsed/bytesPerGiB, memTotal/bytesPerGiB, "GiB"),
 			Pods:   makeResourceUsage(podsUsed, podsTotal, "pods"),
 		}.Build(),
 		Namespaces: buildNamespaceMetrics(nsCPU, nsMem, nsPods, nsCPUReq, nsCPULim, nsMemReq, nsMemLim, nsNetRx, nsNetTx),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetProjectWorkloadTimeSeries(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetProjectWorkloadTimeSeriesRequest],
-) (*connect.Response[organizationv1.GetWorkloadTimeSeriesResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.GetProjectWorkloadTimeSeriesRequest,
+) (*organizationv1.GetWorkloadTimeSeriesResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -545,7 +669,7 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	}
 
 	if len(namespaces) == 0 {
-		return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build()), nil
+		return organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build(), nil
 	}
 
 	// All namespaces in a project are expected to live on the same cluster.
@@ -562,9 +686,13 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get cluster: %w", err))
 	}
 
-	client := s.promClient()
+	client, err := s.promClientFor(ctx, clusterID)
+	if err != nil {
+		s.logPromUnavailable(ctx, clusterID, err)
+		client = prom.StubClient{}
+	}
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
-	start, end, step := resolveTimeRange(req.Msg.HasStart(), req.Msg.GetStart().AsTime(), req.Msg.HasEnd(), req.Msg.GetEnd().AsTime(), req.Msg.GetStepSeconds())
+	start, end, step := resolveTimeRange(req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	var (
 		cpuSeries, memSeries, podSeries []prom.TimeSeries
@@ -590,17 +718,24 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 	qr(&netRxSeries, "query net rx time-series", fmt.Sprintf(`sum(rate(container_network_receive_bytes_total{%s}[5m]))`, nsFilter))
 	qr(&netTxSeries, "query net tx time-series", fmt.Sprintf(`sum(rate(container_network_transmit_bytes_total{%s}[5m]))`, nsFilter))
 
-	if err := g.Wait(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+	err = g.Wait()
+	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project time-series: %w", err))
+		}
+		// Same degradation as GetClusterWorkloadMetrics: empty series, not
+		// an error.
+		s.logger.WarnContext(ctx, "project time-series queries failed", "project_id", projectID, "cluster_id", clusterID, "error", err)
+		return organizationv1.GetWorkloadTimeSeriesResponse_builder{}.Build(), nil
 	}
 
-	return connect.NewResponse(organizationv1.GetWorkloadTimeSeriesResponse_builder{
+	return organizationv1.GetWorkloadTimeSeriesResponse_builder{
 		CpuCores:           timeSeriesFirstToProto(cpuSeries, 1),
 		MemoryGib:          timeSeriesFirstToProto(memSeries, 1.0/bytesPerGiB),
 		PodCount:           timeSeriesFirstToProto(podSeries, 1),
 		NetworkReceiveMbS:  timeSeriesFirstToProto(netRxSeries, 1.0/bytesPerMB),
 		NetworkTransmitMbS: timeSeriesFirstToProto(netTxSeries, 1.0/bytesPerMB),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // -- Helper functions --
@@ -624,6 +759,17 @@ func makeResourceUsage(used, total float64, unit string) *organizationv1.Resourc
 		Used:  used,
 		Total: total,
 		Unit:  unit,
+	}.Build()
+}
+
+// emptyResourceTotals is the totals shape a stub/empty backend produces:
+// zero usage with units, no breakdowns. Used when metrics degrade instead of
+// erroring.
+func emptyResourceTotals() *organizationv1.ResourceUsageInfo {
+	return organizationv1.ResourceUsageInfo_builder{
+		Cpu:    makeResourceUsage(0, 0, "cores"),
+		Memory: makeResourceUsage(0, 0, "GiB"),
+		Pods:   makeResourceUsage(0, 0, "pods"),
 	}.Build()
 }
 
@@ -816,7 +962,7 @@ func promEscapeLabelValue(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	// Escape regex metacharacters so the alternation is treated as a literal match.
-	for _, ch := range []string{".", "+", "*", "?", "(", ")", "[", "]", "{", "}", "^", "$"} {
+	for _, ch := range []string{".", "+", "*", "?", "(", ")", "[", "]", "{", "}", "^", "$", "|"} {
 		s = strings.ReplaceAll(s, ch, `\`+ch)
 	}
 	return s
@@ -872,10 +1018,10 @@ const streamInterval = 15 * time.Second
 // StreamOrgWorkloadMetrics streams org-wide metrics every 15 seconds.
 func (s *Server) StreamOrgWorkloadMetrics(
 	ctx context.Context,
-	req *connect.Request[organizationv1.StreamOrgWorkloadMetricsRequest],
+	req *organizationv1.StreamOrgWorkloadMetricsRequest,
 	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
 ) error {
-	if err := s.sendOrgSnapshot(ctx, req.Msg, stream); err != nil {
+	if err := s.sendOrgSnapshot(ctx, req, stream); err != nil {
 		return err
 	}
 	ticker := time.NewTicker(streamInterval)
@@ -885,7 +1031,7 @@ func (s *Server) StreamOrgWorkloadMetrics(
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			if err := s.sendOrgSnapshot(ctx, req.Msg, stream); err != nil {
+			if err := s.sendOrgSnapshot(ctx, req, stream); err != nil {
 				return err
 			}
 		}
@@ -895,10 +1041,10 @@ func (s *Server) StreamOrgWorkloadMetrics(
 // StreamClusterWorkloadMetrics streams cluster metrics every 15 seconds.
 func (s *Server) StreamClusterWorkloadMetrics(
 	ctx context.Context,
-	req *connect.Request[organizationv1.StreamClusterWorkloadMetricsRequest],
+	req *organizationv1.StreamClusterWorkloadMetricsRequest,
 	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
 ) error {
-	if err := s.sendClusterSnapshot(ctx, req.Msg, stream); err != nil {
+	if err := s.sendClusterSnapshot(ctx, req, stream); err != nil {
 		return err
 	}
 	ticker := time.NewTicker(streamInterval)
@@ -908,7 +1054,7 @@ func (s *Server) StreamClusterWorkloadMetrics(
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			if err := s.sendClusterSnapshot(ctx, req.Msg, stream); err != nil {
+			if err := s.sendClusterSnapshot(ctx, req, stream); err != nil {
 				return err
 			}
 		}
@@ -918,10 +1064,10 @@ func (s *Server) StreamClusterWorkloadMetrics(
 // StreamProjectWorkloadMetrics streams project metrics every 15 seconds.
 func (s *Server) StreamProjectWorkloadMetrics(
 	ctx context.Context,
-	req *connect.Request[organizationv1.StreamProjectWorkloadMetricsRequest],
+	req *organizationv1.StreamProjectWorkloadMetricsRequest,
 	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
 ) error {
-	if err := s.sendProjectSnapshot(ctx, req.Msg, stream); err != nil {
+	if err := s.sendProjectSnapshot(ctx, req, stream); err != nil {
 		return err
 	}
 	ticker := time.NewTicker(streamInterval)
@@ -931,7 +1077,7 @@ func (s *Server) StreamProjectWorkloadMetrics(
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			if err := s.sendProjectSnapshot(ctx, req.Msg, stream); err != nil {
+			if err := s.sendProjectSnapshot(ctx, req, stream); err != nil {
 				return err
 			}
 		}
@@ -946,22 +1092,22 @@ func (s *Server) sendOrgSnapshot(
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	var (
-		workload *connect.Response[organizationv1.GetOrgWorkloadMetricsResponse]
-		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+		workload *organizationv1.GetOrgWorkloadMetricsResponse
+		ts       *organizationv1.GetWorkloadTimeSeriesResponse
 	)
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		var err error
-		workload, err = s.GetOrgWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadMetricsRequest_builder{}.Build()))
+		workload, err = s.GetOrgWorkloadMetrics(gctx, organizationv1.GetOrgWorkloadMetricsRequest_builder{}.Build())
 		return err
 	})
 	g.Go(func() error {
 		var err error
-		ts, err = s.GetOrgWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadTimeSeriesRequest_builder{
+		ts, err = s.GetOrgWorkloadTimeSeries(gctx, organizationv1.GetOrgWorkloadTimeSeriesRequest_builder{
 			Start:       timestamppb.New(start),
 			End:         timestamppb.New(end),
 			StepSeconds: int32(step.Seconds()),
-		}.Build()))
+		}.Build())
 		return err
 	})
 	if err := g.Wait(); err != nil {
@@ -969,10 +1115,10 @@ func (s *Server) sendOrgSnapshot(
 	}
 
 	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
-		Totals:      workload.Msg.GetTotals(),
-		Clusters:    workload.Msg.GetClusters(),
-		Namespaces:  workload.Msg.GetNamespaces(),
-		TimeSeries:  ts.Msg,
+		Totals:      workload.GetTotals(),
+		Clusters:    workload.GetClusters(),
+		Namespaces:  workload.GetNamespaces(),
+		TimeSeries:  ts,
 		RefreshedAt: timestamppb.Now(),
 	}.Build())
 }
@@ -985,25 +1131,25 @@ func (s *Server) sendClusterSnapshot(
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	var (
-		workload *connect.Response[organizationv1.GetClusterWorkloadMetricsResponse]
-		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+		workload *organizationv1.GetClusterWorkloadMetricsResponse
+		ts       *organizationv1.GetWorkloadTimeSeriesResponse
 	)
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		var err error
-		workload, err = s.GetClusterWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadMetricsRequest_builder{
+		workload, err = s.GetClusterWorkloadMetrics(gctx, organizationv1.GetClusterWorkloadMetricsRequest_builder{
 			ClusterId: req.GetClusterId(),
-		}.Build()))
+		}.Build())
 		return err
 	})
 	g.Go(func() error {
 		var err error
-		ts, err = s.GetClusterWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{
+		ts, err = s.GetClusterWorkloadTimeSeries(gctx, organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{
 			ClusterId:   req.GetClusterId(),
 			Start:       timestamppb.New(start),
 			End:         timestamppb.New(end),
 			StepSeconds: int32(step.Seconds()),
-		}.Build()))
+		}.Build())
 		return err
 	})
 	if err := g.Wait(); err != nil {
@@ -1011,11 +1157,12 @@ func (s *Server) sendClusterSnapshot(
 	}
 
 	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
-		Totals:      workload.Msg.GetTotals(),
-		Nodes:       workload.Msg.GetNodes(),
-		Namespaces:  workload.Msg.GetNamespaces(),
-		TimeSeries:  ts.Msg,
-		RefreshedAt: timestamppb.Now(),
+		Totals:             workload.GetTotals(),
+		Nodes:              workload.GetNodes(),
+		Namespaces:         workload.GetNamespaces(),
+		TimeSeries:         ts,
+		RefreshedAt:        timestamppb.Now(),
+		MetricsUnavailable: workload.GetMetricsUnavailable(),
 	}.Build())
 }
 
@@ -1027,25 +1174,25 @@ func (s *Server) sendProjectSnapshot(
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
 	var (
-		workload *connect.Response[organizationv1.GetProjectWorkloadMetricsResponse]
-		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+		workload *organizationv1.GetProjectWorkloadMetricsResponse
+		ts       *organizationv1.GetWorkloadTimeSeriesResponse
 	)
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		var err error
-		workload, err = s.GetProjectWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadMetricsRequest_builder{
+		workload, err = s.GetProjectWorkloadMetrics(gctx, organizationv1.GetProjectWorkloadMetricsRequest_builder{
 			ProjectId: req.GetProjectId(),
-		}.Build()))
+		}.Build())
 		return err
 	})
 	g.Go(func() error {
 		var err error
-		ts, err = s.GetProjectWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadTimeSeriesRequest_builder{
+		ts, err = s.GetProjectWorkloadTimeSeries(gctx, organizationv1.GetProjectWorkloadTimeSeriesRequest_builder{
 			ProjectId:   req.GetProjectId(),
 			Start:       timestamppb.New(start),
 			End:         timestamppb.New(end),
 			StepSeconds: int32(step.Seconds()),
-		}.Build()))
+		}.Build())
 		return err
 	})
 	if err := g.Wait(); err != nil {
@@ -1053,10 +1200,11 @@ func (s *Server) sendProjectSnapshot(
 	}
 
 	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
-		Totals:      workload.Msg.GetTotals(),
-		Namespaces:  workload.Msg.GetNamespaces(),
-		TimeSeries:  ts.Msg,
-		RefreshedAt: timestamppb.Now(),
+		Totals:             workload.GetTotals(),
+		Namespaces:         workload.GetNamespaces(),
+		TimeSeries:         ts,
+		RefreshedAt:        timestamppb.Now(),
+		MetricsUnavailable: workload.GetMetricsUnavailable(),
 	}.Build())
 }
 

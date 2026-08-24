@@ -18,7 +18,7 @@ func Test_APIKey_List_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.ListAPIKeys(context.Background(), connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build()))
+	_, err := client.ListAPIKeys(context.Background(), organizationv1.ListAPIKeysRequest_builder{}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -43,13 +43,14 @@ func Test_APIKey_List_Empty(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	req := organizationv1.ListAPIKeysRequest_builder{}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.ListAPIKeys(context.Background(), req)
+	res, err := client.ListAPIKeys(ctx, req)
 	require.NoError(t, err)
-	assert.Empty(t, res.Msg.GetApiKeys())
+	assert.Empty(t, res.GetApiKeys())
 }
 
 func Test_APIKey_List(t *testing.T) {
@@ -70,26 +71,28 @@ func Test_APIKey_List(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	createReq := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "my-key",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateAPIKey(context.Background(), createReq)
+	createRes, err := client.CreateAPIKey(createCtx, createReq)
 	require.NoError(t, err)
 
-	listReq := connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := organizationv1.ListAPIKeysRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListAPIKeys(context.Background(), listReq)
+	listRes, err := client.ListAPIKeys(listCtx, listReq)
 	require.NoError(t, err)
 
-	require.Len(t, listRes.Msg.GetApiKeys(), 1)
-	key := listRes.Msg.GetApiKeys()[0]
-	assert.Equal(t, createRes.Msg.GetId(), key.GetId())
+	require.Len(t, listRes.GetApiKeys(), 1)
+	key := listRes.GetApiKeys()[0]
+	assert.Equal(t, createRes.GetId(), key.GetId())
 	assert.Equal(t, "my-key", key.GetName())
-	assert.Equal(t, createRes.Msg.GetTokenPrefix(), key.GetTokenPrefix())
+	assert.Equal(t, createRes.GetTokenPrefix(), key.GetTokenPrefix())
 	assert.Equal(t, 8, len(key.GetTokenPrefix()))
 }

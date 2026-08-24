@@ -19,9 +19,9 @@ func Test_Cluster_Get_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.GetCluster(context.Background(), connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	_, err := client.GetCluster(context.Background(), organizationv1.GetClusterRequest_builder{
 		ClusterId: uuid.New().String(),
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,29 +47,31 @@ func Test_Cluster_Get(t *testing.T) {
 
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.GetCluster(context.Background(), getReq)
+	res, err := client.GetCluster(getCtx, getReq)
 	require.NoError(t, err)
 
-	cluster := res.Msg.GetCluster()
+	cluster := res.GetCluster()
 	assert.Equal(t, clusterID, cluster.GetId())
 	assert.Equal(t, "test-cluster", cluster.GetName())
 	assert.Equal(t, "eu-west-1", cluster.GetRegion())
@@ -97,26 +99,28 @@ func Test_Cluster_Get_OtherOrg(t *testing.T) {
 
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "org-a-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgAID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgAID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgBID.String())
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgBID.String())
 
-	_, err = client.GetCluster(context.Background(), getReq)
+	_, err = client.GetCluster(getCtx, getReq)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

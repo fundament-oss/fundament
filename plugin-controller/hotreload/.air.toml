@@ -1,0 +1,16 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/plugin-controller ./plugin-controller/cmd"
+entrypoint = "tmp/plugin-controller"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["plugin-controller", "plugin-sdk", "common", "organization-api"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true

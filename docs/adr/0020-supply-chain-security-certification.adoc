@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 20
 :state: proposed
 
 = ADR-0020: Supply chain security certification

@@ -16,9 +16,9 @@ import (
 
 func (s *Server) GetOrganizationLimits(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetOrganizationLimitsRequest],
-) (*connect.Response[organizationv1.GetOrganizationLimitsResponse], error) {
-	organizationID := uuid.MustParse(req.Msg.GetId())
+	req *organizationv1.GetOrganizationLimitsRequest,
+) (*organizationv1.GetOrganizationLimitsResponse, error) {
+	organizationID := uuid.MustParse(req.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Organization(organizationID)); err != nil {
 		return nil, err
@@ -27,18 +27,18 @@ func (s *Server) GetOrganizationLimits(
 	row, err := s.queries.OrganizationLimitsGet(ctx, db.OrganizationLimitsGetParams{OrganizationID: organizationID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return connect.NewResponse(organizationv1.GetOrganizationLimitsResponse_builder{
+			return organizationv1.GetOrganizationLimitsResponse_builder{
 				Limits:   organizationv1.OrganizationLimits_builder{}.Build(),
 				Defaults: organizationLimitDefaults(),
-			}.Build()), nil
+			}.Build(), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization limits: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetOrganizationLimitsResponse_builder{
+	return organizationv1.GetOrganizationLimitsResponse_builder{
 		Limits:   organizationLimitsFromRow(&row),
 		Defaults: organizationLimitDefaults(),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func organizationLimitsFromRow(row *db.OrganizationLimitsGetRow) *organizationv1.OrganizationLimits {

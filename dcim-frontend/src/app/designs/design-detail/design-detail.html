@@ -17,11 +17,12 @@
     <h1 class="text-base font-semibold text-slate-900 dark:text-white m-0 truncate">
       {{ d.name }}
     </h1>
-    <span
-      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0"
-      [class]="statusBadgeClass(d.status)"
-      >{{ d.status }}</span
-    >
+    <nldd-tag
+      class="shrink-0"
+      size="sm"
+      [attr.color]="statusTagColor(d.status)"
+      [attr.text]="d.status"
+    ></nldd-tag>
     <span class="text-xs text-slate-400 dark:text-gray-500 shrink-0">v{{ d.version }}</span>
 
     <div class="flex-1"></div>
@@ -227,12 +228,12 @@
                       }
                     </span>
                   </div>
-                  <span
-                    class="inline-flex items-center rounded-full px-1.5 py-0 text-xs font-medium mt-0.5"
-                    [class]="connTypeBadgeClass(conn.connectionType)"
-                  >
-                    {{ connTypeLabel(conn.connectionType) }}
-                  </span>
+                  <nldd-tag
+                    class="mt-0.5"
+                    size="sm"
+                    [attr.color]="connTypeTagColor(conn.connectionType)"
+                    [attr.text]="connTypeLabel(conn.connectionType)"
+                  ></nldd-tag>
                 </div>
                 <div
                   class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
@@ -276,11 +277,11 @@
      DEVICE EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Device details" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editDevice()?.id ? 'Edit Device' : 'Add Device'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeDeviceForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
@@ -294,6 +295,7 @@
       <nldd-form-field label="Device name">
         <nldd-text-field
           #fDeviceName
+          autofocus
           [attr.value]="editDevice()?.name ?? ''"
           placeholder="E.g. Spine-1"
           (keydown.enter)="saveDevice()"
@@ -329,7 +331,6 @@
         <span></span>
       }
       <div class="flex gap-2">
-        <nldd-button variant="secondary" text="Cancel" (click)="closeDeviceForm()"></nldd-button>
         <nldd-button variant="primary" text="Save" (click)="saveDevice()"></nldd-button>
       </div>
     </div>
@@ -341,21 +342,21 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #deviceModal
-  [attr.text]="'Delete device \'' + (deleteDevice()?.name ?? '') + '\'?'"
-  supporting-text="All connections to/from this device will also be removed."
+  [attr.text]="'Delete device ' + (deleteDevice()?.name ?? '') + ' from this design?'"
+  supporting-text="Every connection to and from this device is removed as well. This cannot be undone."
   accessible-label="Confirm device deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteDevice()"
+    variant="secondary"
+    text="Keep device"
+    (click)="cancelDeleteDevice()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteDevice()"
+    variant="destructive"
+    text="Delete device"
+    (click)="confirmDeleteDevice()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -363,11 +364,11 @@
      CONNECTION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #connSheet accessible-label="Connection details" placement="right" width="420px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editConnection()?.id ? 'Edit Connection' : 'Add Connection'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeConnForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
@@ -380,13 +381,21 @@
       }
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Source device">
+          <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
+               can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
+          <!-- eslint-disable @angular-eslint/template/no-autofocus -->
           <nldd-dropdown>
-            <select [ngModel]="connSrcDeviceId()" (ngModelChange)="connSrcDeviceId.set($event)">
+            <select
+              autofocus
+              [ngModel]="connSrcDeviceId()"
+              (ngModelChange)="connSrcDeviceId.set($event)"
+            >
               @for (dev of devices(); track dev.id) {
                 <option [value]="dev.id">{{ dev.name }}</option>
               }
             </select>
           </nldd-dropdown>
+          <!-- eslint-enable @angular-eslint/template/no-autofocus -->
         </nldd-form-field>
         <nldd-form-field label="Source port">
           <nldd-text-field
@@ -461,7 +470,6 @@
         <span></span>
       }
       <div class="flex gap-2">
-        <nldd-button variant="secondary" text="Cancel" (click)="closeConnForm()"></nldd-button>
         <nldd-button variant="primary" text="Save" (click)="saveConnection()"></nldd-button>
       </div>
     </div>
@@ -480,19 +488,19 @@
     deviceName(deleteConnection()?.targetDeviceId ?? '') +
     '?'
   "
-  supporting-text="This action cannot be undone."
+  supporting-text="The two devices stay in the design, but this link between them is removed. This cannot be undone."
   accessible-label="Confirm connection deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteConnection()"
+    variant="secondary"
+    text="Keep connection"
+    (click)="cancelDeleteConnection()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteConnection()"
+    variant="destructive"
+    text="Delete connection"
+    (click)="confirmDeleteConnection()"
   ></nldd-button>
 </nldd-modal-dialog>

@@ -39,9 +39,12 @@
               <h2 class="min-w-0 truncate text-base font-semibold">
                 {{ cluster.name }}
               </h2>
-              <span class="badge-md badge shrink-0" [class]="getStatusColor(cluster.status)">
-                {{ getStatusLabel(cluster.status) }}
-              </span>
+              <nldd-tag
+                class="shrink-0"
+                size="sm"
+                [attr.color]="getStatusTagColor(cluster.status)"
+                [attr.text]="getStatusLabel(cluster.status)"
+              ></nldd-tag>
             </div>
 
             <!-- Card Content -->

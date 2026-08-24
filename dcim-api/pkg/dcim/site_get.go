@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetSite(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetSiteRequest],
-) (*connect.Response[dcimv1.GetSiteResponse], error) {
-	siteID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetSiteRequest,
+) (*dcimv1.GetSiteResponse, error) {
+	siteID := uuid.MustParse(req.GetId())
 
 	site, err := s.queries.SiteGetByID(ctx, db.SiteGetByIDParams{ID: siteID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetSite(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get site: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetSiteResponse_builder{
+	return dcimv1.GetSiteResponse_builder{
 		Site: siteFromRow(&site),
-	}.Build()), nil
+	}.Build(), nil
 }

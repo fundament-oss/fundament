@@ -2,9 +2,10 @@
   <app-plugin-iframe
     [src]="customUIUrl()!"
     [pluginName]="pluginName()"
+    [pluginVersion]="installationVersion()"
+    [installationId]="installationId()"
     [crdKind]="crdDef()!.kind"
     view="detail"
-    [allowedResources]="allowedResources()"
     [clusterId]="clusterContext.selectedClusterId()!"
     [resourceName]="resourceId()"
     [resourceNamespace]="resourceNamespace()"
@@ -14,17 +15,31 @@
     <!-- Header -->
     <div class="card">
       <div class="card-header">
-        <a
-          [routerLink]="listLink"
-          class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
-          ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
-        >
-        <h1 class="text-3xl font-semibold">{{ resource()!.metadata.name }}</h1>
-        @if (resource()!.metadata.namespace) {
-          <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
-            Namespace: {{ resource()!.metadata.namespace }}
-          </p>
-        }
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <a
+              [routerLink]="listLink"
+              class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
+              ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
+            >
+            <h1 class="text-3xl font-semibold">{{ resource()!.metadata.name }}</h1>
+            @if (resource()!.metadata.namespace) {
+              <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
+                Namespace: {{ resource()!.metadata.namespace }}
+              </p>
+            }
+          </div>
+          @if (canDelete()) {
+            <nldd-button
+              type="button"
+              text="Delete"
+              start-icon="trash"
+              variant="destructive"
+              size="sm"
+              (click)="openDeleteModal()"
+            ></nldd-button>
+          }
+        </div>
       </div>
 
       <!-- Metadata -->
@@ -32,11 +47,11 @@
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Kind</dt>
-            <dd class="mt-1">{{ resource()!.kind }}</dd>
+            <dd class="mt-1">{{ kind() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">API Version</dt>
-            <dd class="mt-1 font-mono text-sm">{{ resource()!.apiVersion }}</dd>
+            <dd class="mt-1 font-mono text-sm">{{ apiVersion() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
@@ -88,44 +103,43 @@
                   @if (isConditionsField(entry[0], entry[1])) {
                     <!-- Conditions table -->
                     @if (asArray(entry[1]).length > 0) {
-                      <div class="table-container">
-                        <table class="table">
-                          <thead>
-                            <tr>
-                              <th>Type</th>
-                              <th>Status</th>
-                              <th>Message</th>
-                              <th>Last transition</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            @for (cond of asArray(entry[1]); track $index) {
-                              <tr>
-                                <td class="font-medium">{{ asRecord(cond)['type'] }}</td>
-                                <td>
-                                  @if (asRecord(cond)['status'] === 'True') {
-                                    <span class="badge badge-sm badge-emerald">True</span>
-                                  } @else if (asRecord(cond)['status'] === 'False') {
-                                    <span class="badge badge-sm badge-yellow">False</span>
-                                  } @else {
-                                    <span class="badge badge-sm badge-gray">{{
-                                      asRecord(cond)['status']
-                                    }}</span>
-                                  }
-                                </td>
-                                <td
-                                  class="max-w-xs whitespace-normal text-gray-600 dark:text-gray-400"
-                                >
-                                  {{ asRecord(cond)['message'] || '\u2014' }}
-                                </td>
-                                <td>
-                                  {{ formatDateValue(asRecord(cond)['lastTransitionTime']) }}
-                                </td>
-                              </tr>
-                            }
-                          </tbody>
-                        </table>
-                      </div>
+                      <nldd-table
+                        accessible-label="Conditions"
+                        columns="minmax(140px, 1fr) 90px minmax(200px, 2fr) 160px"
+                      >
+                        <nldd-table-row slot="header">
+                          <nldd-text-cell text="**Type**"></nldd-text-cell>
+                          <nldd-text-cell text="**Status**"></nldd-text-cell>
+                          <nldd-text-cell text="**Message**"></nldd-text-cell>
+                          <nldd-text-cell text="**Last transition**"></nldd-text-cell>
+                        </nldd-table-row>
+
+                        @for (cond of asArray(entry[1]); track $index) {
+                          <nldd-table-row>
+                            <nldd-text-cell [attr.text]="asRecord(cond)['type']"></nldd-text-cell>
+                            <nldd-cell>
+                              @if (asRecord(cond)['status'] === 'True') {
+                                <nldd-tag color="success" size="sm" text="True"></nldd-tag>
+                              } @else if (asRecord(cond)['status'] === 'False') {
+                                <nldd-tag color="warning" size="sm" text="False"></nldd-tag>
+                              } @else {
+                                <nldd-tag
+                                  color="neutral"
+                                  size="sm"
+                                  [attr.text]="asRecord(cond)['status']"
+                                ></nldd-tag>
+                              }
+                            </nldd-cell>
+                            <nldd-text-cell
+                              color="secondary"
+                              [attr.text]="asRecord(cond)['message'] || '\u2014'"
+                            ></nldd-text-cell>
+                            <nldd-text-cell
+                              [attr.text]="formatDateValue(asRecord(cond)['lastTransitionTime'])"
+                            ></nldd-text-cell>
+                          </nldd-table-row>
+                        }
+                      </nldd-table>
                     } @else {
                       <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
                     }
@@ -139,6 +153,16 @@
         </div>
       </div>
     }
+
+    <app-resource-delete-modal
+      [show]="showDeleteModal()"
+      [resourceKind]="kind()"
+      [resourceName]="resource()!.metadata.name"
+      [deleting]="deleting()"
+      [errorMessage]="deleteError()"
+      (confirm)="confirmDelete()"
+      (dismiss)="closeDeleteModal()"
+    />
   </div>
 } @else {
   <div class="card">

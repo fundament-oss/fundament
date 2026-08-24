@@ -306,122 +306,124 @@
     }
 
     <!-- ── LIST VIEW ── -->
-    <div [class.hidden]="currentView() === 'kanban'">
-      <table class="w-full border-collapse">
-        <thead>
-          <tr class="border-b border-slate-100 dark:border-gray-800">
-            <th class="w-10 px-3 py-2.5 text-left">
+    <div class="pt-2" [class.hidden]="currentView() === 'kanban'">
+      <div role="table" aria-label="Tasks">
+        <!-- Column headers -->
+        <div
+          role="row"
+          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
+        >
+          <div role="columnheader" class="w-9 shrink-0 flex items-center justify-center">
+            <nldd-checkbox
+              accessible-label="Select all tasks"
+              [attr.checked]="allFilteredSelected() ? '' : null"
+              (change)="toggleSelectAll($any($event).detail.checked)"
+            ></nldd-checkbox>
+          </div>
+          <div
+            role="presentation"
+            class="flex-1 min-w-0 grid grid-cols-[1fr_130px_100px_52px] lg:grid-cols-[80px_1fr_130px_100px_120px_52px_110px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+          >
+            <span role="columnheader" class="hidden lg:block">ID</span>
+            <span role="columnheader">Task</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Priority</span>
+            <span role="columnheader" class="hidden lg:block">Category</span>
+            <span role="columnheader" class="text-center">Who</span>
+            <span role="columnheader" class="hidden lg:block">Due</span>
+          </div>
+        </div>
+
+        <!-- Task rows -->
+        @for (task of filteredTasks(); track task.id) {
+          <div
+            role="row"
+            tabindex="0"
+            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 transition-colors group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-500"
+            [class]="
+              isSelected(task.id)
+                ? 'bg-accent-50 dark:bg-accent-950'
+                : 'hover:bg-slate-50 dark:hover:bg-gray-900'
+            "
+            (click)="openDetail(task.id)"
+            (keydown.enter)="openDetail(task.id)"
+          >
+            <!-- Selection -->
+            <div
+              role="cell"
+              class="w-9 shrink-0 flex items-center justify-center"
+              (click)="$event.stopPropagation()"
+              (keydown)="$event.stopPropagation()"
+            >
               <nldd-checkbox
-                accessible-label="Select all tasks"
-                [attr.checked]="allFilteredSelected() ? '' : null"
-                (change)="toggleSelectAll($any($event).detail.checked)"
+                [attr.accessible-label]="'Select task ' + taskDisplayId(task)"
+                [attr.checked]="isSelected(task.id) ? '' : null"
+                (change)="toggleSelection(task.id, $any($event).detail.checked)"
               ></nldd-checkbox>
-            </th>
-            <th
-              class="w-20 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+            </div>
+
+            <div
+              role="presentation"
+              class="flex-1 min-w-0 grid grid-cols-[1fr_130px_100px_52px] lg:grid-cols-[80px_1fr_130px_100px_120px_52px_110px] gap-3 lg:gap-4 items-center"
             >
-              ID
-            </th>
-            <th
-              class="py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Task
-            </th>
-            <th
-              class="w-32 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Status
-            </th>
-            <th
-              class="w-24 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Priority
-            </th>
-            <th
-              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Category
-            </th>
-            <th
-              class="w-12 py-2.5 px-2 text-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Who
-            </th>
-            <th
-              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-            >
-              Due
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (task of filteredTasks(); track task.id) {
-            <tr
-              class="border-b border-slate-100 dark:border-gray-800 transition-colors hover:bg-slate-50 dark:hover:bg-gray-900 cursor-pointer"
-              [class.bg-indigo-50]="isSelected(task.id)"
-              (click)="openDetail(task.id)"
-            >
-              <td class="w-10 px-3 py-3">
-                <nldd-checkbox
-                  [attr.accessible-label]="'Select task ' + taskDisplayId(task)"
-                  [attr.checked]="isSelected(task.id) ? '' : null"
-                  (click)="$event.stopPropagation()"
-                  (change)="toggleSelection(task.id, $any($event).detail.checked)"
-                ></nldd-checkbox>
-              </td>
-              <td class="w-20 px-2 py-3">
-                <span class="font-mono text-xs text-slate-400 dark:text-gray-500">{{
-                  taskDisplayId(task)
-                }}</span>
-              </td>
-              <td class="min-w-0 px-2 py-3">
-                <p
-                  class="text-sm font-medium text-slate-900 dark:text-white leading-snug truncate max-w-xs"
-                >
+              <!-- ID -->
+              <div
+                role="cell"
+                class="hidden lg:block font-mono text-xs text-slate-400 dark:text-gray-500"
+              >
+                {{ taskDisplayId(task) }}
+              </div>
+
+              <!-- Title + location -->
+              <div role="cell" class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-900 dark:text-white leading-snug">
                   {{ task.title }}
                 </p>
                 <p
-                  class="mt-0.5 text-xs text-slate-400 dark:text-gray-500 truncate flex items-center gap-1"
+                  class="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400 dark:text-gray-500"
                 >
                   <nldd-icon
                     name="apartment-building"
-                    style="width: 11px; height: 11px; display: inline-block; vertical-align: middle"
+                    class="w-3 h-3 shrink-0"
                     aria-hidden="true"
-                  ></nldd-icon
-                  >{{ task.location }}
+                  ></nldd-icon>
+                  <span class="truncate">{{ task.location }}</span>
                 </p>
-              </td>
-              <td class="w-32 px-2 py-3">
-                <span [class]="statusBadgeClass(task.status)">
-                  <span [class]="statusDotClass(task.status)" aria-hidden="true"></span
-                  >{{ task.status }}
-                </span>
-              </td>
-              <td class="w-24 px-2 py-3">
+              </div>
+
+              <!-- Status -->
+              <div role="cell">
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="statusTagColor(task.status)"
+                  [attr.text]="task.status"
+                ></nldd-tag>
+              </div>
+
+              <!-- Priority -->
+              <div role="cell">
                 <span [class]="priorityTextClass(task.priority)">
                   <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
                   >{{ task.priority }}
                 </span>
-              </td>
-              <td class="w-28 px-2 py-3">
+              </div>
+
+              <!-- Category -->
+              <div role="cell" class="hidden lg:block">
                 <span
                   class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-gray-400"
                 >
                   <nldd-icon
                     [attr.name]="categoryIcon(task.category)"
-                    style="
-                      width: 14px;
-                      height: 14px;
-                      color: #94a3b8;
-                      display: inline-block;
-                      vertical-align: middle;
-                    "
+                    class="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
-                  ></nldd-icon
-                  >{{ task.category }}
+                  ></nldd-icon>
+                  {{ task.category }}
                 </span>
-              </td>
-              <td class="w-12 px-2 py-3 text-center">
+              </div>
+
+              <!-- Assignee -->
+              <div role="cell" class="flex justify-center">
                 @if (getTech(task.assignee); as tech) {
                   <span [class]="techInitialsClass(tech)" [title]="tech.name" aria-hidden="true">{{
                     tech.initials
@@ -445,18 +447,35 @@
                     <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
                   </span>
                 }
-              </td>
-              <td class="w-28 px-2 py-3 text-xs text-slate-500 dark:text-gray-400">
+              </div>
+
+              <!-- Due -->
+              <div role="cell" class="hidden lg:block text-xs text-slate-500 dark:text-gray-400">
                 @if (task.due) {
                   {{ formatDate(task.due) }}
                 } @else {
                   <span class="text-slate-300 dark:text-gray-600">—</span>
                 }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Empty state -->
+        @if (filteredTasks().length === 0) {
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
+            >
+              <nldd-icon name="list" class="w-6 h-6" aria-hidden="true"></nldd-icon>
+            </div>
+            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No tasks found</p>
+            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
+              Try adjusting your search or filter criteria.
+            </p>
+          </div>
+        }
+      </div>
 
       <div class="py-3 text-xs text-slate-400 dark:text-gray-500">
         {{ filteredTasks().length }} task{{ filteredTasks().length !== 1 ? 's' : '' }}
@@ -478,10 +497,12 @@
                 aria-hidden="true"
               ></span>
               <h3 class="text-sm font-semibold text-slate-700 dark:text-gray-300">{{ col }}</h3>
-              <span
-                class="ml-auto inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-gray-400"
-                >{{ tasksForColumn(col).length }}</span
-              >
+              <nldd-tag
+                class="ml-auto"
+                color="neutral"
+                size="sm"
+                [attr.text]="tasksForColumn(col).length"
+              ></nldd-tag>
             </div>
             <!-- Whole lane (including empty space below the last card) is a drop
                  target. Sorting is disabled: columns have no persisted order, so
@@ -514,10 +535,11 @@
                     {{ task.title }}
                   </h4>
                   <div class="mt-2 flex items-center gap-1.5">
-                    <span [class]="priorityBadgeClass(task.priority)">
-                      <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
-                      >{{ task.priority }}
-                    </span>
+                    <nldd-tag
+                      size="sm"
+                      [attr.color]="priorityTagColor(task.priority)"
+                      [attr.text]="task.priority"
+                    ></nldd-tag>
                     <span
                       class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500"
                     >
@@ -601,7 +623,7 @@
      TASK DETAIL SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right" width="520px">
-  <nldd-page sticky-header="">
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="detailTask()?.title ?? ''"
@@ -796,21 +818,21 @@
   #deleteDialogEl
   variant="alert"
   icon="trash"
-  text="Delete this task?"
-  supporting-text="This cannot be undone."
+  [attr.text]="'Delete task ' + (detailTask()?.title ?? '') + '?'"
+  supporting-text="The task and its notes are removed for everyone. This cannot be undone."
   accessible-label="Delete task confirmation"
 >
   <nldd-button
     slot="actions"
     variant="secondary"
-    text="Cancel"
+    text="Keep task"
     size="sm"
     (click)="closeDeleteDialog()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
-    text="Delete"
+    text="Delete task"
     size="sm"
     (click)="confirmDeleteTask()"
   ></nldd-button>
@@ -823,21 +845,23 @@
   #bulkDeleteDialogEl
   variant="alert"
   icon="trash"
-  [attr.text]="'Delete ' + selectedTasks().size + ' task(s)?'"
-  supporting-text="This cannot be undone."
+  [attr.text]="
+    'Delete ' + selectedTasks().size + (selectedTasks().size === 1 ? ' task?' : ' tasks?')
+  "
+  supporting-text="The selected tasks and their notes are removed for everyone. This cannot be undone."
   accessible-label="Delete selected tasks confirmation"
 >
   <nldd-button
     slot="actions"
     variant="secondary"
-    text="Cancel"
+    [text]="selectedTasks().size === 1 ? 'Keep task' : 'Keep tasks'"
     size="sm"
     (click)="closeBulkDeleteDialog()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
-    text="Delete"
+    [text]="selectedTasks().size === 1 ? 'Delete task' : 'Delete tasks'"
     size="sm"
     (click)="confirmBulkDelete()"
   ></nldd-button>
@@ -847,11 +871,11 @@
      ADD / EDIT TASK SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right" width="520px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editModalTitle()"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeEditModal()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
@@ -1022,15 +1046,12 @@
                     class="grow"
                     [attr.checked]="editFormAssignee() === tech.id ? '' : null"
                   ></nldd-radio-button-field>
-                  <span
-                    class="ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                    [class]="
-                      tech.available
-                        ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400'
-                    "
-                    >{{ tech.available ? 'Available' : 'Busy' }}</span
-                  >
+                  <nldd-tag
+                    class="ml-auto"
+                    size="sm"
+                    [attr.color]="tech.available ? 'success' : 'neutral'"
+                    [attr.text]="tech.available ? 'Available' : 'Busy'"
+                  ></nldd-tag>
                 </div>
               }
             </nldd-radio-button-group>
@@ -1040,15 +1061,15 @@
     </nldd-simple-section>
     <div
       slot="footer"
-      class="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-gray-800 px-6 py-4"
+      class="flex items-center border-t border-slate-100 dark:border-gray-800 px-6 py-4"
     >
       <nldd-button
-        variant="secondary"
-        text="Cancel"
+        variant="primary"
+        text="Save task"
         size="sm"
-        (click)="closeEditModal()"
+        width="full"
+        (click)="saveTask()"
       ></nldd-button>
-      <nldd-button variant="primary" text="Save task" size="sm" (click)="saveTask()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>

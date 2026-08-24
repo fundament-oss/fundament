@@ -81,6 +81,12 @@ jobs:
           - image-name: console-frontend
             dockerfile: console-frontend/Dockerfile
             context: "."
+          # Same image, built from the demo entrypoint: the guided walkthrough on
+          # in-memory data, served on the console-demo subdomain.
+          - image-name: console-demo-frontend
+            dockerfile: console-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:demo
           - image-name: cluster-worker
             dockerfile: cluster-worker/Dockerfile
             context: "."
@@ -120,6 +126,7 @@ jobs:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
+      build-args: ${{ matrix.build-args }}
 
   deploy:
     needs: [gate, build]
@@ -128,6 +135,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.image_tag }}
     env:
       PR_BRANCH: ${{ github.event.pull_request.head.ref }}
       JWT_SECRET: ${{ secrets.PR_JWT_SECRET }}
@@ -135,9 +144,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Compute image tag
+        id: image_tag
         run: |
           REF_NAME=$(echo '${{ github.ref_name }}' | tr '/' '-')
-          echo "IMAGE_TAG=${{ github.sha }}-${REF_NAME}-${{ github.run_number }}" >> $GITHUB_ENV
+          IMAGE_TAG="${{ github.sha }}-${REF_NAME}-${{ github.run_number }}"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          # Exported so the test jobs can wait for this release specifically.
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Clone Flux repo
         run: |
@@ -209,6 +222,7 @@ jobs:
             | Service | URL |
             |---------|-----|
             | Console | https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Console demo (walkthrough) | https://console-demo.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Kube API Proxy | https://k8s-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
@@ -291,9 +305,15 @@ jobs:
             kubectl -n $NS get cluster.postgresql.cnpg.io/db
             kubectl -n $NS describe cluster.postgresql.cnpg.io/db
 
-            # Migrations run as a Job named db-migrations with a 5m TTL after success.
-            # If the Job is gone, migrations almost certainly succeeded.
-            kubectl -n $NS logs job/db-migrations -c migrations
+            # Migrations run as a Job named db-migrations-<helm-revision>, with a
+            # 5m TTL after success. If the Job is gone, migrations almost
+            # certainly succeeded.
+            kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
+            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
+
+            # OpenFGA blocks on that Job before migrating its schema. If openfga
+            # is stuck in Init, this is why:
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c wait-for-reset
             ```
 
             **6. Routes & TLS**
@@ -308,8 +328,26 @@ jobs:
             If the namespace is missing, the PR overlay never reached the cluster. Check the [PR overlay in the Flux repo](https://${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}/-/tree/master/apps/fundament/overlays/pr/pr-${{ env.PR_NUMBER }}) — if it's not there, the CI push to the Flux repo failed; if it is, the cluster-level Flux reconciliation is stuck.
             </details>
 
-  terraform-acc-tests:
+  # Owns the wait for Flux to roll out this commit, so the test jobs below start
+  # against a settled environment instead of each polling for it themselves.
+  # A failure here means the deployment never landed — the tests are skipped
+  # rather than reporting it as a test failure.
+  environment-ready:
     needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Wait for this commit to be deployed
+        run: |
+          .github/scripts/wait-for-deployment.sh \
+            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+            "${{ needs.deploy.outputs.image_tag }}"
+
+  terraform-acc-tests:
+    needs: environment-ready
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -325,34 +363,6 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Wait for APIs
-        run: |
-          wait_for_api() {
-            local NAME=$1
-            local URL=$2
-            echo "Waiting for ${NAME} at ${URL} to be ready..."
-            for i in $(seq 1 30); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-                echo "${NAME} is ready (HTTP ${STATUS})"
-                return 0
-              fi
-              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-              else
-                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
-                return 1
-              fi
-              sleep 30
-            done
-            echo "Timed out waiting for ${NAME} to be ready"
-            return 1
-          }
-
-          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          wait_for_api "organization-api" "https://organization.${BASE}" && \
-          wait_for_api "authn-api" "https://authn.${BASE}"
-
       - name: Run Terraform acceptance tests
         run: |
           cd terraform-provider
@@ -363,7 +373,7 @@ jobs:
           go test -v ./...
 
   e2e-tests:
-    needs: deploy
+    needs: environment-ready
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -378,36 +388,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: cd e2e && bunx playwright install chromium --with-deps
-
-      - name: Wait for APIs
-        run: |
-          wait_for_api() {
-            local NAME=$1
-            local URL=$2
-            echo "Waiting for ${NAME} at ${URL} to be ready..."
-            for i in $(seq 1 30); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-                echo "${NAME} is ready (HTTP ${STATUS})"
-                return 0
-              fi
-              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-              else
-                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
-                return 1
-              fi
-              sleep 30
-            done
-            echo "Timed out waiting for ${NAME} to be ready"
-            return 1
-          }
-
-          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          wait_for_api "console" "https://console.${BASE}" && \
-          wait_for_api "authn-api" "https://authn.${BASE}" && \
-          wait_for_api "organization-api" "https://organization.${BASE}" && \
-          wait_for_api "plugin-proxy" "https://plugin-proxy.${BASE}"
 
       - name: Run E2E tests
         run: |

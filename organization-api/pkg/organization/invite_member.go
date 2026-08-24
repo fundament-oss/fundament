@@ -18,8 +18,8 @@ import (
 
 func (s *Server) InviteMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.InviteMemberRequest],
-) (*connect.Response[organizationv1.InviteMemberResponse], error) {
+	req *organizationv1.InviteMemberRequest,
+) (*organizationv1.InviteMemberResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -29,8 +29,8 @@ func (s *Server) InviteMember(
 		return nil, err
 	}
 
-	email := req.Msg.GetEmail()
-	permission := req.Msg.GetPermission()
+	email := req.GetEmail()
+	permission := req.GetPermission()
 
 	// Find existing user by email, or create a new one
 	var userID uuid.UUID
@@ -65,7 +65,7 @@ func (s *Server) InviteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create membership: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.InviteMemberResponse_builder{
+	return organizationv1.InviteMemberResponse_builder{
 		InvitationId: membershipRow.ID.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

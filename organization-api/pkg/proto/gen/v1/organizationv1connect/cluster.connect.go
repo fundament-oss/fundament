@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClusterServiceListRegionsProcedure is the fully-qualified name of the ClusterService's
+	// ListRegions RPC.
+	ClusterServiceListRegionsProcedure = "/organization.v1.ClusterService/ListRegions"
 	// ClusterServiceListClustersProcedure is the fully-qualified name of the ClusterService's
 	// ListClusters RPC.
 	ClusterServiceListClustersProcedure = "/organization.v1.ClusterService/ListClusters"
@@ -57,9 +60,6 @@ const (
 	// ClusterServiceGetKubeconfigProcedure is the fully-qualified name of the ClusterService's
 	// GetKubeconfig RPC.
 	ClusterServiceGetKubeconfigProcedure = "/organization.v1.ClusterService/GetKubeconfig"
-	// ClusterServiceGetClusterMetricsCredentialsProcedure is the fully-qualified name of the
-	// ClusterService's GetClusterMetricsCredentials RPC.
-	ClusterServiceGetClusterMetricsCredentialsProcedure = "/organization.v1.ClusterService/GetClusterMetricsCredentials"
 	// ClusterServiceListNodePoolsProcedure is the fully-qualified name of the ClusterService's
 	// ListNodePools RPC.
 	ClusterServiceListNodePoolsProcedure = "/organization.v1.ClusterService/ListNodePools"
@@ -79,34 +79,35 @@ const (
 
 // ClusterServiceClient is a client for the organization.v1.ClusterService service.
 type ClusterServiceClient interface {
+	// List the region catalog: every region with the kubernetes versions and
+	// machine types it offers (drives the create-cluster cascade).
+	ListRegions(context.Context, *v1.ListRegionsRequest) (*v1.ListRegionsResponse, error)
 	// List all clusters for the current organization
-	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
+	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)
 	// Get detailed information about a specific cluster
-	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	GetCluster(context.Context, *v1.GetClusterRequest) (*v1.GetClusterResponse, error)
 	// Get a cluster by name
-	GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	GetClusterByName(context.Context, *v1.GetClusterByNameRequest) (*v1.GetClusterResponse, error)
 	// Create a new cluster
-	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
+	CreateCluster(context.Context, *v1.CreateClusterRequest) (*v1.CreateClusterResponse, error)
 	// Update cluster configuration
-	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error)
+	UpdateCluster(context.Context, *v1.UpdateClusterRequest) (*v1.UpdateClusterResponse, error)
 	// Delete a cluster
-	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error)
+	DeleteCluster(context.Context, *v1.DeleteClusterRequest) (*v1.DeleteClusterResponse, error)
 	// Get cluster activity log
-	GetClusterActivity(context.Context, *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error)
+	GetClusterActivity(context.Context, *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error)
 	// Download kubeconfig for a cluster
-	GetKubeconfig(context.Context, *connect.Request[v1.GetKubeconfigRequest]) (*connect.Response[v1.GetKubeconfigResponse], error)
-	// Fetch the basic-auth credentials for a cluster's metrics dashboard.
-	GetClusterMetricsCredentials(context.Context, *connect.Request[v1.GetClusterMetricsCredentialsRequest]) (*connect.Response[v1.GetClusterMetricsCredentialsResponse], error)
+	GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error)
 	// List node pools for a cluster
-	ListNodePools(context.Context, *connect.Request[v1.ListNodePoolsRequest]) (*connect.Response[v1.ListNodePoolsResponse], error)
+	ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error)
 	// Get a node pool by ID
-	GetNodePool(context.Context, *connect.Request[v1.GetNodePoolRequest]) (*connect.Response[v1.GetNodePoolResponse], error)
+	GetNodePool(context.Context, *v1.GetNodePoolRequest) (*v1.GetNodePoolResponse, error)
 	// Create a node pool in a cluster
-	CreateNodePool(context.Context, *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error)
+	CreateNodePool(context.Context, *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error)
 	// Update a node pool
-	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
+	UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error)
 	// Delete a node pool
-	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
+	DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error)
 }
 
 // NewClusterServiceClient constructs a client for the organization.v1.ClusterService service. By
@@ -120,6 +121,12 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	clusterServiceMethods := v1.File_v1_cluster_proto.Services().ByName("ClusterService").Methods()
 	return &clusterServiceClient{
+		listRegions: connect.NewClient[v1.ListRegionsRequest, v1.ListRegionsResponse](
+			httpClient,
+			baseURL+ClusterServiceListRegionsProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("ListRegions")),
+			connect.WithClientOptions(opts...),
+		),
 		listClusters: connect.NewClient[v1.ListClustersRequest, v1.ListClustersResponse](
 			httpClient,
 			baseURL+ClusterServiceListClustersProcedure,
@@ -168,12 +175,6 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("GetKubeconfig")),
 			connect.WithClientOptions(opts...),
 		),
-		getClusterMetricsCredentials: connect.NewClient[v1.GetClusterMetricsCredentialsRequest, v1.GetClusterMetricsCredentialsResponse](
-			httpClient,
-			baseURL+ClusterServiceGetClusterMetricsCredentialsProcedure,
-			connect.WithSchema(clusterServiceMethods.ByName("GetClusterMetricsCredentials")),
-			connect.WithClientOptions(opts...),
-		),
 		listNodePools: connect.NewClient[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse](
 			httpClient,
 			baseURL+ClusterServiceListNodePoolsProcedure,
@@ -209,122 +210,179 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // clusterServiceClient implements ClusterServiceClient.
 type clusterServiceClient struct {
-	listClusters                 *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
-	getCluster                   *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
-	getClusterByName             *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
-	createCluster                *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
-	updateCluster                *connect.Client[v1.UpdateClusterRequest, v1.UpdateClusterResponse]
-	deleteCluster                *connect.Client[v1.DeleteClusterRequest, v1.DeleteClusterResponse]
-	getClusterActivity           *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
-	getKubeconfig                *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
-	getClusterMetricsCredentials *connect.Client[v1.GetClusterMetricsCredentialsRequest, v1.GetClusterMetricsCredentialsResponse]
-	listNodePools                *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
-	getNodePool                  *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
-	createNodePool               *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
-	updateNodePool               *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
-	deleteNodePool               *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
+	listRegions        *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
+	listClusters       *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
+	getCluster         *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
+	getClusterByName   *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
+	createCluster      *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
+	updateCluster      *connect.Client[v1.UpdateClusterRequest, v1.UpdateClusterResponse]
+	deleteCluster      *connect.Client[v1.DeleteClusterRequest, v1.DeleteClusterResponse]
+	getClusterActivity *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
+	getKubeconfig      *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
+	listNodePools      *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
+	getNodePool        *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
+	createNodePool     *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
+	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
+	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
+}
+
+// ListRegions calls organization.v1.ClusterService.ListRegions.
+func (c *clusterServiceClient) ListRegions(ctx context.Context, req *v1.ListRegionsRequest) (*v1.ListRegionsResponse, error) {
+	response, err := c.listRegions.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
-func (c *clusterServiceClient) ListClusters(ctx context.Context, req *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error) {
-	return c.listClusters.CallUnary(ctx, req)
+func (c *clusterServiceClient) ListClusters(ctx context.Context, req *v1.ListClustersRequest) (*v1.ListClustersResponse, error) {
+	response, err := c.listClusters.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetCluster calls organization.v1.ClusterService.GetCluster.
-func (c *clusterServiceClient) GetCluster(ctx context.Context, req *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error) {
-	return c.getCluster.CallUnary(ctx, req)
+func (c *clusterServiceClient) GetCluster(ctx context.Context, req *v1.GetClusterRequest) (*v1.GetClusterResponse, error) {
+	response, err := c.getCluster.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetClusterByName calls organization.v1.ClusterService.GetClusterByName.
-func (c *clusterServiceClient) GetClusterByName(ctx context.Context, req *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error) {
-	return c.getClusterByName.CallUnary(ctx, req)
+func (c *clusterServiceClient) GetClusterByName(ctx context.Context, req *v1.GetClusterByNameRequest) (*v1.GetClusterResponse, error) {
+	response, err := c.getClusterByName.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateCluster calls organization.v1.ClusterService.CreateCluster.
-func (c *clusterServiceClient) CreateCluster(ctx context.Context, req *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error) {
-	return c.createCluster.CallUnary(ctx, req)
+func (c *clusterServiceClient) CreateCluster(ctx context.Context, req *v1.CreateClusterRequest) (*v1.CreateClusterResponse, error) {
+	response, err := c.createCluster.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateCluster calls organization.v1.ClusterService.UpdateCluster.
-func (c *clusterServiceClient) UpdateCluster(ctx context.Context, req *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error) {
-	return c.updateCluster.CallUnary(ctx, req)
+func (c *clusterServiceClient) UpdateCluster(ctx context.Context, req *v1.UpdateClusterRequest) (*v1.UpdateClusterResponse, error) {
+	response, err := c.updateCluster.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteCluster calls organization.v1.ClusterService.DeleteCluster.
-func (c *clusterServiceClient) DeleteCluster(ctx context.Context, req *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error) {
-	return c.deleteCluster.CallUnary(ctx, req)
+func (c *clusterServiceClient) DeleteCluster(ctx context.Context, req *v1.DeleteClusterRequest) (*v1.DeleteClusterResponse, error) {
+	response, err := c.deleteCluster.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetClusterActivity calls organization.v1.ClusterService.GetClusterActivity.
-func (c *clusterServiceClient) GetClusterActivity(ctx context.Context, req *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error) {
-	return c.getClusterActivity.CallUnary(ctx, req)
+func (c *clusterServiceClient) GetClusterActivity(ctx context.Context, req *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error) {
+	response, err := c.getClusterActivity.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetKubeconfig calls organization.v1.ClusterService.GetKubeconfig.
-func (c *clusterServiceClient) GetKubeconfig(ctx context.Context, req *connect.Request[v1.GetKubeconfigRequest]) (*connect.Response[v1.GetKubeconfigResponse], error) {
-	return c.getKubeconfig.CallUnary(ctx, req)
-}
-
-// GetClusterMetricsCredentials calls organization.v1.ClusterService.GetClusterMetricsCredentials.
-func (c *clusterServiceClient) GetClusterMetricsCredentials(ctx context.Context, req *connect.Request[v1.GetClusterMetricsCredentialsRequest]) (*connect.Response[v1.GetClusterMetricsCredentialsResponse], error) {
-	return c.getClusterMetricsCredentials.CallUnary(ctx, req)
+func (c *clusterServiceClient) GetKubeconfig(ctx context.Context, req *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error) {
+	response, err := c.getKubeconfig.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListNodePools calls organization.v1.ClusterService.ListNodePools.
-func (c *clusterServiceClient) ListNodePools(ctx context.Context, req *connect.Request[v1.ListNodePoolsRequest]) (*connect.Response[v1.ListNodePoolsResponse], error) {
-	return c.listNodePools.CallUnary(ctx, req)
+func (c *clusterServiceClient) ListNodePools(ctx context.Context, req *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error) {
+	response, err := c.listNodePools.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetNodePool calls organization.v1.ClusterService.GetNodePool.
-func (c *clusterServiceClient) GetNodePool(ctx context.Context, req *connect.Request[v1.GetNodePoolRequest]) (*connect.Response[v1.GetNodePoolResponse], error) {
-	return c.getNodePool.CallUnary(ctx, req)
+func (c *clusterServiceClient) GetNodePool(ctx context.Context, req *v1.GetNodePoolRequest) (*v1.GetNodePoolResponse, error) {
+	response, err := c.getNodePool.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateNodePool calls organization.v1.ClusterService.CreateNodePool.
-func (c *clusterServiceClient) CreateNodePool(ctx context.Context, req *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error) {
-	return c.createNodePool.CallUnary(ctx, req)
+func (c *clusterServiceClient) CreateNodePool(ctx context.Context, req *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error) {
+	response, err := c.createNodePool.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateNodePool calls organization.v1.ClusterService.UpdateNodePool.
-func (c *clusterServiceClient) UpdateNodePool(ctx context.Context, req *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error) {
-	return c.updateNodePool.CallUnary(ctx, req)
+func (c *clusterServiceClient) UpdateNodePool(ctx context.Context, req *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error) {
+	response, err := c.updateNodePool.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteNodePool calls organization.v1.ClusterService.DeleteNodePool.
-func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
-	return c.deleteNodePool.CallUnary(ctx, req)
+func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error) {
+	response, err := c.deleteNodePool.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ClusterServiceHandler is an implementation of the organization.v1.ClusterService service.
 type ClusterServiceHandler interface {
+	// List the region catalog: every region with the kubernetes versions and
+	// machine types it offers (drives the create-cluster cascade).
+	ListRegions(context.Context, *v1.ListRegionsRequest) (*v1.ListRegionsResponse, error)
 	// List all clusters for the current organization
-	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
+	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)
 	// Get detailed information about a specific cluster
-	GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	GetCluster(context.Context, *v1.GetClusterRequest) (*v1.GetClusterResponse, error)
 	// Get a cluster by name
-	GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error)
+	GetClusterByName(context.Context, *v1.GetClusterByNameRequest) (*v1.GetClusterResponse, error)
 	// Create a new cluster
-	CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error)
+	CreateCluster(context.Context, *v1.CreateClusterRequest) (*v1.CreateClusterResponse, error)
 	// Update cluster configuration
-	UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error)
+	UpdateCluster(context.Context, *v1.UpdateClusterRequest) (*v1.UpdateClusterResponse, error)
 	// Delete a cluster
-	DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error)
+	DeleteCluster(context.Context, *v1.DeleteClusterRequest) (*v1.DeleteClusterResponse, error)
 	// Get cluster activity log
-	GetClusterActivity(context.Context, *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error)
+	GetClusterActivity(context.Context, *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error)
 	// Download kubeconfig for a cluster
-	GetKubeconfig(context.Context, *connect.Request[v1.GetKubeconfigRequest]) (*connect.Response[v1.GetKubeconfigResponse], error)
-	// Fetch the basic-auth credentials for a cluster's metrics dashboard.
-	GetClusterMetricsCredentials(context.Context, *connect.Request[v1.GetClusterMetricsCredentialsRequest]) (*connect.Response[v1.GetClusterMetricsCredentialsResponse], error)
+	GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error)
 	// List node pools for a cluster
-	ListNodePools(context.Context, *connect.Request[v1.ListNodePoolsRequest]) (*connect.Response[v1.ListNodePoolsResponse], error)
+	ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error)
 	// Get a node pool by ID
-	GetNodePool(context.Context, *connect.Request[v1.GetNodePoolRequest]) (*connect.Response[v1.GetNodePoolResponse], error)
+	GetNodePool(context.Context, *v1.GetNodePoolRequest) (*v1.GetNodePoolResponse, error)
 	// Create a node pool in a cluster
-	CreateNodePool(context.Context, *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error)
+	CreateNodePool(context.Context, *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error)
 	// Update a node pool
-	UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error)
+	UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error)
 	// Delete a node pool
-	DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error)
+	DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error)
 }
 
 // NewClusterServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -334,85 +392,85 @@ type ClusterServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clusterServiceMethods := v1.File_v1_cluster_proto.Services().ByName("ClusterService").Methods()
-	clusterServiceListClustersHandler := connect.NewUnaryHandler(
+	clusterServiceListRegionsHandler := connect.NewUnaryHandlerSimple(
+		ClusterServiceListRegionsProcedure,
+		svc.ListRegions,
+		connect.WithSchema(clusterServiceMethods.ByName("ListRegions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clusterServiceListClustersHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceListClustersProcedure,
 		svc.ListClusters,
 		connect.WithSchema(clusterServiceMethods.ByName("ListClusters")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetClusterHandler := connect.NewUnaryHandler(
+	clusterServiceGetClusterHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceGetClusterProcedure,
 		svc.GetCluster,
 		connect.WithSchema(clusterServiceMethods.ByName("GetCluster")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetClusterByNameHandler := connect.NewUnaryHandler(
+	clusterServiceGetClusterByNameHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceGetClusterByNameProcedure,
 		svc.GetClusterByName,
 		connect.WithSchema(clusterServiceMethods.ByName("GetClusterByName")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceCreateClusterHandler := connect.NewUnaryHandler(
+	clusterServiceCreateClusterHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceCreateClusterProcedure,
 		svc.CreateCluster,
 		connect.WithSchema(clusterServiceMethods.ByName("CreateCluster")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceUpdateClusterHandler := connect.NewUnaryHandler(
+	clusterServiceUpdateClusterHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceUpdateClusterProcedure,
 		svc.UpdateCluster,
 		connect.WithSchema(clusterServiceMethods.ByName("UpdateCluster")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceDeleteClusterHandler := connect.NewUnaryHandler(
+	clusterServiceDeleteClusterHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceDeleteClusterProcedure,
 		svc.DeleteCluster,
 		connect.WithSchema(clusterServiceMethods.ByName("DeleteCluster")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetClusterActivityHandler := connect.NewUnaryHandler(
+	clusterServiceGetClusterActivityHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceGetClusterActivityProcedure,
 		svc.GetClusterActivity,
 		connect.WithSchema(clusterServiceMethods.ByName("GetClusterActivity")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetKubeconfigHandler := connect.NewUnaryHandler(
+	clusterServiceGetKubeconfigHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceGetKubeconfigProcedure,
 		svc.GetKubeconfig,
 		connect.WithSchema(clusterServiceMethods.ByName("GetKubeconfig")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetClusterMetricsCredentialsHandler := connect.NewUnaryHandler(
-		ClusterServiceGetClusterMetricsCredentialsProcedure,
-		svc.GetClusterMetricsCredentials,
-		connect.WithSchema(clusterServiceMethods.ByName("GetClusterMetricsCredentials")),
-		connect.WithHandlerOptions(opts...),
-	)
-	clusterServiceListNodePoolsHandler := connect.NewUnaryHandler(
+	clusterServiceListNodePoolsHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceListNodePoolsProcedure,
 		svc.ListNodePools,
 		connect.WithSchema(clusterServiceMethods.ByName("ListNodePools")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetNodePoolHandler := connect.NewUnaryHandler(
+	clusterServiceGetNodePoolHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceGetNodePoolProcedure,
 		svc.GetNodePool,
 		connect.WithSchema(clusterServiceMethods.ByName("GetNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceCreateNodePoolHandler := connect.NewUnaryHandler(
+	clusterServiceCreateNodePoolHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceCreateNodePoolProcedure,
 		svc.CreateNodePool,
 		connect.WithSchema(clusterServiceMethods.ByName("CreateNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceUpdateNodePoolHandler := connect.NewUnaryHandler(
+	clusterServiceUpdateNodePoolHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceUpdateNodePoolProcedure,
 		svc.UpdateNodePool,
 		connect.WithSchema(clusterServiceMethods.ByName("UpdateNodePool")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceDeleteNodePoolHandler := connect.NewUnaryHandler(
+	clusterServiceDeleteNodePoolHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceDeleteNodePoolProcedure,
 		svc.DeleteNodePool,
 		connect.WithSchema(clusterServiceMethods.ByName("DeleteNodePool")),
@@ -420,6 +478,8 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 	)
 	return "/organization.v1.ClusterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClusterServiceListRegionsProcedure:
+			clusterServiceListRegionsHandler.ServeHTTP(w, r)
 		case ClusterServiceListClustersProcedure:
 			clusterServiceListClustersHandler.ServeHTTP(w, r)
 		case ClusterServiceGetClusterProcedure:
@@ -436,8 +496,6 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceGetClusterActivityHandler.ServeHTTP(w, r)
 		case ClusterServiceGetKubeconfigProcedure:
 			clusterServiceGetKubeconfigHandler.ServeHTTP(w, r)
-		case ClusterServiceGetClusterMetricsCredentialsProcedure:
-			clusterServiceGetClusterMetricsCredentialsHandler.ServeHTTP(w, r)
 		case ClusterServiceListNodePoolsProcedure:
 			clusterServiceListNodePoolsHandler.ServeHTTP(w, r)
 		case ClusterServiceGetNodePoolProcedure:
@@ -457,58 +515,58 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 // UnimplementedClusterServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClusterServiceHandler struct{}
 
-func (UnimplementedClusterServiceHandler) ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error) {
+func (UnimplementedClusterServiceHandler) ListRegions(context.Context, *v1.ListRegionsRequest) (*v1.ListRegionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListRegions is not implemented"))
+}
+
+func (UnimplementedClusterServiceHandler) ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListClusters is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetCluster(context.Context, *connect.Request[v1.GetClusterRequest]) (*connect.Response[v1.GetClusterResponse], error) {
+func (UnimplementedClusterServiceHandler) GetCluster(context.Context, *v1.GetClusterRequest) (*v1.GetClusterResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetClusterByName(context.Context, *connect.Request[v1.GetClusterByNameRequest]) (*connect.Response[v1.GetClusterResponse], error) {
+func (UnimplementedClusterServiceHandler) GetClusterByName(context.Context, *v1.GetClusterByNameRequest) (*v1.GetClusterResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetClusterByName is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) CreateCluster(context.Context, *connect.Request[v1.CreateClusterRequest]) (*connect.Response[v1.CreateClusterResponse], error) {
+func (UnimplementedClusterServiceHandler) CreateCluster(context.Context, *v1.CreateClusterRequest) (*v1.CreateClusterResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.CreateCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) UpdateCluster(context.Context, *connect.Request[v1.UpdateClusterRequest]) (*connect.Response[v1.UpdateClusterResponse], error) {
+func (UnimplementedClusterServiceHandler) UpdateCluster(context.Context, *v1.UpdateClusterRequest) (*v1.UpdateClusterResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.UpdateCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) DeleteCluster(context.Context, *connect.Request[v1.DeleteClusterRequest]) (*connect.Response[v1.DeleteClusterResponse], error) {
+func (UnimplementedClusterServiceHandler) DeleteCluster(context.Context, *v1.DeleteClusterRequest) (*v1.DeleteClusterResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteCluster is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetClusterActivity(context.Context, *connect.Request[v1.GetClusterActivityRequest]) (*connect.Response[v1.GetClusterActivityResponse], error) {
+func (UnimplementedClusterServiceHandler) GetClusterActivity(context.Context, *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetClusterActivity is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetKubeconfig(context.Context, *connect.Request[v1.GetKubeconfigRequest]) (*connect.Response[v1.GetKubeconfigResponse], error) {
+func (UnimplementedClusterServiceHandler) GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetKubeconfig is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetClusterMetricsCredentials(context.Context, *connect.Request[v1.GetClusterMetricsCredentialsRequest]) (*connect.Response[v1.GetClusterMetricsCredentialsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetClusterMetricsCredentials is not implemented"))
-}
-
-func (UnimplementedClusterServiceHandler) ListNodePools(context.Context, *connect.Request[v1.ListNodePoolsRequest]) (*connect.Response[v1.ListNodePoolsResponse], error) {
+func (UnimplementedClusterServiceHandler) ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListNodePools is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) GetNodePool(context.Context, *connect.Request[v1.GetNodePoolRequest]) (*connect.Response[v1.GetNodePoolResponse], error) {
+func (UnimplementedClusterServiceHandler) GetNodePool(context.Context, *v1.GetNodePoolRequest) (*v1.GetNodePoolResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetNodePool is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) CreateNodePool(context.Context, *connect.Request[v1.CreateNodePoolRequest]) (*connect.Response[v1.CreateNodePoolResponse], error) {
+func (UnimplementedClusterServiceHandler) CreateNodePool(context.Context, *v1.CreateNodePoolRequest) (*v1.CreateNodePoolResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.CreateNodePool is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *connect.Request[v1.UpdateNodePoolRequest]) (*connect.Response[v1.UpdateNodePoolResponse], error) {
+func (UnimplementedClusterServiceHandler) UpdateNodePool(context.Context, *v1.UpdateNodePoolRequest) (*v1.UpdateNodePoolResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.UpdateNodePool is not implemented"))
 }
 
-func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *connect.Request[v1.DeleteNodePoolRequest]) (*connect.Response[v1.DeleteNodePoolResponse], error) {
+func (UnimplementedClusterServiceHandler) DeleteNodePool(context.Context, *v1.DeleteNodePoolRequest) (*v1.DeleteNodePoolResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.DeleteNodePool is not implemented"))
 }

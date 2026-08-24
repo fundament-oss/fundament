@@ -108,9 +108,9 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		"name": config.Name.ValueString(),
 	})
 
-	getReq := connect.NewRequest(organizationv1.GetClusterByNameRequest_builder{
+	getReq := organizationv1.GetClusterByNameRequest_builder{
 		Name: config.Name.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := d.client.ClusterService.GetClusterByName(ctx, getReq)
 	if err != nil {
@@ -139,7 +139,7 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	cluster := getResp.Msg.GetCluster()
+	cluster := getResp.GetCluster()
 
 	// Map response to state
 	config.ID = types.StringValue(cluster.GetId())

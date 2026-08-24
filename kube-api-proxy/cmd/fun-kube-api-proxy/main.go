@@ -27,11 +27,16 @@ type config struct {
 	ListenAddr             string     `env:"LISTEN_ADDR" envDefault:":8081"`
 	LogLevel               slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins     []string   `env:"CORS_ALLOWED_ORIGINS"`
-	ConsoleOrigins         []string   `env:"CONSOLE_ORIGINS"` // origins the Console is served from; scopes the plugin console asset CSP
-	PublicOrigin           string     `env:"PUBLIC_ORIGIN"`   // this proxy's own public origin; console assets are served from it
 	KubeProxyMode          string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
 	GardenerKubeconfig     string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 	MockPluginTemplatesDir string     `env:"MOCK_PLUGIN_TEMPLATES_DIR" envDefault:"./plugins"`
+
+	// PluginSandboxKubeconfig is a filesystem path to a kubeconfig for a
+	// locally-running plugin sandbox cluster (typically the same secret
+	// plugin-proxy uses). When set in mock mode, kube-api-proxy proxies every
+	// request to that cluster instead of serving MockClient's canned
+	// responses. Ignored in real mode.
+	PluginSandboxKubeconfig string `env:"PLUGIN_SANDBOX_KUBECONFIG"`
 }
 
 func main() {
@@ -57,6 +62,17 @@ func run() error {
 		"mode", cfg.KubeProxyMode,
 	)
 
+	// PLUGIN_SANDBOX_KUBECONFIG points at a file mounted from an optional Secret.
+	// When the Secret is absent the file won't exist; treat that as unset so the
+	// proxy falls back to MockClient instead of failing to boot.
+	if cfg.PluginSandboxKubeconfig != "" {
+		if _, err := os.Stat(cfg.PluginSandboxKubeconfig); err != nil {
+			logger.Warn("plugin sandbox kubeconfig not found, falling back to mock",
+				"kubeconfig", cfg.PluginSandboxKubeconfig, "error", err)
+			cfg.PluginSandboxKubeconfig = ""
+		}
+	}
+
 	authzClient, err := authz.New(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
@@ -75,13 +91,12 @@ func run() error {
 	}
 
 	server, err := proxy.New(logger, &proxy.Config{
-		JWTSecret:              []byte(cfg.JWTSecret),
-		CORSAllowedOrigins:     cfg.CORSAllowedOrigins,
-		ConsoleOrigins:         cfg.ConsoleOrigins,
-		PublicOrigin:           cfg.PublicOrigin,
-		Mode:                   cfg.KubeProxyMode,
-		GardenerClient:         gardenerClient,
-		MockPluginTemplatesDir: cfg.MockPluginTemplatesDir,
+		JWTSecret:               []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
+		Mode:                    cfg.KubeProxyMode,
+		GardenerClient:          gardenerClient,
+		MockPluginTemplatesDir:  cfg.MockPluginTemplatesDir,
+		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
 	}, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)

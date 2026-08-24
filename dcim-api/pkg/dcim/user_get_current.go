@@ -76,14 +76,14 @@ func (s *Server) currentUser(ctx context.Context) (db.UserGetByExternalRefRow, e
 
 func (s *Server) GetCurrentUser(
 	ctx context.Context,
-	_ *connect.Request[dcimv1.GetCurrentUserRequest],
-) (*connect.Response[dcimv1.GetCurrentUserResponse], error) {
+	_ *dcimv1.GetCurrentUserRequest,
+) (*dcimv1.GetCurrentUserResponse, error) {
 	row, err := s.currentUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(dcimv1.GetCurrentUserResponse_builder{
+	return dcimv1.GetCurrentUserResponse_builder{
 		User: userToProtoWithEmail(row.ID, row.Name, row.Email),
-	}.Build()), nil
+	}.Build(), nil
 }

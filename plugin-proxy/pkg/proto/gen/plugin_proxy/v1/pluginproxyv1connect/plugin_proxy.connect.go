@@ -45,7 +45,7 @@ type PluginInstallationServiceClient interface {
 	// GetInstallationManifest resolves a PluginInstallation's identity by
 	// (cluster_id, installation_id). A missing installation is signalled with a
 	// NotFound error.
-	GetInstallationManifest(context.Context, *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error)
+	GetInstallationManifest(context.Context, *v1.GetInstallationManifestRequest) (*v1.GetInstallationManifestResponse, error)
 }
 
 // NewPluginInstallationServiceClient constructs a client for the
@@ -74,8 +74,12 @@ type pluginInstallationServiceClient struct {
 }
 
 // GetInstallationManifest calls plugin_proxy.v1.PluginInstallationService.GetInstallationManifest.
-func (c *pluginInstallationServiceClient) GetInstallationManifest(ctx context.Context, req *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error) {
-	return c.getInstallationManifest.CallUnary(ctx, req)
+func (c *pluginInstallationServiceClient) GetInstallationManifest(ctx context.Context, req *v1.GetInstallationManifestRequest) (*v1.GetInstallationManifestResponse, error) {
+	response, err := c.getInstallationManifest.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // PluginInstallationServiceHandler is an implementation of the
@@ -84,7 +88,7 @@ type PluginInstallationServiceHandler interface {
 	// GetInstallationManifest resolves a PluginInstallation's identity by
 	// (cluster_id, installation_id). A missing installation is signalled with a
 	// NotFound error.
-	GetInstallationManifest(context.Context, *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error)
+	GetInstallationManifest(context.Context, *v1.GetInstallationManifestRequest) (*v1.GetInstallationManifestResponse, error)
 }
 
 // NewPluginInstallationServiceHandler builds an HTTP handler from the service implementation. It
@@ -94,7 +98,7 @@ type PluginInstallationServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewPluginInstallationServiceHandler(svc PluginInstallationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	pluginInstallationServiceMethods := v1.File_plugin_proxy_v1_plugin_proxy_proto.Services().ByName("PluginInstallationService").Methods()
-	pluginInstallationServiceGetInstallationManifestHandler := connect.NewUnaryHandler(
+	pluginInstallationServiceGetInstallationManifestHandler := connect.NewUnaryHandlerSimple(
 		PluginInstallationServiceGetInstallationManifestProcedure,
 		svc.GetInstallationManifest,
 		connect.WithSchema(pluginInstallationServiceMethods.ByName("GetInstallationManifest")),
@@ -113,6 +117,6 @@ func NewPluginInstallationServiceHandler(svc PluginInstallationServiceHandler, o
 // UnimplementedPluginInstallationServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPluginInstallationServiceHandler struct{}
 
-func (UnimplementedPluginInstallationServiceHandler) GetInstallationManifest(context.Context, *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error) {
+func (UnimplementedPluginInstallationServiceHandler) GetInstallationManifest(context.Context, *v1.GetInstallationManifestRequest) (*v1.GetInstallationManifestResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("plugin_proxy.v1.PluginInstallationService.GetInstallationManifest is not implemented"))
 }

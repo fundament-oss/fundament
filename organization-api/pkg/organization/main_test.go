@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 	adminPool := newAdminPool()
 	defer adminPool.Close()
 
-	useGlobalTrustAuth(dataDir, adminPool)
+	testdb.UseGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
 	err = setupTemplateDatabaseWithMigrations(adminPool)
@@ -214,11 +214,6 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 }
 
 func applyCatalogSeed(projectRoot string) error {
-	seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", "0101-appstore-catalog.sql"))
-	if err != nil {
-		return fmt.Errorf("failed to read appstore catalog seed: %v", err)
-	}
-
 	conn, err := pgx.Connect(context.Background(),
 		fmt.Sprintf("postgres://postgres:postgres@localhost:%d/fundament?sslmode=disable", testDBPort))
 	if err != nil {
@@ -226,12 +221,16 @@ func applyCatalogSeed(projectRoot string) error {
 	}
 	defer conn.Close(context.Background())
 
-	// The simple protocol runs the whole multi-statement file in one implicit
-	// transaction, matching the Job's `psql --single-transaction`.
-	if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
-		return fmt.Errorf("failed to apply appstore catalog seed: %v", err)
+	for _, name := range []string{"0100-system-org.sql", "0101-appstore-catalog.sql"} {
+		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name))
+		if err != nil {
+			return fmt.Errorf("failed to read seed %s: %v", name, err)
+		}
+		// Simple protocol: whole multi-statement file in one implicit transaction.
+		if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
+			return fmt.Errorf("failed to apply seed %s: %v", name, err)
+		}
 	}
-
 	return nil
 }
 
@@ -265,25 +264,6 @@ func newAdminPool() *pgxpool.Pool {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 	return pool
-}
-
-// The embedded-postgres library hardcodes `initdb -A password`, so `pg_hba.conf` requires                                                                                                   │
-// password auth for every connection. In this function we reconfigure PostgreSQL
-// to use 'trust', which means it will accept connections without any credential check.
-// By doing this, we don't have to set passwords and use the password when connecting.
-func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {
-	pgHBAPath := filepath.Join(dataDir, "pg_hba.conf")
-	content, err := os.ReadFile(pgHBAPath)
-	if err != nil {
-		log.Fatalf("failed to read pg_hba.conf: %v", err)
-	}
-	updated := strings.ReplaceAll(string(content), " password\n", " trust\n")
-	if err := os.WriteFile(pgHBAPath, []byte(updated), 0o600); err != nil {
-		log.Fatalf("failed to write pg_hba.conf: %v", err)
-	}
-	if _, err := pool.Exec(context.Background(), "SELECT pg_reload_conf()"); err != nil {
-		log.Fatalf("failed to reload pg_hba.conf: %v", err)
-	}
 }
 
 func trekApply(projectRoot string) {

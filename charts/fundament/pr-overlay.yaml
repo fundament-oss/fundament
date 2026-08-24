@@ -79,6 +79,7 @@ spec:
       kubeApiProxy: https://k8s-api.pr${PR_NUM}.${DOMAIN}
       pluginProxy: https://plugin-proxy.pr${PR_NUM}.${DOMAIN}
       console: https://console.pr${PR_NUM}.${DOMAIN}
+      consoleDemo: https://console-demo.pr${PR_NUM}.${DOMAIN}
       docs: https://docs.pr${PR_NUM}.${DOMAIN}
       cookieDomain: pr${PR_NUM}.${DOMAIN}
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
@@ -86,11 +87,14 @@ spec:
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
+    deploymentVersion: ${IMAGE_TAG}
+
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
       authnApi: ${IMAGE_PREFIX}/authn-api:${IMAGE_TAG}
       organizationApi: ${IMAGE_PREFIX}/organization-api:${IMAGE_TAG}
       consoleFrontend: ${IMAGE_PREFIX}/console-frontend:${IMAGE_TAG}
+      consoleDemoFrontend: ${IMAGE_PREFIX}/console-demo-frontend:${IMAGE_TAG}
       docsFrontend: ${IMAGE_PREFIX}/docs-frontend:${IMAGE_TAG}
       clusterWorker: ${IMAGE_PREFIX}/cluster-worker:${IMAGE_TAG}
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
@@ -139,6 +143,21 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - console.pr${PR_NUM}.${DOMAIN}
+
+    # `enabled` comes from values-sandbox.yaml, which this overlay layers under
+    # `values:` (see valuesFiles above) — only the PR route belongs here.
+    consoleDemoFrontend:
+      replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - console-demo.pr${PR_NUM}.${DOMAIN}
 
     docsFrontend:
       replicas: 1

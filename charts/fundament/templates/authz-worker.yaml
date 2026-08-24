@@ -10,6 +10,18 @@ metadata:
     reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.authzWorker.replicas }}
+  {{- if $.Values.db.reset }}
+  # Local/dev only (db.reset ⇒ this environment wipes+reseeds and resets OpenFGA
+  # on every deploy). Recreate — not RollingUpdate — so the old pod is torn down
+  # before the new one starts. An overlapping old pod still holds the previous
+  # OpenFGA store/model (resolved from a ConfigMap at pod start) and would write
+  # freshly-seeded outbox rows to the now-deleted store, stranding them and
+  # tripping the consumer's circuit breaker. No overlap, no split-brain; a brief
+  # gap in outbox processing is harmless — rows just queue. Prod keeps the
+  # default RollingUpdate for zero-downtime rollouts.
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "fundament.selectorLabels" (dict "root" $ "name" "authz-worker") | nindent 6 }}

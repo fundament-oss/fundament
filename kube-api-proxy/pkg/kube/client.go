@@ -18,8 +18,21 @@ type Client struct {
 	host       *url.URL
 }
 
-// NewFromBytes creates a Client from in-memory kubeconfig data.
+// NewFromBytes creates a Client whose transport uses the kubeconfig's own
+// credentials (bearer token, client cert, basic auth).
 func NewFromBytes(kubeconfigData []byte) (*Client, error) {
+	return newFromBytes(kubeconfigData, false)
+}
+
+// NewAnonymousFromBytes creates a Client whose transport carries no client
+// credentials, keeping only the server TLS/CA settings. Use it when the caller
+// supplies the identity per request (e.g. a bearer token injected by a reverse
+// proxy), so a client certificate in the transport can't override it.
+func NewAnonymousFromBytes(kubeconfigData []byte) (*Client, error) {
+	return newFromBytes(kubeconfigData, true)
+}
+
+func newFromBytes(kubeconfigData []byte, anonymous bool) (*Client, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfigData)
 	if err != nil {
 		return nil, fmt.Errorf("parse kubeconfig: %w", err)
@@ -28,6 +41,10 @@ func NewFromBytes(kubeconfigData []byte) (*Client, error) {
 	cfg, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("build rest config: %w", err)
+	}
+
+	if anonymous {
+		cfg = rest.AnonymousClientConfig(cfg)
 	}
 
 	httpClient, err := rest.HTTPClientFor(cfg)

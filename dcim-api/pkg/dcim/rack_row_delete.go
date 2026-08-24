@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteRackRow(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteRackRowRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	rackRowID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteRackRowRequest,
+) (*emptypb.Empty, error) {
+	rackRowID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.RackRowDelete(ctx, db.RackRowDeleteParams{ID: rackRowID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteRackRow(
 
 	s.logger.InfoContext(ctx, "rack row deleted", "rack_row_id", rackRowID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

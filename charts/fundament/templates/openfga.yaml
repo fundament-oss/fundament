@@ -88,6 +88,13 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "create", "update", "patch"]
+  {{- if $.Values.db.reset }}
+  # The wait-for-reset init container waits on the db-migrations Job, which owns
+  # the coupled DB + OpenFGA reset (local/dev only).
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+  {{- end }}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -136,11 +143,6 @@ spec:
                 sleep 3
               done
               echo "Database is ready!"
-              {{- if $.Values.db.reset }}
-              echo "Resetting OpenFGA database..."
-              psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-              echo "OpenFGA database reset complete."
-              {{- end }}
           env:
             - name: PGCONNECT_TIMEOUT
               value: "5"
@@ -149,6 +151,47 @@ spec:
                 secretKeyRef:
                   name: {{ $openfgaSecretName }}
                   key: uri
+        {{- if $.Values.db.reset }}
+        # Local/dev only. The OpenFGA datastore reset is owned by the db-migrations
+        # Job (coupled with the app-DB reset) — NOT here — so a plain openfga
+        # rollout never wipes the store. Block until this release's Job has
+        # completed, so `migrate` below rebuilds the schema after the reset.
+        #
+        # Failures are fatal on purpose: proceeding early means migrating first
+        # and having the schema dropped underneath us, leaving a live server that
+        # 500s with 42P01 until it is restarted by hand.
+        - name: wait-for-reset
+          image: {{ $.Values.images.openfgaSetup }}
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+
+              JOB="{{ include "fundament.dbMigrationsJobName" $ }}"
+              NS="{{ $.Release.Namespace }}"
+
+              # Helm applies Deployments before Jobs, so the Job usually does not
+              # exist yet, and `kubectl wait` errors immediately on a missing
+              # resource instead of polling. Wait for it to appear first.
+              echo "Waiting for job/${JOB} to appear..."
+              for i in $(seq 1 60); do
+                if kubectl get job "${JOB}" -n "${NS}" >/dev/null 2>&1; then
+                  echo "job/${JOB} exists"
+                  break
+                fi
+                if [ "${i}" -eq 60 ]; then
+                  echo "job/${JOB} never appeared after 5m."
+                  echo "Refusing to start: the datastore is about to be reset by a Job we cannot see."
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              echo "Waiting for job/${JOB} to complete..."
+              kubectl wait --for=condition=complete "job/${JOB}" \
+                -n "${NS}" --timeout=600s
+        {{- end }}
         - name: migrate
           image: {{ $.Values.openfga.image }}
           args:

@@ -1,0 +1,74 @@
+---
+title: Getting started with Fundament development
+sidebar:
+  label: Getting started
+  order: 1
+---
+
+## Prerequisites
+
+- [Mise](https://mise.jdx.dev)
+- [Just](https://just.systems)
+- [Docker](https://www.docker.com)
+- `certutil` (part of NSS tools). Required for `mkcert` to install the CA into system trust stores
+
+### Installing certutil
+
+**macOS:**
+
+```shell
+brew install nss
+```
+
+**Debian/Ubuntu:**
+
+```shell
+apt install libnss3-tools
+```
+
+**Fedora/RHEL:**
+
+```shell
+dnf install nss-tools
+```
+
+**Arch:**
+
+```shell
+pacman -S nss
+```
+
+## MacOS
+
+On macOS, the default shared memory limits are too low for PostgreSQL.
+For embedded-postgres, create/edit `/etc/sysctl.conf`:
+
+```
+kern.sysv.shmall=65536
+kern.sysv.shmmax=16777216
+```
+
+## Installation
+
+```shell
+mise trust
+mise install
+```
+
+## Run cluster
+
+```shell
+just cluster-start
+just dev
+```
+
+## Console frontend
+
+The Console frontend should now be available at https://console.fundament.localhost:8443/. See
+[`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md)
+for linting, formatting and the other frontend commands.
+
+## Storage
+
+Working on the `ceph-rook` plugin needs raw block devices, which a k3d node does not have.
+See [Block devices for k3d](./k3d-block-devices.md).

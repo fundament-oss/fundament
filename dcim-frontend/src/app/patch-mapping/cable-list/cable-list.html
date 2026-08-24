@@ -371,17 +371,11 @@
 
               <!-- Status -->
               <div role="cell">
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="cableStatusColors(cable.status)"
-                >
-                  <span
-                    class="h-1.5 w-1.5 rounded-full"
-                    [class]="statusDotClass(cable.status)"
-                    aria-hidden="true"
-                  ></span>
-                  {{ cableStatusLabel(cable.status) }}
-                </span>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="cableStatusTagColor(cable.status)"
+                  [attr.text]="cableStatusLabel(cable.status)"
+                ></nldd-tag>
               </div>
 
               <!-- Type -->

@@ -1,0 +1,49 @@
+---
+title: Overview
+sidebar:
+  order: 1
+---
+
+Fundament is software for running an Autonomous Private Cloud. It is designed to provide organizations with a minimal, reliable foundation for running modern applications. Unlike traditional platforms that bundle every service by default, Fundament is basic at its core -delivering only the essential infrastructure and orchestration layers- while allowing each tenant to extend their environment with exactly the services and tools they need.
+
+On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling developers to build, deploy, and operate applications with speed and confidence. Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for organizations that want cloud capabilities on their own terms; secure, reliable, and without unnecessary complexity.
+
+## Functional Goals
+
+- Developer-friendly platform for deploying and operating applications.
+- Multi-tenant by design, enabling organizational growth and flexible management.
+- Managed infrastructure that abstracts compute, storage, and networking for ease of use and consistency.
+- Managed orchestration layer to simplify workload scheduling, scaling, and lifecycle management.
+- Built-in platform services for common needs such as application delivery, compute, and data persistence.
+- Extensible through pluggable services, allowing organizations to autonomously evolve and customize their technology stack.
+- Horizontally scalable foundation capable of supporting thousands of organizations and large-scale infrastructure footprints.
+- Strict isolation with a shared-nothing architecture for compute and storage, ensuring reliability and predictable performance.
+
+And fundamentally:
+
+- Secure by default.
+- Highly available under heavy demand or failure conditions.
+- Fast, delivering responsive operations at every layer.
+
+## Non-goals
+
+- Public Cloud: Fundament is not a public cloud offering. It is designed to be self-hosted by organizations as a private or community cloud.
+
+## How?
+
+Fundament integrates [metal-stack](https://metal-stack.io/) for automated bare-metal provisioning and [Gardener](https://gardener.cloud/) for Kubernetes cluster management into a complete cloud solution. This combination delivers Infrastructure-as-a-Service (IaaS) through a reliable, high-performance foundation without unnecessary complexity, while maintaining full compatibility with existing cloud-native practices.
+
+On top of this IaaS layer, Fundament provides Platform-as-a-Service (PaaS) capabilities through a developer-friendly, multi-tenant platform that abstracts infrastructure and orchestration into a simple, scalable service. Core capabilities -such as compute, storage, and networking- are managed out of the box, while higher-level features are delivered as [Plugins](./plugins.md). These Plugins may wrap proven open-source projects to provide cloud services such as load balancing, databases, or object storage.
+
+The result is an autonomous, extensible, and self-hosted platform: secure by default, highly available under load, fast in operation, and designed to scale from a handful of organizations to thousands.
+
+## Open Source Mindset
+
+Fundament builds on top of existing Open Source projects. This has a number of benefits:
+
+- Building on the expertise and community support of existing projects.
+- Enabling customization and extension of existing projects to meet specific needs.
+- Giving back to the community by adding features and improvements to existing projects.
+- No need to re-invent the wheel; more time and energy can go to developing and improving the Fundament platform.
+
+Fundament strongly avoids proprietary software and closed-source solutions.

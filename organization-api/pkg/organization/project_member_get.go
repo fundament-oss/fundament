@@ -17,9 +17,9 @@ import (
 
 func (s *Server) GetProjectMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetProjectMemberRequest],
-) (*connect.Response[organizationv1.GetProjectMemberResponse], error) {
-	memberID := uuid.MustParse(req.Msg.GetMemberId())
+	req *organizationv1.GetProjectMemberRequest,
+) (*organizationv1.GetProjectMemberResponse, error) {
+	memberID := uuid.MustParse(req.GetMemberId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.ProjectMember(memberID)); err != nil {
 		return nil, err
@@ -33,9 +33,9 @@ func (s *Server) GetProjectMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project member: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetProjectMemberResponse_builder{
+	return organizationv1.GetProjectMemberResponse_builder{
 		Member: projectMemberFromGetRow(&member),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func projectMemberFromGetRow(row *db.ProjectMemberGetByIDRow) *organizationv1.ProjectMember {

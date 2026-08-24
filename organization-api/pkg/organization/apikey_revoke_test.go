@@ -18,9 +18,9 @@ func Test_APIKey_Revoke_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
+	req := organizationv1.RevokeAPIKeyRequest_builder{
 		ApiKeyId: uuid.New().String(),
-	}.Build())
+	}.Build()
 
 	_, err := client.RevokeAPIKey(context.Background(), req)
 
@@ -47,43 +47,47 @@ func Test_APIKey_Revoke(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	createReq := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "my-key",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateAPIKey(context.Background(), createReq)
+	createRes, err := client.CreateAPIKey(createCtx, createReq)
 	require.NoError(t, err)
 
-	revokeReq := connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
-		ApiKeyId: createRes.Msg.GetId(),
-	}.Build())
-	revokeReq.Header().Set("Authorization", "Bearer "+token)
-	revokeReq.Header().Set("Fun-Organization", orgID.String())
+	revokeReq := organizationv1.RevokeAPIKeyRequest_builder{
+		ApiKeyId: createRes.GetId(),
+	}.Build()
+	revokeCtx, revokeCallInfo := connect.NewClientContext(context.Background())
+	revokeCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	revokeCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.RevokeAPIKey(context.Background(), revokeReq)
+	_, err = client.RevokeAPIKey(revokeCtx, revokeReq)
 	require.NoError(t, err)
 
 	// Key should still be gettable with revoked timestamp set.
-	getReq := connect.NewRequest(organizationv1.GetAPIKeyRequest_builder{
-		ApiKeyId: createRes.Msg.GetId(),
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	getReq := organizationv1.GetAPIKeyRequest_builder{
+		ApiKeyId: createRes.GetId(),
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	getRes, err := client.GetAPIKey(context.Background(), getReq)
+	getRes, err := client.GetAPIKey(getCtx, getReq)
 	require.NoError(t, err)
-	assert.True(t, getRes.Msg.GetApiKey().HasRevoked())
+	assert.True(t, getRes.GetApiKey().HasRevoked())
 
 	// Key should still appear in list.
-	listReq := connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := organizationv1.ListAPIKeysRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListAPIKeys(context.Background(), listReq)
+	listRes, err := client.ListAPIKeys(listCtx, listReq)
 	require.NoError(t, err)
-	assert.Len(t, listRes.Msg.GetApiKeys(), 1)
+	assert.Len(t, listRes.GetApiKeys(), 1)
 }
 
 func Test_APIKey_Revoke_AlreadyRevoked(t *testing.T) {
@@ -104,28 +108,30 @@ func Test_APIKey_Revoke_AlreadyRevoked(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	createReq := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "my-key",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateAPIKey(context.Background(), createReq)
+	createRes, err := client.CreateAPIKey(createCtx, createReq)
 	require.NoError(t, err)
 
-	revokeReq := func() *connect.Request[organizationv1.RevokeAPIKeyRequest] {
-		req := connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
-			ApiKeyId: createRes.Msg.GetId(),
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
-		return req
+	revokeReq := func() *organizationv1.RevokeAPIKeyRequest {
+		return organizationv1.RevokeAPIKeyRequest_builder{
+			ApiKeyId: createRes.GetId(),
+		}.Build()
 	}
 
-	_, err = client.RevokeAPIKey(context.Background(), revokeReq())
+	revokeCtx, revokeCallInfo := connect.NewClientContext(context.Background())
+	revokeCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	revokeCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	_, err = client.RevokeAPIKey(revokeCtx, revokeReq())
 	require.NoError(t, err)
 
-	_, err = client.RevokeAPIKey(context.Background(), revokeReq())
+	_, err = client.RevokeAPIKey(revokeCtx, revokeReq())
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
@@ -156,22 +162,24 @@ func Test_APIKey_Revoke_OtherUser_NotFound(t *testing.T) {
 	tokenB := env.createAuthnToken(t, userBID)
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	createReq := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "user-a-key",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+tokenA)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+tokenA)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateAPIKey(context.Background(), createReq)
+	createRes, err := client.CreateAPIKey(createCtx, createReq)
 	require.NoError(t, err)
 
-	revokeReq := connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
-		ApiKeyId: createRes.Msg.GetId(),
-	}.Build())
-	revokeReq.Header().Set("Authorization", "Bearer "+tokenB)
-	revokeReq.Header().Set("Fun-Organization", orgID.String())
+	revokeReq := organizationv1.RevokeAPIKeyRequest_builder{
+		ApiKeyId: createRes.GetId(),
+	}.Build()
+	revokeCtx, revokeCallInfo := connect.NewClientContext(context.Background())
+	revokeCallInfo.RequestHeader().Set("Authorization", "Bearer "+tokenB)
+	revokeCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.RevokeAPIKey(context.Background(), revokeReq)
+	_, err = client.RevokeAPIKey(revokeCtx, revokeReq)
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())

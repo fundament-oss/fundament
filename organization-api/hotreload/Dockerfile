@@ -1,9 +1,10 @@
-FROM golang:1.26.5-alpine
+FROM golang:1.26.6-alpine
 RUN go install github.com/air-verse/air@v1.65.0
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY organization-api/ ./organization-api/
+COPY plugin-sdk/ ./plugin-sdk/
 COPY common/ ./common/
 # Bake $GOCACHE at build time so air's first in-container build is a cache hit
 # (compile happens here, throttled by skaffold concurrency — not as a runtime storm).

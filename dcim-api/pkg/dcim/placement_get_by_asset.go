@@ -17,19 +17,19 @@ import (
 // placement when the asset has not been placed.
 func (s *Server) GetPlacementByAsset(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetPlacementByAssetRequest],
-) (*connect.Response[dcimv1.GetPlacementByAssetResponse], error) {
-	assetID := uuid.MustParse(req.Msg.GetAssetId())
+	req *dcimv1.GetPlacementByAssetRequest,
+) (*dcimv1.GetPlacementByAssetResponse, error) {
+	assetID := uuid.MustParse(req.GetAssetId())
 
 	placement, err := s.queries.PlacementGetByAsset(ctx, db.PlacementGetByAssetParams{AssetID: assetID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return connect.NewResponse(dcimv1.GetPlacementByAssetResponse_builder{}.Build()), nil
+			return dcimv1.GetPlacementByAssetResponse_builder{}.Build(), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get placement by asset: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetPlacementByAssetResponse_builder{
+	return dcimv1.GetPlacementByAssetResponse_builder{
 		Placement: placementFromGetByAssetRow(&placement),
-	}.Build()), nil
+	}.Build(), nil
 }

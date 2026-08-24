@@ -51,10 +51,10 @@ func New(logger *slog.Logger, cluster ClusterAccess) *Service {
 // tokens are also used to read state during teardown.
 func (s *Service) GetInstallationManifest(
 	ctx context.Context,
-	req *connect.Request[pluginproxyv1.GetInstallationManifestRequest],
-) (*connect.Response[pluginproxyv1.GetInstallationManifestResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
-	installationID := uuid.MustParse(req.Msg.GetInstallationId())
+	req *pluginproxyv1.GetInstallationManifestRequest,
+) (*pluginproxyv1.GetInstallationManifestResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
+	installationID := uuid.MustParse(req.GetInstallationId())
 
 	target, err := s.Cluster.ForCluster(ctx, clusterID)
 	if err != nil {
@@ -76,14 +76,14 @@ func (s *Service) GetInstallationManifest(
 		"phase", phase,
 	)
 
-	resp := pluginproxyv1.GetInstallationManifestResponse_builder{
-		PluginName:     found.Spec.DefinitionRef.PluginName,
-		PluginVersion:  found.Spec.DefinitionRef.PluginVersion,
-		DefinitionHash: found.Spec.DefinitionRef.DefinitionHash,
-		OrganizationId: target.OrganizationID.String(),
-		Status:         phase,
-	}.Build()
-	return connect.NewResponse(resp), nil
+	return pluginproxyv1.GetInstallationManifestResponse_builder{
+		PluginName:       found.Spec.DefinitionRef.PluginName,
+		PluginVersion:    found.Spec.DefinitionRef.PluginVersion,
+		DefinitionHash:   found.Spec.DefinitionRef.DefinitionHash,
+		OrganizationId:   target.OrganizationID.String(),
+		Status:           phase,
+		InstallationName: found.Name,
+	}.Build(), nil
 }
 
 // findInstallation locates a PluginInstallation by UID. A missing

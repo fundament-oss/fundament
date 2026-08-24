@@ -19,12 +19,12 @@ func TestSiteService_GetSite_HappyFlow(t *testing.T) {
 
 	siteID := createSite(t, env, "Site Get Success")
 
-	resp, err := client.GetSite(context.Background(), connect.NewRequest(
+	resp, err := client.GetSite(context.Background(),
 		(&dcimv1.GetSiteRequest_builder{Id: siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	site := resp.Msg.GetSite()
+	site := resp.GetSite()
 	require.NotNil(t, site)
 	assert.Equal(t, siteID, site.GetId())
 	assert.Equal(t, "Site Get Success", site.GetName())
@@ -48,9 +48,9 @@ func TestSiteService_GetSite(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.GetSite(context.Background(), connect.NewRequest(
+			_, err := client.GetSite(context.Background(),
 				(&dcimv1.GetSiteRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

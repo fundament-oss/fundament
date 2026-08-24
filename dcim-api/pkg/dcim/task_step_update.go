@@ -15,28 +15,28 @@ import (
 
 func (s *Server) UpdateTaskStep(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateTaskStepRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	taskStepID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateTaskStepRequest,
+) (*emptypb.Empty, error) {
+	taskStepID := uuid.MustParse(req.GetId())
 
 	params := db.TaskStepUpdateParams{
 		ID: taskStepID,
 	}
 
-	if req.Msg.HasTitle() {
-		params.Title = pgtype.Text{String: req.Msg.GetTitle(), Valid: true}
+	if req.HasTitle() {
+		params.Title = pgtype.Text{String: req.GetTitle(), Valid: true}
 	}
 
-	if req.Msg.HasDescription() {
-		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
+	if req.HasDescription() {
+		params.Description = pgtype.Text{String: req.GetDescription(), Valid: true}
 	}
 
-	if req.Msg.HasOrdinal() {
-		params.Ordinal = pgtype.Int4{Int32: req.Msg.GetOrdinal(), Valid: true}
+	if req.HasOrdinal() {
+		params.Ordinal = pgtype.Int4{Int32: req.GetOrdinal(), Valid: true}
 	}
 
-	if req.Msg.HasCompleted() {
-		params.Completed = pgtype.Bool{Bool: req.Msg.GetCompleted(), Valid: true}
+	if req.HasCompleted() {
+		params.Completed = pgtype.Bool{Bool: req.GetCompleted(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.TaskStepUpdate(ctx, params)
@@ -50,5 +50,5 @@ func (s *Server) UpdateTaskStep(
 
 	s.logger.InfoContext(ctx, "task step updated", "task_step_id", taskStepID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

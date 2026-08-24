@@ -16,9 +16,9 @@ import (
 
 func (s *Server) GetNodePool(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetNodePoolRequest],
-) (*connect.Response[organizationv1.GetNodePoolResponse], error) {
-	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
+	req *organizationv1.GetNodePoolRequest,
+) (*organizationv1.GetNodePoolResponse, error) {
+	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err
@@ -32,9 +32,9 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetNodePoolResponse_builder{
+	return organizationv1.GetNodePoolResponse_builder{
 		NodePool: nodePoolFromRow(&nodePool),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func nodePoolFromRow(row *db.TenantNodePool) *organizationv1.NodePool {

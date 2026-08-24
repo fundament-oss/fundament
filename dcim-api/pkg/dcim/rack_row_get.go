@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetRackRow(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetRackRowRequest],
-) (*connect.Response[dcimv1.GetRackRowResponse], error) {
-	rackRowID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetRackRowRequest,
+) (*dcimv1.GetRackRowResponse, error) {
+	rackRowID := uuid.MustParse(req.GetId())
 
 	rackRow, err := s.queries.RackRowGetByID(ctx, db.RackRowGetByIDParams{ID: rackRowID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetRackRow(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get rack row: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetRackRowResponse_builder{
+	return dcimv1.GetRackRowResponse_builder{
 		RackRow: rackRowFromRow(&rackRow),
-	}.Build()), nil
+	}.Build(), nil
 }

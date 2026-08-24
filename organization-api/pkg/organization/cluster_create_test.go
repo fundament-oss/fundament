@@ -18,11 +18,11 @@ func Test_Cluster_Create_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.CreateCluster(context.Background(), connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	_, err := client.CreateCluster(context.Background(), organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,20 +47,21 @@ func Test_Cluster_Create(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.CreateCluster(context.Background(), createReq)
+	res, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
-	assert.NotEmpty(t, res.Msg.GetClusterId())
+	assert.NotEmpty(t, res.GetClusterId())
 
 	// Duplicate name in the same org must fail.
-	_, err = client.CreateCluster(context.Background(), createReq)
+	_, err = client.CreateCluster(createCtx, createReq)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

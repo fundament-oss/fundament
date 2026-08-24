@@ -200,12 +200,11 @@
               </div>
 
               <div role="cell" class="hidden sm:block">
-                <span
-                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="categoryBadgeClass(row.entry.category)"
-                >
-                  {{ row.entry.category }}
-                </span>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="categoryTagColor(row.entry.category)"
+                  [attr.text]="row.entry.category"
+                ></nldd-tag>
               </div>
 
               <div role="cell" class="hidden md:block text-right">
@@ -282,11 +281,11 @@
      CATALOG ENTRY EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #entrySheet accessible-label="Catalog entry details" placement="right" width="480px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editEntry()?.id ? 'Edit product' : 'New product'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeEntryForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -301,6 +300,7 @@
       <nldd-form-field label="Model name">
         <nldd-text-field
           #fEntryModel
+          autofocus
           [attr.value]="editEntry()?.model ?? ''"
           placeholder="E.g. Dell PowerEdge R750"
           [attr.invalid]="isFieldInvalid('model') ? '' : null"
@@ -402,12 +402,8 @@
         </div>
       </div>
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeEntryForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveEntry()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveEntry()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -418,20 +414,20 @@
 <nldd-modal-dialog
   #entryModal
   (close)="cancelDeleteEntry()"
-  [attr.text]="'Delete \'' + (deleteEntry()?.model ?? '') + '\'?'"
-  supporting-text="This will remove the product from the catalog. Existing assets will not be affected."
+  [attr.text]="'Delete catalog entry ' + (deleteEntry()?.model ?? '') + '?'"
+  supporting-text="This removes the product from the catalog. Existing assets are not affected."
   accessible-label="Confirm catalog entry deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteEntry()"
+    variant="secondary"
+    text="Keep entry"
+    (click)="cancelDeleteEntry()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteEntry()"
+    variant="destructive"
+    text="Delete entry"
+    (click)="confirmDeleteEntry()"
   ></nldd-button>
 </nldd-modal-dialog>

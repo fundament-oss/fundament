@@ -39,8 +39,6 @@ kubectl ──(JWT)──> kube-api-proxy ──(SA token)──> shoot API serv
 | `LISTEN_ADDR` | no | `:8081` | HTTP listen address |
 | `LOG_LEVEL` | no | `info` | Log level (debug, info, warn, error) |
 | `CORS_ALLOWED_ORIGINS` | no | | Comma-separated allowed origins |
-| `CONSOLE_ORIGINS` | real mode | | Comma-separated origins the Console is served from. Plugin console assets are only served when their `?host=` names one of these, and their CSP only admits scripts from them. Together with `PUBLIC_ORIGIN`, required in `real` mode — the proxy refuses to start without both. In `mock` mode, leaving either unset disables both checks (bare local dev) and logs a warning. |
-| `PUBLIC_ORIGIN` | real mode | | This proxy's own public origin (e.g. `https://k8s-api.example.com`). It is the plugin console-asset CSP's only `script-src` for the plugin's own bundles: the iframe is sandboxed without `allow-same-origin`, so its opaque origin makes `'self'` match nothing. |
 | `OPENFGA_API_URL` | yes | | OpenFGA API endpoint |
 | `OPENFGA_STORE_ID` | yes | | OpenFGA store ID |
 | `OPENFGA_AUTHORIZATION_MODEL_ID` | yes | | OpenFGA authorization model ID |

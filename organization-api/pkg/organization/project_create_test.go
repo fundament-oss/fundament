@@ -18,10 +18,10 @@ func Test_Project_Create_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.CreateProject(context.Background(), connect.NewRequest(organizationv1.CreateProjectRequest_builder{
+	_, err := client.CreateProject(context.Background(), organizationv1.CreateProjectRequest_builder{
 		ClusterId: uuid.New().String(),
 		Name:      "test-project",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -46,41 +46,44 @@ func Test_Project_Create(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createClusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	createClusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: createClusterRes.Msg.GetClusterId(),
+	createReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: createClusterRes.GetClusterId(),
 		Name:      "test-project",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.CreateProject(context.Background(), createReq)
+	res, err := client.CreateProject(createCtx, createReq)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, res.Msg.GetProjectId())
+	require.NotEmpty(t, res.GetProjectId())
 
-	listMembersReq := connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
-		ProjectId: res.Msg.GetProjectId(),
-	}.Build())
-	listMembersReq.Header().Set("Authorization", "Bearer "+token)
-	listMembersReq.Header().Set("Fun-Organization", orgID.String())
+	listMembersReq := organizationv1.ListProjectMembersRequest_builder{
+		ProjectId: res.GetProjectId(),
+	}.Build()
+	listMembersCtx, listMembersCallInfo := connect.NewClientContext(context.Background())
+	listMembersCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listMembersCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	membersRes, err := client.ListProjectMembers(context.Background(), listMembersReq)
+	membersRes, err := client.ListProjectMembers(listMembersCtx, listMembersReq)
 	require.NoError(t, err)
 
-	members := membersRes.Msg.GetMembers()
+	members := membersRes.GetMembers()
 	require.Len(t, members, 1)
 	assert.Equal(t, userID.String(), members[0].GetUserId())
 	assert.Equal(t, organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, members[0].GetRole())

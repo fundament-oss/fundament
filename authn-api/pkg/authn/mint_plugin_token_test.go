@@ -55,6 +55,7 @@ const testJWTSecret = "test-secret"
 
 type mintHarness struct {
 	server                            *AuthnServer
+	client                            authnv1connect.TokenServiceClient
 	secret                            []byte
 	authz                             *fakeAuthz
 	lookup                            *fakeLookup
@@ -77,8 +78,16 @@ func newMintHarness(t *testing.T, allow bool, manifest *InstallationManifest, lo
 		authz:               az,
 		pluginInstallations: lk,
 	}
+
+	mux := http.NewServeMux()
+	path, handler := authnv1connect.NewTokenServiceHandler(server)
+	mux.Handle(path, handler)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
 	return &mintHarness{
 		server:         server,
+		client:         authnv1connect.NewTokenServiceClient(srv.Client(), srv.URL),
 		secret:         secret,
 		authz:          az,
 		lookup:         lk,
@@ -104,44 +113,45 @@ func (h *mintHarness) userToken(t *testing.T) string {
 	return signed
 }
 
-func (h *mintHarness) request(t *testing.T, authHeader string) *connect.Request[authnv1.MintPluginTokenRequest] {
+func (h *mintHarness) mint(t *testing.T, authHeader string) (*authnv1.MintPluginTokenResponse, error) {
 	t.Helper()
-	req := connect.NewRequest(authnv1.MintPluginTokenRequest_builder{
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	if authHeader != "" {
+		callInfo.RequestHeader().Set("Authorization", authHeader)
+	}
+	return h.client.MintPluginToken(ctx, authnv1.MintPluginTokenRequest_builder{ //nolint:wrapcheck // tests assert on the raw connect error
 		ClusterId:      h.clusterID.String(),
 		InstallationId: h.installationID.String(),
 	}.Build())
-	if authHeader != "" {
-		req.Header().Set("Authorization", authHeader)
-	}
-	return req
 }
 
 const testPluginName = "test-plugin"
 
 func activeManifest() *InstallationManifest {
 	return &InstallationManifest{
-		PluginName:     testPluginName,
-		PluginVersion:  "1.2.3",
-		DefinitionHash: "sha256:1f3c9a",
+		InstallationName: "test-plugin-install",
+		PluginName:       testPluginName,
+		PluginVersion:    "1.2.3",
+		DefinitionHash:   "sha256:1f3c9a",
 	}
 }
 
 func TestMintPluginToken_Success(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
-	req := h.request(t, "Bearer "+h.userToken(t))
 
-	resp, err := h.server.MintPluginToken(context.Background(), req)
+	resp, err := h.mint(t, "Bearer "+h.userToken(t))
 	require.NoError(t, err, "MintPluginToken")
 
-	assert.Equal(t, "Bearer", resp.Msg.GetTokenType())
-	assert.Equal(t, int64(PluginTokenExpiry.Seconds()), resp.Msg.GetExpiresIn())
+	assert.Equal(t, "Bearer", resp.GetTokenType())
+	assert.Equal(t, int64(PluginTokenExpiry.Seconds()), resp.GetExpiresIn())
 
-	claims, err := auth.ParsePluginToken(resp.Msg.GetAccessToken(), h.secret)
+	claims, err := auth.ParsePluginToken(resp.GetAccessToken(), h.secret)
 	require.NoError(t, err, "parse minted token")
 
 	assert.Equal(t, h.userID.String(), claims.Subject)
 	assert.Equal(t, h.clusterID.String(), claims.ClusterID)
 	assert.Equal(t, h.installationID.String(), claims.InstallationID)
+	assert.Equal(t, "test-plugin-install", claims.InstallationName)
 	assert.Equal(t, testPluginName, claims.PluginName)
 	assert.Equal(t, "1.2.3", claims.PluginVersion)
 	assert.Equal(t, "sha256:1f3c9a", claims.DefinitionHash)
@@ -149,9 +159,8 @@ func TestMintPluginToken_Success(t *testing.T) {
 
 func TestMintPluginToken_NoAuthorization_Unauthenticated(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
-	req := h.request(t, "")
 
-	_, err := h.server.MintPluginToken(context.Background(), req)
+	_, err := h.mint(t, "")
 	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
@@ -168,17 +177,15 @@ func TestMintPluginToken_PluginAudienceRejected(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(h.secret)
 	require.NoError(t, err, "sign")
-	req := h.request(t, "Bearer "+signed)
 
-	_, err = h.server.MintPluginToken(context.Background(), req)
+	_, err = h.mint(t, "Bearer "+signed)
 	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
 func TestMintPluginToken_CanViewDenied_NotFound(t *testing.T) {
 	h := newMintHarness(t, false, activeManifest(), nil)
-	req := h.request(t, "Bearer "+h.userToken(t))
 
-	_, err := h.server.MintPluginToken(context.Background(), req)
+	_, err := h.mint(t, "Bearer "+h.userToken(t))
 	assertConnectCode(t, err, connect.CodeNotFound)
 
 	assert.Equal(t, 0, h.lookup.calls, "installation lookup should not be called when cluster view denied")
@@ -186,9 +193,8 @@ func TestMintPluginToken_CanViewDenied_NotFound(t *testing.T) {
 
 func TestMintPluginToken_InstallationNotFound(t *testing.T) {
 	h := newMintHarness(t, true, nil, ErrInstallationNotFound)
-	req := h.request(t, "Bearer "+h.userToken(t))
 
-	_, err := h.server.MintPluginToken(context.Background(), req)
+	_, err := h.mint(t, "Bearer "+h.userToken(t))
 	assertConnectCode(t, err, connect.CodeNotFound)
 }
 
@@ -197,15 +203,14 @@ func TestMintPluginToken_InstallationNotFound(t *testing.T) {
 // be rejected by a UserToken validator on the audience pin.
 func TestMintedTokenRejectedAsUserToken(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
-	req := h.request(t, "Bearer "+h.userToken(t))
 
-	resp, err := h.server.MintPluginToken(context.Background(), req)
+	resp, err := h.mint(t, "Bearer "+h.userToken(t))
 	require.NoError(t, err, "MintPluginToken")
 
 	userValidator := auth.NewValidatorForAudience(h.secret,
 		auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil)
 	header := http.Header{}
-	header.Set("Authorization", "Bearer "+resp.Msg.GetAccessToken())
+	header.Set("Authorization", "Bearer "+resp.GetAccessToken())
 	_, err = userValidator.Validate(header)
 	require.Error(t, err, "user validator accepted a PluginToken")
 	assert.Contains(t, err.Error(), "audience", "expected audience-mismatch error")
@@ -225,9 +230,8 @@ func TestMintPluginToken_WrongSecret_Unauthenticated(t *testing.T) {
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
 		SignedString([]byte("different-secret"))
 	require.NoError(t, err, "sign")
-	req := h.request(t, "Bearer "+signed)
 
-	_, err = h.server.MintPluginToken(context.Background(), req)
+	_, err = h.mint(t, "Bearer "+signed)
 	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
@@ -244,9 +248,8 @@ func TestMintPluginToken_ExpiredToken_Unauthenticated(t *testing.T) {
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(h.secret)
 	require.NoError(t, err, "sign")
-	req := h.request(t, "Bearer "+signed)
 
-	_, err = h.server.MintPluginToken(context.Background(), req)
+	_, err = h.mint(t, "Bearer "+signed)
 	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
@@ -263,13 +266,13 @@ func TestMintPluginToken_MalformedUUID_InvalidArgument(t *testing.T) {
 	defer srv.Close()
 
 	client := authnv1connect.NewTokenServiceClient(srv.Client(), srv.URL)
-	req := connect.NewRequest(authnv1.MintPluginTokenRequest_builder{
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+h.userToken(t))
+
+	_, err := client.MintPluginToken(ctx, authnv1.MintPluginTokenRequest_builder{
 		ClusterId:      "not-a-uuid",
 		InstallationId: h.installationID.String(),
 	}.Build())
-	req.Header().Set("Authorization", "Bearer "+h.userToken(t))
-
-	_, err := client.MintPluginToken(context.Background(), req)
 	assertConnectCode(t, err, connect.CodeInvalidArgument)
 
 	assert.Equal(t, 0, h.authz.calls, "authz.Evaluate should not be called when proto validation rejects")
@@ -279,9 +282,8 @@ func TestMintPluginToken_MalformedUUID_InvalidArgument(t *testing.T) {
 func TestMintPluginToken_AuthzError_Internal(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
 	h.authz.err = errors.New("openfga unreachable")
-	req := h.request(t, "Bearer "+h.userToken(t))
 
-	_, err := h.server.MintPluginToken(context.Background(), req)
+	_, err := h.mint(t, "Bearer "+h.userToken(t))
 	assertConnectCode(t, err, connect.CodeInternal)
 }
 

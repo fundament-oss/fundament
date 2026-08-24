@@ -3,12 +3,15 @@ package provider
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
@@ -17,14 +20,25 @@ import (
 // mockTokenServiceClient is a mock implementation of TokenServiceClient for testing.
 type mockTokenServiceClient struct {
 	authnv1connect.UnimplementedTokenServiceHandler
-	exchangeFunc func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error)
+	exchangeFunc func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error)
 }
 
-func (m *mockTokenServiceClient) ExchangeToken(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
+func (m *mockTokenServiceClient) ExchangeToken(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
 	if m.exchangeFunc != nil {
 		return m.exchangeFunc(ctx, req)
 	}
 	return nil, errors.New("not implemented")
+}
+
+// newTestTokenServiceClient serves mock over a real Connect server so that
+// request headers set via the client context are visible to the handler.
+func newTestTokenServiceClient(t *testing.T, mock *mockTokenServiceClient) authnv1connect.TokenServiceClient {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.Handle(authnv1connect.NewTokenServiceHandler(mock))
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return authnv1connect.NewTokenServiceClient(srv.Client(), srv.URL)
 }
 
 // createTestJWT creates a JWT token for testing with the given expiration time.
@@ -80,21 +94,22 @@ func TestTokenManager_GetToken_Fresh(t *testing.T) {
 	testToken := createTestJWT(expTime)
 
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
 			// Verify Authorization header is set
-			if req.Header().Get("Authorization") != "Bearer test-api-key" {
-				t.Errorf("Authorization header = %q, want %q", req.Header().Get("Authorization"), "Bearer test-api-key")
+			callInfo, ok := connect.CallInfoForHandlerContext(ctx)
+			if assert.True(t, ok, "expected handler call info in context") {
+				assert.Equal(t, "Bearer test-api-key", callInfo.RequestHeader().Get("Authorization"))
 			}
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+			return authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 
 	tm := &TokenManager{
 		apiKey:        "test-api-key",
 		authnEndpoint: "http://test.example.com",
-		client:        mock,
+		client:        newTestTokenServiceClient(t, mock),
 	}
 
 	token, err := tm.GetToken(context.Background())
@@ -112,10 +127,10 @@ func TestTokenManager_GetToken_Cached(t *testing.T) {
 	testToken := createTestJWT(expTime)
 
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
+			return authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 
@@ -149,10 +164,10 @@ func TestTokenManager_GetToken_RefreshesExpiredToken(t *testing.T) {
 	newToken := createTestJWT(newExpTime)
 
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
+			return authnv1.ExchangeTokenResponse_builder{
 				AccessToken: newToken,
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 
@@ -176,7 +191,7 @@ func TestTokenManager_GetToken_RefreshesExpiredToken(t *testing.T) {
 
 func TestTokenManager_GetToken_ExchangeError(t *testing.T) {
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
 			return nil, errors.New("authentication failed")
 		},
 	}
@@ -202,10 +217,10 @@ func TestTokenManager_GetToken_ExchangeError(t *testing.T) {
 
 func TestTokenManager_GetToken_InvalidJWT(t *testing.T) {
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
+			return authnv1.ExchangeTokenResponse_builder{ //nolint:gosec // not a real credential
 				AccessToken: "not-a-valid-jwt",
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 
@@ -229,10 +244,10 @@ func TestTokenManager_GetToken_MissingExpiration(t *testing.T) {
 	tokenString, _ := token.SignedString([]byte("test-secret"))
 
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
+			return authnv1.ExchangeTokenResponse_builder{
 				AccessToken: tokenString,
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 
@@ -258,12 +273,12 @@ func TestTokenManager_GetToken_ConcurrentAccess(t *testing.T) {
 	testToken := createTestJWT(expTime)
 
 	mock := &mockTokenServiceClient{
-		exchangeFunc: func(ctx context.Context, req *connect.Request[authnv1.ExchangeTokenRequest]) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
+		exchangeFunc: func(ctx context.Context, req *authnv1.ExchangeTokenRequest) (*authnv1.ExchangeTokenResponse, error) {
 			// Add a small delay to simulate network latency
 			time.Sleep(10 * time.Millisecond)
-			return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+			return authnv1.ExchangeTokenResponse_builder{
 				AccessToken: testToken,
-			}.Build()), nil
+			}.Build(), nil
 		},
 	}
 

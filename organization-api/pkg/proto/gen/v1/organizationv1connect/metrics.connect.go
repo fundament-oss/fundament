@@ -65,23 +65,23 @@ const (
 // MetricsServiceClient is a client for the organization.v1.MetricsService service.
 type MetricsServiceClient interface {
 	// Cluster-level workload metrics (CPU, memory, pods) for a specific cluster
-	GetClusterWorkloadMetrics(context.Context, *connect.Request[v1.GetClusterWorkloadMetricsRequest]) (*connect.Response[v1.GetClusterWorkloadMetricsResponse], error)
+	GetClusterWorkloadMetrics(context.Context, *v1.GetClusterWorkloadMetricsRequest) (*v1.GetClusterWorkloadMetricsResponse, error)
 	// Time-series workload metrics for a specific cluster
-	GetClusterWorkloadTimeSeries(context.Context, *connect.Request[v1.GetClusterWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetClusterWorkloadTimeSeries(context.Context, *v1.GetClusterWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Org-level workload metrics aggregated across all clusters
-	GetOrgWorkloadMetrics(context.Context, *connect.Request[v1.GetOrgWorkloadMetricsRequest]) (*connect.Response[v1.GetOrgWorkloadMetricsResponse], error)
+	GetOrgWorkloadMetrics(context.Context, *v1.GetOrgWorkloadMetricsRequest) (*v1.GetOrgWorkloadMetricsResponse, error)
 	// Org-level time-series workload metrics aggregated across all clusters
-	GetOrgWorkloadTimeSeries(context.Context, *connect.Request[v1.GetOrgWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetOrgWorkloadTimeSeries(context.Context, *v1.GetOrgWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Project-level workload metrics filtered to the project's namespaces
-	GetProjectWorkloadMetrics(context.Context, *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error)
+	GetProjectWorkloadMetrics(context.Context, *v1.GetProjectWorkloadMetricsRequest) (*v1.GetProjectWorkloadMetricsResponse, error)
 	// Project-level time-series workload metrics filtered to the project's namespaces
-	GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetProjectWorkloadTimeSeries(context.Context, *v1.GetProjectWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Live streaming of org-wide workload metrics, pushed every 15 seconds.
-	StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
+	StreamOrgWorkloadMetrics(context.Context, *v1.StreamOrgWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
 	// Live streaming of cluster workload metrics, pushed every 15 seconds.
-	StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
+	StreamClusterWorkloadMetrics(context.Context, *v1.StreamClusterWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
 	// Live streaming of project workload metrics, pushed every 15 seconds.
-	StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
+	StreamProjectWorkloadMetrics(context.Context, *v1.StreamProjectWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
 }
 
 // NewMetricsServiceClient constructs a client for the organization.v1.MetricsService service. By
@@ -166,70 +166,94 @@ type metricsServiceClient struct {
 }
 
 // GetClusterWorkloadMetrics calls organization.v1.MetricsService.GetClusterWorkloadMetrics.
-func (c *metricsServiceClient) GetClusterWorkloadMetrics(ctx context.Context, req *connect.Request[v1.GetClusterWorkloadMetricsRequest]) (*connect.Response[v1.GetClusterWorkloadMetricsResponse], error) {
-	return c.getClusterWorkloadMetrics.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetClusterWorkloadMetrics(ctx context.Context, req *v1.GetClusterWorkloadMetricsRequest) (*v1.GetClusterWorkloadMetricsResponse, error) {
+	response, err := c.getClusterWorkloadMetrics.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetClusterWorkloadTimeSeries calls organization.v1.MetricsService.GetClusterWorkloadTimeSeries.
-func (c *metricsServiceClient) GetClusterWorkloadTimeSeries(ctx context.Context, req *connect.Request[v1.GetClusterWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
-	return c.getClusterWorkloadTimeSeries.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetClusterWorkloadTimeSeries(ctx context.Context, req *v1.GetClusterWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
+	response, err := c.getClusterWorkloadTimeSeries.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetOrgWorkloadMetrics calls organization.v1.MetricsService.GetOrgWorkloadMetrics.
-func (c *metricsServiceClient) GetOrgWorkloadMetrics(ctx context.Context, req *connect.Request[v1.GetOrgWorkloadMetricsRequest]) (*connect.Response[v1.GetOrgWorkloadMetricsResponse], error) {
-	return c.getOrgWorkloadMetrics.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetOrgWorkloadMetrics(ctx context.Context, req *v1.GetOrgWorkloadMetricsRequest) (*v1.GetOrgWorkloadMetricsResponse, error) {
+	response, err := c.getOrgWorkloadMetrics.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetOrgWorkloadTimeSeries calls organization.v1.MetricsService.GetOrgWorkloadTimeSeries.
-func (c *metricsServiceClient) GetOrgWorkloadTimeSeries(ctx context.Context, req *connect.Request[v1.GetOrgWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
-	return c.getOrgWorkloadTimeSeries.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetOrgWorkloadTimeSeries(ctx context.Context, req *v1.GetOrgWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
+	response, err := c.getOrgWorkloadTimeSeries.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetProjectWorkloadMetrics calls organization.v1.MetricsService.GetProjectWorkloadMetrics.
-func (c *metricsServiceClient) GetProjectWorkloadMetrics(ctx context.Context, req *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error) {
-	return c.getProjectWorkloadMetrics.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetProjectWorkloadMetrics(ctx context.Context, req *v1.GetProjectWorkloadMetricsRequest) (*v1.GetProjectWorkloadMetricsResponse, error) {
+	response, err := c.getProjectWorkloadMetrics.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetProjectWorkloadTimeSeries calls organization.v1.MetricsService.GetProjectWorkloadTimeSeries.
-func (c *metricsServiceClient) GetProjectWorkloadTimeSeries(ctx context.Context, req *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
-	return c.getProjectWorkloadTimeSeries.CallUnary(ctx, req)
+func (c *metricsServiceClient) GetProjectWorkloadTimeSeries(ctx context.Context, req *v1.GetProjectWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
+	response, err := c.getProjectWorkloadTimeSeries.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // StreamOrgWorkloadMetrics calls organization.v1.MetricsService.StreamOrgWorkloadMetrics.
-func (c *metricsServiceClient) StreamOrgWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamOrgWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
-	return c.streamOrgWorkloadMetrics.CallServerStream(ctx, req)
+func (c *metricsServiceClient) StreamOrgWorkloadMetrics(ctx context.Context, req *v1.StreamOrgWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamOrgWorkloadMetrics.CallServerStream(ctx, connect.NewRequest(req))
 }
 
 // StreamClusterWorkloadMetrics calls organization.v1.MetricsService.StreamClusterWorkloadMetrics.
-func (c *metricsServiceClient) StreamClusterWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamClusterWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
-	return c.streamClusterWorkloadMetrics.CallServerStream(ctx, req)
+func (c *metricsServiceClient) StreamClusterWorkloadMetrics(ctx context.Context, req *v1.StreamClusterWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamClusterWorkloadMetrics.CallServerStream(ctx, connect.NewRequest(req))
 }
 
 // StreamProjectWorkloadMetrics calls organization.v1.MetricsService.StreamProjectWorkloadMetrics.
-func (c *metricsServiceClient) StreamProjectWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamProjectWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
-	return c.streamProjectWorkloadMetrics.CallServerStream(ctx, req)
+func (c *metricsServiceClient) StreamProjectWorkloadMetrics(ctx context.Context, req *v1.StreamProjectWorkloadMetricsRequest) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamProjectWorkloadMetrics.CallServerStream(ctx, connect.NewRequest(req))
 }
 
 // MetricsServiceHandler is an implementation of the organization.v1.MetricsService service.
 type MetricsServiceHandler interface {
 	// Cluster-level workload metrics (CPU, memory, pods) for a specific cluster
-	GetClusterWorkloadMetrics(context.Context, *connect.Request[v1.GetClusterWorkloadMetricsRequest]) (*connect.Response[v1.GetClusterWorkloadMetricsResponse], error)
+	GetClusterWorkloadMetrics(context.Context, *v1.GetClusterWorkloadMetricsRequest) (*v1.GetClusterWorkloadMetricsResponse, error)
 	// Time-series workload metrics for a specific cluster
-	GetClusterWorkloadTimeSeries(context.Context, *connect.Request[v1.GetClusterWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetClusterWorkloadTimeSeries(context.Context, *v1.GetClusterWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Org-level workload metrics aggregated across all clusters
-	GetOrgWorkloadMetrics(context.Context, *connect.Request[v1.GetOrgWorkloadMetricsRequest]) (*connect.Response[v1.GetOrgWorkloadMetricsResponse], error)
+	GetOrgWorkloadMetrics(context.Context, *v1.GetOrgWorkloadMetricsRequest) (*v1.GetOrgWorkloadMetricsResponse, error)
 	// Org-level time-series workload metrics aggregated across all clusters
-	GetOrgWorkloadTimeSeries(context.Context, *connect.Request[v1.GetOrgWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetOrgWorkloadTimeSeries(context.Context, *v1.GetOrgWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Project-level workload metrics filtered to the project's namespaces
-	GetProjectWorkloadMetrics(context.Context, *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error)
+	GetProjectWorkloadMetrics(context.Context, *v1.GetProjectWorkloadMetricsRequest) (*v1.GetProjectWorkloadMetricsResponse, error)
 	// Project-level time-series workload metrics filtered to the project's namespaces
-	GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	GetProjectWorkloadTimeSeries(context.Context, *v1.GetProjectWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error)
 	// Live streaming of org-wide workload metrics, pushed every 15 seconds.
-	StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
+	StreamOrgWorkloadMetrics(context.Context, *v1.StreamOrgWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
 	// Live streaming of cluster workload metrics, pushed every 15 seconds.
-	StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
+	StreamClusterWorkloadMetrics(context.Context, *v1.StreamClusterWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
 	// Live streaming of project workload metrics, pushed every 15 seconds.
-	StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
+	StreamProjectWorkloadMetrics(context.Context, *v1.StreamProjectWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
 }
 
 // NewMetricsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -239,55 +263,55 @@ type MetricsServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	metricsServiceMethods := v1.File_v1_metrics_proto.Services().ByName("MetricsService").Methods()
-	metricsServiceGetClusterWorkloadMetricsHandler := connect.NewUnaryHandler(
+	metricsServiceGetClusterWorkloadMetricsHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetClusterWorkloadMetricsProcedure,
 		svc.GetClusterWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("GetClusterWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceGetClusterWorkloadTimeSeriesHandler := connect.NewUnaryHandler(
+	metricsServiceGetClusterWorkloadTimeSeriesHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetClusterWorkloadTimeSeriesProcedure,
 		svc.GetClusterWorkloadTimeSeries,
 		connect.WithSchema(metricsServiceMethods.ByName("GetClusterWorkloadTimeSeries")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceGetOrgWorkloadMetricsHandler := connect.NewUnaryHandler(
+	metricsServiceGetOrgWorkloadMetricsHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetOrgWorkloadMetricsProcedure,
 		svc.GetOrgWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("GetOrgWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceGetOrgWorkloadTimeSeriesHandler := connect.NewUnaryHandler(
+	metricsServiceGetOrgWorkloadTimeSeriesHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetOrgWorkloadTimeSeriesProcedure,
 		svc.GetOrgWorkloadTimeSeries,
 		connect.WithSchema(metricsServiceMethods.ByName("GetOrgWorkloadTimeSeries")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceGetProjectWorkloadMetricsHandler := connect.NewUnaryHandler(
+	metricsServiceGetProjectWorkloadMetricsHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetProjectWorkloadMetricsProcedure,
 		svc.GetProjectWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("GetProjectWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceGetProjectWorkloadTimeSeriesHandler := connect.NewUnaryHandler(
+	metricsServiceGetProjectWorkloadTimeSeriesHandler := connect.NewUnaryHandlerSimple(
 		MetricsServiceGetProjectWorkloadTimeSeriesProcedure,
 		svc.GetProjectWorkloadTimeSeries,
 		connect.WithSchema(metricsServiceMethods.ByName("GetProjectWorkloadTimeSeries")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceStreamOrgWorkloadMetricsHandler := connect.NewServerStreamHandler(
+	metricsServiceStreamOrgWorkloadMetricsHandler := connect.NewServerStreamHandlerSimple(
 		MetricsServiceStreamOrgWorkloadMetricsProcedure,
 		svc.StreamOrgWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("StreamOrgWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceStreamClusterWorkloadMetricsHandler := connect.NewServerStreamHandler(
+	metricsServiceStreamClusterWorkloadMetricsHandler := connect.NewServerStreamHandlerSimple(
 		MetricsServiceStreamClusterWorkloadMetricsProcedure,
 		svc.StreamClusterWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("StreamClusterWorkloadMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
-	metricsServiceStreamProjectWorkloadMetricsHandler := connect.NewServerStreamHandler(
+	metricsServiceStreamProjectWorkloadMetricsHandler := connect.NewServerStreamHandlerSimple(
 		MetricsServiceStreamProjectWorkloadMetricsProcedure,
 		svc.StreamProjectWorkloadMetrics,
 		connect.WithSchema(metricsServiceMethods.ByName("StreamProjectWorkloadMetrics")),
@@ -322,38 +346,38 @@ func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect.Handler
 // UnimplementedMetricsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMetricsServiceHandler struct{}
 
-func (UnimplementedMetricsServiceHandler) GetClusterWorkloadMetrics(context.Context, *connect.Request[v1.GetClusterWorkloadMetricsRequest]) (*connect.Response[v1.GetClusterWorkloadMetricsResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetClusterWorkloadMetrics(context.Context, *v1.GetClusterWorkloadMetricsRequest) (*v1.GetClusterWorkloadMetricsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetClusterWorkloadMetrics is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) GetClusterWorkloadTimeSeries(context.Context, *connect.Request[v1.GetClusterWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetClusterWorkloadTimeSeries(context.Context, *v1.GetClusterWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetClusterWorkloadTimeSeries is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) GetOrgWorkloadMetrics(context.Context, *connect.Request[v1.GetOrgWorkloadMetricsRequest]) (*connect.Response[v1.GetOrgWorkloadMetricsResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetOrgWorkloadMetrics(context.Context, *v1.GetOrgWorkloadMetricsRequest) (*v1.GetOrgWorkloadMetricsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetOrgWorkloadMetrics is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) GetOrgWorkloadTimeSeries(context.Context, *connect.Request[v1.GetOrgWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetOrgWorkloadTimeSeries(context.Context, *v1.GetOrgWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetOrgWorkloadTimeSeries is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) GetProjectWorkloadMetrics(context.Context, *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetProjectWorkloadMetrics(context.Context, *v1.GetProjectWorkloadMetricsRequest) (*v1.GetProjectWorkloadMetricsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetProjectWorkloadMetrics is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
+func (UnimplementedMetricsServiceHandler) GetProjectWorkloadTimeSeries(context.Context, *v1.GetProjectWorkloadTimeSeriesRequest) (*v1.GetWorkloadTimeSeriesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetProjectWorkloadTimeSeries is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+func (UnimplementedMetricsServiceHandler) StreamOrgWorkloadMetrics(context.Context, *v1.StreamOrgWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamOrgWorkloadMetrics is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+func (UnimplementedMetricsServiceHandler) StreamClusterWorkloadMetrics(context.Context, *v1.StreamClusterWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamClusterWorkloadMetrics is not implemented"))
 }
 
-func (UnimplementedMetricsServiceHandler) StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+func (UnimplementedMetricsServiceHandler) StreamProjectWorkloadMetrics(context.Context, *v1.StreamProjectWorkloadMetricsRequest, *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamProjectWorkloadMetrics is not implemented"))
 }

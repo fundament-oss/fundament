@@ -36,4 +36,10 @@ message GetInstallationManifestResponse {
   string organization_id = 40 [(buf.validate.field).string = {uuid: true}];
   // The installation lifecycle phase (status.phase), e.g. "Running".
   string status = 50;
+  // The PluginInstallation CR's metadata.name. The plugin's namespace and
+  // ServiceAccount are named plugin-{installation_name}; kube-api-proxy uses
+  // this to address the SA directly, since installation_id (the CR UID) is not
+  // name-addressable via the kube API. installation_id stays authoritative:
+  // kube-api-proxy verifies the resolved CR's UID against it.
+  string installation_name = 60;
 }

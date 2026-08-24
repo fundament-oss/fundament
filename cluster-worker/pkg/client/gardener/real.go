@@ -609,7 +609,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 		Spec: gardencorev1beta1.ShootSpec{
 			CloudProfile: &gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
-				Name: r.provider.CloudProfile,
+				Name: r.cloudProfile(cluster),
 			},
 			Region: r.region(cluster),
 			Kubernetes: gardencorev1beta1.Kubernetes{
@@ -628,9 +628,25 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 	return shoot, nil
 }
 
-// region returns the cluster's region, falling back to the provider default when
-// unset (single-region providers such as metal expose one region, e.g. "local").
+// cloudProfile returns the CloudProfile backing the cluster's catalog region,
+// falling back to the provider default for legacy clusters without a catalog
+// reference.
+func (r *RealClient) cloudProfile(cluster *ClusterToSync) string {
+	if cluster.CloudProfile != "" {
+		return cluster.CloudProfile
+	}
+	return r.provider.CloudProfile
+}
+
+// region returns the shoot region: the catalog region's cloud_profile_region
+// when set (the region name INSIDE the CloudProfile, which may differ from the
+// user-facing catalog name), else the cluster's legacy region text, else the
+// provider default (single-region providers such as metal expose one region,
+// e.g. "local").
 func (r *RealClient) region(cluster *ClusterToSync) string {
+	if cluster.CloudProfileRegion != "" {
+		return cluster.CloudProfileRegion
+	}
 	if cluster.Region != "" {
 		return cluster.Region
 	}

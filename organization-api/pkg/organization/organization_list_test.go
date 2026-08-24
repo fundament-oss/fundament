@@ -19,7 +19,7 @@ func Test_Organization_List_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.ListOrganizations(context.Background(), connect.NewRequest(&organizationv1.ListOrganizationsRequest{}))
+	_, err := client.ListOrganizations(context.Background(), &organizationv1.ListOrganizationsRequest{})
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -49,11 +49,12 @@ func Test_Organization_List(t *testing.T) {
 
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	listReq := connect.NewRequest(&organizationv1.ListOrganizationsRequest{})
-	listReq.Header().Set("Authorization", "Bearer "+token)
+	listReq := &organizationv1.ListOrganizationsRequest{}
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 
-	listRes, err := client.ListOrganizations(context.Background(), listReq)
+	listRes, err := client.ListOrganizations(listCtx, listReq)
 	require.NoError(t, err)
 
-	require.Len(t, listRes.Msg.GetOrganizations(), 2)
+	require.Len(t, listRes.GetOrganizations(), 2)
 }

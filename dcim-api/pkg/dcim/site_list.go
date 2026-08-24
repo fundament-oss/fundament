@@ -10,8 +10,8 @@ import (
 
 func (s *Server) ListSites(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListSitesRequest],
-) (*connect.Response[dcimv1.ListSitesResponse], error) {
+	req *dcimv1.ListSitesRequest,
+) (*dcimv1.ListSitesResponse, error) {
 	rows, err := s.queries.SiteList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list sites: %w", err))
@@ -22,7 +22,7 @@ func (s *Server) ListSites(
 		sites = append(sites, siteFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListSitesResponse_builder{
+	return dcimv1.ListSitesResponse_builder{
 		Sites: sites,
-	}.Build()), nil
+	}.Build(), nil
 }

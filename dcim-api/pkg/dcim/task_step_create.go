@@ -17,16 +17,16 @@ import (
 
 func (s *Server) CreateTaskStep(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateTaskStepRequest],
-) (*connect.Response[dcimv1.CreateTaskStepResponse], error) {
+	req *dcimv1.CreateTaskStepRequest,
+) (*dcimv1.CreateTaskStepResponse, error) {
 	params := db.TaskStepCreateParams{
-		TaskID:  uuid.MustParse(req.Msg.GetTaskId()),
-		Title:   req.Msg.GetTitle(),
-		Ordinal: req.Msg.GetOrdinal(),
+		TaskID:  uuid.MustParse(req.GetTaskId()),
+		Title:   req.GetTitle(),
+		Ordinal: req.GetOrdinal(),
 	}
 
-	if req.Msg.HasDescription() {
-		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
+	if req.HasDescription() {
+		params.Description = pgtype.Text{String: req.GetDescription(), Valid: true}
 	}
 
 	id, err := s.queries.TaskStepCreate(ctx, params)
@@ -40,7 +40,7 @@ func (s *Server) CreateTaskStep(
 
 	s.logger.InfoContext(ctx, "task step created", "task_step_id", id)
 
-	return connect.NewResponse(dcimv1.CreateTaskStepResponse_builder{
+	return dcimv1.CreateTaskStepResponse_builder{
 		TaskStepId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

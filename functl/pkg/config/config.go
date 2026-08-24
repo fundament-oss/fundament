@@ -27,9 +27,28 @@ type Credentials struct {
 // DefaultConfig returns the default configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		APIEndpoint: "https://organization.fundament.localhost:8443",
-		AuthnURL:    "https://authn.fundament.localhost:8443",
+		APIEndpoint: "https://organization-api.fundament-poc.nl",
+		AuthnURL:    "https://authn.fundament-poc.nl",
 		Output:      "table",
+	}
+}
+
+// Environment variables that override the endpoint configuration.
+const (
+	EnvAPIEndpoint = "FUNCTL_API_ENDPOINT"
+	EnvAuthnURL    = "FUNCTL_AUTHN_URL"
+)
+
+// applyEnvOverrides overrides endpoint settings from the environment.
+// EnvAPIEndpoint and EnvAuthnURL take precedence over both the config file
+// and the built-in defaults; the fundament repo sets them via mise so a
+// checkout talks to the local dev endpoints.
+func applyEnvOverrides(cfg *Config) {
+	if v := os.Getenv(EnvAPIEndpoint); v != "" {
+		cfg.APIEndpoint = v
+	}
+	if v := os.Getenv(EnvAuthnURL); v != "" {
+		cfg.AuthnURL = v
 	}
 }
 
@@ -91,6 +110,8 @@ func EnsureConfigDir() error {
 
 // LoadConfig loads the configuration from the config file.
 // If the file doesn't exist, it returns the default configuration.
+// FUNCTL_API_ENDPOINT and FUNCTL_AUTHN_URL environment variables override
+// the endpoints from either source.
 func LoadConfig() (*Config, error) {
 	path, err := ConfigPath()
 	if err != nil {
@@ -100,7 +121,9 @@ func LoadConfig() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return DefaultConfig(), nil
+			cfg := DefaultConfig()
+			applyEnvOverrides(cfg)
+			return cfg, nil
 		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -109,6 +132,7 @@ func LoadConfig() (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
+	applyEnvOverrides(cfg)
 
 	return cfg, nil
 }

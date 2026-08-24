@@ -122,9 +122,23 @@ func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDo
 }
 
 const pluginGetByID = `-- name: PluginGetByID :one
-SELECT id, name, display_name, description_short, description, image, author_name, author_url, repository_url
+SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image, appstore.plugins.author_name, appstore.plugins.author_url, appstore.plugins.repository_url,
+  COALESCE((
+    SELECT appstore.plugin_definitions.plugin_version
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_version,
+  COALESCE((
+    SELECT appstore.plugin_definitions.hash
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_hash
 FROM appstore.plugins
-WHERE id = $1 AND deleted IS NULL
+WHERE appstore.plugins.id = $1 AND appstore.plugins.deleted IS NULL
 `
 
 type PluginGetByIDParams struct {
@@ -141,6 +155,8 @@ type PluginGetByIDRow struct {
 	AuthorName       pgtype.Text
 	AuthorUrl        pgtype.Text
 	RepositoryUrl    pgtype.Text
+	LatestVersion    string
+	LatestHash       string
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
@@ -156,15 +172,31 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.AuthorName,
 		&i.AuthorUrl,
 		&i.RepositoryUrl,
+		&i.LatestVersion,
+		&i.LatestHash,
 	)
 	return i, err
 }
 
 const pluginList = `-- name: PluginList :many
-SELECT id, name, display_name, description_short, description, image
+SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image,
+  COALESCE((
+    SELECT appstore.plugin_definitions.plugin_version
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_version,
+  COALESCE((
+    SELECT appstore.plugin_definitions.hash
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_hash
 FROM appstore.plugins
-WHERE deleted IS NULL
-ORDER BY COALESCE(NULLIF(display_name, ''), name)
+WHERE appstore.plugins.deleted IS NULL
+ORDER BY COALESCE(NULLIF(appstore.plugins.display_name, ''), appstore.plugins.name)
 `
 
 type PluginListRow struct {
@@ -174,6 +206,8 @@ type PluginListRow struct {
 	DescriptionShort string
 	Description      string
 	Image            string
+	LatestVersion    string
+	LatestHash       string
 }
 
 func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
@@ -192,6 +226,8 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 			&i.DescriptionShort,
 			&i.Description,
 			&i.Image,
+			&i.LatestVersion,
+			&i.LatestHash,
 		); err != nil {
 			return nil, err
 		}

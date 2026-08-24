@@ -23,6 +23,10 @@ message SyncState {
 
 // ClusterService manages Kubernetes clusters
 service ClusterService {
+  // List the region catalog: every region with the kubernetes versions and
+  // machine types it offers (drives the create-cluster cascade).
+  rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
+
   // List all clusters for the current organization
   rpc ListClusters(ListClustersRequest) returns (ListClustersResponse);
 
@@ -46,9 +50,6 @@ service ClusterService {
 
   // Download kubeconfig for a cluster
   rpc GetKubeconfig(GetKubeconfigRequest) returns (GetKubeconfigResponse);
-
-  // Fetch the basic-auth credentials for a cluster's metrics dashboard.
-  rpc GetClusterMetricsCredentials(GetClusterMetricsCredentialsRequest) returns (GetClusterMetricsCredentialsResponse);
 
   // List node pools for a cluster
   rpc ListNodePools(ListNodePoolsRequest) returns (ListNodePoolsResponse);
@@ -110,12 +111,15 @@ message ClusterDetails {
   string kubernetes_version = 40;
   ClusterStatus status = 50;
   google.protobuf.Timestamp created = 60;
-  ResourceUsageInfo resource_usage = 70;
+  // 70 carried a never-populated usage stub; live usage comes from the
+  // MetricsService (GetClusterWorkloadMetrics) instead.
+  reserved 70;
+  reserved resource_usage;
   SyncState sync_state = 80;
-  // URL of the per-shoot metrics dashboard (Plutono), resolved from the
-  // <shoot>.monitoring secret in the project namespace. Empty when the
-  // cluster is not ready or the secret is not yet available.
-  string observability_url = 90;
+  // 90 carried the Plutono deep-link URL; retired when the console gained
+  // native metrics panels (ADR-0026).
+  reserved 90;
+  reserved observability_url;
 }
 
 // Resource usage information for a cluster
@@ -138,7 +142,10 @@ message NodePool {
   string version = 80;
 }
 
-// Create cluster request
+// Create cluster request. Region and kubernetes version are the catalog
+// display names; the server resolves them against the region catalog and
+// rejects combinations the region does not offer (pre-validate with
+// ListRegions).
 message CreateClusterRequest {
   string name = 10 [(buf.validate.field).string = {
     min_len: 1
@@ -209,17 +216,6 @@ message GetKubeconfigResponse {
   string kubeconfig_content = 10;
 }
 
-// Get cluster metrics credentials request
-message GetClusterMetricsCredentialsRequest {
-  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// Get cluster metrics credentials response
-message GetClusterMetricsCredentialsResponse {
-  string username = 10;
-  string password = 20;
-}
-
 // Create node pool request
 message CreateNodePoolRequest {
   option (buf.validate.message).cel = {
@@ -233,6 +229,8 @@ message CreateNodePoolRequest {
     min_len: 1
     max_len: 255
   }];
+  // Machine type name from the catalog; the server resolves it against the
+  // cluster's region and rejects types the region does not offer.
   string machine_type = 30 [(buf.validate.field).string = {min_len: 1}];
   int32 autoscale_min = 40 [(buf.validate.field).int32 = {gte: 0}];
   int32 autoscale_max = 50 [(buf.validate.field).int32 = {gte: 0}];
@@ -287,3 +285,26 @@ message GetNodePoolResponse {
   NodePool node_pool = 10;
 }
 
+
+// List regions request
+message ListRegionsRequest {}
+
+// List regions response
+message ListRegionsResponse {
+  repeated Region regions = 10;
+}
+
+// A region from the catalog with its per-region offerings. Text-only: the
+// names here are exactly what CreateCluster / CreateNodePool accept.
+message Region {
+  string name = 10;
+  repeated string kubernetes_versions = 20;
+  repeated RegionMachineType machine_types = 30;
+}
+
+// A machine type offered in a region.
+message RegionMachineType {
+  string name = 10;
+  int32 lcpu = 20;
+  int64 memory = 30; // bytes
+}

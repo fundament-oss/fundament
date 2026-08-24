@@ -14,13 +14,22 @@ import { RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
+import InstallPluginModalComponent, {
+  type PluginVersionOption,
+  type InstallSelection,
+  type RetrySelection,
+} from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
+  PRESENTATION_ENABLED,
+  PLUGIN_INSTALLS_RESET_EVENT,
+} from '../presentation/presentation.tokens';
+import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
+  ListPluginDefinitionsRequestSchema,
   type Category,
   type Preset,
   type PluginSummary,
@@ -55,6 +64,8 @@ interface PluginWithPresets extends Pick<
   | 'categories'
   | 'tags'
   | 'image'
+  | 'pluginVersion'
+  | 'definitionHash'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
@@ -116,6 +127,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private pluginInstallationService = inject(PluginInstallationService);
 
+  private presentationEnabled = inject(PRESENTATION_ENABLED);
+
+  // Demo/walkthrough only: reset the install state to the mock baseline so the
+  // install slide can be replayed. Inert in production, where the event never fires.
+  private readonly onDemoReset = (): void => {
+    this.reloadInstalls();
+  };
+
   selectedCategory = 'all';
 
   selectedPreset = 'all';
@@ -131,6 +150,13 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   sheetPlugin = signal<PluginWithPresets | null>(null);
 
   private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
+
+  // Published versions of the selected plugin, offered in the install modal.
+  installVersions = signal<PluginVersionOption[]>([]);
+
+  // True when fetching the selected plugin's versions failed, so the modal can
+  // show an error state instead of the "no published version" notice.
+  installVersionsError = signal(false);
 
   isLoading = signal(true);
 
@@ -191,6 +217,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   backendPresets: Preset[] = [];
 
   async ngOnInit() {
+    // Registered before the loads below, so a failed load does not also take the
+    // walkthrough's install-replay with it.
+    if (this.presentationEnabled) {
+      document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
+    }
+
     try {
       // Fetch plugins and presets in parallel; use pre-fetched cluster data from service
       const [pluginsResponse, presetsResponse] = await Promise.all([
@@ -221,6 +253,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           categories: backendPlugin.categories,
           tags: backendPlugin.tags,
           image: backendPlugin.image,
+          pluginVersion: backendPlugin.pluginVersion,
+          definitionHash: backendPlugin.definitionHash,
           presets: assignedPresets,
         };
       });
@@ -250,6 +284,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopPolling();
     this.stopInstallPolling();
+    document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
+  }
+
+  // Re-read installs from the (reset) backend and drop any stale in-flight polling.
+  private reloadInstalls(): void {
+    this.stopInstallPolling();
+    this.fetchInstalls()
+      .then((installs) => this.installs.set(installs))
+      .catch(() => {}); // Background refresh; a failed read just leaves the current view.
   }
 
   private async refreshClusters() {
@@ -534,8 +577,20 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return this.clusters().length;
   }
 
-  onInstallPlugin(plugin: PluginWithPresets) {
+  async onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
+    let versions: PluginVersionOption[] = [];
+    let errored = false;
+    try {
+      versions = await this.fetchPluginVersions(plugin.id);
+    } catch {
+      errored = true;
+    }
+    // Quick clicks (plugin A then B) can resolve out of order; ignore a result
+    // for a plugin the user has since navigated away from.
+    if (this.selectedPlugin !== plugin) return;
+    this.installVersions.set(versions);
+    this.installVersionsError.set(errored);
     this.showInstallModal.set(true);
   }
 
@@ -554,9 +609,23 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
   }
 
+  // Fetches the plugin's published versions (latest first) for the install
+  // modal's version picker. Throws on failure so the caller can tell a fetch
+  // error apart from a plugin that simply has nothing published yet.
+  private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
+    const resp = await firstValueFrom(
+      this.pluginClient.listPluginDefinitions(
+        create(ListPluginDefinitionsRequestSchema, { pluginId }),
+      ),
+    );
+    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
+  }
+
   closeInstallModal(): void {
     this.showInstallModal.set(false);
     this.selectedPlugin = null;
+    this.installVersions.set([]);
+    this.installVersionsError.set(false);
   }
 
   private clusterName(clusterId: string): string {
@@ -588,11 +657,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     );
   }
 
-  async onInstallOnClusters(clusterIds: string[]): Promise<void> {
+  async onInstallOnClusters(selection: InstallSelection): Promise<void> {
     const plugin = this.selectedPlugin;
     if (!plugin) return;
 
-    const targets = clusterIds.filter(
+    const targets = selection.clusterIds.filter(
       (id) => !this.installs().some((i) => i.clusterId === id && i.pluginName === plugin.name),
     );
     if (targets.length === 0) return;
@@ -610,7 +679,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     const results = await Promise.allSettled(
       targets.map((clusterId) =>
-        this.pluginInstallationService.installPlugin(clusterId, plugin.name, plugin.image),
+        this.pluginInstallationService.installPlugin(
+          clusterId,
+          plugin.name,
+          selection.version,
+          selection.hash,
+        ),
       ),
     );
 
@@ -645,17 +719,23 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onRetryInstall(clusterId: string): Promise<void> {
+  async onRetryInstall(retry: RetrySelection): Promise<void> {
     const plugin = this.selectedPlugin;
     if (!plugin) return;
 
+    const clusterId = retry.clusterId;
     this.setInstallPhase(clusterId, plugin.name, 'Pending');
     try {
       // The CRD from the failed install still exists, so remove it and wait for
       // it to be gone before re-creating (a plain re-POST would 409).
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
       await this.waitForUninstall(clusterId, plugin.name);
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, plugin.image);
+      await this.pluginInstallationService.installPlugin(
+        clusterId,
+        plugin.name,
+        retry.version,
+        retry.hash,
+      );
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(

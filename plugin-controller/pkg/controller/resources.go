@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 const (
@@ -117,19 +117,20 @@ func pluginScopeClusterRoleName(installationName string) string {
 	return fmt.Sprintf("plugin-%s-scope", installationName)
 }
 
-// mutatePluginScopeClusterRole materialises the pinned definition's
-// permissions.rbac into a real ClusterRole. The cluster's own RBAC engine
-// evaluates this when kube-api-proxy injects the plugin SA token — there is no
-// bespoke matcher anywhere.
-func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []definition.RBACRule) {
+// mutatePluginScopeClusterRole materialises the plugin's declared
+// permissions.rbac (parsed from the fetched PluginDefinition manifest) into a
+// real ClusterRole. The cluster's own RBAC engine evaluates this when
+// kube-api-proxy injects the plugin SA token — there is no bespoke matcher
+// anywhere.
+func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []pluginruntime.PolicyRule) {
 	role.Labels = mergeLabels(role.Labels, childLabels(cr))
 	role.Rules = make([]rbacv1.PolicyRule, 0, len(rules))
-	for _, r := range rules {
+	for _, rule := range rules {
 		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups:     r.APIGroups,
-			Resources:     r.Resources,
-			Verbs:         r.Verbs,
-			ResourceNames: r.ResourceNames,
+			APIGroups:     rule.APIGroups,
+			Resources:     rule.Resources,
+			Verbs:         rule.Verbs,
+			ResourceNames: rule.ResourceNames,
 		})
 	}
 }
@@ -150,8 +151,11 @@ func mutatePluginScopeClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *plu
 	}}
 }
 
-// mutateDeployment applies the desired state to an existing or empty Deployment.
-func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, fundEnvVars []corev1.EnvVar) {
+// mutateDeployment applies the desired state to an existing or empty
+// Deployment. Image and pull policy are sourced from the parsed
+// PluginDefinition — never from the CR — so the hash-verified manifest is the
+// sole gate on what image runs.
+func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, def *pluginruntime.PluginDefinition, fundEnvVars []corev1.EnvVar) {
 	labels := childLabels(cr)
 	replicas := int32(1)
 
@@ -180,8 +184,8 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Containers: []corev1.Container{
 				{
 					Name:            cr.Name,
-					Image:           cr.Spec.Image,
-					ImagePullPolicy: cr.Spec.ImagePullPolicy,
+					Image:           def.Spec.Image,
+					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "http",
@@ -220,6 +224,18 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 func mutateService(svc *corev1.Service, cr *pluginsv1.PluginInstallation) {
 	svc.Labels = childLabels(cr)
 	svc.Spec.Selector = selectorLabels(cr)
+	// Route to the pod as soon as its metadata server is up, before /readyz
+	// passes. The controller reaches GetDefinition through this Service to
+	// materialise the plugin's RBAC scope; a plugin can't become Ready until it
+	// has installed, and it can't install without that scope — so gating the
+	// Service on readiness would deadlock the bootstrap.
+	//
+	// TODO(FUN-*): this Service also carries live user data-plane traffic (asset
+	// fetches), so publishing not-ready addresses means user requests can hit
+	// not-ready pods during rollouts/crash-loops (→ transient 502s). Drop this
+	// flag once GetDefinition moves to the DB and the controller no longer needs
+	// to dial the not-ready pod, letting the Service gate on readiness normally.
+	svc.Spec.PublishNotReadyAddresses = true
 	svc.Spec.Ports = []corev1.ServicePort{
 		{
 			Name:       "http",

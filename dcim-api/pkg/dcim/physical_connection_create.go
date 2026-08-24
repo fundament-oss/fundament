@@ -18,25 +18,25 @@ import (
 
 func (s *Server) CreatePhysicalConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreatePhysicalConnectionRequest],
-) (*connect.Response[dcimv1.CreatePhysicalConnectionResponse], error) {
+	req *dcimv1.CreatePhysicalConnectionRequest,
+) (*dcimv1.CreatePhysicalConnectionResponse, error) {
 	params := db.PhysicalConnectionCreateParams{
-		APlacementID:      uuid.MustParse(req.Msg.GetSourcePlacementId()),
-		APortDefinitionID: uuid.MustParse(req.Msg.GetSourcePortDefinitionId()),
-		BPlacementID:      uuid.MustParse(req.Msg.GetTargetPlacementId()),
-		BPortDefinitionID: uuid.MustParse(req.Msg.GetTargetPortDefinitionId()),
-		CableType:         cableTypeToDB(req.Msg.GetCableType()),
-		Status:            cableStatusToDB(req.Msg.GetStatus()),
-		Color:             cableColorToDB(req.Msg.GetColor()),
-		Label:             pgtype.Text{String: req.Msg.GetLabel(), Valid: req.Msg.GetLabel() != ""},
+		APlacementID:      uuid.MustParse(req.GetSourcePlacementId()),
+		APortDefinitionID: uuid.MustParse(req.GetSourcePortDefinitionId()),
+		BPlacementID:      uuid.MustParse(req.GetTargetPlacementId()),
+		BPortDefinitionID: uuid.MustParse(req.GetTargetPortDefinitionId()),
+		CableType:         cableTypeToDB(req.GetCableType()),
+		Status:            cableStatusToDB(req.GetStatus()),
+		Color:             cableColorToDB(req.GetColor()),
+		Label:             pgtype.Text{String: req.GetLabel(), Valid: req.GetLabel() != ""},
 	}
 
-	if req.Msg.HasCableAssetId() {
-		params.CableAssetID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetCableAssetId()), Valid: true}
+	if req.HasCableAssetId() {
+		params.CableAssetID = pgtype.UUID{Bytes: uuid.MustParse(req.GetCableAssetId()), Valid: true}
 	}
 
-	if req.Msg.HasLogicalConnectionId() {
-		params.LogicalConnectionID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetLogicalConnectionId()), Valid: true}
+	if req.HasLogicalConnectionId() {
+		params.LogicalConnectionID = pgtype.UUID{Bytes: uuid.MustParse(req.GetLogicalConnectionId()), Valid: true}
 	}
 
 	id, err := s.queries.PhysicalConnectionCreate(ctx, params)
@@ -63,7 +63,7 @@ func (s *Server) CreatePhysicalConnection(
 
 	s.logger.InfoContext(ctx, "physical connection created", "connection_id", id)
 
-	return connect.NewResponse(dcimv1.CreatePhysicalConnectionResponse_builder{
+	return dcimv1.CreatePhysicalConnectionResponse_builder{
 		ConnectionId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

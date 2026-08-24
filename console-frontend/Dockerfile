@@ -19,8 +19,11 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 # Copy source files
 COPY console-frontend/ .
 
-# Build the application
-RUN bun run build
+# Build the application. `build:demo` produces the walkthrough bundle (main.demo.ts,
+# in-memory mock data) that the console-demo deployment serves; it needs no config.json
+# and makes no backend calls.
+ARG BUILD_SCRIPT=build
+RUN bun run "$BUILD_SCRIPT"
 
 # Production stage
 FROM nginx:alpine
@@ -28,4 +31,4 @@ COPY --from=build /app/dist/fundament-console/browser /usr/share/nginx/html
 COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf.template
 
 EXPOSE 80
-CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC} ${FRAME_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

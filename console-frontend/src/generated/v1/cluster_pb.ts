@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/cluster.proto.
  */
 export const file_v1_cluster: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9jbHVzdGVyLnByb3RvEg9vcmdhbml6YXRpb24udjEi0AEKCVN5bmNTdGF0ZRIcCg1vdXRib3hfc3RhdHVzGAogASgJQgWqAQIIARIWCg5vdXRib3hfcmV0cmllcxgUIAEoBRIbCgxvdXRib3hfZXJyb3IYHiABKAlCBaoBAggBEhsKDHNob290X3N0YXR1cxgoIAEoCUIFqgECCAESHAoNc2hvb3RfbWVzc2FnZRgyIAEoCUIFqgECCAESNQoRc3RhdHVzX3VwZGF0ZWRfYXQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhUKE0xpc3RDbHVzdGVyc1JlcXVlc3QiqwIKFExpc3RDbHVzdGVyc1Jlc3BvbnNlEkYKCGNsdXN0ZXJzGAogAygLMjQub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlLkNsdXN0ZXJTdW1tYXJ5GsoBCg5DbHVzdGVyU3VtbWFyeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEi4KBnN0YXR1cxgeIAEoDjIeLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyU3RhdHVzEg4KBnJlZ2lvbhgoIAEoCRIVCg1wcm9qZWN0X2NvdW50GDIgASgFEhcKD25vZGVfcG9vbF9jb3VudBg8IAEoBRIuCgpzeW5jX3N0YXRlGEYgASgLMhoub3JnYW5pemF0aW9uLnYxLlN5bmNTdGF0ZSIxChFHZXRDbHVzdGVyUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASIzChdHZXRDbHVzdGVyQnlOYW1lUmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BIkYKEkdldENsdXN0ZXJSZXNwb25zZRIwCgdjbHVzdGVyGAogASgLMh8ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJEZXRhaWxzIroCCg5DbHVzdGVyRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEg4KBnJlZ2lvbhgeIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YKCABKAkSLgoGc3RhdHVzGDIgASgOMh4ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdGF0dXMSKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOgoOcmVzb3VyY2VfdXNhZ2UYRiABKAsyIi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZUluZm8SLgoKc3luY19zdGF0ZRhQIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5TeW5jU3RhdGUSGQoRb2JzZXJ2YWJpbGl0eV91cmwYWiABKAkizAEKEVJlc291cmNlVXNhZ2VJbmZvEisKA2NwdRgKIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEi4KBm1lbW9yeRgUIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEiwKBGRpc2sYHiABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZRIsCgRwb2RzGCggASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2UiuQEKCE5vZGVQb29sEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMbWFjaGluZV90eXBlGB4gASgJEhUKDWN1cnJlbnRfbm9kZXMYKCABKAUSEQoJbWluX25vZGVzGDIgASgFEhEKCW1heF9ub2Rlcxg8IAEoBRIvCgZzdGF0dXMYRiABKA4yHy5vcmdhbml6YXRpb24udjEuTm9kZVBvb2xTdGF0dXMSDwoHdmVyc2lvbhhQIAEoCSJuChRDcmVhdGVDbHVzdGVyUmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BEhcKBnJlZ2lvbhgUIAEoCUIHukgEcgIQARIjChJrdWJlcm5ldGVzX3ZlcnNpb24YHiABKAlCB7pIBHICEAEiYAoMTm9kZVBvb2xTcGVjEgwKBG5hbWUYCiABKAkSFAoMbWFjaGluZV90eXBlGBQgASgJEhUKDWF1dG9zY2FsZV9taW4YHiABKAUSFQoNYXV0b3NjYWxlX21heBgoIAEoBSIrChVDcmVhdGVDbHVzdGVyUmVzcG9uc2USEgoKY2x1c3Rlcl9pZBgKIAEoCSJXChRVcGRhdGVDbHVzdGVyUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABARIhChJrdWJlcm5ldGVzX3ZlcnNpb24YFCABKAlCBaoBAggBIhcKFVVwZGF0ZUNsdXN0ZXJSZXNwb25zZSI0ChREZWxldGVDbHVzdGVyUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASIXChVEZWxldGVDbHVzdGVyUmVzcG9uc2UiSAoZR2V0Q2x1c3RlckFjdGl2aXR5UmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABARINCgVsaW1pdBgUIAEoBSJLChpHZXRDbHVzdGVyQWN0aXZpdHlSZXNwb25zZRItCgZldmVudHMYCiADKAsyHS5vcmdhbml6YXRpb24udjEuQ2x1c3RlckV2ZW50IqoBCgxDbHVzdGVyRXZlbnQSCgoCaWQYCiABKAkSEgoKZXZlbnRfdHlwZRgUIAEoCRIuCgpjcmVhdGVkX2F0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaCgtzeW5jX2FjdGlvbhgoIAEoCUIFqgECCAESFgoHbWVzc2FnZRgyIAEoCUIFqgECCAESFgoHYXR0ZW1wdBg8IAEoBUIFqgECCAEiNAoUR2V0S3ViZWNvbmZpZ1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQEiMwoVR2V0S3ViZWNvbmZpZ1Jlc3BvbnNlEhoKEmt1YmVjb25maWdfY29udGVudBgKIAEoCSJDCiNHZXRDbHVzdGVyTWV0cmljc0NyZWRlbnRpYWxzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJKCiRHZXRDbHVzdGVyTWV0cmljc0NyZWRlbnRpYWxzUmVzcG9uc2USEAoIdXNlcm5hbWUYCiABKAkSEAoIcGFzc3dvcmQYFCABKAkingIKFUNyZWF0ZU5vZGVQb29sUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABARIYCgRuYW1lGBQgASgJQgq6SAdyBRABGP8BEh0KDG1hY2hpbmVfdHlwZRgeIAEoCUIHukgEcgIQARIeCg1hdXRvc2NhbGVfbWluGCggASgFQge6SAQaAigAEh4KDWF1dG9zY2FsZV9tYXgYMiABKAVCB7pIBBoCKAA6brpIaxppChVhdXRvc2NhbGVfbWF4X2d0ZV9taW4SJmF1dG9zY2FsZV9tYXggbXVzdCBiZSA+PSBhdXRvc2NhbGVfbWluGih0aGlzLmF1dG9zY2FsZV9tYXggPj0gdGhpcy5hdXRvc2NhbGVfbWluIi4KFkNyZWF0ZU5vZGVQb29sUmVzcG9uc2USFAoMbm9kZV9wb29sX2lkGAogASgJIucBChVVcGRhdGVOb2RlUG9vbFJlcXVlc3QSHgoMbm9kZV9wb29sX2lkGAogASgJQgi6SAVyA7ABARIeCg1hdXRvc2NhbGVfbWluGBQgASgFQge6SAQaAigAEh4KDWF1dG9zY2FsZV9tYXgYHiABKAVCB7pIBBoCKAA6brpIaxppChVhdXRvc2NhbGVfbWF4X2d0ZV9taW4SJmF1dG9zY2FsZV9tYXggbXVzdCBiZSA+PSBhdXRvc2NhbGVfbWluGih0aGlzLmF1dG9zY2FsZV9tYXggPj0gdGhpcy5hdXRvc2NhbGVfbWluIhgKFlVwZGF0ZU5vZGVQb29sUmVzcG9uc2UiNwoVRGVsZXRlTm9kZVBvb2xSZXF1ZXN0Eh4KDG5vZGVfcG9vbF9pZBgKIAEoCUIIukgFcgOwAQEiGAoWRGVsZXRlTm9kZVBvb2xSZXNwb25zZSI0ChRMaXN0Tm9kZVBvb2xzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJGChVMaXN0Tm9kZVBvb2xzUmVzcG9uc2USLQoKbm9kZV9wb29scxgKIAMoCzIZLm9yZ2FuaXphdGlvbi52MS5Ob2RlUG9vbCI0ChJHZXROb2RlUG9vbFJlcXVlc3QSHgoMbm9kZV9wb29sX2lkGAogASgJQgi6SAVyA7ABASJDChNHZXROb2RlUG9vbFJlc3BvbnNlEiwKCW5vZGVfcG9vbBgKIAEoCzIZLm9yZ2FuaXphdGlvbi52MS5Ob2RlUG9vbDKHCwoOQ2x1c3RlclNlcnZpY2USWwoMTGlzdENsdXN0ZXJzEiQub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuTGlzdENsdXN0ZXJzUmVzcG9uc2USVQoKR2V0Q2x1c3RlchIiLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyUmVzcG9uc2USYQoQR2V0Q2x1c3RlckJ5TmFtZRIoLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyQnlOYW1lUmVxdWVzdBojLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyUmVzcG9uc2USXgoNQ3JlYXRlQ2x1c3RlchIlLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVDbHVzdGVyUmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVDbHVzdGVyUmVzcG9uc2USXgoNVXBkYXRlQ2x1c3RlchIlLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVDbHVzdGVyUmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVDbHVzdGVyUmVzcG9uc2USXgoNRGVsZXRlQ2x1c3RlchIlLm9yZ2FuaXphdGlvbi52MS5EZWxldGVDbHVzdGVyUmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5EZWxldGVDbHVzdGVyUmVzcG9uc2USbQoSR2V0Q2x1c3RlckFjdGl2aXR5Eioub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJBY3Rpdml0eVJlcXVlc3QaKy5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlckFjdGl2aXR5UmVzcG9uc2USXgoNR2V0S3ViZWNvbmZpZxIlLm9yZ2FuaXphdGlvbi52MS5HZXRLdWJlY29uZmlnUmVxdWVzdBomLm9yZ2FuaXphdGlvbi52MS5HZXRLdWJlY29uZmlnUmVzcG9uc2USiwEKHEdldENsdXN0ZXJNZXRyaWNzQ3JlZGVudGlhbHMSNC5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3Rlck1ldHJpY3NDcmVkZW50aWFsc1JlcXVlc3QaNS5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3Rlck1ldHJpY3NDcmVkZW50aWFsc1Jlc3BvbnNlEl4KDUxpc3ROb2RlUG9vbHMSJS5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1Jlc3BvbnNlElgKC0dldE5vZGVQb29sEiMub3JnYW5pemF0aW9uLnYxLkdldE5vZGVQb29sUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5HZXROb2RlUG9vbFJlc3BvbnNlEmEKDkNyZWF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVOb2RlUG9vbFJlc3BvbnNlEmEKDlVwZGF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVOb2RlUG9vbFJlc3BvbnNlEmEKDkRlbGV0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5EZWxldGVOb2RlUG9vbFJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("ChB2MS9jbHVzdGVyLnByb3RvEg9vcmdhbml6YXRpb24udjEi0AEKCVN5bmNTdGF0ZRIcCg1vdXRib3hfc3RhdHVzGAogASgJQgWqAQIIARIWCg5vdXRib3hfcmV0cmllcxgUIAEoBRIbCgxvdXRib3hfZXJyb3IYHiABKAlCBaoBAggBEhsKDHNob290X3N0YXR1cxgoIAEoCUIFqgECCAESHAoNc2hvb3RfbWVzc2FnZRgyIAEoCUIFqgECCAESNQoRc3RhdHVzX3VwZGF0ZWRfYXQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhUKE0xpc3RDbHVzdGVyc1JlcXVlc3QiqwIKFExpc3RDbHVzdGVyc1Jlc3BvbnNlEkYKCGNsdXN0ZXJzGAogAygLMjQub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlLkNsdXN0ZXJTdW1tYXJ5GsoBCg5DbHVzdGVyU3VtbWFyeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEi4KBnN0YXR1cxgeIAEoDjIeLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyU3RhdHVzEg4KBnJlZ2lvbhgoIAEoCRIVCg1wcm9qZWN0X2NvdW50GDIgASgFEhcKD25vZGVfcG9vbF9jb3VudBg8IAEoBRIuCgpzeW5jX3N0YXRlGEYgASgLMhoub3JnYW5pemF0aW9uLnYxLlN5bmNTdGF0ZSIxChFHZXRDbHVzdGVyUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASIzChdHZXRDbHVzdGVyQnlOYW1lUmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BIkYKEkdldENsdXN0ZXJSZXNwb25zZRIwCgdjbHVzdGVyGAogASgLMh8ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJEZXRhaWxzIpICCg5DbHVzdGVyRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEg4KBnJlZ2lvbhgeIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YKCABKAkSLgoGc3RhdHVzGDIgASgOMh4ub3JnYW5pemF0aW9uLnYxLkNsdXN0ZXJTdGF0dXMSKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKc3luY19zdGF0ZRhQIAEoCzIaLm9yZ2FuaXphdGlvbi52MS5TeW5jU3RhdGVKBAhGEEdKBAhaEFtSDnJlc291cmNlX3VzYWdlUhFvYnNlcnZhYmlsaXR5X3VybCLMAQoRUmVzb3VyY2VVc2FnZUluZm8SKwoDY3B1GAogASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLgoGbWVtb3J5GBQgASgLMh4ub3JnYW5pemF0aW9uLnYxLlJlc291cmNlVXNhZ2USLAoEZGlzaxgeIAEoCzIeLm9yZ2FuaXphdGlvbi52MS5SZXNvdXJjZVVzYWdlEiwKBHBvZHMYKCABKAsyHi5vcmdhbml6YXRpb24udjEuUmVzb3VyY2VVc2FnZSK5AQoITm9kZVBvb2wSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxtYWNoaW5lX3R5cGUYHiABKAkSFQoNY3VycmVudF9ub2RlcxgoIAEoBRIRCgltaW5fbm9kZXMYMiABKAUSEQoJbWF4X25vZGVzGDwgASgFEi8KBnN0YXR1cxhGIAEoDjIfLm9yZ2FuaXphdGlvbi52MS5Ob2RlUG9vbFN0YXR1cxIPCgd2ZXJzaW9uGFAgASgJIm4KFENyZWF0ZUNsdXN0ZXJSZXF1ZXN0EhgKBG5hbWUYCiABKAlCCrpIB3IFEAEY/wESFwoGcmVnaW9uGBQgASgJQge6SARyAhABEiMKEmt1YmVybmV0ZXNfdmVyc2lvbhgeIAEoCUIHukgEcgIQASJgCgxOb2RlUG9vbFNwZWMSDAoEbmFtZRgKIAEoCRIUCgxtYWNoaW5lX3R5cGUYFCABKAkSFQoNYXV0b3NjYWxlX21pbhgeIAEoBRIVCg1hdXRvc2NhbGVfbWF4GCggASgFIisKFUNyZWF0ZUNsdXN0ZXJSZXNwb25zZRISCgpjbHVzdGVyX2lkGAogASgJIlcKFFVwZGF0ZUNsdXN0ZXJSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKEmt1YmVybmV0ZXNfdmVyc2lvbhgUIAEoCUIFqgECCAEiFwoVVXBkYXRlQ2x1c3RlclJlc3BvbnNlIjQKFERlbGV0ZUNsdXN0ZXJSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIhcKFURlbGV0ZUNsdXN0ZXJSZXNwb25zZSJIChlHZXRDbHVzdGVyQWN0aXZpdHlSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEg0KBWxpbWl0GBQgASgFIksKGkdldENsdXN0ZXJBY3Rpdml0eVJlc3BvbnNlEi0KBmV2ZW50cxgKIAMoCzIdLm9yZ2FuaXphdGlvbi52MS5DbHVzdGVyRXZlbnQiqgEKDENsdXN0ZXJFdmVudBIKCgJpZBgKIAEoCRISCgpldmVudF90eXBlGBQgASgJEi4KCmNyZWF0ZWRfYXQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhoKC3N5bmNfYWN0aW9uGCggASgJQgWqAQIIARIWCgdtZXNzYWdlGDIgASgJQgWqAQIIARIWCgdhdHRlbXB0GDwgASgFQgWqAQIIASI0ChRHZXRLdWJlY29uZmlnUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASIzChVHZXRLdWJlY29uZmlnUmVzcG9uc2USGgoSa3ViZWNvbmZpZ19jb250ZW50GAogASgJIp4CChVDcmVhdGVOb2RlUG9vbFJlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQESGAoEbmFtZRgUIAEoCUIKukgHcgUQARj/ARIdCgxtYWNoaW5lX3R5cGUYHiABKAlCB7pIBHICEAESHgoNYXV0b3NjYWxlX21pbhgoIAEoBUIHukgEGgIoABIeCg1hdXRvc2NhbGVfbWF4GDIgASgFQge6SAQaAigAOm66SGsaaQoVYXV0b3NjYWxlX21heF9ndGVfbWluEiZhdXRvc2NhbGVfbWF4IG11c3QgYmUgPj0gYXV0b3NjYWxlX21pbhoodGhpcy5hdXRvc2NhbGVfbWF4ID49IHRoaXMuYXV0b3NjYWxlX21pbiIuChZDcmVhdGVOb2RlUG9vbFJlc3BvbnNlEhQKDG5vZGVfcG9vbF9pZBgKIAEoCSLnAQoVVXBkYXRlTm9kZVBvb2xSZXF1ZXN0Eh4KDG5vZGVfcG9vbF9pZBgKIAEoCUIIukgFcgOwAQESHgoNYXV0b3NjYWxlX21pbhgUIAEoBUIHukgEGgIoABIeCg1hdXRvc2NhbGVfbWF4GB4gASgFQge6SAQaAigAOm66SGsaaQoVYXV0b3NjYWxlX21heF9ndGVfbWluEiZhdXRvc2NhbGVfbWF4IG11c3QgYmUgPj0gYXV0b3NjYWxlX21pbhoodGhpcy5hdXRvc2NhbGVfbWF4ID49IHRoaXMuYXV0b3NjYWxlX21pbiIYChZVcGRhdGVOb2RlUG9vbFJlc3BvbnNlIjcKFURlbGV0ZU5vZGVQb29sUmVxdWVzdBIeCgxub2RlX3Bvb2xfaWQYCiABKAlCCLpIBXIDsAEBIhgKFkRlbGV0ZU5vZGVQb29sUmVzcG9uc2UiNAoUTGlzdE5vZGVQb29sc1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQEiRgoVTGlzdE5vZGVQb29sc1Jlc3BvbnNlEi0KCm5vZGVfcG9vbHMYCiADKAsyGS5vcmdhbml6YXRpb24udjEuTm9kZVBvb2wiNAoSR2V0Tm9kZVBvb2xSZXF1ZXN0Eh4KDG5vZGVfcG9vbF9pZBgKIAEoCUIIukgFcgOwAQEiQwoTR2V0Tm9kZVBvb2xSZXNwb25zZRIsCglub2RlX3Bvb2wYCiABKAsyGS5vcmdhbml6YXRpb24udjEuTm9kZVBvb2wiFAoSTGlzdFJlZ2lvbnNSZXF1ZXN0Ij8KE0xpc3RSZWdpb25zUmVzcG9uc2USKAoHcmVnaW9ucxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5SZWdpb24ibgoGUmVnaW9uEgwKBG5hbWUYCiABKAkSGwoTa3ViZXJuZXRlc192ZXJzaW9ucxgUIAMoCRI5Cg1tYWNoaW5lX3R5cGVzGB4gAygLMiIub3JnYW5pemF0aW9uLnYxLlJlZ2lvbk1hY2hpbmVUeXBlIj8KEVJlZ2lvbk1hY2hpbmVUeXBlEgwKBG5hbWUYCiABKAkSDAoEbGNwdRgUIAEoBRIOCgZtZW1vcnkYHiABKAMy0woKDkNsdXN0ZXJTZXJ2aWNlElgKC0xpc3RSZWdpb25zEiMub3JnYW5pemF0aW9uLnYxLkxpc3RSZWdpb25zUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0UmVnaW9uc1Jlc3BvbnNlElsKDExpc3RDbHVzdGVycxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0Q2x1c3RlcnNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlElUKCkdldENsdXN0ZXISIi5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlclJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlclJlc3BvbnNlEmEKEEdldENsdXN0ZXJCeU5hbWUSKC5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlckJ5TmFtZVJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0Q2x1c3RlclJlc3BvbnNlEl4KDUNyZWF0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlQ2x1c3RlclJlc3BvbnNlEl4KDVVwZGF0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuVXBkYXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuVXBkYXRlQ2x1c3RlclJlc3BvbnNlEl4KDURlbGV0ZUNsdXN0ZXISJS5vcmdhbml6YXRpb24udjEuRGVsZXRlQ2x1c3RlclJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuRGVsZXRlQ2x1c3RlclJlc3BvbnNlEm0KEkdldENsdXN0ZXJBY3Rpdml0eRIqLm9yZ2FuaXphdGlvbi52MS5HZXRDbHVzdGVyQWN0aXZpdHlSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkdldENsdXN0ZXJBY3Rpdml0eVJlc3BvbnNlEl4KDUdldEt1YmVjb25maWcSJS5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuR2V0S3ViZWNvbmZpZ1Jlc3BvbnNlEl4KDUxpc3ROb2RlUG9vbHMSJS5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1JlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuTGlzdE5vZGVQb29sc1Jlc3BvbnNlElgKC0dldE5vZGVQb29sEiMub3JnYW5pemF0aW9uLnYxLkdldE5vZGVQb29sUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5HZXROb2RlUG9vbFJlc3BvbnNlEmEKDkNyZWF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVOb2RlUG9vbFJlc3BvbnNlEmEKDlVwZGF0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVOb2RlUG9vbFJlc3BvbnNlEmEKDkRlbGV0ZU5vZGVQb29sEiYub3JnYW5pemF0aW9uLnYxLkRlbGV0ZU5vZGVQb29sUmVxdWVzdBonLm9yZ2FuaXphdGlvbi52MS5EZWxldGVOb2RlUG9vbFJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * Cluster sync state derived from cluster_outbox and Gardener
@@ -239,23 +239,9 @@ export type ClusterDetails = Message<"organization.v1.ClusterDetails"> & {
   created?: Timestamp;
 
   /**
-   * @generated from field: organization.v1.ResourceUsageInfo resource_usage = 70;
-   */
-  resourceUsage?: ResourceUsageInfo;
-
-  /**
    * @generated from field: organization.v1.SyncState sync_state = 80;
    */
   syncState?: SyncState;
-
-  /**
-   * URL of the per-shoot metrics dashboard (Plutono), resolved from the
-   * <shoot>.monitoring secret in the project namespace. Empty when the
-   * cluster is not ready or the secret is not yet available.
-   *
-   * @generated from field: string observability_url = 90;
-   */
-  observabilityUrl: string;
 };
 
 /**
@@ -354,7 +340,10 @@ export const NodePoolSchema: GenMessage<NodePool> = /*@__PURE__*/
   messageDesc(file_v1_cluster, 8);
 
 /**
- * Create cluster request
+ * Create cluster request. Region and kubernetes version are the catalog
+ * display names; the server resolves them against the region catalog and
+ * rejects combinations the region does not offer (pre-validate with
+ * ListRegions).
  *
  * @generated from message organization.v1.CreateClusterRequest
  */
@@ -642,49 +631,6 @@ export const GetKubeconfigResponseSchema: GenMessage<GetKubeconfigResponse> = /*
   messageDesc(file_v1_cluster, 20);
 
 /**
- * Get cluster metrics credentials request
- *
- * @generated from message organization.v1.GetClusterMetricsCredentialsRequest
- */
-export type GetClusterMetricsCredentialsRequest = Message<"organization.v1.GetClusterMetricsCredentialsRequest"> & {
-  /**
-   * @generated from field: string cluster_id = 10;
-   */
-  clusterId: string;
-};
-
-/**
- * Describes the message organization.v1.GetClusterMetricsCredentialsRequest.
- * Use `create(GetClusterMetricsCredentialsRequestSchema)` to create a new message.
- */
-export const GetClusterMetricsCredentialsRequestSchema: GenMessage<GetClusterMetricsCredentialsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 21);
-
-/**
- * Get cluster metrics credentials response
- *
- * @generated from message organization.v1.GetClusterMetricsCredentialsResponse
- */
-export type GetClusterMetricsCredentialsResponse = Message<"organization.v1.GetClusterMetricsCredentialsResponse"> & {
-  /**
-   * @generated from field: string username = 10;
-   */
-  username: string;
-
-  /**
-   * @generated from field: string password = 20;
-   */
-  password: string;
-};
-
-/**
- * Describes the message organization.v1.GetClusterMetricsCredentialsResponse.
- * Use `create(GetClusterMetricsCredentialsResponseSchema)` to create a new message.
- */
-export const GetClusterMetricsCredentialsResponseSchema: GenMessage<GetClusterMetricsCredentialsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 22);
-
-/**
  * Create node pool request
  *
  * @generated from message organization.v1.CreateNodePoolRequest
@@ -701,6 +647,9 @@ export type CreateNodePoolRequest = Message<"organization.v1.CreateNodePoolReque
   name: string;
 
   /**
+   * Machine type name from the catalog; the server resolves it against the
+   * cluster's region and rejects types the region does not offer.
+   *
    * @generated from field: string machine_type = 30;
    */
   machineType: string;
@@ -721,7 +670,7 @@ export type CreateNodePoolRequest = Message<"organization.v1.CreateNodePoolReque
  * Use `create(CreateNodePoolRequestSchema)` to create a new message.
  */
 export const CreateNodePoolRequestSchema: GenMessage<CreateNodePoolRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 23);
+  messageDesc(file_v1_cluster, 21);
 
 /**
  * Create node pool response
@@ -740,7 +689,7 @@ export type CreateNodePoolResponse = Message<"organization.v1.CreateNodePoolResp
  * Use `create(CreateNodePoolResponseSchema)` to create a new message.
  */
 export const CreateNodePoolResponseSchema: GenMessage<CreateNodePoolResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 24);
+  messageDesc(file_v1_cluster, 22);
 
 /**
  * Update node pool request
@@ -769,7 +718,7 @@ export type UpdateNodePoolRequest = Message<"organization.v1.UpdateNodePoolReque
  * Use `create(UpdateNodePoolRequestSchema)` to create a new message.
  */
 export const UpdateNodePoolRequestSchema: GenMessage<UpdateNodePoolRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 25);
+  messageDesc(file_v1_cluster, 23);
 
 /**
  * Update node pool response
@@ -784,7 +733,7 @@ export type UpdateNodePoolResponse = Message<"organization.v1.UpdateNodePoolResp
  * Use `create(UpdateNodePoolResponseSchema)` to create a new message.
  */
 export const UpdateNodePoolResponseSchema: GenMessage<UpdateNodePoolResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 26);
+  messageDesc(file_v1_cluster, 24);
 
 /**
  * Delete node pool request
@@ -803,7 +752,7 @@ export type DeleteNodePoolRequest = Message<"organization.v1.DeleteNodePoolReque
  * Use `create(DeleteNodePoolRequestSchema)` to create a new message.
  */
 export const DeleteNodePoolRequestSchema: GenMessage<DeleteNodePoolRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 27);
+  messageDesc(file_v1_cluster, 25);
 
 /**
  * Delete node pool response
@@ -818,7 +767,7 @@ export type DeleteNodePoolResponse = Message<"organization.v1.DeleteNodePoolResp
  * Use `create(DeleteNodePoolResponseSchema)` to create a new message.
  */
 export const DeleteNodePoolResponseSchema: GenMessage<DeleteNodePoolResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 28);
+  messageDesc(file_v1_cluster, 26);
 
 /**
  * List node pools request
@@ -837,7 +786,7 @@ export type ListNodePoolsRequest = Message<"organization.v1.ListNodePoolsRequest
  * Use `create(ListNodePoolsRequestSchema)` to create a new message.
  */
 export const ListNodePoolsRequestSchema: GenMessage<ListNodePoolsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 29);
+  messageDesc(file_v1_cluster, 27);
 
 /**
  * List node pools response
@@ -856,7 +805,7 @@ export type ListNodePoolsResponse = Message<"organization.v1.ListNodePoolsRespon
  * Use `create(ListNodePoolsResponseSchema)` to create a new message.
  */
 export const ListNodePoolsResponseSchema: GenMessage<ListNodePoolsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 30);
+  messageDesc(file_v1_cluster, 28);
 
 /**
  * Get node pool request
@@ -875,7 +824,7 @@ export type GetNodePoolRequest = Message<"organization.v1.GetNodePoolRequest"> &
  * Use `create(GetNodePoolRequestSchema)` to create a new message.
  */
 export const GetNodePoolRequestSchema: GenMessage<GetNodePoolRequest> = /*@__PURE__*/
-  messageDesc(file_v1_cluster, 31);
+  messageDesc(file_v1_cluster, 29);
 
 /**
  * Get node pool response
@@ -894,7 +843,102 @@ export type GetNodePoolResponse = Message<"organization.v1.GetNodePoolResponse">
  * Use `create(GetNodePoolResponseSchema)` to create a new message.
  */
 export const GetNodePoolResponseSchema: GenMessage<GetNodePoolResponse> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 30);
+
+/**
+ * List regions request
+ *
+ * @generated from message organization.v1.ListRegionsRequest
+ */
+export type ListRegionsRequest = Message<"organization.v1.ListRegionsRequest"> & {
+};
+
+/**
+ * Describes the message organization.v1.ListRegionsRequest.
+ * Use `create(ListRegionsRequestSchema)` to create a new message.
+ */
+export const ListRegionsRequestSchema: GenMessage<ListRegionsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 31);
+
+/**
+ * List regions response
+ *
+ * @generated from message organization.v1.ListRegionsResponse
+ */
+export type ListRegionsResponse = Message<"organization.v1.ListRegionsResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.Region regions = 10;
+   */
+  regions: Region[];
+};
+
+/**
+ * Describes the message organization.v1.ListRegionsResponse.
+ * Use `create(ListRegionsResponseSchema)` to create a new message.
+ */
+export const ListRegionsResponseSchema: GenMessage<ListRegionsResponse> = /*@__PURE__*/
   messageDesc(file_v1_cluster, 32);
+
+/**
+ * A region from the catalog with its per-region offerings. Text-only: the
+ * names here are exactly what CreateCluster / CreateNodePool accept.
+ *
+ * @generated from message organization.v1.Region
+ */
+export type Region = Message<"organization.v1.Region"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated string kubernetes_versions = 20;
+   */
+  kubernetesVersions: string[];
+
+  /**
+   * @generated from field: repeated organization.v1.RegionMachineType machine_types = 30;
+   */
+  machineTypes: RegionMachineType[];
+};
+
+/**
+ * Describes the message organization.v1.Region.
+ * Use `create(RegionSchema)` to create a new message.
+ */
+export const RegionSchema: GenMessage<Region> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 33);
+
+/**
+ * A machine type offered in a region.
+ *
+ * @generated from message organization.v1.RegionMachineType
+ */
+export type RegionMachineType = Message<"organization.v1.RegionMachineType"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * @generated from field: int32 lcpu = 20;
+   */
+  lcpu: number;
+
+  /**
+   * bytes
+   *
+   * @generated from field: int64 memory = 30;
+   */
+  memory: bigint;
+};
+
+/**
+ * Describes the message organization.v1.RegionMachineType.
+ * Use `create(RegionMachineTypeSchema)` to create a new message.
+ */
+export const RegionMachineTypeSchema: GenMessage<RegionMachineType> = /*@__PURE__*/
+  messageDesc(file_v1_cluster, 34);
 
 /**
  * ClusterService manages Kubernetes clusters
@@ -902,6 +946,17 @@ export const GetNodePoolResponseSchema: GenMessage<GetNodePoolResponse> = /*@__P
  * @generated from service organization.v1.ClusterService
  */
 export const ClusterService: GenService<{
+  /**
+   * List the region catalog: every region with the kubernetes versions and
+   * machine types it offers (drives the create-cluster cascade).
+   *
+   * @generated from rpc organization.v1.ClusterService.ListRegions
+   */
+  listRegions: {
+    methodKind: "unary";
+    input: typeof ListRegionsRequestSchema;
+    output: typeof ListRegionsResponseSchema;
+  },
   /**
    * List all clusters for the current organization
    *
@@ -981,16 +1036,6 @@ export const ClusterService: GenService<{
     methodKind: "unary";
     input: typeof GetKubeconfigRequestSchema;
     output: typeof GetKubeconfigResponseSchema;
-  },
-  /**
-   * Fetch the basic-auth credentials for a cluster's metrics dashboard.
-   *
-   * @generated from rpc organization.v1.ClusterService.GetClusterMetricsCredentials
-   */
-  getClusterMetricsCredentials: {
-    methodKind: "unary";
-    input: typeof GetClusterMetricsCredentialsRequestSchema;
-    output: typeof GetClusterMetricsCredentialsResponseSchema;
   },
   /**
    * List node pools for a cluster

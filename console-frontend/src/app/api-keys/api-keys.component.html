@@ -133,82 +133,84 @@
 
     <!-- API Keys Table -->
     @if (apiKeys().length > 0) {
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Token Prefix</th>
-              <th scope="col">Created</th>
-              <th scope="col">Last Used</th>
-              <th scope="col">Expires</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (apiKey of apiKeys(); track apiKey.id) {
-              <tr>
-                <td class="font-medium">
-                  {{ apiKey.name }}
-                </td>
-                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
-                  {{ apiKey.tokenPrefix }}
-                </td>
-                <td class="text-gray-600 dark:text-gray-400">
-                  {{ formatDate(apiKey.created) }}
-                </td>
-                <td class="text-gray-600 dark:text-gray-400">
-                  {{ formatDateTime(apiKey.lastUsed) }}
-                </td>
-                <td class="text-gray-600 dark:text-gray-400">
-                  @if (apiKey.expires) {
-                    <span
-                      [class.text-danger-600]="isExpired(apiKey.expires)"
-                      title="{{ formatDateTime(apiKey.expires) }}"
-                    >
-                      {{ formatDate(apiKey.expires) }}
-                    </span>
-                  } @else {
-                    <span class="text-gray-600 dark:text-gray-400">Never</span>
+      <nldd-table
+        accessible-label="API keys"
+        columns="minmax(160px, 1fr) 140px 120px 150px 120px 110px 64px"
+        md-columns="minmax(160px, 1fr) 140px 150px 110px 64px"
+        sm-columns="minmax(160px, 1fr) 140px 150px 110px 64px"
+      >
+        <nldd-table-row slot="header">
+          <nldd-text-cell text="**Name**"></nldd-text-cell>
+          <nldd-text-cell text="**Token prefix**"></nldd-text-cell>
+          <nldd-text-cell text="**Created**" hide-below="lg"></nldd-text-cell>
+          <nldd-text-cell text="**Last used**"></nldd-text-cell>
+          <nldd-text-cell text="**Expires**" hide-below="lg"></nldd-text-cell>
+          <nldd-text-cell text="**Status**"></nldd-text-cell>
+          <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
+        </nldd-table-row>
+
+        @for (apiKey of apiKeys(); track apiKey.id) {
+          <nldd-table-row>
+            <nldd-text-cell [attr.text]="apiKey.name"></nldd-text-cell>
+            <nldd-text-cell
+              class="font-mono"
+              color="secondary"
+              [attr.text]="apiKey.tokenPrefix"
+            ></nldd-text-cell>
+            <nldd-text-cell
+              color="secondary"
+              hide-below="lg"
+              [attr.text]="formatDate(apiKey.created)"
+            ></nldd-text-cell>
+            <nldd-text-cell
+              color="secondary"
+              [attr.text]="formatDateTime(apiKey.lastUsed)"
+            ></nldd-text-cell>
+            <nldd-text-cell
+              hide-below="lg"
+              [attr.color]="apiKey.expires && isExpired(apiKey.expires) ? 'critical' : 'secondary'"
+              [attr.text]="apiKey.expires ? formatDate(apiKey.expires) : 'Never'"
+            ></nldd-text-cell>
+            <nldd-cell>
+              @if (isRevoked(apiKey.revoked)) {
+                <nldd-tag color="neutral" size="sm" text="Revoked"></nldd-tag>
+              } @else if (isExpired(apiKey.expires)) {
+                <nldd-tag color="warning" size="sm" text="Expired"></nldd-tag>
+              } @else {
+                <nldd-tag color="success" size="sm" text="Active"></nldd-tag>
+              }
+            </nldd-cell>
+            <nldd-cell horizontal-alignment="right">
+              <nldd-icon-button
+                icon="ellipsis"
+                size="sm"
+                variant="neutral-transparent"
+                expandable
+                popup-type="menu"
+                [attr.accessible-label]="'Actions for ' + apiKey.name"
+                [attr.disabled]="loading() ? '' : null"
+              >
+                <nldd-menu slot="popup">
+                  @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
+                    <nldd-menu-item
+                      text="Revoke"
+                      icon="slash-circle"
+                      (select)="openRevokeModal(apiKey.id, apiKey.name)"
+                    ></nldd-menu-item>
+                    <nldd-menu-divider></nldd-menu-divider>
                   }
-                </td>
-                <td>
-                  @if (isRevoked(apiKey.revoked)) {
-                    <span class="badge badge-gray">Revoked</span>
-                  } @else if (isExpired(apiKey.expires)) {
-                    <span class="badge badge-rose">Expired</span>
-                  } @else {
-                    <span class="badge badge-emerald">Active</span>
-                  }
-                </td>
-                <td>
-                  <div class="flex gap-2">
-                    @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
-                      <nldd-button
-                        (click)="openRevokeModal(apiKey.id, apiKey.name)"
-                        [disabled]="loading()"
-                        text="Revoke"
-                        start-icon="slash-circle"
-                        size="sm"
-                        variant="secondary"
-                      ></nldd-button>
-                    }
-                    <nldd-button
-                      (click)="openDeleteModal(apiKey.id, apiKey.name)"
-                      [disabled]="loading()"
-                      text="Delete"
-                      start-icon="trash"
-                      size="sm"
-                      variant="destructive"
-                    ></nldd-button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+                  <nldd-menu-item
+                    text="Delete"
+                    icon="trash"
+                    destructive
+                    (select)="openDeleteModal(apiKey.id, apiKey.name)"
+                  ></nldd-menu-item>
+                </nldd-menu>
+              </nldd-icon-button>
+            </nldd-cell>
+          </nldd-table-row>
+        }
+      </nldd-table>
     }
 
     <!-- Empty State -->
@@ -240,32 +242,26 @@
   #revokeDialog
   appDialogSync
   [show]="showRevokeModal()"
-  text="Revoke API key"
+  [attr.text]="'Revoke API key ' + pendingKeyName() + '?'"
+  supporting-text="The key stops working right away. Anything still using it loses access."
+  accessible-label="Confirm API key revocation"
   variant="alert"
   (open)="onRevokeModalOpen()"
   (close)="showRevokeModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p>
-    Are you sure you want to revoke API key
-    <strong class="font-semibold">{{ pendingKeyName() }}</strong
-    >? It will no longer be usable.
-  </p>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmRevoke()"
-    text="Yes, revoke this key"
-    variant="destructive"
-  ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="showRevokeModal.set(false)"
-    text="Cancel"
+    text="Keep key active"
     variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRevoke()"
+    text="Revoke key"
+    variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -274,31 +270,25 @@
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
-  text="Delete API key"
+  [attr.text]="'Delete API key ' + pendingKeyName() + '?'"
+  supporting-text="This removes the key and its usage history from this project. This cannot be undone."
+  accessible-label="Confirm API key deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p>
-    Are you sure you want to delete API key
-    <strong class="font-semibold">{{ pendingKeyName() }}</strong
-    >?
-  </p>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmDelete()"
-    text="Yes, delete this key"
-    variant="destructive"
-  ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
-    text="Cancel"
+    text="Keep key"
     variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDelete()"
+    text="Delete key"
+    variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

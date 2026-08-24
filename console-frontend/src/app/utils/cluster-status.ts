@@ -53,17 +53,24 @@ export function isTransitionalStatus(status: ClusterStatus): boolean {
   return TRANSITIONAL_STATUSES.has(status);
 }
 
-export function getStatusColor(status: ClusterStatus): string {
+/**
+ * `color` for an `nldd-tag` representing this cluster status.
+ *
+ * Transitional states get their own Rijkskleur rather than `warning`: a cluster
+ * that is provisioning or starting is not in trouble. `warning` and `critical`
+ * are reserved for states that need attention.
+ */
+export function getStatusTagColor(status: ClusterStatus): string {
   const colors: Record<ClusterStatus, string> = {
-    [ClusterStatus.PROVISIONING]: 'badge-yellow',
-    [ClusterStatus.STARTING]: 'badge-blue',
-    [ClusterStatus.RUNNING]: 'badge-emerald',
-    [ClusterStatus.UPGRADING]: 'badge-purple',
-    [ClusterStatus.ERROR]: 'badge-rose',
-    [ClusterStatus.STOPPING]: 'badge-yellow',
-    [ClusterStatus.STOPPED]: 'badge-gray',
-    [ClusterStatus.UNSPECIFIED]: 'badge-gray',
-    [ClusterStatus.DELETING]: 'badge-rose',
+    [ClusterStatus.PROVISIONING]: 'mintgroen',
+    [ClusterStatus.STARTING]: 'hemelblauw',
+    [ClusterStatus.RUNNING]: 'success',
+    [ClusterStatus.UPGRADING]: 'paars',
+    [ClusterStatus.ERROR]: 'critical',
+    [ClusterStatus.STOPPING]: 'oranje',
+    [ClusterStatus.STOPPED]: 'neutral',
+    [ClusterStatus.UNSPECIFIED]: 'neutral',
+    [ClusterStatus.DELETING]: 'robijnrood',
   };
   return colors[status];
 }

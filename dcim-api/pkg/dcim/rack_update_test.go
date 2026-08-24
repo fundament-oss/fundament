@@ -22,21 +22,21 @@ func TestRackService_UpdateRack_HappyFlow(t *testing.T) {
 
 	newName := "Rack After Update"
 	newUnits := int32(48)
-	_, err := client.UpdateRack(context.Background(), connect.NewRequest(
+	_, err := client.UpdateRack(context.Background(),
 		(&dcimv1.UpdateRackRequest_builder{
 			Id:         rackID,
 			Name:       &newName,
 			TotalUnits: &newUnits,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	getResp, err := client.GetRack(context.Background(), connect.NewRequest(
+	getResp, err := client.GetRack(context.Background(),
 		(&dcimv1.GetRackRequest_builder{Id: rackID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	rack := getResp.Msg.GetRack()
+	rack := getResp.GetRack()
 	require.NotNil(t, rack)
 
 	assert.Equal(t, newName, rack.GetName())
@@ -61,9 +61,9 @@ func TestRackService_UpdateRack_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.UpdateRack(context.Background(), connect.NewRequest(
+			_, err := client.UpdateRack(context.Background(),
 				(&dcimv1.UpdateRackRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

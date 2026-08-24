@@ -1,113 +1,162 @@
-<nldd-modal-dialog
-  #dialog
-  appDialogSync
+<nldd-sheet
+  #sheet
+  appSheetSync
   [show]="show()"
-  text="Install plugin"
+  accessible-label="Install plugin"
+  placement="right"
+  width="480px"
   (open)="onOpen()"
   (close)="onClose()"
 >
-  <nldd-spacer size="24"></nldd-spacer>
+  <nldd-page sticky-header sticky-footer>
+    <nldd-top-title-bar
+      slot="header"
+      text="Install plugin"
+      dismiss-text="Cancel"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
 
-  <p class="mb-4 text-gray-600 dark:text-gray-400">
-    Select cluster(s) to install plugin
-    <strong class="font-semibold">{{ pluginDisplayName() }}</strong> on:
-  </p>
+    <nldd-simple-section>
+      <p class="mb-4 text-gray-600 dark:text-gray-400">
+        Select cluster(s) to install plugin
+        <strong class="font-semibold">{{ pluginDisplayName() }}</strong> on:
+      </p>
 
-  @if (clusters().length === 0) {
-    <nldd-box>
-      <nldd-inline-dialog
-        icon="ship-wheel"
-        icon-color="secondary"
-        text="No clusters found"
-        supporting-text="Create a cluster first to install plugins on it."
-      >
-      </nldd-inline-dialog>
-    </nldd-box>
-  } @else {
-    @if (eligibleClusters().length > 1) {
-      <nldd-checkbox-field
-        class="mb-2 block"
-        label="Select all available clusters"
-        [checked]="allSelected()"
-        (change)="setAllSelected($any($event).detail.checked)"
-      ></nldd-checkbox-field>
-    }
-
-    <div class="space-y-2">
-      @for (cluster of clusters(); track cluster.id) {
-        <div
-          class="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
-        >
-          @if (cluster.phase !== null) {
-            <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
-              <nldd-icon name="ship-wheel" class="mx-1 h-4 w-4 shrink-0"></nldd-icon>
-              <span class="truncate">{{ cluster.name }}</span>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
-              <span class="badge badge-sm {{ statusFor(cluster.phase).badgeClass }}">
-                @if (isInProgress(cluster.phase)) {
-                  <app-loading-indicator
-                    class="fill-accent-600 dark:fill-accent-400 mr-1 h-3 w-3 animate-spin text-gray-200 dark:text-gray-800"
-                  />
-                } @else if (statusFor(cluster.phase).label === 'Installed') {
-                  <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
-                }
-                {{ statusFor(cluster.phase).label }}
-              </span>
-              @if (isFailed(cluster.phase)) {
-                <nldd-button
-                  type="button"
-                  (click)="onRetry(cluster.id)"
-                  text="Retry"
-                  variant="secondary"
-                  size="xs"
-                ></nldd-button>
+      @if (versions().length > 0) {
+        <nldd-form-field label="Version" class="mb-4 block">
+          <nldd-dropdown>
+            <select
+              appAutofocus
+              [value]="selectedVersion()"
+              (change)="onVersionChange($any($event).target.value)"
+            >
+              @for (v of versions(); track v.version) {
+                <option [value]="v.version">{{ v.version }}</option>
               }
-              @if (!isInProgress(cluster.phase)) {
-                <nldd-button
-                  type="button"
-                  (click)="onUninstall(cluster.id)"
-                  text="Remove"
-                  variant="destructive"
-                  size="xs"
-                ></nldd-button>
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+      } @else if (versionsError()) {
+        <nldd-box class="mb-4 block">
+          <nldd-inline-dialog
+            icon="exclamation-triangle"
+            icon-color="critical"
+            text="Couldn't load versions"
+            supporting-text="Something went wrong loading this plugin's versions. Close this dialog and try again."
+          ></nldd-inline-dialog>
+        </nldd-box>
+      } @else {
+        <nldd-box class="mb-4 block">
+          <nldd-inline-dialog
+            variant="alert"
+            text="No published version"
+            supporting-text="This plugin has no published definition to install yet."
+          ></nldd-inline-dialog>
+        </nldd-box>
+      }
+
+      @if (clusters().length === 0) {
+        <nldd-box>
+          <nldd-inline-dialog
+            icon="ship-wheel"
+            icon-color="secondary"
+            text="No clusters found"
+            supporting-text="Create a cluster first to install plugins on it."
+          >
+          </nldd-inline-dialog>
+        </nldd-box>
+      } @else {
+        @if (eligibleClusters().length > 1) {
+          <nldd-checkbox-field
+            class="mb-2 block"
+            label="Select all available clusters"
+            [checked]="allSelected()"
+            (change)="setAllSelected($any($event).detail.checked)"
+          ></nldd-checkbox-field>
+        }
+
+        <!-- data-tour: the per-cluster list the walkthrough ticks a single box in
+         (src/app/presentation/tours.ts). Keep the attribute. -->
+        <div data-tour="install-clusters" class="space-y-2">
+          @for (cluster of clusters(); track cluster.id) {
+            <div
+              class="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
+            >
+              @if (cluster.phase !== null) {
+                <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
+                  <nldd-icon name="ship-wheel" class="mx-1 h-4 w-4 shrink-0"></nldd-icon>
+                  <span class="truncate">{{ cluster.name }}</span>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  <nldd-tag size="sm" [attr.color]="statusFor(cluster.phase).tagColor">
+                    @if (isInProgress(cluster.phase)) {
+                      <app-loading-indicator
+                        slot="icon"
+                        class="fill-accent-600 dark:fill-accent-400 h-3 w-3 animate-spin text-gray-200 dark:text-gray-800"
+                      />
+                    } @else if (statusFor(cluster.phase).label === 'Installed') {
+                      <nldd-icon slot="icon" name="check-mark" class="h-3 w-3"></nldd-icon>
+                    }
+                    {{ statusFor(cluster.phase).label }}
+                  </nldd-tag>
+                  @if (isFailed(cluster.phase)) {
+                    <nldd-button
+                      type="button"
+                      (click)="onRetry(cluster.id)"
+                      text="Retry"
+                      variant="secondary"
+                      size="xs"
+                    ></nldd-button>
+                  }
+                  @if (!isInProgress(cluster.phase)) {
+                    <nldd-button
+                      type="button"
+                      (click)="onUninstall(cluster.id)"
+                      text="Remove"
+                      variant="destructive"
+                      size="xs"
+                    ></nldd-button>
+                  }
+                </div>
+              } @else if (!cluster.running) {
+                <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
+                  <nldd-icon
+                    name="ship-wheel"
+                    class="mx-1 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-600"
+                  ></nldd-icon>
+                  <span class="truncate text-gray-400 dark:text-gray-600">{{ cluster.name }}</span>
+                </div>
+                <nldd-tag class="shrink-0" color="neutral" size="sm" text="Not running"></nldd-tag>
+              } @else {
+                <nldd-checkbox-field
+                  class="-my-2 min-w-0 flex-1"
+                  [label]="cluster.name"
+                  [checked]="isSelected(cluster.id)"
+                  (change)="setSelected(cluster.id, $any($event).detail.checked)"
+                ></nldd-checkbox-field>
               }
             </div>
-          } @else if (!cluster.running) {
-            <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
-              <nldd-icon
-                name="ship-wheel"
-                class="mx-1 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-600"
-              ></nldd-icon>
-              <span class="truncate text-gray-400 dark:text-gray-600">{{ cluster.name }}</span>
-            </div>
-            <span class="badge badge-sm badge-gray shrink-0">Not running</span>
-          } @else {
-            <nldd-checkbox-field
-              class="-my-2 min-w-0 flex-1"
-              [label]="cluster.name"
-              [checked]="isSelected(cluster.id)"
-              (change)="setSelected(cluster.id, $any($event).detail.checked)"
-            ></nldd-checkbox-field>
           }
         </div>
       }
-    </div>
-  }
+    </nldd-simple-section>
 
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="onInstallSelected()"
-    text="Install on selected ({{ selectedCount() }})"
-    variant="primary"
-    [attr.disabled]="eligibleClusters().length === 0 || selectedCount() === 0 ? '' : null"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="onClose()"
-    text="Close"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
+    <!-- data-tour: confirm button of the walkthrough's install slide
+         (src/app/presentation/tours.ts). Keep the attribute. -->
+    <div slot="footer" class="sheet-footer">
+      <nldd-button
+        data-tour="install-confirm"
+        type="button"
+        (click)="onInstallSelected()"
+        text="Install on selected ({{ selectedCount() }})"
+        variant="primary"
+        width="full"
+        [attr.disabled]="
+          eligibleClusters().length === 0 || selectedCount() === 0 || versions().length === 0
+            ? ''
+            : null
+        "
+      ></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>

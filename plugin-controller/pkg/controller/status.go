@@ -37,7 +37,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 	url := pluginServiceURL(cr.Name)
 	client := pluginmetadatav1connect.NewPluginMetadataServiceClient(s.httpClient, url)
 
-	resp, err := client.GetStatus(ctx, connect.NewRequest(&pluginmetadatav1.GetStatusRequest{}))
+	resp, err := client.GetStatus(ctx, &pluginmetadatav1.GetStatusRequest{})
 	if err != nil {
 		return pluginsv1.PluginInstallationStatus{
 			Phase:              pluginsv1.PluginPhaseDeploying,
@@ -46,7 +46,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 		}
 	}
 
-	phase, err := mapPhase(resp.Msg.GetPhase())
+	phase, err := mapPhase(resp.GetPhase())
 	if err != nil {
 		return pluginsv1.PluginInstallationStatus{
 			Phase:              pluginsv1.PluginPhaseDegraded,
@@ -57,7 +57,7 @@ func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallatio
 
 	return pluginsv1.PluginInstallationStatus{
 		Phase:              phase,
-		Message:            resp.Msg.GetMessage(),
+		Message:            resp.GetMessage(),
 		Ready:              phase == pluginsv1.PluginPhaseRunning,
 		ObservedGeneration: cr.Generation,
 	}

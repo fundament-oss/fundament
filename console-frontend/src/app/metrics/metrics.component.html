@@ -6,15 +6,18 @@
         <div class="flex items-center gap-3">
           <h1 class="text-3xl font-semibold">Metrics</h1>
           @if (isLive()) {
-            <span class="badge badge-sm badge-green gap-1.5" aria-label="Data is updating live">
-              <span class="live-dot" aria-hidden="true"></span>
+            <nldd-tag color="success" size="sm" accessible-label="Data is updating live">
+              <span slot="icon" class="live-dot" aria-hidden="true"></span>
               Live
-            </span>
+            </nldd-tag>
           }
           @if (connectionError()) {
-            <span class="badge badge-sm badge-yellow" aria-label="Connection lost, retrying">
-              Connection lost
-            </span>
+            <nldd-tag
+              color="warning"
+              size="sm"
+              text="Connection lost"
+              accessible-label="Connection lost, retrying"
+            ></nldd-tag>
           }
         </div>
         <div class="mt-1 flex flex-wrap items-baseline gap-x-2 text-gray-600 dark:text-gray-300">
@@ -43,7 +46,7 @@
         <nldd-button
           type="button"
           text="Download CSV"
-          start-icon="table-badge-arrow-down"
+          start-icon="rectangle-split-2x3-badge-arrow-down"
           size="sm"
           variant="primary"
         ></nldd-button>
@@ -153,74 +156,82 @@
               Organisation totals
             }
           </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <!-- CPU -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">CPU</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.cpu.used | number: '1.1-1' }} / {{ totals.cpu.total | number: '1.0-0' }}
-                  {{ totals.cpu.unit }}
-                </span>
+          @if (totalsUnavailable()) {
+            <p class="text-gray-500 dark:text-gray-400">
+              Metrics are currently unavailable for this view — the cluster may be provisioning or
+              its monitoring stack unreachable.
+            </p>
+          } @else {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <!-- CPU -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.cpu.used | number: '1.1-1' }} /
+                    {{ totals.cpu.total | number: '1.0-0' }}
+                    {{ totals.cpu.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(totals.cpu.used, totals.cpu.total))"
+                    [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
+                </div>
               </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="getUsageColor(getUsagePercentage(totals.cpu.used, totals.cpu.total))"
-                  [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
-              </div>
-            </div>
 
-            <!-- Memory -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">Memory</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.memory.used | number: '1.1-1' }} /
-                  {{ totals.memory.total | number: '1.0-0' }}
-                  {{ totals.memory.unit }}
-                </span>
+              <!-- Memory -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.memory.used | number: '1.1-1' }} /
+                    {{ totals.memory.total | number: '1.0-0' }}
+                    {{ totals.memory.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(getUsagePercentage(totals.memory.used, totals.memory.total))
+                    "
+                    [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
+                </div>
               </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(getUsagePercentage(totals.memory.used, totals.memory.total))
-                  "
-                  [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
-              </div>
-            </div>
 
-            <!-- Pods -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">Pods</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.pods.used | number: '1.0-0' }} /
-                  {{ totals.pods.total | number: '1.0-0' }}
-                  {{ totals.pods.unit }}
-                </span>
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="getUsageColor(getUsagePercentage(totals.pods.used, totals.pods.total))"
-                  [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
+              <!-- Pods -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.pods.used | number: '1.0-0' }} /
+                    {{ totals.pods.total | number: '1.0-0' }}
+                    {{ totals.pods.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(totals.pods.used, totals.pods.total))"
+                    [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
+                </div>
               </div>
             </div>
-          </div>
+          }
         </div>
       }
 
@@ -280,21 +291,35 @@
       @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium">Per cluster</h3>
-          <div class="overflow-x-auto">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">Cluster</th>
-                  <th scope="col">CPU used / total</th>
-                  <th scope="col">Memory used / total</th>
-                  <th scope="col">Pods used / total</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (c of clusterSummaries(); track c.id) {
-                  <tr>
-                    <td class="font-mono text-sm font-medium">{{ c.name }}</td>
-                    <td>
+          <nldd-table
+            accessible-label="Per cluster usage"
+            columns="minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(140px, 1fr)"
+          >
+            <nldd-table-row slot="header">
+              <nldd-text-cell text="**Cluster**"></nldd-text-cell>
+              <nldd-text-cell text="**CPU used / total**"></nldd-text-cell>
+              <nldd-text-cell text="**Memory used / total**"></nldd-text-cell>
+              <nldd-text-cell text="**Pods used / total**"></nldd-text-cell>
+            </nldd-table-row>
+
+            @for (c of clusterSummaries(); track c.id) {
+              <nldd-table-row>
+                <nldd-text-cell class="font-mono" [attr.text]="c.name"></nldd-text-cell>
+                @if (c.unavailable) {
+                  <!-- Zeros here are placeholders for an unreachable backend, so
+                       they must not render as a real (green, 0%) measurement. -->
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                } @else {
+                  <nldd-cell width="full">
+                    <div class="w-full">
                       {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
                         <div
@@ -303,8 +328,10 @@
                           [style.width.%]="getUsagePercentage(c.cpu.used, c.cpu.total)"
                         ></div>
                       </div>
-                    </td>
-                    <td>
+                    </div>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <div class="w-full">
                       {{ c.memory.used | number: '1.1-1' }} /
                       {{ c.memory.total | number: '1.0-0' }} GiB
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
@@ -314,8 +341,10 @@
                           [style.width.%]="getUsagePercentage(c.memory.used, c.memory.total)"
                         ></div>
                       </div>
-                    </td>
-                    <td>
+                    </div>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <div class="w-full">
                       {{ c.pods.used | number: '1.0-0' }} / {{ c.pods.total | number: '1.0-0' }}
                       <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
                         <div
@@ -324,12 +353,12 @@
                           [style.width.%]="getUsagePercentage(c.pods.used, c.pods.total)"
                         ></div>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </nldd-cell>
                 }
-              </tbody>
-            </table>
-          </div>
+              </nldd-table-row>
+            }
+          </nldd-table>
         </div>
       }
 
@@ -411,42 +440,61 @@
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <h3 class="mb-4 text-lg font-medium">Per namespace</h3>
         @if (namespaceUsage().length > 0) {
-          <div class="overflow-x-auto">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">Namespace</th>
-                  <th scope="col">CPU used</th>
-                  <th scope="col">CPU req / lim</th>
-                  <th scope="col">Mem used</th>
-                  <th scope="col">Mem req / lim</th>
-                  <th scope="col">Pods</th>
-                  <th scope="col">Net Rx</th>
-                  <th scope="col">Net Tx</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (ns of filteredNamespaceUsage(); track ns.name) {
-                  <tr>
-                    <td class="font-medium">{{ ns.name }}</td>
-                    <td>{{ ns.cpu | number: '1.2-2' }} cores</td>
-                    <td class="text-gray-500 dark:text-gray-400">
-                      {{ ns.cpuRequests | number: '1.1-1' }} /
-                      {{ ns.cpuLimits | number: '1.1-1' }}
-                    </td>
-                    <td>{{ ns.memory | number: '1.1-1' }} GiB</td>
-                    <td class="text-gray-500 dark:text-gray-400">
-                      {{ ns.memoryRequests | number: '1.1-1' }} /
-                      {{ ns.memoryLimits | number: '1.1-1' }} GiB
-                    </td>
-                    <td>{{ ns.pods }}</td>
-                    <td>{{ ns.networkReceiveMbs | number: '1.2-2' }} MB/s</td>
-                    <td>{{ ns.networkTransmitMbs | number: '1.2-2' }} MB/s</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+          <nldd-table
+            accessible-label="Per namespace usage"
+            columns="minmax(160px, 1fr) 110px 120px 110px 140px 70px 110px 110px"
+            md-columns="minmax(160px, 1fr) 110px 110px 70px"
+            sm-columns="minmax(160px, 1fr) 110px 110px 70px"
+          >
+            <nldd-table-row slot="header">
+              <nldd-text-cell text="**Namespace**"></nldd-text-cell>
+              <nldd-text-cell text="**CPU used**"></nldd-text-cell>
+              <nldd-text-cell text="**CPU req / lim**" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="**Mem used**"></nldd-text-cell>
+              <nldd-text-cell text="**Mem req / lim**" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="**Pods**"></nldd-text-cell>
+              <nldd-text-cell text="**Net Rx**" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="**Net Tx**" hide-below="lg"></nldd-text-cell>
+            </nldd-table-row>
+
+            @for (ns of filteredNamespaceUsage(); track ns.name) {
+              <nldd-table-row>
+                <nldd-text-cell [attr.text]="ns.name"></nldd-text-cell>
+                <nldd-text-cell
+                  [attr.text]="(ns.cpu | number: '1.2-2') + ' cores'"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  color="secondary"
+                  hide-below="lg"
+                  [attr.text]="
+                    (ns.cpuRequests | number: '1.1-1') + ' / ' + (ns.cpuLimits | number: '1.1-1')
+                  "
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  [attr.text]="(ns.memory | number: '1.1-1') + ' GiB'"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  color="secondary"
+                  hide-below="lg"
+                  [attr.text]="
+                    (ns.memoryRequests | number: '1.1-1') +
+                    ' / ' +
+                    (ns.memoryLimits | number: '1.1-1') +
+                    ' GiB'
+                  "
+                ></nldd-text-cell>
+                <nldd-text-cell [attr.text]="ns.pods"></nldd-text-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="(ns.networkReceiveMbs | number: '1.2-2') + ' MB/s'"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="(ns.networkTransmitMbs | number: '1.2-2') + ' MB/s'"
+                ></nldd-text-cell>
+              </nldd-table-row>
+            }
+          </nldd-table>
         } @else {
           <p class="text-gray-400 dark:text-gray-500">No data available</p>
         }

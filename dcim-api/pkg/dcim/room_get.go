@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetRoom(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetRoomRequest],
-) (*connect.Response[dcimv1.GetRoomResponse], error) {
-	roomID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetRoomRequest,
+) (*dcimv1.GetRoomResponse, error) {
+	roomID := uuid.MustParse(req.GetId())
 
 	room, err := s.queries.RoomGetByID(ctx, db.RoomGetByIDParams{ID: roomID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetRoom(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get room: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetRoomResponse_builder{
+	return dcimv1.GetRoomResponse_builder{
 		Room: roomFromRow(&room),
-	}.Build()), nil
+	}.Build(), nil
 }

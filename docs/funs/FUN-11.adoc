@@ -248,6 +248,8 @@ Upgrading is allowed within the same major version of the plugin.
 
 == Marketplace
 
+NOTE: The public marketplace — where external organizations publish plugins and Fundament reviews them — is specified in link:/funs/fun-20[FUN-20]. It is built on the `appstore` schema described below rather than on a store of its own, extending it with review state and listing fields. The console install flow is unchanged.
+
 The marketplace is implemented as an `appstore` schema in the organization-api database:
 
 * **plugins**: Plugin metadata (name, description, author, repository URL, etc.).

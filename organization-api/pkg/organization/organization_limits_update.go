@@ -19,9 +19,9 @@ import (
 
 func (s *Server) UpdateOrganizationLimits(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateOrganizationLimitsRequest],
-) (*connect.Response[organizationv1.UpdateOrganizationLimitsResponse], error) {
-	organizationID := uuid.MustParse(req.Msg.GetId())
+	req *organizationv1.UpdateOrganizationLimitsRequest,
+) (*organizationv1.UpdateOrganizationLimitsResponse, error) {
+	organizationID := uuid.MustParse(req.GetId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Organization(organizationID)); err != nil {
 		return nil, err
@@ -29,13 +29,13 @@ func (s *Server) UpdateOrganizationLimits(
 
 	params := db.OrganizationLimitsUpsertParams{
 		OrganizationID:         organizationID,
-		MaxNodesPerCluster:     pgtype.Int4{Int32: req.Msg.GetMaxNodesPerCluster(), Valid: req.Msg.HasMaxNodesPerCluster()},
-		MaxNodePoolsPerCluster: pgtype.Int4{Int32: req.Msg.GetMaxNodePoolsPerCluster(), Valid: req.Msg.HasMaxNodePoolsPerCluster()},
-		MaxNodesPerNodePool:    pgtype.Int4{Int32: req.Msg.GetMaxNodesPerNodePool(), Valid: req.Msg.HasMaxNodesPerNodePool()},
-		DefaultMemoryRequestMi: pgtype.Int4{Int32: req.Msg.GetDefaultMemoryRequestMi(), Valid: req.Msg.HasDefaultMemoryRequestMi()},
-		DefaultMemoryLimitMi:   pgtype.Int4{Int32: req.Msg.GetDefaultMemoryLimitMi(), Valid: req.Msg.HasDefaultMemoryLimitMi()},
-		DefaultCpuRequestM:     pgtype.Int4{Int32: req.Msg.GetDefaultCpuRequestM(), Valid: req.Msg.HasDefaultCpuRequestM()},
-		DefaultCpuLimitM:       pgtype.Int4{Int32: req.Msg.GetDefaultCpuLimitM(), Valid: req.Msg.HasDefaultCpuLimitM()},
+		MaxNodesPerCluster:     pgtype.Int4{Int32: req.GetMaxNodesPerCluster(), Valid: req.HasMaxNodesPerCluster()},
+		MaxNodePoolsPerCluster: pgtype.Int4{Int32: req.GetMaxNodePoolsPerCluster(), Valid: req.HasMaxNodePoolsPerCluster()},
+		MaxNodesPerNodePool:    pgtype.Int4{Int32: req.GetMaxNodesPerNodePool(), Valid: req.HasMaxNodesPerNodePool()},
+		DefaultMemoryRequestMi: pgtype.Int4{Int32: req.GetDefaultMemoryRequestMi(), Valid: req.HasDefaultMemoryRequestMi()},
+		DefaultMemoryLimitMi:   pgtype.Int4{Int32: req.GetDefaultMemoryLimitMi(), Valid: req.HasDefaultMemoryLimitMi()},
+		DefaultCpuRequestM:     pgtype.Int4{Int32: req.GetDefaultCpuRequestM(), Valid: req.HasDefaultCpuRequestM()},
+		DefaultCpuLimitM:       pgtype.Int4{Int32: req.GetDefaultCpuLimitM(), Valid: req.HasDefaultCpuLimitM()},
 	}
 
 	if _, err := s.queries.OrganizationLimitsUpsert(ctx, params); err != nil {
@@ -52,5 +52,5 @@ func (s *Server) UpdateOrganizationLimits(
 
 	s.logger.InfoContext(ctx, "organization limits updated", "organization_id", organizationID)
 
-	return connect.NewResponse(organizationv1.UpdateOrganizationLimitsResponse_builder{}.Build()), nil
+	return organizationv1.UpdateOrganizationLimitsResponse_builder{}.Build(), nil
 }

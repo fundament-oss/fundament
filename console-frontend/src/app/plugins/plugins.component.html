@@ -52,9 +52,9 @@
                 @for (tag of plugin.tags; track tag.id) {
                   <nldd-tag
                     size="sm"
-                    [color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
-                    [icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : ''"
-                    [text]="tag.name"
+                    [attr.color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                    [attr.icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : null"
+                    [attr.text]="tag.name"
                   ></nldd-tag>
                 }
               </p>
@@ -74,8 +74,11 @@
               mockPluginVersion
             }}</span>
             <div class="flex gap-3">
+              <!-- data-tour: target of the walkthrough's install slide
+                   (src/app/presentation/tours.ts). Keep the attribute. -->
               @if (isPluginInstalledAnywhere(plugin.name)) {
                 <nldd-button
+                  data-tour="plugin-install"
                   (click)="onInstallPlugin(plugin)"
                   type="button"
                   text="Installed"
@@ -92,6 +95,7 @@
                   size="sm"
                 ></nldd-button>
                 <nldd-button
+                  data-tour="plugin-install"
                   (click)="onInstallPlugin(plugin)"
                   type="button"
                   text="Install"
@@ -184,6 +188,8 @@
 <app-install-plugin-modal
   [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"
   [clusters]="clustersForModal"
+  [versions]="installVersions()"
+  [versionsError]="installVersionsError()"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnClusters($event)"
@@ -210,11 +216,11 @@
         <div class="flex items-start gap-4">
           <app-plugin-icon
             [name]="getPluginIconName(plugin.name)"
-            [label]="plugin.name"
+            [label]="plugin.displayName || plugin.name"
             class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2.5 dark:bg-gray-800"
           />
           <div class="min-w-0">
-            <h2 class="text-xl font-semibold">{{ plugin.name }}</h2>
+            <h2 class="text-xl font-semibold">{{ plugin.displayName || plugin.name }}</h2>
             <p class="font-mono text-sm text-gray-600 dark:text-gray-300">
               {{ mockPluginVendor }} · {{ mockPluginVersion }}
             </p>
@@ -227,9 +233,9 @@
             @for (tag of plugin.tags; track tag.id) {
               <nldd-tag
                 size="sm"
-                [color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
-                [icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : ''"
-                [text]="tag.name"
+                [attr.color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                [attr.icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : null"
+                [attr.text]="tag.name"
               ></nldd-tag>
             }
           </div>

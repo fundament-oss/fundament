@@ -123,10 +123,10 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		"permission": plan.Permission.ValueString(),
 	})
 
-	inviteReq := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	inviteReq := organizationv1.InviteMemberRequest_builder{
 		Email:      plan.Email.ValueString(),
 		Permission: plan.Permission.ValueString(),
-	}.Build())
+	}.Build()
 
 	inviteResp, err := createIdempotent(ctx, r.client.InviteService.InviteMember, inviteReq)
 	if err != nil {
@@ -150,7 +150,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	invitationID := inviteResp.Msg.GetInvitationId()
+	invitationID := inviteResp.GetInvitationId()
 	plan.ID = types.StringValue(invitationID)
 
 	member, err := r.findMemberByID(ctx, invitationID)
@@ -279,10 +279,10 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		"permission_new": plan.Permission.ValueString(),
 	})
 
-	updateReq := connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
+	updateReq := organizationv1.UpdateMemberPermissionRequest_builder{
 		Id:         state.ID.ValueString(),
 		Permission: plan.Permission.ValueString(),
-	}.Build())
+	}.Build()
 
 	_, err := r.client.MemberService.UpdateMemberPermission(ctx, updateReq)
 	if err != nil {
@@ -380,9 +380,9 @@ func (r *OrganizationMemberResource) Delete(ctx context.Context, req resource.De
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
+	deleteReq := organizationv1.DeleteMemberRequest_builder{
 		Id: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	_, err := r.client.MemberService.DeleteMember(ctx, deleteReq)
 	if err != nil {
@@ -419,9 +419,9 @@ func (r *OrganizationMemberResource) ImportState(ctx context.Context, req resour
 // findMemberByID fetches a single member by membership ID.
 // Returns the member if found, nil if not found, or an error on API failure.
 func (r *OrganizationMemberResource) findMemberByID(ctx context.Context, id string) (*organizationv1.Member, error) {
-	getReq := connect.NewRequest(organizationv1.GetMemberRequest_builder{
+	getReq := organizationv1.GetMemberRequest_builder{
 		Id: &id,
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.MemberService.GetMember(ctx, getReq)
 	if err != nil {
@@ -431,5 +431,5 @@ func (r *OrganizationMemberResource) findMemberByID(ctx context.Context, id stri
 		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return getResp.Msg.GetMember(), nil
+	return getResp.GetMember(), nil
 }

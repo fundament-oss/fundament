@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListDevices(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListDevicesRequest],
-) (*connect.Response[dcimv1.ListDevicesResponse], error) {
-	designID := uuid.MustParse(req.Msg.GetDesignId())
+	req *dcimv1.ListDevicesRequest,
+) (*dcimv1.ListDevicesResponse, error) {
+	designID := uuid.MustParse(req.GetDesignId())
 
 	rows, err := s.queries.LogicalDeviceList(ctx, db.LogicalDeviceListParams{LogicalDesignID: designID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) ListDevices(
 		devices = append(devices, logicalDeviceFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListDevicesResponse_builder{
+	return dcimv1.ListDevicesResponse_builder{
 		Devices: devices,
-	}.Build()), nil
+	}.Build(), nil
 }

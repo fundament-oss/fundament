@@ -18,48 +18,48 @@ import (
 
 func (s *Server) UpdateCatalogEntry(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateCatalogEntryRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	catalogID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateCatalogEntryRequest,
+) (*emptypb.Empty, error) {
+	catalogID := uuid.MustParse(req.GetId())
 
 	params := db.DeviceCatalogUpdateParams{
 		ID: catalogID,
 	}
 
-	if req.Msg.HasManufacturer() {
-		params.Manufacturer = pgtype.Text{String: req.Msg.GetManufacturer(), Valid: true}
+	if req.HasManufacturer() {
+		params.Manufacturer = pgtype.Text{String: req.GetManufacturer(), Valid: true}
 	}
 
-	if req.Msg.HasModel() {
-		params.Model = pgtype.Text{String: req.Msg.GetModel(), Valid: true}
+	if req.HasModel() {
+		params.Model = pgtype.Text{String: req.GetModel(), Valid: true}
 	}
 
-	if req.Msg.HasPartNumber() {
-		params.PartNumber = pgtype.Text{String: req.Msg.GetPartNumber(), Valid: true}
+	if req.HasPartNumber() {
+		params.PartNumber = pgtype.Text{String: req.GetPartNumber(), Valid: true}
 	}
 
-	if req.Msg.GetCategory() != dcimv1.AssetCategory_ASSET_CATEGORY_UNSPECIFIED {
-		params.Category = pgtype.Text{String: assetCategoryToDB(req.Msg.GetCategory()), Valid: true}
+	if req.GetCategory() != dcimv1.AssetCategory_ASSET_CATEGORY_UNSPECIFIED {
+		params.Category = pgtype.Text{String: assetCategoryToDB(req.GetCategory()), Valid: true}
 	}
 
-	if req.Msg.HasFormFactor() {
-		params.FormFactor = pgtype.Text{String: req.Msg.GetFormFactor(), Valid: true}
+	if req.HasFormFactor() {
+		params.FormFactor = pgtype.Text{String: req.GetFormFactor(), Valid: true}
 	}
 
-	if req.Msg.HasRackUnits() {
-		params.RackUnits = pgtype.Int4{Int32: req.Msg.GetRackUnits(), Valid: true}
+	if req.HasRackUnits() {
+		params.RackUnits = pgtype.Int4{Int32: req.GetRackUnits(), Valid: true}
 	}
 
-	if req.Msg.HasWeightKg() {
-		params.WeightKg = float64ToNumeric(req.Msg.GetWeightKg())
+	if req.HasWeightKg() {
+		params.WeightKg = float64ToNumeric(req.GetWeightKg())
 	}
 
-	if req.Msg.HasPowerDrawW() {
-		params.PowerDrawW = float64ToNumeric(req.Msg.GetPowerDrawW())
+	if req.HasPowerDrawW() {
+		params.PowerDrawW = float64ToNumeric(req.GetPowerDrawW())
 	}
 
-	if len(req.Msg.GetSpecs()) > 0 {
-		params.Specs = specsToDB(req.Msg.GetSpecs())
+	if len(req.GetSpecs()) > 0 {
+		params.Specs = specsToDB(req.GetSpecs())
 	}
 
 	rowsAffected, err := s.queries.DeviceCatalogUpdate(ctx, params)
@@ -77,5 +77,5 @@ func (s *Server) UpdateCatalogEntry(
 
 	s.logger.InfoContext(ctx, "catalog entry updated", "catalog_entry_id", catalogID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

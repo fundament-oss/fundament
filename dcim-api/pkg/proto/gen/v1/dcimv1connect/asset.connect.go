@@ -60,14 +60,14 @@ const (
 
 // AssetServiceClient is a client for the dcim.v1.AssetService service.
 type AssetServiceClient interface {
-	ListAssets(context.Context, *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error)
-	GetAsset(context.Context, *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error)
-	CreateAsset(context.Context, *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error)
-	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error)
-	GetAssetEvents(context.Context, *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error)
-	GetAssetLocation(context.Context, *connect.Request[v1.GetAssetLocationRequest]) (*connect.Response[v1.GetAssetLocationResponse], error)
-	GetAssetStats(context.Context, *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error)
+	ListAssets(context.Context, *v1.ListAssetsRequest) (*v1.ListAssetsResponse, error)
+	GetAsset(context.Context, *v1.GetAssetRequest) (*v1.GetAssetResponse, error)
+	CreateAsset(context.Context, *v1.CreateAssetRequest) (*v1.CreateAssetResponse, error)
+	UpdateAsset(context.Context, *v1.UpdateAssetRequest) (*emptypb.Empty, error)
+	DeleteAsset(context.Context, *v1.DeleteAssetRequest) (*emptypb.Empty, error)
+	GetAssetEvents(context.Context, *v1.GetAssetEventsRequest) (*v1.GetAssetEventsResponse, error)
+	GetAssetLocation(context.Context, *v1.GetAssetLocationRequest) (*v1.GetAssetLocationResponse, error)
+	GetAssetStats(context.Context, *v1.GetAssetStatsRequest) (*v1.GetAssetStatsResponse, error)
 }
 
 // NewAssetServiceClient constructs a client for the dcim.v1.AssetService service. By default, it
@@ -145,55 +145,87 @@ type assetServiceClient struct {
 }
 
 // ListAssets calls dcim.v1.AssetService.ListAssets.
-func (c *assetServiceClient) ListAssets(ctx context.Context, req *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error) {
-	return c.listAssets.CallUnary(ctx, req)
+func (c *assetServiceClient) ListAssets(ctx context.Context, req *v1.ListAssetsRequest) (*v1.ListAssetsResponse, error) {
+	response, err := c.listAssets.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetAsset calls dcim.v1.AssetService.GetAsset.
-func (c *assetServiceClient) GetAsset(ctx context.Context, req *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error) {
-	return c.getAsset.CallUnary(ctx, req)
+func (c *assetServiceClient) GetAsset(ctx context.Context, req *v1.GetAssetRequest) (*v1.GetAssetResponse, error) {
+	response, err := c.getAsset.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateAsset calls dcim.v1.AssetService.CreateAsset.
-func (c *assetServiceClient) CreateAsset(ctx context.Context, req *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error) {
-	return c.createAsset.CallUnary(ctx, req)
+func (c *assetServiceClient) CreateAsset(ctx context.Context, req *v1.CreateAssetRequest) (*v1.CreateAssetResponse, error) {
+	response, err := c.createAsset.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateAsset calls dcim.v1.AssetService.UpdateAsset.
-func (c *assetServiceClient) UpdateAsset(ctx context.Context, req *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateAsset.CallUnary(ctx, req)
+func (c *assetServiceClient) UpdateAsset(ctx context.Context, req *v1.UpdateAssetRequest) (*emptypb.Empty, error) {
+	response, err := c.updateAsset.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteAsset calls dcim.v1.AssetService.DeleteAsset.
-func (c *assetServiceClient) DeleteAsset(ctx context.Context, req *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteAsset.CallUnary(ctx, req)
+func (c *assetServiceClient) DeleteAsset(ctx context.Context, req *v1.DeleteAssetRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteAsset.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetAssetEvents calls dcim.v1.AssetService.GetAssetEvents.
-func (c *assetServiceClient) GetAssetEvents(ctx context.Context, req *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error) {
-	return c.getAssetEvents.CallUnary(ctx, req)
+func (c *assetServiceClient) GetAssetEvents(ctx context.Context, req *v1.GetAssetEventsRequest) (*v1.GetAssetEventsResponse, error) {
+	response, err := c.getAssetEvents.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetAssetLocation calls dcim.v1.AssetService.GetAssetLocation.
-func (c *assetServiceClient) GetAssetLocation(ctx context.Context, req *connect.Request[v1.GetAssetLocationRequest]) (*connect.Response[v1.GetAssetLocationResponse], error) {
-	return c.getAssetLocation.CallUnary(ctx, req)
+func (c *assetServiceClient) GetAssetLocation(ctx context.Context, req *v1.GetAssetLocationRequest) (*v1.GetAssetLocationResponse, error) {
+	response, err := c.getAssetLocation.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetAssetStats calls dcim.v1.AssetService.GetAssetStats.
-func (c *assetServiceClient) GetAssetStats(ctx context.Context, req *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error) {
-	return c.getAssetStats.CallUnary(ctx, req)
+func (c *assetServiceClient) GetAssetStats(ctx context.Context, req *v1.GetAssetStatsRequest) (*v1.GetAssetStatsResponse, error) {
+	response, err := c.getAssetStats.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // AssetServiceHandler is an implementation of the dcim.v1.AssetService service.
 type AssetServiceHandler interface {
-	ListAssets(context.Context, *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error)
-	GetAsset(context.Context, *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error)
-	CreateAsset(context.Context, *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error)
-	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error)
-	GetAssetEvents(context.Context, *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error)
-	GetAssetLocation(context.Context, *connect.Request[v1.GetAssetLocationRequest]) (*connect.Response[v1.GetAssetLocationResponse], error)
-	GetAssetStats(context.Context, *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error)
+	ListAssets(context.Context, *v1.ListAssetsRequest) (*v1.ListAssetsResponse, error)
+	GetAsset(context.Context, *v1.GetAssetRequest) (*v1.GetAssetResponse, error)
+	CreateAsset(context.Context, *v1.CreateAssetRequest) (*v1.CreateAssetResponse, error)
+	UpdateAsset(context.Context, *v1.UpdateAssetRequest) (*emptypb.Empty, error)
+	DeleteAsset(context.Context, *v1.DeleteAssetRequest) (*emptypb.Empty, error)
+	GetAssetEvents(context.Context, *v1.GetAssetEventsRequest) (*v1.GetAssetEventsResponse, error)
+	GetAssetLocation(context.Context, *v1.GetAssetLocationRequest) (*v1.GetAssetLocationResponse, error)
+	GetAssetStats(context.Context, *v1.GetAssetStatsRequest) (*v1.GetAssetStatsResponse, error)
 }
 
 // NewAssetServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -203,49 +235,49 @@ type AssetServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAssetServiceHandler(svc AssetServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	assetServiceMethods := v1.File_v1_asset_proto.Services().ByName("AssetService").Methods()
-	assetServiceListAssetsHandler := connect.NewUnaryHandler(
+	assetServiceListAssetsHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceListAssetsProcedure,
 		svc.ListAssets,
 		connect.WithSchema(assetServiceMethods.ByName("ListAssets")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceGetAssetHandler := connect.NewUnaryHandler(
+	assetServiceGetAssetHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceGetAssetProcedure,
 		svc.GetAsset,
 		connect.WithSchema(assetServiceMethods.ByName("GetAsset")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceCreateAssetHandler := connect.NewUnaryHandler(
+	assetServiceCreateAssetHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceCreateAssetProcedure,
 		svc.CreateAsset,
 		connect.WithSchema(assetServiceMethods.ByName("CreateAsset")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceUpdateAssetHandler := connect.NewUnaryHandler(
+	assetServiceUpdateAssetHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceUpdateAssetProcedure,
 		svc.UpdateAsset,
 		connect.WithSchema(assetServiceMethods.ByName("UpdateAsset")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceDeleteAssetHandler := connect.NewUnaryHandler(
+	assetServiceDeleteAssetHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceDeleteAssetProcedure,
 		svc.DeleteAsset,
 		connect.WithSchema(assetServiceMethods.ByName("DeleteAsset")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceGetAssetEventsHandler := connect.NewUnaryHandler(
+	assetServiceGetAssetEventsHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceGetAssetEventsProcedure,
 		svc.GetAssetEvents,
 		connect.WithSchema(assetServiceMethods.ByName("GetAssetEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceGetAssetLocationHandler := connect.NewUnaryHandler(
+	assetServiceGetAssetLocationHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceGetAssetLocationProcedure,
 		svc.GetAssetLocation,
 		connect.WithSchema(assetServiceMethods.ByName("GetAssetLocation")),
 		connect.WithHandlerOptions(opts...),
 	)
-	assetServiceGetAssetStatsHandler := connect.NewUnaryHandler(
+	assetServiceGetAssetStatsHandler := connect.NewUnaryHandlerSimple(
 		AssetServiceGetAssetStatsProcedure,
 		svc.GetAssetStats,
 		connect.WithSchema(assetServiceMethods.ByName("GetAssetStats")),
@@ -278,34 +310,34 @@ func NewAssetServiceHandler(svc AssetServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedAssetServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAssetServiceHandler struct{}
 
-func (UnimplementedAssetServiceHandler) ListAssets(context.Context, *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error) {
+func (UnimplementedAssetServiceHandler) ListAssets(context.Context, *v1.ListAssetsRequest) (*v1.ListAssetsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.ListAssets is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) GetAsset(context.Context, *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error) {
+func (UnimplementedAssetServiceHandler) GetAsset(context.Context, *v1.GetAssetRequest) (*v1.GetAssetResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.GetAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) CreateAsset(context.Context, *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error) {
+func (UnimplementedAssetServiceHandler) CreateAsset(context.Context, *v1.CreateAssetRequest) (*v1.CreateAssetResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.CreateAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedAssetServiceHandler) UpdateAsset(context.Context, *v1.UpdateAssetRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.UpdateAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedAssetServiceHandler) DeleteAsset(context.Context, *v1.DeleteAssetRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.DeleteAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) GetAssetEvents(context.Context, *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error) {
+func (UnimplementedAssetServiceHandler) GetAssetEvents(context.Context, *v1.GetAssetEventsRequest) (*v1.GetAssetEventsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.GetAssetEvents is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) GetAssetLocation(context.Context, *connect.Request[v1.GetAssetLocationRequest]) (*connect.Response[v1.GetAssetLocationResponse], error) {
+func (UnimplementedAssetServiceHandler) GetAssetLocation(context.Context, *v1.GetAssetLocationRequest) (*v1.GetAssetLocationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.GetAssetLocation is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) GetAssetStats(context.Context, *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error) {
+func (UnimplementedAssetServiceHandler) GetAssetStats(context.Context, *v1.GetAssetStatsRequest) (*v1.GetAssetStatsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.GetAssetStats is not implemented"))
 }

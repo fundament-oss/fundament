@@ -63,4 +63,37 @@ export default class KubePluginLoaderService {
     );
     return { crd, resource };
   }
+
+  // Re-lists resources for an already-resolved CRD, skipping the plugin/CRD-schema
+  // fetch that loadCrdAndResources does. Used to refresh a list after a delete,
+  // where the schema is unchanged and only the resource set differs.
+  async loadResources(
+    pluginName: string,
+    crd: ParsedCrd,
+    clusterId: string,
+  ): Promise<KubeResource[]> {
+    return this.pluginStore.loadResources(
+      crd,
+      clusterId,
+      this.configService.getConfig().kubeApiProxyUrl,
+      pluginName,
+    );
+  }
+
+  async deleteResource(
+    pluginName: string,
+    crd: ParsedCrd,
+    clusterId: string,
+    name: string,
+    namespace: string | undefined,
+  ): Promise<void> {
+    await this.pluginStore.deleteResource(
+      crd,
+      clusterId,
+      this.configService.getConfig().kubeApiProxyUrl,
+      pluginName,
+      name,
+      namespace,
+    );
+  }
 }

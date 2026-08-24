@@ -57,15 +57,19 @@ ORDER BY
 -- name: NodePoolListByClusterID :many
 -- Fetch active (non-deleted) node pools for a cluster.
 -- Used by the cluster handler to build Gardener worker groups.
+-- The catalog join resolves the machine-type name when the pool references
+-- region_machine_types; legacy pools fall back to the machine_type text column.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
-    tenant.node_pools.machine_type,
+    COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
     tenant.node_pools.created
 FROM
     tenant.node_pools
+    LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
+    LEFT JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
 WHERE
     tenant.node_pools.cluster_id = @cluster_id
     AND tenant.node_pools.deleted IS NULL
@@ -107,10 +111,13 @@ SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
     ( -- Cluster has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
@@ -144,10 +151,13 @@ SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
     ( -- Delete has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL

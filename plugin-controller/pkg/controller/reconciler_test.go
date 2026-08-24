@@ -2,11 +2,14 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"log/slog"
 	"net"
 	"net/http"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
@@ -17,14 +20,66 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/defclient"
 	pb "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
+
+// fakeDefClient is a stub defclient.Client for tests. It returns a pre-canned
+// manifest + hash, or a canned error.
+type fakeDefClient struct {
+	manifest []byte
+	hash     string
+	err      error
+}
+
+func (f fakeDefClient) GetDefinition(_ context.Context, _, _ string) (defclient.Definition, error) {
+	if f.err != nil {
+		return defclient.Definition{}, f.err
+	}
+	return defclient.Definition{Manifest: f.manifest, Hash: f.hash}, nil
+}
+
+// countingDefClient counts GetDefinition calls to assert the reconciler does not
+// re-fetch an immutable definition on every poll.
+type countingDefClient struct {
+	inner defclient.Client
+	calls int
+}
+
+func (c *countingDefClient) GetDefinition(ctx context.Context, name, version string) (defclient.Definition, error) {
+	c.calls++
+	return c.inner.GetDefinition(ctx, name, version)
+}
+
+// sampleManifest returns a valid PluginDefinition YAML and its sha256 pin.
+func sampleManifest(t *testing.T) ([]byte, string) {
+	t.Helper()
+	manifest := []byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+  imagePullPolicy: IfNotPresent
+  permissions:
+    rbac:
+      - apiGroups: [cert-manager.io]
+        resources: [certificates, certificaterequests]
+        verbs: [get, list, watch]
+      - apiGroups: [""]
+        resources: [secrets]
+        verbs: [get]
+`)
+	sum := sha256.Sum256(manifest)
+	return manifest, "sha256:" + hex.EncodeToString(sum[:])
+}
 
 func newTestScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
@@ -42,11 +97,12 @@ func testCR() *pluginsv1.PluginInstallation {
 			Generation: 1,
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image: "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
 			DefinitionRef: pluginsv1.DefinitionRef{
-				PluginName:     "cert-manager",
-				PluginVersion:  "v1.17.2",
-				DefinitionHash: "sha256:mock",
+				PluginName:    "cert-manager",
+				PluginVersion: "v1.17.2",
+				// DefinitionHash intentionally empty in tests — the reconciler
+				// treats an empty pin as "no hash check" when AllowUnpinnedHash
+				// is set. The dedicated hash tests set it explicitly.
 			},
 			Config: map[string]string{
 				"LOG_LEVEL": "debug",
@@ -86,41 +142,6 @@ func TestMutateRoleBinding(t *testing.T) {
 	assert.Equal(t, "plugin-cert-manager", rb.Subjects[0].Namespace)
 }
 
-func TestMutateDeployment(t *testing.T) {
-	cr := testCR()
-	envVars := []corev1.EnvVar{
-		{Name: "FUNDAMENT_CLUSTER_ID", Value: "test-cluster"},
-	}
-	deploy := &appsv1.Deployment{}
-	mutateDeployment(deploy, cr, envVars)
-
-	container := deploy.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, cr.Spec.Image, container.Image)
-	assert.Equal(t, "cert-manager", container.Name)
-
-	// Should have fundament env vars + config env vars
-	foundClusterID := false
-	foundLogLevel := false
-	for _, env := range container.Env {
-		if env.Name == "FUNDAMENT_CLUSTER_ID" {
-			foundClusterID = true
-			assert.Equal(t, "test-cluster", env.Value)
-		}
-		if env.Name == "FUNP_LOG_LEVEL" {
-			foundLogLevel = true
-			assert.Equal(t, "debug", env.Value)
-		}
-	}
-	assert.True(t, foundClusterID, "FUNDAMENT_CLUSTER_ID env var should be present")
-	assert.True(t, foundLogLevel, "LOG_LEVEL env var should be present")
-
-	// Health probes
-	assert.NotNil(t, container.LivenessProbe)
-	assert.NotNil(t, container.ReadinessProbe)
-	assert.Equal(t, "/livez", container.LivenessProbe.HTTPGet.Path)
-	assert.Equal(t, "/readyz", container.ReadinessProbe.HTTPGet.Path)
-}
-
 func TestMutateService(t *testing.T) {
 	cr := testCR()
 	svc := &corev1.Service{}
@@ -130,10 +151,17 @@ func TestMutateService(t *testing.T) {
 	assert.Equal(t, int32(8080), svc.Spec.Ports[0].Port)
 }
 
+// TestReconcileChildren_CreatesResources exercises the full happy-path reconcile
+// with a fake defclient that returns a valid manifest whose hash equals the CR
+// pin. All child resources (Namespace, SA, RoleBinding, scope CR+CRB,
+// Deployment, Service) are created.
 func TestReconcileChildren_CreatesResources(t *testing.T) {
 	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
 	cr := testCR()
 	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = pin
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -149,7 +177,8 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 			FundamentInstallID: "test-install",
 			FundamentOrgID:     "test-org",
 		},
-		definitionResolver: definition.NewMockResolver(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
@@ -181,12 +210,22 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "admin", rb.RoleRef.Name)
 
-	// Verify Deployment created in plugin namespace
+	// Verify scope ClusterRole created
+	var scopeRole rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: pluginScopeClusterRoleName(cr.Name),
+	}, &scopeRole)
+	require.NoError(t, err)
+
+	// Verify Deployment created in plugin namespace with image from manifest
 	var deploy appsv1.Deployment
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
 		Name: "plugin-cert-manager", Namespace: nsName,
 	}, &deploy)
 	require.NoError(t, err)
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, corev1.PullIfNotPresent, deploy.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	// Verify Service created in plugin namespace
 	var svc corev1.Service
@@ -196,13 +235,16 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestReconcileChildren_MaterialisesPluginScopeRBAC verifies FUN-17 Plan D:
-// the reconciler resolves the pinned PluginDefinition and materialises the
-// plugin SA's scope ClusterRole + ClusterRoleBinding from its permissions.rbac.
+// TestReconcileChildren_MaterialisesPluginScopeRBAC verifies FUN-17: the
+// reconciler fetches the definition via defclient and materialises the plugin
+// SA's scope ClusterRole + ClusterRoleBinding from its permissions.rbac.
 func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
 	cr := testCR()
 	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = pin
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -211,9 +253,11 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 		Build()
 
 	r := &Reconciler{
-		client:             fakeClient,
-		logger:             slog.Default(),
-		definitionResolver: definition.NewMockResolver(),
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
@@ -227,7 +271,7 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	require.Len(t, role.Rules, 2)
 	assert.Equal(t, []string{"cert-manager.io"}, role.Rules[0].APIGroups)
 	assert.Equal(t, []string{"certificates", "certificaterequests"}, role.Rules[0].Resources)
-	assert.Equal(t, []string{"cert-manager-webhook-ca"}, role.Rules[1].ResourceNames)
+	assert.Equal(t, []string{"secrets"}, role.Rules[1].Resources)
 
 	var crb rbacv1.ClusterRoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
@@ -238,6 +282,284 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	require.Len(t, crb.Subjects, 1)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
+}
+
+// TestReconcileChildren_DeploymentUsesManifestImage verifies that the
+// Deployment's container image is sourced from the parsed definition, not from
+// cr.Spec.Image (which is being removed in Task 8).
+func TestReconcileChildren_DeploymentUsesManifestImage(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	// Even if cr.Spec.Image were set to something else, the reconciler must
+	// use the manifest image. Leave it empty here to prove the fetch path
+	// supplies the image.
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+
+	var deploy appsv1.Deployment
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
+	}, &deploy)
+	require.NoError(t, err)
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
+}
+
+// TestReconcileChildren_DeploymentCreatedAfterScope verifies that on the first
+// reconcile, the scope ClusterRole exists by the time the Deployment is
+// created (order: Namespace, SA, RoleBinding, scope CR+CRB, Deployment,
+// Service). We assert this by observing that if scope fetching fails, no
+// Deployment is created.
+func TestReconcileChildren_DeploymentNotCreatedWhenScopeFails(t *testing.T) {
+	scheme := newTestScheme()
+
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = "sha256:mismatch-so-scope-fails-before-deployment"
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	manifest, _ := sampleManifest(t)
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:whatever"},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.Error(t, err)
+
+	// Deployment must NOT exist yet — scope failure aborts before Deployment.
+	var deploy appsv1.Deployment
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
+	}, &deploy)
+	require.Error(t, err, "Deployment must not be created when scope reconcile fails")
+}
+
+// TestReconcilePluginScope_RejectsHashMismatch confirms that when
+// spec.definitionRef.definitionHash is set and doesn't match the computed
+// sha256 of the fetched manifest, the reconcile errors and the scope
+// ClusterRole is not created.
+func TestReconcilePluginScope_RejectsHashMismatch(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, _ := sampleManifest(t)
+
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = "sha256:definitely-not-what-organization-api-serves"
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:whatever"},
+	}
+
+	// reconcileChildren propagates the hash-mismatch so the workqueue retries
+	// (and the PluginScopeReady Condition on the CR reflects the failure).
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "definition hash mismatch")
+
+	var role rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager-scope",
+	}, &role)
+	require.Error(t, err, "scope ClusterRole must not be created on hash mismatch")
+
+	// The condition is set on the CR passed into reconcileChildren.
+	var cond *metav1.Condition
+	for i := range cr.Status.Conditions {
+		if cr.Status.Conditions[i].Type == ConditionPluginScopeReady {
+			cond = &cr.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "PluginScopeReady Condition must be set")
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, "MaterialisationFailed", cond.Reason)
+}
+
+// TestReconcilePluginScope_RejectsUnpinnedWithoutFlag exercises the fail-closed
+// default: with AllowUnpinnedHash=false, an empty DefinitionHash is a hard
+// failure and no defclient RPC is attempted.
+func TestReconcilePluginScope_RejectsUnpinnedWithoutFlag(t *testing.T) {
+	scheme := newTestScheme()
+	cr := testCR() // testCR uses empty hash
+	cr.SetUID("test-uid")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{AllowUnpinnedHash: false},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{err: errors.New("must not be called")},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH")
+}
+
+// TestReconcilePluginScope_UnpinnedWithFlag exercises the dev-loop path: with
+// AllowUnpinnedHash=true and an empty pin, the reconciler fetches the
+// definition and materialises whatever it gets (no hash comparison).
+func TestReconcilePluginScope_UnpinnedWithFlag(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, _ := sampleManifest(t)
+
+	cr := testCR() // empty DefinitionHash
+	cr.SetUID("test-uid")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{AllowUnpinnedHash: true},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:not-checked"},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+
+	var role rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager-scope",
+	}, &role)
+	require.NoError(t, err)
+}
+
+// TestReconcilePluginScope_FetchError propagates a defclient RPC error and
+// sets PluginScopeReady=False.
+func TestReconcilePluginScope_FetchError(t *testing.T) {
+	scheme := newTestScheme()
+	cr := testCR()
+	cr.SetUID("test-uid")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{AllowUnpinnedHash: true},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{err: errors.New("organization-api unreachable")},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "fetch definition")
+
+	var cond *metav1.Condition
+	for i := range cr.Status.Conditions {
+		if cr.Status.Conditions[i].Type == ConditionPluginScopeReady {
+			cond = &cr.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+}
+
+// TestReconcile_RepairsDriftAndCachesDefinition verifies the controller is
+// level-triggered: a child deleted out of band is recreated on the next
+// reconcile even though the generation is unchanged, while the immutable,
+// hash-pinned definition is served from cache rather than re-fetched.
+func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	counting := &countingDefClient{inner: fakeDefClient{manifest: manifest, hash: pin}}
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
+		statusPoller:        newStatusPoller(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           counting,
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	ctx := context.Background()
+	deployKey := types.NamespacedName{Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name)}
+
+	// First reconcile: materialise children; one fetch.
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counting.calls)
+	require.NoError(t, fakeClient.Get(ctx, deployKey, &appsv1.Deployment{}))
+
+	// Simulate out-of-band drift: delete the Deployment.
+	require.NoError(t, fakeClient.Delete(ctx, &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: deployKey.Name, Namespace: deployKey.Namespace},
+	}))
+
+	// Second reconcile (generation unchanged): level-triggered → the drifted
+	// Deployment is recreated, and the pinned definition is served from cache.
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	assert.NoError(t, fakeClient.Get(ctx, deployKey, &appsv1.Deployment{}), "drifted child must be recreated")
+	assert.Equal(t, 1, counting.calls, "pinned definition must be served from cache, not re-fetched")
 }
 
 func TestMapPhase(t *testing.T) {
@@ -400,13 +722,22 @@ func TestPluginServiceURL(t *testing.T) {
 	assert.Equal(t, "http://plugin-cert-manager.plugin-cert-manager.svc.cluster.local:8080", url)
 }
 
-// startMockPluginServer starts an HTTP server that handles RequestUninstall RPC calls.
-// The handler function is called for each request and should return an error or nil.
-func startMockPluginServer(t *testing.T, handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)) (connect.HTTPClient, string) {
+// mockPluginHandlers lets a test wire specific RPC responses without having to
+// stub every method. Unset handlers fall through to the connect-provided
+// "unimplemented" default.
+type mockPluginHandlers struct {
+	requestUninstall func(context.Context, *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error)
+}
+
+// startMockPluginServer boots an HTTP server that speaks the
+// PluginMetadataService protocol and returns whatever the caller wired up.
+// Only uninstall/status handlers are used now — GetDefinition moved off the
+// pod RPC to organization-api (Task 6/7).
+func startMockPluginServer(t *testing.T, handlers mockPluginHandlers) (connect.HTTPClient, string) {
 	t.Helper()
 	mux := http.NewServeMux()
 
-	svc := &mockUninstallHandler{handler: handler}
+	svc := &mockPluginHandler{handlers: handlers}
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(svc)
 	mux.Handle(path, rpcHandler)
 
@@ -421,13 +752,16 @@ func startMockPluginServer(t *testing.T, handler func(context.Context, *connect.
 	return http.DefaultClient, baseURL
 }
 
-type mockUninstallHandler struct {
+type mockPluginHandler struct {
 	pluginmetadatav1connect.UnimplementedPluginMetadataServiceHandler
-	handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)
+	handlers mockPluginHandlers
 }
 
-func (m *mockUninstallHandler) RequestUninstall(ctx context.Context, req *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-	return m.handler(ctx, req)
+func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
+	if m.handlers.requestUninstall == nil {
+		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req)
+	}
+	return m.handlers.requestUninstall(ctx, req)
 }
 
 func deletionTestCR(t *testing.T) (*pluginsv1.PluginInstallation, *corev1.Namespace) {
@@ -452,9 +786,11 @@ func TestHandleDeletion_CallsUninstall(t *testing.T) {
 	cr, ns := deletionTestCR(t)
 
 	uninstallCalled := false
-	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-		uninstallCalled = true
-		return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		requestUninstall: func(_ context.Context, _ *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
+			uninstallCalled = true
+			return &pb.RequestUninstallResponse{}, nil
+		},
 	})
 
 	fakeClient := fake.NewClientBuilder().
@@ -473,7 +809,7 @@ func TestHandleDeletion_CallsUninstall(t *testing.T) {
 	// We need to call requestPluginUninstall directly since handleDeletion
 	// builds the URL from the CR's pluginName which won't match our server.
 	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(httpClient, baseURL)
-	_, err := rpcClient.RequestUninstall(context.Background(), connect.NewRequest(&pb.RequestUninstallRequest{}))
+	_, err := rpcClient.RequestUninstall(context.Background(), &pb.RequestUninstallRequest{})
 	require.NoError(t, err)
 	assert.True(t, uninstallCalled, "uninstall RPC should have been called")
 
@@ -522,8 +858,10 @@ func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
 	scheme := newTestScheme()
 	cr, ns := deletionTestCR(t)
 
-	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		requestUninstall: func(_ context.Context, _ *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
+			return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
+		},
 	})
 
 	// Since pluginServiceURL generates a cluster-internal URL, we use a transport

@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetDevice(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetDeviceRequest],
-) (*connect.Response[dcimv1.GetDeviceResponse], error) {
-	deviceID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetDeviceRequest,
+) (*dcimv1.GetDeviceResponse, error) {
+	deviceID := uuid.MustParse(req.GetId())
 
 	device, err := s.queries.LogicalDeviceGetByID(ctx, db.LogicalDeviceGetByIDParams{ID: deviceID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetDevice(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get device: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetDeviceResponse_builder{
+	return dcimv1.GetDeviceResponse_builder{
 		Device: logicalDeviceFromRow(&device),
-	}.Build()), nil
+	}.Build(), nil
 }

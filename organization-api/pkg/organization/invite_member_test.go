@@ -20,10 +20,10 @@ func Test_InviteMember_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.InviteMember(context.Background(), connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	_, err := client.InviteMember(context.Background(), organizationv1.InviteMemberRequest_builder{
 		Email:      "arbitrary",
 		Permission: "arbitrary",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -49,18 +49,19 @@ func Test_InviteMember_NewUser(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	req := organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.InviteMember(context.Background(), req)
+	res, err := client.InviteMember(ctx, req)
 	require.NoError(t, err)
 
-	require.NotNil(t, res.Msg)
-	assert.NotEqual(t, "", res.Msg.GetInvitationId())
+	require.NotNil(t, res)
+	assert.NotEqual(t, "", res.GetInvitationId())
 }
 
 func Test_InviteMember_ExistingUser(t *testing.T) {
@@ -93,18 +94,19 @@ func Test_InviteMember_ExistingUser(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	req := organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgAID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgAID.String())
 
-	res, err := client.InviteMember(context.Background(), req)
+	res, err := client.InviteMember(ctx, req)
 	require.NoError(t, err)
 
-	require.NotNil(t, res.Msg.GetInvitationId())
-	assert.NotEqual(t, "", res.Msg.GetInvitationId())
+	require.NotNil(t, res.GetInvitationId())
+	assert.NotEqual(t, "", res.GetInvitationId())
 }
 
 func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
@@ -137,17 +139,18 @@ func Test_InviteMember_ExistingUser_AlreadyMember(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	req := organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgAID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgAID.String())
 
-	_, err := client.InviteMember(context.Background(), req)
+	_, err := client.InviteMember(ctx, req)
 	require.NoError(t, err)
 
-	_, err = client.InviteMember(context.Background(), req)
+	_, err = client.InviteMember(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

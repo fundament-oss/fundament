@@ -20,12 +20,12 @@ func TestRackService_GetRack_HappyFlow(t *testing.T) {
 	rowID := createRackRowFixture(t, env, "Rack Get")
 	rackID := createRack(t, env, rowID, "Rack Get Target", 24)
 
-	resp, err := client.GetRack(context.Background(), connect.NewRequest(
+	resp, err := client.GetRack(context.Background(),
 		(&dcimv1.GetRackRequest_builder{Id: rackID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	rack := resp.Msg.GetRack()
+	rack := resp.GetRack()
 	require.NotNil(t, rack)
 	assert.Equal(t, rackID, rack.GetId())
 	assert.Equal(t, rowID, rack.GetRowId())
@@ -51,9 +51,9 @@ func TestRackService_GetRack_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.GetRack(context.Background(), connect.NewRequest(
+			_, err := client.GetRack(context.Background(),
 				(&dcimv1.GetRackRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

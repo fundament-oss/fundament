@@ -49,13 +49,13 @@ const (
 // MemberServiceClient is a client for the organization.v1.MemberService service.
 type MemberServiceClient interface {
 	// List all members of the current organization
-	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
+	ListMembers(context.Context, *v1.ListMembersRequest) (*v1.ListMembersResponse, error)
 	// Get a member by membership ID or user ID
-	GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error)
+	GetMember(context.Context, *v1.GetMemberRequest) (*v1.GetMemberResponse, error)
 	// Delete a member from the organization
-	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
+	DeleteMember(context.Context, *v1.DeleteMemberRequest) (*v1.DeleteMemberResponse, error)
 	// Update a member's permission
-	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error)
+	UpdateMemberPermission(context.Context, *v1.UpdateMemberPermissionRequest) (*v1.UpdateMemberPermissionResponse, error)
 }
 
 // NewMemberServiceClient constructs a client for the organization.v1.MemberService service. By
@@ -105,35 +105,51 @@ type memberServiceClient struct {
 }
 
 // ListMembers calls organization.v1.MemberService.ListMembers.
-func (c *memberServiceClient) ListMembers(ctx context.Context, req *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
-	return c.listMembers.CallUnary(ctx, req)
+func (c *memberServiceClient) ListMembers(ctx context.Context, req *v1.ListMembersRequest) (*v1.ListMembersResponse, error) {
+	response, err := c.listMembers.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetMember calls organization.v1.MemberService.GetMember.
-func (c *memberServiceClient) GetMember(ctx context.Context, req *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error) {
-	return c.getMember.CallUnary(ctx, req)
+func (c *memberServiceClient) GetMember(ctx context.Context, req *v1.GetMemberRequest) (*v1.GetMemberResponse, error) {
+	response, err := c.getMember.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteMember calls organization.v1.MemberService.DeleteMember.
-func (c *memberServiceClient) DeleteMember(ctx context.Context, req *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error) {
-	return c.deleteMember.CallUnary(ctx, req)
+func (c *memberServiceClient) DeleteMember(ctx context.Context, req *v1.DeleteMemberRequest) (*v1.DeleteMemberResponse, error) {
+	response, err := c.deleteMember.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateMemberPermission calls organization.v1.MemberService.UpdateMemberPermission.
-func (c *memberServiceClient) UpdateMemberPermission(ctx context.Context, req *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error) {
-	return c.updateMemberPermission.CallUnary(ctx, req)
+func (c *memberServiceClient) UpdateMemberPermission(ctx context.Context, req *v1.UpdateMemberPermissionRequest) (*v1.UpdateMemberPermissionResponse, error) {
+	response, err := c.updateMemberPermission.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // MemberServiceHandler is an implementation of the organization.v1.MemberService service.
 type MemberServiceHandler interface {
 	// List all members of the current organization
-	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
+	ListMembers(context.Context, *v1.ListMembersRequest) (*v1.ListMembersResponse, error)
 	// Get a member by membership ID or user ID
-	GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error)
+	GetMember(context.Context, *v1.GetMemberRequest) (*v1.GetMemberResponse, error)
 	// Delete a member from the organization
-	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
+	DeleteMember(context.Context, *v1.DeleteMemberRequest) (*v1.DeleteMemberResponse, error)
 	// Update a member's permission
-	UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error)
+	UpdateMemberPermission(context.Context, *v1.UpdateMemberPermissionRequest) (*v1.UpdateMemberPermissionResponse, error)
 }
 
 // NewMemberServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -143,25 +159,25 @@ type MemberServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	memberServiceMethods := v1.File_v1_member_proto.Services().ByName("MemberService").Methods()
-	memberServiceListMembersHandler := connect.NewUnaryHandler(
+	memberServiceListMembersHandler := connect.NewUnaryHandlerSimple(
 		MemberServiceListMembersProcedure,
 		svc.ListMembers,
 		connect.WithSchema(memberServiceMethods.ByName("ListMembers")),
 		connect.WithHandlerOptions(opts...),
 	)
-	memberServiceGetMemberHandler := connect.NewUnaryHandler(
+	memberServiceGetMemberHandler := connect.NewUnaryHandlerSimple(
 		MemberServiceGetMemberProcedure,
 		svc.GetMember,
 		connect.WithSchema(memberServiceMethods.ByName("GetMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	memberServiceDeleteMemberHandler := connect.NewUnaryHandler(
+	memberServiceDeleteMemberHandler := connect.NewUnaryHandlerSimple(
 		MemberServiceDeleteMemberProcedure,
 		svc.DeleteMember,
 		connect.WithSchema(memberServiceMethods.ByName("DeleteMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	memberServiceUpdateMemberPermissionHandler := connect.NewUnaryHandler(
+	memberServiceUpdateMemberPermissionHandler := connect.NewUnaryHandlerSimple(
 		MemberServiceUpdateMemberPermissionProcedure,
 		svc.UpdateMemberPermission,
 		connect.WithSchema(memberServiceMethods.ByName("UpdateMemberPermission")),
@@ -186,18 +202,18 @@ func NewMemberServiceHandler(svc MemberServiceHandler, opts ...connect.HandlerOp
 // UnimplementedMemberServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMemberServiceHandler struct{}
 
-func (UnimplementedMemberServiceHandler) ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
+func (UnimplementedMemberServiceHandler) ListMembers(context.Context, *v1.ListMembersRequest) (*v1.ListMembersResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.ListMembers is not implemented"))
 }
 
-func (UnimplementedMemberServiceHandler) GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error) {
+func (UnimplementedMemberServiceHandler) GetMember(context.Context, *v1.GetMemberRequest) (*v1.GetMemberResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.GetMember is not implemented"))
 }
 
-func (UnimplementedMemberServiceHandler) DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error) {
+func (UnimplementedMemberServiceHandler) DeleteMember(context.Context, *v1.DeleteMemberRequest) (*v1.DeleteMemberResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.DeleteMember is not implemented"))
 }
 
-func (UnimplementedMemberServiceHandler) UpdateMemberPermission(context.Context, *connect.Request[v1.UpdateMemberPermissionRequest]) (*connect.Response[v1.UpdateMemberPermissionResponse], error) {
+func (UnimplementedMemberServiceHandler) UpdateMemberPermission(context.Context, *v1.UpdateMemberPermissionRequest) (*v1.UpdateMemberPermissionResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MemberService.UpdateMemberPermission is not implemented"))
 }

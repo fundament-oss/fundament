@@ -1,0 +1,258 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: gateway-api-envoy
+  displayName: Gateway API (Envoy Gateway)
+  version: v0.1.0
+  description: Gateway API implementation powered by Envoy Gateway. Manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
+  author: Fundament
+  license: Apache-2.0
+  icon: network
+  urls:
+    homepage: https://gateway.envoyproxy.io
+    repository: https://github.com/envoyproxy/gateway
+    documentation: https://gateway.envoyproxy.io/docs/
+  tags:
+    - networking
+    - gateway
+    - envoy
+    - ingress
+spec:
+  permissions:
+    capabilities:
+      - internet_access
+    rbac:
+      - apiGroups: ["gateway.networking.k8s.io"]
+        resources: ["gateways", "httproutes", "grpcroutes", "tcproutes", "tlsroutes"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["gateway.networking.k8s.io"]
+        resources: ["gateways/status", "httproutes/status", "grpcroutes/status", "tcproutes/status", "tlsroutes/status"]
+        verbs: ["get", "update"]
+      - apiGroups: ["gateway.networking.k8s.io"]
+        resources: ["gatewayclasses"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["gateway.networking.k8s.io"]
+        resources: ["gatewayclasses/status"]
+        verbs: ["get", "update"]
+      - apiGroups: ["gateway.envoyproxy.io"]
+        resources: ["*"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["gateway.envoyproxy.io"]
+        resources: ["envoyproxies", "securitypolicies", "backendtrafficpolicies", "clienttrafficpolicies"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Read-only: the Gateway create form offers a dropdown of cert-manager
+      # ClusterIssuers when cert-manager is chosen as the TLS certificate source.
+      - apiGroups: ["cert-manager.io"]
+        resources: ["clusterissuers"]
+        verbs: ["get", "list", "watch"]
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm
+      # --create-namespace --wait`. These cluster-wide rules grant exactly what Helm and the
+      # Envoy Gateway v1.8 chart need to create and wait on the release: the controller
+      # Deployment, the certgen Job, ServiceAccounts, RBAC, webhooks/admission policies, and
+      # the bundled Gateway API + Envoy CRDs. Also covers Gateway TLS listener secrets the
+      # plugin reads at runtime.
+      - apiGroups: [""]
+        resources: ["secrets", "serviceaccounts", "services", "configmaps"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["namespaces"] # helm --create-namespace
+        verbs: ["get", "list", "watch", "create"]
+      - apiGroups: [""]
+        resources: ["pods"] # helm --wait readiness polling
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["deployments"] # envoy-gateway controller (+ --wait)
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets"] # helm --wait polls the Deployment's ReplicaSets
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["batch"]
+        resources: ["jobs"] # envoy-gateway certgen Job
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apiextensions.k8s.io"]
+        resources: ["customresourcedefinitions"] # bundled Gateway API + Envoy CRDs
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["admissionregistration.k8s.io"]
+        resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterroles", "roles"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "bind", "escalate"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterrolebindings", "rolebindings"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  crds:
+    - gateways.gateway.networking.k8s.io
+    - httproutes.gateway.networking.k8s.io
+    - grpcroutes.gateway.networking.k8s.io
+    - tcproutes.gateway.networking.k8s.io
+    - tlsroutes.gateway.networking.k8s.io
+    - securitypolicies.gateway.envoyproxy.io
+    - backendtrafficpolicies.gateway.envoyproxy.io
+    - clienttrafficpolicies.gateway.envoyproxy.io
+
+  menu:
+    project:
+      - crd: gateways.gateway.networking.k8s.io
+        label: Gateways
+        list: true
+        detail: true
+        icon: server
+      - crd: httproutes.gateway.networking.k8s.io
+        label: HTTP routes
+        list: true
+        detail: true
+        icon: globe
+      - crd: grpcroutes.gateway.networking.k8s.io
+        label: gRPC routes
+        list: true
+        detail: true
+        icon: zap
+      - crd: tcproutes.gateway.networking.k8s.io
+        label: TCP routes
+        list: true
+        detail: true
+        icon: cable
+      - crd: tlsroutes.gateway.networking.k8s.io
+        label: TLS routes
+        list: true
+        detail: true
+        icon: lock
+      - crd: securitypolicies.gateway.envoyproxy.io
+        label: Security policies
+        list: true
+        detail: true
+        icon: shield
+      - crd: backendtrafficpolicies.gateway.envoyproxy.io
+        label: Backend traffic policies
+        list: true
+        detail: true
+        icon: gauge
+      - crd: clienttrafficpolicies.gateway.envoyproxy.io
+        label: Client traffic policies
+        list: true
+        detail: true
+        icon: gauge
+    organization:
+      - crd: gateways.gateway.networking.k8s.io
+        label: Gateways
+        list: true
+        detail: true
+        icon: server
+
+  customComponents:
+    Gateway:
+      create: gateways-create.html
+    HTTPRoute:
+      create: httproutes-create.html
+    GRPCRoute:
+      create: grpcroutes-create.html
+    TCPRoute:
+      create: tcproutes-create.html
+    TLSRoute:
+      create: tlsroutes-create.html
+    SecurityPolicy:
+      create: securitypolicies-create.html
+    BackendTrafficPolicy:
+      create: backendtrafficpolicies-create.html
+    ClientTrafficPolicy:
+      create: clienttrafficpolicies-create.html
+
+  allowedResources:
+    - group: gateway.networking.k8s.io
+      version: v1
+      resource: gateways
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1
+      resource: httproutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1
+      resource: grpcroutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1alpha2
+      resource: tcproutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1alpha2
+      resource: tlsroutes
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: securitypolicies
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: backendtrafficpolicies
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: clienttrafficpolicies
+      verbs: [list, get, create]
+    # Read-only: populate the ClusterIssuer dropdown in the Gateway create form.
+    - group: cert-manager.io
+      version: v1
+      resource: clusterissuers
+      verbs: [list]
+
+  uiHints:
+    gateways.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    httproutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    grpcroutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    tcproutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    tlsroutes.gateway.networking.k8s.io:
+      statusMapping:
+        jsonPath: ".status.parents[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    securitypolicies.gateway.envoyproxy.io:
+      statusMapping:
+        jsonPath: ".status.ancestors[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    backendtrafficpolicies.gateway.envoyproxy.io:
+      statusMapping:
+        jsonPath: ".status.ancestors[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }
+    clienttrafficpolicies.gateway.envoyproxy.io:
+      statusMapping:
+        jsonPath: ".status.ancestors[0].conditions[?(@.type==\"Accepted\")].status"
+        values:
+          "True": { badge: success, label: Accepted }
+          "False": { badge: danger, label: Rejected }
+        default: { badge: info, label: Pending }

@@ -10,15 +10,18 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
+import { deleteErrorMessage } from '../kube-api-error';
 import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
-import buildPluginConsoleUrl from '../plugin-console-url.utils';
+import { buildCustomUIUrl } from '../plugin-console-url.utils';
+import { isDroppedWhenNarrow, narrowTableTracks, tableTracks } from '../table-tracks';
 import {
   resolveJsonPath,
   formatColumnValue,
@@ -46,13 +49,15 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent],
+  imports: [RouterLink, PluginIframeComponent, ResourceDeleteModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ResourceListComponent implements OnInit {
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   private registry = inject(PluginRegistryService);
 
@@ -82,22 +87,19 @@ export default class ResourceListComponent implements OnInit {
 
   resources = signal<KubeResource[]>([]);
 
-  customUIUrl = computed(() => {
-    const kind = this.crdDef()?.kind;
-    if (!kind) return null;
-    const plugin = this.plugin();
-    const path = plugin?.customComponents?.[kind]?.list;
-    const clusterId = this.clusterContext.selectedClusterId();
-    if (!plugin || !path || !clusterId) return null;
-    return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
-      clusterId,
-      pluginName: plugin.name,
-      path,
-    });
-  });
+  customUIUrl = computed(() =>
+    buildCustomUIUrl({
+      plugin: this.plugin(),
+      kind: this.crdDef()?.kind,
+      view: 'list',
+      clusterId: this.clusterContext.selectedClusterId(),
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
+    }),
+  );
 
-  allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   canCreate = computed(() => {
     const kind = this.crdDef()?.kind;
@@ -114,6 +116,12 @@ export default class ResourceListComponent implements OnInit {
       (col) => col.name !== 'Name' && col.name !== 'Age',
     );
   });
+
+  tableColumns = computed(() => tableTracks(this.columns()));
+
+  tableMdColumns = computed(() => narrowTableTracks(this.columns()));
+
+  protected readonly isDroppedWhenNarrow = isDroppedWhenNarrow;
 
   kindLabel = computed(() => {
     const crd = this.crdDef();
@@ -184,5 +192,91 @@ export default class ResourceListComponent implements OnInit {
 
   detailQueryParams = buildDetailQueryParams;
 
+  /** Resolved URL of a resource's detail page, for the `href` of a menu item. */
+  protected detailHref(resource: KubeResource): string {
+    return this.router.serializeUrl(
+      this.router.createUrlTree(buildDetailLink(resource), {
+        relativeTo: this.route,
+        queryParams: buildDetailQueryParams(resource),
+      }),
+    );
+  }
+
+  /**
+   * Routes a left-click on the "View" menu item in-app.
+   *
+   * `nldd-menu-item[href]` renders a real anchor, which is what gives the item its
+   * middle-click and "open in new tab" behaviour — but that anchor sits in the
+   * element's shadow DOM, so `routerLink` cannot bind to it and the browser would
+   * do a full page load. Anything with a modifier is left to the browser.
+   */
+  protected onDetailClick(event: MouseEvent, resource: KubeResource): void {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    this.router.navigate(buildDetailLink(resource), {
+      relativeTo: this.route,
+      queryParams: buildDetailQueryParams(resource),
+    });
+  }
+
   formatCell = buildCellValue;
+
+  // --- Per-row delete ---
+
+  pendingDelete = signal<KubeResource | null>(null);
+
+  deleting = signal(false);
+
+  deleteError = signal<string | null>(null);
+
+  openDelete(resource: KubeResource): void {
+    this.deleteError.set(null);
+    this.pendingDelete.set(resource);
+  }
+
+  closeDelete(): void {
+    if (!this.deleting()) this.pendingDelete.set(null);
+  }
+
+  async confirmDelete(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    const target = this.pendingDelete();
+    if (!crd || !clusterId || !target) return;
+
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    try {
+      await this.loader.deleteResource(
+        this.pluginName(),
+        crd,
+        clusterId,
+        target.metadata.name,
+        target.metadata.namespace,
+      );
+      this.pendingDelete.set(null);
+      await this.reloadResources(crd, clusterId);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to delete resource:', err);
+      this.deleteError.set(deleteErrorMessage(err));
+    } finally {
+      this.deleting.set(false);
+    }
+  }
+
+  // Refreshes the list after a delete. The CRD schema and plugin registry are
+  // unchanged, so re-list resources only rather than re-running the full
+  // loadCrdsAndResources (which re-fetches the CRD schema).
+  private async reloadResources(crd: ParsedCrd, clusterId: string): Promise<void> {
+    try {
+      this.resources.set(await this.loader.loadResources(this.pluginName(), crd, clusterId));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to reload resources:', err);
+      this.errorMessage.set('Failed to load resources. Please try again.');
+    }
+  }
 }

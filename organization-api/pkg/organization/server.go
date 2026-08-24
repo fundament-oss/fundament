@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -29,6 +30,7 @@ type Config struct {
 	Clock                clock.Clock
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
+	PrometheusCAFile     string // PEM bundle trusted for Prometheus/ingress TLS (e.g. Gardener seed CAs in local dev)
 	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
 	GardenerClient       gardener.Client
 }
@@ -45,7 +47,9 @@ type Server struct {
 	handler        http.Handler
 	mockPromClient *prom.MockClient
 	prometheusURL  string
+	promOpts       []prom.Option
 	gardener       gardener.Client
+	perShoot       *perShootClients
 }
 
 // Option configures optional Server dependencies.
@@ -69,6 +73,15 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		gardenerClient = gardener.NoopClient{}
 	}
 
+	var promOpts []prom.Option
+	if cfg.PrometheusCAFile != "" {
+		transport, err := prom.TransportWithCA(cfg.PrometheusCAFile)
+		if err != nil {
+			return nil, fmt.Errorf("load prometheus CA bundle: %w", err)
+		}
+		promOpts = append(promOpts, prom.WithTransport(transport))
+	}
+
 	s := &Server{
 		logger:         logger,
 		config:         cfg,
@@ -79,7 +92,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
 		prometheusURL:  cfg.PrometheusURL,
+		promOpts:       promOpts,
 		gardener:       gardenerClient,
+		perShoot:       newPerShootClients(gardenerClient, logger, promOpts...),
 	}
 
 	for _, opt := range opts {
@@ -120,7 +135,11 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(s, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
 
-	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(s, interceptors)
+	// PutPluginDefinition carries a manifest body; cap the read so an oversized
+	// payload is rejected off the wire before it is buffered into memory. The
+	// domain-level limit (maxManifestBytes) is enforced in the handler; this
+	// backstop sits a little above it to leave room for proto framing.
+	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(s, interceptors, connect.WithReadMaxBytes(2*maxManifestBytes))
 	mux.Handle(pluginPath, pluginHandler)
 
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)

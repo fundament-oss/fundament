@@ -1,0 +1,140 @@
+edition = "2023";
+
+package admin.v1;
+
+import "admin/v1/common.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "marketplace/v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/admin/v1;adminv1";
+
+// ReviewService is the Fundament backoffice API. It acts on submissions from
+// every publishing organization, so the authz question is "is a Fundament
+// reviewer", not "owns this plugin". Deployed separately from the developer API
+// so it can be restricted to the admin host.
+service ReviewService {
+  // The review queue, optionally filtered by status.
+  rpc ListSubmissions(ListSubmissionsRequest) returns (ListSubmissionsResponse);
+  rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse);
+  // Publish the version. Approving a plugin's first version makes the listing
+  // live in the public catalog.
+  rpc ApproveSubmission(ApproveSubmissionRequest) returns (ApproveSubmissionResponse);
+  // Send the version back to the developer with a note; they can fix and resubmit.
+  rpc RequestChanges(RequestChangesRequest) returns (RequestChangesResponse);
+  // Refuse the version outright. Unlike RequestChanges, this ends the submission.
+  rpc RejectSubmission(RejectSubmissionRequest) returns (RejectSubmissionResponse);
+
+  // Read surface backing the ids a Submission hands out. Nothing else can
+  // serve them: CatalogService carries only approved public listings, and
+  // PublicationService authorizes "owns this plugin", which a reviewer does
+  // not.
+  //
+  // Resolves every listing in the queue in one call, rather than a GetPlugin
+  // per submission.
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+  rpc GetPlugin(GetPluginRequest) returns (GetPluginResponse);
+  rpc GetPluginVersion(GetPluginVersionRequest) returns (GetPluginVersionResponse);
+  // Categories a listing's category_ids resolve against.
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  // Publishing organizations. organization-api cannot serve these: its
+  // GetOrganization is RLS-scoped to members, and a reviewer is not a member
+  // of the organization under review.
+  rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+}
+
+message ListSubmissionsRequest {
+  // UNSPECIFIED returns every submission regardless of status.
+  marketplace.v1.SubmissionStatus status = 10 [(buf.validate.field).enum = {defined_only: true}];
+}
+
+message ListSubmissionsResponse {
+  repeated Submission submissions = 10;
+}
+
+message GetSubmissionRequest {
+  string submission_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetSubmissionResponse {
+  Submission submission = 10;
+}
+
+message ApproveSubmissionRequest {
+  string submission_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional note recorded with the decision.
+  string feedback = 20 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {max_len: 4000}
+  ];
+}
+
+message ApproveSubmissionResponse {
+  Submission submission = 10;
+}
+
+message RequestChangesRequest {
+  string submission_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Required: asking for changes without saying which is a dead end.
+  string feedback = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+}
+
+message RequestChangesResponse {
+  Submission submission = 10;
+}
+
+message RejectSubmissionRequest {
+  string submission_id = 10 [(buf.validate.field).string = {uuid: true}];
+  RejectionReason reason = 20 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Optional note recorded with the decision.
+  string feedback = 30 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {max_len: 4000}
+  ];
+}
+
+message RejectSubmissionResponse {
+  Submission submission = 10;
+}
+
+message ListPluginsRequest {}
+
+message ListPluginsResponse {
+  repeated Plugin plugins = 10;
+}
+
+message GetPluginRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPluginResponse {
+  Plugin plugin = 10;
+}
+
+message GetPluginVersionRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPluginVersionResponse {
+  PluginVersion version = 10;
+}
+
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+  repeated marketplace.v1.Category categories = 10;
+}
+
+message ListPublishersRequest {}
+
+message ListPublishersResponse {
+  repeated marketplace.v1.Publisher publishers = 10;
+}

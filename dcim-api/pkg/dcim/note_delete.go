@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteNote(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteNoteRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	noteID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteNoteRequest,
+) (*emptypb.Empty, error) {
+	noteID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.NoteDelete(ctx, db.NoteDeleteParams{ID: noteID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteNote(
 
 	s.logger.InfoContext(ctx, "note deleted", "note_id", noteID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

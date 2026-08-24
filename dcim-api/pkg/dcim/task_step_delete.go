@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteTaskStep(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteTaskStepRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	taskStepID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteTaskStepRequest,
+) (*emptypb.Empty, error) {
+	taskStepID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.TaskStepDelete(ctx, db.TaskStepDeleteParams{ID: taskStepID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteTaskStep(
 
 	s.logger.InfoContext(ctx, "task step deleted", "task_step_id", taskStepID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

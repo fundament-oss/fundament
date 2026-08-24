@@ -41,11 +41,18 @@ export default class PluginInstallationService {
     return (await res.json()) as PluginInstallationItem;
   }
 
-  async installPlugin(clusterId: string, pluginName: string, image: string): Promise<void> {
-    // TODO(FUN-11): once the marketplace returns the published pluginVersion
-    // and definitionHash for each PluginSummary, surface them here. Until then
-    // we send development placeholders; the consent record only becomes a real
-    // pin when Plan B wires the mint endpoint to the marketplace artifact.
+  async installPlugin(
+    clusterId: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
+    // A plugin with no published definition has no version/hash to pin — the
+    // install would reconcile to Failed. Refuse it here rather than create a
+    // stuck CR.
+    if (!pluginVersion || !definitionHash) {
+      throw new Error(`${pluginName} has no published definition to install`);
+    }
     const res = await fetch(this.url(clusterId), {
       method: 'POST',
       credentials: 'include',
@@ -55,11 +62,10 @@ export default class PluginInstallationService {
         kind: 'PluginInstallation',
         metadata: { name: pluginResourceName(pluginName) },
         spec: {
-          image,
           definitionRef: {
             pluginName,
-            pluginVersion: 'unknown',
-            definitionHash: 'sha256:unknown',
+            pluginVersion,
+            definitionHash,
           },
         },
       }),

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import type { CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 
@@ -13,6 +13,7 @@ function toObjectEntries(val: unknown): [string, unknown][] {
 
 @Component({
   selector: 'app-field-renderer',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @switch (effectiveType()) {
@@ -21,16 +22,16 @@ function toObjectEntries(val: unknown): [string, unknown][] {
       }
       @case ('boolean') {
         @if (value()) {
-          <span class="badge badge-sm badge-emerald">Yes</span>
+          <nldd-tag color="success" size="sm" text="Yes"></nldd-tag>
         } @else {
-          <span class="badge badge-sm badge-gray">No</span>
+          <nldd-tag color="neutral" size="sm" text="No"></nldd-tag>
         }
       }
       @case ('string-array') {
         @if (asArray(value()).length > 0) {
           <div class="flex flex-wrap gap-1">
             @for (item of asArray(value()); track item) {
-              <span class="badge badge-sm badge-blue">{{ item }}</span>
+              <nldd-tag color="accent" size="sm" [attr.text]="item"></nldd-tag>
             }
           </div>
         } @else {

@@ -100,9 +100,9 @@ export function deviceRoleColors(role: LogicalDeviceRole, isDark: boolean): Devi
   return DEVICE_ROLE_COLORS[role] ?? DEVICE_ROLE_FALLBACK;
 }
 
-// Badge classes per design status, shared by the designs list and design detail.
-export const LOGICAL_DESIGN_STATUS_BADGE_CLASS: Record<LogicalDesignStatus, string> = {
-  draft: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
-  active: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
-  archived: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+// `nldd-tag` colors per design status, shared by the designs list and design detail.
+export const LOGICAL_DESIGN_STATUS_TAG_COLOR: Record<LogicalDesignStatus, string> = {
+  draft: 'neutral',
+  active: 'success',
+  archived: 'donkergeel',
 };

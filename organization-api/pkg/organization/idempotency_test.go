@@ -35,27 +35,32 @@ func Test_Idempotency_CreateAPIKey_Replay(t *testing.T) {
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 	idempotencyKey := uuid.New().String()
 
-	newReq := func() *connect.Request[organizationv1.CreateAPIKeyRequest] {
-		req := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	newReq := func() *organizationv1.CreateAPIKeyRequest {
+		return organizationv1.CreateAPIKeyRequest_builder{
 			Name: "idempotent-key",
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
-		req.Header().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
-		return req
+		}.Build()
+	}
+	newCtx := func() (context.Context, connect.CallInfo) {
+		ctx, callInfo := connect.NewClientContext(context.Background())
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+		callInfo.RequestHeader().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
+		return ctx, callInfo
 	}
 
 	// First call: creates the API key.
-	res1, err := client.CreateAPIKey(context.Background(), newReq())
+	ctx1, callInfo1 := newCtx()
+	res1, err := client.CreateAPIKey(ctx1, newReq())
 	require.NoError(t, err)
-	assert.NotEmpty(t, res1.Msg.GetId())
-	assert.Equal(t, "processing", res1.Header().Get(idempotency.HeaderIdempotencyStatus))
+	assert.NotEmpty(t, res1.GetId())
+	assert.Equal(t, "processing", callInfo1.ResponseHeader().Get(idempotency.HeaderIdempotencyStatus))
 
 	// Replay: same idempotency key returns the cached response.
-	res2, err := client.CreateAPIKey(context.Background(), newReq())
+	ctx2, callInfo2 := newCtx()
+	res2, err := client.CreateAPIKey(ctx2, newReq())
 	require.NoError(t, err)
-	assert.Equal(t, res1.Msg.GetId(), res2.Msg.GetId())
-	assert.NotEmpty(t, res2.Header().Get(idempotency.HeaderIdempotencyStatus))
+	assert.Equal(t, res1.GetId(), res2.GetId())
+	assert.NotEmpty(t, callInfo2.ResponseHeader().Get(idempotency.HeaderIdempotencyStatus))
 }
 
 func Test_Idempotency_DifferentRequestBody_Rejected(t *testing.T) {
@@ -80,25 +85,27 @@ func Test_Idempotency_DifferentRequestBody_Rejected(t *testing.T) {
 	idempotencyKey := uuid.New().String()
 
 	// First call.
-	req1 := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	req1 := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "key-one",
-	}.Build())
-	req1.Header().Set("Authorization", "Bearer "+token)
-	req1.Header().Set("Fun-Organization", orgID.String())
-	req1.Header().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
+	}.Build()
+	ctx1, callInfo1 := connect.NewClientContext(context.Background())
+	callInfo1.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo1.RequestHeader().Set("Fun-Organization", orgID.String())
+	callInfo1.RequestHeader().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
 
-	_, err := client.CreateAPIKey(context.Background(), req1)
+	_, err := client.CreateAPIKey(ctx1, req1)
 	require.NoError(t, err)
 
 	// Replay with different request body should fail.
-	req2 := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	req2 := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "key-two",
-	}.Build())
-	req2.Header().Set("Authorization", "Bearer "+token)
-	req2.Header().Set("Fun-Organization", orgID.String())
-	req2.Header().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
+	}.Build()
+	ctx2, callInfo2 := connect.NewClientContext(context.Background())
+	callInfo2.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo2.RequestHeader().Set("Fun-Organization", orgID.String())
+	callInfo2.RequestHeader().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
 
-	_, err = client.CreateAPIKey(context.Background(), req2)
+	_, err = client.CreateAPIKey(ctx2, req2)
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
@@ -125,16 +132,17 @@ func Test_Idempotency_NoHeader_Passthrough(t *testing.T) {
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
 	// Request without Idempotency-Key header should pass through normally.
-	req := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	req := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "no-idempotency",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.CreateAPIKey(context.Background(), req)
+	res, err := client.CreateAPIKey(ctx, req)
 	require.NoError(t, err)
-	assert.NotEmpty(t, res.Msg.GetId())
-	assert.Empty(t, res.Header().Get(idempotency.HeaderIdempotencyStatus))
+	assert.NotEmpty(t, res.GetId())
+	assert.Empty(t, callInfo.ResponseHeader().Get(idempotency.HeaderIdempotencyStatus))
 }
 
 func Test_Idempotency_DifferentUsers_SameKey(t *testing.T) {
@@ -165,26 +173,28 @@ func Test_Idempotency_DifferentUsers_SameKey(t *testing.T) {
 	idempotencyKey := uuid.New().String()
 
 	// User 1 creates with the key.
-	req1 := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	req1 := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "user1-key",
-	}.Build())
-	req1.Header().Set("Authorization", "Bearer "+env.createAuthnToken(t, user1ID))
-	req1.Header().Set("Fun-Organization", orgID.String())
-	req1.Header().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
+	}.Build()
+	ctx1, callInfo1 := connect.NewClientContext(context.Background())
+	callInfo1.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, user1ID))
+	callInfo1.RequestHeader().Set("Fun-Organization", orgID.String())
+	callInfo1.RequestHeader().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
 
-	res1, err := client.CreateAPIKey(context.Background(), req1)
+	res1, err := client.CreateAPIKey(ctx1, req1)
 	require.NoError(t, err)
 
 	// User 2 uses the same idempotency key — should create a separate resource.
-	req2 := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+	req2 := organizationv1.CreateAPIKeyRequest_builder{
 		Name: "user2-key",
-	}.Build())
-	req2.Header().Set("Authorization", "Bearer "+env.createAuthnToken(t, user2ID))
-	req2.Header().Set("Fun-Organization", orgID.String())
-	req2.Header().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
+	}.Build()
+	ctx2, callInfo2 := connect.NewClientContext(context.Background())
+	callInfo2.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, user2ID))
+	callInfo2.RequestHeader().Set("Fun-Organization", orgID.String())
+	callInfo2.RequestHeader().Set(idempotency.HeaderIdempotencyKey, idempotencyKey)
 
-	res2, err := client.CreateAPIKey(context.Background(), req2)
+	res2, err := client.CreateAPIKey(ctx2, req2)
 	require.NoError(t, err)
 
-	assert.NotEqual(t, res1.Msg.GetId(), res2.Msg.GetId())
+	assert.NotEqual(t, res1.GetId(), res2.GetId())
 }

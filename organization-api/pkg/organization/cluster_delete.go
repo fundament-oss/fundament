@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteCluster(
 	ctx context.Context,
-	req *connect.Request[organizationv1.DeleteClusterRequest],
-) (*connect.Response[organizationv1.DeleteClusterResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.DeleteClusterRequest,
+) (*organizationv1.DeleteClusterResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -33,5 +33,5 @@ func (s *Server) DeleteCluster(
 
 	s.logger.InfoContext(ctx, "cluster deleted", "cluster_id", clusterID)
 
-	return connect.NewResponse(organizationv1.DeleteClusterResponse_builder{}.Build()), nil
+	return organizationv1.DeleteClusterResponse_builder{}.Build(), nil
 }

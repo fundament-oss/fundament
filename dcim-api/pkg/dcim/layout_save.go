@@ -14,9 +14,9 @@ import (
 
 func (s *Server) SaveLayout(
 	ctx context.Context,
-	req *connect.Request[dcimv1.SaveLayoutRequest],
-) (*connect.Response[dcimv1.SaveLayoutResponse], error) {
-	designID := uuid.MustParse(req.Msg.GetDesignId())
+	req *dcimv1.SaveLayoutRequest,
+) (*dcimv1.SaveLayoutResponse, error) {
+	designID := uuid.MustParse(req.GetDesignId())
 
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
@@ -36,16 +36,16 @@ func (s *Server) SaveLayout(
 		allowed[d.ID] = struct{}{}
 	}
 
-	for _, pos := range req.Msg.GetPositions() {
+	for _, pos := range req.GetPositions() {
 		deviceID := uuid.MustParse(pos.GetDeviceId())
 		if _, ok := allowed[deviceID]; !ok {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("device %s does not belong to design %s", deviceID, designID))
 		}
 	}
 
-	keep := make([]uuid.UUID, 0, len(req.Msg.GetPositions()))
-	positions := make([]*dcimv1.LogicalDeviceLayout, 0, len(req.Msg.GetPositions()))
-	for _, pos := range req.Msg.GetPositions() {
+	keep := make([]uuid.UUID, 0, len(req.GetPositions()))
+	positions := make([]*dcimv1.LogicalDeviceLayout, 0, len(req.GetPositions()))
+	for _, pos := range req.GetPositions() {
 		deviceID := uuid.MustParse(pos.GetDeviceId())
 		row, err := qtx.LogicalDeviceLayoutUpsert(ctx, db.LogicalDeviceLayoutUpsertParams{
 			LogicalDeviceID: deviceID,
@@ -73,7 +73,7 @@ func (s *Server) SaveLayout(
 
 	s.logger.InfoContext(ctx, "layout saved", "design_id", designID)
 
-	return connect.NewResponse(dcimv1.SaveLayoutResponse_builder{
+	return dcimv1.SaveLayoutResponse_builder{
 		Positions: positions,
-	}.Build()), nil
+	}.Build(), nil
 }

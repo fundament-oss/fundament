@@ -183,19 +183,19 @@
         (deleteCable()?.bSide?.deviceName ?? '')) +
     '?'
   "
-  supporting-text="This action cannot be undone."
+  supporting-text="The patch between both ports is removed and the ports become free again. This cannot be undone."
   accessible-label="Confirm cable deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDelete()"
+    variant="secondary"
+    text="Keep cable"
+    (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDelete()"
+    variant="destructive"
+    text="Delete cable"
+    (click)="confirmDelete()"
   ></nldd-button>
 </nldd-modal-dialog>

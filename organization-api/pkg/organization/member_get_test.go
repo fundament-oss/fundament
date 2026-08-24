@@ -20,9 +20,9 @@ func Test_Member_Get_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.GetMember(context.Background(), connect.NewRequest(organizationv1.GetMemberRequest_builder{
+	_, err := client.GetMember(context.Background(), organizationv1.GetMemberRequest_builder{
 		Id: proto.String(uuid.New().String()),
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -55,15 +55,16 @@ func Test_Member_Get(t *testing.T) {
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
 	// List members to discover the target member's membership ID
-	listReq := connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := organizationv1.ListMembersRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListMembers(context.Background(), listReq)
+	listRes, err := client.ListMembers(listCtx, listReq)
 	require.NoError(t, err)
 
 	var targetMemberID string
-	for _, m := range listRes.Msg.GetMembers() {
+	for _, m := range listRes.GetMembers() {
 		if m.GetUserId() == targetUserID.String() {
 			targetMemberID = m.GetId()
 			break
@@ -106,11 +107,12 @@ func Test_Member_Get(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := connect.NewRequest(tc.Request)
-			req.Header().Set("Authorization", "Bearer "+token)
-			req.Header().Set("Fun-Organization", orgID.String())
+			req := tc.Request
+			ctx, callInfo := connect.NewClientContext(context.Background())
+			callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			res, err := client.GetMember(context.Background(), req)
+			res, err := client.GetMember(ctx, req)
 
 			if tc.WantErr {
 				var connectErr *connect.Error
@@ -121,7 +123,7 @@ func Test_Member_Get(t *testing.T) {
 
 			require.NoError(t, err)
 
-			member := res.Msg.GetMember()
+			member := res.GetMember()
 			assert.Equal(t, targetMemberID, member.GetId())
 			assert.Equal(t, targetUserID.String(), member.GetUserId())
 			assert.Equal(t, "target-user", member.GetName())

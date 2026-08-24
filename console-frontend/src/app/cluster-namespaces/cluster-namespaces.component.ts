@@ -26,6 +26,8 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
@@ -37,9 +39,11 @@ import NamespaceSelection from '../utils/namespace-selection';
   imports: [
     ReactiveFormsModule,
     DialogSyncDirective,
+    SheetSyncDirective,
     DropdownSyncDirective,
     RouterLink,
     LoadingIndicatorComponent,
+    AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,6 +73,9 @@ export default class ClusterNamespacesComponent implements OnInit {
   private clusterId = '';
 
   errorMessage = signal<string | null>(null);
+
+  /** Kept apart from errorMessage: a failed create belongs in the sheet the user is still in. */
+  createErrorMessage = signal<string | null>(null);
 
   isLoading = signal(true);
 
@@ -167,13 +174,14 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   openAddNamespaceModal(): void {
     this.namespaceForm.reset();
+    this.createErrorMessage.set(null);
     this.showAddNamespaceModal.set(true);
     this.loadProjects();
   }
 
   async createNamespace(event?: Event): Promise<void> {
     event?.preventDefault();
-    this.errorMessage.set(null);
+    this.createErrorMessage.set(null);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -201,7 +209,7 @@ export default class ClusterNamespacesComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      this.errorMessage.set(
+      this.createErrorMessage.set(
         error instanceof Error
           ? `Failed to create namespace: ${error.message}`
           : 'Failed to create namespace',
@@ -302,6 +310,12 @@ export default class ClusterNamespacesComponent implements OnInit {
     this.namespaceForm.get('name')?.markAsDirty();
   }
 
+  /** Also covers `touched`, so submitting an untouched empty field shows the error. */
+  isNamespaceNameInvalid(): boolean {
+    const nameControl = this.namespaceForm.get('name');
+    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
+  }
+
   getNamespaceNameError(): string {
     const nameControl = this.namespaceForm.get('name');
     if (nameControl?.hasError('required')) {
@@ -318,13 +332,6 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/clusters', this.clusterId]);
-  }
-
-  addNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('addNamespaceDialog');
-
-  onAddNamespaceModalOpen(): void {
-    const el = this.addNamespaceDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

@@ -15,9 +15,9 @@ import (
 
 func (s *Server) ListClusterNamespaces(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListClusterNamespacesRequest],
-) (*connect.Response[organizationv1.ListClusterNamespacesResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.ListClusterNamespacesRequest,
+) (*organizationv1.ListClusterNamespacesResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -33,16 +33,16 @@ func (s *Server) ListClusterNamespaces(
 		result = append(result, namespaceFromRow(namespaces[i]))
 	}
 
-	return connect.NewResponse(organizationv1.ListClusterNamespacesResponse_builder{
+	return organizationv1.ListClusterNamespacesResponse_builder{
 		Namespaces: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) ListProjectNamespaces(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListProjectNamespacesRequest],
-) (*connect.Response[organizationv1.ListProjectNamespacesResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.ListProjectNamespacesRequest,
+) (*organizationv1.ListProjectNamespacesResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanListNamespaces(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -58,9 +58,9 @@ func (s *Server) ListProjectNamespaces(
 		result = append(result, namespaceFromRow((db.NamespaceListByClusterIDRow)(namespaces[i])))
 	}
 
-	return connect.NewResponse(organizationv1.ListProjectNamespacesResponse_builder{
+	return organizationv1.ListProjectNamespacesResponse_builder{
 		Namespaces: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func namespaceFromRow(row db.NamespaceListByClusterIDRow) *organizationv1.Namespace {

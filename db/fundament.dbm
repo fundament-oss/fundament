@@ -63,6 +63,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
+<schema name="catalog" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+	<role name="fun_owner"/>
+</schema>
+
 <schema name="authn" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="fun_owner"/>
 </schema>
@@ -352,6 +356,35 @@ END;]]> </definition>
         END,
         'trigger'
     );
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="node_pool_region_match_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF NEW.region_machine_type_id IS NOT NULL THEN
+        IF (SELECT region_id FROM catalog.region_machine_types WHERE id = NEW.region_machine_type_id)
+           IS DISTINCT FROM
+           (SELECT region_id FROM tenant.clusters WHERE id = NEW.cluster_id)
+        THEN
+            RAISE EXCEPTION 'node_pool region_machine_type region does not match cluster region'
+                        USING HINT = 'node_pool_region_mismatch';
+        END IF;
+    END IF;
     RETURN NULL;
 END;]]> </definition>
 </function>
@@ -1020,6 +1053,124 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<table name="kubernetes_versions" layers="0" collapse-mode="1" max-obj-count="2" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2360"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="version" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="kubernetes_versions_pk" type="pk-constr" table="catalog.kubernetes_versions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="kubernetes_versions_uq_version" type="uq-constr" table="catalog.kubernetes_versions">
+		<columns names="version" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="machine_types" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2460"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="lcpu" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="memory" not-null="true">
+		<type name="bigint" length="0"/>
+	</column>
+	<constraint name="machine_types_pk" type="pk-constr" table="catalog.machine_types">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="machine_types_uq_name" type="uq-constr" table="catalog.machine_types">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="regions" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2560"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="cloud_profile" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="cloud_profile_region" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="regions_pk" type="pk-constr" table="catalog.regions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="regions_uq_name" type="uq-constr" table="catalog.regions">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="region_kubernetes_versions" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-500" y="2360"/>
+	<column name="region_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="kubernetes_version_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="region_kubernetes_versions_pk" type="pk-constr" table="catalog.region_kubernetes_versions">
+		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_kubernetes_versions_fk_region" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.regions" table="catalog.region_kubernetes_versions">
+		<columns names="region_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+	<constraint name="region_kubernetes_versions_fk_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.kubernetes_versions" table="catalog.region_kubernetes_versions">
+		<columns names="kubernetes_version_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+</table>
+
+<table name="region_machine_types" layers="0" collapse-mode="1" max-obj-count="5" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-500" y="2460"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="region_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="machine_type_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="region_machine_types_pk" type="pk-constr" table="catalog.region_machine_types">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_uq" type="uq-constr" table="catalog.region_machine_types">
+		<columns names="region_id,machine_type_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_fk_region" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.regions" table="catalog.region_machine_types">
+		<columns names="region_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_fk_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.machine_types" table="catalog.region_machine_types">
+		<columns names="machine_type_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+</table>
+
 <table name="clusters" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1066,11 +1217,21 @@ END;]]> </definition>
 	<column name="outbox_error">
 		<type name="text" length="0"/>
 	</column>
+	<column name="region_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="kubernetes_version_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
 		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="clusters_fk_region_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_kubernetes_versions" table="tenant.clusters">
+		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
+		<columns names="region_id,kubernetes_version_id" ref-type="dst-columns"/>
 	</constraint>
 </table>
 
@@ -1129,11 +1290,18 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="region_machine_type_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="node_pools_pk" type="pk-constr" table="tenant.node_pools">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="node_pools_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.node_pools">
 		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="node_pools_fk_region_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_machine_types" table="tenant.node_pools">
+		<columns names="region_machine_type_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
 	</constraint>
 </table>
 
@@ -1145,12 +1313,16 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="plugins" layers="0" collapse-mode="1" max-obj-count="13" z-value="0">
+<table name="plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1900"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+		<comment> <![CDATA[Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
@@ -1192,6 +1364,64 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<policy name="plugins_select_all" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_insert_owner" table="appstore.plugins" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="plugins_update_owner" table="appstore.plugins" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<table name="plugin_definitions" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<position x="840" y="1620"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_version" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="manifest" not-null="true">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="hash" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="plugin_definitions_uq_plugin_version" type="uq-constr" nulls-not-distinct="true" table="appstore.plugin_definitions">
+		<columns names="plugin_id,plugin_version,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugin_definitions_pk" type="pk-constr" table="appstore.plugin_definitions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<policy name="plugin_definitions_select_all" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_insert_owner" table="appstore.plugin_definitions" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_update_owner" table="appstore.plugin_definitions" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
 <table name="presets" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -1227,7 +1457,6 @@ END;]]> </definition>
 		<columns names="preset_id,plugin_id" ref-type="src-columns"/>
 	</constraint>
 </table>
-
 <table name="tags" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -1670,6 +1899,9 @@ END;]]> </definition>
 	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="plugin_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -1702,7 +1934,8 @@ END;]]> </definition>
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	organization_user_id
+	organization_user_id,
+	plugin_id
 ) = 1]]> </expression>
 	</constraint>
 	<constraint name="outbox_ck_status" type="ck-constr" table="authz.outbox">
@@ -1869,6 +2102,31 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="plugins_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (plugin_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
 <function name="organizations_users_sync_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -1943,7 +2201,13 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="tenant.node_pool_outbox_trigger()"/>
-		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
+		<columns names="name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted"/>
+</trigger>
+
+<trigger name="region_match" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.node_pool_region_match_trigger()"/>
 </trigger>
 
 <trigger name="namespace_outbox" firing-type="AFTER" per-line="true" constraint="false"
@@ -1984,6 +2248,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="authn.api_keys">
 		<function signature="authz.api_keys_sync_trigger()"/>
+</trigger>
+
+<trigger name="plugins_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="appstore.plugins">
+		<function signature="authz.plugins_sync_trigger()"/>
 </trigger>
 
 <trigger name="outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
@@ -3033,6 +3303,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="plugins_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="appstore.plugins">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="api_keys_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="authn.api_keys">
 	<columns names="user_id" ref-type="src-columns"/>
@@ -3071,6 +3347,12 @@ END;]]> </definition>
 
 <constraint name="plugins_tags_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugins_tags">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugin_definitions_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugin_definitions">
 	<columns names="plugin_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
@@ -3555,6 +3837,11 @@ END;]]> </definition>
 	 dst-table="appstore.plugins" reference-fk="plugins_tags_plugin_id"
 	 src-required="false" dst-required="true"/>
 
+<relationship name="rel_plugin_definitions_plugins" type="relfk" layers="0"
+	 src-table="appstore.plugin_definitions"
+	 dst-table="appstore.plugins" reference-fk="plugin_definitions_fk_plugin"
+	 src-required="false" dst-required="true"/>
+
 <relationship name="rel_preset_plugins_plugins" type="relfk" layers="0"
 	 custom-color="#f0f0f0"
 	 src-table="appstore.preset_plugins"
@@ -3581,6 +3868,11 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="authn.api_keys"
 	 dst-table="tenant.organizations" reference-fk="api_keys_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugins_organizations" type="relfk" layers="0"
+	 src-table="appstore.plugins"
+	 dst-table="tenant.organizations" reference-fk="plugins_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_users" type="relfk" layers="0"
@@ -3989,6 +4281,36 @@ END;]]> </definition>
 	<privileges usage="true"/>
 </permission>
 <permission>
+	<object name="catalog" type="schema"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="catalog.regions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.kubernetes_versions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.machine_types" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.region_kubernetes_versions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.region_machine_types" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
 	<object name="tenant" type="schema"/>
 	<roles names="fun_fundament_api"/>
 	<privileges usage="true"/>
@@ -4105,6 +4427,11 @@ END;]]> </definition>
 </permission>
 <permission>
 	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
@@ -4287,6 +4614,11 @@ END;]]> </definition>
 	<object name="appstore" type="schema"/>
 	<roles names="fun_authz_worker"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations_users" type="table"/>

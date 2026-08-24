@@ -1,11 +1,13 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import type {
   PluginDefinition,
   ParsedCrd,
   RawCrdYaml,
   PluginInstallationListResponse,
-  GetDefinitionResponse,
 } from './types';
+import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/v1/plugin_pb';
+import { PLUGIN } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
 
@@ -47,25 +49,46 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
-function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
+function mapDefinition(
+  def: ProtoPluginDefinition,
+  installation: { installationId: string; installationName: string; installationVersion: string },
+): PluginDefinition {
   return {
-    apiVersion: def.apiVersion,
-    kind: 'PluginDefinition',
-    name: def.name,
-    label: def.displayName,
-    version: def.version,
-    description: def.description,
-    author: def.author,
+    name: def.metadata?.name ?? '',
+    label: def.metadata?.displayName ?? '',
+    version: def.metadata?.version ?? '',
+    description: def.metadata?.description ?? '',
+    author: def.metadata?.author || undefined,
     menu: {
       project: def.menu?.project?.map((e) => ({
         crd: e.crd,
-        label: e.label,
-        icon: e.icon ?? undefined,
+        label: e.label || undefined,
+        icon: e.icon || undefined,
       })),
     },
     crds: def.crds ?? [],
-    customComponents: def.customComponents,
-    allowedResources: def.allowedResources ?? [],
+    customComponents:
+      Object.keys(def.customComponents).length > 0
+        ? Object.fromEntries(
+            Object.entries(def.customComponents).map(([k, v]) => [
+              k,
+              {
+                list: v.list || undefined,
+                detail: v.detail || undefined,
+                create: v.create || undefined,
+              },
+            ]),
+          )
+        : undefined,
+    allowedResources: (def.allowedResources ?? []).map((r) => ({
+      group: r.group,
+      version: r.version,
+      resource: r.resource,
+      verbs: r.verbs,
+    })),
+    installationId: installation.installationId,
+    installationName: installation.installationName,
+    installationVersion: installation.installationVersion,
   };
 }
 
@@ -79,6 +102,8 @@ export default class PluginRegistryService {
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
 
   private configService = inject(ConfigService);
+
+  private pluginClient = inject(PLUGIN);
 
   async loadPlugins(clusterId: string): Promise<void> {
     if (clusterId === this.loadedForClusterId) return;
@@ -105,24 +130,44 @@ export default class PluginRegistryService {
 
     const results = await Promise.allSettled(
       runningPlugins.map(async (item) => {
-        // Child resource names (namespace, service) derive from metadata.name —
-        // see plugin-controller resources.go childName/pluginNamespace.
-        const installationName = item.metadata.name;
-        const defRes = await fetch(
-          `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${installationName}/services/http:plugin-${installationName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
-          { credentials: 'include' },
+        const ref = item.spec.definitionRef;
+        const res = await firstValueFrom(
+          this.pluginClient.getPluginDefinition({
+            pluginName: ref.pluginName,
+            pluginVersion: ref.pluginVersion,
+          }),
         );
-        if (!defRes.ok) {
-          throw new Error(`Failed to fetch definition for ${installationName}: ${defRes.status}`);
-        }
-
-        return defRes.json() as Promise<GetDefinitionResponse>;
+        return {
+          def: res.definition,
+          installationId: item.metadata.uid,
+          // installationName is the CR metadata.name; plugin-proxy derives the
+          // plugin's namespace/Service as `plugin-<installationName>`, so this —
+          // not the definition's display name — drives the iframe asset URL.
+          installationName: item.metadata.name,
+          installationVersion: ref.pluginVersion,
+        };
       }),
     );
 
     const definitions: PluginDefinition[] = results
-      .filter((r): r is PromiseFulfilledResult<GetDefinitionResponse> => r.status === 'fulfilled')
-      .map((r) => mapDefinition(r.value));
+      .filter(
+        (
+          r,
+        ): r is PromiseFulfilledResult<{
+          def: ProtoPluginDefinition | undefined;
+          installationId: string;
+          installationName: string;
+          installationVersion: string;
+        }> => r.status === 'fulfilled',
+      )
+      .filter((r) => r.value.def !== undefined)
+      .map((r) =>
+        mapDefinition(r.value.def as ProtoPluginDefinition, {
+          installationId: r.value.installationId,
+          installationName: r.value.installationName,
+          installationVersion: r.value.installationVersion,
+        }),
+      );
 
     this.plugins.set(definitions);
 

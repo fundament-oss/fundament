@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type { KubeResource, ParsedCrd } from './types';
 import buildResourceUrl from './kube-url.utils';
+import { KubeApiError } from './kube-api-error';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginResourceStoreService {
@@ -75,6 +76,42 @@ export default class PluginResourceStoreService {
     }
 
     return (await response.json()) as KubeResource;
+  }
+
+  async deleteResource(
+    crd: ParsedCrd,
+    clusterId: string,
+    kubeApiProxyUrl: string,
+    pluginName: string,
+    name: string,
+    namespace: string | undefined,
+  ): Promise<void> {
+    // Cluster-scoped resources have no namespace segment; drop a stray namespace.
+    const ns = crd.scope === 'Namespaced' ? namespace : undefined;
+
+    const base = kubeApiProxyUrl.replace(/\/$/, '');
+    const url = buildResourceUrl(base, clusterId, {
+      group: crd.group,
+      version: crd.version,
+      resource: crd.plural,
+      namespace: ns,
+      name,
+    });
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    // A 404 means it's already gone — treat that as success (idempotent delete).
+    if (!response.ok && response.status !== 404) {
+      throw new KubeApiError(
+        `Failed to delete ${crd.kind} ${name}: ${response.status}`,
+        response.status,
+      );
+    }
+
+    this.cache.delete(`${pluginName}/${crd.kind}/${clusterId}`);
   }
 
   getResource(

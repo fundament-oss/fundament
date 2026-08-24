@@ -420,21 +420,19 @@ export default class DeviceDetailComponent {
     return device.uSize === 1 ? `U${device.uStart}` : `U${device.uStart} – U${end}`;
   };
 
-  readonly stateBadgeClass = (state: DeviceState): string => {
+  readonly stateTagColor = (state: DeviceState): string => {
     const stateMap: Record<DeviceState, string> = {
-      allocated: 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300',
-      free: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
-      offline: 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300',
-      locked: 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300',
-      reserved: 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300',
+      allocated: 'donkerblauw',
+      free: 'neutral',
+      offline: 'critical',
+      locked: 'violet',
+      reserved: 'hemelblauw',
     };
     return stateMap[state];
   };
 
-  readonly powerBadgeClass = (powerstate: 'ON' | 'OFF'): string =>
-    powerstate === 'ON'
-      ? 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300'
-      : 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-300';
+  readonly powerTagColor = (powerstate: 'ON' | 'OFF'): string =>
+    powerstate === 'ON' ? 'success' : 'critical';
 
   readonly livelinessClass = (liveliness: 'Alive' | 'Dead' | 'Unknown' | undefined): string => {
     if (liveliness === 'Alive') return 'bg-emerald-500';

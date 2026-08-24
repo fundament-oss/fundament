@@ -51,6 +51,11 @@ function commonHrefPrefix(hrefs: string[]): string {
   return prefix;
 }
 
+function parentSlug(slug: string): string {
+  const lastSlash = slug.lastIndexOf('/');
+  return lastSlash > 0 ? slug.slice(0, lastSlash) : '';
+}
+
 function patchSidebarLabels(entries: SidebarEntry[]): void {
   for (const entry of entries) {
     if (entry.type !== 'group') continue;
@@ -60,7 +65,9 @@ function patchSidebarLabels(entries: SidebarEntry[]): void {
       const prefix = commonHrefPrefix(hrefs);
       const dirSlug = prefix.replace(/^\//, '');
       if (dirSlug) {
-        const label = readMetaLabel(dirSlug);
+        // A group holding a single page has that page's own href as its common
+        // prefix, so fall back to the directory containing it.
+        const label = readMetaLabel(dirSlug) ?? readMetaLabel(parentSlug(dirSlug));
         if (label) entry.label = label;
       }
     }
