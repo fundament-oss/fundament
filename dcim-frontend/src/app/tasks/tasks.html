@@ -186,17 +186,13 @@
       }
 
       <!-- ── LIST VIEW ── -->
-      <div>
+      <div [hidden]="filteredTasks().length === 0">
         <!-- A list, not a table: every row says what its parts are (a status tag,
              a priority, an avatar), so the column headers the old markup carried
              had nothing left to explain. Which columns are on screen follows the
              width of this list through hide-below, so the widest ones drop out in
              a narrow pane instead of squeezing the title to nothing. -->
-        <nldd-list
-          accessible-label="Tasks"
-          empty-text="No tasks found"
-          empty-supporting-text="Try adjusting your search or filter criteria."
-        >
+        <nldd-list accessible-label="Tasks">
           <!-- Above the rows, select-all and how many rows there are. What you do
                with a selection sits in the footer, where it stays in reach after
                you have scrolled. -->
@@ -297,6 +293,18 @@
           </nldd-menu>
         }
       </div>
+      <!-- The page's own empty state, and a section of its own: a list that draws
+           its message where the rows would have been puts it under the toolbar and
+           against the top of the page. Nothing to show is a fact about the whole
+           view, so it stands in the middle of it. -->
+      @if (filteredTasks().length === 0) {
+        <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+          <nldd-inline-dialog
+            text="No tasks found"
+            supporting-text="Try adjusting your search or filter criteria."
+          ></nldd-inline-dialog>
+        </nldd-simple-section>
+      }
 
       <!-- The cells of a task row, shared by both shapes of row above. -->
       <ng-template #taskCells let-task>

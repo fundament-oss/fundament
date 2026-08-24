@@ -35,6 +35,8 @@
     <!-- Nothing to pick, so no menu beside this: the list is the page. -->
     <ng-container [ngTemplateOutlet]="roundsBody"></ng-container>
   }
+  <!-- Closes the round the way every other page closes its content. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
