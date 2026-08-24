@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import type { Asset, AssetCategory, CatalogEntry } from '../inventory/inventory';
+import type { Asset, AssetCategory, AssetStatus, CatalogEntry } from '../inventory/inventory';
 import type { DatacenterInfo } from '../datacenters/datacenter.model';
 import type { Rack } from '../racks/rack.model';
 import type { TaskData } from '../task-management/task-api.service';
@@ -117,12 +117,20 @@ export default class OverlayService {
   readonly assetSheet = signal<Partial<Asset> | null>(null);
 
   /** Open the asset form on a blank asset. */
-  newAsset(): void {
+  /**
+   * Open the asset form on one that does not exist yet.
+   *
+   * The status comes from the list you were looking at: standing in Requested
+   * and pressing add means you are recording a request, and a form that opens
+   * on Available makes you correct it every time. Falls back to Available where
+   * the list is not one status, which is the one an asset most often arrives in.
+   */
+  newAsset(status: AssetStatus = 'available'): void {
     this.assetSheet.set({
       id: '',
       deviceCatalogId: '',
       assetTag: '',
-      status: 'available',
+      status,
       notes: '',
     });
   }

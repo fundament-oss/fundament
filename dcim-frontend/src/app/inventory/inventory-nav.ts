@@ -10,7 +10,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import InventoryStatsService from './inventory-stats.service';
-import { ASSET_STATUS_TAG_COLOR } from './asset-status';
+import { ASSET_STATUSES_BY_ATTENTION, ASSET_STATUS_TAG_COLOR } from './asset-status';
 import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
 import { viewSlug } from '../shared/section-views';
 import { INVENTORY_PATH } from './inventory-views';
@@ -56,14 +56,7 @@ export default class InventoryNavComponent implements OnInit {
 
   readonly statusTagColor = (status: AssetStatus): string => ASSET_STATUS_TAG_COLOR[status];
 
-  readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'on-order', label: 'On Order' },
-    { value: 'available', label: 'Available' },
-    { value: 'deployed', label: 'Deployed' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly statuses = ASSET_STATUSES_BY_ATTENTION;
 
   readonly statusCounts = computed<Record<string, number>>(() => {
     const s = this.statsService.stats();

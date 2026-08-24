@@ -22,7 +22,11 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
-import { ASSET_STATUS_TAG_COLOR } from './asset-status';
+import {
+  ASSET_STATUSES,
+  ASSET_STATUSES_BY_ATTENTION,
+  ASSET_STATUS_TAG_COLOR,
+} from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import SecondaryNavService from '../shell/secondary-nav.service';
@@ -310,7 +314,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   });
 
   /** What the list asks for: the status of the view, or the one in the toolbar. */
-  private readonly activeStatus = computed<AssetStatus | 'all'>(() => {
+  readonly activeStatus = computed<AssetStatus | 'all'>(() => {
     const view = this.statusFilter();
     return view !== 'all' ? view : this.statusParam();
   });
@@ -333,25 +337,16 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   }
 
   /**
-   * The states in the order they ask something of you: broken first, then what
-   * somebody asked for and still has to be ordered, then what is on its way and
-   * might need chasing, then what is ready to use, then what is quietly
-   * working, and what is written off last. Requested sits above On Order
-   * because it is still your move; once it is ordered the wait is the
-   * supplier's.
+   * The order the rows are sorted in. See ASSET_STATUSES_BY_ATTENTION for why
+   * that order.
    *
    * Alphabetical order was what the API offered and it means nothing here:
    * "Decommissioned" landing between "Available" and "Deployed" is a fact about
    * spelling, not about the rack.
    */
-  private readonly attentionOrder: AssetStatus[] = [
-    'needs-repair',
-    'requested',
-    'on-order',
-    'available',
-    'deployed',
-    'decommissioned',
-  ];
+  private readonly attentionOrder: AssetStatus[] = ASSET_STATUSES_BY_ATTENTION.map(
+    (status) => status.value,
+  );
 
   /**
    * The rows in that order, then by model so identical machines sit together,
@@ -530,14 +525,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   readonly categories = CATEGORIES;
 
-  readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'deployed', label: 'Deployed' },
-    { value: 'available', label: 'Available' },
-    { value: 'on-order', label: 'On Order' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly statuses = ASSET_STATUSES;
 
   private loadAssets(viewChange = false): void {
     if (viewChange) this.switchingView.set(true);
@@ -663,7 +651,8 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   /** Both routes into the form open the one the shell holds: it outlives this
    *  page, and the add button in the bar opens the same one. */
   openCreateAsset(): void {
-    this.overlays.newAsset();
+    const status = this.activeStatus();
+    this.overlays.newAsset(status === 'all' ? undefined : status);
   }
 
   openEditAsset(asset: Asset): void {

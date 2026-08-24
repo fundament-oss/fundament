@@ -19,7 +19,7 @@ import { firstValueFrom } from 'rxjs';
 import { pageTitle } from '../../shell/page-title';
 import { RackSlotType } from '../../../generated/v1/common_pb';
 import { Asset, AssetStatus, CatalogEntry, HistoryEntry, NoteComment } from '../inventory';
-import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
+import { ASSET_STATUSES, ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
@@ -109,14 +109,7 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
 
   readonly formErrorMessage = signal<string | null>(null);
 
-  readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'deployed', label: 'Deployed' },
-    { value: 'available', label: 'Available' },
-    { value: 'on-order', label: 'On Order' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly statuses = ASSET_STATUSES;
 
   /** Rack placement of the asset being edited; null while loading or when unplaced. */
   readonly editPlacement = signal<{

@@ -12,6 +12,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 import InventoryApiService from '../inventory-api.service';
 import { Asset, AssetStatus, CatalogEntry } from '../inventory';
+import { ASSET_STATUSES } from '../asset-status';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import InventoryStatsService from '../inventory-stats.service';
@@ -85,14 +86,7 @@ export default class AssetSheetComponent {
 
   protected readonly formErrorMessage = signal<string | null>(null);
 
-  protected readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'deployed', label: 'Deployed' },
-    { value: 'available', label: 'Available' },
-    { value: 'on-order', label: 'On Order' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  protected readonly statuses = ASSET_STATUSES;
 
   protected readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
