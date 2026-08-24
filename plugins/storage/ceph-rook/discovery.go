@@ -77,7 +77,7 @@ func byIDPath(devLinks string) string {
 
 // isNVMe reports whether a device is NVMe-attached. sys.LocalDisk has no
 // transport field, so this goes on the kernel name and the by-id link form.
-func isNVMe(d rawDevice) bool {
+func isNVMe(d *rawDevice) bool {
 	if strings.HasPrefix(d.Name, "nvme") {
 		return true
 	}
@@ -96,7 +96,7 @@ func isNVMe(d rawDevice) bool {
 // partitions -- replaced, not extended. A k3d node's privileged containers see
 // the host's real disks and they do reach the ConfigMap, so this filter is the
 // only thing keeping them out of an OSD.
-func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alpha1.DiskStatus, error) {
+func ParseDiscoveredDevices(node, raw string, loopDevices bool) ([]v1alpha1.DiskStatus, error) {
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil
 	}
@@ -105,7 +105,8 @@ func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alph
 		return nil, fmt.Errorf("parse device json for node %q: %w", node, err)
 	}
 	out := make([]v1alpha1.DiskStatus, 0, len(devs))
-	for _, d := range devs {
+	for i := range devs {
+		d := &devs[i]
 		path := "/dev/" + d.Name
 		if loopDevices {
 			// Loop-backed partitions report as "part"; a bare loop device is
@@ -144,7 +145,7 @@ func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alph
 // listing it, and the device silently leaves the CephCluster.
 //
 // The prefixes stop a serial colliding with a WWN of the same text.
-func DeviceKey(st v1alpha1.DiskStatus) string {
+func DeviceKey(st *v1alpha1.DiskStatus) string {
 	switch {
 	case st.StablePath != "":
 		return st.StablePath

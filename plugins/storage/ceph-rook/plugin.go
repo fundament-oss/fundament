@@ -56,7 +56,7 @@ func buildScheme() (*runtime.Scheme, error) {
 // Anything the reconcilers read through the cached client must match these
 // selectors. DiskInventoryReconciler only touches discovery ConfigMaps, and the
 // install path uses its own uncached client.
-func cacheOptions(cfg Config) cache.Options {
+func cacheOptions(cfg *Config) cache.Options {
 	return cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ConfigMap{}: {
@@ -101,7 +101,7 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		// The plugin host owns the lifecycle; no listeners of our own.
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
-		Cache:                  cacheOptions(p.cfg),
+		Cache:                  cacheOptions(&p.cfg),
 	})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})

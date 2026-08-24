@@ -60,9 +60,9 @@ func TestParseDiscoveredDevicesSurvivesKernelRename(t *testing.T) {
 	require.Len(t, second, 1)
 
 	assert.NotEqual(t, first[0].Path, second[0].Path, "the kernel name did move")
-	assert.Equal(t, DeviceRef(first[0]), DeviceRef(second[0]),
+	assert.Equal(t, DeviceRef(&first[0]), DeviceRef(&second[0]),
 		"the CephCluster device entry must not move with it")
-	assert.Equal(t, DiskName("node-1", DeviceKey(first[0])), DiskName("node-1", DeviceKey(second[0])),
+	assert.Equal(t, DiskName("node-1", DeviceKey(&first[0])), DiskName("node-1", DeviceKey(&second[0])),
 		"a renamed Disk CR would drop out of every StoragePool listing it")
 }
 
@@ -158,20 +158,20 @@ func TestDeviceKeyPrefersStableIdentity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, DeviceKey(tt.status))
+			assert.Equal(t, tt.want, DeviceKey(&tt.status))
 		})
 	}
 
 	assert.NotEqual(t,
-		DeviceKey(v1alpha1.DiskStatus{WWN: "X"}),
-		DeviceKey(v1alpha1.DiskStatus{Serial: "X"}))
+		DeviceKey(&v1alpha1.DiskStatus{WWN: "X"}),
+		DeviceKey(&v1alpha1.DiskStatus{Serial: "X"}))
 }
 
 func TestDeviceRef(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "/dev/disk/by-id/wwn-0xABC",
-		DeviceRef(v1alpha1.DiskStatus{Path: "/dev/sdb", StablePath: "/dev/disk/by-id/wwn-0xABC"}))
-	assert.Equal(t, "/dev/loop0p1", DeviceRef(v1alpha1.DiskStatus{Path: "/dev/loop0p1"}))
+		DeviceRef(&v1alpha1.DiskStatus{Path: "/dev/sdb", StablePath: "/dev/disk/by-id/wwn-0xABC"}))
+	assert.Equal(t, "/dev/loop0p1", DeviceRef(&v1alpha1.DiskStatus{Path: "/dev/loop0p1"}))
 }
 
 func TestParseDiscoveredDevicesLoopMode(t *testing.T) {

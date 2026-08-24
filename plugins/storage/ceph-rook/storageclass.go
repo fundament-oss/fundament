@@ -28,7 +28,9 @@ func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace str
 		},
 		Provisioner:   RBDProvisioner(rookNamespace),
 		ReclaimPolicy: &reclaim,
-		Parameters: map[string]string{
+		// The csi.storage.k8s.io/*-secret-name keys name the Rook-managed Secrets
+		// the CSI driver looks up; no credential is in this file.
+		Parameters: map[string]string{ //nolint:gosec // G101: CSI parameter names, not credentials
 			"clusterID":     clusterNamespace,
 			"pool":          blockPoolName,
 			"imageFeatures": "layering",

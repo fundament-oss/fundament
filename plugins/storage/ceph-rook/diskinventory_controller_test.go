@@ -255,7 +255,7 @@ func TestDiskInventoryKeepsDiskNameAcrossKernelRename(t *testing.T) {
 // index the map: the keys are interface values holding pointers, so a fresh
 // &corev1.ConfigMap{} misses. controller-runtime resolves them by GVK, so
 // matching the concrete type mirrors that.
-func configMapCacheScope(t *testing.T, opts cache.Options) (cache.ByObject, bool) {
+func configMapCacheScope(t *testing.T, opts *cache.Options) (cache.ByObject, bool) {
 	t.Helper()
 	for obj, byObject := range opts.ByObject {
 		if _, ok := obj.(*corev1.ConfigMap); ok {
@@ -269,7 +269,8 @@ func TestCacheOptionsScopeConfigMapsToDiscovery(t *testing.T) {
 	t.Parallel()
 	cfg := Config{RookNamespace: "rook-ceph"}
 
-	byObject, ok := configMapCacheScope(t, cacheOptions(cfg))
+	opts := cacheOptions(&cfg)
+	byObject, ok := configMapCacheScope(t, &opts)
 	require.True(t, ok, "ConfigMaps must be scoped; the default caches the whole cluster")
 
 	nsCfg, ok := byObject.Namespaces[cfg.RookNamespace]
@@ -284,7 +285,8 @@ func TestCacheOptionsScopeConfigMapsToDiscovery(t *testing.T) {
 // A non-default namespace must follow, or the plugin caches nothing.
 func TestCacheOptionsFollowsRookNamespace(t *testing.T) {
 	t.Parallel()
-	byObject, found := configMapCacheScope(t, cacheOptions(Config{RookNamespace: "ceph-operator"}))
+	opts := cacheOptions(&Config{RookNamespace: "ceph-operator"})
+	byObject, found := configMapCacheScope(t, &opts)
 	require.True(t, found)
 
 	_, ok := byObject.Namespaces["ceph-operator"]

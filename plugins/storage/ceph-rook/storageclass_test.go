@@ -4,13 +4,12 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRenderStorageClass(t *testing.T) {
-	var sc *storagev1.StorageClass = RenderStorageClass("pool-a", "rook-ceph", "pool-a", "rook-ceph")
+	sc := RenderStorageClass("pool-a", "rook-ceph", "pool-a", "rook-ceph")
 	assert.Equal(t, "pool-a", sc.Name)
 	assert.Equal(t, "rook-ceph.rbd.csi.ceph.com", sc.Provisioner)
 	assert.Equal(t, "rook-ceph", sc.Parameters["clusterID"])

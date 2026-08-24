@@ -46,13 +46,16 @@ func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 		return obj.GetLabels()["app"] == discoverAppLabel
 	})
 
-	return ctrl.NewControllerManagedBy(mgr).
+	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.ConfigMap{}, builder.WithPredicates(discoverPredicate)).
 		Watches(
 			&v1alpha1.StoragePool{},
 			handler.EnqueueRequestsFromMapFunc(r.poolToDiscoveryConfigMaps),
 		).
-		Complete(r)
+		Complete(r); err != nil {
+		return fmt.Errorf("register DiskInventory controller: %w", err)
+	}
+	return nil
 }
 
 // discoverAppLabel is what rook-discover labels its per-node ConfigMaps with.
@@ -71,7 +74,8 @@ func (r *DiskInventoryReconciler) poolToDiscoveryConfigMaps(ctx context.Context,
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(cms.Items))
-	for _, cm := range cms.Items {
+	for i := range cms.Items {
+		cm := &cms.Items[i]
 		reqs = append(reqs, reconcile.Request{
 			NamespacedName: types.NamespacedName{Namespace: cm.Namespace, Name: cm.Name},
 		})
@@ -110,7 +114,8 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	seenNames := make(map[string]struct{}, len(statuses))
-	for _, st := range statuses {
+	for i := range statuses {
+		st := &statuses[i]
 		name := DiskName(node, DeviceKey(st))
 		seenNames[name] = struct{}{}
 		st.ClaimedBy = claimedBy[name]
@@ -147,7 +152,7 @@ func (r *DiskInventoryReconciler) buildClaimedByIndex(ctx context.Context) (map[
 }
 
 // upsertDisk creates or updates the Disk, then writes status.
-func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, st v1alpha1.DiskStatus) error {
+func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, st *v1alpha1.DiskStatus) error {
 	disk := &v1alpha1.Disk{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -165,10 +170,10 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &current); err != nil {
 		return fmt.Errorf("get Disk %q for status update: %w", name, err)
 	}
-	if current.Status == st {
+	if current.Status == *st {
 		return nil // nothing changed; skip the write
 	}
-	current.Status = st
+	current.Status = *st
 	if err := r.Client.Status().Update(ctx, &current); err != nil {
 		return fmt.Errorf("update status for Disk %q: %w", name, err)
 	}

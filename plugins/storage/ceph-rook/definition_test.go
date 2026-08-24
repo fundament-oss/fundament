@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -19,7 +20,7 @@ const fakeDigest = "ghcr.io/fundament-oss/fundament/ceph-rook-plugin@sha256:dead
 func injectFakeImage(src []byte) ([]byte, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(src, &doc); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal definition yaml: %w", err)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
 		return nil, nil
@@ -39,14 +40,21 @@ func injectFakeImage(src []byte) ([]byte, error) {
 		if spec.Content[i].Value == "image" {
 			spec.Content[i+1].Value = fakeDigest
 			out, err := yaml.Marshal(&doc)
-			return out, err
+			if err != nil {
+				return nil, fmt.Errorf("marshal definition yaml: %w", err)
+			}
+			return out, nil
 		}
 	}
 	spec.Content = append(spec.Content,
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "image"},
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: fakeDigest},
 	)
-	return yaml.Marshal(&doc)
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("marshal definition yaml: %w", err)
+	}
+	return out, nil
 }
 
 func TestPluginImplementsInterface(t *testing.T) {

@@ -9,50 +9,50 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func unstructuredNestedBool(obj map[string]any, fields ...string) (bool, bool, error) {
-	val, found, err := nestedField(obj, fields...)
-	if !found || err != nil {
-		return false, found, err
+func unstructuredNestedBool(obj map[string]any, fields ...string) (bool, bool) {
+	val, found := nestedField(obj, fields...)
+	if !found {
+		return false, false
 	}
 	b, ok := val.(bool)
 	if !ok {
-		return false, false, nil
+		return false, false
 	}
-	return b, true, nil
+	return b, true
 }
 
-func unstructuredNestedSlice(obj map[string]any, fields ...string) ([]any, bool, error) {
-	val, found, err := nestedField(obj, fields...)
-	if !found || err != nil {
-		return nil, found, err
+func unstructuredNestedSlice(obj map[string]any, fields ...string) ([]any, bool) {
+	val, found := nestedField(obj, fields...)
+	if !found {
+		return nil, false
 	}
 	s, ok := val.([]any)
 	if !ok {
-		return nil, false, nil
+		return nil, false
 	}
-	return s, true, nil
+	return s, true
 }
 
-func nestedField(obj map[string]any, fields ...string) (any, bool, error) {
+func nestedField(obj map[string]any, fields ...string) (any, bool) {
 	cur := obj
 	for i, f := range fields {
 		v, ok := cur[f]
 		if !ok {
-			return nil, false, nil
+			return nil, false
 		}
 		if i == len(fields)-1 {
-			return v, true, nil
+			return v, true
 		}
 		cur, ok = v.(map[string]any)
 		if !ok {
-			return nil, false, nil
+			return nil, false
 		}
 	}
-	return nil, false, nil
+	return nil, false
 }
 
-func testConfig() Config {
-	return Config{
+func testConfig() *Config {
+	return &Config{
 		CephImage: "quay.io/ceph/ceph:v18.2.4",
 		MonCount:  3,
 		MgrCount:  2,
@@ -87,12 +87,12 @@ func TestBootstrapCephClusterIsEmpty(t *testing.T) {
 	u := BootstrapCephCluster("rook-ceph", testConfig())
 	assert.Equal(t, "CephCluster", u.GetKind())
 	// A privileged k3d node sees the host's disks, so neither may ever be true.
-	useAllDevices, _, _ := unstructuredNestedBool(u.Object, "spec", "storage", "useAllDevices")
+	useAllDevices, _ := unstructuredNestedBool(u.Object, "spec", "storage", "useAllDevices")
 	assert.False(t, useAllDevices)
-	useAllNodes, found, _ := unstructuredNestedBool(u.Object, "spec", "storage", "useAllNodes")
+	useAllNodes, found := unstructuredNestedBool(u.Object, "spec", "storage", "useAllNodes")
 	assert.True(t, found, "useAllNodes must be set explicitly, not left to Rook's default")
 	assert.False(t, useAllNodes)
-	nodes, found, _ := unstructuredNestedSlice(u.Object, "spec", "storage", "nodes")
+	nodes, found := unstructuredNestedSlice(u.Object, "spec", "storage", "nodes")
 	assert.True(t, !found || len(nodes) == 0)
 
 	dataDir, found, _ := unstructured.NestedString(u.Object, "spec", "dataDirHostPath")
@@ -112,9 +112,9 @@ func TestBootstrapCephClusterSingleNode(t *testing.T) {
 	assert.Equal(t, int64(1), monCount)
 	mgrCount, _, _ := unstructured.NestedInt64(u.Object, "spec", "mgr", "count")
 	assert.Equal(t, int64(1), mgrCount)
-	multi, _, _ := unstructuredNestedBool(u.Object, "spec", "mon", "allowMultiplePerNode")
+	multi, _ := unstructuredNestedBool(u.Object, "spec", "mon", "allowMultiplePerNode")
 	assert.True(t, multi)
-	multi, _, _ = unstructuredNestedBool(u.Object, "spec", "mgr", "allowMultiplePerNode")
+	multi, _ = unstructuredNestedBool(u.Object, "spec", "mgr", "allowMultiplePerNode")
 	assert.True(t, multi)
 
 	cfg.CephImage = "quay.io/ceph/ceph:v19.2.3"
@@ -128,13 +128,13 @@ func TestBootstrapCephClusterSingleNode(t *testing.T) {
 func TestBootstrapCephClusterAllowUnsupported(t *testing.T) {
 	cfg := testConfig()
 	cfg.AllowUnsupportedCeph = true
-	allow, found, _ := unstructuredNestedBool(BootstrapCephCluster("rook-ceph", cfg).Object,
+	allow, found := unstructuredNestedBool(BootstrapCephCluster("rook-ceph", cfg).Object,
 		"spec", "cephVersion", "allowUnsupported")
 	assert.True(t, found)
 	assert.True(t, allow)
 
 	cfg.AllowUnsupportedCeph = false
-	allow, found, _ = unstructuredNestedBool(BootstrapCephCluster("rook-ceph", cfg).Object,
+	allow, found = unstructuredNestedBool(BootstrapCephCluster("rook-ceph", cfg).Object,
 		"spec", "cephVersion", "allowUnsupported")
 	assert.True(t, found)
 	assert.False(t, allow)

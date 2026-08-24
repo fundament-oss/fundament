@@ -14,7 +14,7 @@ import (
 //
 // nodeCount is cluster-wide, not per-pool: a CephBlockPool has no CRUSH rule
 // confining it to one pool's disks. See the call site in reconcilePool.
-func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain string, message string) {
+func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain, message string) {
 	nodes := nodeCount
 	if nodes < 1 {
 		nodes = 1

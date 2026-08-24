@@ -895,3 +895,42 @@ func TestReconcileKeepsLastTransitionTimeWhileReady(t *testing.T) {
 	assert.Equal(t, settled, getPool(t, c, "pool").ResourceVersion,
 		"a reconcile that changes nothing must not write")
 }
+
+// The conditions handed to SetStatusCondition must not alias the refetched
+// object's: it updates an existing condition in place, through a pointer into
+// the backing array, so a shared slice mutates both sides and the DeepEqual
+// guard ends up comparing a condition against itself. A reason- or
+// message-only change would then never reach the API server.
+func TestWriteStatusPersistsConditionOnlyChange(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	markBlockPoolReady(t, c, "ceph-pool")
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	pool := getPool(t, c, "pool")
+	before := readyCondition(t, pool)
+	require.Equal(t, metav1.ConditionTrue, before.Status)
+
+	// Every observable field stays as it is; only the condition's reason and
+	// message move. Status is deliberately unchanged so the write can only be
+	// driven by the condition.
+	status := pool.Status
+	require.NoError(t, r.writeStatus(context.Background(), pool, &status, &metav1.Condition{
+		Status:  metav1.ConditionTrue,
+		Reason:  v1alpha1.ReasonProvisioning,
+		Message: "reason and message moved, nothing else did",
+	}))
+
+	after := readyCondition(t, getPool(t, c, "pool"))
+	assert.Equal(t, v1alpha1.ReasonProvisioning, after.Reason)
+	assert.Equal(t, "reason and message moved, nothing else did", after.Message)
+	assert.Equal(t, before.LastTransitionTime, after.LastTransitionTime,
+		"the condition did not flip, so its transition time must stand")
+}

@@ -27,8 +27,9 @@ func DerivedName(poolName string) string {
 // Oldest pool wins; ties break on name so two controllers agree. Pools being
 // deleted release their claims immediately.
 func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
-	var claimants []v1alpha1.StoragePool
-	for _, pool := range pools {
+	var claimants []*v1alpha1.StoragePool
+	for i := range pools {
+		pool := &pools[i]
 		if !pool.DeletionTimestamp.IsZero() {
 			continue
 		}
@@ -56,7 +57,8 @@ func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
 // ClaimOwner's precedence. It populates Disk.status.claimedBy.
 func BuildClaimIndex(pools []v1alpha1.StoragePool) map[string]string {
 	index := make(map[string]string)
-	for _, pool := range pools {
+	for i := range pools {
+		pool := &pools[i]
 		if !pool.DeletionTimestamp.IsZero() {
 			continue
 		}

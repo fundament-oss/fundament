@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 
@@ -53,7 +54,7 @@ var rookCRDNames = []string{
 // CRDs, a wait for them to be established, then the CephCluster singleton.
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	if err := helm.NewClient(p.cfg.RookNamespace).InstallFromRepo(
-		ctx, rookReleaseName, rookChart, rookRepoURL, rookChartVersion, RookValues(p.cfg),
+		ctx, rookReleaseName, rookChart, rookRepoURL, rookChartVersion, RookValues(&p.cfg),
 	); err != nil {
 		return fmt.Errorf("install rook-ceph helm chart: %w", err)
 	}
@@ -70,7 +71,7 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 		return fmt.Errorf("wait for CRDs to be established: %w", err)
 	}
 
-	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace, p.cfg); err != nil {
+	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace, &p.cfg); err != nil {
 		return fmt.Errorf("bootstrap CephCluster: %w", err)
 	}
 
@@ -103,7 +104,7 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(data)))
 	for {
 		doc, err := reader.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -132,7 +133,7 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 // bootstrapCephCluster creates the singleton CephCluster if absent. An existing
 // one is left alone: install runs on every plugin start, and overwriting would
 // clobber the spec.storage that StoragePoolReconciler maintains.
-func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg Config) error {
+func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg *Config) error {
 	desired := BootstrapCephCluster(namespace, cfg)
 
 	existing := &unstructured.Unstructured{}

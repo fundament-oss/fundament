@@ -8,14 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func unstructuredNestedInt64(obj map[string]any, fields ...string) (int64, bool, error) {
-	return unstructured.NestedInt64(obj, fields...)
-}
-
-func unstructuredNestedString(obj map[string]any, fields ...string) (string, bool, error) {
-	return unstructured.NestedString(obj, fields...)
-}
-
 func TestRenderCephBlockPool(t *testing.T) {
 	u := RenderCephBlockPool("rook-ceph", "pool-a", 3, "host")
 	assert.Equal(t, "ceph.rook.io/v1", u.GetAPIVersion())
@@ -23,12 +15,12 @@ func TestRenderCephBlockPool(t *testing.T) {
 	assert.Equal(t, "pool-a", u.GetName())
 	assert.Equal(t, "rook-ceph", u.GetNamespace())
 
-	size, found, err := unstructuredNestedInt64(u.Object, "spec", "replicated", "size")
+	size, found, err := unstructured.NestedInt64(u.Object, "spec", "replicated", "size")
 	require.NoError(t, err)
 	require.True(t, found)
 	assert.Equal(t, int64(3), size)
 
-	fd, _, _ := unstructuredNestedString(u.Object, "spec", "failureDomain")
+	fd, _, _ := unstructured.NestedString(u.Object, "spec", "failureDomain")
 	assert.Equal(t, "host", fd)
 
 	_, found, err = unstructured.NestedBool(u.Object, "spec", "replicated", "requireSafeReplicaSize")

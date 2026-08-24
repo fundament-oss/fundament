@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	if r.Scheme == nil {
 		r.Scheme = mgr.GetScheme()
 	}
-	return ctrl.NewControllerManagedBy(mgr).
+	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.StoragePool{}).
 		Owns(&storagev1.StorageClass{}).
 		Owns(cephBlockPoolStub()).
@@ -64,7 +65,10 @@ func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 			&v1alpha1.Disk{},
 			handler.EnqueueRequestsFromMapFunc(r.diskToStoragePools),
 		).
-		Complete(r)
+		Complete(r); err != nil {
+		return fmt.Errorf("register StoragePool controller: %w", err)
+	}
+	return nil
 }
 
 // cephBlockPoolStub is an empty CephBlockPool carrying only its GVK, which is
@@ -86,9 +90,9 @@ func (r *StoragePoolReconciler) diskToStoragePools(ctx context.Context, _ client
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(pools.Items))
-	for _, pool := range pools.Items {
+	for i := range pools.Items {
 		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: pool.Name},
+			NamespacedName: types.NamespacedName{Name: pools.Items[i].Name},
 		})
 	}
 	return reqs
@@ -159,7 +163,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		status.Replicas, status.FailureDomain = 0, ""
 		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
 		status.Message = emptyPoolMessage(pool, notes)
-		return ctrl.Result{}, r.writeStatus(ctx, pool, status, metav1.Condition{
+		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
 			Reason:  v1alpha1.ReasonNoUsableDisks,
 			Message: status.Message,
@@ -198,8 +202,8 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 	}
 
 	var rawCapacity int64
-	for _, d := range selected {
-		rawCapacity += d.SizeBytes
+	for i := range selected {
+		rawCapacity += selected[i].SizeBytes
 	}
 
 	message := strings.Join(notes, "; ")
@@ -219,7 +223,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		}
 	}
 
-	if err := r.writeStatus(ctx, pool, v1alpha1.StoragePoolStatus{
+	if err := r.writeStatus(ctx, pool, &v1alpha1.StoragePoolStatus{
 		Phase:             phase,
 		StorageClassName:  derived,
 		Replicas:          replicas,
@@ -227,7 +231,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		SelectedDiskCount: len(selected),
 		RawCapacityBytes:  rawCapacity,
 		Message:           message,
-	}, ready); err != nil {
+	}, &ready); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -258,7 +262,7 @@ func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
 // observedGeneration are taken from the refetched object rather than from the
 // caller's status value: the caller builds the observable fields, this decides
 // what generation they describe.
-func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status v1alpha1.StoragePoolStatus, ready metav1.Condition) error {
+func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status *v1alpha1.StoragePoolStatus, ready *metav1.Condition) error {
 	var current v1alpha1.StoragePool
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: pool.Name}, &current); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -269,21 +273,24 @@ func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.
 
 	status.ObservedGeneration = current.Generation
 	// Carry the existing conditions so SetStatusCondition can preserve
-	// lastTransitionTime for a condition whose status has not flipped.
-	status.Conditions = current.Status.Conditions
+	// lastTransitionTime for a condition whose status has not flipped. Cloned,
+	// not aliased: SetStatusCondition mutates the existing element through a
+	// pointer into the backing array, so sharing it with current would mutate
+	// both sides and the DeepEqual below could never see a condition change.
+	status.Conditions = slices.Clone(current.Status.Conditions)
 	ready.Type = v1alpha1.ConditionReady
 	ready.ObservedGeneration = current.Generation
-	meta.SetStatusCondition(&status.Conditions, ready)
+	meta.SetStatusCondition(&status.Conditions, *ready)
 
 	// Every Disk event in the cluster fans out to a reconcile of every pool, and
 	// the status is identical almost every time. The API server would no-op the
 	// write, but not before it has been serialised and sent. Compared semantically
 	// rather than with ==, which stopped compiling once Conditions was added and
 	// would silently compare slice headers if it ever did.
-	if equality.Semantic.DeepEqual(current.Status, status) {
+	if equality.Semantic.DeepEqual(current.Status, *status) {
 		return nil
 	}
-	current.Status = status
+	current.Status = *status
 	if err := r.Client.Status().Update(ctx, &current); err != nil {
 		return fmt.Errorf("update StoragePool status %s: %w", pool.Name, err)
 	}
@@ -302,7 +309,7 @@ func (r *StoragePoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.
 		Reason:  v1alpha1.ReasonReconcileError,
 		Message: cause.Error(),
 	}
-	if err := r.writeStatus(ctx, pool, status, ready); err != nil {
+	if err := r.writeStatus(ctx, pool, &status, &ready); err != nil {
 		log.FromContext(ctx).Error(err, "could not record degraded status", "storagePool", pool.Name)
 	}
 }
@@ -379,7 +386,8 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) (
 	// Deduplicate by (node, path) so a disk listed in multiple pools isn't doubled.
 	seen := make(map[string]struct{})
 	var union []v1alpha1.DiskStatus
-	for _, pool := range pools.Items {
+	for i := range pools.Items {
+		pool := &pools.Items[i]
 		// A pool being deleted has released its disks; leaving them in would
 		// keep Rook configured for devices no pool owns any more.
 		if !pool.DeletionTimestamp.IsZero() {
@@ -396,7 +404,7 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) (
 			}
 			// Keyed on the same reference that goes into the CephCluster, so two
 			// Disk CRs that resolve to one device collapse to one entry.
-			key := disk.Status.Node + "\x00" + DeviceRef(disk.Status)
+			key := disk.Status.Node + "\x00" + DeviceRef(&disk.Status)
 			if _, ok := seen[key]; !ok {
 				seen[key] = struct{}{}
 				union = append(union, disk.Status)
@@ -503,6 +511,7 @@ func poolOwnerRef(pool *v1alpha1.StoragePool) metav1.OwnerReference {
 // removing the conflicting object produces a watch event that reconciles it
 // again -- which is the only thing that can resolve it.
 func notOursError(kind, name string) error {
+	//nolint:wrapcheck // TerminalError is a wrapper; wrapping it again adds nothing
 	return reconcile.TerminalError(fmt.Errorf(
 		"%s %q already exists and is not owned by this StoragePool; "+
 			"refusing to adopt it (deleting the pool would then delete that object). "+
@@ -577,6 +586,7 @@ func (r *StoragePoolReconciler) applyStorageClass(ctx context.Context, pool *v1a
 	// Terminal for the same reason as notOursError: the API server will refuse
 	// this update every time, so retrying only burns backoff and fills the log.
 	if drift := immutableStorageClassDrift(&existing, desired); len(drift) > 0 {
+		//nolint:wrapcheck // TerminalError is a wrapper; wrapping it again adds nothing
 		return reconcile.TerminalError(fmt.Errorf(
 			"StorageClass %q differs from the desired spec on immutable field(s) %s; "+
 				"Kubernetes does not allow updating these. Delete the StorageClass to have it recreated "+

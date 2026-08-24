@@ -13,7 +13,9 @@ var (
 	GroupVersion = schema.GroupVersion{Group: "storage.fundament.io", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	// The deprecation is about api packages pulling in controller-runtime; this
+	// package is a plugin-local API and already depends on it via the scheme.
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:staticcheck // SA1019: kubebuilder's scaffolded pattern
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme

@@ -20,7 +20,7 @@ const (
 // No device denylist here: discoverDaemonUdev only filters which udev events
 // trigger a re-probe, and probeDevices writes every device it finds regardless.
 // ParseDiscoveredDevices is what keeps a node's real disks out of the inventory.
-func RookValues(cfg Config) map[string]string {
+func RookValues(cfg *Config) map[string]string {
 	values := map[string]string{
 		"enableDiscoveryDaemon":   "true",
 		"discoveryDaemonInterval": discoveryInterval,
@@ -33,7 +33,7 @@ func RookValues(cfg Config) map[string]string {
 
 // BootstrapCephCluster returns the baseline CephCluster. storage.nodes is left
 // empty so StoragePoolReconciler owns disk assignment.
-func BootstrapCephCluster(namespace string, cfg Config) *unstructured.Unstructured {
+func BootstrapCephCluster(namespace string, cfg *Config) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": cephAPIVersion,

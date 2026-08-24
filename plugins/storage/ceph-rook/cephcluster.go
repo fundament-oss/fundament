@@ -10,7 +10,7 @@ import (
 // Rook takes a kernel name or a udev path; the by-id form is the one that
 // survives a reboot, and a renamed device would take its OSD out of the cluster.
 // Disks with no by-id link fall back to the kernel path.
-func DeviceRef(disk v1alpha1.DiskStatus) string {
+func DeviceRef(disk *v1alpha1.DiskStatus) string {
 	if disk.StablePath != "" {
 		return disk.StablePath
 	}
@@ -25,7 +25,8 @@ func BuildStorageNodes(disks []v1alpha1.DiskStatus) []map[string]any {
 	}
 
 	nodeMap := make(map[string][]string)
-	for _, disk := range disks {
+	for i := range disks {
+		disk := &disks[i]
 		nodeMap[disk.Node] = append(nodeMap[disk.Node], DeviceRef(disk))
 	}
 
@@ -63,8 +64,8 @@ func DistinctNodeCount(disks []v1alpha1.DiskStatus) int {
 	}
 
 	nodeSet := make(map[string]struct{})
-	for _, disk := range disks {
-		nodeSet[disk.Node] = struct{}{}
+	for i := range disks {
+		nodeSet[disks[i].Node] = struct{}{}
 	}
 
 	return len(nodeSet)
