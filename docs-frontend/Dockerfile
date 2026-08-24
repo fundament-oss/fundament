@@ -1,10 +1,5 @@
 # Build stage
-# Use a real Node.js (>= v24.15) for the Astro build; the tooling rejects Bun's
-# Node-compat version (24.3.0). Bun is still used as the package manager.
-FROM oven/bun:1.3.14-alpine AS bun
-
-FROM node:24.17-alpine AS build
-COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+FROM oven/bun:1.4.0-alpine AS build
 WORKDIR /app
 
 # Copy package files
@@ -20,7 +15,7 @@ COPY docs-frontend/ .
 # rewrite the links that are written for GitHub so they work on the site too.
 # See docs-frontend/scripts/sync-docs.mjs for the link conventions this implies.
 COPY docs/ /tmp/docs/
-RUN node scripts/sync-docs.mjs --source /tmp/docs && rm -rf /tmp/docs
+RUN bun scripts/sync-docs.mjs --source /tmp/docs && rm -rf /tmp/docs
 
 # Disable Astro telemetry
 ENV ASTRO_TELEMETRY_DISABLED=1
@@ -34,7 +29,6 @@ RUN bun run build
 # Run pagefind explicitly to ensure the search index is generated.
 # Starlight's internal pagefind hook uses `npx` which may fail silently; `bun x`
 # uses the already-installed package and fails the build loudly.
-# Note: `bun x` rather than `bunx`, since only the `bun` binary is copied above.
 RUN bun x pagefind --site dist
 
 # Production stage

@@ -14,17 +14,17 @@
     "report": "open reports/cucumber-report.html"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "2.12.1",
+    "@bufbuild/protobuf": "2.14.0",
     "@connectrpc/connect": "2.1.2",
     "@connectrpc/connect-node": "2.1.2"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "13.0.0",
-    "@playwright/test": "1.61.1",
-    "@types/node": "26.0.1",
+    "@cucumber/cucumber": "13.2.1",
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.2.0",
     "dotenv": "17.4.2",
-    "playwright": "1.61.1",
-    "tsx": "4.22.4",
+    "playwright": "1.62.1",
+    "tsx": "4.23.12",
     "typescript": "6.0.3"
   }
 }
