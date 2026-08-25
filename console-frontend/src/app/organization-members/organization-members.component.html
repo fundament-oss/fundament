@@ -101,7 +101,12 @@
         </nldd-table>
       } @else {
         <nldd-box>
-          <nldd-inline-dialog icon="envelope" icon-color="secondary" text="No pending invitations">
+          <nldd-inline-dialog
+            class="card-body"
+            icon="envelope"
+            icon-color="secondary"
+            text="No pending invitations"
+          >
             <nldd-button
               (click)="openModal()"
               type="button"
@@ -151,6 +156,7 @@
       } @else if (activeMembers().length === 0) {
         <nldd-box>
           <nldd-inline-dialog
+            class="card-body"
             icon="person-2"
             icon-color="secondary"
             text="No members found"
