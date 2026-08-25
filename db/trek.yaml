@@ -9,6 +9,7 @@ roles:
   - name: fun_authz
   - name: fun_authz_worker
   - name: fun_dcim_api
+  - name: fun_marketplace_catalog_api
 outputs:
   - sql
 templates:
