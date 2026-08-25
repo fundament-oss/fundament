@@ -146,20 +146,21 @@
   </div>
 
   @if (loadError()) {
-    <div
-      class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950"
-      role="alert"
+    <!-- The twelfth of these, and the only one with a way out of it: the retry
+         goes in the banner's own actions slot. -->
+    <nldd-banner
+      variant="critical"
+      text="Could not load your tasks"
+      [attr.supporting-text]="loadError()"
     >
-      <p class="text-sm font-semibold text-red-800 dark:text-red-200">Could not load your tasks</p>
-      <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ loadError() }}</p>
-      <button
-        type="button"
-        class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
+      <nldd-button
+        slot="actions"
+        variant="secondary"
+        text="Try again"
         (click)="retryLoad()"
-      >
-        Try again
-      </button>
-    </div>
+      ></nldd-button>
+    </nldd-banner>
+    <nldd-spacer size="16"></nldd-spacer>
   }
 
   <!-- Step Wizard Timeline
