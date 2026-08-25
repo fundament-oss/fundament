@@ -25,21 +25,27 @@
          kind of port, which port. -->
     <nldd-form>
       <!-- Where the cable runs, before which two ends it joins: the devices you
-           can pick come from this one, so changing it empties both sides. -->
-      @if (datacenters().length > 1) {
-        <nldd-form-field label="Data center">
-          <nldd-toggle-button-group type="radio" accessible-label="Data center">
-            @for (dc of datacenters(); track dc.id) {
-              <nldd-toggle-button
-                [attr.value]="dc.id"
-                [attr.text]="dc.name"
-                [attr.selected]="dcId() === dc.id ? '' : null"
-                (change)="onDcToggle(dc.id, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-      }
+           can pick come from this one, so changing it empties both sides.
+           Hidden rather than left out with an @if. nldd-form moves its children
+           into a real form element and appends whatever arrives after that, so
+           a field behind a condition lands at the bottom, under the save
+           button, the moment the condition turns true. Present from the start,
+           it keeps its place. -->
+      <nldd-form-field
+        label="Data center"
+        [attr.hidden]="datacenters().length > 1 ? null : ''"
+      >
+        <nldd-toggle-button-group type="radio" accessible-label="Data center">
+          @for (dc of datacenters(); track dc.id) {
+            <nldd-toggle-button
+              [attr.value]="dc.id"
+              [attr.text]="dc.name"
+              [attr.selected]="dcId() === dc.id ? '' : null"
+              (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+            ></nldd-toggle-button>
+          }
+        </nldd-toggle-button-group>
+      </nldd-form-field>
 
       <!-- How far along the cable is, beside where it runs: both are true of
            the whole run and neither belongs to one of its two ends. -->
@@ -130,6 +136,19 @@
             }
           </nldd-form-field>
         }
+        <!-- Named from where you stand, and standing where you are: you fill one
+             end in, see it should have been the other, and the way out is under
+             your eyes rather than at the foot of the form. With both ends filled
+             there is nowhere to move to without displacing, so the two change
+             places and nothing is lost. -->
+        <nldd-button
+          variant="secondary"
+          size="sm"
+          text="Move to B side"
+          start-icon="arrow-down"
+          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+          (click)="swapSides()"
+        ></nldd-button>
       </nldd-form-section>
 
       <nldd-form-section text="B side">
@@ -208,19 +227,15 @@
             }
           </nldd-form-field>
         }
+        <nldd-button
+          variant="secondary"
+          size="sm"
+          text="Move to A side"
+          start-icon="arrow-up"
+          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+          (click)="swapSides()"
+        ></nldd-button>
       </nldd-form-section>
-
-      <nldd-toolbar label="Cable ends">
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="secondary"
-            text="Swap sides"
-            start-icon="arrow-up-arrow-down"
-            [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
-            (click)="swapSides()"
-          ></nldd-button>
-        </nldd-toolbar-item>
-      </nldd-toolbar>
 
       <nldd-form-section text="Cable">
         <!-- Label -->
