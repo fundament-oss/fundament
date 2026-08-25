@@ -24,6 +24,57 @@
     <!-- Both ends of the cable as two sections of one form: which device, which
          kind of port, which port. -->
     <nldd-form>
+
+
+      <!-- What this cable is called and what it is for, before anything about
+           where it runs: the name is how you find it back, and everything
+           below is detail hanging off it. -->
+      <!-- Label -->
+      <nldd-form-field label="Label" optional optional-label="Optional">
+        <nldd-text-field
+          id="cable-label"
+          [attr.value]="cableLabel()"
+          class="w-full font-mono"
+          (change)="cableLabel.set($any($event).detail?.value ?? '')"
+          (input)="cableLabel.set($any($event.target).value)"
+          (keydown.enter)="onSave()"
+        ></nldd-text-field>
+      </nldd-form-field>
+
+      <!-- Description -->
+      <!-- One line to start with, growing with what you write. Most cables get
+           a sentence or nothing, and three empty lines ask for an essay. The
+           field sizes itself, so there is no handle to drag either. -->
+      <nldd-form-field label="Description" optional optional-label="Optional">
+        <nldd-multi-line-text-field
+          id="cable-description"
+          [value]="cableDescription()"
+          (input)="cableDescription.set($any($event.target).value)"
+          rows="1"
+          resize="auto"
+        ></nldd-multi-line-text-field>
+      </nldd-form-field>
+
+      <!-- How far along the run is, and then which building it is in. -->
+      <nldd-form-field label="Status">
+        <nldd-toggle-button-group type="radio" accessible-label="Status">
+          <nldd-toggle-button
+            value=""
+            text="Unspecified"
+            [attr.selected]="cableStatus() === '' ? '' : null"
+            (change)="onStatusToggle('', $any($event).detail.selected)"
+          ></nldd-toggle-button>
+          @for (st of CABLE_STATUSES; track st.value) {
+            <nldd-toggle-button
+              [attr.value]="st.value"
+              [attr.text]="st.label"
+              [attr.selected]="cableStatus() === st.value ? '' : null"
+              (change)="onStatusToggle(st.value, $any($event).detail.selected)"
+            ></nldd-toggle-button>
+          }
+        </nldd-toggle-button-group>
+      </nldd-form-field>
+
       <!-- Where the cable runs, before which two ends it joins: the devices you
            can pick come from this one, so changing it empties both sides.
            Hidden rather than left out with an @if. nldd-form moves its children
@@ -42,27 +93,6 @@
               [attr.text]="dc.name"
               [attr.selected]="dcId() === dc.id ? '' : null"
               (change)="onDcToggle(dc.id, $any($event).detail.selected)"
-            ></nldd-toggle-button>
-          }
-        </nldd-toggle-button-group>
-      </nldd-form-field>
-
-      <!-- How far along the cable is, beside where it runs: both are true of
-           the whole run and neither belongs to one of its two ends. -->
-      <nldd-form-field label="Status">
-        <nldd-toggle-button-group type="radio" accessible-label="Status">
-          <nldd-toggle-button
-            value=""
-            text="Unspecified"
-            [attr.selected]="cableStatus() === '' ? '' : null"
-            (change)="onStatusToggle('', $any($event).detail.selected)"
-          ></nldd-toggle-button>
-          @for (st of CABLE_STATUSES; track st.value) {
-            <nldd-toggle-button
-              [attr.value]="st.value"
-              [attr.text]="st.label"
-              [attr.selected]="cableStatus() === st.value ? '' : null"
-              (change)="onStatusToggle(st.value, $any($event).detail.selected)"
             ></nldd-toggle-button>
           }
         </nldd-toggle-button-group>
@@ -140,7 +170,13 @@
              end in, see it should have been the other, and the way out is under
              your eyes rather than at the foot of the form. With both ends filled
              there is nowhere to move to without displacing, so the two change
-             places and nothing is lost. -->
+             places and nothing is lost.
+             A spacer above it because a section only spaces field after field;
+             anything else is on the caller, which form-section.css says in so
+             many words. Not a form-field around the button: a field looks among
+             its children for an input to name, a button is not one, and it says
+             so in the console every time it renders. -->
+        <nldd-spacer size="16"></nldd-spacer>
         <nldd-button
           variant="secondary"
           size="sm"
@@ -227,6 +263,7 @@
             }
           </nldd-form-field>
         }
+        <nldd-spacer size="16"></nldd-spacer>
         <nldd-button
           variant="secondary"
           size="sm"
@@ -237,18 +274,8 @@
         ></nldd-button>
       </nldd-form-section>
 
-      <nldd-form-section text="Cable">
-        <!-- Label -->
-        <nldd-form-field label="Label" optional optional-label="Optional">
-          <nldd-text-field
-            id="cable-label"
-            [attr.value]="cableLabel()"
-            class="w-full font-mono"
-            (change)="cableLabel.set($any($event).detail?.value ?? '')"
-            (input)="cableLabel.set($any($event.target).value)"
-            (keydown.enter)="onSave()"
-          ></nldd-text-field>
-        </nldd-form-field>
+      <!-- What the lead itself is: what you would ask for when ordering one. -->
+      <nldd-form-section text="Specifications">
 
         <!-- Type -->
         <nldd-form-field label="Type">
@@ -260,8 +287,12 @@
             [attr.value]="cableType()"
             (change)="onCableTypeChange($any($event).detail.value)"
           >
+            <!-- No "Unspecified" in here. An empty combo box is already the
+                 answer, and the clear button beside it is how you get back to
+                 it: an option that sets the field to a word meaning "empty"
+                 gives one state two spellings, and the field then shows a value
+                 where there is none. -->
             <nldd-menu>
-              <nldd-menu-item value="" text="Unspecified"></nldd-menu-item>
               @for (t of CABLE_TYPES; track t) {
                 <nldd-menu-item [attr.value]="t" [attr.text]="CABLE_TYPE_LABEL[t]"></nldd-menu-item>
               }
@@ -325,16 +356,6 @@
           </nldd-toggle-button-group>
         </nldd-form-field>
 
-        <!-- Description -->
-        <nldd-form-field label="Description" optional optional-label="Optional">
-          <nldd-multi-line-text-field
-            id="cable-description"
-            [value]="cableDescription()"
-            (input)="cableDescription.set($any($event.target).value)"
-            rows="3"
-            resize="vertical"
-          ></nldd-multi-line-text-field>
-        </nldd-form-field>
       </nldd-form-section>
       <!-- Under the fields rather than docked at the bottom, the same as
              every other form in this app. -->
