@@ -125,7 +125,12 @@
         @if (resources().length === 0) {
           @if (clusterContext.clusters().length === 0) {
             <nldd-box>
-              <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
+              <nldd-inline-dialog
+                class="card-body"
+                icon="ship-wheel"
+                icon-color="secondary"
+                text="No clusters found"
+              >
                 <nldd-button
                   routerLink="/clusters/add"
                   slot="actions"
@@ -138,6 +143,7 @@
           } @else {
             <nldd-box>
               <nldd-inline-dialog
+                class="card-body"
                 icon="cylinder-split-slash"
                 icon-color="secondary"
                 [text]="'No ' + kindLabel().toLowerCase() + ' found'"

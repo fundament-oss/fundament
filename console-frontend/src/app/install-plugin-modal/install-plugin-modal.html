@@ -39,6 +39,7 @@
       } @else if (versionsError()) {
         <nldd-box class="mb-4 block">
           <nldd-inline-dialog
+            class="card-body"
             icon="exclamation-triangle"
             icon-color="critical"
             text="Couldn't load versions"
@@ -48,6 +49,7 @@
       } @else {
         <nldd-box class="mb-4 block">
           <nldd-inline-dialog
+            class="card-body"
             variant="alert"
             text="No published version"
             supporting-text="This plugin has no published definition to install yet."
@@ -58,6 +60,7 @@
       @if (clusters().length === 0) {
         <nldd-box>
           <nldd-inline-dialog
+            class="card-body"
             icon="ship-wheel"
             icon-color="secondary"
             text="No clusters found"
