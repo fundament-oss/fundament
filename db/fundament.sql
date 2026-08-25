@@ -1066,9 +1066,13 @@ CREATE TABLE appstore.plugins (
 	author_url text,
 	repository_url text,
 	image text NOT NULL DEFAULT '',
+	license text NOT NULL DEFAULT '',
+	featured bool NOT NULL DEFAULT false,
+	visibility text NOT NULL DEFAULT 'public',
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
+	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
+	CONSTRAINT plugins_ck_visibility CHECK (visibility IN ('public', 'restricted')),
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
 -- ddl-end --
@@ -1077,6 +1081,8 @@ COMMENT ON COLUMN appstore.plugins.organization_id IS E'Owning organization. Gat
 COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Nothing writes this until the registry API lands.';
 -- ddl-end --
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --
@@ -1119,11 +1125,17 @@ CREATE TABLE appstore.plugin_definitions (
 	plugin_version text NOT NULL,
 	manifest bytea NOT NULL,
 	hash text NOT NULL,
+	status text NOT NULL DEFAULT 'draft',
+	published timestamptz,
+	release_notes text NOT NULL DEFAULT '',
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugin_definitions_uq_plugin_version UNIQUE NULLS NOT DISTINCT (plugin_id,plugin_version,deleted),
-	CONSTRAINT plugin_definitions_pk PRIMARY KEY (id)
+	CONSTRAINT plugin_definitions_pk PRIMARY KEY (id),
+	CONSTRAINT plugin_definitions_ck_status CHECK (status IN ('draft', 'pending', 'changes_requested', 'approved', 'rejected', 'withdrawn'))
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.published IS E'Null until the version is live. The public catalog''s entire visibility predicate.';
 -- ddl-end --
 ALTER TABLE appstore.plugin_definitions OWNER TO fun_owner;
 -- ddl-end --
@@ -1155,6 +1167,63 @@ CREATE POLICY plugin_definitions_update_owner ON appstore.plugin_definitions
 	FOR UPDATE
 	TO fun_fundament_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_definitions_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_select_catalog ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_select_catalog ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (deleted IS NULL AND published IS NOT NULL);
+-- ddl-end --
+
+-- object: plugins_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_catalog ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_catalog ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (deleted IS NULL AND visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL));
+-- ddl-end --
+
+-- object: appstore.plugin_labels | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_labels CASCADE;
+CREATE TABLE appstore.plugin_labels (
+	plugin_id uuid NOT NULL,
+	name text NOT NULL,
+	CONSTRAINT plugin_labels_pk PRIMARY KEY (plugin_id,name),
+	CONSTRAINT plugin_labels_ck_name CHECK (name IN ('core', 'rijksoverheid', 'support_9_to_17'))
+);
+-- ddl-end --
+ALTER TABLE appstore.plugin_labels OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: appstore.plugin_features | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_features CASCADE;
+CREATE TABLE appstore.plugin_features (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_id uuid NOT NULL,
+	title text NOT NULL,
+	body text NOT NULL,
+	"position" integer NOT NULL DEFAULT 0,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT plugin_features_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE appstore.plugin_features OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: plugin_definitions_idx_published | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.plugin_definitions_idx_published CASCADE;
+CREATE INDEX plugin_definitions_idx_published ON appstore.plugin_definitions
+USING btree
+(
+	plugin_id,
+	published
+)
+WHERE (published IS NOT NULL AND deleted IS NULL);
 -- ddl-end --
 
 -- object: appstore.presets | type: TABLE --
@@ -1399,6 +1468,15 @@ CREATE POLICY organizations_cluster_worker_policy ON tenant.organizations
 	FOR SELECT
 	TO fun_cluster_worker
 	USING (true);
+-- ddl-end --
+
+-- object: organizations_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_catalog ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_catalog ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL)));
 -- ddl-end --
 
 -- object: organization_limits_organization_policy | type: POLICY --
@@ -2728,6 +2806,20 @@ REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: plugin_labels_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_labels DROP CONSTRAINT IF EXISTS plugin_labels_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_labels ADD CONSTRAINT plugin_labels_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_features_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_features DROP CONSTRAINT IF EXISTS plugin_features_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_features ADD CONSTRAINT plugin_features_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: plugins_presets_plugin_id | type: CONSTRAINT --
 -- ALTER TABLE appstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
 ALTER TABLE appstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
@@ -4051,6 +4143,102 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT
    ON TABLE dcim.users
    TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_3cf00584d9" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_b008e3bf09" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_ad467a32af | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_b5ce42087b | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_6992c58873 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_labels
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_872f844dd7 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_features
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_6b5b560cea | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_documentation_links
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d7a3569e08 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.tags
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_6de6ab3524 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_23e909fefb | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_87e898b32e | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_88394fcb78 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_marketplace_catalog_api;
 
 -- ddl-end --
 

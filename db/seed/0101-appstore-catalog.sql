@@ -478,3 +478,28 @@ ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     url_name = EXCLUDED.url_name,
     url = EXCLUDED.url;
+
+-- Publish the first-party definitions. Definitions themselves are pushed by
+-- plugins/cmd/plugin-publish as 'draft'; this marks fresh drafts as live so
+-- the public catalog can serve them. A no-op on a fresh database.
+--
+-- Only touches 'draft' definitions: a definition that has since moved to
+-- 'withdrawn' or 'rejected' is left alone, so this does not silently
+-- resurrect a deliberately pulled or rejected first-party version.
+--
+-- Scoped to the system organization (db/seed/0100-system-org.sql) and to
+-- plugins that are not soft-deleted: once registry.v1.PublicationService and
+-- admin.v1.ReviewService ship, an unscoped UPDATE here would blanket-approve
+-- third-party submissions.
+UPDATE appstore.plugin_definitions
+SET status = 'approved',
+    published = COALESCE(appstore.plugin_definitions.published, now())
+WHERE appstore.plugin_definitions.deleted IS NULL
+  AND appstore.plugin_definitions.status = 'draft'
+  AND EXISTS (
+    SELECT 1
+    FROM appstore.plugins
+    WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id
+      AND appstore.plugins.deleted IS NULL
+      AND appstore.plugins.organization_id = '019b4000-0000-7000-8000-000000000000'
+  );
