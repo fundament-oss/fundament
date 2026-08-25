@@ -1,0 +1,111 @@
+{{- if $.Values.marketplaceFrontend.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marketplace-frontend-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+data:
+  # The three marketplace APIs are three deployables (FUN-20), so each gets its
+  # own base URL rather than a shared one with a path prefix. An empty URL means
+  # that service is not deployed in this environment; the app still serves, but
+  # the views that call it fail.
+  config.json: |
+    {
+      "catalogApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
+      "registryApiUrl": "{{ $.Values.externalUrls.marketplaceRegistryApi }}",
+      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}"
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketplace-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ $.Values.marketplaceFrontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: marketplace-frontend
+          image: {{ $.Values.images.marketplaceFrontend }}
+          env:
+            # Substituted into the CSP connect-src directive at container start
+            # (see marketplace-frontend/nginx.conf). Unset URLs collapse to
+            # extra whitespace, leaving connect-src 'self'.
+            - name: CONNECT_SRC
+              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.marketplaceRegistryApi }} {{ $.Values.externalUrls.marketplaceAdminApi }}"
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/assets/config
+              readOnly: true
+            - name: config
+              mountPath: /app/public/assets/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: marketplace-frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketplace-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marketplace-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - marketplace.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: marketplace-frontend-tls
+  {{- end }}
+  rules:
+    - host: marketplace.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace-frontend
+                port:
+                  name: http
+{{- end }}
+
+{{- end }}

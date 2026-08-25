@@ -85,6 +85,9 @@ spec:
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
+      marketplace: https://marketplace.pr${PR_NUM}.${DOMAIN}
+      # marketplace{Catalog,Registry,Admin}Api are left unset: the three
+      # marketplace APIs have no implementation yet (FUN-20 defers them).
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}
@@ -103,6 +106,7 @@ spec:
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
       dcimApi: ${IMAGE_PREFIX}/dcim-api:${IMAGE_TAG}
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
+      marketplaceFrontend: ${IMAGE_PREFIX}/marketplace-frontend:${IMAGE_TAG}
       dcimAuthnApi: ${IMAGE_PREFIX}/dcim-authn-api:${IMAGE_TAG}
 
     authnApi:
@@ -307,6 +311,20 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - dcim-authn.pr${PR_NUM}.${DOMAIN}
+
+    marketplaceFrontend:
+      enabled: true
+      replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - marketplace.pr${PR_NUM}.${DOMAIN}
 
     ingress:
       enabled: false

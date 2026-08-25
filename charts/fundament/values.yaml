@@ -31,6 +31,10 @@ externalUrls:
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
+  marketplace: "" # e.g., https://marketplace.example.com
+  marketplaceCatalogApi: "" # e.g., https://marketplace-catalog.example.com
+  marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
+  marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
 # Container images
@@ -50,6 +54,7 @@ images:
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
+  marketplaceFrontend: ghcr.io/fundament-oss/fundament/marketplace-frontend:latest
 
 # Database (CloudNativePG)
 db:
@@ -183,6 +188,19 @@ docsFrontend:
     #    namespace: gateway-ns
     hostnames: []
     #  - docs.example.com
+
+# Marketplace frontend (public storefront, publishing and review surfaces).
+# Reads its three API base URLs from externalUrls.marketplace*Api at runtime.
+marketplaceFrontend:
+  enabled: false
+  replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - marketplace.example.com
 
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:

@@ -111,6 +111,9 @@ jobs:
           - image-name: dcim-frontend
             dockerfile: dcim-frontend/Dockerfile
             context: "."
+          - image-name: marketplace-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
           - image-name: dcim-authn-api
             dockerfile: dcim-authn-api/Dockerfile
             context: "."

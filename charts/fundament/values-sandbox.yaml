@@ -181,6 +181,10 @@ dcimFrontend:
   enabled: true
   replicas: 2
 
+marketplaceFrontend:
+  enabled: true
+  replicas: 2
+
 ingress:
   enabled: false
   tls:

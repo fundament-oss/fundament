@@ -13,6 +13,13 @@ externalUrls:
   dcimApi: https://dcim-api.fundament.localhost:8443
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
+  marketplace: https://marketplace.fundament.localhost:8443
+  # The three marketplace APIs are not implemented yet (FUN-20 defers the
+  # service implementations), so the frontend deploys with no backend to call.
+  # When they land they take these hosts:
+  #   marketplaceCatalogApi: https://marketplace-catalog.fundament.localhost:8443
+  #   marketplaceRegistryApi: https://marketplace-registry.fundament.localhost:8443
+  #   marketplaceAdminApi: https://marketplace-admin.fundament.localhost:8443
   corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
@@ -148,6 +155,10 @@ dcimApi:
   logLevel: debug
 
 dcimFrontend:
+  enabled: true
+  replicas: 1
+
+marketplaceFrontend:
   enabled: true
   replicas: 1
 
