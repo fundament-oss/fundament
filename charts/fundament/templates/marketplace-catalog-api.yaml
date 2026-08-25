@@ -32,6 +32,11 @@ spec:
                   key: uri
             - name: LOG_LEVEL
               value: {{ .Values.marketplaceCatalogApi.logLevel }}
+            {{- if $.Values.deploymentVersion }}
+            # Served on /version so CI can tell which release is answering.
+            - name: DEPLOYMENT_VERSION
+              value: {{ $.Values.deploymentVersion | quote }}
+            {{- end }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
