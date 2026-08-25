@@ -50,6 +50,7 @@ images:
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
+  marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
 
 # Database (CloudNativePG)
 db:
@@ -282,6 +283,16 @@ dexDcim:
 dcimFrontend:
   enabled: false
   replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Marketplace Catalog API
+marketplaceCatalogApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
   httproute:
     enabled: false
     parentRefs: []
