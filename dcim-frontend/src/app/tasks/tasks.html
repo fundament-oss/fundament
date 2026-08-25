@@ -1,58 +1,3 @@
-<nldd-popover
-  id="bulkStatusPopover"
-  #bulkStatusPopoverEl
-  anchor="bulkStatusTrigger"
-  accessible-label="Set status"
-  role="menu"
->
-  <div class="flex flex-col gap-0.5 p-1" role="none">
-    @for (s of kanbanColumns; track s) {
-      <button
-        type="button"
-        role="menuitem"
-        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
-        (click)="bulkSetStatus(s)"
-      >
-        <span [class]="statusDotClass(s)" aria-hidden="true"></span>
-        {{ s }}
-      </button>
-    }
-  </div>
-</nldd-popover>
-
-<nldd-popover
-  id="bulkAssignPopover"
-  #bulkAssignPopoverEl
-  anchor="bulkAssignTrigger"
-  accessible-label="Assign to"
-  role="menu"
->
-  <div class="flex max-h-60 flex-col gap-0.5 overflow-y-auto p-1" role="none">
-    <button
-      type="button"
-      role="menuitem"
-      class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
-      (click)="bulkAssign(null)"
-    >
-      <span [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')" aria-hidden="true">—</span>
-      Unassigned
-    </button>
-    @for (tech of technicians(); track tech.id) {
-      <button
-        type="button"
-        role="menuitem"
-        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
-        (click)="bulkAssign(tech.id)"
-      >
-        <span [class]="techInitialsClass(tech, 'h-6 w-6 text-[10px]')" aria-hidden="true">{{
-          tech.initials
-        }}</span>
-        {{ tech.name }}
-      </button>
-    }
-  </div>
-</nldd-popover>
-
 <!-- ══════════════════════════════════════════════════════════════
      PAGE
      ══════════════════════════════════════════════════════════════ -->
@@ -78,26 +23,50 @@
       <nldd-toolbar label="Bulk actions">
         <nldd-toolbar-title slot="start" [attr.text]="selectionSummary()"></nldd-toolbar-title>
         <nldd-toolbar-item slot="end">
+          <!-- The menu is slotted into the button that opens it, so it
+               anchors and closes itself: no id to keep in step with an anchor,
+               and no handle to reach for when an item is picked. -->
           <nldd-button
-            id="bulkStatusTrigger"
             variant="secondary"
             text="Status"
             start-icon="pencil"
             expandable
             popup-type="menu"
             [attr.disabled]="selectedTasks().size === 0 ? '' : null"
-          ></nldd-button>
+          >
+            <nldd-menu slot="popup" accessible-label="Set status">
+              @for (s of kanbanColumns; track s) {
+                <nldd-menu-item
+                  [attr.text]="s"
+                  [attr.icon]="statusIcon(s)"
+                  (select)="bulkSetStatus(s)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="end">
           <nldd-button
-            id="bulkAssignTrigger"
             variant="secondary"
             text="Assign"
             start-icon="person"
             expandable
             popup-type="menu"
             [attr.disabled]="selectedTasks().size === 0 ? '' : null"
-          ></nldd-button>
+          >
+            <!-- Names without their avatars: a face helps you scan a board, a
+                 menu you read. -->
+            <nldd-menu slot="popup" accessible-label="Assign to">
+              <nldd-menu-item text="Unassigned" (select)="bulkAssign(null)"></nldd-menu-item>
+              <nldd-menu-divider></nldd-menu-divider>
+              @for (tech of technicians(); track tech.id) {
+                <nldd-menu-item
+                  [attr.text]="tech.name"
+                  (select)="bulkAssign(tech.id)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="end">
           <nldd-button

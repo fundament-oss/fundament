@@ -433,30 +433,26 @@
     </nldd-list>
   </div>
 
-  <!-- Task Complete Screen -->
-  <div [class.hidden]="!showCompleteScreen()" class="py-16 text-center">
-    <div
-      class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950 ring-1 ring-emerald-200/60 dark:ring-emerald-800/60"
-    >
-      <nldd-icon
-        name="check-mark-circle"
-        style="width: 32px; height: 32px; color: #059669"
-        aria-hidden="true"
-      ></nldd-icon>
-    </div>
-    <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">Work order complete!</h2>
-    <p class="mt-2 text-sm text-neutral-500 dark:text-gray-400">
-      Everything in this round is done.
-    </p>
-    <a href="#">
-      <nldd-button
-        variant="neutral-filled"
-        text="Back to My Tasks"
-        start-icon="arrow-left"
-        class="mt-6 inline-flex"
-      ></nldd-button>
-    </a>
-  </div>
+  <!-- The end of the round. An inline dialog with variant="success": the ring,
+       the circle and the green were a check mark drawn by hand, down to a hex
+       colour that no theme can reach. -->
+  @if (showCompleteScreen()) {
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog
+        variant="success"
+        heading-level="2"
+        text="Work order complete!"
+        supporting-text="Everything in this round is done."
+      >
+        <nldd-button
+          slot="actions"
+          variant="neutral-filled"
+          text="Back to My Tasks"
+          start-icon="arrow-left"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    </nldd-simple-section>
+  }
   </nldd-simple-section>
 </ng-template>
 

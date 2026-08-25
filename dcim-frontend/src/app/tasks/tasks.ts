@@ -832,10 +832,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
 
-  readonly bulkStatusPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkStatusPopoverEl');
-
-  readonly bulkAssignPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkAssignPopoverEl');
-
   getTech(id: string | null): Technician | null {
     return this.store.getTech(id);
   }
@@ -1067,13 +1063,11 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
   bulkSetStatus(status: TaskStatusLabel): void {
-    this.bulkStatusPopoverEl()?.nativeElement.hide();
     this.bulkUpdate({ status });
   }
 
   // assignee of null unassigns the selected tasks (the "Unassigned" option).
   bulkAssign(assigneeId: string | null): void {
-    this.bulkAssignPopoverEl()?.nativeElement.hide();
     this.bulkUpdate({ assignee: assigneeId });
   }
 
