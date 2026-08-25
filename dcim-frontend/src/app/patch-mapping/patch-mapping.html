@@ -62,8 +62,13 @@
         }
         <!-- The two filters as menus rather than as a row of buttons: six states
              and thirteen kinds is a wall of choices next to a location you can
-             count on one hand, and the button says which one is on. -->
-        <nldd-toolbar-item slot="start">
+             count on one hand, and the button says which one is on. At the far
+             end, away from where you stand: the hall is what the drawing is of,
+             the filters are what you leave out of it.
+             No clear button either. "All states" and "All types" are the first
+             item of their own menu, so putting the reset back is where you set
+             it in the first place. -->
+        <nldd-toolbar-item slot="end">
           <nldd-button
             variant="secondary"
             expandable
@@ -88,7 +93,7 @@
             </nldd-menu>
           </nldd-button>
         </nldd-toolbar-item>
-        <nldd-toolbar-item slot="start">
+        <nldd-toolbar-item slot="end">
           <nldd-button
             variant="secondary"
             expandable
@@ -113,15 +118,6 @@
             </nldd-menu>
           </nldd-button>
         </nldd-toolbar-item>
-        @if (topologyStatusFilter() || topologyTypeFilter()) {
-          <nldd-toolbar-item slot="end">
-            <nldd-button
-              variant="secondary"
-              text="Clear"
-              (click)="topologyStatusFilter.set(''); topologyTypeFilter.set('')"
-            ></nldd-button>
-          </nldd-toolbar-item>
-        }
       </nldd-toolbar>
     </nldd-container>
     <!-- Full bleed: the canvas is the content, so it takes the sheet's width and
