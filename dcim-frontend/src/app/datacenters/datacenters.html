@@ -436,7 +436,7 @@
   #layoutSheet
   accessible-label="Floor layout"
   placement="bottom"
-  (close)="closeLayout()"
+  (close)="onLayoutClose($event)"
 >
   @defer (when layoutOpen()) {
     @if (layoutOpen()) {

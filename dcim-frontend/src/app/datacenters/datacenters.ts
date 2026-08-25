@@ -124,6 +124,20 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
     this.router.navigate(['/data-centers', viewSlug(dc.name), 'layout']);
   }
 
+  /**
+   * A sheet closing inside this one is not this one closing.
+   *
+   * `close` is composed and bubbling, so the room, row and rack forms the
+   * editor opens all reach this handler on their way up. The sheet itself knows
+   * better and stays open; it is this binding that would take the address away
+   * from under it and shut it after all.
+   */
+  onLayoutClose(event: Event): void {
+    const sheet = this.layoutSheetEl()?.nativeElement as unknown as EventTarget | undefined;
+    if (event.target !== sheet) return;
+    this.closeLayout();
+  }
+
   /** Back to the data center underneath, which is the address without the
    *  editor on top. */
   closeLayout(): void {
