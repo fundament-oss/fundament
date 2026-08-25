@@ -37,12 +37,16 @@
       dismiss-text="Close"
       (dismiss)="topologyOpen.set(false)"
     ></nldd-top-title-bar>
-    <nldd-simple-section width="full" padding-block="8">
-      <!-- Which hall is drawn. The list can show every location at once, a
-           drawing cannot: two data centers on one canvas are two islands, not a
-           floor. So the topology picks one, the way the shopping list does. -->
-      @if (sites().length > 1) {
-        <nldd-toolbar label="Topology location">
+    <!-- One bar for everything you can set about the drawing: which hall, which
+         states, which kinds. A container rather than a section, because this is
+         a strip of controls over a canvas and not a piece of the page. -->
+    <nldd-container padding-inline="16" padding-block="8">
+      <nldd-toolbar label="Topology">
+        <!-- Which hall is drawn. The list can show every location at once, a
+             drawing cannot: two data centers on one canvas are two islands, not
+             a floor. So the topology picks one, the way the shopping list
+             does. -->
+        @if (sites().length > 1) {
           <nldd-toolbar-item slot="start">
             <nldd-toggle-button-group type="radio" accessible-label="Data center">
               @for (dc of sites(); track dc.id) {
@@ -55,42 +59,59 @@
               }
             </nldd-toggle-button-group>
           </nldd-toolbar-item>
-        </nldd-toolbar>
-        <nldd-spacer size="8"></nldd-spacer>
-      }
-      <nldd-toolbar label="Topology filters">
+        }
+        <!-- The two filters as menus rather than as a row of buttons: six states
+             and thirteen kinds is a wall of choices next to a location you can
+             count on one hand, and the button says which one is on. -->
         <nldd-toolbar-item slot="start">
-          <nldd-toggle-button-group type="radio" accessible-label="Filter by status">
-            <nldd-toggle-button
-              value=""
-              text="All"
-              [attr.selected]="topologyStatusFilter() === '' ? '' : null"
-              (change)="onTopologyStatusToggle('', $any($event).detail.selected)"
-            ></nldd-toggle-button>
-            @for (s of CABLE_STATUSES; track s.value) {
-              <nldd-toggle-button
-                [attr.value]="s.value"
-                [attr.text]="s.label"
-                [attr.selected]="topologyStatusFilter() === s.value ? '' : null"
-                (change)="onTopologyStatusToggle(s.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item slot="end">
-          <nldd-dropdown>
-            <select
-              aria-label="Filter by type"
-              (change)="topologyTypeFilter.set($any($event.target).value)"
-            >
-              <option value="" [selected]="topologyTypeFilter() === ''">All types</option>
-              @for (t of CABLE_TYPES; track t) {
-                <option [value]="t" [selected]="topologyTypeFilter() === t">
-                  {{ CABLE_TYPE_LABEL[t] }}
-                </option>
+          <nldd-button
+            variant="secondary"
+            expandable
+            popup-type="menu"
+            [attr.text]="topologyStatusLabel()"
+          >
+            <nldd-menu slot="popup" accessible-label="Filter by status">
+              <nldd-menu-item
+                type="radio"
+                text="All states"
+                [attr.selected]="topologyStatusFilter() === '' ? '' : null"
+                (select)="topologyStatusFilter.set('')"
+              ></nldd-menu-item>
+              @for (s of CABLE_STATUSES; track s.value) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="s.label"
+                  [attr.selected]="topologyStatusFilter() === s.value ? '' : null"
+                  (select)="topologyStatusFilter.set(s.value)"
+                ></nldd-menu-item>
               }
-            </select>
-          </nldd-dropdown>
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            expandable
+            popup-type="menu"
+            [attr.text]="topologyTypeLabel()"
+          >
+            <nldd-menu slot="popup" accessible-label="Filter by type">
+              <nldd-menu-item
+                type="radio"
+                text="All types"
+                [attr.selected]="topologyTypeFilter() === '' ? '' : null"
+                (select)="topologyTypeFilter.set('')"
+              ></nldd-menu-item>
+              @for (t of CABLE_TYPES; track t) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="CABLE_TYPE_LABEL[t]"
+                  [attr.selected]="topologyTypeFilter() === t ? '' : null"
+                  (select)="topologyTypeFilter.set(t)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
         </nldd-toolbar-item>
         @if (topologyStatusFilter() || topologyTypeFilter()) {
           <nldd-toolbar-item slot="end">
@@ -102,7 +123,7 @@
           </nldd-toolbar-item>
         }
       </nldd-toolbar>
-    </nldd-simple-section>
+    </nldd-container>
     <!-- Full bleed: the canvas is the content, so it takes the sheet's width and
          whatever height is left under the filters. -->
     <app-patch-mapping-flow

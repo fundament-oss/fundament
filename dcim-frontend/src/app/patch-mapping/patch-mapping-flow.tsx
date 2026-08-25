@@ -666,7 +666,10 @@ function Legend() {
         Legend
       </div>
       <LegendRow dash={false} opacity={1} label="Connected" />
-      <LegendRow dash={true} opacity={1} label="Planned" />
+      {/* Not one status but three: to order, ordered and ready to install are
+          all cables that are not in the rack yet, and the drawing cannot tell
+          them apart. So the line says what it knows. */}
+      <LegendRow dash={true} opacity={1} label="Not in place yet" />
       <LegendRow dash={false} opacity={0.3} label="Decommissioned" />
       <div
         style={{
