@@ -217,6 +217,7 @@
     @if (!loading() && apiKeys().length === 0 && !error() && !isCreating()) {
       <nldd-box>
         <nldd-inline-dialog
+          class="card-body"
           icon="lock-closed"
           icon-color="secondary"
           text="No API keys found"
