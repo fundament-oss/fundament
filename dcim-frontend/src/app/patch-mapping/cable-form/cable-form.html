@@ -41,6 +41,27 @@
         </nldd-form-field>
       }
 
+      <!-- How far along the cable is, beside where it runs: both are true of
+           the whole run and neither belongs to one of its two ends. -->
+      <nldd-form-field label="Status">
+        <nldd-toggle-button-group type="radio" accessible-label="Status">
+          <nldd-toggle-button
+            value=""
+            text="Unspecified"
+            [attr.selected]="cableStatus() === '' ? '' : null"
+            (change)="onStatusToggle('', $any($event).detail.selected)"
+          ></nldd-toggle-button>
+          @for (st of CABLE_STATUSES; track st.value) {
+            <nldd-toggle-button
+              [attr.value]="st.value"
+              [attr.text]="st.label"
+              [attr.selected]="cableStatus() === st.value ? '' : null"
+              (change)="onStatusToggle(st.value, $any($event).detail.selected)"
+            ></nldd-toggle-button>
+          }
+        </nldd-toggle-button-group>
+      </nldd-form-field>
+
       <nldd-form-section text="A side">
         <nldd-form-field label="Device">
           <nldd-combo-box
@@ -110,18 +131,6 @@
           </nldd-form-field>
         }
       </nldd-form-section>
-
-      <nldd-toolbar label="Cable ends">
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="secondary"
-            text="Swap sides"
-            start-icon="arrow-up-arrow-down"
-            [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
-            (click)="swapSides()"
-          ></nldd-button>
-        </nldd-toolbar-item>
-      </nldd-toolbar>
 
       <nldd-form-section text="B side">
         <nldd-form-field label="Device">
@@ -201,6 +210,18 @@
         }
       </nldd-form-section>
 
+      <nldd-toolbar label="Cable ends">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Swap sides"
+            start-icon="arrow-up-arrow-down"
+            [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+            (click)="swapSides()"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+
       <nldd-form-section text="Cable">
         <!-- Label -->
         <nldd-form-field label="Label" optional optional-label="Optional">
@@ -233,23 +254,28 @@
           </nldd-combo-box>
         </nldd-form-field>
 
-        <nldd-form-field label="Status">
-          <nldd-toggle-button-group type="radio" accessible-label="Status">
-            <nldd-toggle-button
-              value=""
-              text="Unspecified"
-              [attr.selected]="cableStatus() === '' ? '' : null"
-              (change)="onStatusToggle('', $any($event).detail.selected)"
-            ></nldd-toggle-button>
-            @for (st of CABLE_STATUSES; track st.value) {
-              <nldd-toggle-button
-                [attr.value]="st.value"
-                [attr.text]="st.label"
-                [attr.selected]="cableStatus() === st.value ? '' : null"
-                (change)="onStatusToggle(st.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
+        <!-- Length -->
+        <nldd-form-field label="Length (m)" optional optional-label="Optional">
+          <nldd-number-field
+            id="cable-length"
+            [attr.value]="cableLength() ?? ''"
+            class="w-full"
+            min="0"
+            step="0.5"
+            (change)="
+              cableLength.set(
+                $any($event).detail?.value !== null && $any($event).detail?.value !== ''
+                  ? +$any($event).detail.value
+                  : undefined
+              )
+            "
+            (input)="
+              cableLength.set(
+                $any($event.target).value !== '' ? +$any($event.target).value : undefined
+              )
+            "
+            (keydown.enter)="onSave()"
+          ></nldd-number-field>
         </nldd-form-field>
 
         <!-- The colour with its name beside it: a colour on its own is not
@@ -282,30 +308,6 @@
               </nldd-toggle-button>
             }
           </nldd-toggle-button-group>
-        </nldd-form-field>
-
-        <!-- Length -->
-        <nldd-form-field label="Length (m)" optional optional-label="Optional">
-          <nldd-number-field
-            id="cable-length"
-            [attr.value]="cableLength() ?? ''"
-            class="w-full"
-            min="0"
-            step="0.5"
-            (change)="
-              cableLength.set(
-                $any($event).detail?.value !== null && $any($event).detail?.value !== ''
-                  ? +$any($event).detail.value
-                  : undefined
-              )
-            "
-            (input)="
-              cableLength.set(
-                $any($event.target).value !== '' ? +$any($event.target).value : undefined
-              )
-            "
-            (keydown.enter)="onSave()"
-          ></nldd-number-field>
         </nldd-form-field>
 
         <!-- Description -->
