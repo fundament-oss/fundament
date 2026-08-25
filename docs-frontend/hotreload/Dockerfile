@@ -1,9 +1,4 @@
-# Use a real Node.js (>= v24.15) for the Astro dev server; the tooling rejects
-# Bun's Node-compat version (24.3.0). Bun is still used as the package manager.
-FROM oven/bun:1.3.14-alpine AS bun
-
-FROM node:24.17-alpine
-COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+FROM oven/bun:1.4.0-alpine
 WORKDIR /app
 
 # Copy package files
@@ -21,7 +16,7 @@ COPY docs-frontend/ .
 # The script replaces each destination before copying, so it is safe to re-run
 # over a tree that already has them.
 COPY docs/ /tmp/docs/
-RUN node scripts/sync-docs.mjs --source /tmp/docs && rm -rf /tmp/docs
+RUN bun scripts/sync-docs.mjs --source /tmp/docs && rm -rf /tmp/docs
 
 # Disable Astro telemetry
 ENV ASTRO_TELEMETRY_DISABLED=1

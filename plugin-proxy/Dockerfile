@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 go build ./plugin-proxy/cmd/fun-plugin-proxy
 # origin so plugin console-ui views can load their <nldd-*> components). Runs
 # console-frontend's `build:plugin-ui` so the bundles stay identical to the ones
 # the Console serves at /plugin-ui/.
-FROM oven/bun:1.3-alpine AS sdk-builder
+FROM oven/bun:1.4-alpine AS sdk-builder
 WORKDIR /console-frontend
 COPY console-frontend/package.json console-frontend/bun.lock* ./
 RUN bun install --frozen-lockfile

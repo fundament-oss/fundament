@@ -1,7 +1,7 @@
 # Bun sdk-builder — bundles the plugin-sdk + NLDD Design System JS/CSS so
 # plugin-proxy can serve them at /plugins/sdk/v1/ during hotreload dev sessions
 # (matches the production Dockerfile's setup).
-FROM oven/bun:1.3-alpine AS sdk-builder
+FROM oven/bun:1.4-alpine AS sdk-builder
 WORKDIR /console-frontend
 COPY console-frontend/package.json console-frontend/bun.lock* ./
 RUN bun install --frozen-lockfile
