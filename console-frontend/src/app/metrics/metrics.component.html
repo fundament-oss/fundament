@@ -466,28 +466,21 @@
             >
               <nldd-table-row slot="header">
                 <nldd-text-cell text="Namespace"></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell text="CPU used"></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   text="CPU req / lim"
                   hide-below="lg"
                 ></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell text="Mem used"></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   text="Mem req / lim"
                   hide-below="lg"
                 ></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell text="Pods"></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   text="Net Rx"
                   hide-below="lg"
                 ></nldd-text-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   text="Net Tx"
                   hide-below="lg"
@@ -496,22 +489,18 @@
               @for (ns of filteredNamespaceUsage(); track ns.name) {
                 <nldd-table-row>
                   <nldd-text-cell [attr.text]="ns.name"></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     [attr.text]="(ns.cpu | number: '1.2-2') + ' cores'"
                   ></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     hide-below="lg"
                     [attr.text]="
                       (ns.cpuRequests | number: '1.1-1') + ' / ' + (ns.cpuLimits | number: '1.1-1')
                     "
                   ></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     [attr.text]="(ns.memory | number: '1.1-1') + ' GiB'"
                   ></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     hide-below="lg"
                     [attr.text]="
@@ -521,14 +510,11 @@
                       ' GiB'
                     "
                   ></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell [attr.text]="ns.pods"></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     hide-below="lg"
                     [attr.text]="(ns.networkReceiveMbs | number: '1.2-2') + ' MB/s'"
                   ></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     hide-below="lg"
                     [attr.text]="(ns.networkTransmitMbs | number: '1.2-2') + ' MB/s'"
