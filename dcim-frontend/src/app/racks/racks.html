@@ -175,45 +175,28 @@
             <h2 id="rack-history-heading">History</h2>
           </nldd-title>
           <nldd-spacer size="8"></nldd-spacer>
-          <ol class="flex flex-col gap-0" aria-label="Rack history">
+          <!-- The same list as the history on an asset: the track carries the
+               line between the events, so the rows need no dividers of their
+               own. -->
+          <nldd-list variant="box-tinted" dividers="never" accessible-label="Rack history">
             @for (
               event of currentRackHistory();
               track event.daysAgo + event.description;
-              let last = $last
+              let i = $index
             ) {
-              <li class="flex items-start gap-2.5">
-                <!-- Icon + vertical line -->
-                <div class="flex flex-col items-center shrink-0">
-                  <div
-                    class="flex h-7 w-7 items-center justify-center rounded-full"
-                    [class]="historyEventIconBg(event.type)"
-                    aria-hidden="true"
-                  >
-                    <nldd-icon
-                      [name]="historyEventIcon(event.type)"
-                      [style]="'width:14px;height:14px;' + historyEventIconColor(event.type)"
-                    >
-                    </nldd-icon>
-                  </div>
-                  @if (!last) {
-                    <div
-                      class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-3"
-                      aria-hidden="true"
-                    ></div>
-                  }
-                </div>
-                <!-- Content -->
-                <div class="pb-3 min-w-0 flex-1">
-                  <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
-                    {{ event.description }}
-                  </p>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {{ event.user }} · {{ formatDaysAgo(event.daysAgo) }}
-                  </p>
-                </div>
-              </li>
+              <nldd-list-item>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-timeline-track-cell
+                  [attr.position]="historyPosition(i)"
+                ></nldd-timeline-track-cell>
+                <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                <nldd-text-cell
+                  [attr.text]="event.description"
+                  [attr.supporting-text]="event.user + ' · ' + formatDaysAgo(event.daysAgo)"
+                ></nldd-text-cell>
+              </nldd-list-item>
             }
-          </ol>
+          </nldd-list>
         </section>
       }
       <nldd-spacer size="32"></nldd-spacer>

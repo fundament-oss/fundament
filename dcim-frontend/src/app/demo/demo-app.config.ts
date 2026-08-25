@@ -10,6 +10,8 @@ import { DCIM_TRANSPORT } from '../../connect/tokens';
 import createDemoTransport from './mock-transport';
 import DemoConfigService from './demo-config.service';
 import DemoAuthService from './demo-auth.service';
+import RackHistoryService from '../racks/rack-history.service';
+import DemoRackHistoryService from './demo-rack-history.service';
 
 const demoAppConfig: ApplicationConfig = {
   providers: [
@@ -20,6 +22,7 @@ const demoAppConfig: ApplicationConfig = {
     { provide: TitleStrategy, useClass: AppTitleStrategy },
     { provide: ConfigService, useClass: DemoConfigService },
     { provide: AuthService, useClass: DemoAuthService },
+    { provide: RackHistoryService, useClass: DemoRackHistoryService },
     { provide: DCIM_TRANSPORT, useFactory: createDemoTransport },
   ],
 };

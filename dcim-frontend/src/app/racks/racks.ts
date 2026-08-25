@@ -23,6 +23,7 @@ import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import DatacenterListService from '../datacenters/datacenter-list.service';
 import RackListService, { RackListItem } from './rack-list.service';
+import RackHistoryService from './rack-history.service';
 import RackNavComponent from './rack-nav';
 import InventoryApiService from '../inventory/inventory-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
@@ -74,13 +75,6 @@ interface RackNotes {
   comments: RackNoteComment[];
 }
 
-interface RackEvent {
-  user: string;
-  daysAgo: number;
-  description: string;
-  type: 'power' | 'hardware' | 'config' | 'alert';
-}
-
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
 const RACK_NOTES: Record<string, RackNotes> = {
@@ -128,60 +122,6 @@ const RACK_NOTES: Record<string, RackNotes> = {
   },
 };
 
-const RACK_HISTORY: Record<string, RackEvent[]> = {
-  'ams-01-r01': [
-    {
-      user: 'Ops Team',
-      daysAgo: 6,
-      description: 'Rack powered on after scheduled maintenance window',
-      type: 'power',
-    },
-    {
-      user: 'Monitoring',
-      daysAgo: 8,
-      description: 'server-02 went offline — PSU fault detected',
-      type: 'alert',
-    },
-    {
-      user: 'Jan de Vries',
-      daysAgo: 14,
-      description: 'patch-panel-01 installed in U3',
-      type: 'hardware',
-    },
-    {
-      user: 'Automation',
-      daysAgo: 27,
-      description: 'Config push: VLAN 42 updated on tor-switch-01',
-      type: 'config',
-    },
-    {
-      user: 'Sarah Müller',
-      daysAgo: 50,
-      description: 'Firmware update applied to server-01 (BIOS 2.8.0)',
-      type: 'hardware',
-    },
-  ],
-  'ams-01-r02': [
-    {
-      user: 'Monitoring',
-      daysAgo: 10,
-      description: 'NAS reported degraded RAID — drive rebuild initiated',
-      type: 'alert',
-    },
-    {
-      user: 'Tom Bakker',
-      daysAgo: 22,
-      description: 'Tape library firmware updated to v3.4.1',
-      type: 'hardware',
-    },
-    {
-      user: 'Ops Team',
-      daysAgo: 60,
-      description: 'UPS bypass test performed — all systems nominal',
-      type: 'power',
-    },
-  ],
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -267,6 +207,8 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   // ── Mutable rack list (per selected DC) ────────────────────────────────────
   private readonly rackList = inject(RackListService);
+
+  private readonly rackHistory = inject(RackHistoryService);
 
   /** The list this section shares with the menu and the device page. */
   readonly mutableRacks = this.rackList.racks;
@@ -657,8 +599,16 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   readonly currentRackHistory = computed(() => {
     const id = this.currentRackId();
-    return id ? (RACK_HISTORY[id] ?? []) : [];
+    return id ? this.rackHistory.historyFor(id) : [];
   });
+
+  /** Where an event sits in the line: see the same list on an asset. */
+  historyPosition(index: number): 'first' | 'between' | 'last' | 'only' {
+    const last = this.currentRackHistory().length - 1;
+    if (last === 0) return 'only';
+    if (index === 0) return 'first';
+    return index === last ? 'last' : 'between';
+  }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
@@ -886,35 +836,5 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     if (daysAgo < 7) return `${daysAgo} days ago`;
     const weeks = Math.floor(daysAgo / 7);
     return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-  };
-
-  readonly historyEventIcon = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'exclamation-triangle',
-      hardware: 'puzzle-piece',
-      config: 'gear',
-      alert: 'exclamation-triangle-filled',
-    };
-    return eventMap[type];
-  };
-
-  readonly historyEventIconColor = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'color: #f59e0b',
-      hardware: 'color: #3b82f6',
-      config: 'color: #6366f1',
-      alert: 'color: #ef4444',
-    };
-    return eventMap[type];
-  };
-
-  readonly historyEventIconBg = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'bg-amber-50 dark:bg-amber-950',
-      hardware: 'bg-blue-50 dark:bg-blue-950',
-      config: 'bg-indigo-50 dark:bg-indigo-950',
-      alert: 'bg-red-50 dark:bg-red-950',
-    };
-    return eventMap[type];
   };
 }
