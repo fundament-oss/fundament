@@ -15,7 +15,8 @@ data:
     {
       "catalogApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
       "registryApiUrl": "{{ $.Values.externalUrls.marketplaceRegistryApi }}",
-      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}"
+      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}",
+      "consoleUrl": "{{ $.Values.externalUrls.console }}"
     }
 
 ---

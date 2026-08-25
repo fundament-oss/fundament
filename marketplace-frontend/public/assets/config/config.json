@@ -1,5 +1,6 @@
 {
   "catalogApiUrl": "",
   "registryApiUrl": "",
-  "adminApiUrl": ""
+  "adminApiUrl": "",
+  "consoleUrl": ""
 }

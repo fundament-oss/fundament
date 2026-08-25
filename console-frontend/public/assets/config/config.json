@@ -3,5 +3,6 @@
   "organizationApiUrl": "",
   "kubeApiProxyUrl": "",
   "pluginProxyUrl": "",
-  "consoleDemoUrl": ""
+  "consoleDemoUrl": "",
+  "marketplaceUrl": ""
 }

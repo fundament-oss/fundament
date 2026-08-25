@@ -11,6 +11,12 @@ export interface AppConfiguration {
    * button is hidden when this is empty.
    */
   consoleDemoUrl?: string;
+  /**
+   * Public URL of the plugin marketplace. Optional: the marketplace is not
+   * deployed in every environment, and the plugin sheet's "View full details"
+   * button falls back to the console's own plugin page when this is empty.
+   */
+  marketplaceUrl?: string;
 }
 
 @Injectable({

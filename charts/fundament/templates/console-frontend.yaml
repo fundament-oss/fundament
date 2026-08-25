@@ -13,7 +13,8 @@ data:
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
       "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
-      "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}"
+      "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
+      "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}"
     }
 
 ---

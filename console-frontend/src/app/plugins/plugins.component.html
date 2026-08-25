@@ -291,13 +291,26 @@
             width="full"
           ></nldd-button>
         }
-        <nldd-button
-          [routerLink]="['/plugins', plugin.id]"
-          text="View full details"
-          start-icon="square-arrow-right-top"
-          variant="secondary"
-          width="full"
-        ></nldd-button>
+        <!-- The full listing (description, features, permissions) lives in the
+             marketplace; the console's own plugin page is the fallback for
+             environments where no marketplace is deployed. -->
+        @if (marketplacePluginUrl(plugin); as marketplaceUrl) {
+          <nldd-button
+            [attr.href]="marketplaceUrl"
+            text="View full details"
+            start-icon="square-arrow-right-top"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        } @else {
+          <nldd-button
+            [routerLink]="['/plugins', plugin.id]"
+            text="View full details"
+            start-icon="square-arrow-right-top"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        }
       </div>
     }
   </nldd-page>

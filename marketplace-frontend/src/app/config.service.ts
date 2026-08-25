@@ -7,6 +7,12 @@ export interface AppConfiguration {
   catalogApiUrl: string;
   registryApiUrl: string;
   adminApiUrl: string;
+  /**
+   * Public URL of the console. Optional: the storefront has no cluster context
+   * of its own, so a listing's "Install plugin" button hands the visitor over
+   * to the console. Empty means no console is reachable from this environment.
+   */
+  consoleUrl?: string;
 }
 
 @Injectable({

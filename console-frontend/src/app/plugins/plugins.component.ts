@@ -13,6 +13,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import { ConfigService } from '../config.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
@@ -148,6 +149,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Plugin currently shown in the details sheet (right-hand side panel opened
   // from a card's "Details" button); null while the sheet is closed.
   sheetPlugin = signal<PluginWithPresets | null>(null);
+
+  // Base URL of the marketplace, or '' when it is not deployed here.
+  private readonly marketplaceUrl = inject(ConfigService).getConfig().marketplaceUrl ?? '';
 
   private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
 
@@ -592,6 +596,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.installVersions.set(versions);
     this.installVersionsError.set(errored);
     this.showInstallModal.set(true);
+  }
+
+  // The marketplace listing for a plugin, or '' when no marketplace is
+  // configured and the sheet has to fall back to the console's own plugin page.
+  // Both apps list the same appstore.plugins rows, so the id in the URL is the
+  // same key on the other side.
+  marketplacePluginUrl(plugin: PluginWithPresets): string {
+    if (!this.marketplaceUrl) return '';
+    return `${this.marketplaceUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
   }
 
   openPluginDetails(plugin: PluginWithPresets): void {

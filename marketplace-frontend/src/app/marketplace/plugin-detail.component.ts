@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   inject,
   signal,
   OnInit,
@@ -7,6 +8,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ConfigService } from '../config.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
@@ -22,6 +24,8 @@ import connectErrorMessage from '../../connect/error';
   templateUrl: './plugin-detail.component.html',
 })
 export default class PluginDetailComponent implements OnInit {
+  private configService = inject(ConfigService);
+
   private titleService = inject(TitleService);
 
   private toastService = inject(ToastService);
@@ -35,6 +39,18 @@ export default class PluginDetailComponent implements OnInit {
   isLoading = signal(true);
 
   errorMessage = signal<string | null>(null);
+
+  // The console page for this plugin, or '' when no console is configured.
+  // Installing needs an organization and a cluster, which only the
+  // authenticated console has, so the storefront's "Install plugin" button
+  // hands the visitor over to it. Both apps list the same appstore.plugins
+  // rows, so the id in the URL is the same key on the other side.
+  consoleInstallUrl = computed(() => {
+    const plugin = this.plugin();
+    const consoleUrl = this.configService.getConfig().consoleUrl;
+    if (!plugin || !consoleUrl) return '';
+    return `${consoleUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
+  });
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -62,8 +78,9 @@ export default class PluginDetailComponent implements OnInit {
   install() {
     const plugin = this.plugin();
     if (!plugin) return;
-    // This public storefront has no organization/cluster context, so installing
-    // is a mock action. A real install happens from the authenticated console.
+    // Only reachable when no console is configured: this public storefront has
+    // no organization/cluster context of its own, so there is nowhere to
+    // install to.
     this.toastService.info(
       `Sign in to the console to install ${plugin.displayName} onto a cluster`,
     );

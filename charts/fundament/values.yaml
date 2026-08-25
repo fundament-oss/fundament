@@ -25,13 +25,13 @@ externalUrls:
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
-  console: "" # e.g., https://app.example.com
+  console: "" # e.g., https://app.example.com (empty makes the marketplace's "Install plugin" button explain the hand-off instead of linking to it)
   consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
-  marketplace: "" # e.g., https://marketplace.example.com
+  marketplace: "" # e.g., https://marketplace.example.com (empty points the console's "View full details" button at its own plugin page)
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog.example.com
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
