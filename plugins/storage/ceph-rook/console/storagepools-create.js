@@ -31,8 +31,10 @@ if (loadError) {
 } else if (availableDisks.length === 0) {
   content.innerHTML = `
     <p class="plugin-text">
-      No unclaimed, available disks found in the cluster. Disks must be discovered and
-      available (not already claimed by another StoragePool) before a StoragePool can be created.
+      No disks to offer. A disk appears here once it has been discovered, is not claimed by
+      another StoragePool, and the node's last probe found nothing on it. That probe can lag,
+      so a disk missing from this list is not necessarily in use — check
+      <code>kubectl get disks</code> for what each one reports.
     </p>
     <div class="plugin-actions">
       <button type="button" class="plugin-button-secondary" id="back-btn">Back to Storage Pools</button>
@@ -65,7 +67,9 @@ if (loadError) {
         ${diskPicker}
         <span class="plugin-hint">
           These disks become OSDs in the shared Ceph cluster. Disks spread over two or more
-          nodes enable host-level failure domains.
+          nodes enable host-level failure domains. Fundament can confirm only that a disk is
+          unclaimed, not that it is empty — a disk marked as carrying a filesystem holds data,
+          and one marked with nothing may still hold data the last node probe missed.
         </span>
       </div>
 

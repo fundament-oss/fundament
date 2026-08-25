@@ -141,6 +141,12 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
+  # Exactly the verbs the console pages issue, no more: nothing enforces this
+  # list at request time yet, so it is a declaration of intent, and a declaration
+  # that overstates is worse than none.
+  #
+  # No delete: the console offers no delete, because the guard for it would have
+  # to be server-side to mean anything. No update: the edit form merge-patches.
   allowedResources:
     - group: storage.fundament.io
       version: v1alpha1
@@ -149,14 +155,8 @@ spec:
     - group: storage.fundament.io
       version: v1alpha1
       resource: storagepools
-      verbs: [list, get, create, update, delete]
+      verbs: [list, get, create, patch]
     - group: ceph.rook.io
       version: v1
       resource: cephclusters
       verbs: [get]
-    # Deleting a pool cascades to its StorageClass, so the console checks for
-    # bound volumes before offering the button.
-    - group: ""
-      version: v1
-      resource: persistentvolumes
-      verbs: [list]

@@ -12,12 +12,16 @@ await fundament.init;
 
 const tbody = document.getElementById('rows');
 
-// A consumed disk stops reporting as empty, so `available` alone cannot tell
-// "in use by us" from "in use by something else". claimedBy can.
-function availabilityText(status) {
+// Deliberately never says "Available". `available` is a stale-able snapshot of
+// "empty and unformatted" — a disk running an OSD has been observed reporting
+// available=true — so it cannot back a claim that a disk is free to take. Only
+// two things here are facts: the claim this plugin recorded, and a filesystem
+// the node actually saw. An absent filesystem is absence of evidence, so it
+// stays unstated.
+function claimText(status) {
   if (status?.claimedBy) return `Claimed by ${status.claimedBy}`;
-  if (status?.available) return 'Available';
-  return 'In use';
+  if (status?.filesystem) return `No claim recorded — contains ${status.filesystem}`;
+  return 'No claim recorded';
 }
 
 try {
@@ -40,7 +44,7 @@ try {
             <td><a href="#" class="row-link">${escapeHtml(s.path ?? name)}</a></td>
             <td>${escapeHtml(humanizeBytes(s.sizeBytes ?? 0))}</td>
             <td>${escapeHtml(s.type ?? '')}</td>
-            <td>${escapeHtml(availabilityText(s))}</td>
+            <td>${escapeHtml(claimText(s))}</td>
           </tr>`;
       })
       .join('');

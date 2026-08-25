@@ -40,9 +40,27 @@ func TestParseDiscoveredDevices(t *testing.T) {
 	assert.Equal(t, v1alpha1.DiskTypeHDD, got[0].Type) // rotational=1
 	assert.True(t, got[0].Rotational)
 	assert.True(t, got[0].Available) // empty && no filesystem
+	assert.Empty(t, got[0].Filesystem)
 
 	assert.Equal(t, v1alpha1.DiskTypeSSD, got[1].Type) // rotational=0
 	assert.False(t, got[1].Available)                  // has filesystem
+	assert.Equal(t, "ext4", got[1].Filesystem)
+}
+
+// Available collapses "empty and unformatted" into one bit and has been observed
+// stale while a device was running an OSD. Filesystem is what survives that
+// collapse: when the node reports ceph_bluestore, the console can say so instead
+// of inferring from the boolean.
+func TestParseDiscoveredDevicesPublishesCephBluestore(t *testing.T) {
+	t.Parallel()
+	const devices = `[{"name":"sdb","type":"disk","size":100,"empty":false,"filesystem":"ceph_bluestore"}]`
+
+	got, err := ParseDiscoveredDevices("node-1", devices, false)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	assert.Equal(t, "ceph_bluestore", got[0].Filesystem)
+	assert.False(t, got[0].Available)
 }
 
 // Why StablePath exists: a kernel rename must move neither the CephCluster's

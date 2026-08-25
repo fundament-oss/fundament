@@ -92,7 +92,10 @@ func TestDefinition(t *testing.T) {
 			}
 		}
 		require.NotNil(t, found, "allowedResources must contain storagepools")
-		assert.ElementsMatch(t, []string{"list", "get", "create", "update", "delete"}, found.Verbs)
+		// patch, not update: the edit form merge-patches. No delete: the console
+		// offers none, since the bound-volume guard it would need can only be
+		// meaningful server-side.
+		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
 	})
 
 	t.Run("allowedResources/disks", func(t *testing.T) {
@@ -154,6 +157,26 @@ func TestDefinition(t *testing.T) {
 				"console/%s is not referenced from customComponents, so the host can never route to it", entry.Name())
 		}
 	})
+}
+
+// The console deliberately offers no way to delete a StoragePool. The guard
+// against deleting one whose StorageClass still has volumes bound ran in the
+// browser, while the API accepted the same delete from kubectl, Flux or any
+// other client — a guard in one client that reads as a platform guarantee. The
+// button belongs back only once that check is server-side, so this test fails
+// if it returns before then.
+func TestConsoleOffersNoStoragePoolDelete(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{
+		"console/storagepools-detail.html",
+		"console/storagepools-detail.js",
+		"console/storagepools-list.js",
+	} {
+		src, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.NotContains(t, string(src), "k8s.delete", "%s must not delete a StoragePool", path)
+		assert.NotContains(t, string(src), "delete-btn", "%s must not offer a delete button", path)
+	}
 }
 
 // Run only registers /console/ for a ConsoleProvider; without it the embedded

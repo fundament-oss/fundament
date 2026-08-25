@@ -36,9 +36,14 @@ if (!ctx.resource?.name) {
 
     // Text, not a link: plugin:navigate resolves within the current kind, so a
     // hop to a StoragePool would route to disks/<poolname>.
+    //
+    // "Reported empty" rather than "Available": the flag is a node probe that
+    // has been observed stale for hours while the device ran an OSD, so it is
+    // reported as the observation it is and never as permission to take the disk.
     const allocation = [
-      ['Available', s.available ? 'yes' : 'no'],
-      ['Claimed by', s.claimedBy || '—'],
+      ['Claimed by', s.claimedBy || 'not claimed by any StoragePool'],
+      ['Filesystem found', s.filesystem || 'none reported by the last probe'],
+      ['Reported empty', s.available ? 'yes — last node probe found nothing on it' : 'no'],
     ];
 
     content.innerHTML = `
@@ -47,8 +52,10 @@ if (!ctx.resource?.name) {
       <h2 class="plugin-heading">Allocation</h2>
       ${renderDefList(allocation)}
       <p class="plugin-text">
-        A disk stops reporting as available once Ceph consumes it, so “Claimed by” is what
-        tells you whether that was this plugin.
+        “Claimed by” is the only line Fundament controls, and it says whether this plugin
+        handed the disk to a pool. The two below it are the node's last probe: a filesystem
+        it names is really there, but the probe can lag, so “Reported empty: yes” is not a
+        guarantee the disk is unused. Confirm on the node before repurposing or pulling it.
       </p>
     `;
   } catch (err) {

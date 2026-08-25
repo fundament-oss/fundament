@@ -30,7 +30,13 @@ export function renderDiskPicker(disks, selectedNames = []) {
         .map((disk) => {
           const s = disk.status ?? {};
           const name = disk.metadata?.name ?? '';
-          const label = `${s.path ?? name} — ${humanizeBytes(s.sizeBytes ?? 0)}`;
+          // A filesystem the node named is really on the device, so say so here
+          // rather than only on the detail page — this is the screen where the
+          // disk gets taken. Marked, not filtered: a disk carrying BlueStore
+          // from a dead cluster is exactly the one an operator needs to reuse,
+          // and hiding it would leave no console path to reclaim it.
+          const carries = s.filesystem ? ` — contains ${s.filesystem}` : '';
+          const label = `${s.path ?? name} — ${humanizeBytes(s.sizeBytes ?? 0)}${carries}`;
           const checked = selected.has(name) ? ' checked' : '';
           return `
             <label class="plugin-checkbox">
