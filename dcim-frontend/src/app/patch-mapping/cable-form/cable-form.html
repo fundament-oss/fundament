@@ -170,13 +170,17 @@
              end in, see it should have been the other, and the way out is under
              your eyes rather than at the foot of the form. With both ends filled
              there is nowhere to move to without displacing, so the two change
-             places and nothing is lost. -->
+             places and nothing is lost.
+             Gone rather than switched off while there is nothing to move: a
+             button you cannot press does not say why. Hidden rather than left
+             out with an @if, for the reason under the data center field, and
+             the form's rhythm skips a hidden child so it leaves no gap. -->
         <nldd-button
           variant="secondary"
           size="sm"
           text="Move to B side"
           start-icon="arrow-down"
-          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+          [attr.hidden]="!aDeviceId() && !bDeviceId() ? '' : null"
           (click)="swapSides()"
         ></nldd-button>
       </nldd-form-section>
@@ -262,7 +266,7 @@
           size="sm"
           text="Move to A side"
           start-icon="arrow-up"
-          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+          [attr.hidden]="!aDeviceId() && !bDeviceId() ? '' : null"
           (click)="swapSides()"
         ></nldd-button>
       </nldd-form-section>
