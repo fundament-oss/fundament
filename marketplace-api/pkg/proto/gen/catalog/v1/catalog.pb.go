@@ -720,13 +720,12 @@ func (b0 PublishedVersion_builder) Build() *PublishedVersion {
 }
 
 type ListPluginsRequest struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Query        string                 `protobuf:"bytes,10,opt,name=query"`
-	xxx_hidden_CategoryId   string                 `protobuf:"bytes,20,opt,name=category_id,json=categoryId"`
-	xxx_hidden_FeaturedOnly bool                   `protobuf:"varint,30,opt,name=featured_only,json=featuredOnly"`
-	xxx_hidden_Sort         PluginSort             `protobuf:"varint,40,opt,name=sort,enum=catalog.v1.PluginSort"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Query      string                 `protobuf:"bytes,10,opt,name=query"`
+	xxx_hidden_CategoryId string                 `protobuf:"bytes,20,opt,name=category_id,json=categoryId"`
+	xxx_hidden_Sort       PluginSort             `protobuf:"varint,30,opt,name=sort,enum=catalog.v1.PluginSort"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ListPluginsRequest) Reset() {
@@ -768,13 +767,6 @@ func (x *ListPluginsRequest) GetCategoryId() string {
 	return ""
 }
 
-func (x *ListPluginsRequest) GetFeaturedOnly() bool {
-	if x != nil {
-		return x.xxx_hidden_FeaturedOnly
-	}
-	return false
-}
-
 func (x *ListPluginsRequest) GetSort() PluginSort {
 	if x != nil {
 		return x.xxx_hidden_Sort
@@ -790,10 +782,6 @@ func (x *ListPluginsRequest) SetCategoryId(v string) {
 	x.xxx_hidden_CategoryId = v
 }
 
-func (x *ListPluginsRequest) SetFeaturedOnly(v bool) {
-	x.xxx_hidden_FeaturedOnly = v
-}
-
 func (x *ListPluginsRequest) SetSort(v PluginSort) {
 	x.xxx_hidden_Sort = v
 }
@@ -802,10 +790,9 @@ type ListPluginsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	// Free text over display name, short description, publisher, tags and description.
-	Query        string
-	CategoryId   string
-	FeaturedOnly bool
-	Sort         PluginSort
+	Query      string
+	CategoryId string
+	Sort       PluginSort
 }
 
 func (b0 ListPluginsRequest_builder) Build() *ListPluginsRequest {
@@ -814,7 +801,6 @@ func (b0 ListPluginsRequest_builder) Build() *ListPluginsRequest {
 	_, _ = b, x
 	x.xxx_hidden_Query = b.Query
 	x.xxx_hidden_CategoryId = b.CategoryId
-	x.xxx_hidden_FeaturedOnly = b.FeaturedOnly
 	x.xxx_hidden_Sort = b.Sort
 	return m0
 }
@@ -1372,14 +1358,13 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\aversion\x18\x14 \x01(\tR\aversion\x128\n" +
 	"\tpublished\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12'\n" +
 	"\x0fdefinition_hash\x18( \x01(\tR\x0edefinitionHash\x12#\n" +
-	"\rrelease_notes\x182 \x01(\tR\freleaseNotes\"\xbd\x01\n" +
+	"\rrelease_notes\x182 \x01(\tR\freleaseNotes\"\x98\x01\n" +
 	"\x12ListPluginsRequest\x12\x1e\n" +
 	"\x05query\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12,\n" +
 	"\vcategory_id\x18\x14 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\n" +
-	"categoryId\x12#\n" +
-	"\rfeatured_only\x18\x1e \x01(\bR\ffeaturedOnly\x124\n" +
-	"\x04sort\x18( \x01(\x0e2\x16.catalog.v1.PluginSortB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04sort\"J\n" +
+	"categoryId\x124\n" +
+	"\x04sort\x18\x1e \x01(\x0e2\x16.catalog.v1.PluginSortB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04sort\"J\n" +
 	"\x13ListPluginsResponse\x123\n" +
 	"\aplugins\x18\n" +
 	" \x03(\v2\x19.catalog.v1.PluginSummaryR\aplugins\"9\n" +

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"log/slog"
@@ -9,14 +10,18 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
+
+	"github.com/fundament-oss/fundament/common/dbversion"
+	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/marketplace-api/pkg/catalog"
 )
 
 // No JWT_SECRET: the storefront is unauthenticated by design (FUN-20).
 type config struct {
-	ListenAddr string     `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel   slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	Database           psqldb.Config
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
 	// Served on /version so callers outside the cluster can tell which release
 	// is answering; the previous one keeps serving until Flux reconciles.
 	DeploymentVersion string `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
@@ -44,27 +49,55 @@ func run() error {
 		"log_level", cfg.LogLevel.String(),
 	)
 
-	// Health endpoints only for now. The database connection and the catalog.v1
-	// handlers land with the service implementation; until then this deploys
-	// green and reserves the image, chart and route.
-	mux := http.NewServeMux()
-	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
+	ctx := context.Background()
+
+	db, err := catalog.NewDB(ctx, logger, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("failed to setup database: %w", err)
+	}
+
+	defer db.Close()
+
+	dbversion.MustAssertLatestVersion(ctx, logger, db.Pool)
+
+	server := catalog.New(logger, db, cfg.CORSAllowedOrigins)
+
+	// Health endpoints are registered on an outer mux so they bypass CORS
+	// and Connect interceptors.
+	outerMux := http.NewServeMux()
+	outerMux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+	outerMux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(cfg.DeploymentVersion))
 	})
+	outerMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		if err := db.Pool.Ping(ctx); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database: " + err.Error()))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	outerMux.Handle("/", server.Handler())
+
+	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.
+	// Replaces x/net/http2/h2c, whose Upgrade: handshake nothing here uses.
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetUnencryptedHTTP2(true)
 
 	httpServer := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		Handler:           outerMux,
+		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

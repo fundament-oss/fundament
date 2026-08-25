@@ -106,8 +106,7 @@ message ListPluginsRequest {
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string = {uuid: true}
   ];
-  bool featured_only = 30;
-  PluginSort sort = 40 [(buf.validate.field).enum = {defined_only: true}];
+  PluginSort sort = 30 [(buf.validate.field).enum = {defined_only: true}];
 }
 
 message ListPluginsResponse {
