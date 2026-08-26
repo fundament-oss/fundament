@@ -60,17 +60,9 @@ spec:
               value: /etc/gardener/kubeconfig
             {{- end }}
             - name: OPENFGA_API_URL
-              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
-            - name: OPENFGA_STORE_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: store-id
-            - name: OPENFGA_AUTHORIZATION_MODEL_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: authorization-model-id
+              value: http://openfga:{{ $.Values.openfga.apiPort }}
+            - name: OPENFGA_STORE_NAME
+              value: {{ include "fundament.openfga.storeName" $ | quote }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}

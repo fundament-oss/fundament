@@ -16,6 +16,7 @@ import (
 
 	db "github.com/fundament-oss/fundament/authz-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/authz-worker/pkg/worker/handler"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
@@ -50,7 +51,7 @@ type Worker struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	handler *handler.Handler
-	fga     *client.OpenFgaClient
+	store   *authz.StoreResolver
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -66,7 +67,7 @@ type Worker struct {
 }
 
 // New creates a new authz worker with sensible defaults.
-func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logger, cfg Config) *Worker {
+func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger, cfg Config) *Worker {
 	cfg = applyDefaults(cfg)
 
 	hostname, _ := os.Hostname()
@@ -75,8 +76,8 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 	w := &Worker{
 		pool:    pool,
 		queries: db.New(pool),
-		handler: handler.New(fgaClient, logger),
-		fga:     fgaClient,
+		handler: handler.New(fgaClient, store, logger),
+		store:   store,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
@@ -179,14 +180,13 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 }
 
-// verifyStore gates a drain on the store existing: OpenFGA's Write does not
-// check store existence, so writes to a wiped store falsely succeed. GetStore
-// bypasses the typesystem cache and sees the wipe.
+// verifyStore gates a drain on the store existing, and picks up its id if a
+// reset replaced it.
 func (w *Worker) verifyStore(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
 	defer cancel()
 
-	if _, err := w.fga.GetStore(checkCtx).Execute(); err != nil {
+	if _, err := w.store.Resolve(checkCtx); err != nil {
 		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
 	}
 

@@ -57,6 +57,8 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
+  # Wipes and reseeds both the fundament database and the OpenFGA store on every
+  # deploy. Local development and PR previews only.
   reset: false
   insertTestData: false
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
@@ -204,6 +206,7 @@ authzWorker:
 openfga:
   enabled: true
   image: openfga/openfga:v1.18.0
+  apiPort: 8080
   replicas: 1
   playground:
     enabled: false

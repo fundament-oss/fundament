@@ -11,30 +11,35 @@ import (
 )
 
 // Config holds configuration for the OpenFGA client.
+//
+// The store is addressed by name: ids are server-generated and change when the
+// store is reset. No authorization model is pinned, so each request evaluates
+// the latest one.
 type Config struct {
-	APIURL               string `env:"OPENFGA_API_URL,required,notEmpty"`
-	StoreID              string `env:"OPENFGA_STORE_ID,required,notEmpty"`
-	AuthorizationModelID string `env:"OPENFGA_AUTHORIZATION_MODEL_ID"`
+	APIURL    string `env:"OPENFGA_API_URL,required,notEmpty"`
+	StoreName string `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
 }
 
 // Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.
 // See https://openid.github.io/authzen/ for the AuthZEN specification.
 type Client struct {
-	fga *client.OpenFgaClient
+	fga   *client.OpenFgaClient
+	store *StoreResolver
 }
 
 // New creates a new authorization client.
 func New(cfg Config) (*Client, error) {
 	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
-		ApiUrl:               cfg.APIURL,
-		StoreId:              cfg.StoreID,
-		AuthorizationModelId: cfg.AuthorizationModelID,
+		ApiUrl: cfg.APIURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create OpenFGA client: %w", err)
 	}
 
-	return &Client{fga: fgaClient}, nil
+	return &Client{
+		fga:   fgaClient,
+		store: NewStoreResolver(fgaClient, cfg.StoreName),
+	}, nil
 }
 
 // CanViewCluster is a convenience wrapper around Evaluate for the frequently
@@ -59,8 +64,7 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 
 // Healthy checks that the OpenFGA store is reachable.
 func (c *Client) Healthy(ctx context.Context) error {
-	_, err := c.fga.GetStore(ctx).Execute()
-	if err != nil {
+	if _, err := c.store.Resolve(ctx); err != nil {
 		return fmt.Errorf("openfga: %w", err)
 	}
 	return nil
@@ -109,7 +113,17 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 		checkReq.Context = &checkContext
 	}
 
-	resp, err := c.fga.Check(ctx).Body(checkReq).Execute()
+	var resp *client.ClientCheckResponse
+
+	err := c.store.Do(ctx, func(storeID string) error {
+		var checkErr error
+		resp, checkErr = c.fga.Check(ctx).
+			Body(checkReq).
+			Options(client.ClientCheckOptions{StoreId: &storeID}).
+			Execute()
+
+		return checkErr //nolint:wrapcheck // Do inspects the raw SDK error
+	})
 	if err != nil {
 		return Decision{Decision: false}, fmt.Errorf("check: %w", err)
 	}

@@ -49,17 +49,9 @@ spec:
               value: /etc/plugin-sandbox/kubeconfig
             {{- end }}
             - name: OPENFGA_API_URL
-              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
-            - name: OPENFGA_STORE_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: store-id
-            - name: OPENFGA_AUTHORIZATION_MODEL_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: authorization-model-id
+              value: http://openfga:{{ $.Values.openfga.apiPort }}
+            - name: OPENFGA_STORE_NAME
+              value: {{ include "fundament.openfga.storeName" $ | quote }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
