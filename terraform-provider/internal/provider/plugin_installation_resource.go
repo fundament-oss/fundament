@@ -36,12 +36,13 @@ type PluginInstallationResource struct {
 }
 
 type PluginInstallationResourceModel struct {
-	ID             types.String `tfsdk:"id"`
-	ClusterID      types.String `tfsdk:"cluster_id"`
-	PluginName     types.String `tfsdk:"plugin_name"`
-	PluginVersion  types.String `tfsdk:"plugin_version"`
-	DefinitionHash types.String `tfsdk:"definition_hash"`
-	Phase          types.String `tfsdk:"phase"`
+	ID               types.String `tfsdk:"id"`
+	ClusterID        types.String `tfsdk:"cluster_id"`
+	OrganizationName types.String `tfsdk:"organization_name"`
+	PluginName       types.String `tfsdk:"plugin_name"`
+	PluginVersion    types.String `tfsdk:"plugin_version"`
+	DefinitionHash   types.String `tfsdk:"definition_hash"`
+	Phase            types.String `tfsdk:"phase"`
 }
 
 type pluginInstallationMetadata struct {
@@ -53,9 +54,10 @@ type pluginInstallationMetadata struct {
 // resolves the definition by DefinitionHash and materialises the plugin SA's
 // RBAC from it.
 type pluginDefinitionRef struct {
-	PluginName     string `json:"pluginName"`
-	PluginVersion  string `json:"pluginVersion"`
-	DefinitionHash string `json:"definitionHash"`
+	OrganizationName string `json:"organizationName"`
+	PluginName       string `json:"pluginName"`
+	PluginVersion    string `json:"pluginVersion"`
+	DefinitionHash   string `json:"definitionHash"`
 }
 
 type pluginInstallationSpec struct {
@@ -96,6 +98,15 @@ type pluginInstallationCreatePayload struct {
 	Spec       pluginInstallationSpec     `json:"spec"`
 }
 
+// installationName is the CR's metadata.name: a plugin's identity is the pair
+// (organization, plugin), and the apiserver enforces that pair's uniqueness
+// through the name. The separator is a double dash and neither half may contain
+// one, so the pair cannot be confused with a different pair spelling the same
+// name.
+func installationName(organizationName, pluginName string) string {
+	return organizationName + "--" + pluginName
+}
+
 func NewPluginInstallationResource() resource.Resource {
 	return &PluginInstallationResource{}
 }
@@ -111,7 +122,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 			"Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Composite identifier in the form {cluster_id}/{plugin_name}.",
+				Description: "Composite identifier in the form {cluster_id}/{organization_name}-{plugin_name}.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -124,8 +135,15 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"organization_name": schema.StringAttribute{
+				Description: "The name of the organization that publishes the plugin. With plugin_name it forms the installation's metadata.name (\"<organization_name>--<plugin_name>\"). Changing this value forces a replacement. On import, this is first guessed by splitting metadata.name on its first dash, then immediately corrected by the following Read from the CR's authoritative definitionRef — so an organization name containing a dash still resolves correctly.",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"plugin_name": schema.StringAttribute{
-				Description: "The name of the plugin to install. Must match a plugin in the Fundament catalog. Used as the installation's metadata.name and as definitionRef.pluginName. Changing this value forces a replacement.",
+				Description: "The name of the plugin to install. Must match a plugin published by organization_name in the Fundament catalog. Combined with organization_name to form the installation's metadata.name; used alone as definitionRef.pluginName. Changing this value forces a replacement.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -201,9 +219,11 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	clusterID := plan.ClusterID.ValueString()
+	organizationName := plan.OrganizationName.ValueString()
 	pluginName := plan.PluginName.ValueString()
 	pluginVersion := plan.PluginVersion.ValueString()
 	definitionHash := plan.DefinitionHash.ValueString()
+	name := installationName(organizationName, pluginName)
 
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
@@ -212,7 +232,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	// empty), pin the latest published definition resolved from organization-api.
 	// Version and hash are pinned together as a matched pair.
 	if pluginVersion == "" || pluginVersion == unpinnedPluginVersion {
-		version, hash, err := r.resolveLatestDefinition(ctx, pluginName)
+		version, hash, err := r.resolveLatestDefinition(ctx, organizationName, pluginName)
 		if err != nil {
 			resp.Diagnostics.AddError("Unable to Resolve Plugin Definition", err.Error())
 			return
@@ -236,12 +256,13 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	crd := pluginInstallationCreatePayload{
 		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
-		Metadata:   pluginInstallationMetadata{Name: pluginName},
+		Metadata:   pluginInstallationMetadata{Name: name},
 		Spec: pluginInstallationSpec{
 			DefinitionRef: pluginDefinitionRef{
-				PluginName:     pluginName,
-				PluginVersion:  pluginVersion,
-				DefinitionHash: definitionHash,
+				OrganizationName: organizationName,
+				PluginName:       pluginName,
+				PluginVersion:    pluginVersion,
+				DefinitionHash:   definitionHash,
 			},
 		},
 	}
@@ -270,7 +291,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	if httpResp.StatusCode == http.StatusConflict {
 		conflictBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		tflog.Debug(ctx, "Plugin installation POST returned 409, checking existing resource", map[string]any{"body": string(conflictBody)})
-		existingCRD, err := r.fetchCRD(ctx, clusterID, pluginName)
+		existingCRD, err := r.fetchCRD(ctx, clusterID, name)
 		if err != nil {
 			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
 			return
@@ -282,14 +303,14 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
 					"(existing: version=%q hash=%q; planned: version=%q hash=%q). "+
 					"Import it with `terraform import fundament_plugin_installation.<name> %s/%s` or delete it manually.",
-					pluginName, clusterID,
+					name, clusterID,
 					existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
 					pluginVersion, definitionHash,
-					clusterID, pluginName),
+					clusterID, name),
 			)
 			return
 		}
-		tflog.Info(ctx, "Plugin installation already exists with matching spec, treating as idempotent success", map[string]any{"plugin_name": pluginName})
+		tflog.Info(ctx, "Plugin installation already exists with matching spec, treating as idempotent success", map[string]any{"name": name})
 	} else if httpResp.StatusCode != http.StatusCreated && httpResp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError(
@@ -302,16 +323,16 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	// Persist partial state now: the CRD exists on the server, so if the wait
 	// below fails we must still track the resource — otherwise Terraform treats
 	// Create as failed and orphans the CRD (the next apply hits the 409 path).
-	plan.ID = types.StringValue(clusterID + "/" + pluginName)
+	plan.ID = types.StringValue(clusterID + "/" + name)
 	plan.Phase = types.StringNull()
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"plugin_name": pluginName})
+	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"name": name})
 
-	phase, err := r.waitForPluginRunning(ctx, clusterID, pluginName)
+	phase, err := r.waitForPluginRunning(ctx, clusterID, name)
 	if err != nil {
 		resp.Diagnostics.AddError("Plugin Installation Did Not Reach Running", err.Error())
 		return
@@ -323,26 +344,26 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 }
 
 // resolveLatestDefinition returns the latest published version and definition
-// hash for a catalog plugin, resolved via organization-api ListPlugins (auth
-// headers are added by the client transport). It errors when the plugin is not
-// in the catalog or has no published definition to pin.
-func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, pluginName string) (string, string, error) {
-	listReq := organizationv1.ListPluginsRequest_builder{}.Build()
-	listResp, err := r.client.PluginService.ListPlugins(ctx, listReq)
+// hash for a catalog plugin published by organizationName, resolved via
+// organization-api ListPlugins (auth headers are added by the client
+// transport). It errors when the (organization, plugin) pair is not in the
+// catalog or has no published definition to pin.
+func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, organizationName, pluginName string) (string, string, error) {
+	listResp, err := r.client.PluginService.ListPlugins(ctx, organizationv1.ListPluginsRequest_builder{}.Build())
 	if err != nil {
 		return "", "", fmt.Errorf("list plugins: %w", err)
 	}
 	for _, p := range listResp.GetPlugins() {
-		if p.GetName() != pluginName {
+		if p.GetName() != pluginName || p.GetOrganizationName() != organizationName {
 			continue
 		}
 		version, hash := p.GetPluginVersion(), p.GetDefinitionHash()
 		if version == "" || hash == "" {
-			return "", "", fmt.Errorf("plugin %q has no published definition to install", pluginName)
+			return "", "", fmt.Errorf("plugin %q from organization %q has no published definition to install", pluginName, organizationName)
 		}
 		return version, hash, nil
 	}
-	return "", "", fmt.Errorf("plugin %q not found in the Fundament catalog", pluginName)
+	return "", "", fmt.Errorf("plugin %q from organization %q not found in the Fundament catalog", pluginName, organizationName)
 }
 
 func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -364,7 +385,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	}
 
 	clusterID := state.ClusterID.ValueString()
-	pluginName := state.PluginName.ValueString()
+	name := installationName(state.OrganizationName.ValueString(), state.PluginName.ValueString())
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
@@ -398,7 +419,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	getURL := r.resourceURL(clusterID, pluginName)
+	getURL := r.resourceURL(clusterID, name)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
@@ -413,7 +434,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode == http.StatusNotFound {
-		tflog.Info(ctx, "Plugin installation not found, removing from state", map[string]any{"plugin_name": pluginName})
+		tflog.Info(ctx, "Plugin installation not found, removing from state", map[string]any{"name": name})
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -428,6 +449,21 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	if err := json.NewDecoder(httpResp.Body).Decode(&crd); err != nil {
 		resp.Diagnostics.AddError("Unable to Parse Plugin Installation Response", err.Error())
 		return
+	}
+
+	// definitionRef carries the authoritative (organization, plugin) pair, so
+	// always take it from here rather than trusting the caller's state — in
+	// particular, ImportState's dash-split of metadata.name is only a guess
+	// when the organization name itself contains a dash, and this corrects it.
+	if crd.Spec.DefinitionRef.OrganizationName != "" {
+		state.OrganizationName = types.StringValue(crd.Spec.DefinitionRef.OrganizationName)
+	} else {
+		state.OrganizationName = types.StringNull()
+	}
+	if crd.Spec.DefinitionRef.PluginName != "" {
+		state.PluginName = types.StringValue(crd.Spec.DefinitionRef.PluginName)
+	} else {
+		state.PluginName = types.StringNull()
 	}
 
 	if crd.Spec.DefinitionRef.PluginVersion != "" {
@@ -473,7 +509,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	}
 
 	clusterID := state.ClusterID.ValueString()
-	pluginName := state.PluginName.ValueString()
+	name := installationName(state.OrganizationName.ValueString(), state.PluginName.ValueString())
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -506,7 +542,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	deleteURL := r.resourceURL(clusterID, pluginName)
+	deleteURL := r.resourceURL(clusterID, name)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Build Request", err.Error())
@@ -522,7 +558,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 
 	switch httpResp.StatusCode {
 	case http.StatusOK, http.StatusAccepted, http.StatusNoContent, http.StatusNotFound:
-		tflog.Info(ctx, "Deleted plugin installation", map[string]any{"plugin_name": pluginName})
+		tflog.Info(ctx, "Deleted plugin installation", map[string]any{"name": name})
 	default:
 		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError("Unable to Delete Plugin Installation", fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(respBody)))
@@ -530,22 +566,35 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *PluginInstallationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	clusterID, pluginName, err := parseImportID(req.ID)
+	clusterID, name, err := parseImportID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Import ID", err.Error())
 		return
 	}
 
+	// The installation name is "<organization_name>--<plugin_name>". Neither half
+	// may contain a double dash, so this split is exact rather than a guess — the
+	// Read that Terraform runs after import still overwrites both fields from the
+	// CR's authoritative definitionRef.
+	organizationName, pluginName, ok := strings.Cut(name, "--")
+	if !ok {
+		resp.Diagnostics.AddError("Invalid Import ID",
+			fmt.Sprintf("installation name must be \"<organization_name>--<plugin_name>\", got: %q", name))
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), clusterID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_name"), organizationName)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("plugin_name"), pluginName)...)
 }
 
-// parseImportID splits a composite import ID of the form {cluster_id}/{plugin_name}.
-func parseImportID(id string) (clusterID, pluginName string, err error) {
+// parseImportID splits a composite import ID of the form
+// {cluster_id}/{organization_name}-{plugin_name}.
+func parseImportID(id string) (clusterID, name string, err error) {
 	parts := strings.SplitN(id, "/", 2)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("import ID must be in the form {cluster_id}/{plugin_name}, got: %q", id)
+		return "", "", fmt.Errorf("import ID must be in the form {cluster_id}/{organization_name}-{plugin_name}, got: %q", id)
 	}
 	return parts[0], parts[1], nil
 }
@@ -555,13 +604,14 @@ func (r *PluginInstallationResource) listURL(clusterID string) string {
 		strings.TrimRight(r.client.KubeProxyURL, "/"), url.PathEscape(clusterID), pluginInstallationAPIVersion)
 }
 
-func (r *PluginInstallationResource) resourceURL(clusterID, pluginName string) string {
-	return r.listURL(clusterID) + "/" + url.PathEscape(pluginName)
+func (r *PluginInstallationResource) resourceURL(clusterID, name string) string {
+	return r.listURL(clusterID) + "/" + url.PathEscape(name)
 }
 
 // fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
-func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pluginName string) (*pluginInstallationCRD, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, pluginName), nil)
+// name is the installation's metadata.name ("<organization_name>--<plugin_name>").
+func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, name string) (*pluginInstallationCRD, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, name), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -602,17 +652,17 @@ func classifyPluginPhase(phase string) (done bool, terminal bool) {
 // waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
 // Returns the final phase string on success, or an error.
 // Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
-func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, pluginName string) (string, error) {
+func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, name string) (string, error) {
 	const maxConsecutiveErrors = 5
 
 	lastPhase := ""
 
 	err := pollWithBackoff(ctx, 10*time.Second, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
-		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
+		crdState, err := r.fetchCRD(ctx, clusterID, name)
 		if err != nil {
 			tflog.Debug(ctx, "Transient error polling plugin installation, retrying", map[string]any{
-				"plugin_name": pluginName,
-				"error":       err.Error(),
+				"name":  name,
+				"error": err.Error(),
 			})
 			return false, false, fmt.Errorf("polling plugin installation status: %w", err)
 		}
@@ -623,15 +673,15 @@ func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, c
 		case done:
 			return true, false, nil
 		case terminal:
-			return false, true, fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, lastPhase, crdState.Status.Message)
+			return false, true, fmt.Errorf("plugin installation for %q entered phase %q: %s", name, lastPhase, crdState.Status.Message)
 		default:
-			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": lastPhase})
+			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"name": name, "phase": lastPhase})
 			return false, false, nil
 		}
 	})
 
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, err)
+		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", name, lastPhase, err)
 	}
 	if err != nil {
 		return "", err

@@ -47,7 +47,7 @@ describe('demo plugin sidebar', () => {
     const registry = TestBed.inject(PluginRegistryService);
     const nav = TestBed.inject(PluginNavService);
 
-    await installs.installPlugin('cl-production', 'cert-manager', 'v1.17.2', 'sha256:demo');
+    await installs.installPlugin('cl-production', 'system', 'cert-manager', 'v1.17.2', 'sha256:demo');
     await registry.loadPlugins('cl-production');
 
     // Still Pending right after the install: not in the menu yet.
@@ -58,7 +58,8 @@ describe('demo plugin sidebar', () => {
 
     expect(nav.projectNav()).toEqual([
       {
-        pluginName: 'cert-manager',
+        installationName: 'system--cert-manager',
+        // Only one publisher here, so the label stays unqualified.
         label: 'Cert Manager',
         items: [
           { label: 'Certificates', crdPlural: 'certificates.cert-manager.io', icon: 'certificate' },
@@ -79,14 +80,15 @@ describe('demo plugin sidebar', () => {
     document.dispatchEvent(new CustomEvent(PLUGIN_INSTALLS_ENSURE_EVENT));
     await Promise.resolve();
 
-    expect(nav.projectNav().map((group) => group.pluginName)).toEqual(['cert-manager']);
+    // The route segment is the installation name, not the plugin name.
+    expect(nav.projectNav().map((group) => group.installationName)).toEqual(['system--cert-manager']);
   });
 
   it('resolves the CRD behind a menu entry by reference, plural or kind', () => {
     const registry = TestBed.inject(PluginRegistryService);
 
     ['certificates.cert-manager.io', 'certificates', 'Certificate'].forEach((key) => {
-      expect(registry.getCrd('cert-manager', key, 'cl-production')?.kind).toBe('Certificate');
+      expect(registry.getCrd('system--cert-manager', key, 'cl-production')?.kind).toBe('Certificate');
     });
     expect(registry.getCrd('cert-manager', 'issuers', 'cl-production')).toBeUndefined();
   });

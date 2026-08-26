@@ -18,7 +18,8 @@ type PluginClaims struct {
 	ClusterID      string `json:"cluster_id"`
 	InstallationID string `json:"installation_id"`
 	// InstallationName is the PluginInstallation CR's metadata.name. It lets
-	// kube-api-proxy address the plugin's SA (plugin-{name}) directly, since the
+	// kube-api-proxy address the plugin's SA ("plugin", in the namespace derived
+	// from this name) directly, since the
 	// CR UID in InstallationID isn't name-addressable via the kube API.
 	// InstallationID stays authoritative: the resolver verifies the named CR's
 	// UID against it.

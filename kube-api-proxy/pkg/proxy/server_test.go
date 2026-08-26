@@ -79,7 +79,9 @@ func TestClusterProxy_ConsoleAssetPublicAndCORS(t *testing.T) {
 	})
 
 	path := "/clusters/" + uuid.NewString() +
-		"/api/v1/namespaces/plugin-acme/services/http:plugin-acme:8080/proxy/console/_shared.js"
+		// Namespace suffix is the installation name, "<organization>-<plugin>";
+		// the template directory is named after the plugin ("acme").
+		"/api/v1/namespaces/plugin-globex--acme/services/http:plugin:8080/proxy/console/_shared.js"
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+path, http.NoBody) // no Authorization header
 	require.NoError(t, err)
 	// An Origin makes the rs/cors middleware emit Access-Control-Allow-Credentials:

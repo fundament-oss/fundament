@@ -289,10 +289,29 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, body)
 }
 
+// pluginTemplateDir maps an installation name to its directory under
+// PluginTemplatesDir, whose entries are named after the *plugin* (plugins/ in
+// the repo). The installation name is "<organizationName>--<pluginName>" and
+// neither half may contain a double dash, so the split is exact. Two
+// organizations publishing the same plugin name therefore share the mock's
+// assets, which is the right trade for a dev mock.
+func (m *MockClient) pluginTemplateDir(installationName string) (string, bool) {
+	_, pluginName, ok := strings.Cut(installationName, "--")
+	if !ok {
+		return "", false
+	}
+	//nolint:gosec // pluginName is a suffix of a value pluginConsoleAsset constrained to [a-z0-9-]+, so it cannot traverse
+	info, err := os.Stat(filepath.Join(m.PluginTemplatesDir, pluginName))
+	if err != nil || !info.IsDir() {
+		return "", false
+	}
+	return pluginName, true
+}
+
 // serveConsoleAsset serves a static file from PluginTemplatesDir for paths of
-// the form /api/v1/namespaces/plugin-<name>/services/http:plugin-<name>:8080/proxy/console/<asset>.
+// the form /api/v1/namespaces/plugin-<installation>/services/http:plugin:8080/proxy/console/<asset>.
 // In real mode the same path is answered by the plugin pod's embedded console FS.
-func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, pluginName, asset string) {
+func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, installationName, asset string) {
 	if m.PluginTemplatesDir == "" {
 		http.Error(w, `{"message":"plugin templates directory not configured"}`, http.StatusNotFound)
 		return
@@ -302,8 +321,14 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		return
 	}
 
+	pluginName, ok := m.pluginTemplateDir(installationName)
+	if !ok {
+		http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
+		return
+	}
+
 	full := filepath.Join(m.PluginTemplatesDir, pluginName, "console", filepath.FromSlash(asset))
-	data, err := os.ReadFile(full) //nolint:gosec // pluginName + asset are extracted from a fixed pattern; ".." is rejected above.
+	data, err := os.ReadFile(full) //nolint:gosec // pluginName is an existing directory under PluginTemplatesDir; ".." is rejected above.
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
@@ -429,13 +454,13 @@ func IsPluginConsoleAssetPath(path string) bool {
 	return ok
 }
 
-// pluginConsoleAsset matches `/api/v1/namespaces/plugin-<name>/services/http:plugin-<name>:8080/proxy/console/<asset>`
-// and returns the plugin name and the trailing asset path.
-func pluginConsoleAsset(path string) (pluginName, asset string, ok bool) {
+// pluginConsoleAsset matches `/api/v1/namespaces/plugin-<installation>/services/http:plugin:8080/proxy/console/<asset>`
+// and returns the namespace's installation suffix and the trailing asset path.
+// The Service is constant-named, so only the namespace varies.
+func pluginConsoleAsset(path string) (installationName, asset string, ok bool) {
 	const (
-		nsPrefix  = "/api/v1/namespaces/plugin-"
-		svcMid    = "/services/http:plugin-"
-		svcSuffix = ":8080/proxy/console/"
+		nsPrefix = "/api/v1/namespaces/plugin-"
+		svcMid   = "/services/http:plugin:8080/proxy/console/"
 	)
 	if !strings.HasPrefix(path, nsPrefix) {
 		return "", "", false
@@ -445,16 +470,32 @@ func pluginConsoleAsset(path string) (pluginName, asset string, ok bool) {
 	if slash <= 0 {
 		return "", "", false
 	}
-	pluginName = afterNS[:slash]
+	installationName = afterNS[:slash]
+	// The name indexes a directory below, so constrain it to the DNS-1123 label
+	// charset a real namespace suffix uses — that also rules out ".." and any
+	// separator escaping PluginTemplatesDir.
+	if !isDNS1123LabelChars(installationName) {
+		return "", "", false
+	}
 	rest := afterNS[slash:]
 
 	if !strings.HasPrefix(rest, svcMid) {
 		return "", "", false
 	}
-	rest = rest[len(svcMid):]
-	if !strings.HasPrefix(rest, pluginName+svcSuffix) {
-		return "", "", false
+	asset = rest[len(svcMid):]
+	return installationName, asset, true
+}
+
+// isDNS1123LabelChars reports whether s is a non-empty string of lowercase
+// alphanumerics and '-'.
+func isDNS1123LabelChars(s string) bool {
+	if s == "" {
+		return false
 	}
-	asset = rest[len(pluginName)+len(svcSuffix):]
-	return pluginName, asset, true
+	for _, c := range s {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
+			return false
+		}
+	}
+	return true
 }

@@ -137,5 +137,6 @@ func pluginDetailFromRow(
 		DocumentationLinks: protoDocLinks,
 		PluginVersion:      plugin.LatestVersion,
 		DefinitionHash:     plugin.LatestHash,
+		OrganizationName:   plugin.OrganizationName,
 	}.Build()
 }

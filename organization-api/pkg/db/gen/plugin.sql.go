@@ -123,6 +123,7 @@ func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDo
 
 const pluginGetByID = `-- name: PluginGetByID :one
 SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image, appstore.plugins.author_name, appstore.plugins.author_url, appstore.plugins.repository_url,
+  tenant.organizations.name AS organization_name,
   COALESCE((
     SELECT appstore.plugin_definitions.plugin_version
     FROM appstore.plugin_definitions
@@ -138,6 +139,7 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     LIMIT 1
   ), '')::text AS latest_hash
 FROM appstore.plugins
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.id = $1 AND appstore.plugins.deleted IS NULL
 `
 
@@ -155,6 +157,7 @@ type PluginGetByIDRow struct {
 	AuthorName       pgtype.Text
 	AuthorUrl        pgtype.Text
 	RepositoryUrl    pgtype.Text
+	OrganizationName string
 	LatestVersion    string
 	LatestHash       string
 }
@@ -172,6 +175,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.AuthorName,
 		&i.AuthorUrl,
 		&i.RepositoryUrl,
+		&i.OrganizationName,
 		&i.LatestVersion,
 		&i.LatestHash,
 	)
@@ -180,6 +184,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 
 const pluginList = `-- name: PluginList :many
 SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image,
+  tenant.organizations.name AS organization_name,
   COALESCE((
     SELECT appstore.plugin_definitions.plugin_version
     FROM appstore.plugin_definitions
@@ -195,6 +200,7 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     LIMIT 1
   ), '')::text AS latest_hash
 FROM appstore.plugins
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.deleted IS NULL
 ORDER BY COALESCE(NULLIF(appstore.plugins.display_name, ''), appstore.plugins.name)
 `
@@ -206,6 +212,7 @@ type PluginListRow struct {
 	DescriptionShort string
 	Description      string
 	Image            string
+	OrganizationName string
 	LatestVersion    string
 	LatestHash       string
 }
@@ -226,6 +233,7 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 			&i.DescriptionShort,
 			&i.Description,
 			&i.Image,
+			&i.OrganizationName,
 			&i.LatestVersion,
 			&i.LatestHash,
 		); err != nil {

@@ -380,7 +380,7 @@
                 </a>
               </li>
 
-              @for (group of pluginNavService.projectNav(); track group.pluginName) {
+              @for (group of pluginNavService.projectNav(); track group.installationName) {
                 <li class="mt-2">
                   <p
                     class="px-3 pt-3 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
@@ -395,7 +395,7 @@
                             '/projects',
                             selectedProjectId(),
                             'plugin-resources',
-                            group.pluginName,
+                            group.installationName,
                             item.crdPlural,
                           ]"
                           routerLinkActive="active"

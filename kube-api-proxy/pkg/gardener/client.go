@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/fundament-oss/fundament/common/gardener"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 const (
@@ -32,6 +33,16 @@ const (
 	// saTokenExpiry is the requested expiration for SA tokens (15 minutes).
 	saTokenExpiry int64 = 900
 )
+
+// pluginSAName is the plugin ServiceAccount's constant name; plugin-controller
+// names every namespace-scoped child from this same shared constant.
+const pluginSAName = kubename.PluginChildName
+
+// pluginSANamespace derives the plugin's namespace exactly as plugin-controller
+// does, through the shared helper.
+func pluginSANamespace(installationName string) string {
+	return kubename.PluginNamespace(installationName)
+}
 
 // ErrSyncPending indicates the service account has not been provisioned yet.
 var ErrSyncPending = errors.New("service account sync pending")
@@ -221,8 +232,9 @@ func ResolvePluginSAFromRESTConfig(ctx context.Context, restConfig *rest.Config,
 // The CR is addressed by installationName (metadata.name), because the kube API
 // can't Get by UID. installationID (the CR UID) stays authoritative: the
 // resolved CR's UID is verified against it, so a stale token for a
-// deleted-and-recreated install is rejected. The SA/namespace are named
-// `plugin-{cr.Name}` (see plugin-controller/pkg/controller/resources.go).
+// deleted-and-recreated install is rejected. The SA is always named `plugin`
+// (pluginSAName) inside the namespace derived from installationName via
+// kubename.PluginNamespace (see plugin-controller/pkg/controller/resources.go).
 func resolvePluginSA(ctx context.Context, dyn dynamic.Interface, kube kubernetes.Interface, installationID, installationName string) (*PluginSAToken, error) {
 	if installationName == "" {
 		return nil, fmt.Errorf("token missing installation_name for installation %q", installationID)
@@ -247,8 +259,8 @@ func resolvePluginSA(ctx context.Context, dyn dynamic.Interface, kube kubernetes
 		return nil, fmt.Errorf("read spec.definitionRef.definitionHash from %q: %w", installationName, err)
 	}
 
-	saName := "plugin-" + installationName
-	saNamespace := "plugin-" + installationName
+	saName := pluginSAName
+	saNamespace := pluginSANamespace(installationName)
 	expSeconds := saTokenExpiry
 	tokenReq := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{

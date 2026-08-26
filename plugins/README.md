@@ -11,7 +11,7 @@ just deploy           # One-time build without file watching
 
 # In another terminal:
 just plugin-install cert-manager   # Build plugin, push to registry, apply CR
-just plugin-status                 # Check PluginInstallation status
+just plugins status                 # Check PluginInstallation status
 just logs                          # Watch controller logs
 
 # Verify cert-manager actually works:
@@ -30,8 +30,8 @@ just openfsc test                  # Sample FSCInstallation reaches Active
 just openfsc test-cleanup          # Remove the sample installation
 
 # Cleanup:
-just plugin-uninstall cert-manager
-just plugin-uninstall external-dns
+just plugins uninstall cert-manager
+just plugins uninstall external-dns
 just cluster-delete
 ```
 

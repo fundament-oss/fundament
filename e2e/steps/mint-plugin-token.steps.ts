@@ -21,6 +21,10 @@ interface PluginClaims {
   iat?: number;
   cluster_id: string;
   installation_id: string;
+  // The CR's metadata.name. plugin-proxy derives the plugin's namespace from
+  // this, not from plugin_name — the two differ now that a plugin's identity
+  // is (organization, plugin).
+  installation_name: string;
   plugin_name: string;
   plugin_version: string;
   definition_hash: string;
@@ -196,6 +200,14 @@ Then('the plugin token should carry the plugin name {string}', async function (t
   const claims = decodePluginClaims(mintResponse!.accessToken);
   expect(claims.plugin_name).toBe(want);
 });
+
+Then(
+  'the plugin token should carry the installation name {string}',
+  async function (this: ICustomWorld, want: string) {
+    const claims = decodePluginClaims(mintResponse!.accessToken);
+    expect(claims.installation_name).toBe(want);
+  },
+);
 
 Then('I should receive an invalid argument error', async function (this: ICustomWorld) {
   expect(this.lastApiError).toBeDefined();
