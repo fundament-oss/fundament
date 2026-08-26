@@ -1071,9 +1071,9 @@ CREATE TABLE appstore.plugins (
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
+	CONSTRAINT plugins_ck_visibility CHECK (visibility IN ('public', 'restricted')),
 	CONSTRAINT plugins_pk PRIMARY KEY (id),
-	CONSTRAINT plugins_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--'),
-	CONSTRAINT plugins_ck_visibility CHECK (visibility IN ('public', 'restricted'))
+	CONSTRAINT plugins_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--')
 );
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.organization_id IS E'Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.';
@@ -1190,13 +1190,30 @@ CREATE POLICY plugins_select_catalog ON appstore.plugins
 -- object: appstore.plugin_labels | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.plugin_labels CASCADE;
 CREATE TABLE appstore.plugin_labels (
+	id uuid NOT NULL DEFAULT uuidv7(),
 	plugin_id uuid NOT NULL,
 	name text NOT NULL,
-	CONSTRAINT plugin_labels_pk PRIMARY KEY (plugin_id,name),
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT plugin_labels_pk PRIMARY KEY (id),
+	CONSTRAINT plugin_labels_uq_name UNIQUE NULLS NOT DISTINCT (plugin_id,name,deleted),
 	CONSTRAINT plugin_labels_ck_name CHECK (name IN ('core', 'rijksoverheid', 'support_9_to_17'))
 );
 -- ddl-end --
+COMMENT ON COLUMN appstore.plugin_labels.deleted IS E'Revoking a trust label is a soft delete, so the grant and its withdrawal both stay auditable.';
+-- ddl-end --
 ALTER TABLE appstore.plugin_labels OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_labels ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_labels_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_labels_select_catalog ON appstore.plugin_labels CASCADE;
+CREATE POLICY plugin_labels_select_catalog ON appstore.plugin_labels
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id));
 -- ddl-end --
 
 -- object: appstore.plugin_features | type: TABLE --
@@ -1213,6 +1230,17 @@ CREATE TABLE appstore.plugin_features (
 );
 -- ddl-end --
 ALTER TABLE appstore.plugin_features OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_features ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_features_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_features_select_catalog ON appstore.plugin_features CASCADE;
+CREATE POLICY plugin_features_select_catalog ON appstore.plugin_features
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id));
 -- ddl-end --
 
 -- object: plugin_definitions_idx_published | type: INDEX --
@@ -1274,6 +1302,26 @@ CREATE TABLE appstore.plugins_tags (
 -- ddl-end --
 ALTER TABLE appstore.plugins_tags OWNER TO fun_owner;
 -- ddl-end --
+ALTER TABLE appstore.plugins_tags ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugins_tags_all_api | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_all_api ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_all_api ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugins_tags_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_select_catalog ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_select_catalog ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id));
+-- ddl-end --
 
 -- object: appstore.categories | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.categories CASCADE;
@@ -1299,6 +1347,26 @@ CREATE TABLE appstore.categories_plugins (
 -- ddl-end --
 ALTER TABLE appstore.categories_plugins OWNER TO fun_owner;
 -- ddl-end --
+ALTER TABLE appstore.categories_plugins ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: categories_plugins_all_api | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_all_api ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_all_api ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: categories_plugins_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_select_catalog ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_select_catalog ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id));
+-- ddl-end --
 
 -- object: appstore.plugin_documentation_links | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.plugin_documentation_links CASCADE;
@@ -1312,6 +1380,26 @@ CREATE TABLE appstore.plugin_documentation_links (
 );
 -- ddl-end --
 ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_documentation_links ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_documentation_links_all_api | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_documentation_links_all_api ON appstore.plugin_documentation_links CASCADE;
+CREATE POLICY plugin_documentation_links_all_api ON appstore.plugin_documentation_links
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_documentation_links_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_documentation_links_select_catalog ON appstore.plugin_documentation_links CASCADE;
+CREATE POLICY plugin_documentation_links_select_catalog ON appstore.plugin_documentation_links
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id));
 -- ddl-end --
 
 -- object: require_admin | type: TRIGGER --

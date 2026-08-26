@@ -1,13 +1,12 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
--- Schema USAGE for the catalog reader role (trek's diff emits the table
--- SELECTs below but not schema-level permissions; without USAGE the
--- SELECTs are unusable).
+-- Schema USAGE for the catalog reader role. trek's diff emits the table SELECTs
+-- below but not schema-level permissions, so these are hand-added and must be
+-- re-added whenever this migration is regenerated. Without USAGE every SELECT
+-- below is unusable.
 GRANT USAGE ON SCHEMA "appstore" TO "fun_marketplace_catalog_api";
 GRANT USAGE ON SCHEMA "tenant" TO "fun_marketplace_catalog_api";
-
-ALTER INDEX "appstore"."plugins_uq_name" RENAME TO "pgschemadiff_tmpidx_plugins_uq_name_x2zFsK6CTKy0hTnYuYsayw";
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
@@ -15,9 +14,34 @@ ALTER INDEX "appstore"."plugins_uq_name" RENAME TO "pgschemadiff_tmpidx_plugins_
 GRANT SELECT ON "appstore"."categories" TO "fun_marketplace_catalog_api";
 
 /* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "categories_plugins_all_api" ON "appstore"."categories_plugins"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "categories_plugins_select_catalog" ON "appstore"."categories_plugins"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING ((EXISTS ( SELECT 1
+   FROM appstore.plugins
+  WHERE (plugins.id = categories_plugins.plugin_id))));
+
+/* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT SELECT ON "appstore"."categories_plugins" TO "fun_marketplace_catalog_api";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Enabling RLS on a table could cause queries to fail if not correctly configured.
+*/
+ALTER TABLE "appstore"."categories_plugins" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "appstore"."plugin_definitions" ADD COLUMN "published" timestamp with time zone;
 
@@ -49,9 +73,34 @@ GRANT SELECT ON "appstore"."plugin_definitions" TO "fun_marketplace_catalog_api"
 CREATE INDEX plugin_definitions_idx_published ON appstore.plugin_definitions USING btree (plugin_id, published) WHERE ((published IS NOT NULL) AND (deleted IS NULL));
 
 /* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "plugin_documentation_links_all_api" ON "appstore"."plugin_documentation_links"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "plugin_documentation_links_select_catalog" ON "appstore"."plugin_documentation_links"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING ((EXISTS ( SELECT 1
+   FROM appstore.plugins
+  WHERE (plugins.id = plugin_documentation_links.plugin_id))));
+
+/* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT SELECT ON "appstore"."plugin_documentation_links" TO "fun_marketplace_catalog_api";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Enabling RLS on a table could cause queries to fail if not correctly configured.
+*/
+ALTER TABLE "appstore"."plugin_documentation_links" ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE "appstore"."plugin_features" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
@@ -63,6 +112,16 @@ CREATE TABLE "appstore"."plugin_features" (
 	"deleted" timestamp with time zone
 );
 
+CREATE POLICY "plugin_features_select_catalog" ON "appstore"."plugin_features"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (((deleted IS NULL) AND (EXISTS ( SELECT 1
+   FROM appstore.plugins
+  WHERE (plugins.id = plugin_features.plugin_id)))));
+
+ALTER TABLE "appstore"."plugin_features" ENABLE ROW LEVEL SECURITY;
+
 GRANT SELECT ON "appstore"."plugin_features" TO "fun_marketplace_catalog_api";
 
 CREATE UNIQUE INDEX plugin_features_pk ON appstore.plugin_features USING btree (id);
@@ -70,17 +129,34 @@ CREATE UNIQUE INDEX plugin_features_pk ON appstore.plugin_features USING btree (
 ALTER TABLE "appstore"."plugin_features" ADD CONSTRAINT "plugin_features_pk" PRIMARY KEY USING INDEX "plugin_features_pk";
 
 CREATE TABLE "appstore"."plugin_labels" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"plugin_id" uuid NOT NULL,
-	"name" text COLLATE "pg_catalog"."default" NOT NULL
+	"name" text COLLATE "pg_catalog"."default" NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted" timestamp with time zone
 );
 
 ALTER TABLE "appstore"."plugin_labels" ADD CONSTRAINT "plugin_labels_ck_name" CHECK((name = ANY (ARRAY['core'::text, 'rijksoverheid'::text, 'support_9_to_17'::text])));
 
+CREATE POLICY "plugin_labels_select_catalog" ON "appstore"."plugin_labels"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (((deleted IS NULL) AND (EXISTS ( SELECT 1
+   FROM appstore.plugins
+  WHERE (plugins.id = plugin_labels.plugin_id)))));
+
+ALTER TABLE "appstore"."plugin_labels" ENABLE ROW LEVEL SECURITY;
+
 GRANT SELECT ON "appstore"."plugin_labels" TO "fun_marketplace_catalog_api";
 
-CREATE UNIQUE INDEX plugin_labels_pk ON appstore.plugin_labels USING btree (plugin_id, name);
+CREATE UNIQUE INDEX plugin_labels_pk ON appstore.plugin_labels USING btree (id);
 
 ALTER TABLE "appstore"."plugin_labels" ADD CONSTRAINT "plugin_labels_pk" PRIMARY KEY USING INDEX "plugin_labels_pk";
+
+CREATE UNIQUE INDEX plugin_labels_uq_name ON appstore.plugin_labels USING btree (plugin_id, name, deleted) NULLS NOT DISTINCT;
+
+ALTER TABLE "appstore"."plugin_labels" ADD CONSTRAINT "plugin_labels_uq_name" UNIQUE USING INDEX "plugin_labels_uq_name";
 
 ALTER TABLE "appstore"."plugins" ADD COLUMN "license" text COLLATE "pg_catalog"."default" DEFAULT ''::text NOT NULL;
 
@@ -106,13 +182,6 @@ CREATE POLICY "plugins_select_catalog" ON "appstore"."plugins"
 */
 GRANT SELECT ON "appstore"."plugins" TO "fun_marketplace_catalog_api";
 
-/* Hazards:
- - ACQUIRES_SHARE_LOCK: Non-concurrent index creates will lock out writes to the table during the duration of the index build.
-*/
-CREATE UNIQUE INDEX plugins_uq_name ON appstore.plugins USING btree (organization_id, name, deleted) NULLS NOT DISTINCT;
-
-ALTER TABLE "appstore"."plugins" ADD CONSTRAINT "plugins_uq_name" UNIQUE USING INDEX "plugins_uq_name";
-
 ALTER TABLE "appstore"."plugin_features" ADD CONSTRAINT "plugin_features_fk_plugin" FOREIGN KEY (plugin_id) REFERENCES appstore.plugins(id) NOT VALID;
 
 ALTER TABLE "appstore"."plugin_features" VALIDATE CONSTRAINT "plugin_features_fk_plugin";
@@ -122,9 +191,34 @@ ALTER TABLE "appstore"."plugin_labels" ADD CONSTRAINT "plugin_labels_fk_plugin" 
 ALTER TABLE "appstore"."plugin_labels" VALIDATE CONSTRAINT "plugin_labels_fk_plugin";
 
 /* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "plugins_tags_all_api" ON "appstore"."plugins_tags"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+
+/* Hazards:
+ - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
+*/
+CREATE POLICY "plugins_tags_select_catalog" ON "appstore"."plugins_tags"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING ((EXISTS ( SELECT 1
+   FROM appstore.plugins
+  WHERE (plugins.id = plugins_tags.plugin_id))));
+
+/* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT SELECT ON "appstore"."plugins_tags" TO "fun_marketplace_catalog_api";
+
+/* Hazards:
+ - AUTHZ_UPDATE: Enabling RLS on a table could cause queries to fail if not correctly configured.
+*/
+ALTER TABLE "appstore"."plugins_tags" ENABLE ROW LEVEL SECURITY;
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
@@ -148,12 +242,6 @@ CREATE POLICY "organizations_select_catalog" ON "tenant"."organizations"
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
 GRANT SELECT ON "tenant"."organizations" TO "fun_marketplace_catalog_api";
-
-/* Hazards:
- - ACQUIRES_ACCESS_EXCLUSIVE_LOCK: Index drops will lock out all accesses to the table. They should be fast.
- - INDEX_DROPPED: Dropping this index means queries that use this index might perform worse because they will no longer will be able to leverage it.
-*/
-ALTER TABLE "appstore"."plugins" DROP CONSTRAINT "pgschemadiff_tmpidx_plugins_uq_name_x2zFsK6CTKy0hTnYuYsayw";
 
 
 -- Statements generated automatically, please review:

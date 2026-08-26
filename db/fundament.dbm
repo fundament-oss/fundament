@@ -1460,25 +1460,42 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL)]]> </expression>
 </policy>
 
-<table name="plugin_labels" layers="0" collapse-mode="1" max-obj-count="2" z-value="0">
+<table name="plugin_labels" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="2200"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
 	<column name="plugin_id" not-null="true">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[Revoking a trust label is a soft delete, so the grant and its withdrawal both stay auditable.]]> </comment>
+	</column>
 	<constraint name="plugin_labels_pk" type="pk-constr" table="appstore.plugin_labels">
-		<columns names="plugin_id,name" ref-type="src-columns"/>
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugin_labels_uq_name" type="uq-constr" nulls-not-distinct="true" table="appstore.plugin_labels">
+		<columns names="plugin_id,name,deleted" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="plugin_labels_ck_name" type="ck-constr" table="appstore.plugin_labels">
 			<expression> <![CDATA[name IN ('core', 'rijksoverheid', 'support_9_to_17')]]> </expression>
 	</constraint>
 </table>
 
-<table name="plugin_features" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
+<policy name="plugin_labels_select_catalog" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id)]]> </expression>
+</policy>
+
+<table name="plugin_features" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1120" y="2200"/>
@@ -1507,6 +1524,10 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<policy name="plugin_features_select_catalog" table="appstore.plugin_features" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id)]]> </expression>
+</policy>
 
 <index name="plugin_definitions_idx_published" table="appstore.plugin_definitions"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
@@ -1579,7 +1600,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugins_tags" layers="0" collapse-mode="1" max-obj-count="3" z-value="-4">
+<table name="plugins_tags" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1560" y="2340"/>
@@ -1593,6 +1614,14 @@ END;]]> </definition>
 		<columns names="plugin_id,tag_id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<policy name="plugins_tags_all_api" table="appstore.plugins_tags" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_tags_select_catalog" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id)]]> </expression>
+</policy>
 
 <table name="categories" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
@@ -1618,7 +1647,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="categories_plugins" layers="0" collapse-mode="1" max-obj-count="3" z-value="-4">
+<table name="categories_plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1540" y="1940"/>
@@ -1633,7 +1662,15 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugin_documentation_links" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+<policy name="categories_plugins_all_api" table="appstore.categories_plugins" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="categories_plugins_select_catalog" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id)]]> </expression>
+</policy>
+
+<table name="plugin_documentation_links" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1560" y="1620"/>
@@ -1656,6 +1693,14 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<policy name="plugin_documentation_links_all_api" table="appstore.plugin_documentation_links" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_documentation_links_select_catalog" table="appstore.plugin_documentation_links" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id)]]> </expression>
+</policy>
 
 <trigger name="require_admin" firing-type="AFTER" per-line="true" constraint="true"
 	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"

@@ -273,6 +273,8 @@ const (
 	ConstraintPluginLabelsCkName = "plugin_labels_ck_name"
 	// ConstraintPluginLabelsFkPlugin is defined on appstore.plugin_labels.
 	ConstraintPluginLabelsFkPlugin = "plugin_labels_fk_plugin"
+	// ConstraintPluginLabelsUqName is defined on appstore.plugin_labels.
+	ConstraintPluginLabelsUqName = "plugin_labels_uq_name"
 	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesCategoryId = "plugins_categories_category_id"
 	// ConstraintPluginsCategoriesPluginId is defined on appstore.categories_plugins.
