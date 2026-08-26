@@ -13,6 +13,9 @@ var (
 	levelKeys   = []string{"level", "severity", "lvl", "loglevel", "log_level"}
 )
 
+// maxFieldsPerEntry bounds how many structured fields one log line contributes.
+const maxFieldsPerEntry = 64
+
 // parseLogLine extracts a display message, a raw level string, and structured
 // fields from a single log line. If the line is a JSON object, recognised keys
 // are promoted and the remainder is returned as fields. Otherwise the whole
@@ -28,23 +31,32 @@ func parseLogLine(line string) (message, level string, fields map[string]string)
 		return line, "", nil
 	}
 
-	fields = make(map[string]string, len(obj))
-	for k, raw := range obj {
-		fields[k] = rawToString(raw)
-	}
-
+	// Read the recognised keys straight from the object: the field map below is
+	// capped, so looking them up there would lose the message on a line with
+	// enough keys to hit the cap.
 	message = line
 	for _, k := range messageKeys {
-		if v, ok := fields[k]; ok {
-			message = v
+		if raw, ok := obj[k]; ok {
+			message = rawToString(raw)
 			break
 		}
 	}
 	for _, k := range levelKeys {
-		if v, ok := fields[k]; ok {
-			level = v
+		if raw, ok := obj[k]; ok {
+			level = rawToString(raw)
 			break
 		}
+	}
+
+	// Cap the promoted keys. The line is tenant-controlled and every field is
+	// copied into the response proto, so an object with thousands of keys — one
+	// per entry, across a whole page — is a response-size multiplier.
+	fields = make(map[string]string, min(len(obj), maxFieldsPerEntry))
+	for k, raw := range obj {
+		if len(fields) >= maxFieldsPerEntry {
+			break
+		}
+		fields[k] = rawToString(raw)
 	}
 	if len(fields) == 0 {
 		fields = nil

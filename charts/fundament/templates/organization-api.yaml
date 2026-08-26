@@ -49,11 +49,15 @@ spec:
             {{- if $.Values.externalUrls.kubeApiProxy }}
             - name: KUBE_API_PROXY_URL
               value: {{ $.Values.externalUrls.kubeApiProxy }}
+            {{- end }}
             # org-api's own calls to the proxy (plugin-pod logs) go over the
-            # in-cluster Service; the external URL above is browser-facing.
+            # in-cluster Service; the external URL above is browser-facing and
+            # unrelated. Nesting this inside that conditional meant a landscape
+            # which publishes no browser-facing proxy URL got no internal URL
+            # either, and every plugin-pod query then answered zero entries
+            # while still reporting a working backend.
             - name: KUBE_API_PROXY_INTERNAL_URL
               value: http://kube-api-proxy:8081
-            {{- end }}
             {{- if $.Values.organizationApi.kubeApiProxyInsecure }}
             - name: KUBE_API_PROXY_INSECURE
               value: "true"

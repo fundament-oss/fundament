@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"strings"
 	"time"
 )
 
@@ -46,13 +45,22 @@ var mockStreams = []mockStream{
 // mockInterval is the synthetic spacing between consecutive entries.
 const mockInterval = 3 * time.Second
 
+// mockMaxScan bounds how many synthetic ticks Query examines. The result set is
+// already capped by the limit, but a Search that matches nothing never fills it,
+// so the tick count alone decides how long the loop runs — and the range comes
+// from the wire. 250k ticks is ~8.7 days of synthetic history.
+const mockMaxScan = 250_000
+
+// mockScanCtxInterval is how often the scan checks for caller cancellation.
+const mockScanCtxInterval = 1024
+
 func (m *MockClient) Backend() Backend { return BackendLoki }
 
 // Query synthesizes entries across the requested range, newest first, one
 // entry per mockInterval, cycling deterministically through the matching
 // streams. The cluster id seeds the cycle offset so different clusters show
 // different (but stable) logs.
-func (m *MockClient) Query(_ context.Context, p *QueryParams) ([]Entry, error) {
+func (m *MockClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error) {
 	end := p.End
 	if end.IsZero() {
 		end = m.now()
@@ -60,6 +68,9 @@ func (m *MockClient) Query(_ context.Context, p *QueryParams) ([]Entry, error) {
 	start := p.Start
 	if start.IsZero() {
 		start = end.Add(-time.Hour)
+	}
+	if !start.Before(end) {
+		return []Entry{}, nil
 	}
 	limit := EffectiveLimit(p.Limit)
 
@@ -73,10 +84,13 @@ func (m *MockClient) Query(_ context.Context, p *QueryParams) ([]Entry, error) {
 	// return the same entries.
 	tick := end.Truncate(mockInterval)
 	entries := make([]Entry, 0, limit)
-	for !tick.Before(start) && len(entries) < limit {
+	for scanned := 0; scanned < mockMaxScan && !tick.Before(start) && len(entries) < limit; scanned++ {
+		if scanned%mockScanCtxInterval == 0 && ctx.Err() != nil {
+			return nil, fmt.Errorf("mock query cancelled: %w", ctx.Err())
+		}
 		idx := (tick.Unix()/int64(mockInterval.Seconds()) + seed) % int64(len(streams))
 		e := m.entryAt(tick, p.ClusterID, &streams[idx])
-		if p.Search == "" || strings.Contains(e.Message, p.Search) {
+		if MatchesSearch(e.Message, p.Search) {
 			entries = append(entries, e)
 		}
 		tick = tick.Add(-mockInterval)
@@ -104,7 +118,7 @@ func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent
 			case now := <-ticker.C:
 				idx := (now.Unix()/int64(mockInterval.Seconds()) + seed) % int64(len(streams))
 				e := m.entryAt(now, p.ClusterID, &streams[idx])
-				if p.Search != "" && !strings.Contains(e.Message, p.Search) {
+				if !MatchesSearch(e.Message, p.Search) {
 					continue
 				}
 				select {

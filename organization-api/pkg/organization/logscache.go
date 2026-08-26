@@ -14,6 +14,12 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 )
 
+// logsResolveTimeout bounds one logs-backend resolution: a monitoring-secret
+// read plus up to logs.MaxDatasourceProbeID sequential probes, each bounded by
+// its own 10s client timeout. Sized above that worst case so a slow landscape
+// degrades on the probe's own terms rather than on a truncated budget.
+const logsResolveTimeout = 70 * time.Second
+
 // perShootLogs resolves and caches one Vali client per cluster. Vali has no
 // ingress of its own (only its push endpoint is exposed), so the client
 // targets the shoot Plutono's datasource proxy: the "plutono-url" annotation
@@ -45,7 +51,12 @@ func newPerShootLogs(g gardener.Client, logger *slog.Logger, opts ...logs.Option
 			return logs.DiscoverValiProxyBase(ctx, plutonoURL, username, password, opts...)
 		},
 	}
-	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient)
+	// Resolving a logs backend is a secret read plus a sequential probe of
+	// several Plutono datasource ids, each with its own client timeout, so it
+	// needs a budget bigger than the single-secret-read default. Too small a
+	// budget cut the probe mid-scan on any landscape where the ids answer
+	// slowly, and — before negative caching — did so once per request.
+	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient, logsResolveTimeout)
 	return c
 }
 

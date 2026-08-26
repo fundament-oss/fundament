@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"time"
 
 	"connectrpc.com/connect"
@@ -20,6 +19,11 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
+
+// maxLogsResponseBytes is the transport ceiling for a logs response. The entry
+// limit and the per-entry field cap already bound it; this is the backstop that
+// does not depend on either being right.
+const maxLogsResponseBytes = 64 << 20
 
 // logsClientFor selects the log backend for one cluster:
 //   - "per-shoot" → the cluster's Vali through its Plutono datasource proxy
@@ -88,28 +92,40 @@ func callerAuthHeaders(ctx context.Context) http.Header {
 	return out
 }
 
-// pluginPodClient reroutes a query pinned to a specific namespace+pod that the
-// Vali-backed client does not cover: plugin pods are ordinary workloads and
-// never reach Vali (valitail ships system components only), so they are read
-// through the kube-api-proxy with the caller's own credentials — per-user
-// Kubernetes authorization applies. Returns the original client when the
-// request is not pod-scoped, the namespace is covered, or no proxy is
-// configured.
-func (s *Server) pluginPodClient(ctx context.Context, client logs.Client, params *logs.QueryParams, auth http.Header) logs.Client {
-	if params.Namespace == "" || params.Pod == "" || s.kubeProxyInternalURL() == "" {
-		return client
+// logClientForSource picks the backend for one request.
+//
+// Plugin workloads are ordinary pods and never reach Vali (valitail ships system
+// components only), so they are read through the kube-api-proxy with the
+// caller's own credentials — per-user Kubernetes authorization applies. The
+// console models that choice as an explicit switch, so it arrives on the wire:
+// deriving it by probing Vali's label values cost three round trips on every
+// query and tail, and guessed wrong whenever the probe failed (silently, keeping
+// Vali and returning empty results) or the namespace was merely quiet in the
+// requested window.
+//
+// Resolving the source before touching Vali also means a cluster whose Vali is
+// unreachable can still serve plugin logs, which is exactly when that fallback
+// is worth having.
+func (s *Server) logClientForSource(
+	ctx context.Context,
+	clusterID uuid.UUID,
+	source organizationv1.LogSource,
+	auth http.Header,
+) (logs.Client, error) {
+	if source != organizationv1.LogSource_LOG_SOURCE_PLUGIN {
+		return s.logsClientFor(ctx, clusterID)
 	}
-	if client.Backend() != logs.BackendLoki {
-		return client
+	// "mock" means "talk to no real backend". Honour that for plugin logs too,
+	// rather than forwarding the caller's live credentials to a real proxy while
+	// the operator asked for generated data.
+	if s.logsURL == "" || s.logsURL == "mock" {
+		return s.logsClientFor(ctx, clusterID)
 	}
-	labels, err := client.Labels(ctx, params.ClusterID, "", params.Start, params.End)
-	if err != nil {
-		return client
+	base := s.kubeProxyInternalURL()
+	if base == "" {
+		return nil, fmt.Errorf("plugin logs need a kube-api-proxy URL: %w", gardener.ErrNotFound)
 	}
-	if slices.Contains(labels.Namespaces, params.Namespace) {
-		return client
-	}
-	return logs.NewKubeClient(s.kubeProxyInternalURL(), auth)
+	return logs.NewKubeClient(base, auth), nil
 }
 
 // QueryLogs returns a bounded set of log entries for a cluster.
@@ -132,6 +148,7 @@ func (s *Server) QueryLogs(
 		Pod:       req.GetPod(),
 		Container: req.GetContainer(),
 		Search:    req.GetSearch(),
+		Levels:    req.GetLevels(),
 		Limit:     logs.EffectiveLimit(int(req.GetLimit())),
 	}
 	if req.HasStart() {
@@ -141,25 +158,27 @@ func (s *Server) QueryLogs(
 		params.End = req.GetEnd().AsTime()
 	}
 
-	client, err := s.logsClientFor(ctx, clusterID)
+	client, err := s.logClientForSource(ctx, clusterID, req.GetSource(), callerAuthHeaders(ctx))
 	if err != nil {
 		s.logLogsUnavailable(ctx, clusterID, err)
 		return organizationv1.QueryLogsResponse_builder{
 			Backend: organizationv1.LogBackend_LOG_BACKEND_NONE,
 		}.Build(), nil
 	}
-	client = s.pluginPodClient(ctx, client, &params, callerAuthHeaders(ctx))
 
 	entries, err := client.Query(ctx, &params)
 	if err != nil {
-		if isDegradableLogError(err) {
-			s.logger.WarnContext(ctx, "logs backend unreachable, degrading", "cluster_id", clusterID, "error", err)
+		if s.degradeLogError(ctx, clusterID, err) {
 			return organizationv1.QueryLogsResponse_builder{
 				Backend: organizationv1.LogBackend_LOG_BACKEND_NONE,
 			}.Build(), nil
 		}
 		return nil, mapLogError(err)
 	}
+
+	// Enforce the level filter exactly. Backends only narrow their queries
+	// approximately, so that the entry limit lands on a relevant set.
+	entries = logs.FilterByLevels(entries, params.Levels)
 
 	return organizationv1.QueryLogsResponse_builder{
 		Entries: toProtoEntries(entries),
@@ -188,18 +207,25 @@ func (s *Server) TailLogs(
 		Pod:       req.GetPod(),
 		Container: req.GetContainer(),
 		Search:    req.GetSearch(),
+		Levels:    req.GetLevels(),
 	}
+	wantLevels := logs.NormalizedLevels(params.Levels)
 
-	client, err := s.logsClientFor(ctx, clusterID)
+	client, err := s.logClientForSource(ctx, clusterID, req.GetSource(), callerAuthHeaders(ctx))
 	if err != nil {
-		// No backend: keep the stream open but silent until the client
-		// disconnects, so the UI's live tail doesn't error-loop against a
-		// provisioning cluster.
 		s.logLogsUnavailable(ctx, clusterID, err)
-		<-ctx.Done()
-		return nil
+		if errors.Is(err, gardener.ErrNotFound) {
+			// Genuinely not provisioned yet: keep the stream open but silent
+			// until the client disconnects, so the UI's live tail doesn't
+			// error-loop against a cluster that is still coming up.
+			<-ctx.Done()
+			return nil
+		}
+		// Anything else is a backend we expected to work. Ending the stream lets
+		// the client stop claiming to be live, rather than sitting on a socket
+		// that will never carry an entry and never retries resolution.
+		return mapLogError(err)
 	}
-	client = s.pluginPodClient(ctx, client, &params, callerAuthHeaders(ctx))
 
 	ch, err := client.Tail(ctx, &params)
 	if err != nil {
@@ -221,6 +247,9 @@ func (s *Server) TailLogs(
 				s.logger.WarnContext(ctx, "log tail ended on backend error",
 					"cluster_id", clusterID, "error", ev.Err)
 				return mapLogError(ev.Err)
+			}
+			if wantLevels != nil && !wantLevels[logs.NormalizeLevel(ev.Entry.Level)] {
+				continue
 			}
 			if err := stream.Send(toProtoEntry(&ev.Entry)); err != nil {
 				return fmt.Errorf("send log entry: %w", err)
@@ -264,8 +293,7 @@ func (s *Server) GetLogLabels(
 
 	labels, err := client.Labels(ctx, clusterID.String(), req.GetNamespace(), start, end)
 	if err != nil {
-		if isDegradableLogError(err) {
-			s.logger.WarnContext(ctx, "logs backend unreachable, degrading", "cluster_id", clusterID, "error", err)
+		if s.degradeLogError(ctx, clusterID, err) {
 			return organizationv1.GetLogLabelsResponse_builder{
 				Backend: organizationv1.LogBackend_LOG_BACKEND_NONE,
 			}.Build(), nil
@@ -332,15 +360,81 @@ func mapLogError(err error) error {
 	return connect.NewError(connect.CodeInternal, err)
 }
 
-// isDegradableLogError reports whether a backend failure should degrade to an
-// empty LOG_BACKEND_NONE response instead of failing the RPC: transport-level
-// errors (unreachable ingress, hibernated shoot) and non-2xx statuses other
-// than 400 (a 400 is a bad query and the caller should see it).
-func isDegradableLogError(err error) bool {
+// degradeLogError decides whether a backend failure becomes an empty
+// LOG_BACKEND_NONE response, and logs it at the level its kind deserves.
+//
+// ADR-0027 requires per-cluster failures to degrade rather than fail the RPC,
+// but degrading *everything* made four different situations indistinguishable:
+// "not provisioned", "unreachable", "misconfigured" and "unauthorized" all
+// rendered indefinitely as "this cluster has no log backend", visible only in a
+// warn log. Only the first two are properties of the cluster; the other two are
+// faults that need to be seen.
+func (s *Server) degradeLogError(ctx context.Context, clusterID uuid.UUID, err error) bool {
+	switch classifyLogError(err) {
+	case logErrorEnvironmental:
+		s.logger.WarnContext(ctx, "logs backend unreachable, degrading",
+			"cluster_id", clusterID, "error", err)
+		return true
+	case logErrorConfig:
+		// Credentials or grants that no longer work, or a response we could not
+		// parse — ADR-0027 notes an exhausted Vali path is how the VictoriaLogs
+		// migration will announce itself. Surface it.
+		s.logger.ErrorContext(ctx, "logs backend rejected or unparseable, surfacing",
+			"cluster_id", clusterID, "error", err)
+		return false
+	case logErrorCaller, logErrorCanceled:
+		return false
+	default:
+		panic(fmt.Sprintf("unhandled log error kind for %v", err))
+	}
+}
+
+// logErrorKind classifies a log-backend failure by who has to act on it.
+type logErrorKind int
+
+const (
+	// logErrorEnvironmental: the cluster has no reachable backend right now —
+	// unreachable ingress, hibernated shoot, gateway error. Degrade.
+	logErrorEnvironmental logErrorKind = iota
+	// logErrorCaller: the request was bad. Return it to the caller.
+	logErrorCaller
+	// logErrorConfig: our configuration is wrong, or the backend is no longer
+	// the shape we expect. Surface rather than hide behind an empty response.
+	logErrorConfig
+	// logErrorCanceled: the caller went away mid-flight.
+	logErrorCanceled
+)
+
+func classifyLogError(err error) logErrorKind {
+	switch {
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return logErrorCanceled
+	case errors.Is(err, logs.ErrPodRequired):
+		return logErrorCaller
+	}
+
 	var statusErr *logs.StatusError
 	if errors.As(err, &statusErr) {
-		return statusErr.StatusCode != http.StatusBadRequest
+		switch statusErr.StatusCode {
+		case http.StatusBadRequest, http.StatusUnprocessableEntity:
+			return logErrorCaller
+		case http.StatusUnauthorized, http.StatusForbidden:
+			// A 401 that survived re-resolution means the monitoring secret is
+			// genuinely wrong; a 403 means Plutono no longer grants the
+			// datasource proxy — the assumption ADR-0027 rests on.
+			return logErrorConfig
+		default:
+			return logErrorEnvironmental
+		}
 	}
+
 	var urlErr *url.Error
-	return errors.As(err, &urlErr)
+	if errors.As(err, &urlErr) {
+		return logErrorEnvironmental
+	}
+
+	// Unclassified: a decode failure or an unexpected envelope. That is a
+	// property of our integration, not of the cluster, so reporting an empty
+	// success would be the same silent lie this classification exists to remove.
+	return logErrorConfig
 }

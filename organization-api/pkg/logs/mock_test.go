@@ -26,6 +26,63 @@ func TestMockClientQueryClampsLimit(t *testing.T) {
 	assert.LessOrEqual(t, len(entries), MaxLimit)
 }
 
+// A Search that matches nothing never fills the result set, so before the tick
+// budget the loop ran once per mockInterval across a caller-supplied range — a
+// zero-value Start meant ~2e10 iterations from one request.
+func TestMockClientQueryBoundsScanOnUnmatchedSearch(t *testing.T) {
+	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m := &MockClient{now: func() time.Time { return fixed }}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		entries, err := m.Query(context.Background(), &QueryParams{
+			ClusterID: "cluster-1",
+			// The zero Start the proto happily accepts: year 1.
+			Start:  time.Time{}.Add(time.Second),
+			End:    fixed,
+			Search: "no-entry-contains-this",
+		})
+		require.NoError(t, err)
+		assert.Empty(t, entries)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Query did not return: the tick scan is unbounded")
+	}
+}
+
+func TestMockClientQueryHonoursCancellation(t *testing.T) {
+	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m := &MockClient{now: func() time.Time { return fixed }}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := m.Query(ctx, &QueryParams{
+		ClusterID: "cluster-1",
+		Start:     fixed.Add(-30 * 24 * time.Hour),
+		End:       fixed,
+		Search:    "no-entry-contains-this",
+	})
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestMockClientQueryEmptyOnInvertedRange(t *testing.T) {
+	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m := &MockClient{now: func() time.Time { return fixed }}
+
+	entries, err := m.Query(context.Background(), &QueryParams{
+		ClusterID: "cluster-1",
+		Start:     fixed,
+		End:       fixed.Add(-time.Hour),
+	})
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
 func TestMockClientQueryDeterministic(t *testing.T) {
 	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
 	m := &MockClient{now: func() time.Time { return fixed }}

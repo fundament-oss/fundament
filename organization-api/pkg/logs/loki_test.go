@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,7 +106,7 @@ func TestBuildLogQL(t *testing.T) {
 		{
 			name: "search adds line filter",
 			p:    QueryParams{Namespace: "prod", Search: "timeout"},
-			want: `{namespace_name="prod"} |= "timeout"`,
+			want: `{namespace_name="prod"} |~ "(?i)timeout"`,
 		},
 	}
 	for _, tc := range tests {
@@ -150,7 +152,7 @@ func TestLokiClient_Query(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "/vali/api/v1/query_range", gotPath)
-	assert.Equal(t, `{namespace_name="prod"} |= "boom"`, gotQuery.Get("query"))
+	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)boom"`, gotQuery.Get("query"))
 	assert.Equal(t, "backward", gotQuery.Get("direction"))
 	require.Len(t, entries, 2)
 	// Newest first.
@@ -255,6 +257,84 @@ func TestNormalizeLevel(t *testing.T) {
 		"weird":   "",
 	}
 	for in, want := range tests {
-		assert.Equal(t, want, normalizeLevel(in), "normalizeLevel(%q)", in)
+		assert.Equal(t, want, NormalizeLevel(in), "NormalizeLevel(%q)", in)
 	}
+}
+
+func TestLevelPreFilter(t *testing.T) {
+	tests := []struct {
+		name   string
+		levels []string
+		want   string
+	}{
+		{"no filter", nil, ""},
+		{"error only", []string{"ERROR"}, "(?i)alert|crit|emerg|err|fatal|panic"},
+		{"error and warn", []string{"ERROR", "WARN"}, "(?i)alert|crit|emerg|err|fatal|panic|warn"},
+		{"debug only", []string{"DEBUG"}, "(?i)debug|trace"},
+		// An unclassifiable line is reported as the default level, and carries no
+		// level token — so a set including it cannot be narrowed without losing
+		// exactly those lines.
+		{"including the default level does not narrow", []string{"ERROR", "INFO"}, ""},
+		{"every level does not narrow", []string{"ERROR", "WARN", "INFO", "DEBUG"}, ""},
+		{"unrecognised level is ignored", []string{"ERROR", "bogus"}, "(?i)alert|crit|emerg|err|fatal|panic"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, levelPreFilter(tt.levels))
+		})
+	}
+}
+
+// The pre-filter narrows what Vali scans; it must never be the thing that
+// decides the result, so it is always a superset of the exact filter.
+func TestLevelPreFilterIsSupersetOfExactFilter(t *testing.T) {
+	entries := []Entry{
+		{Level: "ERROR", Message: `{"level":"error","msg":"boom"}`},
+		{Level: "WARN", Message: `{"level":"warn","msg":"careful"}`},
+		{Level: "INFO", Message: "plain text line with no level at all"},
+	}
+	for _, e := range entries {
+		if NormalizeLevel(e.Level) != "ERROR" {
+			continue
+		}
+		pattern := levelPreFilter([]string{"ERROR"})
+		require.NotEmpty(t, pattern)
+		re, err := regexp.Compile(pattern)
+		require.NoError(t, err)
+		assert.True(t, re.MatchString(e.Message),
+			"pre-filter %q must not exclude an ERROR line: %q", pattern, e.Message)
+	}
+}
+
+func TestBuildLogQLLevelFilter(t *testing.T) {
+	got := buildLogQL(&QueryParams{Namespace: "prod", Levels: []string{"ERROR"}})
+	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)alert|crit|emerg|err|fatal|panic"`, got)
+
+	// Search and levels compose as two pipeline stages.
+	got = buildLogQL(&QueryParams{Namespace: "prod", Search: "boom", Levels: []string{"ERROR"}})
+	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)boom" |~ "(?i)alert|crit|emerg|err|fatal|panic"`, got)
+}
+
+// A regression guard for the quoting: %q keeps a hostile value inside the
+// string literal. If this ever became %s, injection would be possible and the
+// alphanumeric-only cases elsewhere would still pass.
+func TestBuildLogQLQuotesHostileValues(t *testing.T) {
+	got := buildLogQL(&QueryParams{
+		Namespace: `a" , container_name=~".+" }|~"`,
+		Search:    "\\\" x",
+	})
+	assert.Equal(t, 1, strings.Count(got, "{"), "selector must not be broken out of: %s", got)
+	assert.Contains(t, got, `namespace_name="a\" , container_name=~\".+\" }|~\""`)
+}
+
+// A malformed timestamp used to be discarded into time.Unix(0,0), which the
+// tail then dropped as "at or before the watermark" — a Vali format change
+// would have produced a permanently empty, permanently error-free stream.
+func TestStreamsToEntriesRejectsBadTimestamp(t *testing.T) {
+	_, err := streamsToEntries([]lokiStream{{
+		Stream: map[string]string{labelNamespace: "prod"},
+		Values: [][2]string{{"not-a-timestamp", "hello"}},
+	}}, "cluster-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parse entry timestamp")
 }

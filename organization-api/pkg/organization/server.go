@@ -193,7 +193,12 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
 	mux.Handle(metricsPath, metricsHandler)
 
-	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(s, interceptors)
+	// A log response is the one payload here built entirely from
+	// tenant-controlled content, so it gets an explicit transport ceiling on top
+	// of the entry limit and per-entry field cap.
+	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(
+		s, interceptors, connect.WithSendMaxBytes(maxLogsResponseBytes),
+	)
 	mux.Handle(logsPath, logsHandler)
 
 	corsHandler := cors.New(cors.Options{

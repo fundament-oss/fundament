@@ -16,10 +16,21 @@ const (
 	// kube-api-proxy's admin-kubeconfig cache).
 	perShootTTL = 10 * time.Minute
 
-	// resolveTimeout bounds one resolution. Resolution runs detached from the
-	// winning caller's context (all concurrent callers join its flight), so it
-	// needs its own deadline.
-	resolveTimeout = 15 * time.Second
+	// defaultResolveTimeout bounds one resolution. Resolution runs detached from
+	// the winning caller's context (all concurrent callers join its flight), so
+	// it needs its own deadline. Owners whose resolution does more work pass
+	// their own: this default was sized for a single secret read, and silently
+	// cut a resolver that probes several endpoints in sequence.
+	defaultResolveTimeout = 15 * time.Second
+
+	// negativeTTL bounds how long a failed resolution is remembered. Without it
+	// every request against a cluster with no reachable backend re-ran the whole
+	// resolution — a secret read plus, for logs, a sequential probe — because
+	// singleflight only dedupes callers that overlap in time. A logs page fires
+	// several requests and repeats them on every filter change, so one broken
+	// cluster meant a stall per request and a warning per request, for a result
+	// already known.
+	negativeTTL = 30 * time.Second
 )
 
 // perShootCache caches one resolved value per cluster with TTL expiry,
@@ -31,6 +42,8 @@ type perShootCache[T any] struct {
 	// seams; both must be set before use.
 	now     func() time.Time
 	resolve func(ctx context.Context, clusterID uuid.UUID) (T, error)
+	// resolveTimeout bounds one resolution attempt.
+	resolveTimeout time.Duration
 
 	mu      sync.Mutex
 	entries map[uuid.UUID]perShootCacheEntry[T]
@@ -38,15 +51,26 @@ type perShootCache[T any] struct {
 }
 
 type perShootCacheEntry[T any] struct {
-	value   T
+	value T
+	// err, when non-nil, is a remembered failure: the entry is negative and
+	// callers get this error back without re-resolving until it expires.
+	err     error
 	expires time.Time
 }
 
-func newPerShootCache[T any](now func() time.Time, resolve func(ctx context.Context, clusterID uuid.UUID) (T, error)) *perShootCache[T] {
+func newPerShootCache[T any](
+	now func() time.Time,
+	resolve func(ctx context.Context, clusterID uuid.UUID) (T, error),
+	resolveTimeout time.Duration,
+) *perShootCache[T] {
+	if resolveTimeout <= 0 {
+		resolveTimeout = defaultResolveTimeout
+	}
 	return &perShootCache[T]{
-		now:     now,
-		resolve: resolve,
-		entries: make(map[uuid.UUID]perShootCacheEntry[T]),
+		now:            now,
+		resolve:        resolve,
+		resolveTimeout: resolveTimeout,
+		entries:        make(map[uuid.UUID]perShootCacheEntry[T]),
 	}
 }
 
@@ -59,6 +83,9 @@ func (c *perShootCache[T]) get(ctx context.Context, clusterID uuid.UUID) (T, err
 	entry, ok := c.entries[clusterID]
 	c.mu.Unlock()
 	if ok && c.now().Before(entry.expires) {
+		if entry.err != nil {
+			return zero, entry.err
+		}
 		return entry.value, nil
 	}
 
@@ -66,10 +93,16 @@ func (c *perShootCache[T]) get(ctx context.Context, clusterID uuid.UUID) (T, err
 		// Detach from the winning caller's cancellation: every concurrent
 		// caller for this cluster joins this flight, and one caller aborting
 		// (page refresh) must not fail the others' resolution.
-		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), resolveTimeout)
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.resolveTimeout)
 		defer cancel()
 		value, err := c.resolve(rctx, clusterID)
 		if err != nil {
+			c.mu.Lock()
+			c.entries[clusterID] = perShootCacheEntry[T]{
+				err:     err,
+				expires: c.now().Add(negativeTTL),
+			}
+			c.mu.Unlock()
 			return nil, err
 		}
 		c.mu.Lock()

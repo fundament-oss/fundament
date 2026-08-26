@@ -76,6 +76,59 @@ func (x LogBackend) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// LogSource selects which of a cluster's two log sources a request targets.
+// The console models this as an explicit switch, so it is carried on the wire:
+// deriving it server-side meant probing Vali's label values on every request,
+// which cost three round trips and silently guessed wrong when the probe failed
+// or when a Vali-covered namespace happened to be quiet in the window.
+type LogSource int32
+
+const (
+	// Treated as LOG_SOURCE_CLUSTER.
+	LogSource_LOG_SOURCE_UNSPECIFIED LogSource = 0
+	// Cluster/system logs from the per-shoot Vali.
+	LogSource_LOG_SOURCE_CLUSTER LogSource = 1
+	// Plugin workload logs, read live from the Kubernetes pod-log endpoint via
+	// the kube-api-proxy. Requires a namespace and pod.
+	LogSource_LOG_SOURCE_PLUGIN LogSource = 2
+)
+
+// Enum value maps for LogSource.
+var (
+	LogSource_name = map[int32]string{
+		0: "LOG_SOURCE_UNSPECIFIED",
+		1: "LOG_SOURCE_CLUSTER",
+		2: "LOG_SOURCE_PLUGIN",
+	}
+	LogSource_value = map[string]int32{
+		"LOG_SOURCE_UNSPECIFIED": 0,
+		"LOG_SOURCE_CLUSTER":     1,
+		"LOG_SOURCE_PLUGIN":      2,
+	}
+)
+
+func (x LogSource) Enum() *LogSource {
+	p := new(LogSource)
+	*p = x
+	return p
+}
+
+func (x LogSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (LogSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_logs_proto_enumTypes[1].Descriptor()
+}
+
+func (LogSource) Type() protoreflect.EnumType {
+	return &file_v1_logs_proto_enumTypes[1]
+}
+
+func (x LogSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
 // LogEntry is a single log line. Mirrors the console-frontend LogEntry view type.
 type LogEntry struct {
 	state                protoimpl.MessageState `protogen:"opaque.v1"`
@@ -256,6 +309,8 @@ type QueryLogsRequest struct {
 	xxx_hidden_Start     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=start"`
 	xxx_hidden_End       *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=end"`
 	xxx_hidden_Limit     int32                  `protobuf:"varint,90,opt,name=limit"`
+	xxx_hidden_Levels    []string               `protobuf:"bytes,100,rep,name=levels"`
+	xxx_hidden_Source    LogSource              `protobuf:"varint,110,opt,name=source,enum=organization.v1.LogSource"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -341,6 +396,20 @@ func (x *QueryLogsRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *QueryLogsRequest) GetLevels() []string {
+	if x != nil {
+		return x.xxx_hidden_Levels
+	}
+	return nil
+}
+
+func (x *QueryLogsRequest) GetSource() LogSource {
+	if x != nil {
+		return x.xxx_hidden_Source
+	}
+	return LogSource_LOG_SOURCE_UNSPECIFIED
+}
+
 func (x *QueryLogsRequest) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -373,6 +442,14 @@ func (x *QueryLogsRequest) SetLimit(v int32) {
 	x.xxx_hidden_Limit = v
 }
 
+func (x *QueryLogsRequest) SetLevels(v []string) {
+	x.xxx_hidden_Levels = v
+}
+
+func (x *QueryLogsRequest) SetSource(v LogSource) {
+	x.xxx_hidden_Source = v
+}
+
 func (x *QueryLogsRequest) HasStart() bool {
 	if x == nil {
 		return false
@@ -403,7 +480,7 @@ type QueryLogsRequest_builder struct {
 	Namespace string
 	Pod       string
 	Container string
-	// Optional free-text line filter. Severity filtering happens client-side.
+	// Optional free-text line filter.
 	Search string
 	// Optional time range. Defaults to the last hour when not set.
 	Start *timestamppb.Timestamp
@@ -412,6 +489,16 @@ type QueryLogsRequest_builder struct {
 	// capped at 5000: backends preallocate on this value, so an unbounded limit
 	// is an out-of-memory vector.
 	Limit int32
+	// Optional severity filter, as normalised levels (ERROR / WARN / INFO /
+	// DEBUG). Empty means all levels.
+	//
+	// This must be applied by the backend, not the client: the entry limit is
+	// applied to the newest matching lines, so a namespace logging mostly INFO
+	// fills the page and a client-side filter for ERROR reports nothing while
+	// errors sit just outside it.
+	Levels []string
+	// Which of the cluster's log sources to read.
+	Source LogSource
 }
 
 func (b0 QueryLogsRequest_builder) Build() *QueryLogsRequest {
@@ -426,6 +513,8 @@ func (b0 QueryLogsRequest_builder) Build() *QueryLogsRequest {
 	x.xxx_hidden_Start = b.Start
 	x.xxx_hidden_End = b.End
 	x.xxx_hidden_Limit = b.Limit
+	x.xxx_hidden_Levels = b.Levels
+	x.xxx_hidden_Source = b.Source
 	return m0
 }
 
@@ -512,6 +601,8 @@ type TailLogsRequest struct {
 	xxx_hidden_Pod       string                 `protobuf:"bytes,30,opt,name=pod"`
 	xxx_hidden_Container string                 `protobuf:"bytes,40,opt,name=container"`
 	xxx_hidden_Search    string                 `protobuf:"bytes,60,opt,name=search"`
+	xxx_hidden_Levels    []string               `protobuf:"bytes,100,rep,name=levels"`
+	xxx_hidden_Source    LogSource              `protobuf:"varint,110,opt,name=source,enum=organization.v1.LogSource"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -576,6 +667,20 @@ func (x *TailLogsRequest) GetSearch() string {
 	return ""
 }
 
+func (x *TailLogsRequest) GetLevels() []string {
+	if x != nil {
+		return x.xxx_hidden_Levels
+	}
+	return nil
+}
+
+func (x *TailLogsRequest) GetSource() LogSource {
+	if x != nil {
+		return x.xxx_hidden_Source
+	}
+	return LogSource_LOG_SOURCE_UNSPECIFIED
+}
+
 func (x *TailLogsRequest) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -596,6 +701,14 @@ func (x *TailLogsRequest) SetSearch(v string) {
 	x.xxx_hidden_Search = v
 }
 
+func (x *TailLogsRequest) SetLevels(v []string) {
+	x.xxx_hidden_Levels = v
+}
+
+func (x *TailLogsRequest) SetSource(v LogSource) {
+	x.xxx_hidden_Source = v
+}
+
 type TailLogsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -604,6 +717,10 @@ type TailLogsRequest_builder struct {
 	Pod       string
 	Container string
 	Search    string
+	// Optional severity filter; see QueryLogsRequest.levels.
+	Levels []string
+	// Which of the cluster's log sources to read.
+	Source LogSource
 }
 
 func (b0 TailLogsRequest_builder) Build() *TailLogsRequest {
@@ -615,6 +732,8 @@ func (b0 TailLogsRequest_builder) Build() *TailLogsRequest {
 	x.xxx_hidden_Pod = b.Pod
 	x.xxx_hidden_Container = b.Container
 	x.xxx_hidden_Search = b.Search
+	x.xxx_hidden_Levels = b.Levels
+	x.xxx_hidden_Source = b.Source
 	return m0
 }
 
@@ -862,7 +981,7 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\x06fields\x18P \x03(\v2%.organization.v1.LogEntry.FieldsEntryR\x06fields\x1a9\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb1\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8d\x03\n" +
 	"\x10QueryLogsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -874,11 +993,13 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\x05start\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12 \n" +
 	"\x05limit\x18Z \x01(\x05B\n" +
-	"\xbaH\a\x1a\x05\x18\x88'(\x00R\x05limit\"\x7f\n" +
+	"\xbaH\a\x1a\x05\x18\x88'(\x00R\x05limit\x12&\n" +
+	"\x06levels\x18d \x03(\tB\x0e\xbaH\v\x92\x01\b\x10\x04\"\x04r\x02\x18\x10R\x06levels\x122\n" +
+	"\x06source\x18n \x01(\x0e2\x1a.organization.v1.LogSourceR\x06source\"\x7f\n" +
 	"\x11QueryLogsResponse\x123\n" +
 	"\aentries\x18\n" +
 	" \x03(\v2\x19.organization.v1.LogEntryR\aentries\x125\n" +
-	"\abackend\x18\x14 \x01(\x0e2\x1b.organization.v1.LogBackendR\abackend\"\xa0\x01\n" +
+	"\abackend\x18\x14 \x01(\x0e2\x1b.organization.v1.LogBackendR\abackend\"\xfc\x01\n" +
 	"\x0fTailLogsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -886,7 +1007,9 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\tnamespace\x18\x14 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03pod\x18\x1e \x01(\tR\x03pod\x12\x1c\n" +
 	"\tcontainer\x18( \x01(\tR\tcontainer\x12\x16\n" +
-	"\x06search\x18< \x01(\tR\x06search\"\xca\x01\n" +
+	"\x06search\x18< \x01(\tR\x06search\x12&\n" +
+	"\x06levels\x18d \x03(\tB\x0e\xbaH\v\x92\x01\b\x10\x04\"\x04r\x02\x18\x10R\x06levels\x122\n" +
+	"\x06source\x18n \x01(\x0e2\x1a.organization.v1.LogSourceR\x06source\"\xca\x01\n" +
 	"\x13GetLogLabelsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -909,46 +1032,53 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\x17LOG_BACKEND_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10LOG_BACKEND_LOKI\x10\x01\x12\x1a\n" +
 	"\x16LOG_BACKEND_KUBERNETES\x10\x02\x12\x14\n" +
-	"\x10LOG_BACKEND_NONE\x10\x032\x89\x02\n" +
+	"\x10LOG_BACKEND_NONE\x10\x03*V\n" +
+	"\tLogSource\x12\x1a\n" +
+	"\x16LOG_SOURCE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12LOG_SOURCE_CLUSTER\x10\x01\x12\x15\n" +
+	"\x11LOG_SOURCE_PLUGIN\x10\x022\x89\x02\n" +
 	"\vLogsService\x12R\n" +
 	"\tQueryLogs\x12!.organization.v1.QueryLogsRequest\x1a\".organization.v1.QueryLogsResponse\x12I\n" +
 	"\bTailLogs\x12 .organization.v1.TailLogsRequest\x1a\x19.organization.v1.LogEntry0\x01\x12[\n" +
 	"\fGetLogLabels\x12$.organization.v1.GetLogLabelsRequest\x1a%.organization.v1.GetLogLabelsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_logs_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_v1_logs_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_v1_logs_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_v1_logs_proto_goTypes = []any{
 	(LogBackend)(0),               // 0: organization.v1.LogBackend
-	(*LogEntry)(nil),              // 1: organization.v1.LogEntry
-	(*QueryLogsRequest)(nil),      // 2: organization.v1.QueryLogsRequest
-	(*QueryLogsResponse)(nil),     // 3: organization.v1.QueryLogsResponse
-	(*TailLogsRequest)(nil),       // 4: organization.v1.TailLogsRequest
-	(*GetLogLabelsRequest)(nil),   // 5: organization.v1.GetLogLabelsRequest
-	(*GetLogLabelsResponse)(nil),  // 6: organization.v1.GetLogLabelsResponse
-	nil,                           // 7: organization.v1.LogEntry.FieldsEntry
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(LogSource)(0),                // 1: organization.v1.LogSource
+	(*LogEntry)(nil),              // 2: organization.v1.LogEntry
+	(*QueryLogsRequest)(nil),      // 3: organization.v1.QueryLogsRequest
+	(*QueryLogsResponse)(nil),     // 4: organization.v1.QueryLogsResponse
+	(*TailLogsRequest)(nil),       // 5: organization.v1.TailLogsRequest
+	(*GetLogLabelsRequest)(nil),   // 6: organization.v1.GetLogLabelsRequest
+	(*GetLogLabelsResponse)(nil),  // 7: organization.v1.GetLogLabelsResponse
+	nil,                           // 8: organization.v1.LogEntry.FieldsEntry
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_v1_logs_proto_depIdxs = []int32{
-	8,  // 0: organization.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
-	7,  // 1: organization.v1.LogEntry.fields:type_name -> organization.v1.LogEntry.FieldsEntry
-	8,  // 2: organization.v1.QueryLogsRequest.start:type_name -> google.protobuf.Timestamp
-	8,  // 3: organization.v1.QueryLogsRequest.end:type_name -> google.protobuf.Timestamp
-	1,  // 4: organization.v1.QueryLogsResponse.entries:type_name -> organization.v1.LogEntry
-	0,  // 5: organization.v1.QueryLogsResponse.backend:type_name -> organization.v1.LogBackend
-	8,  // 6: organization.v1.GetLogLabelsRequest.start:type_name -> google.protobuf.Timestamp
-	8,  // 7: organization.v1.GetLogLabelsRequest.end:type_name -> google.protobuf.Timestamp
-	0,  // 8: organization.v1.GetLogLabelsResponse.backend:type_name -> organization.v1.LogBackend
-	2,  // 9: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
-	4,  // 10: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
-	5,  // 11: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
-	3,  // 12: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
-	1,  // 13: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
-	6,  // 14: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
-	12, // [12:15] is the sub-list for method output_type
-	9,  // [9:12] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	9,  // 0: organization.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
+	8,  // 1: organization.v1.LogEntry.fields:type_name -> organization.v1.LogEntry.FieldsEntry
+	9,  // 2: organization.v1.QueryLogsRequest.start:type_name -> google.protobuf.Timestamp
+	9,  // 3: organization.v1.QueryLogsRequest.end:type_name -> google.protobuf.Timestamp
+	1,  // 4: organization.v1.QueryLogsRequest.source:type_name -> organization.v1.LogSource
+	2,  // 5: organization.v1.QueryLogsResponse.entries:type_name -> organization.v1.LogEntry
+	0,  // 6: organization.v1.QueryLogsResponse.backend:type_name -> organization.v1.LogBackend
+	1,  // 7: organization.v1.TailLogsRequest.source:type_name -> organization.v1.LogSource
+	9,  // 8: organization.v1.GetLogLabelsRequest.start:type_name -> google.protobuf.Timestamp
+	9,  // 9: organization.v1.GetLogLabelsRequest.end:type_name -> google.protobuf.Timestamp
+	0,  // 10: organization.v1.GetLogLabelsResponse.backend:type_name -> organization.v1.LogBackend
+	3,  // 11: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
+	5,  // 12: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
+	6,  // 13: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
+	4,  // 14: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
+	2,  // 15: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
+	7,  // 16: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_v1_logs_proto_init() }
@@ -961,7 +1091,7 @@ func file_v1_logs_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_logs_proto_rawDesc), len(file_v1_logs_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,

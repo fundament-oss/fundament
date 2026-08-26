@@ -57,13 +57,24 @@ func (c *KubeClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 	}
 	limit := EffectiveLimit(p.Limit)
 
-	resp, err := c.openLogStream(ctx, p, false, limit)
+	// The pod-log endpoint has no server-side search and no end bound — it can
+	// only hand back the last N raw lines — so Search, End and Levels have to be
+	// applied here. That means fetching more than the caller asked for when a
+	// filter is active: applying the kubelet's cap to *unfiltered* lines meant a
+	// match just outside the last `limit` lines was reported as "no results",
+	// and an explicit End was ignored outright.
+	fetchLines := limit
+	if p.Search != "" || !p.End.IsZero() || len(p.Levels) > 0 {
+		fetchLines = MaxLimit
+	}
+
+	resp, err := c.openLogStream(ctx, p, false, fetchLines)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var entries []Entry
+	entries := make([]Entry, 0, min(fetchLines, 1024))
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
@@ -77,7 +88,33 @@ func (c *KubeClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
 		entries[i], entries[j] = entries[j], entries[i]
 	}
+
+	entries = filterEntries(entries, p)
+	if len(entries) > limit {
+		entries = entries[:limit]
+	}
 	return entries, nil
+}
+
+// filterEntries applies the query filters the pod-log endpoint cannot express.
+// Search matches case-insensitively, the same way the Vali line filter and the
+// console's own filter box do.
+func filterEntries(entries []Entry, p *QueryParams) []Entry {
+	entries = FilterByLevels(entries, p.Levels)
+	if p.Search == "" && p.End.IsZero() {
+		return entries
+	}
+	out := make([]Entry, 0, len(entries))
+	for i := range entries {
+		if !p.End.IsZero() && entries[i].Timestamp.After(p.End) {
+			continue
+		}
+		if !MatchesSearch(entries[i].Message, p.Search) {
+			continue
+		}
+		out = append(out, entries[i])
+	}
+	return out
 }
 
 func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent, error) {
@@ -98,9 +135,19 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent
 		defer func() { _ = resp.Body.Close() }()
 		scanner := bufio.NewScanner(resp.Body)
 		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		wantLevels := NormalizedLevels(p.Levels)
 		for scanner.Scan() {
+			// The pod-log endpoint cannot filter, so the tail applies the same
+			// filters Query does; otherwise a filtered tail streams every line.
+			entry := c.lineToEntry(scanner.Text(), p)
+			if !MatchesSearch(entry.Message, p.Search) {
+				continue
+			}
+			if wantLevels != nil && !wantLevels[NormalizeLevel(entry.Level)] {
+				continue
+			}
 			select {
-			case out <- TailEvent{Entry: c.lineToEntry(scanner.Text(), p)}:
+			case out <- TailEvent{Entry: entry}:
 			case <-ctx.Done():
 				return
 			}
@@ -124,8 +171,17 @@ func (*KubeClient) Labels(_ context.Context, _, _ string, _, _ time.Time) (Label
 }
 
 func (c *KubeClient) openLogStream(ctx context.Context, p *QueryParams, follow bool, tailLines int) (*http.Response, error) {
+	// Escape the caller-supplied segments. Unescaped, a pod named
+	// "x?previous=true" terminates the path and injects a query parameter that
+	// survives q.Set, and "%2f..%2f.." reaches the proxy with its dot segments
+	// un-normalized — org-api would fetch an attacker-chosen kube API path with
+	// the caller's credentials attached. It also simply queries the wrong
+	// resource for any legitimate name with an unusual character.
 	endpoint := fmt.Sprintf("%s/clusters/%s/api/v1/namespaces/%s/pods/%s/log",
-		c.proxyURL, p.ClusterID, p.Namespace, p.Pod)
+		c.proxyURL,
+		url.PathEscape(p.ClusterID),
+		url.PathEscape(p.Namespace),
+		url.PathEscape(p.Pod))
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("parse url: %w", err)
@@ -164,9 +220,14 @@ func (c *KubeClient) openLogStream(ctx context.Context, p *QueryParams, follow b
 		return nil, fmt.Errorf("http get: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		// Drain a bounded amount so the connection can be reused, but keep the
+		// upstream body out of the error: it reaches the browser verbatim.
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 2048))
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("pod logs: status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		// A *StatusError, like the Vali path returns, so one classification
+		// covers both backends. A plain error here meant every kube-path failure
+		// bypassed degradation and arrived as CodeInternal.
+		return nil, &StatusError{StatusCode: resp.StatusCode, Operation: "pod logs"}
 	}
 	return resp, nil
 }
@@ -182,9 +243,9 @@ func (c *KubeClient) lineToEntry(line string, p *QueryParams) Entry {
 		}
 	}
 	msg, lineLevel, fields := parseLogLine(rest)
-	level := normalizeLevel(lineLevel)
+	level := NormalizeLevel(lineLevel)
 	if level == "" {
-		level = "INFO"
+		level = defaultLevel
 	}
 	return Entry{
 		Timestamp: ts,

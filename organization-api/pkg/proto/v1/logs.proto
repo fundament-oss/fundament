@@ -40,6 +40,21 @@ enum LogBackend {
   LOG_BACKEND_NONE = 3;
 }
 
+// LogSource selects which of a cluster's two log sources a request targets.
+// The console models this as an explicit switch, so it is carried on the wire:
+// deriving it server-side meant probing Vali's label values on every request,
+// which cost three round trips and silently guessed wrong when the probe failed
+// or when a Vali-covered namespace happened to be quiet in the window.
+enum LogSource {
+  // Treated as LOG_SOURCE_CLUSTER.
+  LOG_SOURCE_UNSPECIFIED = 0;
+  // Cluster/system logs from the per-shoot Vali.
+  LOG_SOURCE_CLUSTER = 1;
+  // Plugin workload logs, read live from the Kubernetes pod-log endpoint via
+  // the kube-api-proxy. Requires a namespace and pod.
+  LOG_SOURCE_PLUGIN = 2;
+}
+
 // LogEntry is a single log line. Mirrors the console-frontend LogEntry view type.
 message LogEntry {
   google.protobuf.Timestamp timestamp = 10;
@@ -61,7 +76,7 @@ message QueryLogsRequest {
   string namespace = 20;
   string pod = 30;
   string container = 40;
-  // Optional free-text line filter. Severity filtering happens client-side.
+  // Optional free-text line filter.
   string search = 60;
   // Optional time range. Defaults to the last hour when not set.
   google.protobuf.Timestamp start = 70 [features.field_presence = EXPLICIT];
@@ -70,6 +85,21 @@ message QueryLogsRequest {
   // capped at 5000: backends preallocate on this value, so an unbounded limit
   // is an out-of-memory vector.
   int32 limit = 90 [(buf.validate.field).int32 = {gte: 0, lte: 5000}];
+  // Optional severity filter, as normalised levels (ERROR / WARN / INFO /
+  // DEBUG). Empty means all levels.
+  //
+  // This must be applied by the backend, not the client: the entry limit is
+  // applied to the newest matching lines, so a namespace logging mostly INFO
+  // fills the page and a client-side filter for ERROR reports nothing while
+  // errors sit just outside it.
+  repeated string levels = 100 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      string: {max_len: 16}
+    }
+  }];
+  // Which of the cluster's log sources to read.
+  LogSource source = 110;
 }
 
 // QueryLogsResponse contains the matched log entries.
@@ -86,6 +116,15 @@ message TailLogsRequest {
   string pod = 30;
   string container = 40;
   string search = 60;
+  // Optional severity filter; see QueryLogsRequest.levels.
+  repeated string levels = 100 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      string: {max_len: 16}
+    }
+  }];
+  // Which of the cluster's log sources to read.
+  LogSource source = 110;
 }
 
 // GetLogLabelsRequest requests the available filter values for a cluster.

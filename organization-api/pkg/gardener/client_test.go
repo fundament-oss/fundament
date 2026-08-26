@@ -2,13 +2,14 @@ package gardener
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log/slog"
 	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,12 +20,8 @@ import (
 func testScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("add core scheme: %v", err)
-	}
-	if err := gardencorev1beta1.AddToScheme(scheme); err != nil {
-		t.Fatalf("add gardener scheme: %v", err)
-	}
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, gardencorev1beta1.AddToScheme(scheme))
 	return scheme
 }
 
@@ -69,21 +66,15 @@ func TestRealClient_Monitoring(t *testing.T) {
 			monitoringSecret(map[string]string{plutonoURLAnnotation: "https://plutono.example"}),
 		)
 		info, err := c.Monitoring(context.Background(), id)
-		if err != nil {
-			t.Fatalf("Monitoring: %v", err)
-		}
-		if info.URL != "https://plutono.example" {
-			t.Errorf("URL = %q, want https://plutono.example", info.URL)
-		}
-		if info.Username != "observer" || info.Password != "s3cr3t" {
-			t.Errorf("creds = (%q, %q), want (observer, s3cr3t)", info.Username, info.Password)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "https://plutono.example", info.URL)
+		assert.Equal(t, "observer", info.Username)
+		assert.Equal(t, "s3cr3t", info.Password)
 	})
 
 	t.Run("ErrNotFound when shoot missing", func(t *testing.T) {
 		c := realClientWith(t)
-		if _, err := c.Monitoring(context.Background(), id); !errors.Is(err, ErrNotFound) {
-			t.Errorf("err = %v, want ErrNotFound", err)
-		}
+		_, err := c.Monitoring(context.Background(), id)
+		require.ErrorIs(t, err, ErrNotFound)
 	})
 }

@@ -304,6 +304,7 @@ func Test_Logs_PluginPod_RoutesThroughKubeProxy(t *testing.T) {
 		ClusterId: l.clusterID.String(),
 		Namespace: "plugin-envoy-gateway",
 		Pod:       "envoy-gateway-abc",
+		Source:    organizationv1.LogSource_LOG_SOURCE_PLUGIN,
 	}.Build()
 	ctx, callInfo := connect.NewClientContext(context.Background())
 	l.authed(callInfo.RequestHeader())
@@ -315,6 +316,44 @@ func Test_Logs_PluginPod_RoutesThroughKubeProxy(t *testing.T) {
 	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_KUBERNETES, res.GetBackend())
 	assert.Contains(t, gotPath, "/namespaces/plugin-envoy-gateway/pods/envoy-gateway-abc/log")
 	assert.Equal(t, "Bearer "+l.token, gotAuth)
+}
+
+// Plugin logs go through the kube-api-proxy and need no Vali at all, so an
+// unreachable Vali must not take them down with it. Previously resolution ran
+// first and short-circuited to LOG_BACKEND_NONE before the plugin path was ever
+// considered — the fallback died exactly when it was worth having.
+func Test_Logs_PluginPod_SurvivesDeadVali(t *testing.T) {
+	t.Parallel()
+
+	// A Plutono that refuses every connection: resolution cannot succeed.
+	deadPlutono := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(deadPlutono.Close)
+	g := &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)}
+
+	kube := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("2026-08-05T12:00:00.000000000Z plugin still readable\n"))
+	}))
+	t.Cleanup(kube.Close)
+
+	l := newPerShootLogsEnv(t, g, WithKubeAPIProxy(kube.URL))
+	g.set(l.clusterID, &gardener.MonitoringInfo{URL: deadPlutono.URL, Username: "u", Password: "p"})
+
+	req := organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Namespace: "plugin-envoy-gateway",
+		Pod:       "envoy-gateway-abc",
+		Source:    organizationv1.LogSource_LOG_SOURCE_PLUGIN,
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	res, err := l.client.QueryLogs(ctx, req)
+	require.NoError(t, err)
+	require.Len(t, res.GetEntries(), 1)
+	assert.Equal(t, "plugin still readable", res.GetEntries()[0].GetMessage())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_KUBERNETES, res.GetBackend())
 }
 
 // A namespace Vali does cover stays on the Vali backend even when a pod is
@@ -347,4 +386,35 @@ func Test_Logs_SystemPod_StaysOnVali(t *testing.T) {
 	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_LOKI, res.GetBackend())
 	require.Len(t, res.GetEntries(), 1)
 	assert.Equal(t, "calico says hi", res.GetEntries()[0].GetMessage())
+}
+
+// Level filtering has to happen in the backend: the entry limit selects the
+// newest matching lines, so a client-side filter over a page of mostly-INFO
+// entries reported "no errors" while errors sat just outside it.
+func Test_Logs_LevelFilterAppliedServerSide(t *testing.T) {
+	t.Parallel()
+
+	l := newLogsEnv(t)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	res, err := l.client.QueryLogs(ctx, organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Levels:    []string{"ERROR"},
+		Limit:     200,
+	}.Build())
+	require.NoError(t, err)
+	require.NotEmpty(t, res.GetEntries(), "the mock emits ERROR streams, so some must survive the filter")
+	for _, e := range res.GetEntries() {
+		assert.Equal(t, "ERROR", e.GetLevel())
+	}
+
+	// And the unfiltered query returns strictly more.
+	all, err := l.client.QueryLogs(ctx, organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Limit:     200,
+	}.Build())
+	require.NoError(t, err)
+	assert.Greater(t, len(all.GetEntries()), len(res.GetEntries()))
 }

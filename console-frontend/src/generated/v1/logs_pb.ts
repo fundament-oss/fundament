@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/logs.proto.
  */
 export const file_v1_logs: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9sb2dzLnByb3RvEg9vcmdhbml6YXRpb24udjEigwIKCExvZ0VudHJ5Ei0KCXRpbWVzdGFtcBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGV2ZWwYFCABKAkSDwoHY2x1c3RlchgeIAEoCRIRCgluYW1lc3BhY2UYKCABKAkSCwoDcG9kGDIgASgJEhEKCWNvbnRhaW5lchg8IAEoCRIPCgdtZXNzYWdlGEYgASgJEjUKBmZpZWxkcxhQIAMoCzIlLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeS5GaWVsZHNFbnRyeRotCgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIvABChBRdWVyeUxvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIwCgVzdGFydBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhkKBWxpbWl0GFogASgFQgq6SAcaBRiIJygAIm0KEVF1ZXJ5TG9nc1Jlc3BvbnNlEioKB2VudHJpZXMYCiADKAsyGS5vcmdhbml6YXRpb24udjEuTG9nRW50cnkSLAoHYmFja2VuZBgUIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kInIKD1RhaWxMb2dzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABARIRCgluYW1lc3BhY2UYFCABKAkSCwoDcG9kGB4gASgJEhEKCWNvbnRhaW5lchgoIAEoCRIOCgZzZWFyY2gYPCABKAkiqAEKE0dldExvZ0xhYmVsc1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQESEQoJbmFtZXNwYWNlGBQgASgJEjAKBXN0YXJ0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESLgoDZW5kGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiegoUR2V0TG9nTGFiZWxzUmVzcG9uc2USEgoKbmFtZXNwYWNlcxgKIAMoCRIMCgRwb2RzGBQgAygJEhIKCmNvbnRhaW5lcnMYHiADKAkSLAoHYmFja2VuZBgoIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kKnEKCkxvZ0JhY2tlbmQSGwoXTE9HX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIUChBMT0dfQkFDS0VORF9MT0tJEAESGgoWTE9HX0JBQ0tFTkRfS1VCRVJORVRFUxACEhQKEExPR19CQUNLRU5EX05PTkUQAzKJAgoLTG9nc1NlcnZpY2USUgoJUXVlcnlMb2dzEiEub3JnYW5pemF0aW9uLnYxLlF1ZXJ5TG9nc1JlcXVlc3QaIi5vcmdhbml6YXRpb24udjEuUXVlcnlMb2dzUmVzcG9uc2USSQoIVGFpbExvZ3MSIC5vcmdhbml6YXRpb24udjEuVGFpbExvZ3NSZXF1ZXN0Ghkub3JnYW5pemF0aW9uLnYxLkxvZ0VudHJ5MAESWwoMR2V0TG9nTGFiZWxzEiQub3JnYW5pemF0aW9uLnYxLkdldExvZ0xhYmVsc1JlcXVlc3QaJS5vcmdhbml6YXRpb24udjEuR2V0TG9nTGFiZWxzUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS9sb2dzLnByb3RvEg9vcmdhbml6YXRpb24udjEigwIKCExvZ0VudHJ5Ei0KCXRpbWVzdGFtcBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGV2ZWwYFCABKAkSDwoHY2x1c3RlchgeIAEoCRIRCgluYW1lc3BhY2UYKCABKAkSCwoDcG9kGDIgASgJEhEKCWNvbnRhaW5lchg8IAEoCRIPCgdtZXNzYWdlGEYgASgJEjUKBmZpZWxkcxhQIAMoCzIlLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeS5GaWVsZHNFbnRyeRotCgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrwCChBRdWVyeUxvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIwCgVzdGFydBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhkKBWxpbWl0GFogASgFQgq6SAcaBRiIJygAEh4KBmxldmVscxhkIAMoCUIOukgLkgEIEAQiBHICGBASKgoGc291cmNlGG4gASgOMhoub3JnYW5pemF0aW9uLnYxLkxvZ1NvdXJjZSJtChFRdWVyeUxvZ3NSZXNwb25zZRIqCgdlbnRyaWVzGAogAygLMhkub3JnYW5pemF0aW9uLnYxLkxvZ0VudHJ5EiwKB2JhY2tlbmQYFCABKA4yGy5vcmdhbml6YXRpb24udjEuTG9nQmFja2VuZCK+AQoPVGFpbExvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIeCgZsZXZlbHMYZCADKAlCDrpIC5IBCBAEIgRyAhgQEioKBnNvdXJjZRhuIAEoDjIaLm9yZ2FuaXphdGlvbi52MS5Mb2dTb3VyY2UiqAEKE0dldExvZ0xhYmVsc1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQESEQoJbmFtZXNwYWNlGBQgASgJEjAKBXN0YXJ0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESLgoDZW5kGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiegoUR2V0TG9nTGFiZWxzUmVzcG9uc2USEgoKbmFtZXNwYWNlcxgKIAMoCRIMCgRwb2RzGBQgAygJEhIKCmNvbnRhaW5lcnMYHiADKAkSLAoHYmFja2VuZBgoIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kKnEKCkxvZ0JhY2tlbmQSGwoXTE9HX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIUChBMT0dfQkFDS0VORF9MT0tJEAESGgoWTE9HX0JBQ0tFTkRfS1VCRVJORVRFUxACEhQKEExPR19CQUNLRU5EX05PTkUQAypWCglMb2dTb3VyY2USGgoWTE9HX1NPVVJDRV9VTlNQRUNJRklFRBAAEhYKEkxPR19TT1VSQ0VfQ0xVU1RFUhABEhUKEUxPR19TT1VSQ0VfUExVR0lOEAIyiQIKC0xvZ3NTZXJ2aWNlElIKCVF1ZXJ5TG9ncxIhLm9yZ2FuaXphdGlvbi52MS5RdWVyeUxvZ3NSZXF1ZXN0GiIub3JnYW5pemF0aW9uLnYxLlF1ZXJ5TG9nc1Jlc3BvbnNlEkkKCFRhaWxMb2dzEiAub3JnYW5pemF0aW9uLnYxLlRhaWxMb2dzUmVxdWVzdBoZLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeTABElsKDEdldExvZ0xhYmVscxIkLm9yZ2FuaXphdGlvbi52MS5HZXRMb2dMYWJlbHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkdldExvZ0xhYmVsc1Jlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * LogEntry is a single log line. Mirrors the console-frontend LogEntry view type.
@@ -103,7 +103,7 @@ export type QueryLogsRequest = Message<"organization.v1.QueryLogsRequest"> & {
   container: string;
 
   /**
-   * Optional free-text line filter. Severity filtering happens client-side.
+   * Optional free-text line filter.
    *
    * @generated from field: string search = 60;
    */
@@ -129,6 +129,26 @@ export type QueryLogsRequest = Message<"organization.v1.QueryLogsRequest"> & {
    * @generated from field: int32 limit = 90;
    */
   limit: number;
+
+  /**
+   * Optional severity filter, as normalised levels (ERROR / WARN / INFO /
+   * DEBUG). Empty means all levels.
+   *
+   * This must be applied by the backend, not the client: the entry limit is
+   * applied to the newest matching lines, so a namespace logging mostly INFO
+   * fills the page and a client-side filter for ERROR reports nothing while
+   * errors sit just outside it.
+   *
+   * @generated from field: repeated string levels = 100;
+   */
+  levels: string[];
+
+  /**
+   * Which of the cluster's log sources to read.
+   *
+   * @generated from field: organization.v1.LogSource source = 110;
+   */
+  source: LogSource;
 };
 
 /**
@@ -194,6 +214,20 @@ export type TailLogsRequest = Message<"organization.v1.TailLogsRequest"> & {
    * @generated from field: string search = 60;
    */
   search: string;
+
+  /**
+   * Optional severity filter; see QueryLogsRequest.levels.
+   *
+   * @generated from field: repeated string levels = 100;
+   */
+  levels: string[];
+
+  /**
+   * Which of the cluster's log sources to read.
+   *
+   * @generated from field: organization.v1.LogSource source = 110;
+   */
+  source: LogSource;
 };
 
 /**
@@ -319,6 +353,45 @@ export enum LogBackend {
  */
 export const LogBackendSchema: GenEnum<LogBackend> = /*@__PURE__*/
   enumDesc(file_v1_logs, 0);
+
+/**
+ * LogSource selects which of a cluster's two log sources a request targets.
+ * The console models this as an explicit switch, so it is carried on the wire:
+ * deriving it server-side meant probing Vali's label values on every request,
+ * which cost three round trips and silently guessed wrong when the probe failed
+ * or when a Vali-covered namespace happened to be quiet in the window.
+ *
+ * @generated from enum organization.v1.LogSource
+ */
+export enum LogSource {
+  /**
+   * Treated as LOG_SOURCE_CLUSTER.
+   *
+   * @generated from enum value: LOG_SOURCE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Cluster/system logs from the per-shoot Vali.
+   *
+   * @generated from enum value: LOG_SOURCE_CLUSTER = 1;
+   */
+  CLUSTER = 1,
+
+  /**
+   * Plugin workload logs, read live from the Kubernetes pod-log endpoint via
+   * the kube-api-proxy. Requires a namespace and pod.
+   *
+   * @generated from enum value: LOG_SOURCE_PLUGIN = 2;
+   */
+  PLUGIN = 2,
+}
+
+/**
+ * Describes the enum organization.v1.LogSource.
+ */
+export const LogSourceSchema: GenEnum<LogSource> = /*@__PURE__*/
+  enumDesc(file_v1_logs, 1);
 
 /**
  * LogsService serves container/application logs for clusters. Logs are sourced

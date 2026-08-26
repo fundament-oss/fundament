@@ -6,6 +6,7 @@ package logs
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -41,9 +42,13 @@ type QueryParams struct {
 	Pod       string
 	Container string
 	Search    string
-	Start     time.Time
-	End       time.Time
-	Limit     int
+	// Levels, when non-empty, restricts results to those normalised severities.
+	// Backends narrow the query with it before applying Limit; FilterByLevels
+	// then enforces it exactly.
+	Levels []string
+	Start  time.Time
+	End    time.Time
+	Limit  int
 }
 
 // Labels are the distinct label values available for a cluster.
@@ -84,6 +89,12 @@ type Client interface {
 
 const defaultLimit = 1000
 
+// defaultLevel is reported for an entry whose severity could not be classified.
+// It is load-bearing for the level filter: because an unclassifiable line lands
+// here, a query narrowing on this level cannot narrow at all (see
+// levelPreFilter).
+const defaultLevel = "INFO"
+
 // MaxLimit caps a caller-supplied entry limit. Backends preallocate on the
 // limit, so an unbounded value from the wire is an out-of-memory vector — the
 // proto carries the same ceiling, and this clamp guards every other path.
@@ -102,9 +113,57 @@ func EffectiveLimit(limit int) int {
 	}
 }
 
-// normalizeLevel maps a free-form severity string onto one of the four levels
+// NormalizedLevels maps the caller's requested severities onto the normalised
+// set, dropping anything unrecognised. A nil result means "no level filter".
+func NormalizedLevels(levels []string) map[string]bool {
+	if len(levels) == 0 {
+		return nil
+	}
+	out := make(map[string]bool, len(levels))
+	for _, l := range levels {
+		if n := NormalizeLevel(l); n != "" {
+			out[n] = true
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// FilterByLevels keeps only entries whose level is in levels, exactly. Backends
+// narrow their queries approximately so that Limit is applied to a relevant set;
+// this is what makes the filter precise, and it runs server-side so that every
+// backend — and every API consumer, not just the console — sees one semantics.
+func FilterByLevels(entries []Entry, levels []string) []Entry {
+	want := NormalizedLevels(levels)
+	if want == nil {
+		return entries
+	}
+	out := make([]Entry, 0, len(entries))
+	for i := range entries {
+		if want[NormalizeLevel(entries[i].Level)] {
+			out = append(out, entries[i])
+		}
+	}
+	return out
+}
+
+// MatchesSearch reports whether a message satisfies a free-text filter. Matching
+// is case-insensitive, which is what the console's filter box implies and what
+// the Vali line filter now does — previously the backends matched
+// case-sensitively while the client re-filtered case-insensitively, so searching
+// "Timeout" on a service logging "timeout" returned nothing.
+func MatchesSearch(message, search string) bool {
+	if search == "" {
+		return true
+	}
+	return strings.Contains(strings.ToLower(message), strings.ToLower(search))
+}
+
+// NormalizeLevel maps a free-form severity string onto one of the four levels
 // the UI understands, returning "" when it can't be classified.
-func normalizeLevel(raw string) string {
+func NormalizeLevel(raw string) string {
 	switch s := toUpperASCII(raw); {
 	case s == "":
 		return ""

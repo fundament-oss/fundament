@@ -43,7 +43,7 @@ func newPerShootClients(g gardener.Client, logger *slog.Logger, opts ...prom.Opt
 	}
 	// Indirections keep c.now / c.newClient assignable by tests after
 	// construction.
-	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient)
+	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient, defaultResolveTimeout)
 	return c
 }
 
