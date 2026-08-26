@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storage Pools</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Storage Pools</h1>
+      <div class="plugin-actions">
+        <button type="button" class="plugin-button" id="create-btn">
+          Create storage pool
+        </button>
+      </div>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phase</th>
+            <th>Storage Class</th>
+            <th>Replicas</th>
+            <th>Failure Domain</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="6" class="plugin-text">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script type="module" src="./storagepools-list.js"></script>
+  </body>
+</html>
