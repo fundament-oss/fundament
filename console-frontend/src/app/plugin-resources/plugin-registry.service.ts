@@ -15,12 +15,10 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
 
   const specRaw = version.schema.openAPIV3Schema.properties?.['spec'] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   const statusRaw = version.schema.openAPIV3Schema.properties?.['status'] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   const specSchema = specRaw?.['properties']
     ? parseObjectSchema(

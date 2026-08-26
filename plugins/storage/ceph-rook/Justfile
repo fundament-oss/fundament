@@ -1,0 +1,39 @@
+export kube_context := "k3d-fundament-plugin"
+
+_default:
+    @just --list
+
+# Apply sample StoragePool to verify ceph-rook works end-to-end.
+#
+# Disk names are cluster-specific, so test-resources.yaml ships a placeholder.
+# The guard catches an unedited file instead of burning the 300s wait.
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubectl() { command kubectl --context {{ kube_context }} "$@"; }
+
+    if grep -q 'placeholder-node-loop0p1' test-resources.yaml; then
+        echo "test-resources.yaml still lists the placeholder disk." >&2
+        echo "Put real Disk names in spec.disks first:" >&2
+        echo >&2
+        kubectl get disks 2>/dev/null >&2 || echo "  (no Disk CRs yet -- is the plugin installed?)" >&2
+        exit 1
+    fi
+
+    kubectl apply -f test-resources.yaml
+
+    # A pool resolving no disks goes Degraded, not Ready: report why.
+    echo "Waiting for StoragePool to become Ready..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Ready storagepool/test-pool --timeout=300s; then
+        echo >&2
+        echo "StoragePool did not become Ready. Status:" >&2
+        kubectl get storagepool test-pool -o jsonpath='{.status.phase}: {.status.message}{"\n"}' >&2
+        exit 1
+    fi
+
+    kubectl get storagepool test-pool
+    kubectl get storageclass
+
+# Remove sample StoragePool
+test-cleanup:
+    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found

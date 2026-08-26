@@ -202,6 +202,40 @@ jobs:
         working-directory: dcim-api
         run: go test ./... -count=1
 
+  marketplace-api:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (marketplace-api)
+        working-directory: marketplace-api
+        run: go test ./... -count=1
+
   test-other:
     runs-on: ubuntu-24.04
     steps:
@@ -216,7 +250,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api|marketplace-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04
@@ -226,7 +260,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.14
+          bun-version: 1.4.0
 
       - name: Cache Bun dependencies
         uses: actions/cache@v5
@@ -253,6 +287,41 @@ jobs:
         working-directory: plugins/openfsc/console-ui
         run: bun run build
 
+  gateway-api-console-ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-gateway-api-${{ hashFiles('plugins/gateway-api/envoy-gateway/console-ui/bun.lock') }}
+
+      - name: Install dependencies
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run typecheck
+
+      - name: Run tests
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run test
+
+      # Catches a broken or missing HTML entry point here rather than at image build.
+      # Note this does not verify the emitted names against definition.yaml's
+      # customComponents — a renamed entry builds clean and only fails in the iframe.
+      - name: Build
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run build
+
   # The docs image build in build.yml is gated behind `should_deploy`, so it is
   # skipped on draft PRs and on PRs labelled no-preview-env. This job runs
   # unconditionally so broken links are caught on every PR.
@@ -266,7 +335,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.14
+          bun-version: 1.4.0
 
       # Astro's tooling rejects Bun's Node-compat version; it needs a real Node.
       - name: Setup Node

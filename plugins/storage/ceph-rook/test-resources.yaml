@@ -1,0 +1,33 @@
+# Sample StoragePool for sandbox verification. Full walkthrough:
+# docs/developer/fundament/k3d-block-devices.md
+#
+# k3d nodes have no raw disks, so provide loop-backed ones:
+#
+#   just storage-disks doctor      # check the kernel Docker runs on
+#   just storage-disks attach      # creates /dev/loop0p1 .. /dev/loop2p1
+#
+# The PluginInstallation then needs the local-development config:
+#
+#   spec:
+#     config:
+#       DEV_LOOP_DEVICES: "true"
+#       MON_COUNT: "1"
+#       MGR_COUNT: "1"
+#       ALLOW_MULTIPLE_PER_NODE: "true"
+#
+# Add ALLOW_UNSUPPORTED_CEPH: "true" only for a Ceph release Rook does not list as
+# supported; the default image is fine without it.
+#
+# Finally, put real Disk names below — they are node name + a hash of the device's
+# stable identity, so they differ per cluster:
+#
+#   kubectl get disks
+apiVersion: storage.fundament.io/v1alpha1
+kind: StoragePool
+metadata:
+  name: test-pool
+spec:
+  # Replace with actual Disk CR names from `kubectl get disks`:
+  disks:
+    - placeholder-node-loop0p1
+  replication: auto
