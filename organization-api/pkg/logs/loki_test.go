@@ -261,6 +261,10 @@ func TestNormalizeLevel(t *testing.T) {
 	}
 }
 
+// The exact pattern for a single ERROR selection, pinned so a change to the
+// alternation is deliberate rather than incidental.
+const errorPreFilter = `(?i)^[EF][0-9]{4} |alert|crit|emerg|err|fatal|panic`
+
 func TestLevelPreFilter(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -268,15 +272,15 @@ func TestLevelPreFilter(t *testing.T) {
 		want   string
 	}{
 		{"no filter", nil, ""},
-		{"error only", []string{"ERROR"}, "(?i)alert|crit|emerg|err|fatal|panic"},
-		{"error and warn", []string{"ERROR", "WARN"}, "(?i)alert|crit|emerg|err|fatal|panic|warn"},
-		{"debug only", []string{"DEBUG"}, "(?i)debug|trace"},
+		{"error only", []string{"ERROR"}, `(?i)^[EF][0-9]{4} |alert|crit|emerg|err|fatal|panic`},
+		{"error and warn", []string{"ERROR", "WARN"}, `(?i)^W[0-9]{4} |^[EF][0-9]{4} |alert|crit|emerg|err|fatal|panic|warn`},
+		{"debug only", []string{"DEBUG"}, `(?i)^D[0-9]{4} |debug|trace`},
 		// An unclassifiable line is reported as the default level, and carries no
 		// level token — so a set including it cannot be narrowed without losing
 		// exactly those lines.
 		{"including the default level does not narrow", []string{"ERROR", "INFO"}, ""},
 		{"every level does not narrow", []string{"ERROR", "WARN", "INFO", "DEBUG"}, ""},
-		{"unrecognised level is ignored", []string{"ERROR", "bogus"}, "(?i)alert|crit|emerg|err|fatal|panic"},
+		{"unrecognised level is ignored", []string{"ERROR", "bogus"}, `(?i)^[EF][0-9]{4} |alert|crit|emerg|err|fatal|panic`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -308,11 +312,11 @@ func TestLevelPreFilterIsSupersetOfExactFilter(t *testing.T) {
 
 func TestBuildLogQLLevelFilter(t *testing.T) {
 	got := buildLogQL(&QueryParams{Namespace: "prod", Levels: []string{"ERROR"}})
-	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)alert|crit|emerg|err|fatal|panic"`, got)
+	assert.Equal(t, `{namespace_name="prod"} |~ "`+errorPreFilter+`"`, got)
 
 	// Search and levels compose as two pipeline stages.
 	got = buildLogQL(&QueryParams{Namespace: "prod", Search: "boom", Levels: []string{"ERROR"}})
-	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)boom" |~ "(?i)alert|crit|emerg|err|fatal|panic"`, got)
+	assert.Equal(t, `{namespace_name="prod"} |~ "(?i)boom" |~ "`+errorPreFilter+`"`, got)
 }
 
 // A regression guard for the quoting: %q keeps a hostile value inside the
@@ -337,4 +341,45 @@ func TestStreamsToEntriesRejectsBadTimestamp(t *testing.T) {
 	}}, "cluster-1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parse entry timestamp")
+}
+
+// Fixing klog classification without widening the pre-filter would have created
+// a fresh false negative: a klog error line contains no word like "error", so
+// the token-only pattern dropped it from the Vali query before FilterByLevels
+// ever classified it as ERROR.
+func TestLevelPreFilterMatchesKlogHeaders(t *testing.T) {
+	pattern := levelPreFilter([]string{"ERROR"})
+	require.NotEmpty(t, pattern)
+	re, err := regexp.Compile(pattern)
+	require.NoError(t, err)
+
+	klogError := "E0804 12:33:01.123456       1 reflector.go:1] failed to sync"
+	assert.True(t, re.MatchString(klogError),
+		"pre-filter %q must not exclude a klog error line", pattern)
+
+	// And the exact classification agrees, which is what makes the pair sound.
+	_, level, _ := parseLogLine(klogError)
+	assert.Equal(t, "ERROR", NormalizeLevel(level))
+}
+
+// Every level the pre-filter narrows on must keep the lines the classifier
+// assigns to it — the property the pre-filter's contract rests on.
+func TestLevelPreFilterAgreesWithClassifierOnKlog(t *testing.T) {
+	lines := map[string]string{
+		"ERROR": "E0804 12:33:01.123456       1 a.go:1] boom",
+		"WARN":  "W0804 12:33:01.123456       1 a.go:1] careful",
+		"DEBUG": "D0804 12:33:01.123456       1 a.go:1] verbose",
+	}
+	for level, line := range lines {
+		t.Run(level, func(t *testing.T) {
+			pattern := levelPreFilter([]string{level})
+			require.NotEmpty(t, pattern, "expected narrowing for %s", level)
+			re, err := regexp.Compile(pattern)
+			require.NoError(t, err)
+			assert.True(t, re.MatchString(line), "pattern %q must keep %q", pattern, line)
+
+			_, parsed, _ := parseLogLine(line)
+			assert.Equal(t, level, NormalizeLevel(parsed))
+		})
+	}
 }

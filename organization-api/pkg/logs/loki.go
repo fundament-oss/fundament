@@ -340,20 +340,27 @@ const (
 	labelContainer = "container_name"
 )
 
-// levelLineTokens maps a normalised level onto substrings that a line carrying
-// that level plausibly contains. It mirrors NormalizeLevel's prefixes, and is
-// deliberately generous: the pre-filter must never be narrower than the exact
-// classification, or a real match would be dropped before it is classified.
+// levelLinePatterns maps a normalised level onto regex alternatives that a line
+// carrying that level plausibly contains. It is deliberately generous, because
+// the pre-filter must not be narrower than the classification that follows it.
 //
-// Level is only ever read from a JSON field on the line or from a stream label,
-// never inferred from free text, so a line whose level is ERROR contains the
-// token in its own JSON — which is what makes this safe against Vali 2.2.1,
-// where there is no structured-metadata filter to use instead.
-var levelLineTokens = map[string][]string{
-	"ERROR": {"err", "fatal", "crit", "panic", "emerg", "alert"},
-	"WARN":  {"warn"},
-	"INFO":  {"info", "notice"},
-	"DEBUG": {"debug", "trace"},
+// Two shapes have to be covered, matching what parseLogLine reads: a severity
+// field in a JSON line (whose token appears in the line's own JSON), and a
+// klog/glog header, where the severity is a single leading letter and no word
+// like "error" appears at all. Omitting the second shape would silently drop
+// every Gardener system-component error — the bulk of what Vali holds.
+//
+// Known limit: a level carried *only* in a stream label (severity / level /
+// detected_level, read as a fallback in streamsToEntries) cannot be matched by a
+// line filter at all, so narrowing would drop such an entry. Gardener's Vali
+// streams carry namespace_name, pod_name, container_name, nodename and origin
+// only — verified against a live v1.138 shoot — so this does not arise today. If
+// those labels ever appear, this narrowing has to be reconsidered.
+var levelLinePatterns = map[string][]string{
+	"ERROR": {"err", "fatal", "crit", "panic", "emerg", "alert", `^[EF][0-9]{4} `},
+	"WARN":  {"warn", `^W[0-9]{4} `},
+	"INFO":  {"info", "notice", `^I[0-9]{4} `},
+	"DEBUG": {"debug", "trace", `^D[0-9]{4} `},
 }
 
 // levelPreFilter returns a case-insensitive LogQL line-filter pattern keeping
@@ -368,7 +375,7 @@ var levelLineTokens = map[string][]string{
 // this can only improve recall, never precision.
 func levelPreFilter(levels []string) string {
 	want := NormalizedLevels(levels)
-	if want == nil || len(want) == len(levelLineTokens) {
+	if want == nil || len(want) == len(levelLinePatterns) {
 		// No filter, or every level requested: nothing to narrow.
 		return ""
 	}
@@ -380,9 +387,9 @@ func levelPreFilter(levels []string) string {
 		// namespace that is mostly unclassified chatter) does not include it.
 		return ""
 	}
-	tokens := make([]string, 0, len(levelLineTokens))
+	tokens := make([]string, 0, len(levelLinePatterns))
 	for level := range want {
-		tokens = append(tokens, levelLineTokens[level]...)
+		tokens = append(tokens, levelLinePatterns[level]...)
 	}
 	slices.Sort(tokens)
 	return "(?i)" + strings.Join(slices.Compact(tokens), "|")

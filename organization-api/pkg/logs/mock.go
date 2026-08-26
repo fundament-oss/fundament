@@ -88,8 +88,7 @@ func (m *MockClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 		if scanned%mockScanCtxInterval == 0 && ctx.Err() != nil {
 			return nil, fmt.Errorf("mock query cancelled: %w", ctx.Err())
 		}
-		idx := (tick.Unix()/int64(mockInterval.Seconds()) + seed) % int64(len(streams))
-		e := m.entryAt(tick, p.ClusterID, &streams[idx])
+		e := m.entryAt(tick, p.ClusterID, &streams[streamIndex(tick, seed, len(streams))])
 		if MatchesSearch(e.Message, p.Search) {
 			entries = append(entries, e)
 		}
@@ -116,8 +115,7 @@ func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent
 			case <-ctx.Done():
 				return
 			case now := <-ticker.C:
-				idx := (now.Unix()/int64(mockInterval.Seconds()) + seed) % int64(len(streams))
-				e := m.entryAt(now, p.ClusterID, &streams[idx])
+				e := m.entryAt(now, p.ClusterID, &streams[streamIndex(now, seed, len(streams))])
 				if !MatchesSearch(e.Message, p.Search) {
 					continue
 				}
@@ -186,6 +184,17 @@ func matchingStreams(p *QueryParams) []mockStream {
 		out = append(out, st)
 	}
 	return out
+}
+
+// streamIndex picks the stream for a tick, cycling deterministically.
+//
+// The modulo is made euclidean deliberately: Go's % keeps the sign of the
+// dividend and Unix() is negative for any pre-1970 timestamp, so the plain form
+// returned a negative index and panicked. Query's range arrives straight off the
+// wire, so that was reachable from a single request.
+func streamIndex(ts time.Time, seed int64, streams int) int {
+	n := int64(streams)
+	return int(((ts.Unix()/int64(mockInterval.Seconds())+seed)%n + n) % n)
 }
 
 // hashSeed maps a cluster id onto a small non-negative offset (fnv32a fits

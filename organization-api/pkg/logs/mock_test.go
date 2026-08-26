@@ -154,3 +154,35 @@ func TestMockClientLabels(t *testing.T) {
 func TestMockClientBackend(t *testing.T) {
 	assert.Equal(t, BackendLoki, NewMockClient().Backend())
 }
+
+// Go's % keeps the sign of the dividend, so a pre-1970 tick produced a negative
+// stream index and panicked. Start and End arrive straight off the wire, and
+// mock is the default backend, so a single request could take the handler down.
+func TestMockClientQueryPre1970RangeDoesNotPanic(t *testing.T) {
+	fixed := time.Date(1960, 6, 1, 12, 0, 0, 0, time.UTC)
+	m := &MockClient{now: func() time.Time { return fixed }}
+
+	entries, err := m.Query(context.Background(), &QueryParams{
+		ClusterID: "cluster-1",
+		Start:     fixed.Add(-time.Hour),
+		End:       fixed,
+		Limit:     10,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, entries, "a valid pre-1970 range should still synthesize entries")
+}
+
+func TestStreamIndexIsAlwaysInRange(t *testing.T) {
+	for _, ts := range []time.Time{
+		time.Date(1901, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1969, 12, 31, 23, 59, 59, 0, time.UTC),
+		time.Unix(0, 0),
+		time.Date(2026, 8, 26, 0, 0, 0, 0, time.UTC),
+	} {
+		for _, seed := range []int64{0, 1, 7, 4294967295} {
+			idx := streamIndex(ts, seed, len(mockStreams))
+			assert.GreaterOrEqual(t, idx, 0, "ts=%s seed=%d", ts, seed)
+			assert.Less(t, idx, len(mockStreams), "ts=%s seed=%d", ts, seed)
+		}
+	}
+}

@@ -317,27 +317,25 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   // ── generated query string for the query bar
   readonly generatedQuery = computed(() => {
-    const parts: string[] = [];
-    if (this.selectedNamespace()) parts.push(`namespace="${this.selectedNamespace()}"`);
-    if (this.selectedPod()) parts.push(`pod=~"${this.selectedPod()}.*"`);
-    if (this.selectedContainer()) parts.push(`container="${this.selectedContainer()}"`);
+    // Two lists from the start, rather than one flat list taken apart again
+    // afterwards: the old reassembly sliced off the final element before
+    // filtering, so with a namespace and a pod selected it silently dropped the
+    // pod matcher from the query it displayed.
+    const matchers: string[] = [];
+    if (this.selectedNamespace()) matchers.push(`namespace="${this.selectedNamespace()}"`);
+    // Exact, matching the matcher the backend actually sends.
+    if (this.selectedPod()) matchers.push(`pod="${this.selectedPod()}"`);
+    if (this.selectedContainer()) matchers.push(`container="${this.selectedContainer()}"`);
     const levels = this.selectedLevels();
-    if (levels.size > 0 && levels.size < 4) {
-      parts.push(`level=~"${[...levels].join('|')}"`);
+    if (levels.size > 0 && levels.size < ALL_LEVELS.length) {
+      matchers.push(`level=~"${[...levels].join('|')}"`);
     }
+
+    const pipeline: string[] = [];
     const search = this.searchText();
-    if (search) parts.push(`|= "${search}"`);
-    if (parts.length === 0) return '{}';
-    const scope = parts
-      .slice(0, -1)
-      .filter((p) => !p.startsWith('|='))
-      .join(', ');
-    const textParts = parts.filter((p) => p.startsWith('|='));
-    const levelPart = parts.find((p) => p.startsWith('level'));
-    const braceParts = [scope, levelPart && !scope.includes('level') ? levelPart : '']
-      .filter(Boolean)
-      .join(', ');
-    return `{${braceParts}}${textParts.length ? ` ${textParts.join(' ')}` : ''}`;
+    if (search) pipeline.push(`|~ "(?i)${search}"`);
+
+    return `{${matchers.join(', ')}}${pipeline.length ? ` ${pipeline.join(' ')}` : ''}`;
   });
 
   // ── histogram buckets
@@ -718,6 +716,21 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       });
   }
 
+  /**
+   * Reopen the tail so its server-side filters match the current selection.
+   *
+   * The stream carries namespace, pod, container, search, levels and source, so
+   * leaving it untouched after a filter change means the server keeps applying
+   * the *previous* query: entries matching the old filter keep arriving and
+   * evict the rows just fetched for the new one, while the status bar still
+   * reads "Streaming".
+   */
+  private restartLiveTailIfRunning(): void {
+    if (!this.liveTailEnabled()) return;
+    this.stopLiveTail();
+    this.startLiveTail();
+  }
+
   private stopLiveTail(): void {
     this.liveTailSub?.unsubscribe();
     this.liveTailSub = null;
@@ -728,6 +741,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.liveTailEnabled.set(false);
     this.liveTailPaused.set(false);
     this.liveTailRate.set(0);
+  }
+
+  /** Re-query and realign a running tail after a filter change. */
+  private reloadForFilterChange(): void {
+    this.loadLogs();
+    this.restartLiveTailIfRunning();
   }
 
   // ── filter actions
@@ -751,7 +770,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     } else {
       this.refineLabels();
     }
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   onPodChange(value: string): void {
@@ -762,13 +781,13 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       const pod = this.livePods().find((p) => p.name === value);
       this.containers.set(pod?.containers ?? []);
     }
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   onContainerChange(value: string): void {
     this.selectedContainer.set(value);
     this.currentPage.set(0);
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   onTimePresetChange(value: string): void {
@@ -780,7 +799,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     if (!this.isLiveMode()) {
       this.refineLabels();
     }
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   onSearchChange(value: string): void {
@@ -788,7 +807,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.currentPage.set(0);
     if (this.searchDebounce !== null) clearTimeout(this.searchDebounce);
     this.searchDebounce = setTimeout(() => {
-      this.loadLogs();
+      this.reloadForFilterChange();
     }, 400);
   }
 
@@ -805,7 +824,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     } else {
       this.refineLabels();
     }
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   removeChip(key: string): void {
@@ -826,12 +845,18 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.selectedContainer.set('');
     }
     this.currentPage.set(0);
-    this.loadLogs();
+    this.reloadForFilterChange();
   }
 
   toggleAllLevels(): void {
     this.selectedLevels.set(new Set(ALL_LEVELS));
     this.currentPage.set(0);
+    // The severity filter is applied by the backend, before the entry limit, so
+    // changing it has to re-query. Re-filtering the page already in memory was
+    // the whole bug: on an INFO-heavy namespace the first page fills with INFO
+    // and selecting ERROR emptied the table while the backend held matches it
+    // was never asked for.
+    this.reloadForFilterChange();
   }
 
   toggleLevel(level: LogLevel): void {
@@ -848,6 +873,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       return next;
     });
     this.currentPage.set(0);
+    this.reloadForFilterChange();
   }
 
   isLevelSelected(level: LogLevel): boolean {
