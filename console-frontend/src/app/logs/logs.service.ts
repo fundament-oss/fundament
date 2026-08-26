@@ -9,6 +9,7 @@ import {
   TailLogsRequestSchema,
   GetLogLabelsRequestSchema,
   LogBackend,
+  LogSource,
   type LogEntry as ProtoLogEntry,
 } from '../../generated/v1/logs_pb';
 import type { LogEntry, LogLevel } from './log.types';
@@ -24,6 +25,17 @@ export interface LogQuery {
   pod?: string;
   container?: string;
   search?: string;
+  /**
+   * Severities to return. Applied by the backend, not here: the entry limit
+   * selects the newest matching lines, so filtering in the client meant a
+   * namespace logging mostly INFO filled the page and a filter for ERROR
+   * reported nothing while the errors sat just outside it.
+   *
+   * Omit, or pass every level, for "all".
+   */
+  levels?: readonly LogLevel[];
+  /** Which of the cluster's log sources to read. */
+  source?: LogSource;
   from?: Date;
   to?: Date;
   limit?: number;
@@ -47,6 +59,18 @@ function toViewLevel(level: string): LogLevel {
   return VALID_LEVELS.has(level) ? (level as LogLevel) : 'INFO';
 }
 
+/**
+ * Normalises the level selection for the wire. An empty list and a full
+ * selection both mean "all levels", and the backend reads an empty list that
+ * way, so sending nothing is the cheaper equivalent.
+ */
+function levelsForRequest(levels: readonly LogLevel[] | undefined): string[] {
+  if (!levels || levels.length === 0 || levels.length === VALID_LEVELS.size) {
+    return [];
+  }
+  return [...levels];
+}
+
 /** Maps a backend LogEntry onto the frontend view model. */
 export function mapLogEntry(proto: ProtoLogEntry, id: string): LogEntry {
   return {
@@ -65,7 +89,7 @@ export function mapLogEntry(proto: ProtoLogEntry, id: string): LogEntry {
 /**
  * LogsApiService wraps the LogsService Connect client: fetching the cluster
  * list, querying historical logs, and live-tailing. The backend reports which
- * source answered via LogBackend; severity filtering happens client-side.
+ * source answered via LogBackend, and applies the severity filter itself.
  */
 @Injectable({ providedIn: 'root' })
 export class LogsApiService {
@@ -89,6 +113,8 @@ export class LogsApiService {
           pod: q.pod ?? '',
           container: q.container ?? '',
           search: q.search ?? '',
+          levels: levelsForRequest(q.levels),
+          source: q.source ?? LogSource.CLUSTER,
           start: q.from ? timestampFromDate(q.from) : undefined,
           end: q.to ? timestampFromDate(q.to) : undefined,
           limit: q.limit ?? 0,
@@ -131,6 +157,8 @@ export class LogsApiService {
           pod: q.pod ?? '',
           container: q.container ?? '',
           search: q.search ?? '',
+          levels: levelsForRequest(q.levels),
+          source: q.source ?? LogSource.CLUSTER,
         }),
       )
       .pipe(

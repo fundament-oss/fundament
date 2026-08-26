@@ -14,13 +14,13 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+
 import { Subscription } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import type { LogEntry, LogLevel, HistogramBucket } from '../log.types';
 import { LogsApiService, type ClusterOption } from '../logs.service';
 import { ShootPodsService, type ShootPod } from '../shoot-pods.service';
-import { LogBackend } from '../../../generated/v1/logs_pb';
+import { LogBackend, LogSource } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { ToastService } from '../../toast.service';
 import PluginInstallationService from '../../plugin-installation/plugin-installation.service';
@@ -108,7 +108,7 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
 
 @Component({
   selector: 'app-log-explorer',
-  imports: [FormsModule, DecimalPipe, RouterLink],
+  imports: [FormsModule, DecimalPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './log-explorer.component.html',
@@ -157,6 +157,19 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   readonly sourceMode = signal<'vali' | 'live'>('vali');
 
   readonly isLiveMode = computed(() => this.sourceMode() === 'live');
+
+  /** The source mode as the backend expresses it. */
+  readonly requestedSource = computed(() =>
+    this.isLiveMode() ? LogSource.PLUGIN : LogSource.CLUSTER,
+  );
+
+  /**
+   * The severity selection to send. The backend applies it before the entry
+   * limit, which is the only place it can be applied correctly — filtering a
+   * page that was already truncated to the newest N lines reported "no errors"
+   * on any namespace that logs mostly INFO.
+   */
+  readonly requestedLevels = computed(() => [...this.selectedLevels()]);
 
   // Pods (with their containers) of the selected plugin namespace, listed
   // through the kube-api-proxy in live mode.
@@ -255,7 +268,22 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     );
   });
 
-  // ── level counts for chips
+  /**
+   * The count to show on a severity chip, or "" when it is not known.
+   *
+   * The backend applies the severity filter, so an unselected level is absent
+   * from the result set entirely — its count would render as a confident zero
+   * that says nothing about the cluster. A number is only shown for levels the
+   * current query actually asked for.
+   */
+  levelCountLabel(level: LogLevel): string {
+    if (!this.selectedLevels().has(level)) {
+      return '';
+    }
+    return this.levelCounts()[level].toLocaleString();
+  }
+
+  // ── level counts for chips (within the fetched, already level-filtered set)
   readonly levelCounts = computed(() => {
     const logs = this.filteredLogsNoLevel();
     return {
@@ -539,6 +567,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         pod: this.selectedPod() || undefined,
         container: this.selectedContainer() || undefined,
         search: this.searchText() || undefined,
+        levels: this.requestedLevels(),
+        source: this.requestedSource(),
         from,
         to,
         limit: this.LOG_LIMIT,
@@ -664,6 +694,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         pod: this.selectedPod() || undefined,
         container: this.selectedContainer() || undefined,
         search: this.searchText() || undefined,
+        levels: this.requestedLevels(),
+        source: this.requestedSource(),
       })
       .subscribe({
         next: (entry) => {

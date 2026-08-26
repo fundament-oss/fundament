@@ -172,14 +172,6 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-3xl font-semibold">Log explorer</h1>
       <div class="flex items-center gap-3">
-        <nldd-button
-          [routerLink]="['/logs/analytics']"
-          text="Analytics"
-          end-icon="chevron-right-small"
-          variant="secondary"
-          size="sm"
-        ></nldd-button>
-
         <nldd-toggle-button
           [text]="liveTailEnabled() ? 'Stop streaming' : 'Stream logs'"
           [active]="liveTailEnabled()"
@@ -456,7 +448,7 @@
           <button (click)="toggleLevel(level)" type="button" [class]="levelChipClass(level)">
             <span [class]="levelDotClass(level)"></span>
             {{ level }}
-            <span class="font-mono text-xs opacity-70">{{ levelCounts()[level] | number }}</span>
+            <span class="font-mono text-xs opacity-70">{{ levelCountLabel(level) }}</span>
           </button>
         }
       </div>
