@@ -201,6 +201,8 @@ openfga:
   enabled: true
   image: openfga/openfga:v1.18.0
   apiPort: 8080
+  # Where the provision sidecar publishes which release the datastore belongs to.
+  statusPort: 8099
   replicas: 1
   playground:
     enabled: false
