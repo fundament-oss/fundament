@@ -7,6 +7,16 @@ sidebar:
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
 
+To write one, start with the scaffolder rather than a blank directory:
+
+```shell
+functl plugin create my-plugin
+```
+
+It generates a buildable project with its manifest, Dockerfile and optionally a
+console UI, and needs no Fundament account. See
+[Writing a plugin](/docs/developer/plugins/writing-a-plugin).
+
 ## System overview
 
 ```

@@ -14,6 +14,7 @@ RUN go install github.com/air-verse/air@v1.64.5 && \
     go install github.com/go-delve/delve/cmd/dlv@v1.26.1
 WORKDIR /src
 COPY go.mod go.sum ./
+COPY plugin-sdk/go.mod plugin-sdk/go.sum ./plugin-sdk/
 RUN go mod download
 COPY kube-api-proxy/ ./kube-api-proxy/
 COPY common/ ./common/

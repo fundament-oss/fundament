@@ -30,3 +30,4 @@ The contents of this repository are copyrighted by *The Fundament Authors*
 
 - **Source code** is licensed under the [GNU Affero General Public License (AGPL)](https://www.gnu.org/licenses/agpl-3.0.html), unless otherwise stated.
 - **Documentation** (including Markdown, D2 and similar files) is licensed under [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/).
+- **`plugin-sdk/`** is licensed under the [Apache License 2.0](LICENSES/Apache-v2.txt), stated in [plugin-sdk/LICENSE](plugin-sdk/LICENSE). It is a separate Go module that plugin authors import into their own binaries, so it is deliberately permissive: writing a Fundament plugin does not make your plugin a derivative work of the AGPL platform.

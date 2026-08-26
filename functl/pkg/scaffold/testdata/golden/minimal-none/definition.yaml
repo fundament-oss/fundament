@@ -1,0 +1,35 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: demo
+  displayName: Demo
+  version: v0.1.0
+  description: A demo plugin.
+  author: Demo Author
+  license: Apache-2.0
+  icon: puzzle-piece
+  urls:
+    homepage: https://example.com
+    repository: https://example.com/demo-plugin
+    documentation: https://example.com/docs
+  tags:
+    - example
+# There is deliberately no spec.image here. Publishing builds the image, resolves
+# the pushed manifest digest and injects it, so the stored definition always pins
+# immutable code. Never add a mutable tag by hand: it will be rejected.
+spec:
+  permissions:
+    # capabilities gate what the plugin may reach outside the cluster. Add
+    # `internet_access` if the plugin talks to anything off-cluster.
+    capabilities: []
+    # rbac becomes a ClusterRole bound to the plugin's ServiceAccount, verbatim.
+    # Grant only what the plugin actually uses.
+    rbac:
+      - apiGroups:
+          - example.com
+        resources:
+          - widgets
+        verbs:
+          - get
+          - list
+          - watch

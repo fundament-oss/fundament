@@ -149,6 +149,20 @@ jobs:
         working-directory: common
         run: go test ./... -count=1
 
+  plugin-sdk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests (plugin-sdk)
+        working-directory: plugin-sdk
+        run: go test ./... -count=1
+
   functl:
     runs-on: ubuntu-24.04
     steps:
@@ -162,11 +176,12 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Build and vet
+      - name: Build, vet and test
         working-directory: functl
         run: |
           go build ./...
           go vet ./...
+          go test ./... -count=1
 
   dcim-api:
     runs-on: ubuntu-24.04

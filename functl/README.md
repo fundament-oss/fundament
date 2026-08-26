@@ -104,6 +104,42 @@ functl auth login <API_KEY>
 | `--output` | `-o` | Output format: `table` (default) or `json` |
 | `--help` | `-h` | Show help |
 
+### `functl plugin create`
+
+Scaffolds a new, standalone Fundament plugin project. It writes files and nothing
+else -- no network, no API key, no organization -- so it works before you have an
+account.
+
+```shell
+functl plugin create my-plugin
+```
+
+Prompts for anything not passed as a flag when stdin is a terminal; otherwise
+takes the defaults, so it is safe to script.
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `<name>` | Plugin name: a lowercase DNS label, at most 56 characters | required |
+| `--display-name` | Human-readable name shown in the console | title-cased name |
+| `--description` | One-line description | `A Fundament plugin.` |
+| `--author` | Plugin author | `git config user.name` |
+| `--license` | SPDX license identifier | `Apache-2.0` |
+| `--module` | Go module path | derived from the git remote |
+| `--template` | `minimal` or `helm` | `minimal` |
+| `--console` | `none`, `vanilla` or `vite` | `none` |
+| `--crd` | Custom resource as `<plural>.<group>` | `<name>s.example.com` |
+| `--kind` | Kind of that custom resource | UpperCamelCase name |
+| `--dir` | Where to write the project | `./<name>` |
+| `--sdk-version` | plugin-sdk version to pin | the version functl was built with |
+| `--[no-]git` | Run `git init` | on |
+| `--[no-]tidy` | Run `go mod tidy` | on |
+| `--force` | Write into a non-empty directory | off |
+| `--yes`, `-y` | Accept all defaults without prompting | off |
+
+The 56-character limit is not arbitrary: the plugin controller prefixes `plugin-`
+to derive the plugin's namespace and other resource names, and those must fit
+Kubernetes' 63-character DNS-label limit.
+
 ## Output formats
 
 ### Table (default)

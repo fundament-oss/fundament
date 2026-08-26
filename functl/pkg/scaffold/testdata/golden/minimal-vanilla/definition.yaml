@@ -1,0 +1,69 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: demo
+  displayName: Demo
+  version: v0.1.0
+  description: A demo plugin.
+  author: Demo Author
+  license: Apache-2.0
+  icon: puzzle-piece
+  urls:
+    homepage: https://example.com
+    repository: https://example.com/demo-plugin
+    documentation: https://example.com/docs
+  tags:
+    - example
+# There is deliberately no spec.image here. Publishing builds the image, resolves
+# the pushed manifest digest and injects it, so the stored definition always pins
+# immutable code. Never add a mutable tag by hand: it will be rejected.
+spec:
+  permissions:
+    # capabilities gate what the plugin may reach outside the cluster. Add
+    # `internet_access` if the plugin talks to anything off-cluster.
+    capabilities: []
+    # rbac becomes a ClusterRole bound to the plugin's ServiceAccount, verbatim.
+    # Grant only what the plugin actually uses.
+    rbac:
+      - apiGroups:
+          - example.com
+        resources:
+          - widgets
+        verbs:
+          - get
+          - list
+          - watch
+  # The four blocks below are one contract with nothing to enforce it at build
+  # time except definition_test.go: the menu entry names the CRD, customComponents
+  # maps the Kind to files that must exist under console/, and allowedResources
+  # is what the console is permitted to read through the API proxy. Change one,
+  # change all four.
+  menu:
+    project:
+      - crd: widgets.example.com
+        list: true
+        detail: true
+        icon: puzzle-piece
+        label: Widgets
+  crds:
+    - widgets.example.com
+  uiHints:
+    widgets.example.com:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        values:
+          "True":
+            badge: success
+            label: Ready
+          "False":
+            badge: danger
+            label: Not Ready
+  customComponents:
+    Widget:
+      list: widgets-list.html
+      detail: widgets-detail.html
+  allowedResources:
+    - group: example.com
+      version: v1
+      resource: widgets
+      verbs: [list, get]

@@ -1,6 +1,7 @@
 FROM golang:1.26.6-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
+COPY plugin-sdk/go.mod plugin-sdk/go.sum ./plugin-sdk/
 RUN go mod download
 COPY authn-api/ ./authn-api/
 COPY common/ ./common/

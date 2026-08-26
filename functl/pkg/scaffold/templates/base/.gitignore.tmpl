@@ -1,0 +1,10 @@
+# Compiled binary
+/{{.BinaryName}}
+{{if .ConsoleVite}}
+# Vite build output. Only the .gitkeep is tracked, so `go:embed console/*`
+# still compiles on a fresh checkout where the UI has never been built.
+/console/*
+!/console/.gitkeep
+
+/console-ui/node_modules/
+{{end}}

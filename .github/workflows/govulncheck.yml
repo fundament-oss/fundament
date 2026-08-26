@@ -18,5 +18,9 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+      # plugin-sdk is a separate Go module; ./... stops at the module boundary.
+      - name: govulncheck (plugin-sdk)
+        working-directory: plugin-sdk
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
       - name: Check dependency age
         run: go run ./tools/gomod-age/cmd/gomod-age --config .gomod-age.json
