@@ -52,75 +52,27 @@ data:
 {{- .Files.Get "openfga/model.fga" | nindent 4 }}
 
 ---
-{{- $openfgaConfigName := "openfga-config" }}
-{{- $openfgaConfigExisting := lookup "v1" "ConfigMap" $.Release.Namespace $openfgaConfigName }}
-{{- $openfgaStoreID := "pending" }}
-{{- $openfgaAuthModelID := "pending" }}
-{{- if $openfgaConfigExisting }}
-{{- $openfgaStoreID = index $openfgaConfigExisting.data "store-id" | default "pending" }}
-{{- $openfgaAuthModelID = index $openfgaConfigExisting.data "authorization-model-id" | default "pending" }}
-{{- end }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ $openfgaConfigName }}
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
-data:
-  store-id: {{ $openfgaStoreID | quote }}
-  authorization-model-id: {{ $openfgaAuthModelID | quote }}
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: openfga-setup
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: openfga-setup
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
-rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "create", "update", "patch"]
-  {{- if $.Values.db.reset }}
-  # The wait-for-reset init container waits on the db-migrations Job, which owns
-  # the coupled DB + OpenFGA reset (local/dev only).
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["get", "list", "watch"]
-  {{- end }}
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: openfga-setup
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "openfga-setup" "component" "backend") | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: openfga-setup
-subjects:
-  - kind: ServiceAccount
-    name: openfga-setup
-    namespace: {{ $.Release.Namespace }}
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: openfga
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
+    # Which store this release provisioned, so it is discoverable without
+    # querying the API: kubectl -n <ns> get deploy openfga -L fundament.io/store
+    fundament.io/store: {{ include "fundament.openfga.storeName" $ }}
 spec:
+  {{- if $.Values.db.reset }}
+  # A resettable datastore has exactly one writer: the wipe decides whether to
+  # run by reading a marker, so two pods starting together could both wipe.
+  # Recreate keeps an old pod from serving while a new one drops the schema
+  # under it.
+  replicas: 1
+  strategy:
+    type: Recreate
+  {{- else }}
   replicas: {{ $.Values.openfga.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "fundament.selectorLabels" (dict "root" $ "name" "openfga") | nindent 6 }}
@@ -129,7 +81,13 @@ spec:
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 8 }}
     spec:
-      serviceAccountName: openfga-setup
+      # Named explicitly because this release deletes the ServiceAccount this pod
+      # used to run as. Omitting the field instead leaves the deprecated
+      # spec.serviceAccount set on the live object, which the API server keeps in
+      # sync with serviceAccountName — so the pod template goes on naming a
+      # ServiceAccount that no longer exists and the Deployment silently stops
+      # being able to create pods, while Helm still reports the upgrade complete.
+      serviceAccountName: default
       initContainers:
         - name: wait-for-db
           image: ghcr.io/cloudnative-pg/postgresql:18
@@ -152,46 +110,64 @@ spec:
                   name: {{ $openfgaSecretName }}
                   key: uri
         {{- if $.Values.db.reset }}
-        # Local/dev only. The OpenFGA datastore reset is owned by the db-migrations
-        # Job (coupled with the app-DB reset) — NOT here — so a plain openfga
-        # rollout never wipes the store. Block until this release's Job has
-        # completed, so `migrate` below rebuilds the schema after the reset.
+        # Wipe before migrate: the server must never serve a schema it did not
+        # create. The marker lives outside the public schema so it survives the
+        # drop, which is what distinguishes a new release from a crash restart.
+        # A restart that re-wipes takes the store out from under an outbox that
+        # has already marked its rows synced, and nothing replays them.
         #
-        # Failures are fatal on purpose: proceeding early means migrating first
-        # and having the schema dropped underneath us, leaving a live server that
-        # 500s with 42P01 until it is restarted by hand.
-        - name: wait-for-reset
-          image: {{ $.Values.images.openfgaSetup }}
+        # Runs as the datastore's own role: a schema recreated by postgres is
+        # owned by postgres, and openfga then fails to migrate with SQLSTATE
+        # 3F000, "no schema has been selected to create in".
+        - name: wipe-datastore
+          image: ghcr.io/cloudnative-pg/postgresql:18
           command:
-            - bash
+            - sh
             - -c
             - |
-              set -euo pipefail
+              set -eu
+              GEN="$OPENFGA_GENERATION"
 
-              JOB="{{ include "fundament.dbMigrationsJobName" $ }}"
-              NS="{{ $.Release.Namespace }}"
+              psql "$OPENFGA_DATASTORE_URI" -q <<'SQL'
+              CREATE SCHEMA IF NOT EXISTS fundament_reset;
+              CREATE TABLE IF NOT EXISTS fundament_reset.state (
+                id boolean PRIMARY KEY DEFAULT true CHECK (id),
+                generation text NOT NULL
+              );
+              SQL
 
-              # Helm applies Deployments before Jobs, so the Job usually does not
-              # exist yet, and `kubectl wait` errors immediately on a missing
-              # resource instead of polling. Wait for it to appear first.
-              echo "Waiting for job/${JOB} to appear..."
-              for i in $(seq 1 60); do
-                if kubectl get job "${JOB}" -n "${NS}" >/dev/null 2>&1; then
-                  echo "job/${JOB} exists"
-                  break
-                fi
-                if [ "${i}" -eq 60 ]; then
-                  echo "job/${JOB} never appeared after 5m."
-                  echo "Refusing to start: the datastore is about to be reset by a Job we cannot see."
-                  exit 1
-                fi
-                sleep 5
-              done
+              # An unreadable marker must abort, never fall through to a wipe: the
+              # rows it would destroy are already marked synced in authz.outbox
+              # and nothing replays them.
+              LAST=$(psql "$OPENFGA_DATASTORE_URI" -tAc "SELECT generation FROM fundament_reset.state")
+              if [ "$LAST" = "$GEN" ]; then
+                echo "Not wiping: datastore generation '$LAST' already matches this release '$GEN'."
+                exit 0
+              fi
 
-              echo "Waiting for job/${JOB} to complete..."
-              kubectl wait --for=condition=complete "job/${JOB}" \
-                -n "${NS}" --timeout=600s
+              echo "Wiping the OpenFGA datastore for generation '$GEN' (was '${LAST:-none}')..."
+              # One transaction, so a kill between the drop and the marker cannot
+              # leave a wiped datastore claiming the previous generation.
+              psql "$OPENFGA_DATASTORE_URI" -v ON_ERROR_STOP=1 -v gen="$GEN" -1 <<'SQL'
+              DROP SCHEMA public CASCADE;
+              CREATE SCHEMA public;
+              INSERT INTO fundament_reset.state (generation) VALUES (:'gen')
+                ON CONFLICT (id) DO UPDATE SET generation = EXCLUDED.generation;
+              SQL
+          env:
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
+            - name: OPENFGA_GENERATION
+              value: {{ include "fundament.openfga.generation" $ | quote }}
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
         {{- end }}
+
+        # Sole migrator, and it runs before the server starts: openfga is never
+        # live on a schema its binary did not migrate.
         - name: migrate
           image: {{ $.Values.openfga.image }}
           args:
@@ -211,7 +187,7 @@ spec:
             - run
           ports:
             - name: http
-              containerPort: {{ $.Values.openfga.apiPort | default 8080 }}
+              containerPort: {{ $.Values.openfga.apiPort }}
             - name: grpc
               containerPort: 8081
             {{- if $.Values.openfga.playground.enabled }}
@@ -229,7 +205,7 @@ spec:
             - name: OPENFGA_PLAYGROUND_ENABLED
               value: {{ $.Values.openfga.playground.enabled | quote }}
             - name: OPENFGA_HTTP_ADDR
-              value: "0.0.0.0:{{ $.Values.openfga.apiPort | default 8080 }}"
+              value: "0.0.0.0:{{ $.Values.openfga.apiPort }}"
           readinessProbe:
             httpGet:
               path: /healthz
@@ -242,67 +218,29 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-        - name: setup
+        # Sole creator of the store. Publishes the generation the datastore now
+        # belongs to, which is what db-migrations waits for before seeding.
+        #
+        # A rolling update puts two generations behind the status Service. A
+        # waiter accepts only its own release's generation, so only the new pod
+        # can satisfy it.
+        - name: provision
           image: {{ $.Values.images.openfgaSetup }}
-          command:
-            - bash
-            - -c
-            - |
-              set -euo pipefail
-
-              export FGA_API_URL="http://localhost:{{ $.Values.openfga.apiPort | default 8080 }}"
-
-              echo "Waiting for OpenFGA to be ready..."
-              until curl -sf "$FGA_API_URL/healthz" > /dev/null 2>&1; do
-                sleep 2
-              done
-              echo "OpenFGA is ready!"
-
-              echo "Checking if OpenFGA store already exists..."
-
-              # Check if store already exists
-              EXISTING_STORE_ID=$(curl -sf "$FGA_API_URL/stores" | jq -r '.stores[] | select(.name == "fundament") | .id' | head -1)
-
-              if [ -n "$EXISTING_STORE_ID" ]; then
-                echo "Store 'fundament' already exists with ID: $EXISTING_STORE_ID"
-                export FGA_STORE_ID="$EXISTING_STORE_ID"
-
-                # Get current model ID from configmap (if exists)
-                CURRENT_MODEL_ID=$(kubectl get configmap openfga-config -o jsonpath='{.data.authorization-model-id}' 2>/dev/null || echo "")
-
-                # Write the model and get the new model ID
-                echo "Writing authorization model..."
-                fga model write --store-id "$FGA_STORE_ID" --file /model/model.fga
-
-                NEW_MODEL_ID=$(fga model get --store-id "$FGA_STORE_ID" --field id | sed 's/^# Model ID: //')
-                echo "Authorization model ID: $NEW_MODEL_ID"
-
-                if [ "$CURRENT_MODEL_ID" = "$NEW_MODEL_ID" ]; then
-                  echo "Model unchanged, no configmap update needed"
-                  echo "Setup complete, sleeping..."
-                  exec sleep infinity
-                fi
-
-                echo "Model changed from '$CURRENT_MODEL_ID' to '$NEW_MODEL_ID', updating configmap..."
-                MODEL_ID="$NEW_MODEL_ID"
-              else
-                echo "Creating new store 'fundament' with model..."
-                RESULT=$(fga store create --name fundament --model /model/model.fga)
-                export FGA_STORE_ID=$(echo "$RESULT" | jq -r '.store.id')
-                echo "Store created with ID: $FGA_STORE_ID"
-
-                MODEL_ID=$(fga model get --store-id "$FGA_STORE_ID" --field id | sed 's/^# Model ID: //')
-                echo "Authorization model ID: $MODEL_ID"
-              fi
-
-              # Write store ID and model ID to the ConfigMap managed by Helm
-              kubectl patch configmap openfga-config \
-                -n {{ $.Release.Namespace }} \
-                --patch "{\"data\":{\"store-id\":\"$FGA_STORE_ID\",\"authorization-model-id\":\"$MODEL_ID\"}}"
-
-              echo "ConfigMap updated successfully"
-              echo "Setup complete, sleeping..."
-              exec sleep infinity
+          args: ["provision"]
+          env:
+            - name: OPENFGA_API_URL
+              value: http://localhost:{{ $.Values.openfga.apiPort }}
+            - name: OPENFGA_STORE_NAME
+              value: {{ include "fundament.openfga.storeName" $ }}
+            - name: OPENFGA_GENERATION
+              value: {{ include "fundament.openfga.generation" $ | quote }}
+            - name: OPENFGA_MODEL_PATH
+              value: /model/model.fga
+            - name: OPENFGA_STATUS_ADDR
+              value: ":{{ $.Values.openfga.statusPort }}"
+          ports:
+            - name: status
+              containerPort: {{ $.Values.openfga.statusPort }}
           volumeMounts:
             - name: model
               mountPath: /model
@@ -321,12 +259,15 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: {{ $.Values.openfga.apiPort | default 8080 }}
+    - port: {{ $.Values.openfga.apiPort }}
       targetPort: http
       name: http
     - port: 8081
       targetPort: grpc
       name: grpc
+    - port: {{ $.Values.openfga.statusPort }}
+      targetPort: status
+      name: status
     {{- if $.Values.openfga.playground.enabled }}
     - port: 3000
       targetPort: playground

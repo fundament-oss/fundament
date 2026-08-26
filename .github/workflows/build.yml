@@ -101,7 +101,7 @@ jobs:
             context: "."
           - image-name: openfga-setup
             dockerfile: openfga/setup/Dockerfile
-            context: openfga/setup
+            context: "."
           - image-name: docs-frontend
             dockerfile: docs-frontend/Dockerfile
             context: "."
@@ -295,12 +295,11 @@ jobs:
 
             ```bash
             # organization-api and kube-api-proxy readiness depend on OpenFGA.
-            kubectl -n $NS get configmap openfga-config -o yaml
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c setup
             kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
 
-            # If consumers are still using an old store/model ID after setup patched openfga-config:
-            kubectl -n $NS rollout restart deployment/organization-api deployment/kube-api-proxy
+            # Consumers resolve the store by name, so a missing store surfaces as
+            # "openfga store not found" in their logs.
+            kubectl -n $NS logs -l app.kubernetes.io/name=authz-worker --tail=50
             ```
 
             **5. DB & migrations**
@@ -309,15 +308,14 @@ jobs:
             kubectl -n $NS get cluster.postgresql.cnpg.io/db
             kubectl -n $NS describe cluster.postgresql.cnpg.io/db
 
-            # Migrations run as a Job named db-migrations-<helm-revision>, with a
+            # Setup runs as a Job named db-migrations-<helm-revision>, with a
             # 5m TTL after success. If the Job is gone, migrations almost
             # certainly succeeded.
             kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
-            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
+            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c fundament-migrate
 
-            # OpenFGA blocks on that Job before migrating its schema. If openfga
-            # is stuck in Init, this is why:
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c wait-for-reset
+            # Every setup step is an init container of that Job, in order:
+            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c wait-for-store
             ```
 
             **6. Routes & TLS**

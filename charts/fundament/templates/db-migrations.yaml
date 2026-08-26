@@ -1,11 +1,14 @@
 {{- if $.Values.db.enabled }}
+
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  # Per-release name: a Job's pod template is immutable, and openfga's
-  # wait-for-reset needs to identify this upgrade's run.
-  name: {{ include "fundament.dbMigrationsJobName" $ }}
+  # Prepares the datastores this release needs, in order: the OpenFGA schema and
+  # store, then the fundament database whose seeded rows project into it.
+  #
+  # Per-release name: a Job's pod template is immutable.
+  name: db-migrations-{{ .Release.Revision }}
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:
@@ -17,30 +20,27 @@ spec:
         {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 8 }}
     spec:
       restartPolicy: OnFailure
+      # Init containers, so the kubelet sequences them: the store exists before
+      # the reseed that projects into it. Each step is idempotent; a retry
+      # re-runs them all.
       initContainers:
         - name: wait-for-db
-          image: busybox:1.36
+          image: ghcr.io/cloudnative-pg/postgresql:18
           command:
             - sh
             - -c
             - |
-              echo "Waiting for database to be ready..."
-              until nc -z -w 5 {{ include "fundament.db.host" . }} 5432; do
-                echo "Database not ready, waiting..."
-                sleep 2
-              done
-              echo "Database is ready!"
+              set -eu
+              echo "Waiting for the fundament database..."
+              until pg_isready -h {{ include "fundament.db.host" . }} -p 5432 > /dev/null 2>&1; do sleep 2; done
       containers:
-        - name: migrations
+        - name: fundament-migrate
           image: {{ $.Values.images.dbMigrations }}
-          # Run the schema migrations, then seed the appstore plugin catalog
-          # (reference data) in EVERY environment, independently of
-          # TREK_INSERT_TEST_DATA. The seed is a set of idempotent upserts, so it
-          # runs unconditionally on every Job: a fresh DB gets the catalog and an
-          # existing one is reconciled to the file. It runs in one transaction
-          # with ON_ERROR_STOP, and any psql failure aborts the Job (set -e)
-          # instead of being swallowed. The trek image is Alpine-based and ships
-          # psql.
+          # Seed the appstore plugin catalog (reference data) in EVERY environment,
+          # independently of TREK_INSERT_TEST_DATA. The seed is a set of idempotent
+          # upserts: a fresh DB gets the catalog and an existing one is reconciled
+          # to the file. One transaction with ON_ERROR_STOP, and any psql failure
+          # aborts the Job instead of being swallowed.
           command:
             - sh
             - -c
@@ -51,36 +51,6 @@ spec:
               psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
               echo "Seeding appstore plugin catalog..."
               psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
-              {{- if and $.Values.db.reset $.Values.openfga.enabled }}
-              # Reset the OpenFGA datastore here, coupled with the DB reset, so
-              # the two always happen together as one triggered event. OpenFGA no
-              # longer resets itself on pod start, so an unrelated openfga rollout
-              # can't wipe the store out from under an already-synced outbox.
-              # CNPG creates the openfga database asynchronously, so on a cold start
-              # it can still be absent here — the init container's port check says
-              # nothing about which databases exist. Failing here is unrecoverable:
-              # the Job exhausts backoffLimit, ttlSecondsAfterFinished then removes
-              # it, and openfga's wait-for-reset blocks forever on a Job name that
-              # no longer exists. Wait for the database itself.
-              echo "Waiting for the openfga database..."
-              i=0
-              until psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
-                i=$((i + 1))
-                if [ "$i" -ge 150 ]; then
-                  echo "openfga database did not appear after 5 minutes" >&2
-                  exit 1
-                fi
-                sleep 2
-              done
-              # TODO: this reset does not always converge. openfga-setup can create a new store
-              # while the tuples authz-worker writes go to the previous one, leaving every
-              # authorization decision false with every pod healthy — and it stays that way
-              # until another reset happens to line them up. Observed 1 run in 3. Couple the
-              # store id to the outbox, or re-emit the outbox when the store is recreated.
-              echo "Resetting OpenFGA datastore (coupled with the DB reset)..."
-              psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-              echo "OpenFGA datastore reset complete."
-              {{- end }}
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
@@ -123,13 +93,4 @@ spec:
               value: fundament
             - name: PGSSLMODE
               value: disable
-            {{- if and $.Values.db.reset $.Values.openfga.enabled }}
-            # OpenFGA datastore connection (separate DB on the same cluster), used
-            # only for the coupled reset step above.
-            - name: OPENFGA_DATASTORE_URI
-              valueFrom:
-                secretKeyRef:
-                  name: db-fun-openfga
-                  key: uri
-            {{- end }}
 {{- end }}

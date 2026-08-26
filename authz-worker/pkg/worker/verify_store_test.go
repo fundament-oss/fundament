@@ -52,7 +52,30 @@ func newVerifyWorker(t *testing.T, srv *storeServer) *Worker {
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	return New(nil, nil, srv.resolver(t), logger, Config{})
+	return New(nil, nil, srv.resolver(t), nil, logger, Config{})
+}
+
+// statusServer stands in for the provision sidecar's status endpoint.
+func statusServer(t *testing.T, generation string) *authz.StatusClient {
+	t.Helper()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"generation":"` + generation + `","store":"fundament","id":"x"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	return authz.NewStatusClient(srv.URL + "/status.json")
+}
+
+// newGatedWorker builds a worker that gates drains on a release generation.
+func newGatedWorker(t *testing.T, srv *storeServer, release, served string) *Worker {
+	t.Helper()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	return New(nil, nil, srv.resolver(t), statusServer(t, served), logger,
+		Config{Generation: release})
 }
 
 func store(id string, created time.Time) openfga.Store {
@@ -85,4 +108,33 @@ func TestVerifyStoreRecoversAgainstAReplacementStore(t *testing.T) {
 	id, err := w.store.ID(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, "01M0Y00000000000000000000B", id, "the next drain must target the replacement")
+}
+
+// A store that exists is not enough: during a reset the outgoing store is still
+// there, and writing to it marks rows completed for tuples about to be destroyed.
+func TestVerifyHoldsWhileOpenFGAServesAnotherGeneration(t *testing.T) {
+	srv := &storeServer{}
+	srv.set(store("01JMZ0000000000000000000AA", time.Now()))
+
+	err := newGatedWorker(t, srv, "release-2", "release-1").verifyStore(t.Context())
+
+	require.ErrorIs(t, err, errStoreUnavailable)
+	require.Contains(t, err.Error(), "release-2")
+	require.Contains(t, err.Error(), "release-1")
+}
+
+func TestVerifyPassesWhenTheGenerationMatches(t *testing.T) {
+	srv := &storeServer{}
+	srv.set(store("01JMZ0000000000000000000AA", time.Now()))
+
+	require.NoError(t, newGatedWorker(t, srv, "release-2", "release-2").verifyStore(t.Context()))
+}
+
+// Without a configured generation the gate is inert, so a caller outside the
+// chart keeps the old behaviour of waiting only for the store to exist.
+func TestVerifyWithoutAGenerationChecksOnlyExistence(t *testing.T) {
+	srv := &storeServer{}
+	srv.set(store("01JMZ0000000000000000000AA", time.Now()))
+
+	require.NoError(t, newGatedWorker(t, srv, "", "whatever").verifyStore(t.Context()))
 }
