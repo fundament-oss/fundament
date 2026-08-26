@@ -26,12 +26,24 @@ type UnaryFn<I extends DescMessage, O extends DescMessage> = (
   options?: CallOptions,
 ) => Observable<MessageShape<O>>;
 
+/**
+ * Optional wrapper around every unary call, so callers can layer behaviour that
+ * needs an Angular injector on top of a transport that knows nothing about
+ * Angular. `tokens.ts` uses it for the server-side render transfer cache.
+ */
+export type UnaryInterceptor = <I extends DescMessage, O extends DescMessage>(
+  method: DescMethodUnary<I, O>,
+  request: MessageInitShape<I>,
+  call: () => Observable<MessageShape<O>>,
+) => Observable<MessageShape<O>>;
+
 function createUnaryFn<I extends DescMessage, O extends DescMessage>(
   transport: Transport,
   method: DescMethodUnary<I, O>,
+  interceptor?: UnaryInterceptor,
 ): UnaryFn<I, O> {
-  return function unary(requestMessage, options) {
-    return new Observable<MessageShape<O>>((subscriber) => {
+  const call = (requestMessage: MessageInitShape<I>, options?: CallOptions) =>
+    new Observable<MessageShape<O>>((subscriber) => {
       transport
         .unary(method, options?.signal, options?.timeoutMs, options?.headers, requestMessage)
         .then(
@@ -48,6 +60,12 @@ function createUnaryFn<I extends DescMessage, O extends DescMessage>(
           subscriber.complete();
         });
     });
+
+  return function unary(requestMessage, options) {
+    if (!interceptor) {
+      return call(requestMessage, options);
+    }
+    return interceptor(method, requestMessage, () => call(requestMessage, options));
   };
 }
 
@@ -94,11 +112,15 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
   };
 }
 
-export function createObservableClient<T extends DescService>(service: T, transport: Transport) {
+export function createObservableClient<T extends DescService>(
+  service: T,
+  transport: Transport,
+  unaryInterceptor?: UnaryInterceptor,
+) {
   return makeAnyClient(service, (method: DescMethodUnary | DescMethodStreaming) => {
     switch (method.methodKind) {
       case 'unary':
-        return createUnaryFn(transport, method);
+        return createUnaryFn(transport, method, unaryInterceptor);
       case 'server_streaming':
         return createServerStreamingFn(transport, method);
       default:

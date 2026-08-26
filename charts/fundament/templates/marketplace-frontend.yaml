@@ -19,6 +19,19 @@ data:
       "consoleUrl": "{{ $.Values.externalUrls.console }}"
     }
 
+{{- /*
+  Hostnames the server-rendered app will answer for. Angular's SSR engine
+  rejects a request whose Host (or forwarded host) is not on this list, which is
+  what keeps a spoofed host header from steering server-side rendering.
+*/}}
+{{- $allowedHosts := list }}
+{{- if $.Values.ingress.enabled }}
+{{- $allowedHosts = append $allowedHosts (printf "marketplace.%s%s" (include "fundament.ingress.infix" .) $.Values.ingress.domain) }}
+{{- end }}
+{{- range $.Values.marketplaceFrontend.httproute.hostnames }}
+{{- $allowedHosts = append $allowedHosts . }}
+{{- end }}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,18 +53,49 @@ spec:
         - name: marketplace-frontend
           image: {{ $.Values.images.marketplaceFrontend }}
           env:
-            # Substituted into the CSP connect-src directive at container start
-            # (see marketplace-frontend/nginx.conf). Unset URLs collapse to
-            # extra whitespace, leaving connect-src 'self'.
+            # Substituted into the CSP connect-src directive by the server
+            # (see marketplace-frontend/src/server.ts). These are the origins the
+            # browser calls; a server render uses the internal URLs below. Unset
+            # URLs collapse to extra whitespace, leaving connect-src 'self'.
             - name: CONNECT_SRC
               value: "{{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.marketplaceRegistryApi }} {{ $.Values.externalUrls.marketplaceAdminApi }}"
+            {{- if $allowedHosts }}
+            - name: NG_ALLOWED_HOSTS
+              value: "{{ join "," $allowedHosts }}"
+            {{- end }}
+            # Base URLs the renderer uses for its own calls. Without these it
+            # would reach the APIs by their public hostname, leaving the cluster
+            # and coming back in through the gateway for every page it renders.
+            {{- with $.Values.marketplaceFrontend.internalApiUrls.catalog }}
+            - name: CATALOG_API_INTERNAL_URL
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $.Values.marketplaceFrontend.internalApiUrls.registry }}
+            - name: REGISTRY_API_INTERNAL_URL
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $.Values.marketplaceFrontend.internalApiUrls.admin }}
+            - name: ADMIN_API_INTERNAL_URL
+              value: "{{ . }}"
+            {{- end }}
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 4000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
           volumeMounts:
+            # Read by the browser over HTTP and by the renderer straight off disk.
             - name: config
-              mountPath: /usr/share/nginx/html/assets/config
+              mountPath: /app/dist/fundament-marketplace/browser/assets/config
               readOnly: true
+            # Same file for the hot-reload image, which serves from the sources.
             - name: config
               mountPath: /app/public/assets/config
               readOnly: true

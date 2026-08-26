@@ -16,13 +16,19 @@ RUN bun install --frozen-lockfile
 # Copy source files
 COPY marketplace-frontend/ .
 
-# Build the application
+# Build the application: a browser bundle plus the Node server that renders it
 RUN bun run build
 
 # Production stage
-FROM nginx:alpine
-COPY --from=build /app/dist/fundament-marketplace/browser /usr/share/nginx/html
-COPY marketplace-frontend/nginx.conf /etc/nginx/conf.d/default.conf.template
+# The storefront is server-rendered, so this ships as a Node server rather than
+# a static site. The server bundle is self-contained (esbuild inlines express
+# and everything else), so no node_modules are needed here.
+FROM node:24.17-alpine
+WORKDIR /app
+ENV NODE_ENV=production
 
-EXPOSE 80
-CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+COPY --from=build /app/dist/fundament-marketplace ./dist/fundament-marketplace
+
+USER node
+EXPOSE 4000
+CMD ["node", "dist/fundament-marketplace/server/server.mjs"]

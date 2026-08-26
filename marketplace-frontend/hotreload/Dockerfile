@@ -15,9 +15,10 @@ RUN bun install --frozen-lockfile
 # Copy source files
 COPY marketplace-frontend/ .
 
-# Expose Angular dev server port (using 80 to match production service port)
-EXPOSE 80
+# Expose Angular dev server port (using 4000 to match the production container)
+EXPOSE 4000
 
-# Start development server with hot reload
-# Configure dev server to listen on 0.0.0.0:80 for pod accessibility
-CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 80"]
+# Start development server with hot reload. It server-renders the storefront the
+# same way the production server does; see marketplace-frontend/src/server.ts.
+# Configure dev server to listen on 0.0.0.0:4000 for pod accessibility
+CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 4000"]

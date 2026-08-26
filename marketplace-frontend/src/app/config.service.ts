@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 
 // Runtime configuration, fetched before the app bootstraps. The three
 // marketplace APIs are three deployables (FUN-20), so each gets its own base
@@ -15,11 +15,40 @@ export interface AppConfiguration {
   consoleUrl?: string;
 }
 
+export type ConfigLoader = () => Promise<AppConfiguration>;
+
+export const EMPTY_CONFIGURATION: AppConfiguration = {
+  catalogApiUrl: '',
+  registryApiUrl: '',
+  adminApiUrl: '',
+};
+
+async function fetchConfig(): Promise<AppConfiguration> {
+  const response = await fetch('/assets/config/config.json');
+  if (!response.ok) {
+    throw new Error(`Failed to load config: ${response.statusText}`);
+  }
+  return (await response.json()) as AppConfiguration;
+}
+
+/**
+ * How `ConfigService` obtains the runtime configuration. The browser fetches
+ * the file the deployment mounts next to the app; the server bundle overrides
+ * this with a loader that reads the configuration out of the request context
+ * (see `app.config.server.ts`), because a relative fetch has no origin there.
+ */
+export const CONFIG_LOADER = new InjectionToken<ConfigLoader>('marketplace-config-loader', {
+  providedIn: 'root',
+  factory: () => fetchConfig,
+});
+
 @Injectable({
   providedIn: 'root',
 })
 export class ConfigService {
   private config?: AppConfiguration;
+
+  private loader = inject(CONFIG_LOADER);
 
   async loadConfig(): Promise<AppConfiguration> {
     if (this.config) {
@@ -27,21 +56,13 @@ export class ConfigService {
     }
 
     try {
-      const response = await fetch('/assets/config/config.json');
-      if (!response.ok) {
-        throw new Error(`Failed to load config: ${response.statusText}`);
-      }
-      this.config = await response.json();
-      return this.config!;
+      this.config = await this.loader();
+      return this.config;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load configuration', error);
 
-      this.config = {
-        catalogApiUrl: '',
-        registryApiUrl: '',
-        adminApiUrl: '',
-      };
+      this.config = EMPTY_CONFIGURATION;
 
       return this.config;
     }

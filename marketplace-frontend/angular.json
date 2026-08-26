@@ -19,6 +19,11 @@
           "options": {
             "outputPath": "dist/fundament-marketplace",
             "browser": "src/main.ts",
+            "server": "src/main.server.ts",
+            "outputMode": "server",
+            "ssr": {
+              "entry": "src/server.ts"
+            },
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
@@ -26,7 +31,10 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": ["src/styles.css"],
+            "security": {
+              "allowedHosts": ["marketplace.fundament.localhost", "localhost"]
+            }
           },
           "configurations": {
             "production": {

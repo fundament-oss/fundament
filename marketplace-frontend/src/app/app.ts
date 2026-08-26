@@ -2,7 +2,6 @@ import {
   Component,
   signal,
   inject,
-  OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -23,6 +22,7 @@ import '@nldd/design-system/inline-dialog';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { FundamentLogoIconComponent } from './icons';
 import { ToastService } from './toast.service';
+import ThemeService from './theme.service';
 
 @Component({
   selector: 'app-root',
@@ -34,20 +34,18 @@ import { ToastService } from './toast.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class App implements OnInit {
+export default class App {
   private router = inject(Router);
+
+  private themeService = inject(ThemeService);
 
   protected toastService = inject(ToastService);
 
-  // Theme state
-  isDarkMode = signal(false);
+  // Theme state, owned by ThemeService so the server can render it too.
+  isDarkMode = this.themeService.isDarkMode;
 
   // Search box value; submitting navigates to the marketplace filtered by query.
   searchQuery = signal('');
-
-  ngOnInit() {
-    this.initializeTheme();
-  }
 
   onSearchInput(event: Event) {
     const value = (event.target as HTMLInputElement).value;
@@ -70,50 +68,7 @@ export default class App implements OnInit {
     });
   }
 
-  // Initialize theme from an explicit saved choice, falling back to the OS
-  // preference. The OS preference is never persisted here, so it keeps tracking
-  // the OS on later visits until the user explicitly picks a theme.
-  private initializeTheme() {
-    const savedTheme = localStorage.getItem('theme');
-
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-      this.isDarkMode.set(savedTheme === 'dark');
-    } else {
-      // Use system preference
-      this.isDarkMode.set(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-
-    this.applyTheme();
-  }
-
-  // Toggle theme in response to a user action, and persist the choice.
   toggleTheme() {
-    this.isDarkMode.set(!this.isDarkMode());
-    this.persistTheme();
-
-    // Apply with view transition if supported. Use 80 ms delay to allow CSS transition on the switch to start
-    setTimeout(() => {
-      if (document.startViewTransition) {
-        document.startViewTransition(this.applyTheme.bind(this));
-      } else {
-        this.applyTheme();
-      }
-    }, 80);
-  }
-
-  // Apply the active theme to the <html> element.
-  private applyTheme() {
-    const htmlElement = document.documentElement;
-
-    if (this.isDarkMode()) {
-      htmlElement.classList.add('dark');
-    } else {
-      htmlElement.classList.remove('dark');
-    }
-  }
-
-  // Persist the user's explicit theme choice to localStorage.
-  private persistTheme() {
-    localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
+    this.themeService.toggle();
   }
 }

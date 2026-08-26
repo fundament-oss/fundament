@@ -161,6 +161,12 @@ dcimFrontend:
 marketplaceFrontend:
   enabled: true
   replicas: 1
+  # The renderer would call the three APIs in-cluster. They are not implemented yet
+  # yet (see externalUrls above); when they land they take these addresses:
+  #   internalApiUrls:
+  #     catalog: http://marketplace-catalog-api
+  #     registry: http://marketplace-registry-api
+  #     admin: http://marketplace-admin-api
 
 dexDcim:
   enabled: true

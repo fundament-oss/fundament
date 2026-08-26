@@ -190,10 +190,20 @@ docsFrontend:
     #  - docs.example.com
 
 # Marketplace frontend (public storefront, publishing and review surfaces).
-# Reads its three API base URLs from externalUrls.marketplace*Api at runtime.
+# Server-rendered (Node), so it reads its three API base URLs from
+# externalUrls.marketplace*Api at runtime and renders the public storefront
+# itself; the developer and backoffice areas stay client-rendered.
 marketplaceFrontend:
   enabled: false
   replicas: 1
+  # Base URLs the server-side renderer uses for its own API calls. In-cluster
+  # addresses (e.g. http://marketplace-catalog-api), so rendering a page does not
+  # leave the cluster and come back in through the gateway. Empty falls back to
+  # the public URL from externalUrls.
+  internalApiUrls:
+    catalog: ""
+    registry: ""
+    admin: ""
   httproute:
     enabled: false
     parentRefs: []
