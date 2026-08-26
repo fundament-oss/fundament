@@ -11,14 +11,9 @@ metadata:
 spec:
   replicas: {{ $.Values.authzWorker.replicas }}
   {{- if $.Values.db.reset }}
-  # Local/dev only (db.reset ⇒ this environment wipes+reseeds and resets OpenFGA
-  # on every deploy). Recreate — not RollingUpdate — so the old pod is torn down
-  # before the new one starts. An overlapping old pod still holds the previous
-  # OpenFGA store/model (resolved from a ConfigMap at pod start) and would write
-  # freshly-seeded outbox rows to the now-deleted store, stranding them and
-  # tripping the consumer's circuit breaker. No overlap, no split-brain; a brief
-  # gap in outbox processing is harmless — rows just queue. Prod keeps the
-  # default RollingUpdate for zero-downtime rollouts.
+    # Recreate, so no old pod overlaps the new one and drains outbox rows into
+    # the store the next release replaces. A brief gap in outbox processing is
+    # harmless: rows queue.
   strategy:
     type: Recreate
   {{- end }}
@@ -51,17 +46,9 @@ spec:
             - name: MAX_RETRIES
               value: {{ $.Values.authzWorker.maxRetries | quote }}
             - name: OPENFGA_API_URL
-              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
-            - name: OPENFGA_STORE_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: store-id
-            - name: OPENFGA_AUTHORIZATION_MODEL_ID
-              valueFrom:
-                configMapKeyRef:
-                  name: openfga-config
-                  key: authorization-model-id
+              value: http://openfga:{{ $.Values.openfga.apiPort }}
+            - name: OPENFGA_STORE_NAME
+              value: {{ include "fundament.openfga.storeName" $ | quote }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
 {{- end }}

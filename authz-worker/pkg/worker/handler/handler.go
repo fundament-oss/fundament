@@ -14,12 +14,13 @@ import (
 // Handler contains all entity handlers for the authz worker.
 type Handler struct {
 	fga    *client.OpenFgaClient
+	store  *authz.StoreResolver
 	logger *slog.Logger
 }
 
 // New creates a new Handlers instance.
-func New(fga *client.OpenFgaClient, logger *slog.Logger) *Handler {
-	return &Handler{fga: fga, logger: logger}
+func New(fga *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger) *Handler {
+	return &Handler{fga: fga, store: store, logger: logger}
 }
 
 // writeTuplesIfNotExist writes tuples, ignoring errors if the tuples already
@@ -35,7 +36,12 @@ func (h *Handler) writeTuplesIfNotExist(ctx context.Context, tuples ...openfga.T
 			OnDuplicateWrites: client.CLIENT_WRITE_REQUEST_ON_DUPLICATE_WRITES_IGNORE,
 		},
 	}
-	if _, err := h.fga.WriteTuples(ctx).Body(tuples).Options(opts).Execute(); err != nil {
+	if err := h.store.Do(ctx, func(storeID string) error {
+		opts.StoreId = &storeID
+		_, err := h.fga.WriteTuples(ctx).Body(tuples).Options(opts).Execute()
+
+		return err //nolint:wrapcheck // Do inspects the raw SDK error
+	}); err != nil {
 		return fmt.Errorf("write tuples: %w", err)
 	}
 	return nil
@@ -52,7 +58,12 @@ func (h *Handler) deleteTuplesIfExist(ctx context.Context, tuples ...openfga.Tup
 			OnMissingDeletes: client.CLIENT_WRITE_REQUEST_ON_MISSING_DELETES_IGNORE,
 		},
 	}
-	if _, err := h.fga.DeleteTuples(ctx).Body(tuples).Options(opts).Execute(); err != nil {
+	if err := h.store.Do(ctx, func(storeID string) error {
+		opts.StoreId = &storeID
+		_, err := h.fga.DeleteTuples(ctx).Body(tuples).Options(opts).Execute()
+
+		return err //nolint:wrapcheck // Do inspects the raw SDK error
+	}); err != nil {
 		return fmt.Errorf("delete tuples: %w", err)
 	}
 	return nil

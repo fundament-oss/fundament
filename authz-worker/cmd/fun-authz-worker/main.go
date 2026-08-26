@@ -95,36 +95,20 @@ func run() error {
 
 	logger.Debug("connecting to OpenFGA",
 		"api_url", cfg.OpenFGA.APIURL,
-		"store_id", cfg.OpenFGA.StoreID,
-		"authorization_model_id", cfg.OpenFGA.AuthorizationModelID,
+		"store_name", cfg.OpenFGA.StoreName,
 	)
 
 	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
-		ApiUrl:               cfg.OpenFGA.APIURL,
-		StoreId:              cfg.OpenFGA.StoreID,
-		AuthorizationModelId: cfg.OpenFGA.AuthorizationModelID,
+		ApiUrl: cfg.OpenFGA.APIURL,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
 
-	// Validate the store and authorization model exist - this ensures we have valid config
-	store, err := fgaClient.GetStore(ctx).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to validate OpenFGA store: %w", err)
-	}
+	// The store may not exist yet (a reset deletes it before the reseed); Run waits for it.
+	store := authz.NewStoreResolver(fgaClient, cfg.OpenFGA.StoreName)
 
-	model, err := fgaClient.ReadAuthorizationModel(ctx).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to validate OpenFGA authorization model: %w", err)
-	}
-
-	logger.Debug("OpenFGA client connected",
-		"store_name", store.GetName(),
-		"model_id", model.AuthorizationModel.GetId(),
-	)
-
-	w := worker.New(pool, fgaClient, logger, worker.Config{
+	w := worker.New(pool, fgaClient, store, logger, worker.Config{
 		PollInterval: cfg.PollInterval,
 		BatchSize:    cfg.BatchSize,
 		BaseBackoff:  cfg.BaseBackoff,
