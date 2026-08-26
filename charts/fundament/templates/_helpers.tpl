@@ -48,20 +48,6 @@ Database superuser secret name
 {{- end }}
 
 {{/*
-Name of the db-migrations Job for THIS release.
-
-The revision suffix lets openfga's wait-for-reset block on this upgrade's run
-rather than the previous deploy's completed one. It also lands in that init
-container's command, so a new Job always rolls the openfga pod — without that,
-a reset can drop the schema under a server that never restarts.
-
-Usage: include "fundament.dbMigrationsJobName" $
-*/}}
-{{- define "fundament.dbMigrationsJobName" -}}
-db-migrations-{{ .Release.Revision }}
-{{- end }}
-
-{{/*
 JWT Secret environment variable - supports both direct value and secretRef
 */}}
 {{- define "fundament.jwtSecretEnv" -}}
@@ -135,8 +121,39 @@ readinessProbe:
 {{- end }}
 
 {{/*
+Name of the OpenFGA store. Consumers resolve it to an id at runtime.
+
+Constant across releases: a per-release name would exceed the 63-character label
+cap on PR previews, where the release version is an image tag. Which release a
+store belongs to is carried by fundament.openfga.generation instead.
+
 Usage: include "fundament.openfga.storeName" $
 */}}
 {{- define "fundament.openfga.storeName" -}}
 fundament
+{{- end }}
+
+{{/*
+Identifies the release whose datastore state is current. openfga's provision
+sidecar publishes it, db-migrations waits for it, and the wipe runs when the
+datastore carries a different one.
+
+Only a resettable datastore has releases to tell apart, so elsewhere this is a
+constant. A value that tracked Helm revisions would land in openfga's pod
+template and roll the server on every reconcile, and hold the migration Job
+behind that rollout.
+
+deploymentVersion comes first because Release.Revision counts Helm operations
+rather than builds: a drift correction or a retry bumps the revision and would
+wipe a live environment mid-use. PR previews set deploymentVersion to the image
+tag, which is unique per build.
+
+Usage: include "fundament.openfga.generation" $
+*/}}
+{{- define "fundament.openfga.generation" -}}
+{{- if .Values.db.reset -}}
+{{ .Values.deploymentVersion | default .Release.Revision }}
+{{- else -}}
+stable
+{{- end -}}
 {{- end }}

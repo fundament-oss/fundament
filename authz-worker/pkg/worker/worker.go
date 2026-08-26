@@ -38,6 +38,10 @@ var errStoreUnavailable = errors.New("openfga store unavailable")
 
 // Config holds configuration for the outbox worker.
 type Config struct {
+	// Generation is the release this worker belongs to. When set, a drain waits
+	// until openfga reports the same generation, so seeded rows are never written
+	// to a store the current release is about to replace.
+	Generation   string
 	PollInterval time.Duration
 	BatchSize    int32
 	BaseBackoff  time.Duration
@@ -52,6 +56,7 @@ type Worker struct {
 	queries *db.Queries
 	handler *handler.Handler
 	store   *authz.StoreResolver
+	status  *authz.StatusClient
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -67,7 +72,10 @@ type Worker struct {
 }
 
 // New creates a new authz worker with sensible defaults.
-func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger, cfg Config) *Worker {
+func New(
+	pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver,
+	status *authz.StatusClient, logger *slog.Logger, cfg Config,
+) *Worker {
 	cfg = applyDefaults(cfg)
 
 	hostname, _ := os.Hostname()
@@ -78,6 +86,7 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.Store
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, store, logger),
 		store:   store,
+		status:  status,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
@@ -180,11 +189,28 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 }
 
-// verifyStore gates a drain on the store existing, and picks up its id if a
-// reset replaced it.
+// verifyStore gates a drain on the store being this release's, and picks up its
+// id if a reset replaced it.
+//
+// Existence alone is not enough. During a reset the outgoing store is still there
+// until the wipe runs, and OpenFGA's Write does not check that a store survives,
+// so a drain against it reports success and marks rows completed for tuples that
+// are about to be destroyed. The generation is what tells the two stores apart.
 func (w *Worker) verifyStore(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
 	defer cancel()
+
+	if w.cfg.Generation != "" {
+		reported, err := w.status.Generation(checkCtx)
+		if err != nil {
+			return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+		}
+
+		if reported != w.cfg.Generation {
+			return fmt.Errorf("%w: openfga serves generation %q, this release is %q",
+				errStoreUnavailable, reported, w.cfg.Generation)
+		}
+	}
 
 	if _, err := w.store.Resolve(checkCtx); err != nil {
 		return fmt.Errorf("%w: %w", errStoreUnavailable, err)

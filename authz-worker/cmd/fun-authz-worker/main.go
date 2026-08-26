@@ -108,7 +108,11 @@ func run() error {
 	// The store may not exist yet (a reset deletes it before the reseed); Run waits for it.
 	store := authz.NewStoreResolver(fgaClient, cfg.OpenFGA.StoreName)
 
-	w := worker.New(pool, fgaClient, store, logger, worker.Config{
+	// The gate that keeps seeded rows out of a store this release is replacing.
+	status := authz.NewStatusClient(cfg.OpenFGA.StatusURL)
+
+	w := worker.New(pool, fgaClient, store, status, logger, worker.Config{
+		Generation:   cfg.OpenFGA.Generation,
 		PollInterval: cfg.PollInterval,
 		BatchSize:    cfg.BatchSize,
 		BaseBackoff:  cfg.BaseBackoff,

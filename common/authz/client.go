@@ -18,6 +18,11 @@ import (
 type Config struct {
 	APIURL    string `env:"OPENFGA_API_URL,required,notEmpty"`
 	StoreName string `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
+	// StatusURL is where the provisioner publishes what it provisioned.
+	StatusURL string `env:"OPENFGA_STATUS_URL"`
+	// Generation identifies this release. A consumer that writes through the
+	// outbox waits for the provisioner to report it before draining.
+	Generation string `env:"OPENFGA_GENERATION"`
 }
 
 // Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.

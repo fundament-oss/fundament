@@ -56,9 +56,9 @@ build:
         dockerfile: kube-api-proxy/Dockerfile
 
     - image: openfga-setup
-      context: openfga/setup
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: openfga/setup/Dockerfile
 
     - image: plugin-controller
       context: .
