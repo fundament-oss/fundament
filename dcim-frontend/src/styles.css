@@ -161,10 +161,14 @@ nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > *:not(nldd-page
 
 /* Same story one level down: a component that wraps an nldd-page and is slotted
    into a sheet stands between the two, and the page then has no height to
-   scroll within. */
-nldd-sheet > app-cable-form,
-nldd-sheet > app-datacenter-detail,
-nldd-sheet > app-shopping-list {
+   scroll within.
+
+   Written the same way as the rule above rather than as a list of component
+   names. A list is a promise to remember, and it was already broken: the task
+   detail was missing from it and its sheet would not scroll. A sheet has one
+   slot and takes one page, so anything else between the two is a wrapper and
+   has no business in the layout. */
+nldd-sheet > *:not(nldd-page) {
   display: contents;
 }
 
