@@ -228,6 +228,28 @@ spec:
           ports:
             - name: status
               containerPort: {{ $.Values.openfga.statusPort }}
+          # The status endpoint answers only once the store exists and carries
+          # this release's generation, so gating readiness on it keeps openfga out
+          # of its Service until consumers can resolve the store. The startup
+          # probe owns the provisioning window; the liveness probe restarts a
+          # provisioner whose HTTP server has stopped answering.
+          startupProbe:
+            httpGet:
+              path: /status.json
+              port: status
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /status.json
+              port: status
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /status.json
+              port: status
+            periodSeconds: 20
+            failureThreshold: 3
 
 ---
 apiVersion: v1
