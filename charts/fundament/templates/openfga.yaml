@@ -41,17 +41,6 @@ spec:
     name: {{ include "fundament.db.name" . }}
 
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: openfga-model
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "openfga" "component" "backend") | nindent 4 }}
-data:
-  model.fga: |
-{{- .Files.Get "openfga/model.fga" | nindent 4 }}
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -234,20 +223,11 @@ spec:
               value: {{ include "fundament.openfga.storeName" $ }}
             - name: OPENFGA_GENERATION
               value: {{ include "fundament.openfga.generation" $ | quote }}
-            - name: OPENFGA_MODEL_PATH
-              value: /model/model.fga
             - name: OPENFGA_STATUS_ADDR
               value: ":{{ $.Values.openfga.statusPort }}"
           ports:
             - name: status
               containerPort: {{ $.Values.openfga.statusPort }}
-          volumeMounts:
-            - name: model
-              mountPath: /model
-      volumes:
-        - name: model
-          configMap:
-            name: openfga-model
 
 ---
 apiVersion: v1
