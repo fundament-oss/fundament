@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	openfga "github.com/openfga/go-sdk"
 	"github.com/openfga/go-sdk/client"
 	language "github.com/openfga/language/pkg/go/transformer"
+
+	"github.com/fundament-oss/fundament/openfga/model"
 )
 
 // Status is what the provisioner publishes once the store is ready. Consumers
@@ -26,7 +27,6 @@ type ProvisionConfig struct {
 	APIURL     string        `env:"OPENFGA_API_URL,required,notEmpty"`
 	StoreName  string        `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
 	Generation string        `env:"OPENFGA_GENERATION,required,notEmpty"`
-	ModelPath  string        `env:"OPENFGA_MODEL_PATH,notEmpty" envDefault:"/model/model.fga"`
 	StatusAddr string        `env:"OPENFGA_STATUS_ADDR,notEmpty" envDefault:":8099"`
 	Timeout    time.Duration `env:"OPENFGA_TIMEOUT" envDefault:"5m"`
 }
@@ -36,19 +36,14 @@ const pollInterval = 2 * time.Second
 // Provision creates the store if it is absent, brings its authorization model up
 // to date, and then serves the status until it is shut down.
 func Provision(ctx context.Context, cfg *ProvisionConfig) error {
-	dsl, err := os.ReadFile(cfg.ModelPath)
-	if err != nil {
-		return fmt.Errorf("read model: %w", err)
-	}
-
 	// The DSL is what humans edit; the API takes JSON.
-	modelJSON, err := language.TransformDSLToJSON(string(dsl))
+	modelJSON, err := language.TransformDSLToJSON(model.DSL)
 	if err != nil {
 		return fmt.Errorf("parse model: %w", err)
 	}
 
-	var model openfga.AuthorizationModel
-	if err := json.Unmarshal([]byte(modelJSON), &model); err != nil {
+	var want openfga.AuthorizationModel
+	if err := json.Unmarshal([]byte(modelJSON), &want); err != nil {
 		return fmt.Errorf("decode model: %w", err)
 	}
 
@@ -69,7 +64,7 @@ func Provision(ctx context.Context, cfg *ProvisionConfig) error {
 		return err
 	}
 
-	if err := ensureModel(ctx, fga, storeID, &model); err != nil {
+	if err := ensureModel(ctx, fga, storeID, &want); err != nil {
 		return err
 	}
 
