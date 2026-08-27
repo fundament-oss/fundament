@@ -14,6 +14,11 @@ type ProvisionStatus struct {
 	// Generation names the release the datastore belongs to.
 	Generation string `json:"generation"`
 	StoreID    string `json:"id"`
+	// ModelID is the model the provisioner put in force, which is the one
+	// embedded in its own image. Consumers evaluate against it rather than
+	// against whatever model is latest, so a model written by anything else
+	// does not take effect by being newer.
+	ModelID string `json:"model_id"`
 }
 
 // StatusClient reads that document.

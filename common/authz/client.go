@@ -30,6 +30,7 @@ type Config struct {
 type Client struct {
 	fga   *client.OpenFgaClient
 	store *StoreResolver
+	model *ModelPin
 }
 
 // New creates a new authorization client.
@@ -44,6 +45,7 @@ func New(cfg Config) (*Client, error) {
 	return &Client{
 		fga:   fgaClient,
 		store: NewStoreResolver(fgaClient, cfg.StoreName),
+		model: NewModelPin(cfg.StatusURL),
 	}, nil
 }
 
@@ -121,11 +123,18 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 	var resp *client.ClientCheckResponse
 
 	err := c.store.Do(ctx, func(storeID string) error {
+		modelID, modelErr := c.model.ID(ctx, storeID)
+		if modelErr != nil {
+			return modelErr
+		}
+
+		opts := client.ClientCheckOptions{StoreId: &storeID}
+		if modelID != "" {
+			opts.AuthorizationModelId = &modelID
+		}
+
 		var checkErr error
-		resp, checkErr = c.fga.Check(ctx).
-			Body(checkReq).
-			Options(client.ClientCheckOptions{StoreId: &storeID}).
-			Execute()
+		resp, checkErr = c.fga.Check(ctx).Body(checkReq).Options(opts).Execute()
 
 		return checkErr //nolint:wrapcheck // Do inspects the raw SDK error
 	})

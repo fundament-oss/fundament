@@ -15,12 +15,15 @@ import (
 type Handler struct {
 	fga    *client.OpenFgaClient
 	store  *authz.StoreResolver
+	model  *authz.ModelPin
 	logger *slog.Logger
 }
 
 // New creates a new Handlers instance.
-func New(fga *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger) *Handler {
-	return &Handler{fga: fga, store: store, logger: logger}
+func New(
+	fga *client.OpenFgaClient, store *authz.StoreResolver, model *authz.ModelPin, logger *slog.Logger,
+) *Handler {
+	return &Handler{fga: fga, store: store, model: model, logger: logger}
 }
 
 // writeTuplesIfNotExist writes tuples, ignoring errors if the tuples already
@@ -38,6 +41,10 @@ func (h *Handler) writeTuplesIfNotExist(ctx context.Context, tuples ...openfga.T
 	}
 	if err := h.store.Do(ctx, func(storeID string) error {
 		opts.StoreId = &storeID
+		if err := h.pin(ctx, storeID, &opts); err != nil {
+			return err
+		}
+
 		_, err := h.fga.WriteTuples(ctx).Body(tuples).Options(opts).Execute()
 
 		return err //nolint:wrapcheck // Do inspects the raw SDK error
@@ -60,6 +67,10 @@ func (h *Handler) deleteTuplesIfExist(ctx context.Context, tuples ...openfga.Tup
 	}
 	if err := h.store.Do(ctx, func(storeID string) error {
 		opts.StoreId = &storeID
+		if err := h.pin(ctx, storeID, &opts); err != nil {
+			return err
+		}
+
 		_, err := h.fga.DeleteTuples(ctx).Body(tuples).Options(opts).Execute()
 
 		return err //nolint:wrapcheck // Do inspects the raw SDK error
@@ -83,4 +94,21 @@ func tupleDelete(subject authz.Object, relation authz.ActionName, object authz.O
 		Relation: string(relation),
 		Object:   object.String(),
 	}
+}
+
+// pin selects the authorization model tuples are validated against. Writes are
+// checked against a model like any other request, so an unpinned write is
+// validated by whatever model is latest: one that drops a type rejects every
+// tuple of that type, and those rows exhaust their retries and go to failed.
+func (h *Handler) pin(ctx context.Context, storeID string, opts *client.ClientWriteOptions) error {
+	modelID, err := h.model.ID(ctx, storeID)
+	if err != nil {
+		return fmt.Errorf("resolve authorization model: %w", err)
+	}
+
+	if modelID != "" {
+		opts.AuthorizationModelId = &modelID
+	}
+
+	return nil
 }

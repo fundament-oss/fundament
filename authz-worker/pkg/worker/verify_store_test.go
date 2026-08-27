@@ -52,7 +52,7 @@ func newVerifyWorker(t *testing.T, srv *storeServer) *Worker {
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	return New(nil, nil, srv.resolver(t), nil, logger, Config{})
+	return New(nil, nil, srv.resolver(t), nil, nil, logger, Config{})
 }
 
 // statusServer stands in for the provision sidecar's status endpoint.
@@ -74,7 +74,7 @@ func newGatedWorker(t *testing.T, srv *storeServer, release, served string) *Wor
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	return New(nil, nil, srv.resolver(t), statusServer(t, served), logger,
+	return New(nil, nil, srv.resolver(t), statusServer(t, served), nil, logger,
 		Config{Generation: release})
 }
 

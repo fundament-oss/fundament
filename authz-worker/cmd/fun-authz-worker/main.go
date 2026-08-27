@@ -111,7 +111,11 @@ func run() error {
 	// The gate that keeps seeded rows out of a store this release is replacing.
 	status := authz.NewStatusClient(cfg.OpenFGA.StatusURL)
 
-	w := worker.New(pool, fgaClient, store, status, logger, worker.Config{
+	// Writes are validated against a model too, so the worker pins the same one
+	// consumers evaluate against.
+	model := authz.NewModelPin(cfg.OpenFGA.StatusURL)
+
+	w := worker.New(pool, fgaClient, store, status, model, logger, worker.Config{
 		Generation:   cfg.OpenFGA.Generation,
 		PollInterval: cfg.PollInterval,
 		BatchSize:    cfg.BatchSize,

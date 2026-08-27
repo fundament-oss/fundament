@@ -13,6 +13,10 @@ import (
 	"github.com/openfga/go-sdk/client"
 )
 
+// ErrModelUnknown reports that the provisioner has not published a usable model
+// for the resolved store yet.
+var ErrModelUnknown = errors.New("openfga authorization model not published")
+
 // ErrStoreNotFound reports that no store with the configured name exists.
 var ErrStoreNotFound = errors.New("openfga store not found")
 

@@ -91,10 +91,12 @@ func listStoresNamed(ctx context.Context, fga *client.OpenFgaClient, name string
 	return matches, nil
 }
 
-// ensureModel writes the authorization model only when the store's latest one
-// differs. OpenFGA never dedupes: every write appends a version with a fresh id,
-// and since no consumer pins a model id they would all silently follow it.
-func ensureModel(ctx context.Context, fga *client.OpenFgaClient, storeID string, want *openfga.AuthorizationModel) error {
+// ensureModel brings the store's authorization model up to date and returns the
+// id of the model now in force. It writes only when the latest model differs:
+// OpenFGA never dedupes, so every write appends a version with a fresh id.
+func ensureModel(
+	ctx context.Context, fga *client.OpenFgaClient, storeID string, want *openfga.AuthorizationModel,
+) (string, error) {
 	current, err := fga.ReadLatestAuthorizationModel(ctx).Options(
 		client.ClientReadLatestAuthorizationModelOptions{StoreId: &storeID},
 	).Execute()
@@ -109,18 +111,18 @@ func ensureModel(ctx context.Context, fga *client.OpenFgaClient, storeID string,
 	// A read that failed for any other reason must not pass for "no model yet":
 	// writing then appends a version every consumer immediately evaluates against.
 	case err != nil && !errors.As(err, &notFound):
-		return fmt.Errorf("read latest authorization model: %w", err)
+		return "", fmt.Errorf("read latest authorization model: %w", err)
 
 	case err == nil && current.AuthorizationModel != nil:
 		same, err := sameModel(current.AuthorizationModel, want)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		if same {
 			slog.Info("authorization model unchanged", "model_id", current.AuthorizationModel.Id)
 
-			return nil
+			return current.AuthorizationModel.Id, nil
 		}
 
 		reason = "shipped model differs from the store's latest, " + current.AuthorizationModel.Id
@@ -139,12 +141,12 @@ func ensureModel(ctx context.Context, fga *client.OpenFgaClient, storeID string,
 		Options(client.ClientWriteAuthorizationModelOptions{StoreId: &storeID}).
 		Execute()
 	if err != nil {
-		return fmt.Errorf("write authorization model: %w", err)
+		return "", fmt.Errorf("write authorization model: %w", err)
 	}
 
 	slog.Info("authorization model written", "model_id", written.AuthorizationModelId)
 
-	return nil
+	return written.AuthorizationModelId, nil
 }
 
 // sameModel reports whether the store's latest model means the same as the one the

@@ -57,6 +57,7 @@ type Worker struct {
 	handler *handler.Handler
 	store   *authz.StoreResolver
 	status  *authz.StatusClient
+	model   *authz.ModelPin
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -74,7 +75,7 @@ type Worker struct {
 // New creates a new authz worker with sensible defaults.
 func New(
 	pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver,
-	status *authz.StatusClient, logger *slog.Logger, cfg Config,
+	status *authz.StatusClient, model *authz.ModelPin, logger *slog.Logger, cfg Config,
 ) *Worker {
 	cfg = applyDefaults(cfg)
 
@@ -84,9 +85,10 @@ func New(
 	w := &Worker{
 		pool:    pool,
 		queries: db.New(pool),
-		handler: handler.New(fgaClient, store, logger),
+		handler: handler.New(fgaClient, store, model, logger),
 		store:   store,
 		status:  status,
+		model:   model,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
