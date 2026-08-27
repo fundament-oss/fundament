@@ -52,7 +52,7 @@ func newVerifyWorker(t *testing.T, srv *storeServer) *Worker {
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	return New(nil, nil, srv.resolver(t), logger, Config{})
+	return New(nil, nil, srv.resolver(t), nil, logger, Config{})
 }
 
 func store(id string, created time.Time) openfga.Store {

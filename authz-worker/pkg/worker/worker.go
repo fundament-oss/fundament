@@ -67,7 +67,10 @@ type Worker struct {
 }
 
 // New creates a new authz worker with sensible defaults.
-func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger, cfg Config) *Worker {
+func New(
+	pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver,
+	model *authz.ModelPin, logger *slog.Logger, cfg Config,
+) *Worker {
 	cfg = applyDefaults(cfg)
 
 	hostname, _ := os.Hostname()
@@ -76,7 +79,7 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.Store
 	w := &Worker{
 		pool:    pool,
 		queries: db.New(pool),
-		handler: handler.New(fgaClient, store, logger),
+		handler: handler.New(fgaClient, store, model, logger),
 		store:   store,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,

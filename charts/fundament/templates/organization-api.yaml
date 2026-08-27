@@ -56,6 +56,8 @@ spec:
               value: http://openfga:{{ $.Values.openfga.apiPort }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ | quote }}
+            - name: OPENFGA_STATUS_URL
+              value: http://openfga:{{ $.Values.openfga.statusPort }}/status.json
             {{- if $.Values.organizationApi.prometheusCASecret }}
             - name: PROMETHEUS_CA_FILE
               value: /etc/prometheus-ca/ca.crt

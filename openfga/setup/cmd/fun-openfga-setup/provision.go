@@ -20,6 +20,11 @@ type Status struct {
 	Generation string `json:"generation"`
 	Store      string `json:"store"`
 	StoreID    string `json:"id"`
+	// ModelID is the model this provisioner put in force, which is the one
+	// embedded in its own image. Consumers evaluate against it rather than
+	// against whatever model is latest, so a model written by anything else
+	// does not take effect by being newer.
+	ModelID string `json:"model_id"`
 }
 
 // ProvisionConfig configures the provisioning role.
@@ -64,16 +69,19 @@ func Provision(ctx context.Context, cfg *ProvisionConfig) error {
 		return err
 	}
 
-	if err := ensureModel(ctx, fga, storeID, &want); err != nil {
+	modelID, err := ensureModel(ctx, fga, storeID, &want)
+	if err != nil {
 		return err
 	}
 
-	slog.Info("datastore provisioned", "store", cfg.StoreName, "id", storeID, "generation", cfg.Generation)
+	slog.Info("datastore provisioned",
+		"store", cfg.StoreName, "id", storeID, "model_id", modelID, "generation", cfg.Generation)
 
 	return serveStatus(ctx, cfg.StatusAddr, Status{
 		Generation: cfg.Generation,
 		Store:      cfg.StoreName,
 		StoreID:    storeID,
+		ModelID:    modelID,
 	})
 }
 

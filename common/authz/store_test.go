@@ -3,6 +3,7 @@ package authz
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -51,6 +52,16 @@ type fgaServer struct {
 	pageSize int
 
 	listCalls atomic.Int32
+	// checkBody records the last check request, so tests can assert what went on
+	// the wire rather than only what came back.
+	checkBody atomic.Value
+}
+
+// lastCheckBody returns the body of the most recent check request.
+func (s *fgaServer) lastCheckBody() string {
+	body, _ := s.checkBody.Load().(string)
+
+	return body
 }
 
 func (s *fgaServer) setStores(stores ...openfga.Store) {
@@ -92,6 +103,10 @@ func (s *fgaServer) url(t *testing.T) string {
 		w.Header().Set("Content-Type", "application/json")
 
 		if id, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/stores/"), "/check"); ok {
+			if raw, err := io.ReadAll(r.Body); err == nil {
+				s.checkBody.Store(string(raw))
+			}
+
 			s.mu.Lock()
 			code := s.status[id]
 			s.mu.Unlock()

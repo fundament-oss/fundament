@@ -66,6 +66,8 @@ spec:
               value: http://openfga:{{ $.Values.openfga.apiPort }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ | quote }}
+            - name: OPENFGA_STATUS_URL
+              value: http://openfga:{{ $.Values.openfga.statusPort }}/status.json
           {{- if or $.Values.pluginProxy.gardenerKubeconfigSecret $.Values.pluginProxy.sandboxKubeconfigSecret }}
           volumeMounts:
             {{- if $.Values.pluginProxy.gardenerKubeconfigSecret }}
