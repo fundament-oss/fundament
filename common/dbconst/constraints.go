@@ -259,18 +259,30 @@ const (
 	ConstraintPlacementsCkSlotType = "placements_ck_slot_type"
 	// ConstraintPlacementsCkUnitStart is defined on dcim.placements.
 	ConstraintPlacementsCkUnitStart = "placements_ck_unit_start"
+	// ConstraintPluginDefinitionsCkStatus is defined on appstore.plugin_definitions.
+	ConstraintPluginDefinitionsCkStatus = "plugin_definitions_ck_status"
 	// ConstraintPluginDefinitionsFkPlugin is defined on appstore.plugin_definitions.
 	ConstraintPluginDefinitionsFkPlugin = "plugin_definitions_fk_plugin"
 	// ConstraintPluginDefinitionsUqPluginVersion is defined on appstore.plugin_definitions.
 	ConstraintPluginDefinitionsUqPluginVersion = "plugin_definitions_uq_plugin_version"
 	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
+	// ConstraintPluginFeaturesFkPlugin is defined on appstore.plugin_features.
+	ConstraintPluginFeaturesFkPlugin = "plugin_features_fk_plugin"
+	// ConstraintPluginLabelsCkName is defined on appstore.plugin_labels.
+	ConstraintPluginLabelsCkName = "plugin_labels_ck_name"
+	// ConstraintPluginLabelsFkPlugin is defined on appstore.plugin_labels.
+	ConstraintPluginLabelsFkPlugin = "plugin_labels_fk_plugin"
+	// ConstraintPluginLabelsUqName is defined on appstore.plugin_labels.
+	ConstraintPluginLabelsUqName = "plugin_labels_uq_name"
 	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesCategoryId = "plugins_categories_category_id"
 	// ConstraintPluginsCategoriesPluginId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesPluginId = "plugins_categories_plugin_id"
 	// ConstraintPluginsCkName is defined on appstore.plugins.
 	ConstraintPluginsCkName = "plugins_ck_name"
+	// ConstraintPluginsCkVisibility is defined on appstore.plugins.
+	ConstraintPluginsCkVisibility = "plugins_ck_visibility"
 	// ConstraintPluginsFkOrganization is defined on appstore.plugins.
 	ConstraintPluginsFkOrganization = "plugins_fk_organization"
 	// ConstraintPluginsPresetsPluginId is defined on appstore.preset_plugins.

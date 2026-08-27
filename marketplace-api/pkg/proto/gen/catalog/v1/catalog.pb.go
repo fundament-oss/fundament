@@ -37,8 +37,7 @@ type PluginSummary struct {
 	xxx_hidden_Tags             []string               `protobuf:"bytes,80,rep,name=tags"`
 	xxx_hidden_Labels           []PluginLabel          `protobuf:"varint,90,rep,packed,name=labels,enum=catalog.v1.PluginLabel"`
 	xxx_hidden_LatestVersionId  string                 `protobuf:"bytes,100,opt,name=latest_version_id,json=latestVersionId"`
-	xxx_hidden_Featured         bool                   `protobuf:"varint,110,opt,name=featured"`
-	xxx_hidden_Published        *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=published"`
+	xxx_hidden_Published        *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=published"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -138,13 +137,6 @@ func (x *PluginSummary) GetLatestVersionId() string {
 	return ""
 }
 
-func (x *PluginSummary) GetFeatured() bool {
-	if x != nil {
-		return x.xxx_hidden_Featured
-	}
-	return false
-}
-
 func (x *PluginSummary) GetPublished() *timestamppb.Timestamp {
 	if x != nil {
 		return x.xxx_hidden_Published
@@ -192,10 +184,6 @@ func (x *PluginSummary) SetLatestVersionId(v string) {
 	x.xxx_hidden_LatestVersionId = v
 }
 
-func (x *PluginSummary) SetFeatured(v bool) {
-	x.xxx_hidden_Featured = v
-}
-
 func (x *PluginSummary) SetPublished(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Published = v
 }
@@ -232,7 +220,6 @@ type PluginSummary_builder struct {
 	// The newest published version, resolved through ListPluginVersions. Points
 	// at the version rather than repeating its version string.
 	LatestVersionId string
-	Featured        bool
 	// When the listing was first published; drives "recently added".
 	Published *timestamppb.Timestamp
 }
@@ -251,7 +238,6 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_Tags = b.Tags
 	x.xxx_hidden_Labels = b.Labels
 	x.xxx_hidden_LatestVersionId = b.LatestVersionId
-	x.xxx_hidden_Featured = b.Featured
 	x.xxx_hidden_Published = b.Published
 	return m0
 }
@@ -269,17 +255,16 @@ type PluginDetails struct {
 	xxx_hidden_Tags               []string                 `protobuf:"bytes,80,rep,name=tags"`
 	xxx_hidden_Labels             []PluginLabel            `protobuf:"varint,90,rep,packed,name=labels,enum=catalog.v1.PluginLabel"`
 	xxx_hidden_LatestVersionId    string                   `protobuf:"bytes,100,opt,name=latest_version_id,json=latestVersionId"`
-	xxx_hidden_Featured           bool                     `protobuf:"varint,110,opt,name=featured"`
-	xxx_hidden_Published          *timestamppb.Timestamp   `protobuf:"bytes,120,opt,name=published"`
-	xxx_hidden_Description        string                   `protobuf:"bytes,130,opt,name=description"`
-	xxx_hidden_AuthorName         string                   `protobuf:"bytes,140,opt,name=author_name,json=authorName"`
-	xxx_hidden_AuthorUrl          string                   `protobuf:"bytes,150,opt,name=author_url,json=authorUrl"`
-	xxx_hidden_RepositoryUrl      string                   `protobuf:"bytes,160,opt,name=repository_url,json=repositoryUrl"`
-	xxx_hidden_License            string                   `protobuf:"bytes,170,opt,name=license"`
-	xxx_hidden_Capabilities       []string                 `protobuf:"bytes,180,rep,name=capabilities"`
-	xxx_hidden_Permissions        *[]*v1.PluginPermission  `protobuf:"bytes,190,rep,name=permissions"`
-	xxx_hidden_Features           *[]*v1.FeatureBlock      `protobuf:"bytes,200,rep,name=features"`
-	xxx_hidden_DocumentationLinks *[]*v1.DocumentationLink `protobuf:"bytes,210,rep,name=documentation_links,json=documentationLinks"`
+	xxx_hidden_Published          *timestamppb.Timestamp   `protobuf:"bytes,110,opt,name=published"`
+	xxx_hidden_Description        string                   `protobuf:"bytes,120,opt,name=description"`
+	xxx_hidden_AuthorName         string                   `protobuf:"bytes,130,opt,name=author_name,json=authorName"`
+	xxx_hidden_AuthorUrl          string                   `protobuf:"bytes,140,opt,name=author_url,json=authorUrl"`
+	xxx_hidden_RepositoryUrl      string                   `protobuf:"bytes,150,opt,name=repository_url,json=repositoryUrl"`
+	xxx_hidden_License            string                   `protobuf:"bytes,160,opt,name=license"`
+	xxx_hidden_Capabilities       []string                 `protobuf:"bytes,170,rep,name=capabilities"`
+	xxx_hidden_Permissions        *[]*v1.PluginPermission  `protobuf:"bytes,180,rep,name=permissions"`
+	xxx_hidden_Features           *[]*v1.FeatureBlock      `protobuf:"bytes,190,rep,name=features"`
+	xxx_hidden_DocumentationLinks *[]*v1.DocumentationLink `protobuf:"bytes,200,rep,name=documentation_links,json=documentationLinks"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -377,13 +362,6 @@ func (x *PluginDetails) GetLatestVersionId() string {
 		return x.xxx_hidden_LatestVersionId
 	}
 	return ""
-}
-
-func (x *PluginDetails) GetFeatured() bool {
-	if x != nil {
-		return x.xxx_hidden_Featured
-	}
-	return false
 }
 
 func (x *PluginDetails) GetPublished() *timestamppb.Timestamp {
@@ -502,10 +480,6 @@ func (x *PluginDetails) SetLatestVersionId(v string) {
 	x.xxx_hidden_LatestVersionId = v
 }
 
-func (x *PluginDetails) SetFeatured(v bool) {
-	x.xxx_hidden_Featured = v
-}
-
 func (x *PluginDetails) SetPublished(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Published = v
 }
@@ -574,7 +548,6 @@ type PluginDetails_builder struct {
 	Labels      []PluginLabel
 	// See PluginSummary.latest_version_id.
 	LatestVersionId string
-	Featured        bool
 	// When the listing was first published; drives "recently added".
 	Published   *timestamppb.Timestamp
 	Description string
@@ -604,7 +577,6 @@ func (b0 PluginDetails_builder) Build() *PluginDetails {
 	x.xxx_hidden_Tags = b.Tags
 	x.xxx_hidden_Labels = b.Labels
 	x.xxx_hidden_LatestVersionId = b.LatestVersionId
-	x.xxx_hidden_Featured = b.Featured
 	x.xxx_hidden_Published = b.Published
 	x.xxx_hidden_Description = b.Description
 	x.xxx_hidden_AuthorName = b.AuthorName
@@ -1356,7 +1328,7 @@ var File_catalog_v1_catalog_proto protoreflect.FileDescriptor
 const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"\x18catalog/v1/catalog.proto\x12\n" +
-	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xac\x03\n" +
+	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\x90\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1368,9 +1340,8 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fcategory_ids\x18F \x03(\tR\vcategoryIds\x12\x12\n" +
 	"\x04tags\x18P \x03(\tR\x04tags\x12/\n" +
 	"\x06labels\x18Z \x03(\x0e2\x17.catalog.v1.PluginLabelR\x06labels\x12*\n" +
-	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x12\x1a\n" +
-	"\bfeatured\x18n \x01(\bR\bfeatured\x128\n" +
-	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\"\xce\x06\n" +
+	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x128\n" +
+	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\"\xb1\x06\n" +
 	"\rPluginDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1382,20 +1353,19 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fcategory_ids\x18F \x03(\tR\vcategoryIds\x12\x12\n" +
 	"\x04tags\x18P \x03(\tR\x04tags\x12/\n" +
 	"\x06labels\x18Z \x03(\x0e2\x17.catalog.v1.PluginLabelR\x06labels\x12*\n" +
-	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x12\x1a\n" +
-	"\bfeatured\x18n \x01(\bR\bfeatured\x128\n" +
-	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12!\n" +
-	"\vdescription\x18\x82\x01 \x01(\tR\vdescription\x12 \n" +
-	"\vauthor_name\x18\x8c\x01 \x01(\tR\n" +
+	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x128\n" +
+	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12 \n" +
+	"\vdescription\x18x \x01(\tR\vdescription\x12 \n" +
+	"\vauthor_name\x18\x82\x01 \x01(\tR\n" +
 	"authorName\x12\x1e\n" +
 	"\n" +
-	"author_url\x18\x96\x01 \x01(\tR\tauthorUrl\x12&\n" +
-	"\x0erepository_url\x18\xa0\x01 \x01(\tR\rrepositoryUrl\x12\x19\n" +
-	"\alicense\x18\xaa\x01 \x01(\tR\alicense\x12#\n" +
-	"\fcapabilities\x18\xb4\x01 \x03(\tR\fcapabilities\x12C\n" +
-	"\vpermissions\x18\xbe\x01 \x03(\v2 .marketplace.v1.PluginPermissionR\vpermissions\x129\n" +
-	"\bfeatures\x18\xc8\x01 \x03(\v2\x1c.marketplace.v1.FeatureBlockR\bfeatures\x12S\n" +
-	"\x13documentation_links\x18\xd2\x01 \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\"\xc4\x01\n" +
+	"author_url\x18\x8c\x01 \x01(\tR\tauthorUrl\x12&\n" +
+	"\x0erepository_url\x18\x96\x01 \x01(\tR\rrepositoryUrl\x12\x19\n" +
+	"\alicense\x18\xa0\x01 \x01(\tR\alicense\x12#\n" +
+	"\fcapabilities\x18\xaa\x01 \x03(\tR\fcapabilities\x12C\n" +
+	"\vpermissions\x18\xb4\x01 \x03(\v2 .marketplace.v1.PluginPermissionR\vpermissions\x129\n" +
+	"\bfeatures\x18\xbe\x01 \x03(\v2\x1c.marketplace.v1.FeatureBlockR\bfeatures\x12S\n" +
+	"\x13documentation_links\x18\xc8\x01 \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\"\xc4\x01\n" +
 	"\x10PublishedVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x18\n" +

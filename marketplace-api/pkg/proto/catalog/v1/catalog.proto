@@ -51,9 +51,8 @@ message PluginSummary {
   // The newest published version, resolved through ListPluginVersions. Points
   // at the version rather than repeating its version string.
   string latest_version_id = 100;
-  bool featured = 110;
   // When the listing was first published; drives "recently added".
-  google.protobuf.Timestamp published = 120;
+  google.protobuf.Timestamp published = 110;
 }
 
 // Full listing as it appears on a detail page.
@@ -72,20 +71,19 @@ message PluginDetails {
   repeated PluginLabel labels = 90;
   // See PluginSummary.latest_version_id.
   string latest_version_id = 100;
-  bool featured = 110;
   // When the listing was first published; drives "recently added".
-  google.protobuf.Timestamp published = 120;
-  string description = 130;
+  google.protobuf.Timestamp published = 110;
+  string description = 120;
   // Original author, which may differ from the publishing organization.
-  string author_name = 140;
-  string author_url = 150;
-  string repository_url = 160;
-  string license = 170;
+  string author_name = 130;
+  string author_url = 140;
+  string repository_url = 150;
+  string license = 160;
   // Platform capabilities the plugin declares, e.g. "internet_access".
-  repeated string capabilities = 180;
-  repeated marketplace.v1.PluginPermission permissions = 190;
-  repeated marketplace.v1.FeatureBlock features = 200;
-  repeated marketplace.v1.DocumentationLink documentation_links = 210;
+  repeated string capabilities = 170;
+  repeated marketplace.v1.PluginPermission permissions = 180;
+  repeated marketplace.v1.FeatureBlock features = 190;
+  repeated marketplace.v1.DocumentationLink documentation_links = 200;
 }
 
 // A published version of a listing. Carries the id that
