@@ -20,7 +20,12 @@
              pool instead of to the pool it sits in. -->
         @let poolIndex = $index;
         <nldd-box [formGroupName]="$index">
-          <nldd-container padding="16">
+          <!-- The fields sit three levels down from the nldd-form, so its own
+               spacing does not reach them. The container stacks them instead. -->
+          <nldd-container
+            padding="16"
+            gap="16"
+          >
             <nldd-title size="5">
               <h3>Node pool {{ $index + 1 }}</h3>
               @if (nodePools.length > 1) {
@@ -35,7 +40,6 @@
                 ></nldd-button>
               }
             </nldd-title>
-            <nldd-spacer size="16"></nldd-spacer>
             <nldd-form-field label="Machine type">
               <!-- A list, not a menu: you pick a machine by comparing its specs,
                    and a popup shows them one at a time. Same shape as choosing a

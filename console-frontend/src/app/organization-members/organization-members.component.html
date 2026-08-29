@@ -40,7 +40,7 @@
              reads as a control, so it wears the control's affordance. -->
         <nldd-button
           [attr.href]="pageNav.path('/members/permissions')"
-          text="About permissions"
+          text="About roles"
           start-icon="info"
           variant="secondary"
           (click)="openPermissions($event)"
@@ -48,7 +48,7 @@
         <nldd-menu-item
           slot="overflow"
           icon="info"
-          text="About permissions"
+          text="About roles"
           [attr.href]="pageNav.path('/members/permissions')"
           (select)="openPermissions($event)"
         ></nldd-menu-item>
@@ -194,7 +194,7 @@
               ></nldd-menu-item>
               <nldd-menu-item
                 type="radio"
-                text="Permission"
+                text="Role"
                 [attr.selected]="memberSort() === 'permission' ? '' : null"
                 (select)="memberSort.set('permission')"
               ></nldd-menu-item>
@@ -224,7 +224,7 @@
             ></nldd-menu-item>
             <nldd-menu-item
               type="radio"
-              text="Permission"
+              text="Role"
               [attr.selected]="memberSort() === 'permission' ? '' : null"
               (select)="memberSort.set('permission')"
             ></nldd-menu-item>

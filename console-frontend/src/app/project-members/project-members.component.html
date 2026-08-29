@@ -37,7 +37,7 @@
       <nldd-toolbar-item slot="start">
         <nldd-button
           [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
-          text="About permissions"
+          text="About roles"
           start-icon="info"
           variant="secondary"
           (click)="openPermissions($event)"
@@ -45,7 +45,7 @@
         <nldd-menu-item
           slot="overflow"
           icon="info"
-          text="About permissions"
+          text="About roles"
           [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           (select)="openPermissions($event)"
         ></nldd-menu-item>
@@ -54,8 +54,8 @@
     <nldd-spacer size="16"></nldd-spacer>
     <nldd-rich-text spacing="flat">
       <p>
-        Admin permissions are inherited from the organization and cannot be changed per project;
-        change those in <a [routerLink]="pageNav.path('/members')">Organization members</a>. An
+        The admin role is inherited from the organization and cannot be changed per project; change
+        those in <a [routerLink]="pageNav.path('/members')">Organization members</a>. An
         organization viewer can be made admin in this project.
       </p>
     </nldd-rich-text>

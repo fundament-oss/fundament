@@ -2,14 +2,14 @@
   #permissionsSheet
   appSheetSync
   [show]="true"
-  accessible-label="About permissions"
+  accessible-label="About roles"
   placement="right"
   (close)="onClose()"
 >
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      text="About permissions"
+      text="About roles"
       collapse-anchor="permissions-title"
       dismiss-text="Close"
       (dismiss)="onClose()"
@@ -19,13 +19,13 @@
         id="permissions-title"
         size="3"
       >
-        <h1>About permissions</h1>
+        <h1>About roles</h1>
       </nldd-title>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-rich-text spacing="flat">
         <p>
-          What each permission covers in the console. What someone may do inside a namespace is set
-          per project, with roles.
+          What each role covers in the console. A role in the organization says what someone may do
+          across it; inside a namespace it is set per project, and someone can carry one of each.
         </p>
       </nldd-rich-text>
       <nldd-spacer size="24"></nldd-spacer>

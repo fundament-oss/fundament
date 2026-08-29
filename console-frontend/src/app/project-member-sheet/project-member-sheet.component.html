@@ -240,16 +240,16 @@
             ></nldd-text-cell>
           </nldd-list-item>
           <nldd-list-item>
-            <!-- Project permission, because the same person also carries one at
+            <!-- The project role, because the same person also carries one at
                  organization level and the two are not the same thing. -->
-            <nldd-text-cell text="Project permission"></nldd-text-cell>
+            <nldd-text-cell text="Project role"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="fit-content"
               horizontal-alignment="right"
               [attr.text]="roleLabel(view.member.role)"
             ></nldd-text-cell>
-            <!-- An inherited permission has no action here; the paragraph below
+            <!-- An inherited role has no action here; the paragraph below
                  says why, so the row does not repeat it. -->
             @if (!isLocked(view)) {
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -259,7 +259,7 @@
                   size="sm"
                   variant="secondary"
                   popup-type="menu"
-                  accessible-label="Permission actions"
+                  accessible-label="Role actions"
                   [attr.loading]="saving() ? '' : null"
                 >
                   <nldd-menu slot="popup">
@@ -289,7 +289,7 @@
         </nldd-list>
         @if (isLocked(view)) {
           <nldd-spacer size="12"></nldd-spacer>
-          <!-- Under the permission it explains, rather than where an action
+          <!-- Under the role it explains, rather than where an action
                would have been: there is no action to explain away. -->
           <nldd-rich-text spacing="flat">
             <p>
@@ -414,7 +414,7 @@
   appDialogSync
   [show]="!!pendingRemoveNamespace()"
   [attr.text]="'Remove access to ' + namespaceLabel(pendingRemoveNamespace()) + '?'"
-  supporting-text="They keep their project permission, but lose every role in this namespace."
+  supporting-text="They keep their project role, but lose every role in this namespace."
   accessible-label="Confirm access removal"
   variant="alert"
   (close)="pendingRemoveNamespace.set('')"

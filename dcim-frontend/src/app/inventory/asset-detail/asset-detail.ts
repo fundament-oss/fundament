@@ -63,6 +63,22 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly router = inject(Router);
 
+  /**
+   * Follows the catalog link inside the app while leaving the element a real
+   * `<a href>`, so middle-click and "open in new tab" keep working. Only a plain
+   * left click is intercepted; the modifiers mean "open this somewhere else".
+   */
+  protected openCatalogEntry(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    void this.router.navigate(['/catalog', id]);
+  }
+
   private readonly title = inject(Title);
 
   private readonly inventoryApi = inject(InventoryApiService);

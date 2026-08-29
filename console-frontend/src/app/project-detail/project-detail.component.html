@@ -186,28 +186,31 @@
   appDialogSync
   [show]="showDeleteModal()"
   [attr.text]="'Delete project ' + projectLabel() + '?'"
-  supporting-text="This permanently removes the project and everything in it. This cannot be undone."
+  [attr.supporting-text]="
+    'This permanently removes the project and everything in it. This cannot be undone. To confirm, type ' +
+    deleteConfirmationSlug() +
+    ' below.'
+  "
   accessible-label="Confirm project deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <p class="text-sm text-gray-600 dark:text-gray-400">
-    To confirm, type
-    <span
-      class="rounded-md bg-gray-50 px-1.5 py-0.5 font-mono text-gray-900 dark:bg-gray-900 dark:text-white"
-      >{{ deleteConfirmationSlug() }}</span
-    >
-    below.
-  </p>
-  <nldd-spacer size="12"></nldd-spacer>
-  <nldd-form-field label="Project to delete">
+  <nldd-spacer size="4"></nldd-spacer>
+  <nldd-form-field>
     <nldd-text-field
       id="deleteConfirmation"
+      accessible-label="Project to delete"
       [value]="deleteConfirmationInput()"
-      [attr.placeholder]="deleteConfirmationSlug()"
+      [attr.invalid]="deleteConfirmationInvalid() ? '' : null"
+      unmet="delete-project-error"
       (input)="onDeleteConfirmationInput($event)"
     ></nldd-text-field>
+    <nldd-validation-list>
+      <nldd-validation-item id="delete-project-error"
+        >The name above, exactly as it is written</nldd-validation-item
+      >
+    </nldd-validation-list>
   </nldd-form-field>
   <nldd-button
     slot="actions"
@@ -222,6 +225,5 @@
     (click)="deleteProject()"
     text="Delete project"
     variant="destructive"
-    [disabled]="!isDeleteConfirmed()"
   ></nldd-button>
 </nldd-modal-dialog>

@@ -565,6 +565,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   deleteConfirmationInput = signal<string>('');
 
   /**
+   * Set by the delete button. The field is not wrong until you have asked for
+   * the deletion: before that it is simply not filled in yet, and a button that
+   * sits there dead says nothing about what is missing.
+   */
+  deleteAttempted = signal(false);
+
+  deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
+
+  /**
    * The full slug ("orgname/clustername") the user must type to confirm deletion.
    * Empty until both parts are known, so a partial slug can never be confirmed.
    */
@@ -585,6 +594,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async deleteCluster(): Promise<void> {
+    this.deleteAttempted.set(true);
     if (!this.isDeleteConfirmed()) {
       return;
     }
@@ -707,6 +717,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   onDeleteModalOpen(): void {
     this.errorMessage.set(null);
     this.deleteConfirmationInput.set('');
+    this.deleteAttempted.set(false);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

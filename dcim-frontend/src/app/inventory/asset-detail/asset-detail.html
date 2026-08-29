@@ -79,7 +79,10 @@
            lives in the same list as the rest, because "which rack" is a fact
            about the asset like its serial number is, and it stood in two places
            before: here and in a card of its own. -->
-      <nldd-list variant="box-tinted" accessible-label="Asset details">
+      <!-- A form rather than a list: these are rows you read, not rows you walk
+             through, so there is no arrow navigation to promise and Tab goes
+             straight to the link in the catalog row. -->
+      <nldd-list type="form" variant="box-tinted" accessible-label="Asset details">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Asset tag"></nldd-text-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -94,9 +97,17 @@
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Catalog entry"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-text-cell horizontal-alignment="right"
-              ><a [routerLink]="['/catalog', cat.id]">{{ cat.model }}</a></nldd-text-cell
-            >
+            <nldd-text-cell horizontal-alignment="right">
+              <!-- A bare <a> in a cell inherits the cell's color and loses its
+                   underline, so it reads as plain text. nldd-link brings its own
+                   appearance, and without a size it stays inline and takes the
+                   cell's type. -->
+              <nldd-link
+                [attr.href]="'/catalog/' + cat.id"
+                [attr.text]="cat.model"
+                (click)="openCatalogEntry($event, cat.id)"
+              ></nldd-link>
+            </nldd-text-cell>
           </nldd-list-item>
         }
         <nldd-list-item>

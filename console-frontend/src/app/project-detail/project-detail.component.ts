@@ -199,6 +199,15 @@ export default class ProjectDetailComponent implements OnInit {
   deleteConfirmationInput = signal<string>('');
 
   /**
+   * Set by the delete button. The field is not wrong until you have asked for
+   * the deletion: before that it is simply not filled in yet, and a button that
+   * sits there dead says nothing about what is missing.
+   */
+  deleteAttempted = signal(false);
+
+  deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
+
+  /**
    * The full slug ("orgname/clustername/projectname") the user must type to confirm deletion.
    * Empty until all parts are known, so a partial slug can never be confirmed.
    */
@@ -221,6 +230,7 @@ export default class ProjectDetailComponent implements OnInit {
   }
 
   async deleteProject() {
+    this.deleteAttempted.set(true);
     const currentProject = this.project();
     if (!currentProject) return;
     if (!this.isDeleteConfirmed()) return;
@@ -257,6 +267,7 @@ export default class ProjectDetailComponent implements OnInit {
 
   onDeleteModalOpen(): void {
     this.deleteConfirmationInput.set('');
+    this.deleteAttempted.set(false);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
