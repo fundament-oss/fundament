@@ -168,7 +168,7 @@ export default class TaskStore {
   };
 
   readonly taskStateIcon = (task: TaskData): string =>
-    (this.holdReason(task) !== null ? 'clock-light' : `${this.statusIcon(task.status)}-light`);
+    this.holdReason(task) !== null ? 'clock-light' : `${this.statusIcon(task.status)}-light`;
 
   /** Everything a task is filed under, as one list of paths. See task-tags.ts. */
   readonly taskTagList = (task: TaskData): string[] => taskTags(task);
@@ -179,7 +179,7 @@ export default class TaskStore {
   readonly taskDisplayId = (task: Task): string =>
     // A task that does not exist yet has no number to show. The row stays, so
     // the sheet does not change shape the moment it gets one.
-    (task.id ? `T-${task.id.replace(/-/g, '').slice(-8).toUpperCase()}` : '—');
+    task.id ? `T-${task.id.replace(/-/g, '').slice(-8).toUpperCase()}` : '—';
 
   formatDate(str: string | null): string {
     if (!str) return '—';

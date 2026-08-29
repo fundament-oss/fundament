@@ -51,12 +51,14 @@
                 appAutofocus
                 [value]="email?.value ?? ''"
                 (input)="loginForm.get('email')!.setValue($any($event.target).value)"
-                [invalid]="!!(email?.invalid && email.touched)"
-                error-message="login-email-error"
+                [invalid]="!!(email?.invalid && formSubmitted())"
+                unmet="login-email-error"
               ></nldd-text-field>
-              <nldd-form-field-error-text id="login-email-error">
-                {{ getEmailError() }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item id="login-email-error">{{
+                  getEmailError()
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-field label="Password">
               <nldd-password-field
@@ -69,12 +71,14 @@
                 show-button-accessible-label="Show password"
                 hide-button-text="Hide"
                 hide-button-accessible-label="Hide password"
-                [invalid]="!!(password?.invalid && password.dirty)"
-                error-message="login-password-error"
+                [invalid]="!!(password?.invalid && formSubmitted())"
+                unmet="login-password-error"
               ></nldd-password-field>
-              <nldd-form-field-error-text id="login-password-error">
-                {{ getPasswordError() }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item id="login-password-error">{{
+                  getPasswordError()
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-actions>
               <!-- Never disabled: a disabled button says nothing about what is
@@ -92,4 +96,8 @@
       </nldd-box>
     </nldd-container>
   </nldd-simple-section>
+  <!-- Only the ribbon: nothing belongs at the foot of a login page, and an
+       empty footer drops the grey band and leaves the Rijksoverheid ribbon,
+       which is what closes off the page. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>

@@ -404,12 +404,7 @@ const DEMO_CABLE_STATUS: CableStatus[][] = [
     CableStatus.CONNECTED,
     CableStatus.CONNECTED,
   ],
-  [
-    CableStatus.TO_ORDER,
-    CableStatus.CONNECTED,
-    CableStatus.CONNECTED,
-    CableStatus.DECOMMISSIONED,
-  ],
+  [CableStatus.TO_ORDER, CableStatus.CONNECTED, CableStatus.CONNECTED, CableStatus.DECOMMISSIONED],
 ];
 
 /** Not every run is the same lead. The type shows as a tag behind the label,
@@ -423,8 +418,7 @@ const DEMO_CABLE_TYPE = [CableType.CAT6A, CableType.CAT6A, CableType.MMF, CableT
  */
 export const connections = sites.flatMap((site, siteIndex) => {
   const inSite = placements.filter(
-    (placement) =>
-      siteOfPlacement(placement) === site.id && portsOfPlacement(placement).length > 0,
+    (placement) => siteOfPlacement(placement) === site.id && portsOfPlacement(placement).length > 0,
   );
   const statuses = DEMO_CABLE_STATUS[siteIndex] ?? [];
   const idBase = siteIndex * 20;

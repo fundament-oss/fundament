@@ -57,7 +57,10 @@ export function formatTimeAgo(date: Date | undefined): string {
 /** Date and time with the month abbreviated: "Aug 9, 2026 at 10:48 AM". For a
  *  column of timestamps, where a full month name makes every row a different
  *  width and the eye has nothing to line up on. */
-export function formatShortDateTime(value: Timestamp | string | undefined, fallback?: string): string {
+export function formatShortDateTime(
+  value: Timestamp | string | undefined,
+  fallback?: string,
+): string {
   if (!value) return fallback ?? '';
 
   try {

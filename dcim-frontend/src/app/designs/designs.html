@@ -211,11 +211,13 @@
           placeholder="E.g. AMS-01 Compute Cluster v2"
           (keydown.enter)="saveDesign()"
           [attr.invalid]="isFieldInvalid('name') ? '' : null"
-          error-message="error-design-name"
+          unmet="error-design-name"
         ></nldd-text-field>
-        <nldd-form-field-error-text id="error-design-name">{{
-          fieldError('name')
-        }}</nldd-form-field-error-text>
+        <nldd-validation-list>
+          <nldd-validation-item id="error-design-name">
+            {{ fieldError('name') }}
+          </nldd-validation-item>
+        </nldd-validation-list>
       </nldd-form-field>
       <p class="text-xs text-slate-400 dark:text-gray-500">
         Version will be set to 1 and status to Draft.

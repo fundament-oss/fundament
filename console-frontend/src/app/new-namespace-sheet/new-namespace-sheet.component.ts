@@ -74,6 +74,14 @@ export default class NewNamespaceSheetComponent {
 
   isCreatingNamespace = signal<boolean>(false);
 
+  /**
+   * Set by pressing Create. A field you have not filled in yet is not wrong, it
+   * is unfinished, so nothing goes red until you say you are done. The rules
+   * under the field are visible from the start as the requirements; they only
+   * turn critical once this is true.
+   */
+  createAttempted = signal<boolean>(false);
+
   /** Who gets access to the namespace being created, and with which roles. A
    *  namespace is made to work in, so the people come with it rather than in a
    *  second visit to the sheet. */
@@ -158,6 +166,7 @@ export default class NewNamespaceSheetComponent {
 
     event?.preventDefault();
     this.createErrorMessage.set(null);
+    this.createAttempted.set(true);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -221,10 +230,14 @@ export default class NewNamespaceSheetComponent {
     this.namespaceForm.get('name')?.markAsDirty();
   }
 
-  /** Also covers `touched`, so submitting an untouched empty field shows the error. */
+  /**
+   * Only after pressing Create. Typing towards a name that is not finished yet
+   * is not a mistake, and a field that turns red on the second character reads
+   * as one. The rules stand under the field the whole time, so there is
+   * something to go on before the verdict.
+   */
   isNameInvalid(): boolean {
-    const nameControl = this.namespaceForm.get('name');
-    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
+    return this.createAttempted() && !!this.namespaceForm.get('name')?.invalid;
   }
 
   getNameError(): string {

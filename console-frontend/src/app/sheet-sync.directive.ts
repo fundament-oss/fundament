@@ -4,13 +4,12 @@ import isPresenting from './presentation/presenting';
 type SheetElement = HTMLElement & { show(): void; hide(): void };
 
 /**
- * Re-arms the error-text wiring of every `nldd-form-field` in a subtree that was just moved.
+ * Re-arms the wiring of every `nldd-form-field` in a subtree that was just moved.
  *
- * `nldd-form-field` watches the `invalid` attribute of its slotted input with a MutationObserver
- * and toggles the matching `nldd-form-field-error-text`. Moving the field disconnects it, which
- * tears that observer down, and the field only rebuilds it from its own child-list observer — so
- * without a nudge the error text stays hidden forever. A throwaway child node produces exactly
- * that child-list mutation.
+ * A field builds its wiring, the label and the link to its `nldd-validation-list`, from its own
+ * child-list observer. Moving the element runs `disconnectedCallback`, and what comes back does
+ * not run that wiring again by itself. A throwaway child node produces exactly the mutation that
+ * does.
  */
 export function rewireFormFields(root: HTMLElement): void {
   root.querySelectorAll('nldd-form-field').forEach((field) => {

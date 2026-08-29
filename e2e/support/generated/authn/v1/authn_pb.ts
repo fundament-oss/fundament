@@ -3,35 +3,47 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
-import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type {
+  GenFile,
+  GenMessage,
+  GenService,
+} from '@bufbuild/protobuf/codegenv2';
+import {
+  fileDesc,
+  messageDesc,
+  serviceDesc,
+} from '@bufbuild/protobuf/codegenv2';
+import { file_buf_validate_validate } from '../../buf/validate/validate_pb';
+import { file_google_protobuf_go_features } from '@bufbuild/protobuf/wkt';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file authn/v1/authn.proto.
  */
-export const file_authn_v1_authn: GenFile = /*@__PURE__*/
-  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJZChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKD2luc3RhbGxhdGlvbl9pZBgUIAEoCUIIukgFcgOwAQEiVwoXTWludFBsdWdpblRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAzJaCgxBdXRoblNlcnZpY2USSgoLR2V0VXNlckluZm8SHC5hdXRobi52MS5HZXRVc2VySW5mb1JlcXVlc3QaHS5hdXRobi52MS5HZXRVc2VySW5mb1Jlc3BvbnNlMrgBCgxUb2tlblNlcnZpY2USUAoNRXhjaGFuZ2VUb2tlbhIeLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXF1ZXN0Gh8uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlc3BvbnNlElYKD01pbnRQbHVnaW5Ub2tlbhIgLmF1dGhuLnYxLk1pbnRQbHVnaW5Ub2tlblJlcXVlc3QaIS5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXNwb25zZUJXWktnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2F1dGhuLWFwaS9wa2cvcHJvdG8vZ2VuL2F1dGhuL3YxO2F1dGhudjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
+export const file_authn_v1_authn: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJZChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKD2luc3RhbGxhdGlvbl9pZBgUIAEoCUIIukgFcgOwAQEiVwoXTWludFBsdWdpblRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAzJaCgxBdXRoblNlcnZpY2USSgoLR2V0VXNlckluZm8SHC5hdXRobi52MS5HZXRVc2VySW5mb1JlcXVlc3QaHS5hdXRobi52MS5HZXRVc2VySW5mb1Jlc3BvbnNlMrgBCgxUb2tlblNlcnZpY2USUAoNRXhjaGFuZ2VUb2tlbhIeLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXF1ZXN0Gh8uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlc3BvbnNlElYKD01pbnRQbHVnaW5Ub2tlbhIgLmF1dGhuLnYxLk1pbnRQbHVnaW5Ub2tlblJlcXVlc3QaIS5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXNwb25zZUJXWktnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2F1dGhuLWFwaS9wa2cvcHJvdG8vZ2VuL2F1dGhuL3YxO2F1dGhudjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw',
+    [file_buf_validate_validate, file_google_protobuf_go_features],
+  );
 
 /**
  * @generated from message authn.v1.GetUserInfoRequest
  */
-export type GetUserInfoRequest = Message<"authn.v1.GetUserInfoRequest"> & {
-};
+export type GetUserInfoRequest = Message<'authn.v1.GetUserInfoRequest'> & {};
 
 /**
  * Describes the message authn.v1.GetUserInfoRequest.
  * Use `create(GetUserInfoRequestSchema)` to create a new message.
  */
-export const GetUserInfoRequestSchema: GenMessage<GetUserInfoRequest> = /*@__PURE__*/
+export const GetUserInfoRequestSchema: GenMessage<GetUserInfoRequest> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 0);
 
 /**
  * @generated from message authn.v1.GetUserInfoResponse
  */
-export type GetUserInfoResponse = Message<"authn.v1.GetUserInfoResponse"> & {
+export type GetUserInfoResponse = Message<'authn.v1.GetUserInfoResponse'> & {
   /**
    * User information
    *
@@ -44,13 +56,14 @@ export type GetUserInfoResponse = Message<"authn.v1.GetUserInfoResponse"> & {
  * Describes the message authn.v1.GetUserInfoResponse.
  * Use `create(GetUserInfoResponseSchema)` to create a new message.
  */
-export const GetUserInfoResponseSchema: GenMessage<GetUserInfoResponse> = /*@__PURE__*/
+export const GetUserInfoResponseSchema: GenMessage<GetUserInfoResponse> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 1);
 
 /**
  * @generated from message authn.v1.User
  */
-export type User = Message<"authn.v1.User"> & {
+export type User = Message<'authn.v1.User'> & {
   /**
    * User ID
    *
@@ -91,7 +104,8 @@ export type User = Message<"authn.v1.User"> & {
  * Describes the message authn.v1.User.
  * Use `create(UserSchema)` to create a new message.
  */
-export const UserSchema: GenMessage<User> = /*@__PURE__*/
+export const UserSchema: GenMessage<User> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 2);
 
 /**
@@ -99,14 +113,15 @@ export const UserSchema: GenMessage<User> = /*@__PURE__*/
  *
  * @generated from message authn.v1.ExchangeTokenRequest
  */
-export type ExchangeTokenRequest = Message<"authn.v1.ExchangeTokenRequest"> & {
-};
+export type ExchangeTokenRequest =
+  Message<'authn.v1.ExchangeTokenRequest'> & {};
 
 /**
  * Describes the message authn.v1.ExchangeTokenRequest.
  * Use `create(ExchangeTokenRequestSchema)` to create a new message.
  */
-export const ExchangeTokenRequestSchema: GenMessage<ExchangeTokenRequest> = /*@__PURE__*/
+export const ExchangeTokenRequestSchema: GenMessage<ExchangeTokenRequest> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 3);
 
 /**
@@ -114,34 +129,36 @@ export const ExchangeTokenRequestSchema: GenMessage<ExchangeTokenRequest> = /*@_
  *
  * @generated from message authn.v1.ExchangeTokenResponse
  */
-export type ExchangeTokenResponse = Message<"authn.v1.ExchangeTokenResponse"> & {
-  /**
-   * JWT access token for API calls
-   *
-   * @generated from field: string access_token = 10;
-   */
-  accessToken: string;
+export type ExchangeTokenResponse =
+  Message<'authn.v1.ExchangeTokenResponse'> & {
+    /**
+     * JWT access token for API calls
+     *
+     * @generated from field: string access_token = 10;
+     */
+    accessToken: string;
 
-  /**
-   * Token type (always "Bearer")
-   *
-   * @generated from field: string token_type = 20;
-   */
-  tokenType: string;
+    /**
+     * Token type (always "Bearer")
+     *
+     * @generated from field: string token_type = 20;
+     */
+    tokenType: string;
 
-  /**
-   * Seconds until token expires
-   *
-   * @generated from field: int64 expires_in = 30;
-   */
-  expiresIn: bigint;
-};
+    /**
+     * Seconds until token expires
+     *
+     * @generated from field: int64 expires_in = 30;
+     */
+    expiresIn: bigint;
+  };
 
 /**
  * Describes the message authn.v1.ExchangeTokenResponse.
  * Use `create(ExchangeTokenResponseSchema)` to create a new message.
  */
-export const ExchangeTokenResponseSchema: GenMessage<ExchangeTokenResponse> = /*@__PURE__*/
+export const ExchangeTokenResponseSchema: GenMessage<ExchangeTokenResponse> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 4);
 
 /**
@@ -151,27 +168,29 @@ export const ExchangeTokenResponseSchema: GenMessage<ExchangeTokenResponse> = /*
  *
  * @generated from message authn.v1.MintPluginTokenRequest
  */
-export type MintPluginTokenRequest = Message<"authn.v1.MintPluginTokenRequest"> & {
-  /**
-   * The cluster the plugin installation lives on.
-   *
-   * @generated from field: string cluster_id = 10;
-   */
-  clusterId: string;
+export type MintPluginTokenRequest =
+  Message<'authn.v1.MintPluginTokenRequest'> & {
+    /**
+     * The cluster the plugin installation lives on.
+     *
+     * @generated from field: string cluster_id = 10;
+     */
+    clusterId: string;
 
-  /**
-   * The plugin installation to act through (PluginInstallation CR UID).
-   *
-   * @generated from field: string installation_id = 20;
-   */
-  installationId: string;
-};
+    /**
+     * The plugin installation to act through (PluginInstallation CR UID).
+     *
+     * @generated from field: string installation_id = 20;
+     */
+    installationId: string;
+  };
 
 /**
  * Describes the message authn.v1.MintPluginTokenRequest.
  * Use `create(MintPluginTokenRequestSchema)` to create a new message.
  */
-export const MintPluginTokenRequestSchema: GenMessage<MintPluginTokenRequest> = /*@__PURE__*/
+export const MintPluginTokenRequestSchema: GenMessage<MintPluginTokenRequest> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 5);
 
 /**
@@ -179,35 +198,37 @@ export const MintPluginTokenRequestSchema: GenMessage<MintPluginTokenRequest> = 
  *
  * @generated from message authn.v1.MintPluginTokenResponse
  */
-export type MintPluginTokenResponse = Message<"authn.v1.MintPluginTokenResponse"> & {
-  /**
-   * JWT access token (aud=fundament-plugin) for API calls to
-   * kube-api-proxy and plugin-proxy.
-   *
-   * @generated from field: string access_token = 10;
-   */
-  accessToken: string;
+export type MintPluginTokenResponse =
+  Message<'authn.v1.MintPluginTokenResponse'> & {
+    /**
+     * JWT access token (aud=fundament-plugin) for API calls to
+     * kube-api-proxy and plugin-proxy.
+     *
+     * @generated from field: string access_token = 10;
+     */
+    accessToken: string;
 
-  /**
-   * Token type (always "Bearer")
-   *
-   * @generated from field: string token_type = 20;
-   */
-  tokenType: string;
+    /**
+     * Token type (always "Bearer")
+     *
+     * @generated from field: string token_type = 20;
+     */
+    tokenType: string;
 
-  /**
-   * Seconds until token expires (15 minutes; mint again to refresh)
-   *
-   * @generated from field: int64 expires_in = 30;
-   */
-  expiresIn: bigint;
-};
+    /**
+     * Seconds until token expires (15 minutes; mint again to refresh)
+     *
+     * @generated from field: int64 expires_in = 30;
+     */
+    expiresIn: bigint;
+  };
 
 /**
  * Describes the message authn.v1.MintPluginTokenResponse.
  * Use `create(MintPluginTokenResponseSchema)` to create a new message.
  */
-export const MintPluginTokenResponseSchema: GenMessage<MintPluginTokenResponse> = /*@__PURE__*/
+export const MintPluginTokenResponseSchema: GenMessage<MintPluginTokenResponse> =
+  /*@__PURE__*/
   messageDesc(file_authn_v1_authn, 6);
 
 /**
@@ -221,12 +242,11 @@ export const AuthnService: GenService<{
    * @generated from rpc authn.v1.AuthnService.GetUserInfo
    */
   getUserInfo: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof GetUserInfoRequestSchema;
     output: typeof GetUserInfoResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_authn_v1_authn, 0);
+  };
+}> = /*@__PURE__*/ serviceDesc(file_authn_v1_authn, 0);
 
 /**
  * TokenService handles API token operations
@@ -241,10 +261,10 @@ export const TokenService: GenService<{
    * @generated from rpc authn.v1.TokenService.ExchangeToken
    */
   exchangeToken: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof ExchangeTokenRequestSchema;
     output: typeof ExchangeTokenResponseSchema;
-  },
+  };
   /**
    * MintPluginToken issues a short-lived JWT scoped to a specific plugin
    * installation on a specific cluster. The caller authenticates with a
@@ -254,10 +274,8 @@ export const TokenService: GenService<{
    * @generated from rpc authn.v1.TokenService.MintPluginToken
    */
   mintPluginToken: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof MintPluginTokenRequestSchema;
     output: typeof MintPluginTokenResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_authn_v1_authn, 1);
-
+  };
+}> = /*@__PURE__*/ serviceDesc(file_authn_v1_authn, 1);

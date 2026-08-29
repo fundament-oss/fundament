@@ -76,13 +76,15 @@
                 [id]="'nodePoolName-' + $index"
                 [value]="nameControl?.value ?? ''"
                 [appAutofocus]="$first"
-                [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
-                [attr.error-message]="'node-pool-name-error-' + $index"
+                [invalid]="!!(nameControl?.invalid && formSubmitted())"
+                [attr.unmet]="'node-pool-name-error-' + $index"
                 (input)="onNodePoolNameInput($index, $event)"
               ></nldd-text-field>
-              <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
-                {{ getNodePoolNameError($index) }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item [id]="'node-pool-name-error-' + $index">{{
+                  getNodePoolNameError($index)
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-field label="Autoscale minimum">
               <nldd-number-field

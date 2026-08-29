@@ -74,8 +74,7 @@ const isOpen = (task: TaskData): boolean => task.status !== 'Done';
  * the walk. It reads as a label instead.
  */
 export function sortRoundTasks(tasks: TaskData[]): TaskData[] {
-  const place = (task: TaskData): string =>
-    taskTags(task).find((tag) => tag.includes('/')) ?? '￿';
+  const place = (task: TaskData): string => taskTags(task).find((tag) => tag.includes('/')) ?? '￿';
   return [...tasks].sort((a, b) => {
     const urgency = Number(b.priority === 'Urgent') - Number(a.priority === 'Urgent');
     if (urgency !== 0) return urgency;

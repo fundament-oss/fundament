@@ -492,7 +492,7 @@
         <nldd-box background="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h3>Danger zone</h3>
+              <h3>Delete {{ clusterData.basics.name || 'this cluster' }}</h3>
             </nldd-title>
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
@@ -523,7 +523,8 @@
                  deletion is blocked explains why, and offers the way forward. -->
             <nldd-button
               (click)="onDeleteClusterClick()"
-              text="Delete this cluster"
+              text="Delete cluster"
+              start-icon="delete"
               variant="destructive"
             ></nldd-button>
           </nldd-container>

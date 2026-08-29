@@ -404,8 +404,6 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
     this.router.navigate(['/racks', rackId]);
   }
 
-
-
   /** Opens the rack section on the first rack of this data center. */
   openRackView(): void {
     this.router.navigate(this.firstRackRoute());

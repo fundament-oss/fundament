@@ -8,6 +8,7 @@ import {
   inject,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  signal,
 } from '@angular/core';
 import {
   ReactiveFormsModule,
@@ -36,6 +37,10 @@ export interface NodePoolData {
   templateUrl: './shared-node-pools-form.component.html',
 })
 export class SharedNodePoolsFormComponent implements AfterViewInit {
+  /** Whether the form has been submitted at least once. Before that, a field
+   * that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
+
   @Input() submitButtonText = 'Next step';
 
   @Input() set initialData(data: NodePoolData[] | null) {
@@ -219,6 +224,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   onSubmit(event?: Event) {
     event?.preventDefault();
+    this.formSubmitted.set(true);
 
     if (this.nodePoolsForm.invalid) {
       this.nodePoolsForm.markAllAsTouched();

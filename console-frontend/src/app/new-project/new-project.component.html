@@ -43,13 +43,15 @@
             id="name"
             appAutofocus
             [value]="projectForm.get('name')?.value ?? ''"
-            [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
-            error-message="new-project-name-error"
+            [invalid]="!!(projectForm.get('name')?.invalid && formSubmitted())"
+            unmet="new-project-name-error"
             (input)="onNameInput($event)"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="new-project-name-error">
-            {{ getNameError() }}
-          </nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="new-project-name-error">{{
+              getNameError()
+            }}</nldd-validation-item>
+          </nldd-validation-list>
           <nldd-form-field-help-text>
             Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
           </nldd-form-field-help-text>
@@ -79,6 +81,8 @@
               type="radio"
               name="clusterId"
               accessible-label="Cluster"
+              [attr.invalid]="projectForm.get('clusterId')?.invalid && formSubmitted() ? '' : null"
+              unmet="new-project-cluster-error"
               (change)="onClusterChange($event)"
             >
               @for (cluster of clusters(); track cluster.id) {
@@ -90,11 +94,11 @@
                 ></nldd-toggle-button>
               }
             </nldd-toggle-button-group>
-            <nldd-form-field-error-text id="new-project-cluster-error">
-              @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
-                {{ getClusterError() }}
-              }
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="new-project-cluster-error">{{
+                getClusterError()
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           }
         </nldd-form-field>
         <!-- No cancel button: the title bar's dismiss already covers leaving. -->

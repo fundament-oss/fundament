@@ -31,7 +31,6 @@ import PageNavService from '../page-nav.service';
 export default class NewClusterSummaryComponent {
   private pageNav = inject(PageNavService);
 
-
   private router = inject(Router);
 
   private client = inject(CLUSTER);

@@ -91,9 +91,7 @@ export default class PatchMappingComponent implements OnInit {
     this.selectedDcId() ? this.graph.graphFor(this.selectedDcId()) : null,
   );
 
-  readonly mutableCables = computed(
-    () => this.siteGraph()?.cables ?? this.graph.allCables(),
-  );
+  readonly mutableCables = computed(() => this.siteGraph()?.cables ?? this.graph.allCables());
 
   readonly dcCables = computed(() => this.mutableCables());
 
@@ -168,12 +166,18 @@ export default class PatchMappingComponent implements OnInit {
 
   readonly localDevicePorts = computed(() => this.topologyGraph().devicePorts);
 
-  /** Opens on the building you were looking at, or on the first one when the
-   *  list is showing all of them. */
+  /**
+   * Opens on the building you were looking at, every time and not just the
+   * first: the guard that used to stand here only filled an empty id, so
+   * switching the list to another building and opening the topology again kept
+   * showing the one from before.
+   *
+   * With the list on every building there is nothing to follow, so it stays
+   * where you last left it, and falls back to the first building on a first
+   * open.
+   */
   openTopology(): void {
-    if (!this.topologyDcId()) {
-      this.topologyDcId.set(this.selectedDcId() || this.sites()[0]?.id || '');
-    }
+    this.topologyDcId.set(this.selectedDcId() || this.topologyDcId() || this.sites()[0]?.id || '');
     this.topologyOpen.set(true);
   }
 

@@ -126,11 +126,15 @@
                     ></nldd-text-cell>
                   </nldd-list-item>
                 </nldd-list>
-                <nldd-form-field-error-text id="member-namespaces-error">
-                  @if (namespaceSelectionInvalid()) {
-                    Pick at least one namespace.
-                  }
-                </nldd-form-field-error-text>
+                @if (namespaceSelectionInvalid()) {
+                  <nldd-validation-list>
+                    <nldd-validation-item
+                      hint
+                      id="member-namespaces-error"
+                      >At least one namespace</nldd-validation-item
+                    >
+                  </nldd-validation-list>
+                }
               </nldd-form-field>
             }
             @if (draftNamespaces().includes(NEW_NAMESPACE) || impliedNew()) {
@@ -139,15 +143,17 @@
                   appAutofocus
                   [value]="newNamespaceName()"
                   [invalid]="newNamespaceInvalid()"
-                  error-message="member-new-namespace-error"
+                  unmet="member-new-namespace-error"
                   (input)="newNamespaceName.set($any($event.target).value)"
                 ></nldd-text-field>
                 <nldd-form-field-help-text>
                   Lowercase letters, numbers and hyphens; it will be created in this project.
                 </nldd-form-field-help-text>
-                <nldd-form-field-error-text id="member-new-namespace-error">
-                  {{ newNamespaceError() }}
-                </nldd-form-field-error-text>
+                <nldd-validation-list>
+                  <nldd-validation-item id="member-new-namespace-error">{{
+                    newNamespaceError()
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
               </nldd-form-field>
             }
           }
@@ -381,7 +387,7 @@
           <nldd-box background="critical">
             <nldd-container padding="16">
               <nldd-title size="5">
-                <h2>Remove from project</h2>
+                <h2>Remove {{ view.member.userName }} from project</h2>
               </nldd-title>
               <nldd-spacer size="8"></nldd-spacer>
               <nldd-rich-text spacing="flat">
@@ -391,7 +397,8 @@
               <nldd-button
                 type="button"
                 (click)="showRemoveModal.set(true)"
-                [attr.text]="'Remove ' + view.member.userName"
+                text="Remove member"
+                start-icon="delete"
                 variant="destructive"
               ></nldd-button>
             </nldd-container>

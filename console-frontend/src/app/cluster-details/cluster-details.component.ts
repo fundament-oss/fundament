@@ -195,7 +195,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     });
   });
 
-
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -312,9 +311,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  nested inside a page that already scrolls. */
   private static readonly EVENTS_ON_PAGE = 6;
 
-  eventsOnPage = computed(() => this.clusterEvents().slice(0, ClusterDetailsComponent.EVENTS_ON_PAGE));
+  eventsOnPage = computed(() =>
+    this.clusterEvents().slice(0, ClusterDetailsComponent.EVENTS_ON_PAGE),
+  );
 
-  hasMoreEvents = computed(() => this.clusterEvents().length > ClusterDetailsComponent.EVENTS_ON_PAGE);
+  hasMoreEvents = computed(
+    () => this.clusterEvents().length > ClusterDetailsComponent.EVENTS_ON_PAGE,
+  );
 
   showAllEventsSheet = signal(false);
 
@@ -412,7 +415,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-
       // Fetch namespaces, plugins, and events in parallel
       await Promise.all([
         this.loadNamespaces(clusterId),
@@ -441,7 +443,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       if (!response.cluster) {
         // Cluster has been deleted
         this.stopPolling();
-        this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+        this.notificationService.success(
+          `Cluster '${this.clusterData.basics.name}' has been deleted`,
+        );
         this.pageNav.goTo('/clusters');
         return;
       }
@@ -454,7 +458,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch {
       // If the request fails with a not-found-like error, the cluster was deleted
       this.stopPolling();
-      this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.notificationService.success(
+        `Cluster '${this.clusterData.basics.name}' has been deleted`,
+      );
       this.pageNav.goTo('/clusters');
     }
   }
@@ -548,9 +554,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      this.kubeconfigError.set(
-        error instanceof Error ? error.message : 'The request failed.',
-      );
+      this.kubeconfigError.set(error instanceof Error ? error.message : 'The request failed.');
     } finally {
       this.isDownloadingKubeconfig.set(false);
     }
@@ -593,7 +597,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
-      this.notificationService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
+      this.notificationService.info(
+        `The cluster '${this.clusterData.basics.name}' is being deleted`,
+      );
       this.pageNav.goTo('/clusters');
     } catch (error) {
       this.errorMessage.set(
@@ -655,16 +661,18 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   /** Named like the other overlays that belong to one cluster: "Plugins for X",
    *  "Metrics credentials for X". Three sheets, one way of saying it. */
-  eventHistoryTitle = (): string => (this.clusterData.basics.name
-    ? `Event history for ${this.clusterData.basics.name}`
-    : 'Event history');
+  eventHistoryTitle = (): string =>
+    this.clusterData.basics.name
+      ? `Event history for ${this.clusterData.basics.name}`
+      : 'Event history';
 
   /** These credentials belong to one cluster, and the sheet can sit open beside
    *  another window, so it says which one. Falls back to the bare noun while the
    *  cluster is still loading. */
-  metricsCredentialsTitle = (): string => (this.clusterData.basics.name
-    ? `Metrics credentials for ${this.clusterData.basics.name}`
-    : 'Metrics credentials');
+  metricsCredentialsTitle = (): string =>
+    this.clusterData.basics.name
+      ? `Metrics credentials for ${this.clusterData.basics.name}`
+      : 'Metrics credentials';
 
   // Load cluster activity/events
   async loadClusterEvents(clusterId: string): Promise<void> {

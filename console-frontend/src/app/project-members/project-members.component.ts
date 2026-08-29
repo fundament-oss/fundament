@@ -111,12 +111,7 @@ const byPermissionThenAdded = (a: ProjectMemberView, b: ProjectMemberView): numb
 
 @Component({
   selector: 'app-project-members',
-  imports: [
-    RouterOutlet,
-    ReactiveFormsModule,
-    DialogSyncDirective,
-    RouterLink,
-  ],
+  imports: [RouterOutlet, ReactiveFormsModule, DialogSyncDirective, RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',

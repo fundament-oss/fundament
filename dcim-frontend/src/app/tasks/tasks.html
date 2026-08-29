@@ -223,7 +223,7 @@
                 <nldd-list-item-segment
                   button
                   [attr.id]="'task-status-' + task.id"
-                  [attr.accessible-label]="holdReason(task) ?? ('Status: ' + task.status)"
+                  [attr.accessible-label]="holdReason(task) ?? 'Status: ' + task.status"
                 >
                   <!-- Top-aligned: a row runs to two or three lines and the state
                        belongs beside the title, not beside whatever happens to be
@@ -494,10 +494,7 @@
      TASK DETAIL SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right">
-  <app-task-detail
-    [taskId]="detailTaskId()"
-    (closed)="closeDetail()"
-  ></app-task-detail>
+  <app-task-detail [taskId]="detailTaskId()" (closed)="closeDetail()"></app-task-detail>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -519,7 +516,6 @@
     @defer (when technicianOpen()) {
       @if (detailTask(); as task) {
         <app-task-management-technician
-         
           embedded
           [readOnly]="true"
           [round]="roundOf(task)"

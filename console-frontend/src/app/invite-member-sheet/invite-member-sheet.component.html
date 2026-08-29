@@ -41,17 +41,15 @@
             type="email"
             id="email"
             [value]="inviteEmail()"
-            (input)="
-              inviteEmail.set($any($event.target).value);
-              inviteEmailDirty.set(true);
-              inviteError.set(null)
-            "
-            [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
-            error-message="org-invite-email-error"
+            (input)="inviteEmail.set($any($event.target).value); inviteError.set(null)"
+            [invalid]="!!(inviteError() || (inviteSubmitted() && !inviteEmail().trim()))"
+            unmet="org-invite-email-error"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="org-invite-email-error">
-            {{ inviteError() || 'The user email is required' }}
-          </nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="org-invite-email-error">{{
+              inviteError() || 'The user email is required'
+            }}</nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Permission">
           <nldd-list

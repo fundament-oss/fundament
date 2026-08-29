@@ -132,9 +132,7 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
 
   readonly mutableRooms = signal<Room[]>([]);
 
-  readonly dcRooms = computed(() =>
-    this.mutableRooms().filter((r) => r.siteId === this.siteId()),
-  );
+  readonly dcRooms = computed(() => this.mutableRooms().filter((r) => r.siteId === this.siteId()));
 
   // ── Rack rows ──────────────────────────────────────────────────────────────
 

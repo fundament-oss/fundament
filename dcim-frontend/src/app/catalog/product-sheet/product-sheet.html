@@ -27,36 +27,42 @@
             autofocus
             [attr.value]="entry()?.model ?? ''"
             [attr.invalid]="isFieldInvalid('model') ? '' : null"
-            error-message="error-model"
+            unmet="error-model"
             (keydown.enter)="save()"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-model">{{
-            fieldError('model')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-model">
+              {{ fieldError('model') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Manufacturer">
           <nldd-text-field
             #fManufacturer
             [attr.value]="entry()?.manufacturer ?? ''"
             [attr.invalid]="isFieldInvalid('manufacturer') ? '' : null"
-            error-message="error-manufacturer"
+            unmet="error-manufacturer"
             (keydown.enter)="save()"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-manufacturer">{{
-            fieldError('manufacturer')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-manufacturer">
+              {{ fieldError('manufacturer') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Part number">
           <nldd-text-field
             #fPartNumber
             [attr.value]="entry()?.partNumber ?? ''"
             [attr.invalid]="isFieldInvalid('part_number') ? '' : null"
-            error-message="error-part-number"
+            unmet="error-part-number"
             (keydown.enter)="save()"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-part-number">{{
-            fieldError('part_number')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-part-number">
+              {{ fieldError('part_number') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- The rows and the way to add one in the same box: the button is the
              last row of the list, so a new row appears right above where you
@@ -110,7 +116,12 @@
              die drie puntjes staan voor "de rest" en zeggen naast het woord
              niets meer. -->
         <nldd-form-field label="Category">
-          <nldd-toggle-button-group type="radio" accessible-label="Category">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Category"
+            [attr.invalid]="isFieldInvalid('category') ? '' : null"
+            unmet="error-category"
+          >
             @for (cat of categories; track cat) {
               <nldd-toggle-button
                 [attr.value]="cat"
@@ -121,11 +132,11 @@
               ></nldd-toggle-button>
             }
           </nldd-toggle-button-group>
-          @if (isFieldInvalid('category')) {
-            <nldd-form-field-error-text id="error-category">{{
-              fieldError('category')
-            }}</nldd-form-field-error-text>
-          }
+          <nldd-validation-list>
+            <nldd-validation-item id="error-category">
+              {{ fieldError('category') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->

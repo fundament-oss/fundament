@@ -226,19 +226,16 @@
         <nldd-box background="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h2>Danger zone</h2>
+              <h2>Delete {{ resource()!.metadata.name }}</h2>
             </nldd-title>
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
-              <p>
-                Deleting {{ kind() }} '{{ resource()!.metadata.name }}' is permanent and cannot be
-                undone.
-              </p>
+              <p>Deleting this {{ kind() }} is permanent and cannot be undone.</p>
             </nldd-rich-text>
             <nldd-spacer size="16"></nldd-spacer>
             <nldd-button
               type="button"
-              [attr.text]="'Delete ' + resource()!.metadata.name + '…'"
+              [attr.text]="'Delete ' + kind()"
               start-icon="delete"
               variant="destructive"
               (click)="openDeleteModal()"

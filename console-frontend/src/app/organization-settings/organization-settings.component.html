@@ -142,15 +142,17 @@
             appAutofocus
             [value]="editingName()"
             [invalid]="aliasInvalid()"
-            error-message="organization-alias-error"
+            unmet="organization-alias-error"
             (input)="editingName.set($any($event.target).value)"
             (keyup.escape)="cancelEdit()"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="organization-alias-error">
-            @if (aliasInvalid()) {
-              An alias is required.
-            }
-          </nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="organization-alias-error">
+              @if (aliasInvalid()) {
+                An alias is required.
+              }
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-actions>
           <!-- Never disabled: a disabled button says nothing about what is

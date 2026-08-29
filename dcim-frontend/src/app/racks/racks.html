@@ -206,18 +206,19 @@
       <nldd-box background="critical">
         <nldd-container padding="16">
           <nldd-title size="4">
-            <h2>Delete this rack</h2>
+            <h2>Delete {{ rack.name }}</h2>
           </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            Deleting {{ rack.name }} removes the devices placed in it as well. This cannot be
-            undone.
-          </nldd-text>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Deleting this rack removes the devices placed in it as well. This cannot be undone.
+            </p>
+          </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
             variant="destructive"
             text="Delete rack"
-            start-icon="trash"
+            start-icon="delete"
             (click)="openDeleteRack(rack)"
           ></nldd-button>
         </nldd-container>
@@ -263,7 +264,7 @@
           <nldd-combo-box
             #fDeviceAsset
             [attr.invalid]="isDeviceFieldInvalid('asset_id') ? '' : null"
-            error-message="error-device-asset"
+            unmet="error-device-asset"
           >
             <nldd-menu>
               @for (asset of assetOptions(); track asset.id) {
@@ -272,14 +273,18 @@
             </nldd-menu>
           </nldd-combo-box>
           @if (isDeviceFieldInvalid('asset_id')) {
-            <nldd-form-field-error-text id="error-device-asset">
-              {{ deviceFieldError('asset_id') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-device-asset">{{
+                deviceFieldError('asset_id')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           }
           @if (assetOptions().length === 0) {
-            <nldd-form-field-error-text id="error-no-assets">
-              No assets found. Create one on the Inventory page first.
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item hint id="error-no-assets"
+                >No assets found. Create one on the Inventory page first.</nldd-validation-item
+              >
+            </nldd-validation-list>
           }
         </nldd-form-field>
         <!-- Three kinds, all of them worth showing: a choice this small is
@@ -305,12 +310,14 @@
             full-width
             hide-spin-buttons
             [attr.invalid]="isDeviceFieldInvalid('location.rack.rack_unit_start') ? '' : null"
-            error-message="error-device-rack-unit"
+            unmet="error-device-rack-unit"
             (keydown.enter)="saveDevice()"
           ></nldd-number-field>
-          <nldd-form-field-error-text id="error-device-rack-unit">
-            {{ deviceFieldError('location.rack.rack_unit_start') }}
-          </nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-device-rack-unit">{{
+              deviceFieldError('location.rack.rack_unit_start')
+            }}</nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->

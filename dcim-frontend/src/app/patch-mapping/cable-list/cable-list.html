@@ -76,27 +76,27 @@
            not on what is left after searching, because a search that matched
            nothing still has to be clearable. -->
       @if (viewCables().length > 0) {
-      <nldd-toolbar label="Cable list">
-        <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
-          <nldd-search-field
-            accessible-label="Search cables"
-            placeholder="Search"
-            [value]="searchText()"
-            (input)="searchText.set($any($event.target).value)"
-          ></nldd-search-field>
-        </nldd-toolbar-item>
-        @if (filteredCables().length > 0) {
-          <nldd-toolbar-item slot="end">
-            <nldd-button
-              variant="secondary"
-              text="Download CSV"
-              start-icon="arrow-down-in-bucket"
-              accessible-label="Export visible cables as CSV"
-              (click)="exportCsv()"
-            ></nldd-button>
+        <nldd-toolbar label="Cable list">
+          <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
+            <nldd-search-field
+              accessible-label="Search cables"
+              placeholder="Search"
+              [value]="searchText()"
+              (input)="searchText.set($any($event.target).value)"
+            ></nldd-search-field>
           </nldd-toolbar-item>
-        }
-      </nldd-toolbar>
+          @if (filteredCables().length > 0) {
+            <nldd-toolbar-item slot="end">
+              <nldd-button
+                variant="secondary"
+                text="Download CSV"
+                start-icon="arrow-down-in-bucket"
+                accessible-label="Export visible cables as CSV"
+                (click)="exportCsv()"
+              ></nldd-button>
+            </nldd-toolbar-item>
+          }
+        </nldd-toolbar>
       }
       <!-- How many rows the view and the search left, right above them. With
            nothing left there are no rows for it to stand above, and the empty
@@ -110,120 +110,125 @@
            so each end is one cell with the device above its port: that pair is
            read together, and a header row cannot say that. -->
       @if (filteredCables().length) {
-      <nldd-list accessible-label="Cable list">
-        @for (cable of filteredCables(); track cable.id) {
-          <!-- The row is not a button: what you do with a cable you pick from
+        <nldd-list accessible-label="Cable list">
+          @for (cable of filteredCables(); track cable.id) {
+            <!-- The row is not a button: what you do with a cable you pick from
                the menu at the end of it. -->
-          <nldd-list-item>
-            <!-- The color as a dot beside the label, because a cable is found
+            <nldd-list-item>
+              <!-- The color as a dot beside the label, because a cable is found
                    by its color as often as by its name. Every row carries a mark,
                    so a cable without a colour says so with an open ring instead
                    of leaving a hole in the column. Bigger than the status dot
                    further along the row: two round marks in one row have to be
                    told apart, and this one is a property of the cable itself
                    rather than a state the system decided. -->
-            <nldd-cell width="fit-content" min-width="24px">
-              @if (cable.color) {
-                <!-- The jacket colour of a real cable, so it is the cable's own
+              <nldd-cell width="fit-content" min-width="24px">
+                @if (cable.color) {
+                  <!-- The jacket colour of a real cable, so it is the cable's own
                      and not one of the system's: custom-color takes it as a CSS
                      value. -->
-                <nldd-icon
-                  name="circle-filled"
-                  size="24"
-                  [attr.custom-color]="CABLE_COLOR_HEX[cable.color]"
-                ></nldd-icon>
-              } @else {
-                <nldd-icon name="circle-dashed" size="24" color="secondary-content"></nldd-icon>
-              }
-            </nldd-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <!-- The label is the name of the row, so a nameless one says so:
+                  <nldd-icon
+                    name="circle-filled"
+                    size="24"
+                    [attr.custom-color]="CABLE_COLOR_HEX[cable.color]"
+                  ></nldd-icon>
+                } @else {
+                  <nldd-icon name="circle-dashed" size="24" color="secondary-content"></nldd-icon>
+                }
+              </nldd-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <!-- The label is the name of the row, so a nameless one says so:
                    left empty it reads as a rendering fault, and a dash reads as
                    a value. -->
-            <!-- The cable's name, and under it the run it makes. One cell
+              <!-- The cable's name, and under it the run it makes. One cell
                  rather than three: a run is one sentence, and split over two
                  growing columns the arrow between them landed somewhere else on
                  every row. The port type is not said here. Every port in a rack
                  is a network interface until one is not, and a word that is the
                  same on every row is one you stop reading; the type column says
                  "Power" on the run where it matters. -->
-            <nldd-text-cell
-              width="full"
-              min-width="160px"
-              [attr.color]="cable.label ? null : 'secondary'"
-              [attr.supporting-text]="runLabel(cable)"
-              >{{ cable.label || 'Unlabelled'
-              }}@if (cable.type) {&ngsp;<nldd-tag
-                  size="sm"
-                  color="neutral"
-                  [attr.text]="CABLE_TYPE_LABEL[cable.type]"
-                ></nldd-tag>}</nldd-text-cell
-            >
-            <nldd-spacer-cell size="12" hide-below="700px"></nldd-spacer-cell>
-            <!-- The status as a dot and a word rather than a tag: a tag is a
+              <nldd-text-cell
+                width="full"
+                min-width="160px"
+                [attr.color]="cable.label ? null : 'secondary'"
+                [attr.supporting-text]="runLabel(cable)"
+                >{{ cable.label || 'Unlabelled' }}
+                @if (cable.type) {
+                  &ngsp;<nldd-tag
+                    size="sm"
+                    color="neutral"
+                    [attr.text]="CABLE_TYPE_LABEL[cable.type]"
+                  ></nldd-tag>
+                }
+              </nldd-text-cell>
+              <nldd-spacer-cell size="12" hide-below="700px"></nldd-spacer-cell>
+              <!-- The status as a dot and a word rather than a tag: a tag is a
                    property somebody assigns, and this one the system decides. It
                    also puts the state in the same shape as the menu it was picked
                    from.
                    Everything from here to the menu button takes the width of
                    what it holds, so the whole tail sits against that button
                    instead of leaving a column of air in front of it. -->
-            <nldd-text-cell width="fit-content" hide-below="700px"
-              ><nldd-badge decorative [attr.color]="cableStatusTagColor(cable.status)"></nldd-badge
-              >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
-            >
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-cell width="fit-content">
-              <nldd-icon-button
-                icon="ellipsis"
-                size="sm"
-                popup-type="menu"
-                [attr.accessible-label]="'Actions for ' + (cable.label || 'this cable')"
+              <nldd-text-cell width="fit-content" hide-below="700px"
+                ><nldd-badge
+                  decorative
+                  [attr.color]="cableStatusTagColor(cable.status)"
+                ></nldd-badge
+                >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
               >
-                <nldd-menu slot="popup">
-                  <!-- The status right here, because moving a cable along is
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-icon-button
+                  icon="ellipsis"
+                  size="sm"
+                  popup-type="menu"
+                  [attr.accessible-label]="'Actions for ' + (cable.label || 'this cable')"
+                >
+                  <nldd-menu slot="popup">
+                    <!-- The status right here, because moving a cable along is
                        the ordinary thing you do to it and opening the whole
                        form to change one field is a detour. Radios under a
                        heading: a cable is in exactly one of them, and the group
                        says which question the six answers belong to. -->
-                  <nldd-menu-group text="Status">
-                    <!-- Drawn, not decided on. Every other row says a cable is
+                    <nldd-menu-group text="Status">
+                      <!-- Drawn, not decided on. Every other row says a cable is
                          on its way to existing, and this is the answer for one
                          that is not on its way yet. Without it the radios could
                          only be moved forward, never set back. -->
-                    <nldd-menu-item
-                      type="radio"
-                      text="Unspecified"
-                      [attr.selected]="!cable.status ? '' : null"
-                      (select)="cableStatusChanged.emit({ cableId: cable.id, status: undefined })"
-                    ></nldd-menu-item>
-                    @for (s of CABLE_STATUSES; track s.value) {
                       <nldd-menu-item
                         type="radio"
-                        [attr.text]="s.label"
-                        [attr.selected]="cable.status === s.value ? '' : null"
-                        (select)="cableStatusChanged.emit({ cableId: cable.id, status: s.value })"
+                        text="Unspecified"
+                        [attr.selected]="!cable.status ? '' : null"
+                        (select)="cableStatusChanged.emit({ cableId: cable.id, status: undefined })"
                       ></nldd-menu-item>
-                    }
-                  </nldd-menu-group>
-                  <nldd-menu-divider></nldd-menu-divider>
-                  <nldd-menu-item
-                    text="Edit cable"
-                    icon="pencil-on-square"
-                    (select)="editCable.emit(cable)"
-                  ></nldd-menu-item>
-                  <nldd-menu-divider></nldd-menu-divider>
-                  <nldd-menu-item
-                    text="Delete cable"
-                    icon="trash"
-                    destructive
-                    (select)="deleteCable.emit(cable)"
-                  ></nldd-menu-item>
-                </nldd-menu>
-              </nldd-icon-button>
-            </nldd-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
+                      @for (s of CABLE_STATUSES; track s.value) {
+                        <nldd-menu-item
+                          type="radio"
+                          [attr.text]="s.label"
+                          [attr.selected]="cable.status === s.value ? '' : null"
+                          (select)="cableStatusChanged.emit({ cableId: cable.id, status: s.value })"
+                        ></nldd-menu-item>
+                      }
+                    </nldd-menu-group>
+                    <nldd-menu-divider></nldd-menu-divider>
+                    <nldd-menu-item
+                      text="Edit cable"
+                      icon="pencil-on-square"
+                      (select)="editCable.emit(cable)"
+                    ></nldd-menu-item>
+                    <nldd-menu-divider></nldd-menu-divider>
+                    <nldd-menu-item
+                      text="Delete cable"
+                      icon="trash"
+                      destructive
+                      (select)="deleteCable.emit(cable)"
+                    ></nldd-menu-item>
+                  </nldd-menu>
+                </nldd-icon-button>
+              </nldd-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
       }
     </nldd-simple-section>
     <!-- The page's own empty state, and a section of its own: a list that draws

@@ -81,7 +81,11 @@
         <nldd-box background="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h3>Danger zone</h3>
+              <h3>
+                Delete all {{ namespaces().length }} namespace{{
+                  namespaces().length === 1 ? '' : 's'
+                }}
+              </h3>
             </nldd-title>
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
@@ -93,12 +97,7 @@
             <nldd-button
               type="button"
               (click)="openBulkDeleteModal()"
-              [text]="
-                'Delete all ' +
-                namespaces().length +
-                ' namespace' +
-                (namespaces().length === 1 ? '' : 's')
-              "
+              text="Delete namespaces"
               start-icon="delete"
               variant="destructive"
               [attr.loading]="isBulkDeleting() ? '' : null"

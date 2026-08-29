@@ -3,45 +3,68 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import { file_v1_common } from "./common_pb";
-import { file_v1_member } from "./member_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type {
+  GenFile,
+  GenMessage,
+  GenService,
+} from '@bufbuild/protobuf/codegenv2';
+import {
+  fileDesc,
+  messageDesc,
+  serviceDesc,
+} from '@bufbuild/protobuf/codegenv2';
+import { file_buf_validate_validate } from '../buf/validate/validate_pb';
+import type { Timestamp } from '@bufbuild/protobuf/wkt';
+import {
+  file_google_protobuf_go_features,
+  file_google_protobuf_timestamp,
+} from '@bufbuild/protobuf/wkt';
+import { file_v1_common } from './common_pb';
+import { file_v1_member } from './member_pb';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file v1/invite.proto.
  */
-export const file_v1_invite: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9pbnZpdGUucHJvdG8SD29yZ2FuaXphdGlvbi52MSJXChNJbnZpdGVNZW1iZXJSZXF1ZXN0EhYKBWVtYWlsGAogASgJQge6SARyAmABEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIi0KFEludml0ZU1lbWJlclJlc3BvbnNlEhUKDWludml0YXRpb25faWQYCiABKAkiGAoWTGlzdEludml0YXRpb25zUmVxdWVzdCJLChdMaXN0SW52aXRhdGlvbnNSZXNwb25zZRIwCgtpbnZpdGF0aW9ucxgKIAMoCzIbLm9yZ2FuaXphdGlvbi52MS5JbnZpdGF0aW9uIo4BCgpJbnZpdGF0aW9uEgoKAmlkGAogASgJEhcKD29yZ2FuaXphdGlvbl9pZBgUIAEoCRIaChJvcmdhbml6YXRpb25fYWxpYXMYHiABKAkSEgoKcGVybWlzc2lvbhgoIAEoCRIrCgdjcmVhdGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIvChdBY2NlcHRJbnZpdGF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiGgoYQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlIjAKGERlY2xpbmVJbnZpdGF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiGwoZRGVjbGluZUludml0YXRpb25SZXNwb25zZTKnAwoNSW52aXRlU2VydmljZRJbCgxJbnZpdGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuSW52aXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5JbnZpdGVNZW1iZXJSZXNwb25zZRJkCg9MaXN0SW52aXRhdGlvbnMSJy5vcmdhbml6YXRpb24udjEuTGlzdEludml0YXRpb25zUmVxdWVzdBooLm9yZ2FuaXphdGlvbi52MS5MaXN0SW52aXRhdGlvbnNSZXNwb25zZRJnChBBY2NlcHRJbnZpdGF0aW9uEigub3JnYW5pemF0aW9uLnYxLkFjY2VwdEludml0YXRpb25SZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkFjY2VwdEludml0YXRpb25SZXNwb25zZRJqChFEZWNsaW5lSW52aXRhdGlvbhIpLm9yZ2FuaXphdGlvbi52MS5EZWNsaW5lSW52aXRhdGlvblJlcXVlc3QaKi5vcmdhbml6YXRpb24udjEuRGVjbGluZUludml0YXRpb25SZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common, file_v1_member]);
+export const file_v1_invite: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Cg92MS9pbnZpdGUucHJvdG8SD29yZ2FuaXphdGlvbi52MSJXChNJbnZpdGVNZW1iZXJSZXF1ZXN0EhYKBWVtYWlsGAogASgJQge6SARyAmABEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIi0KFEludml0ZU1lbWJlclJlc3BvbnNlEhUKDWludml0YXRpb25faWQYCiABKAkiGAoWTGlzdEludml0YXRpb25zUmVxdWVzdCJLChdMaXN0SW52aXRhdGlvbnNSZXNwb25zZRIwCgtpbnZpdGF0aW9ucxgKIAMoCzIbLm9yZ2FuaXphdGlvbi52MS5JbnZpdGF0aW9uIo4BCgpJbnZpdGF0aW9uEgoKAmlkGAogASgJEhcKD29yZ2FuaXphdGlvbl9pZBgUIAEoCRIaChJvcmdhbml6YXRpb25fYWxpYXMYHiABKAkSEgoKcGVybWlzc2lvbhgoIAEoCRIrCgdjcmVhdGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIvChdBY2NlcHRJbnZpdGF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiGgoYQWNjZXB0SW52aXRhdGlvblJlc3BvbnNlIjAKGERlY2xpbmVJbnZpdGF0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiGwoZRGVjbGluZUludml0YXRpb25SZXNwb25zZTKnAwoNSW52aXRlU2VydmljZRJbCgxJbnZpdGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuSW52aXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5JbnZpdGVNZW1iZXJSZXNwb25zZRJkCg9MaXN0SW52aXRhdGlvbnMSJy5vcmdhbml6YXRpb24udjEuTGlzdEludml0YXRpb25zUmVxdWVzdBooLm9yZ2FuaXphdGlvbi52MS5MaXN0SW52aXRhdGlvbnNSZXNwb25zZRJnChBBY2NlcHRJbnZpdGF0aW9uEigub3JnYW5pemF0aW9uLnYxLkFjY2VwdEludml0YXRpb25SZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkFjY2VwdEludml0YXRpb25SZXNwb25zZRJqChFEZWNsaW5lSW52aXRhdGlvbhIpLm9yZ2FuaXphdGlvbi52MS5EZWNsaW5lSW52aXRhdGlvblJlcXVlc3QaKi5vcmdhbml6YXRpb24udjEuRGVjbGluZUludml0YXRpb25SZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH',
+    [
+      file_buf_validate_validate,
+      file_google_protobuf_go_features,
+      file_google_protobuf_timestamp,
+      file_v1_common,
+      file_v1_member,
+    ],
+  );
 
 /**
  * Invite member request
  *
  * @generated from message organization.v1.InviteMemberRequest
  */
-export type InviteMemberRequest = Message<"organization.v1.InviteMemberRequest"> & {
-  /**
-   * @generated from field: string email = 10;
-   */
-  email: string;
+export type InviteMemberRequest =
+  Message<'organization.v1.InviteMemberRequest'> & {
+    /**
+     * @generated from field: string email = 10;
+     */
+    email: string;
 
-  /**
-   * Permission for the invited user: "viewer" or "admin"
-   *
-   * @generated from field: string permission = 20;
-   */
-  permission: string;
-};
+    /**
+     * Permission for the invited user: "viewer" or "admin"
+     *
+     * @generated from field: string permission = 20;
+     */
+    permission: string;
+  };
 
 /**
  * Describes the message organization.v1.InviteMemberRequest.
  * Use `create(InviteMemberRequestSchema)` to create a new message.
  */
-export const InviteMemberRequestSchema: GenMessage<InviteMemberRequest> = /*@__PURE__*/
+export const InviteMemberRequestSchema: GenMessage<InviteMemberRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 0);
 
 /**
@@ -49,18 +72,20 @@ export const InviteMemberRequestSchema: GenMessage<InviteMemberRequest> = /*@__P
  *
  * @generated from message organization.v1.InviteMemberResponse
  */
-export type InviteMemberResponse = Message<"organization.v1.InviteMemberResponse"> & {
-  /**
-   * @generated from field: string invitation_id = 10;
-   */
-  invitationId: string;
-};
+export type InviteMemberResponse =
+  Message<'organization.v1.InviteMemberResponse'> & {
+    /**
+     * @generated from field: string invitation_id = 10;
+     */
+    invitationId: string;
+  };
 
 /**
  * Describes the message organization.v1.InviteMemberResponse.
  * Use `create(InviteMemberResponseSchema)` to create a new message.
  */
-export const InviteMemberResponseSchema: GenMessage<InviteMemberResponse> = /*@__PURE__*/
+export const InviteMemberResponseSchema: GenMessage<InviteMemberResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 1);
 
 /**
@@ -68,14 +93,15 @@ export const InviteMemberResponseSchema: GenMessage<InviteMemberResponse> = /*@_
  *
  * @generated from message organization.v1.ListInvitationsRequest
  */
-export type ListInvitationsRequest = Message<"organization.v1.ListInvitationsRequest"> & {
-};
+export type ListInvitationsRequest =
+  Message<'organization.v1.ListInvitationsRequest'> & {};
 
 /**
  * Describes the message organization.v1.ListInvitationsRequest.
  * Use `create(ListInvitationsRequestSchema)` to create a new message.
  */
-export const ListInvitationsRequestSchema: GenMessage<ListInvitationsRequest> = /*@__PURE__*/
+export const ListInvitationsRequestSchema: GenMessage<ListInvitationsRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 2);
 
 /**
@@ -83,18 +109,20 @@ export const ListInvitationsRequestSchema: GenMessage<ListInvitationsRequest> = 
  *
  * @generated from message organization.v1.ListInvitationsResponse
  */
-export type ListInvitationsResponse = Message<"organization.v1.ListInvitationsResponse"> & {
-  /**
-   * @generated from field: repeated organization.v1.Invitation invitations = 10;
-   */
-  invitations: Invitation[];
-};
+export type ListInvitationsResponse =
+  Message<'organization.v1.ListInvitationsResponse'> & {
+    /**
+     * @generated from field: repeated organization.v1.Invitation invitations = 10;
+     */
+    invitations: Invitation[];
+  };
 
 /**
  * Describes the message organization.v1.ListInvitationsResponse.
  * Use `create(ListInvitationsResponseSchema)` to create a new message.
  */
-export const ListInvitationsResponseSchema: GenMessage<ListInvitationsResponse> = /*@__PURE__*/
+export const ListInvitationsResponseSchema: GenMessage<ListInvitationsResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 3);
 
 /**
@@ -102,7 +130,7 @@ export const ListInvitationsResponseSchema: GenMessage<ListInvitationsResponse> 
  *
  * @generated from message organization.v1.Invitation
  */
-export type Invitation = Message<"organization.v1.Invitation"> & {
+export type Invitation = Message<'organization.v1.Invitation'> & {
   /**
    * @generated from field: string id = 10;
    */
@@ -133,7 +161,8 @@ export type Invitation = Message<"organization.v1.Invitation"> & {
  * Describes the message organization.v1.Invitation.
  * Use `create(InvitationSchema)` to create a new message.
  */
-export const InvitationSchema: GenMessage<Invitation> = /*@__PURE__*/
+export const InvitationSchema: GenMessage<Invitation> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 4);
 
 /**
@@ -141,18 +170,20 @@ export const InvitationSchema: GenMessage<Invitation> = /*@__PURE__*/
  *
  * @generated from message organization.v1.AcceptInvitationRequest
  */
-export type AcceptInvitationRequest = Message<"organization.v1.AcceptInvitationRequest"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-};
+export type AcceptInvitationRequest =
+  Message<'organization.v1.AcceptInvitationRequest'> & {
+    /**
+     * @generated from field: string id = 10;
+     */
+    id: string;
+  };
 
 /**
  * Describes the message organization.v1.AcceptInvitationRequest.
  * Use `create(AcceptInvitationRequestSchema)` to create a new message.
  */
-export const AcceptInvitationRequestSchema: GenMessage<AcceptInvitationRequest> = /*@__PURE__*/
+export const AcceptInvitationRequestSchema: GenMessage<AcceptInvitationRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 5);
 
 /**
@@ -160,14 +191,15 @@ export const AcceptInvitationRequestSchema: GenMessage<AcceptInvitationRequest> 
  *
  * @generated from message organization.v1.AcceptInvitationResponse
  */
-export type AcceptInvitationResponse = Message<"organization.v1.AcceptInvitationResponse"> & {
-};
+export type AcceptInvitationResponse =
+  Message<'organization.v1.AcceptInvitationResponse'> & {};
 
 /**
  * Describes the message organization.v1.AcceptInvitationResponse.
  * Use `create(AcceptInvitationResponseSchema)` to create a new message.
  */
-export const AcceptInvitationResponseSchema: GenMessage<AcceptInvitationResponse> = /*@__PURE__*/
+export const AcceptInvitationResponseSchema: GenMessage<AcceptInvitationResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 6);
 
 /**
@@ -175,18 +207,20 @@ export const AcceptInvitationResponseSchema: GenMessage<AcceptInvitationResponse
  *
  * @generated from message organization.v1.DeclineInvitationRequest
  */
-export type DeclineInvitationRequest = Message<"organization.v1.DeclineInvitationRequest"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
-};
+export type DeclineInvitationRequest =
+  Message<'organization.v1.DeclineInvitationRequest'> & {
+    /**
+     * @generated from field: string id = 10;
+     */
+    id: string;
+  };
 
 /**
  * Describes the message organization.v1.DeclineInvitationRequest.
  * Use `create(DeclineInvitationRequestSchema)` to create a new message.
  */
-export const DeclineInvitationRequestSchema: GenMessage<DeclineInvitationRequest> = /*@__PURE__*/
+export const DeclineInvitationRequestSchema: GenMessage<DeclineInvitationRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 7);
 
 /**
@@ -194,14 +228,15 @@ export const DeclineInvitationRequestSchema: GenMessage<DeclineInvitationRequest
  *
  * @generated from message organization.v1.DeclineInvitationResponse
  */
-export type DeclineInvitationResponse = Message<"organization.v1.DeclineInvitationResponse"> & {
-};
+export type DeclineInvitationResponse =
+  Message<'organization.v1.DeclineInvitationResponse'> & {};
 
 /**
  * Describes the message organization.v1.DeclineInvitationResponse.
  * Use `create(DeclineInvitationResponseSchema)` to create a new message.
  */
-export const DeclineInvitationResponseSchema: GenMessage<DeclineInvitationResponse> = /*@__PURE__*/
+export const DeclineInvitationResponseSchema: GenMessage<DeclineInvitationResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_invite, 8);
 
 /**
@@ -216,40 +251,38 @@ export const InviteService: GenService<{
    * @generated from rpc organization.v1.InviteService.InviteMember
    */
   inviteMember: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof InviteMemberRequestSchema;
     output: typeof InviteMemberResponseSchema;
-  },
+  };
   /**
    * List pending invitations for the current user (user-scoped, no org header needed)
    *
    * @generated from rpc organization.v1.InviteService.ListInvitations
    */
   listInvitations: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof ListInvitationsRequestSchema;
     output: typeof ListInvitationsResponseSchema;
-  },
+  };
   /**
    * Accept a pending invitation (user-scoped, no org header needed)
    *
    * @generated from rpc organization.v1.InviteService.AcceptInvitation
    */
   acceptInvitation: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof AcceptInvitationRequestSchema;
     output: typeof AcceptInvitationResponseSchema;
-  },
+  };
   /**
    * Decline a pending invitation (user-scoped, no org header needed)
    *
    * @generated from rpc organization.v1.InviteService.DeclineInvitation
    */
   declineInvitation: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof DeclineInvitationRequestSchema;
     output: typeof DeclineInvitationResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_v1_invite, 0);
-
+  };
+}> = /*@__PURE__*/ serviceDesc(file_v1_invite, 0);

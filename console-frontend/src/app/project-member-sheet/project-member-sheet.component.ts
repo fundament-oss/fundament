@@ -356,7 +356,9 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await firstValueFrom(
         this.projectClient.updateProjectMemberRole({ memberId: view.member.id, role }),
       );
-      this.notificationService.success(`${view.member.userName} is now ${roleLabel(role).toLowerCase()}`);
+      this.notificationService.success(
+        `${view.member.userName} is now ${roleLabel(role).toLowerCase()}`,
+      );
       await this.load();
     } catch (err) {
       this.notificationService.error(

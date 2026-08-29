@@ -18,11 +18,13 @@
             [attr.value]="form()?.name ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('name') ? '' : null"
-            error-message="error-dc-name"
+            unmet="error-dc-name"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-name">{{
-            fieldError('name')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-name">
+              {{ fieldError('name') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Full name">
           <nldd-text-field
@@ -30,11 +32,13 @@
             [attr.value]="form()?.fullName ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('full_name') ? '' : null"
-            error-message="error-dc-fullname"
+            unmet="error-dc-fullname"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-fullname">{{
-            fieldError('full_name')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-fullname">
+              {{ fieldError('full_name') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Street address">
           <nldd-text-field
@@ -42,11 +46,13 @@
             [attr.value]="form()?.address ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('address') ? '' : null"
-            error-message="error-dc-address"
+            unmet="error-dc-address"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-address">{{
-            fieldError('address')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-address">
+              {{ fieldError('address') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="City">
           <nldd-text-field
@@ -54,11 +60,13 @@
             [attr.value]="form()?.city ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('city') ? '' : null"
-            error-message="error-dc-city"
+            unmet="error-dc-city"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-city">{{
-            fieldError('city')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-city">
+              {{ fieldError('city') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Country">
           <nldd-text-field
@@ -66,11 +74,13 @@
             [attr.value]="form()?.country ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('country') ? '' : null"
-            error-message="error-dc-country"
+            unmet="error-dc-country"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-country">{{
-            fieldError('country')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-country">
+              {{ fieldError('country') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Four tiers and three states, all short: buttons show the whole choice
              where a dropdown hides it behind a click, and one field per row keeps
@@ -108,11 +118,13 @@
             full-width
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('established') ? '' : null"
-            error-message="error-dc-established"
+            unmet="error-dc-established"
           ></nldd-number-field>
-          <nldd-form-field-error-text id="error-dc-established">{{
-            fieldError('established')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-established">
+              {{ fieldError('established') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Floor space (m²)">
           <nldd-number-field
@@ -122,11 +134,13 @@
             full-width
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
-            error-message="error-dc-floorsqm"
+            unmet="error-dc-floorsqm"
           ></nldd-number-field>
-          <nldd-form-field-error-text id="error-dc-floorsqm">{{
-            fieldError('floor_sqm')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-dc-floorsqm">
+              {{ fieldError('floor_sqm') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->

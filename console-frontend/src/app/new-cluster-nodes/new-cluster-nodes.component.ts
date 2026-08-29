@@ -24,14 +24,12 @@ import { MachineTypeOption, RegionCatalogService } from '../region-catalog.servi
 export default class NewClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
-
   private stateService = inject(NewClusterFormStateService);
 
   private regionCatalog = inject(RegionCatalogService);
 
   // Machine types offered by the region chosen in step 1.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
-
 
   async ngOnInit() {
     const { region: regionName } = this.stateService.getState();

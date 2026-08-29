@@ -154,7 +154,9 @@
                         <nldd-badge
                           color="critical"
                           [attr.text]="cableAttention.count()"
-                          [attr.accessible-label]="cableAttention.count() + ' cables need attention'"
+                          [attr.accessible-label]="
+                            cableAttention.count() + ' cables need attention'
+                          "
                         ></nldd-badge>
                       </nldd-cell>
                     }

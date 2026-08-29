@@ -46,7 +46,7 @@ export default class InviteMemberSheetComponent {
 
   inviteEmail = signal('');
 
-  inviteEmailDirty = signal(false);
+  inviteSubmitted = signal(false);
 
   invitePermission = signal('viewer');
 
@@ -71,7 +71,7 @@ export default class InviteMemberSheetComponent {
     effect(() => {
       if (!this.show()) return;
       this.inviteEmail.set('');
-      this.inviteEmailDirty.set(false);
+      this.inviteSubmitted.set(false);
       this.invitePermission.set('viewer');
       this.inviteError.set(null);
       this.isSubmitting.set(false);
@@ -84,6 +84,7 @@ export default class InviteMemberSheetComponent {
 
   async submitInvitation(event?: Event) {
     event?.preventDefault();
+    this.inviteSubmitted.set(true);
 
     const email = this.inviteEmail().trim();
     const permission = this.invitePermission();

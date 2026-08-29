@@ -40,11 +40,13 @@
               (input)="newKeyName.set($any($event.target).value)"
               (keyup.escape)="cancelCreating()"
               [invalid]="!newKeyName().trim() && newKeySubmitted()"
-              error-message="api-key-name-error"
+              unmet="api-key-name-error"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="api-key-name-error">
-              A name is required.
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="api-key-name-error"
+                >A name is required.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field
             label="Expires after"

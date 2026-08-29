@@ -57,14 +57,16 @@
                 id="new-port-name"
                 [attr.value]="newPortName()"
                 [attr.invalid]="nameError() ? '' : null"
-                [attr.error-message]="nameError() ? 'new-port-name-error' : null"
+                [attr.unmet]="nameError() ? 'new-port-name-error' : null"
                 (input)="newPortName.set($any($event.target).value)"
                 (keydown.enter)="addPort()"
               ></nldd-text-field>
               @if (nameError()) {
-                <nldd-form-field-error-text id="new-port-name-error">{{
-                  nameError()
-                }}</nldd-form-field-error-text>
+                <nldd-validation-list>
+                  <nldd-validation-item id="new-port-name-error">
+                    {{ nameError() }}
+                  </nldd-validation-item>
+                </nldd-validation-list>
               }
             </nldd-form-field>
 

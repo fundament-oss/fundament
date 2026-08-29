@@ -235,7 +235,9 @@ export default class ResourceListComponent implements OnInit {
    *  way a cluster's status does; the rest become rows in the card's list. */
   conditionColumn = computed(() =>
     this.columns().find((col) =>
-      this.resources().some((resource) => this.conditionBadge(col.name, buildCellValue(resource, col))),
+      this.resources().some((resource) =>
+        this.conditionBadge(col.name, buildCellValue(resource, col)),
+      ),
     ),
   );
 

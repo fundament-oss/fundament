@@ -34,25 +34,63 @@
         (submit)="createNamespace($event)"
         (keydown.enter)="createNamespace($event)"
       >
-        <!-- The rule as help text, not as a supporting label: it tells you how to
-             fill the field in, which is what help text is for. And no
-             placeholder: it disappears the moment you start typing, exactly when
-             you would want to check the rule again. -->
+        <!-- The rules as a list, each checking itself while you type. The
+             pattern behind them is one regular expression saying three things
+             at once, and the message that came with it said all three in one
+             sentence; here each one goes quiet on its own. No placeholder: it
+             disappears the moment you start typing, exactly when you would want
+             to check the rule again. -->
         <nldd-form-field label="Namespace name">
           <nldd-text-field
             appAutofocus
             id="namespaceName"
+            autocomplete="off"
             [value]="namespaceForm.get('name')?.value ?? ''"
             [invalid]="isNameInvalid()"
-            error-message="namespace-name-error"
             (input)="onNameInput($event)"
           ></nldd-text-field>
-          <nldd-form-field-help-text>
-            Lowercase letters, numbers and hyphens.
-          </nldd-form-field-help-text>
-          <nldd-form-field-error-text id="namespace-name-error">
-            {{ getNameError() }}
-          </nldd-form-field-error-text>
+          <nldd-validation-list>
+            <!-- No hint on this one: everything else on this sheet is optional,
+                 so that a name is needed goes without saying until it is
+                 missing. It only ever shows in the critical state, so it reads
+                 as what is wrong rather than as a requirement. -->
+            <nldd-validation-item
+              id="namespace-name-required"
+              required
+            >
+              A namespace name is required
+            </nldd-validation-item>
+            <!-- Which characters first, then where they may sit: the one below
+                 is a refinement of this one, and reading them the other way
+                 round asks you to hold a rule you have not been given yet. -->
+            <nldd-validation-item
+              id="namespace-name-characters"
+              hint
+              match="^[-a-z0-9]*$"
+            >
+              Only lowercase letters, numbers and hyphens
+            </nldd-validation-item>
+            <!-- Case is deliberately not checked here, even though the value
+                 has to be lowercase: the line above owns that rule, and a
+                 pattern refusing "Abc" would paint this line red about a name
+                 that does start with a letter. The optional group is what lets
+                 a one-character name through, since "a" is the first and the
+                 last character at once. -->
+            <nldd-validation-item
+              id="namespace-name-edges"
+              hint
+              match="^[a-zA-Z](.*[a-zA-Z0-9])?$"
+            >
+              Starts with a letter and ends with a letter or number
+            </nldd-validation-item>
+            <nldd-validation-item
+              id="namespace-name-length"
+              hint
+              maxlength="63"
+            >
+              At most 63 characters
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- A namespace is made to work in, so the people come with it. Optional:
              creating one without anyone in it is a normal thing to do. -->

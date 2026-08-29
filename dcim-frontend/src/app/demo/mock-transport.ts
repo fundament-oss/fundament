@@ -815,8 +815,7 @@ export default function createDemoTransport(): Transport {
           store.placements
             .filter(
               (placement) =>
-                placement.location.case === 'rack' &&
-                rackIds.has(placement.location.value.rackId),
+                placement.location.case === 'rack' && rackIds.has(placement.location.value.rackId),
             )
             .map((placement) => placement.id),
         );

@@ -25,8 +25,6 @@ import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
-
-
 function checkIsConditionsField(key: string, value: unknown): boolean {
   return key === 'conditions' && Array.isArray(value);
 }

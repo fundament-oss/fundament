@@ -30,6 +30,7 @@ import '@nldd/design-system/checkbox';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
+import '@nldd/design-system/validation-list';
 import '@nldd/design-system/dropdown';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/number-field';
@@ -151,7 +152,6 @@ export default class App implements OnInit {
   private apiService = inject(AuthnApiService);
 
   private configService = inject(ConfigService);
-
 
   protected organizationDataService = inject(OrganizationDataService);
 
@@ -317,7 +317,10 @@ export default class App implements OnInit {
         // sheet in.
         const openedFor = this.overlays.openedFor();
         this.overlays.openedFor.set(null);
-        if (event.urlAfterRedirects !== openedFor && event.urlAfterRedirects !== this.currentUrl()) {
+        if (
+          event.urlAfterRedirects !== openedFor &&
+          event.urlAfterRedirects !== this.currentUrl()
+        ) {
           this.overlays.closeAll();
         }
         this.currentUrl.set(event.urlAfterRedirects);

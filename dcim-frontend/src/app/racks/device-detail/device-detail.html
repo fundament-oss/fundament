@@ -398,18 +398,20 @@
       <nldd-box background="critical">
         <nldd-container padding="16">
           <nldd-title size="4">
-            <h2>Remove from rack</h2>
+            <h2>Remove {{ dev.name }} from rack</h2>
           </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            Taking {{ dev.name }} out frees the units it fills. The asset itself stays in the
-            inventory.
-          </nldd-text>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Taking this device out frees the units it fills. The asset itself stays in the
+              inventory.
+            </p>
+          </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
             variant="destructive"
             text="Remove from rack"
-            start-icon="trash"
+            start-icon="delete"
             (click)="removeFromRack()"
           ></nldd-button>
         </nldd-container>

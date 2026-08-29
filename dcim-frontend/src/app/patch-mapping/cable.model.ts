@@ -57,11 +57,7 @@ export type CableType =
  * an unset status already meant.
  */
 export type CableStatus =
-  | 'to-order'
-  | 'ordered'
-  | 'ready-to-install'
-  | 'connected'
-  | 'decommissioned';
+  'to-order' | 'ordered' | 'ready-to-install' | 'connected' | 'decommissioned';
 
 /** In the order a cable passes through them, which is the order they are shown
  *  in wherever all of them are offered. */

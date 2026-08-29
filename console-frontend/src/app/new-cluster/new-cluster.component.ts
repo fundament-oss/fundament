@@ -21,7 +21,6 @@ import { Region } from '../../generated/v1/cluster_pb';
   templateUrl: './new-cluster.component.html',
 })
 export default class NewClusterComponent implements OnInit {
-
   private fb = inject(FormBuilder);
 
   private stateService = inject(NewClusterFormStateService);
@@ -48,7 +47,6 @@ export default class NewClusterComponent implements OnInit {
   catalogError = signal<string | null>(null);
 
   constructor() {
-
     this.clusterForm = this.fb.group({
       clusterName: [
         '',
@@ -208,5 +206,4 @@ export default class NewClusterComponent implements OnInit {
       }
     }
   }
-
 }

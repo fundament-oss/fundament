@@ -3,26 +3,46 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import { file_v1_common } from "./common_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type {
+  GenFile,
+  GenMessage,
+  GenService,
+} from '@bufbuild/protobuf/codegenv2';
+import {
+  fileDesc,
+  messageDesc,
+  serviceDesc,
+} from '@bufbuild/protobuf/codegenv2';
+import { file_buf_validate_validate } from '../buf/validate/validate_pb';
+import type { Timestamp } from '@bufbuild/protobuf/wkt';
+import {
+  file_google_protobuf_go_features,
+  file_google_protobuf_timestamp,
+} from '@bufbuild/protobuf/wkt';
+import { file_v1_common } from './common_pb';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file v1/apikey.proto.
  */
-export const file_v1_apikey: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSLuAQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEisKB2V4cGlyZXMYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3RfdXNlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHcmV2b2tlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiQwoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BEhIKCmV4cGlyZXNfaW4YFCABKAkiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSIwChBHZXRBUElLZXlSZXF1ZXN0EhwKCmFwaV9rZXlfaWQYCiABKAlCCLpIBXIDsAEBIj0KEUdldEFQSUtleVJlc3BvbnNlEigKB2FwaV9rZXkYCiABKAsyFy5vcmdhbml6YXRpb24udjEuQVBJS2V5IjMKE1Jldm9rZUFQSUtleVJlcXVlc3QSHAoKYXBpX2tleV9pZBgKIAEoCUIIukgFcgOwAQEiFgoUUmV2b2tlQVBJS2V5UmVzcG9uc2UiMwoTRGVsZXRlQVBJS2V5UmVxdWVzdBIcCgphcGlfa2V5X2lkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVBUElLZXlSZXNwb25zZTLUAwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJbCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5SZXZva2VBUElLZXlSZXNwb25zZRJbCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVBUElLZXlSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+export const file_v1_apikey: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Cg92MS9hcGlrZXkucHJvdG8SD29yZ2FuaXphdGlvbi52MSLuAQoGQVBJS2V5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJEisKB2V4cGlyZXMYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3RfdXNlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHcmV2b2tlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiQwoTQ3JlYXRlQVBJS2V5UmVxdWVzdBIYCgRuYW1lGAogASgJQgq6SAdyBRABGP8BEhIKCmV4cGlyZXNfaW4YFCABKAkiRwoUQ3JlYXRlQVBJS2V5UmVzcG9uc2USCgoCaWQYCiABKAkSDQoFdG9rZW4YFCABKAkSFAoMdG9rZW5fcHJlZml4GB4gASgJIhQKEkxpc3RBUElLZXlzUmVxdWVzdCJAChNMaXN0QVBJS2V5c1Jlc3BvbnNlEikKCGFwaV9rZXlzGAogAygLMhcub3JnYW5pemF0aW9uLnYxLkFQSUtleSIwChBHZXRBUElLZXlSZXF1ZXN0EhwKCmFwaV9rZXlfaWQYCiABKAlCCLpIBXIDsAEBIj0KEUdldEFQSUtleVJlc3BvbnNlEigKB2FwaV9rZXkYCiABKAsyFy5vcmdhbml6YXRpb24udjEuQVBJS2V5IjMKE1Jldm9rZUFQSUtleVJlcXVlc3QSHAoKYXBpX2tleV9pZBgKIAEoCUIIukgFcgOwAQEiFgoUUmV2b2tlQVBJS2V5UmVzcG9uc2UiMwoTRGVsZXRlQVBJS2V5UmVxdWVzdBIcCgphcGlfa2V5X2lkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVBUElLZXlSZXNwb25zZTLUAwoNQVBJS2V5U2VydmljZRJbCgxDcmVhdGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuQ3JlYXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5DcmVhdGVBUElLZXlSZXNwb25zZRJYCgtMaXN0QVBJS2V5cxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0QVBJS2V5c1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdEFQSUtleXNSZXNwb25zZRJSCglHZXRBUElLZXkSIS5vcmdhbml6YXRpb24udjEuR2V0QVBJS2V5UmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRBUElLZXlSZXNwb25zZRJbCgxSZXZva2VBUElLZXkSJC5vcmdhbml6YXRpb24udjEuUmV2b2tlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5SZXZva2VBUElLZXlSZXNwb25zZRJbCgxEZWxldGVBUElLZXkSJC5vcmdhbml6YXRpb24udjEuRGVsZXRlQVBJS2V5UmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVBUElLZXlSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH',
+    [
+      file_buf_validate_validate,
+      file_google_protobuf_go_features,
+      file_google_protobuf_timestamp,
+      file_v1_common,
+    ],
+  );
 
 /**
  * API key information (without sensitive data)
  *
  * @generated from message organization.v1.APIKey
  */
-export type APIKey = Message<"organization.v1.APIKey"> & {
+export type APIKey = Message<'organization.v1.APIKey'> & {
   /**
    * @generated from field: string id = 10;
    */
@@ -69,7 +89,8 @@ export type APIKey = Message<"organization.v1.APIKey"> & {
  * Describes the message organization.v1.APIKey.
  * Use `create(APIKeySchema)` to create a new message.
  */
-export const APIKeySchema: GenMessage<APIKey> = /*@__PURE__*/
+export const APIKeySchema: GenMessage<APIKey> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 0);
 
 /**
@@ -77,25 +98,27 @@ export const APIKeySchema: GenMessage<APIKey> = /*@__PURE__*/
  *
  * @generated from message organization.v1.CreateAPIKeyRequest
  */
-export type CreateAPIKeyRequest = Message<"organization.v1.CreateAPIKeyRequest"> & {
-  /**
-   * @generated from field: string name = 10;
-   */
-  name: string;
+export type CreateAPIKeyRequest =
+  Message<'organization.v1.CreateAPIKeyRequest'> & {
+    /**
+     * @generated from field: string name = 10;
+     */
+    name: string;
 
-  /**
-   * Time until expiry, empty = never
-   *
-   * @generated from field: string expires_in = 20;
-   */
-  expiresIn: string;
-};
+    /**
+     * Time until expiry, empty = never
+     *
+     * @generated from field: string expires_in = 20;
+     */
+    expiresIn: string;
+  };
 
 /**
  * Describes the message organization.v1.CreateAPIKeyRequest.
  * Use `create(CreateAPIKeyRequestSchema)` to create a new message.
  */
-export const CreateAPIKeyRequestSchema: GenMessage<CreateAPIKeyRequest> = /*@__PURE__*/
+export const CreateAPIKeyRequestSchema: GenMessage<CreateAPIKeyRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 1);
 
 /**
@@ -103,30 +126,32 @@ export const CreateAPIKeyRequestSchema: GenMessage<CreateAPIKeyRequest> = /*@__P
  *
  * @generated from message organization.v1.CreateAPIKeyResponse
  */
-export type CreateAPIKeyResponse = Message<"organization.v1.CreateAPIKeyResponse"> & {
-  /**
-   * @generated from field: string id = 10;
-   */
-  id: string;
+export type CreateAPIKeyResponse =
+  Message<'organization.v1.CreateAPIKeyResponse'> & {
+    /**
+     * @generated from field: string id = 10;
+     */
+    id: string;
 
-  /**
-   * IMPORTANT: Only returned once, must be copied by user
-   *
-   * @generated from field: string token = 20;
-   */
-  token: string;
+    /**
+     * IMPORTANT: Only returned once, must be copied by user
+     *
+     * @generated from field: string token = 20;
+     */
+    token: string;
 
-  /**
-   * @generated from field: string token_prefix = 30;
-   */
-  tokenPrefix: string;
-};
+    /**
+     * @generated from field: string token_prefix = 30;
+     */
+    tokenPrefix: string;
+  };
 
 /**
  * Describes the message organization.v1.CreateAPIKeyResponse.
  * Use `create(CreateAPIKeyResponseSchema)` to create a new message.
  */
-export const CreateAPIKeyResponseSchema: GenMessage<CreateAPIKeyResponse> = /*@__PURE__*/
+export const CreateAPIKeyResponseSchema: GenMessage<CreateAPIKeyResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 2);
 
 /**
@@ -134,14 +159,15 @@ export const CreateAPIKeyResponseSchema: GenMessage<CreateAPIKeyResponse> = /*@_
  *
  * @generated from message organization.v1.ListAPIKeysRequest
  */
-export type ListAPIKeysRequest = Message<"organization.v1.ListAPIKeysRequest"> & {
-};
+export type ListAPIKeysRequest =
+  Message<'organization.v1.ListAPIKeysRequest'> & {};
 
 /**
  * Describes the message organization.v1.ListAPIKeysRequest.
  * Use `create(ListAPIKeysRequestSchema)` to create a new message.
  */
-export const ListAPIKeysRequestSchema: GenMessage<ListAPIKeysRequest> = /*@__PURE__*/
+export const ListAPIKeysRequestSchema: GenMessage<ListAPIKeysRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 3);
 
 /**
@@ -149,18 +175,20 @@ export const ListAPIKeysRequestSchema: GenMessage<ListAPIKeysRequest> = /*@__PUR
  *
  * @generated from message organization.v1.ListAPIKeysResponse
  */
-export type ListAPIKeysResponse = Message<"organization.v1.ListAPIKeysResponse"> & {
-  /**
-   * @generated from field: repeated organization.v1.APIKey api_keys = 10;
-   */
-  apiKeys: APIKey[];
-};
+export type ListAPIKeysResponse =
+  Message<'organization.v1.ListAPIKeysResponse'> & {
+    /**
+     * @generated from field: repeated organization.v1.APIKey api_keys = 10;
+     */
+    apiKeys: APIKey[];
+  };
 
 /**
  * Describes the message organization.v1.ListAPIKeysResponse.
  * Use `create(ListAPIKeysResponseSchema)` to create a new message.
  */
-export const ListAPIKeysResponseSchema: GenMessage<ListAPIKeysResponse> = /*@__PURE__*/
+export const ListAPIKeysResponseSchema: GenMessage<ListAPIKeysResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 4);
 
 /**
@@ -168,7 +196,7 @@ export const ListAPIKeysResponseSchema: GenMessage<ListAPIKeysResponse> = /*@__P
  *
  * @generated from message organization.v1.GetAPIKeyRequest
  */
-export type GetAPIKeyRequest = Message<"organization.v1.GetAPIKeyRequest"> & {
+export type GetAPIKeyRequest = Message<'organization.v1.GetAPIKeyRequest'> & {
   /**
    * @generated from field: string api_key_id = 10;
    */
@@ -179,7 +207,8 @@ export type GetAPIKeyRequest = Message<"organization.v1.GetAPIKeyRequest"> & {
  * Describes the message organization.v1.GetAPIKeyRequest.
  * Use `create(GetAPIKeyRequestSchema)` to create a new message.
  */
-export const GetAPIKeyRequestSchema: GenMessage<GetAPIKeyRequest> = /*@__PURE__*/
+export const GetAPIKeyRequestSchema: GenMessage<GetAPIKeyRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 5);
 
 /**
@@ -187,7 +216,7 @@ export const GetAPIKeyRequestSchema: GenMessage<GetAPIKeyRequest> = /*@__PURE__*
  *
  * @generated from message organization.v1.GetAPIKeyResponse
  */
-export type GetAPIKeyResponse = Message<"organization.v1.GetAPIKeyResponse"> & {
+export type GetAPIKeyResponse = Message<'organization.v1.GetAPIKeyResponse'> & {
   /**
    * @generated from field: organization.v1.APIKey api_key = 10;
    */
@@ -198,7 +227,8 @@ export type GetAPIKeyResponse = Message<"organization.v1.GetAPIKeyResponse"> & {
  * Describes the message organization.v1.GetAPIKeyResponse.
  * Use `create(GetAPIKeyResponseSchema)` to create a new message.
  */
-export const GetAPIKeyResponseSchema: GenMessage<GetAPIKeyResponse> = /*@__PURE__*/
+export const GetAPIKeyResponseSchema: GenMessage<GetAPIKeyResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 6);
 
 /**
@@ -206,18 +236,20 @@ export const GetAPIKeyResponseSchema: GenMessage<GetAPIKeyResponse> = /*@__PURE_
  *
  * @generated from message organization.v1.RevokeAPIKeyRequest
  */
-export type RevokeAPIKeyRequest = Message<"organization.v1.RevokeAPIKeyRequest"> & {
-  /**
-   * @generated from field: string api_key_id = 10;
-   */
-  apiKeyId: string;
-};
+export type RevokeAPIKeyRequest =
+  Message<'organization.v1.RevokeAPIKeyRequest'> & {
+    /**
+     * @generated from field: string api_key_id = 10;
+     */
+    apiKeyId: string;
+  };
 
 /**
  * Describes the message organization.v1.RevokeAPIKeyRequest.
  * Use `create(RevokeAPIKeyRequestSchema)` to create a new message.
  */
-export const RevokeAPIKeyRequestSchema: GenMessage<RevokeAPIKeyRequest> = /*@__PURE__*/
+export const RevokeAPIKeyRequestSchema: GenMessage<RevokeAPIKeyRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 7);
 
 /**
@@ -225,14 +257,15 @@ export const RevokeAPIKeyRequestSchema: GenMessage<RevokeAPIKeyRequest> = /*@__P
  *
  * @generated from message organization.v1.RevokeAPIKeyResponse
  */
-export type RevokeAPIKeyResponse = Message<"organization.v1.RevokeAPIKeyResponse"> & {
-};
+export type RevokeAPIKeyResponse =
+  Message<'organization.v1.RevokeAPIKeyResponse'> & {};
 
 /**
  * Describes the message organization.v1.RevokeAPIKeyResponse.
  * Use `create(RevokeAPIKeyResponseSchema)` to create a new message.
  */
-export const RevokeAPIKeyResponseSchema: GenMessage<RevokeAPIKeyResponse> = /*@__PURE__*/
+export const RevokeAPIKeyResponseSchema: GenMessage<RevokeAPIKeyResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 8);
 
 /**
@@ -240,18 +273,20 @@ export const RevokeAPIKeyResponseSchema: GenMessage<RevokeAPIKeyResponse> = /*@_
  *
  * @generated from message organization.v1.DeleteAPIKeyRequest
  */
-export type DeleteAPIKeyRequest = Message<"organization.v1.DeleteAPIKeyRequest"> & {
-  /**
-   * @generated from field: string api_key_id = 10;
-   */
-  apiKeyId: string;
-};
+export type DeleteAPIKeyRequest =
+  Message<'organization.v1.DeleteAPIKeyRequest'> & {
+    /**
+     * @generated from field: string api_key_id = 10;
+     */
+    apiKeyId: string;
+  };
 
 /**
  * Describes the message organization.v1.DeleteAPIKeyRequest.
  * Use `create(DeleteAPIKeyRequestSchema)` to create a new message.
  */
-export const DeleteAPIKeyRequestSchema: GenMessage<DeleteAPIKeyRequest> = /*@__PURE__*/
+export const DeleteAPIKeyRequestSchema: GenMessage<DeleteAPIKeyRequest> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 9);
 
 /**
@@ -259,14 +294,15 @@ export const DeleteAPIKeyRequestSchema: GenMessage<DeleteAPIKeyRequest> = /*@__P
  *
  * @generated from message organization.v1.DeleteAPIKeyResponse
  */
-export type DeleteAPIKeyResponse = Message<"organization.v1.DeleteAPIKeyResponse"> & {
-};
+export type DeleteAPIKeyResponse =
+  Message<'organization.v1.DeleteAPIKeyResponse'> & {};
 
 /**
  * Describes the message organization.v1.DeleteAPIKeyResponse.
  * Use `create(DeleteAPIKeyResponseSchema)` to create a new message.
  */
-export const DeleteAPIKeyResponseSchema: GenMessage<DeleteAPIKeyResponse> = /*@__PURE__*/
+export const DeleteAPIKeyResponseSchema: GenMessage<DeleteAPIKeyResponse> =
+  /*@__PURE__*/
   messageDesc(file_v1_apikey, 10);
 
 /**
@@ -281,50 +317,48 @@ export const APIKeyService: GenService<{
    * @generated from rpc organization.v1.APIKeyService.CreateAPIKey
    */
   createAPIKey: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof CreateAPIKeyRequestSchema;
     output: typeof CreateAPIKeyResponseSchema;
-  },
+  };
   /**
    * List all API keys for the current organization
    *
    * @generated from rpc organization.v1.APIKeyService.ListAPIKeys
    */
   listAPIKeys: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof ListAPIKeysRequestSchema;
     output: typeof ListAPIKeysResponseSchema;
-  },
+  };
   /**
    * Get a specific API key by ID
    *
    * @generated from rpc organization.v1.APIKeyService.GetAPIKey
    */
   getAPIKey: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof GetAPIKeyRequestSchema;
     output: typeof GetAPIKeyResponseSchema;
-  },
+  };
   /**
    * Revoke an API key
    *
    * @generated from rpc organization.v1.APIKeyService.RevokeAPIKey
    */
   revokeAPIKey: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof RevokeAPIKeyRequestSchema;
     output: typeof RevokeAPIKeyResponseSchema;
-  },
+  };
   /**
    * Delete an API key
    *
    * @generated from rpc organization.v1.APIKeyService.DeleteAPIKey
    */
   deleteAPIKey: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof DeleteAPIKeyRequestSchema;
     output: typeof DeleteAPIKeyResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_v1_apikey, 0);
-
+  };
+}> = /*@__PURE__*/ serviceDesc(file_v1_apikey, 0);

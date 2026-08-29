@@ -41,7 +41,10 @@ const opensSheet =
 
 /** The three that belong to no page at all: they open over the home pane. */
 const opensOverlay = (sheet: 'profile' | 'apiKeys' | 'newProject'): CanActivateFn =>
-  opensSheet((overlays) => overlays[sheet].set(true), () => '/');
+  opensSheet(
+    (overlays) => overlays[sheet].set(true),
+    () => '/',
+  );
 
 /**
  * The address names the organization, so the console follows the address rather
@@ -133,7 +136,12 @@ const routes: Routes = [
         children: [
           {
             path: 'new',
-            canActivate: [opensSheet((o) => o.newCluster.set(true), () => '/clusters')],
+            canActivate: [
+              opensSheet(
+                (o) => o.newCluster.set(true),
+                () => '/clusters',
+              ),
+            ],
             children: [],
           },
           { path: 'new/**', redirectTo: 'new' },

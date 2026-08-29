@@ -170,7 +170,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   // rather than as a legitimately empty board.
   readonly loadError = this.store.loadError;
 
-
   // The signed-in user's roster entry, for the note composer's avatar. Null when
   // the caller has no directory entry — GetCurrentUser answers NotFound then,
   // which is an ordinary provisioning state and not worth a toast here: the
@@ -335,7 +334,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   };
 
   readonly kanbanColumns: TaskStatusLabel[] = ['To do', 'Doing', 'Done'];
-
 
   /** The picker offers all five; the menu leaves None out. */
   readonly menuPriorities: TaskPriorityLabel[] = ['Urgent', 'High', 'Medium', 'Low'];
@@ -718,8 +716,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     if (!on) this.selectedTasks.set(new Set());
   }
 
-
-
   /** The tasks that belong in this view right now. */
   private readonly matchingTasks = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -823,12 +819,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return selected === 0 ? 'Nothing selected' : `${selected} selected`;
   });
 
-
   readonly kanbanSheetEl = viewChild<ElementRef<NlddSheet>>('kanbanSheetEl');
 
-
   readonly technicianSheetEl = viewChild<ElementRef<NlddSheet>>('technicianSheetEl');
-
 
   readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
 
@@ -917,23 +910,15 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    */
   readonly knownTags = this.store.knownTags;
 
-
   /** The name the combo box shows for whoever it is for. */
   assigneeName(task: TaskData): string {
     return this.store.assigneeName(task);
   }
 
-
   /** Whose task this is, if not yours. Nobody, or you, both read as yours. */
   somebodyElses(task: TaskData): boolean {
     return this.store.somebodyElses(task);
   }
-
-
-
-
-
-
 
   openKanban(): void {
     this.kanbanSheetEl()?.nativeElement.show();
@@ -1003,23 +988,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.detailTaskId.set(null);
   }
 
-
-
-
-
-
-
   private loadRacks(): void {
     this.store.loadRacks();
   }
 
-
   closeTechnicianView(): void {
     this.technicianSheetEl()?.nativeElement.hide();
   }
-
-
-
 
   openBulkDeleteDialog(): void {
     this.bulkDeleteDialogEl()?.nativeElement.show();
@@ -1107,8 +1082,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   openNewTask(): void {
     this.overlays.newTask();
   }
-
-
 
   // True when a task carries an assignee that the roster has no entry for —
   // typically someone soft-deleted since the board loaded. Rendering that as

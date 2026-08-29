@@ -335,18 +335,20 @@
       <nldd-box background="critical">
         <nldd-container padding="16">
           <nldd-title size="4">
-            <h2>Delete this data center</h2>
+            <h2>Delete {{ dc.name }}</h2>
           </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            Deleting {{ dc.name }} removes its rooms, rack rows and racks as well. This cannot be
-            undone.
-          </nldd-text>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Deleting this data center removes its rooms, rack rows and racks as well. This cannot
+              be undone.
+            </p>
+          </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
             variant="destructive"
             text="Delete data center"
-            start-icon="trash"
+            start-icon="delete"
             (click)="openDeleteDc(dc)"
           ></nldd-button>
         </nldd-container>

@@ -122,7 +122,6 @@ const RACK_NOTES: Record<string, RackNotes> = {
   },
 };
 
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function findFirstFreeSlot(rack: Rack, uSize: number): number | null {

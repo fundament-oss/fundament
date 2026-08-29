@@ -6,13 +6,7 @@ import {
   input,
   signal,
 } from '@angular/core';
-import {
-  Cable,
-  CableColor,
-  CableType,
-  CABLE_COLOR_HEX,
-  cableTypeLabel,
-} from '../cable.model';
+import { Cable, CableColor, CableType, CABLE_COLOR_HEX, cableTypeLabel } from '../cable.model';
 import type { SiteOption } from '../patch-mapping';
 
 /** Above this many locations a row of buttons stops being readable. */
@@ -181,8 +175,6 @@ export default class ShoppingListComponent {
       ? 'Nothing is planned anywhere, so there is nothing to order.'
       : `Nothing is planned in ${this.scopeLabel()}, so there is nothing to order.`,
   );
-
-
 
   readonly groupKey = groupKey;
 

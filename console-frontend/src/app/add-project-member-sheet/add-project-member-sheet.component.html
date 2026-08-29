@@ -56,6 +56,7 @@
               accessible-label="Member"
               [attr.text]="selectedUserName()"
               [attr.invalid]="userFieldInvalid() ? '' : null"
+              unmet="project-member-user-error"
               (change)="onUserChange($event)"
             >
               <nldd-menu accessible-label="Organization members">
@@ -71,11 +72,11 @@
               The person must first be added to the organization by an organization admin before
               they can become a project member.
             </nldd-form-field-help-text>
-            <nldd-form-field-error-text id="project-member-user-error">
-              @if (userFieldInvalid()) {
-                Please select a member.
-              }
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="project-member-user-error"
+                >Please select a member.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field label="Permission">
             <nldd-list
@@ -184,15 +185,17 @@
               <nldd-text-field
                 [value]="newNamespaceName()"
                 [invalid]="newNamespaceInvalid()"
-                error-message="add-member-new-namespace-error"
+                unmet="add-member-new-namespace-error"
                 (input)="newNamespaceName.set($any($event.target).value)"
               ></nldd-text-field>
               <nldd-form-field-help-text>
                 Lowercase letters, numbers and hyphens; it will be created in this project.
               </nldd-form-field-help-text>
-              <nldd-form-field-error-text id="add-member-new-namespace-error">
-                {{ newNamespaceError() }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item id="add-member-new-namespace-error">{{
+                  newNamespaceError()
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
           }
           <!-- Only once there is a namespace to hold them: a role on nothing is

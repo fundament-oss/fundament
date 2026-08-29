@@ -216,18 +216,20 @@
       <nldd-box background="critical">
         <nldd-container padding="16">
           <nldd-title size="4">
-            <h2>Delete this asset</h2>
+            <h2>Delete {{ a.assetTag }}</h2>
           </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            Deleting {{ a.assetTag }} removes it and everything recorded about it. This cannot be
-            undone.
-          </nldd-text>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Deleting this asset removes it and everything recorded about it. This cannot be
+              undone.
+            </p>
+          </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
             variant="destructive"
             text="Delete asset"
-            start-icon="trash"
+            start-icon="delete"
             (click)="openDeleteAsset()"
           ></nldd-button>
         </nldd-container>

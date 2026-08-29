@@ -127,7 +127,6 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
    *  it those cables sit behind none of the three. */
   readonly filterUnspecified = computed(() => this.statusView() === 'unspecified');
 
-
   readonly filterType = computed<CableType | ''>(
     () => this.CABLE_TYPES.find((t) => t === this.typeView()) ?? '',
   );
@@ -424,7 +423,6 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
    */
   readonly runLabel = (cable: Cable): string =>
     `${cable.aSide.deviceName} (${cable.aSide.portName}) → ${cable.bSide.deviceName} (${cable.bSide.portName})`;
-
 
   readonly CABLE_STATUSES = CABLE_STATUSES;
 

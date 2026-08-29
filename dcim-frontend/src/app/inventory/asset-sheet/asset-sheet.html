@@ -23,6 +23,7 @@
             [attr.readonly]="form()?.id ? '' : null"
             [attr.autofocus]="form()?.id ? null : ''"
             [attr.invalid]="isFieldInvalid('device_catalog_id') ? '' : null"
+            unmet="error-device"
             (change)="assetDeviceId.set($any($event).detail.value)"
           >
             <nldd-menu>
@@ -32,9 +33,11 @@
             </nldd-menu>
           </nldd-combo-box>
 
-          <nldd-form-field-error-text id="error-device">{{
-            fieldError('device_catalog_id')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-device">
+              {{ fieldError('device_catalog_id') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Asset tag">
           <nldd-text-field
@@ -43,11 +46,13 @@
             [attr.value]="form()?.assetTag ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
-            error-message="error-asset-tag"
+            unmet="error-asset-tag"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-asset-tag">{{
-            fieldError('asset_tag')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-asset-tag">
+              {{ fieldError('asset_tag') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Six states, all of them worth seeing: which one an asset is in is
              the thing this form says, so it is not worth hiding behind a click. -->
@@ -57,11 +62,13 @@
             [attr.value]="form()?.serialNumber ?? ''"
             (keydown.enter)="save()"
             [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
-            error-message="error-asset-serial"
+            unmet="error-asset-serial"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-asset-serial">{{
-            fieldError('serial_number')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-asset-serial">
+              {{ fieldError('serial_number') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Warranty expiry">
           <nldd-date-field

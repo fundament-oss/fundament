@@ -222,17 +222,19 @@
       <nldd-box background="critical">
         <nldd-container padding="16">
           <nldd-title size="4">
-            <h2>Delete this product</h2>
+            <h2>Delete {{ e.model }}</h2>
           </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            Deleting {{ e.model }} removes its port definitions as well. This cannot be undone.
-          </nldd-text>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Deleting this product removes its port definitions as well. This cannot be undone.
+            </p>
+          </nldd-rich-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
             variant="destructive"
             text="Delete product"
-            start-icon="trash"
+            start-icon="delete"
             (click)="openDeleteEntry()"
           ></nldd-button>
         </nldd-container>
@@ -291,16 +293,23 @@
             [attr.value]="editPortDef()?.name ?? ''"
             (keydown.enter)="savePortDef()"
             [attr.invalid]="isFieldInvalid('name') ? '' : null"
-            error-message="error-port-name"
+            unmet="error-port-name"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-port-name">{{
-            fieldError('name')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-name">
+              {{ fieldError('name') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <!-- Six types and three directions, all of them short: buttons show the
              whole choice where a dropdown hides it behind a click. -->
         <nldd-form-field label="Port type">
-          <nldd-toggle-button-group type="radio" accessible-label="Port type">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Port type"
+            [attr.invalid]="isFieldInvalid('port_type') ? '' : null"
+            unmet="error-port-type"
+          >
             @for (t of PORT_TYPES; track t.value) {
               <nldd-toggle-button
                 [attr.value]="t.value"
@@ -310,12 +319,19 @@
               ></nldd-toggle-button>
             }
           </nldd-toggle-button-group>
-          <nldd-form-field-error-text id="error-port-type">{{
-            fieldError('port_type')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-type">
+              {{ fieldError('port_type') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Direction">
-          <nldd-toggle-button-group type="radio" accessible-label="Direction">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Direction"
+            [attr.invalid]="isFieldInvalid('direction') ? '' : null"
+            unmet="error-port-direction"
+          >
             @for (d of PORT_DIRECTIONS; track d.value) {
               <nldd-toggle-button
                 [attr.value]="d.value"
@@ -325,9 +341,11 @@
               ></nldd-toggle-button>
             }
           </nldd-toggle-button-group>
-          <nldd-form-field-error-text id="error-port-direction">{{
-            fieldError('direction')
-          }}</nldd-form-field-error-text>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-direction">
+              {{ fieldError('direction') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
         <nldd-form-field label="Media type" [optional]="true">
           <nldd-text-field

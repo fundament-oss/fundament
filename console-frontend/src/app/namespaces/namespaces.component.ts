@@ -18,10 +18,7 @@ import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import { OverlayService } from '../overlay.service';
 import { OrganizationDataService } from '../organization-data.service';
-import {
-  ListProjectNamespacesRequestSchema,
-  Namespace,
-} from '../../generated/v1/namespace_pb';
+import { ListProjectNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import { mockBindingsFor } from '../utils/mock-role-bindings';
@@ -31,11 +28,7 @@ import type { ProjectMember } from '../../generated/v1/project_pb';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [
-    ReactiveFormsModule,
-    DialogSyncDirective,
-    RouterOutlet,
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective, RouterOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -156,5 +149,4 @@ export default class NamespacesComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
-
 }

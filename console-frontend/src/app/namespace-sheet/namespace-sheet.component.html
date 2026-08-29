@@ -60,7 +60,7 @@
                   accessible-label="Members"
                   [attr.values]="draftMemberIds().join(',')"
                   [attr.invalid]="memberSelectionInvalid() ? '' : null"
-                  error-message="namespace-member-error"
+                  unmet="namespace-member-error"
                   (change)="onMembersChange($event)"
                 >
                   <nldd-menu accessible-label="Project members">
@@ -72,11 +72,13 @@
                     }
                   </nldd-menu>
                 </nldd-token-field>
-                <nldd-form-field-error-text id="namespace-member-error">
-                  @if (memberSelectionInvalid()) {
-                    Pick at least one member.
-                  }
-                </nldd-form-field-error-text>
+                <nldd-validation-list>
+                  <nldd-validation-item id="namespace-member-error">
+                    @if (memberSelectionInvalid()) {
+                      Pick at least one member.
+                    }
+                  </nldd-validation-item>
+                </nldd-validation-list>
               }
             </nldd-form-field>
           }
@@ -274,7 +276,7 @@
         <nldd-box background="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h2>Delete namespace</h2>
+              <h2>Delete {{ namespaceName() }}</h2>
             </nldd-title>
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
@@ -284,7 +286,8 @@
             <nldd-button
               type="button"
               (click)="showDeleteModal.set(true)"
-              [attr.text]="'Delete ' + namespaceName()"
+              text="Delete namespace"
+              start-icon="delete"
               variant="destructive"
             ></nldd-button>
           </nldd-container>

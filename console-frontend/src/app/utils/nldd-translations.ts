@@ -63,9 +63,11 @@ const datePickerTranslations = {
   'components.date-picker.range-end-lowercase-label': 'end of the period',
   'components.date-picker.in-range-lowercase-label': 'in the period',
   'components.date-picker.date-selected-text': 'Selected: {date}.',
-  'components.date-picker.range-anchor-text': 'Selected: {date}. Now choose a second date, earlier or later.',
+  'components.date-picker.range-anchor-text':
+    'Selected: {date}. Now choose a second date, earlier or later.',
   'components.date-picker.range-selected-text': 'Selected: {start} through {end}.',
-  'components.date-picker.range-blocked-text': 'That period contains a date that is unavailable. Choose another.',
+  'components.date-picker.range-blocked-text':
+    'That period contains a date that is unavailable. Choose another.',
 };
 
 export default datePickerTranslations;

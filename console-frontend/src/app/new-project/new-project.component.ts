@@ -56,6 +56,10 @@ export default class NewProjectComponent implements OnInit {
 
   private organizationDataService = inject(OrganizationDataService);
 
+  /** Whether the form has been submitted at least once. Before that, a field
+   * that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
+
   errorMessage = signal<string | null>(null);
 
   isSubmitting = signal<boolean>(false);
@@ -115,6 +119,7 @@ export default class NewProjectComponent implements OnInit {
 
   async onSubmit(event?: Event) {
     event?.preventDefault();
+    this.formSubmitted.set(true);
 
     if (this.projectForm.invalid) {
       this.projectForm.markAllAsTouched();
@@ -134,7 +139,9 @@ export default class NewProjectComponent implements OnInit {
         signal: this.idempotency.reset(),
       });
 
-      this.notificationService.success(`Project '${this.projectForm.value.name}' created successfully`);
+      this.notificationService.success(
+        `Project '${this.projectForm.value.name}' created successfully`,
+      );
 
       // Reload project data to update the selector modal and breadcrumbs
       await this.organizationDataService.reloadProjectsAndNamespaces();

@@ -246,12 +246,14 @@
               autofocus
               [attr.value]="room.name ?? ''"
               [attr.invalid]="isRoomFieldInvalid('name') ? '' : null"
-              error-message="error-room-name"
+              unmet="error-room-name"
               (keydown.enter)="saveRoom()"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="error-room-name">
-              {{ roomFieldError('name') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-room-name">{{
+                roomFieldError('name')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field label="Floor number">
             <nldd-number-field
@@ -261,12 +263,14 @@
               max="99"
               full-width
               [attr.invalid]="isRoomFieldInvalid('floor') ? '' : null"
-              error-message="error-room-floor"
+              unmet="error-room-floor"
               (keydown.enter)="saveRoom()"
             ></nldd-number-field>
-            <nldd-form-field-error-text id="error-room-floor">
-              {{ roomFieldError('floor') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-room-floor">{{
+                roomFieldError('floor')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button
@@ -343,12 +347,14 @@
               autofocus
               [attr.value]="row.name ?? ''"
               [attr.invalid]="isRowFieldInvalid('name') ? '' : null"
-              error-message="error-row-name"
+              unmet="error-row-name"
               (keydown.enter)="saveRackRow()"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="error-row-name">
-              {{ rowFieldError('name') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-row-name">{{
+                rowFieldError('name')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <!-- Two short number fields side by side. A collection rather than a
                grid of our own: the design system already knows what a row of
@@ -361,12 +367,14 @@
                 min="1"
                 full-width
                 [attr.invalid]="isRowFieldInvalid('position_x') ? '' : null"
-                error-message="error-row-x"
+                unmet="error-row-x"
                 (keydown.enter)="saveRackRow()"
               ></nldd-number-field>
-              <nldd-form-field-error-text id="error-row-x">
-                {{ rowFieldError('position_x') }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item id="error-row-x">{{
+                  rowFieldError('position_x')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-field label="Position Y">
               <nldd-number-field
@@ -375,12 +383,14 @@
                 min="1"
                 full-width
                 [attr.invalid]="isRowFieldInvalid('position_y') ? '' : null"
-                error-message="error-row-y"
+                unmet="error-row-y"
                 (keydown.enter)="saveRackRow()"
               ></nldd-number-field>
-              <nldd-form-field-error-text id="error-row-y">
-                {{ rowFieldError('position_y') }}
-              </nldd-form-field-error-text>
+              <nldd-validation-list>
+                <nldd-validation-item id="error-row-y">{{
+                  rowFieldError('position_y')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
           </nldd-collection>
           <nldd-form-actions>
@@ -474,12 +484,14 @@
               autofocus
               [attr.value]="rack.name ?? ''"
               [attr.invalid]="isRackFieldInvalid('name') ? '' : null"
-              error-message="error-rack-name"
+              unmet="error-rack-name"
               (keydown.enter)="saveRack()"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="error-rack-name">
-              {{ rackFieldError('name') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-name">{{
+                rackFieldError('name')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field label="Height (U)">
             <nldd-number-field
@@ -489,12 +501,14 @@
               max="60"
               full-width
               [attr.invalid]="isRackFieldInvalid('total_units') ? '' : null"
-              error-message="error-rack-totalu"
+              unmet="error-rack-totalu"
               (keydown.enter)="saveRack()"
             ></nldd-number-field>
-            <nldd-form-field-error-text id="error-rack-totalu">
-              {{ rackFieldError('total_units') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-totalu">{{
+                rackFieldError('total_units')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button

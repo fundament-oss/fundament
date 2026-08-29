@@ -109,7 +109,7 @@
         <nldd-box background="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h3>Danger zone</h3>
+              <h3>Delete {{ projectLabel() }}</h3>
             </nldd-title>
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
@@ -118,7 +118,8 @@
             <nldd-spacer size="16"></nldd-spacer>
             <nldd-button
               (click)="showDeleteModal.set(true)"
-              [attr.text]="'Delete ' + projectLabel()"
+              text="Delete project"
+              start-icon="delete"
               variant="destructive"
             ></nldd-button>
           </nldd-container>

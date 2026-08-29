@@ -21,7 +21,6 @@ function base64UrlEncode(str: string): string {
     .replace(/=+$/, '');
 }
 
-
 Given(
   'I am logged in as {string} with password {string}',
   async function (this: ICustomWorld, email: string, password: string) {
@@ -29,7 +28,7 @@ Given(
     await loginPage.goto();
     await loginPage.login(email, password);
     await loginPage.waitForLoginSuccess();
-  }
+  },
 );
 
 Given('my session is active', async function (this: ICustomWorld) {
@@ -49,7 +48,7 @@ When(
   async function (this: ICustomWorld) {
     await this.page!.goto('/organization');
     await this.page!.waitForLoadState('networkidle');
-  }
+  },
 );
 
 When('I trigger a token refresh', async function (this: ICustomWorld) {
@@ -113,9 +112,9 @@ Then(
     await expect(orgIdValue).toBeVisible();
     const idText = await orgIdValue.textContent();
     expect(idText?.trim()).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
-  }
+  },
 );
 
 Then(
@@ -124,7 +123,7 @@ Then(
     // Check that no error message is visible
     const errorMessage = this.page!.locator('.bg-danger-50, .bg-danger-950');
     await expect(errorMessage).not.toBeVisible();
-  }
+  },
 );
 
 Then('I should remain authenticated', async function (this: ICustomWorld) {
@@ -147,7 +146,7 @@ Then(
     // Dashboard content should be visible
     const heading = this.page!.locator('h1:has-text("Clusters")');
     await expect(heading).toBeVisible({ timeout: 10000 });
-  }
+  },
 );
 
 Then(
@@ -155,7 +154,7 @@ Then(
   async function (this: ICustomWorld) {
     await this.page!.waitForURL('**/login', { timeout: 10000 });
     expect(this.page!.url()).toContain('/login');
-  }
+  },
 );
 
 Then('the auth cookie should be cleared', async function (this: ICustomWorld) {
@@ -178,7 +177,7 @@ Then(
     // Should be redirected to login
     await this.page!.waitForURL('**/login', { timeout: 10000 });
     expect(this.page!.url()).toContain('/login');
-  }
+  },
 );
 
 // JWT Tampering Test Steps
@@ -209,7 +208,7 @@ When(
     // Re-encode with original signature (which won't match)
     const tamperedToken = `${parts[0]}.${base64UrlEncode(JSON.stringify(payload))}.${parts[2]}`;
     this.testData.tamperedToken = tamperedToken;
-  }
+  },
 );
 
 When('I corrupt the JWT signature', async function (this: ICustomWorld) {
@@ -235,7 +234,7 @@ When(
     // Create token with no signature
     const tamperedToken = `${base64UrlEncode(JSON.stringify(noneHeader))}.${parts[1]}.`;
     this.testData.tamperedToken = tamperedToken;
-  }
+  },
 );
 
 When('I remove the JWT signature', async function (this: ICustomWorld) {
@@ -253,14 +252,15 @@ When(
     this.testData.tamperedToken = 'not-a-valid-jwt-token';
     this.testData.cookieDomain = 'fundament.localhost';
     this.testData.cookiePath = '/';
-  }
+  },
 );
 
 When(
   'I make an API request with the tampered token',
   async function (this: ICustomWorld) {
     const tamperedToken = this.testData.tamperedToken as string;
-    const domain = (this.testData.cookieDomain as string) || 'fundament.localhost';
+    const domain =
+      (this.testData.cookieDomain as string) || 'fundament.localhost';
     const path = (this.testData.cookiePath as string) || '/';
 
     // Clear existing cookies and set the tampered one
@@ -276,18 +276,22 @@ When(
 
     // Make API request via the organization API
     const orgApiUrl =
-      process.env.ORGANIZATION_API_URL || 'https://organization.fundament.localhost:8443';
+      process.env.ORGANIZATION_API_URL ||
+      'https://organization.fundament.localhost:8443';
 
     const response = await this.page!.evaluate(async (url: string) => {
       try {
-        const res = await fetch(`${url}/organization.v1.OrganizationService/GetOrganization`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const res = await fetch(
+          `${url}/organization.v1.OrganizationService/GetOrganization`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({}),
           },
-          credentials: 'include',
-          body: JSON.stringify({}),
-        });
+        );
         return { status: res.status, ok: res.ok };
       } catch (e) {
         return { status: 0, ok: false, error: String(e) };
@@ -295,16 +299,19 @@ When(
     }, orgApiUrl);
 
     this.testData.apiResponse = response;
-  }
+  },
 );
 
 Then(
   'the API request should be rejected with an authentication error',
   async function (this: ICustomWorld) {
-    const response = this.testData.apiResponse as { status: number; ok: boolean };
+    const response = this.testData.apiResponse as {
+      status: number;
+      ok: boolean;
+    };
 
     // The request should fail with 401 Unauthorized
     expect(response.ok).toBe(false);
     expect(response.status).toBe(401);
-  }
+  },
 );

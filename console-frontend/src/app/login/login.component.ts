@@ -35,6 +35,10 @@ export default class LoginComponent implements OnInit {
 
   loginForm!: FormGroup;
 
+  /** Whether the form has been submitted at least once. Before that, a field
+   * that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
+
   error = signal<string | null>(null);
 
   isLoading = signal(false);
@@ -86,6 +90,7 @@ export default class LoginComponent implements OnInit {
   async onSubmit(event?: Event) {
     // Prevent the native form submission triggered by the submit button.
     event?.preventDefault();
+    this.formSubmitted.set(true);
 
     if (this.isLoading()) return;
     if (this.loginForm.invalid) {

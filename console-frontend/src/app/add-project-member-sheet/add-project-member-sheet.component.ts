@@ -236,7 +236,9 @@ export default class AddProjectMemberSheetComponent {
       );
       this.closed.emit();
       await this.grantDraftAccess(userId);
-      this.notificationService.success(`'${this.selectedUserName()}' added to ${this.projectName()}`);
+      this.notificationService.success(
+        `'${this.selectedUserName()}' added to ${this.projectName()}`,
+      );
       // The member list is a page of its own, and it may well be the page behind
       // this sheet, so it hears about the new member from here.
       this.organizationData.membersChanged.update((count) => count + 1);

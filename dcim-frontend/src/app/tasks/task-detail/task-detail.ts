@@ -306,8 +306,6 @@ export default class TaskDetailComponent {
     };
   }
 
-
-
   /** The round this task is walked in, if it is in one at all. */
   roundOf(task: Task): Round | null {
     return this.roundsService.roundOf().get(task.id) ?? null;

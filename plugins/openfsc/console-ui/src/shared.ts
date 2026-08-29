@@ -5,10 +5,17 @@ import type { Condition, FSCInstallation, GatewayStatus } from './types.ts';
 
 // Resolves once `el` has loaded (or failed to). Both <link> and <script> fire
 // load/error, so one helper covers the pair.
-function whenSettled(el: HTMLLinkElement | HTMLScriptElement, what: string): Promise<void> {
+function whenSettled(
+  el: HTMLLinkElement | HTMLScriptElement,
+  what: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     el.addEventListener('load', () => resolve(), { once: true });
-    el.addEventListener('error', () => reject(new Error(`failed to load ${what}`)), { once: true });
+    el.addEventListener(
+      'error',
+      () => reject(new Error(`failed to load ${what}`)),
+      { once: true },
+    );
   });
 }
 
@@ -129,10 +136,13 @@ function formatScalar(v: unknown): string {
 }
 
 // Renders a key/value definition list for the given map. Returns HTML.
-export function renderDefList(obj: Record<string, unknown> | null | undefined): string {
+export function renderDefList(
+  obj: Record<string, unknown> | null | undefined,
+): string {
   if (!obj || typeof obj !== 'object') return '';
   const rows = Object.entries(obj).map(
-    ([k, v]) => `<dt class="plugin-text">${escapeHtml(k)}</dt><dd>${escapeHtml(formatScalar(v))}</dd>`,
+    ([k, v]) =>
+      `<dt class="plugin-text">${escapeHtml(k)}</dt><dd>${escapeHtml(formatScalar(v))}</dd>`,
   );
   return `<dl class="plugin-deflist">${rows.join('')}</dl>`;
 }
@@ -151,7 +161,12 @@ function renderTable<T>(
   }
   const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
   const body = entries
-    .map((e) => `<tr>${cells(e).map((c) => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`)
+    .map(
+      (e) =>
+        `<tr>${cells(e)
+          .map((c) => `<td>${escapeHtml(c)}</td>`)
+          .join('')}</tr>`,
+    )
     .join('');
   return `
     <table class="plugin-table">
@@ -164,14 +179,22 @@ export function renderConditionsTable(item: FSCInstallation): string {
   return renderTable<Condition>(
     item?.status?.conditions,
     ['Type', 'Status', 'Reason', 'Message', 'Age'],
-    (c) => [c.type, c.status, c.reason ?? '', c.message ?? '', formatAge(c.lastTransitionTime)],
+    (c) => [
+      c.type,
+      c.status,
+      c.reason ?? '',
+      c.message ?? '',
+      formatAge(c.lastTransitionTime),
+    ],
     'No conditions reported.',
   );
 }
 
 // Renders the per-gateway entries of status.inways / status.outways: the declared
 // gateways with their registration state.
-export function renderGatewayTable(entries: GatewayStatus[] | undefined): string {
+export function renderGatewayTable(
+  entries: GatewayStatus[] | undefined,
+): string {
   return renderTable<GatewayStatus>(
     entries,
     ['Name', 'Phase', 'URL', 'Message'],

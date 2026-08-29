@@ -155,7 +155,8 @@ export default class RoundsService {
     });
     const counts: Record<string, { done: number; total: number }> = {};
     settled.forEach((r) => {
-      if (r.status === 'fulfilled') counts[r.value.id] = { done: r.value.done, total: r.value.total };
+      if (r.status === 'fulfilled')
+        counts[r.value.id] = { done: r.value.done, total: r.value.total };
     });
     this.stepCounts.set(counts);
   }

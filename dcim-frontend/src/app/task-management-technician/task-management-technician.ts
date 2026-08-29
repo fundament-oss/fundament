@@ -120,7 +120,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    * task you were looking at. The view drops its own top navigation there: two
    * bars stacked say the same thing twice, and the way back is the sheet.
    */
-  readonly embedded = input(false, { transform: (v: boolean | string) => v !== false && v !== 'false' });
+  readonly embedded = input(false, {
+    transform: (v: boolean | string) => v !== false && v !== 'false',
+  });
 
   /**
    * The round to show: one person, one data center, one day. Without it the
@@ -135,7 +137,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    * written, here or in the browser's own store. Stepping through to read is
    * still allowed: that changes what you look at, not what is there.
    */
-  readonly readOnly = input(false, { transform: (v: boolean | string) => v !== false && v !== 'false' });
+  readonly readOnly = input(false, {
+    transform: (v: boolean | string) => v !== false && v !== 'false',
+  });
 
   private sanitizer = inject(DomSanitizer);
 
@@ -459,7 +463,13 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    * work nobody flagged.
    */
   private async withSteps(
-    sources: { id: string; title: string; priority: TaskPriorityLabel; tags: string[]; location: string }[],
+    sources: {
+      id: string;
+      title: string;
+      priority: TaskPriorityLabel;
+      tags: string[];
+      location: string;
+    }[],
   ): Promise<Task[]> {
     const completed = new Set<string>();
     const settled = await settledPool(sources, STEP_FETCH_CONCURRENCY, async (t) => {
@@ -582,9 +592,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly menuOpen = signal(false);
 
-
   readonly noteText = signal('');
-
 
   readonly loadError = signal<string | null>(null);
 
@@ -650,7 +658,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    */
   contentStatus(taskIdx: number, stepIdx: number): 'past' | 'current' {
     const front = this.front();
-    const behind = front.taskIdx > taskIdx || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
+    const behind =
+      front.taskIdx > taskIdx || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
     return behind ? 'past' : 'current';
   }
 
@@ -884,9 +893,10 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    *  does not pull the work backwards when you walk into it again. */
   private markReached(taskIdx: number, stepIdx: number): void {
     const reached = this.reached();
-    const ahead = !reached
-      || taskIdx > reached.taskIdx
-      || (taskIdx === reached.taskIdx && stepIdx > reached.stepIdx);
+    const ahead =
+      !reached ||
+      taskIdx > reached.taskIdx ||
+      (taskIdx === reached.taskIdx && stepIdx > reached.stepIdx);
     if (ahead) this.reached.set({ taskIdx, stepIdx });
   }
 
@@ -924,8 +934,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   stepStatus(taskIdx: number, stepIdx: number): 'past' | 'current' | 'future' {
     const front = this.front();
     if (front.taskIdx === taskIdx && front.stepIdx === stepIdx) return 'current';
-    const behind = front.taskIdx > taskIdx
-      || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
+    const behind =
+      front.taskIdx > taskIdx || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
     return behind ? 'past' : 'future';
   }
 

@@ -24,8 +24,6 @@
     <!-- Both ends of the cable as two sections of one form: which device, which
          kind of port, which port. -->
     <nldd-form>
-
-
       <!-- What this cable is called and what it is for, before anything about
            where it runs: the name is how you find it back, and everything
            below is detail hanging off it. -->
@@ -82,10 +80,7 @@
            a field behind a condition lands at the bottom, under the save
            button, the moment the condition turns true. Present from the start,
            it keeps its place. -->
-      <nldd-form-field
-        label="Data center"
-        [attr.hidden]="datacenters().length > 1 ? null : ''"
-      >
+      <nldd-form-field label="Data center" [attr.hidden]="datacenters().length > 1 ? null : ''">
         <nldd-toggle-button-group type="radio" accessible-label="Data center">
           @for (dc of datacenters(); track dc.id) {
             <nldd-toggle-button
@@ -104,7 +99,7 @@
             id="a-device"
             [attr.value]="aDeviceId()"
             [attr.invalid]="aDeviceError() ? '' : null"
-            [attr.error-message]="aDeviceError() ? 'a-device-error' : null"
+            [attr.unmet]="aDeviceError() ? 'a-device-error' : null"
             (change)="onADeviceChange($any($event).detail.value)"
           >
             <nldd-menu>
@@ -113,11 +108,9 @@
               }
             </nldd-menu>
           </nldd-combo-box>
-          @if (aDeviceError()) {
-            <nldd-form-field-error-text id="a-device-error">{{
-              aDeviceError()
-            }}</nldd-form-field-error-text>
-          }
+          <nldd-validation-list>
+            <nldd-validation-item id="a-device-error">{{ aDeviceError() }}</nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
 
         <!-- Both only make sense once there is a device to look in.
@@ -135,7 +128,7 @@
                 id="a-port"
                 [attr.value]="aPortId()"
                 [attr.invalid]="aPortError() ? '' : null"
-                [attr.error-message]="aPortError() ? 'a-port-error' : null"
+                [attr.unmet]="aPortError() ? 'a-port-error' : null"
                 (change)="aPortId.set($any($event).detail.value)"
               >
                 <nldd-menu>
@@ -159,11 +152,9 @@
             @if (aPorts().length === 0) {
               <nldd-form-field-help-text>This device has no ports yet.</nldd-form-field-help-text>
             }
-            @if (aPortError()) {
-              <nldd-form-field-error-text id="a-port-error">{{
-                aPortError()
-              }}</nldd-form-field-error-text>
-            }
+            <nldd-validation-list>
+              <nldd-validation-item id="a-port-error">{{ aPortError() }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
         }
         <!-- Named from where you stand, and standing where you are: you fill one
@@ -191,7 +182,7 @@
             id="b-device"
             [attr.value]="bDeviceId()"
             [attr.invalid]="bDeviceError() ? '' : null"
-            [attr.error-message]="bDeviceError() ? 'b-device-error' : null"
+            [attr.unmet]="bDeviceError() ? 'b-device-error' : null"
             (change)="onBDeviceChange($any($event).detail.value)"
           >
             <nldd-menu>
@@ -200,11 +191,9 @@
               }
             </nldd-menu>
           </nldd-combo-box>
-          @if (bDeviceError()) {
-            <nldd-form-field-error-text id="b-device-error">{{
-              bDeviceError()
-            }}</nldd-form-field-error-text>
-          }
+          <nldd-validation-list>
+            <nldd-validation-item id="b-device-error">{{ bDeviceError() }}</nldd-validation-item>
+          </nldd-validation-list>
         </nldd-form-field>
 
         <!-- Both only make sense once there is a device to look in.
@@ -222,7 +211,7 @@
                 id="b-port"
                 [attr.value]="bPortId()"
                 [attr.invalid]="bPortError() ? '' : null"
-                [attr.error-message]="bPortError() ? 'b-port-error' : null"
+                [attr.unmet]="bPortError() ? 'b-port-error' : null"
                 (change)="bPortId.set($any($event).detail.value)"
               >
                 <nldd-menu>
@@ -254,11 +243,9 @@
             @if (bPorts().length === 0) {
               <nldd-form-field-help-text>This device has no ports yet.</nldd-form-field-help-text>
             }
-            @if (bPortError()) {
-              <nldd-form-field-error-text id="b-port-error">{{
-                bPortError()
-              }}</nldd-form-field-error-text>
-            }
+            <nldd-validation-list>
+              <nldd-validation-item id="b-port-error">{{ bPortError() }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
         }
         <nldd-button
@@ -273,7 +260,6 @@
 
       <!-- What the lead itself is: what you would ask for when ordering one. -->
       <nldd-form-section text="Specifications">
-
         <!-- Type -->
         <nldd-form-field label="Type">
           <!-- Thirteen kinds of cable: typing "cat6" beats reading past twelve
@@ -352,7 +338,6 @@
             }
           </nldd-toggle-button-group>
         </nldd-form-field>
-
       </nldd-form-section>
       <!-- Under the fields rather than docked at the bottom, the same as
              every other form in this app. -->

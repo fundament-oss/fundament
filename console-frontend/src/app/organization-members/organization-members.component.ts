@@ -168,10 +168,7 @@ const comparatorFor =
 
 @Component({
   selector: 'app-organization-members',
-  imports: [
-    RouterOutlet,
-    DialogSyncDirective,
-  ],
+  imports: [RouterOutlet, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -220,7 +217,9 @@ export default class OrganizationMembersComponent implements OnInit {
   removeMemberTitle = computed(() => {
     const member = this.deletingMember();
     const name = member?.name || member?.email;
-    return name ? `Remove ${name} from this organization?` : 'Remove this member from this organization?';
+    return name
+      ? `Remove ${name} from this organization?`
+      : 'Remove this member from this organization?';
   });
 
   /** A failed action, reported over the list instead of in place of it: the
@@ -342,7 +341,6 @@ export default class OrganizationMembersComponent implements OnInit {
       this.isLoading.set(false);
     }
   }
-
 
   async cancelInvitation(id: string) {
     const invitation = this.pendingInvitations().find((m) => m.id === id);

@@ -42,13 +42,21 @@
                 }
               </nldd-toggle-button-group>
               @if (formRooms().length === 0) {
-                <nldd-form-field-error-text id="error-no-rooms">
-                  No rooms in this data center. Create one on the Data centers page first.
-                </nldd-form-field-error-text>
+                <nldd-validation-list>
+                  <nldd-validation-item hint id="error-no-rooms"
+                    >No rooms in this data center. Create one on the Data centers page
+                    first.</nldd-validation-item
+                  >
+                </nldd-validation-list>
               }
             </nldd-form-field>
             <nldd-form-field label="Rack row">
-              <nldd-toggle-button-group type="radio" accessible-label="Rack row">
+              <nldd-toggle-button-group
+                type="radio"
+                accessible-label="Rack row"
+                [attr.invalid]="isFieldInvalid('row_id') ? '' : null"
+                unmet="error-rack-row-id"
+              >
                 @for (row of rowsForFormRoom(); track row.id) {
                   <nldd-toggle-button
                     [attr.value]="row.id"
@@ -58,15 +66,18 @@
                   ></nldd-toggle-button>
                 }
               </nldd-toggle-button-group>
-              @if (isFieldInvalid('row_id')) {
-                <nldd-form-field-error-text id="error-rack-row-id">
-                  {{ fieldError('row_id') }}
-                </nldd-form-field-error-text>
-              }
+              <nldd-validation-list>
+                <nldd-validation-item id="error-rack-row-id">{{
+                  fieldError('row_id')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
               @if (formRooms().length > 0 && rowsForFormRoom().length === 0) {
-                <nldd-form-field-error-text id="error-no-rows">
-                  No rack rows in this room. Create one on the Data centers page first.
-                </nldd-form-field-error-text>
+                <nldd-validation-list>
+                  <nldd-validation-item hint id="error-no-rows"
+                    >No rack rows in this room. Create one on the Data centers page
+                    first.</nldd-validation-item
+                  >
+                </nldd-validation-list>
               }
             </nldd-form-field>
           }
@@ -77,12 +88,14 @@
               #fRackName
               [attr.value]="rack.name ?? ''"
               [attr.invalid]="isFieldInvalid('name') ? '' : null"
-              error-message="error-rack-name"
+              unmet="error-rack-name"
               (keydown.enter)="save()"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="error-rack-name">
-              {{ fieldError('name') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-name">{{
+                fieldError('name')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <!-- Spin buttons here, and none on the rack unit of a device: this is
                a value you nudge from a default (42U, 45U, 47U) between bounds
@@ -95,12 +108,14 @@
               max="52"
               full-width
               [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
-              error-message="error-rack-total-u"
+              unmet="error-rack-total-u"
               (keydown.enter)="save()"
             ></nldd-number-field>
-            <nldd-form-field-error-text id="error-rack-total-u">
-              {{ fieldError('total_units') }}
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-total-u">{{
+                fieldError('total_units')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-actions>
             <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>

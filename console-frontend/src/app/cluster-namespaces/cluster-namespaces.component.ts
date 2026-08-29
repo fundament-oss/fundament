@@ -33,11 +33,7 @@ import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [
-    ReactiveFormsModule,
-    DialogSyncDirective,
-    SheetSyncDirective,
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',
@@ -83,10 +79,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   projects = signal<Project[]>([]);
 
-
   isLoadingProjects = signal<boolean>(false);
-
-
 
   showDeleteNamespaceModal = signal<boolean>(false);
 
@@ -95,7 +88,6 @@ export default class ClusterNamespacesComponent implements OnInit {
   pendingNamespaceName = signal<string | null>(null);
 
   clusterName = signal<string | null>(null);
-
 
   constructor() {
     this.titleService.setTitle('Namespaces');
@@ -145,14 +137,10 @@ export default class ClusterNamespacesComponent implements OnInit {
     }
   }
 
-
-
   getProjectName(projectId: string): string {
     const project = this.projects().find((p) => p.id === projectId);
     return project?.alias || projectId;
   }
-
-
 
   openDeleteNamespaceModal(namespaceId: string, namespaceName: string): void {
     this.pendingNamespaceId.set(namespaceId);
@@ -216,7 +204,9 @@ export default class ClusterNamespacesComponent implements OnInit {
       const succeeded = ids.length - failed;
 
       if (succeeded > 0) {
-        this.notificationService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
+        this.notificationService.success(
+          `${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`,
+        );
       }
       if (failed > 0) {
         this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
@@ -238,9 +228,6 @@ export default class ClusterNamespacesComponent implements OnInit {
     const el = this.bulkDeleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
-
-
-
 
   onCancel() {
     this.pageNav.goTo(`/clusters/${this.clusterId}`);
