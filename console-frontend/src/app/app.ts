@@ -117,6 +117,14 @@ function depthForPath(url: string): number {
   return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
+/** One step up from a page: the project it belongs to, or the organization when
+ *  it belongs to none. Relative to the organization, which is what goTo takes. */
+function parentOf(url: string): string {
+  const path = withinOrganization(url.split(/[?#]/)[0]);
+  const project = /^\/projects\/([^/]+)\//.exec(path);
+  return project ? `/projects/${project[1]}` : '/';
+}
+
 @Component({
   selector: 'app-root',
   imports: [
@@ -576,14 +584,20 @@ export default class App implements OnInit {
   }
 
   /**
-   * A page's back button, bubbled up from its nldd-top-title-bar.
+   * A back button, bubbled up from the title bar of whichever pane it sits in.
+   * Which pane that is decides where you land: back from a page goes to the
+   * project it belongs to, or to the organization when it belongs to none, and
+   * back from a project's menu to the organization.
    *
-   * Stacked (narrow) mode shows the deepest pane that carries `has-content`, so
-   * dropping it on main is what reveals the sidebar again. On wide screens the
-   * split view hides the button, so this never fires there.
+   * It navigates rather than counting the stack down a step. The depth is
+   * derived from the address everywhere else, so moving it by hand left the two
+   * disagreeing from the first press onward: the panes emptied while the outlet
+   * went on rendering the page you had just left, which reads as a button that
+   * does nothing.
    */
-  onPaneBack(): void {
-    this.stackDepth.update((depth) => Math.max(depth - 1, 0));
+  onPaneBack(event: Event): void {
+    const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
+    this.pageNav.goTo(pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : parentOf(this.router.url));
   }
 
   isMembersActive(): boolean {

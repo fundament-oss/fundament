@@ -324,7 +324,7 @@
           <nldd-navigation-split-view
             #splitView
             sidebar-accessible-label="Navigation"
-            (back)="onPaneBack()"
+            (back)="onPaneBack($event)"
             (nldd-single-column-change)="onSingleColumnChange($event)"
           >
             <!-- Every pane opens with its own h1. Collapsed to one column each
@@ -529,10 +529,12 @@
                    per pane depending on whether the organization is visible
                    alongside. -->
                 <nldd-page sticky-header>
+                  <!-- No (back) of its own: the event bubbles, and the split
+                       view above already listens for it. Bound in both places
+                       one press was handled twice and the stack fell two steps. -->
                   <nldd-top-title-bar
                     slot="header"
                     [attr.back-text]="currentOrganization()?.alias || 'Menu'"
-                    (back)="onPaneBack()"
                   ></nldd-top-title-bar>
                   <nldd-simple-section>
                     <!-- The cluster sits under the name rather than in a list of
