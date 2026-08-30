@@ -83,6 +83,16 @@ function depthForPath(url: string): number {
   return SECTIONS.some((section) => path === section.path) ? 1 : 2;
 }
 
+/** The section a url belongs to, which is the address of depth 1. Anything
+ *  outside the sections belongs to none, and '/' is the list of them all. */
+function sectionOf(url: string): string {
+  const path = url.split(/[?#]/)[0];
+  const section = SECTIONS.find(
+    (candidate) => path === candidate.path || path.startsWith(`${candidate.path}/`),
+  );
+  return section?.path ?? '/';
+}
+
 // Shell wraps routes that share the navigation; task-management-technician sits outside it, since it has a different layout.
 @Component({
   selector: 'app-shell',
@@ -210,13 +220,18 @@ export default class ShellComponent implements OnInit {
   /**
    * A back button, bubbled up from the title bar of whichever pane it sits in.
    * Which pane that is decides where you land: back from the page goes to the
-   * section's menu, back from that menu to the sections. Counting down one step
-   * from wherever the stack happens to be sent you to the menu you were already
-   * looking at.
+   * section's menu, back from that menu to the sections.
+   *
+   * It navigates rather than counting the stack down a step. The depth is
+   * derived from the address everywhere else, so setting it by hand here left
+   * the two disagreeing from the first press onward: the outlet went on
+   * rendering the page you had just left, and widening the window laid out a
+   * depth the address had never heard of.
    */
   onPaneBack(event: Event): void {
     const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
-    this.stackDepth.set(pane?.getAttribute('slot') === 'secondary-sidebar' ? 0 : 1);
+    const up = pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : sectionOf(this.currentUrl());
+    this.router.navigateByUrl(up);
   }
 
   async handleLogout(): Promise<void> {

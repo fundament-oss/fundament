@@ -20,9 +20,13 @@ const routes: Routes = [
     loadComponent: () => import('./shell/shell').then((m) => m.default),
     children: [
       {
+        // The sections list with nothing chosen, which is where back from a
+        // section's menu lands once the columns no longer fit side by side.
+        // A redirect here would leave that step without an address.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'data-centers',
+        title: 'DCIM',
+        loadComponent: () => import('./shell/no-section').then((m) => m.default),
       },
       {
         // Before the detail route, not after: /catalog/all is one segment and
