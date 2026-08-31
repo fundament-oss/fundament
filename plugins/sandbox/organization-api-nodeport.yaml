@@ -1,6 +1,6 @@
 # NodePort exposing organization-api's Connect port so the plugin-controller in
 # the network-isolated sandbox cluster (k3d-fundament-plugin) can fetch
-# PluginDefinitions (FUN-19). Applied by `just plugin-sandbox-orgapi`.
+# PluginDefinitions (FUN-19). Applied by `just plugins sandbox-orgapi`.
 #
 # Local dev only: production reaches organization-api over its normal external
 # URL. Here the two k3d clusters are isolated, so a relay container bridges the

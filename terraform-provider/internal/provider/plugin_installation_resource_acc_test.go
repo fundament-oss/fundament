@@ -36,6 +36,7 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 
 	suffix := acctest.RandString(6)
 	clusterName := "tf-acc-plugin-" + suffix
+	pluginOrganizationName := "system"
 	pluginName := "grafana"
 	resourceName := "fundament_plugin_installation.test"
 
@@ -44,9 +45,10 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccPluginInstallationResourceConfig(clusterName, pluginName, endpoint, organizationID, kubeProxyURL),
+				Config: testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "cluster_id"),
+					resource.TestCheckResourceAttr(resourceName, "organization_name", pluginOrganizationName),
 					resource.TestCheckResourceAttr(resourceName, "plugin_name", pluginName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "phase", "Running"),
@@ -63,12 +65,12 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	})
 }
 
-func testAccPluginInstallationResourceConfig(clusterName, pluginName, endpoint, organizationID, kubeProxyURL string) string {
+func testAccPluginInstallationResourceConfig(clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint            = %[3]q
-  organization_id     = %[4]q
-  kube_api_proxy_url  = %[5]q
+  endpoint            = %[4]q
+  organization_id     = %[5]q
+  kube_api_proxy_url  = %[6]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
@@ -79,8 +81,9 @@ resource "fundament_cluster" "test" {
 }
 
 resource "fundament_plugin_installation" "test" {
-  cluster_id  = fundament_cluster.test.id
-  plugin_name = %[2]q
+  cluster_id        = fundament_cluster.test.id
+  organization_name = %[2]q
+  plugin_name       = %[3]q
 }
-`, clusterName, pluginName, endpoint, organizationID, kubeProxyURL)
+`, clusterName, pluginOrganizationName, pluginName, endpoint, organizationID, kubeProxyURL)
 }

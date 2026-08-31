@@ -35,9 +35,17 @@ type DiskStatus struct {
 	Model      string   `json:"model,omitempty"`
 	Serial     string   `json:"serial,omitempty"`
 	// WWN is a fallback stable identity when there is no by-id link.
-	WWN       string `json:"wwn,omitempty"`
-	Available bool   `json:"available,omitempty"`
-	ClaimedBy string `json:"claimedBy,omitempty"`
+	WWN string `json:"wwn,omitempty"`
+	// Filesystem is what the node found on the device, e.g. "ext4" or
+	// "ceph_bluestore". Empty means the last probe found none -- which is not the
+	// same as the device being empty, since the probe can be stale. Set is a fact;
+	// unset is an absence of evidence. Available folds this into a boolean and so
+	// cannot express the difference, which is why both are published -- and both
+	// are print columns, so `kubectl get disks` shows Available=true next to a
+	// filesystem when the probe contradicts itself.
+	Filesystem string `json:"filesystem,omitempty"`
+	Available  bool   `json:"available,omitempty"`
+	ClaimedBy  string `json:"claimedBy,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -47,6 +55,8 @@ type DiskStatus struct {
 // +kubebuilder:printcolumn:name="Path",type=string,JSONPath=`.status.path`
 // +kubebuilder:printcolumn:name="Size",type=integer,JSONPath=`.status.sizeBytes`
 // +kubebuilder:printcolumn:name="Available",type=boolean,JSONPath=`.status.available`
+// +kubebuilder:printcolumn:name="Filesystem",type=string,JSONPath=`.status.filesystem`
+// +kubebuilder:printcolumn:name="Claimed By",type=string,JSONPath=`.status.claimedBy`
 type Disk struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

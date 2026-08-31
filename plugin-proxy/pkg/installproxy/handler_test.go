@@ -30,8 +30,11 @@ func mintPluginToken(t *testing.T, secret []byte, installID, clusterID string) s
 		},
 		ClusterID:      clusterID,
 		InstallationID: installID,
-		PluginName:     "cert-manager",
-		PluginVersion:  "v1.17.2",
+		// Deliberately different from PluginName: the namespace derives from the
+		// installation name, and conflating the two is a real bug this catches.
+		InstallationName: "system--cert-manager",
+		PluginName:       "cert-manager",
+		PluginVersion:    "v1.17.2",
 	}
 	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(secret)
 	require.NoError(t, err, "sign")
@@ -94,6 +97,27 @@ func TestRuntimeProxy_ForwardsAuthorizedRequest(t *testing.T) {
 	h.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "pong")
+}
+
+// TestRuntimeProxy_RouteCarriesInstallationName pins the claim the backend derives
+// the plugin's namespace from. Taking PluginName here instead resolves to a
+// namespace that does not exist, since metadata.name is "<org>-<plugin>".
+func TestRuntimeProxy_RouteCarriesInstallationName(t *testing.T) {
+	secret := []byte("s")
+	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
+
+	var got Route
+	backend := BackendFunc(func(w http.ResponseWriter, _ *http.Request, route Route) {
+		got = route
+		w.WriteHeader(http.StatusOK)
+	})
+
+	h := New(secret, allowAuthz{}, backend, discardLogger())
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	h.ServeHTTP(httptest.NewRecorder(), r)
+
+	assert.Equal(t, "system--cert-manager", got.InstallationName)
 }
 
 func TestParseRoute(t *testing.T) {

@@ -4,14 +4,21 @@ import { ConfigService } from '../config.service';
 import { PluginInstallationItem, PluginInstallationListResponse } from '../plugin-resources/types';
 
 // Kubernetes resource names must be RFC-1123 (lowercase alphanumerics and '-'),
-// but catalog plugins carry display names like "Grafana Alloy" or "ECK operator".
-// Derive a stable slug for the PluginInstallation's metadata.name; the catalog
-// name is still carried verbatim in spec.definitionRef.pluginName.
-export function pluginResourceName(pluginName: string): string {
-  return pluginName
+// but catalog entries carry display names like "Grafana Alloy".
+function slug(value: string): string {
+  return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+// A plugin's identity is (organization, plugin), so the installation's
+// metadata.name is both halves joined by a double dash — the pair the apiserver
+// keeps unique. Each half is slugged separately: slugging the joined string
+// would collapse the separator back to a single dash, and a single dash cannot
+// tell ("system", "cert-manager") apart from ("system-cert", "manager").
+export function pluginResourceName(organizationName: string, pluginName: string): string {
+  return `${slug(organizationName)}--${slug(pluginName)}`;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -43,6 +50,7 @@ export default class PluginInstallationService {
 
   async installPlugin(
     clusterId: string,
+    organizationName: string,
     pluginName: string,
     pluginVersion: string,
     definitionHash: string,
@@ -60,9 +68,10 @@ export default class PluginInstallationService {
       body: JSON.stringify({
         apiVersion: 'plugins.fundament.io/v1',
         kind: 'PluginInstallation',
-        metadata: { name: pluginResourceName(pluginName) },
+        metadata: { name: pluginResourceName(organizationName, pluginName) },
         spec: {
           definitionRef: {
+            organizationName,
             pluginName,
             pluginVersion,
             definitionHash,

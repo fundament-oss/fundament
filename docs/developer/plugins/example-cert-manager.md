@@ -51,19 +51,20 @@ cert-manager installs cluster-scoped resources that require broad permissions:
 - ValidatingWebhookConfigurations / MutatingWebhookConfigurations
 - Resources across multiple namespaces
 
-The default namespace-admin RoleBinding only covers the plugin's own namespace. The `clusterRoles: [cluster-admin]` field in the PluginInstallation grants the additional access.
+The default namespace-admin RoleBinding only covers the plugin's own namespace. The additional cluster-wide access comes from `definition.yaml`'s `spec.permissions.rbac`, which `plugin-controller` materialises into a ClusterRole bound to the plugin's ServiceAccount — see [Plugin Controller](/docs/developer/plugins/#plugin-controller).
 
 ```yaml
 # plugins/cert-manager/install.yaml
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: cert-manager-test
+  name: system--cert-manager
 spec:
-  image: localhost:5111/cert-manager-plugin:latest
-  pluginName: cert-manager-test
-  clusterRoles:
-    - cluster-admin
+  definitionRef:
+    organizationName: system
+    pluginName: cert-manager
+    pluginVersion: v1.17.2
+    definitionHash: sha256:...
 ```
 
 ## Plugin lifecycle

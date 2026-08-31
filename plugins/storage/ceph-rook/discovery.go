@@ -134,6 +134,10 @@ func ParseDiscoveredDevices(node, raw string, loopDevices bool) ([]v1alpha1.Disk
 			Model:      d.Model,
 			Serial:     d.Serial,
 			WWN:        d.WWN,
+			// Published alongside Available, not folded into it: "the node saw
+			// ceph_bluestore here" is a fact worth showing an operator, and the
+			// boolean loses it.
+			Filesystem: d.Filesystem,
 			Available:  d.Empty && d.Filesystem == "",
 		})
 	}

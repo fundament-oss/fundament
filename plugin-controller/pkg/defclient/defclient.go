@@ -18,7 +18,7 @@ type Definition struct {
 
 // Client fetches plugin definitions from organization-api.
 type Client interface {
-	GetDefinition(ctx context.Context, pluginName, pluginVersion string) (Definition, error)
+	GetDefinition(ctx context.Context, organizationName, pluginName, pluginVersion string) (Definition, error)
 }
 
 type connectClient struct {
@@ -30,9 +30,9 @@ func New(baseURL string, httpClient connect.HTTPClient) Client {
 	return &connectClient{rpc: organizationv1connect.NewPluginServiceClient(httpClient, baseURL)}
 }
 
-func (c *connectClient) GetDefinition(ctx context.Context, pluginName, pluginVersion string) (Definition, error) {
+func (c *connectClient) GetDefinition(ctx context.Context, organizationName, pluginName, pluginVersion string) (Definition, error) {
 	resp, err := c.rpc.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
-		PluginName: pluginName, PluginVersion: pluginVersion,
+		OrganizationName: organizationName, PluginName: pluginName, PluginVersion: pluginVersion,
 	}.Build())
 	if err != nil {
 		return Definition{}, fmt.Errorf("GetPluginDefinition RPC: %w", err)

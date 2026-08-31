@@ -2,6 +2,7 @@ mod terraform-provider
 mod e2e
 mod cluster-worker
 mod deploy-remote
+mod plugins
 
 _default:
     @just --list

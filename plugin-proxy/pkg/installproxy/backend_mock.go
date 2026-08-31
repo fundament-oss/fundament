@@ -17,7 +17,7 @@ func (m MockBackend) Serve(w http.ResponseWriter, r *http.Request, route Route) 
 		"kind", route.Kind,
 		"cluster", route.ClusterID,
 		"install", route.InstallID,
-		"plugin", route.PluginName,
+		"installation", route.InstallationName,
 		"path", route.RemainingPath,
 	)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")

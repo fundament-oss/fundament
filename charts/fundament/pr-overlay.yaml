@@ -86,8 +86,9 @@ spec:
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       marketplace: https://marketplace.pr${PR_NUM}.${DOMAIN}
-      # marketplace{Catalog,Registry,Admin}Api are left unset: the three
-      # marketplace APIs have no implementation yet (FUN-20 defers them).
+      marketplaceCatalogApi: https://marketplace-api.pr${PR_NUM}.${DOMAIN}
+      # marketplace{Registry,Admin}Api are left unset: those two marketplace
+      # APIs have no implementation yet (FUN-20 defers them).
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}
@@ -108,6 +109,7 @@ spec:
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
       marketplaceFrontend: ${IMAGE_PREFIX}/marketplace-frontend:${IMAGE_TAG}
       dcimAuthnApi: ${IMAGE_PREFIX}/dcim-authn-api:${IMAGE_TAG}
+      marketplaceCatalogApi: ${IMAGE_PREFIX}/marketplace-catalog-api:${IMAGE_TAG}
 
     authnApi:
       replicas: 1
@@ -315,6 +317,8 @@ spec:
     marketplaceFrontend:
       enabled: true
       replicas: 1
+      internalApiUrls:
+        catalog: http://marketplace-catalog-api:8080
       httproute:
         enabled: true
         parentRefs:
@@ -325,6 +329,22 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - marketplace.pr${PR_NUM}.${DOMAIN}
+
+    # Anonymous storefront API: no auth, so no Dex client and no JWT secret.
+    marketplaceCatalogApi:
+      enabled: true
+      replicas: 1
+      logLevel: debug
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - marketplace-api.pr${PR_NUM}.${DOMAIN}
 
     ingress:
       enabled: false

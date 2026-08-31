@@ -27,6 +27,12 @@ spec:
     - jsonPath: .status.available
       name: Available
       type: boolean
+    - jsonPath: .status.filesystem
+      name: Filesystem
+      type: string
+    - jsonPath: .status.claimedBy
+      name: Claimed By
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -59,6 +65,16 @@ spec:
               available:
                 type: boolean
               claimedBy:
+                type: string
+              filesystem:
+                description: |-
+                  Filesystem is what the node found on the device, e.g. "ext4" or
+                  "ceph_bluestore". Empty means the last probe found none -- which is not the
+                  same as the device being empty, since the probe can be stale. Set is a fact;
+                  unset is an absence of evidence. Available folds this into a boolean and so
+                  cannot express the difference, which is why both are published -- and both
+                  are print columns, so `kubectl get disks` shows Available=true next to a
+                  filesystem when the probe contradicts itself.
                 type: string
               model:
                 type: string

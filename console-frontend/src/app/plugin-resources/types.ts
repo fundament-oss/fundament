@@ -13,11 +13,15 @@ export interface PluginDefinition {
   // The PluginInstallation CR UID this definition was loaded from.
   // Used as installation_id in MintPluginToken and pinned into every JWT.
   installationId: string;
-  // The PluginInstallation CR name (metadata.name). plugin-controller derives
-  // the plugin's namespace and Service as `plugin-<installationName>`, so this
-  // — NOT the definition's own `name` — must drive the plugin-proxy asset URL.
-  // The two usually match but nothing enforces it.
+  // The PluginInstallation CR name (metadata.name), "<organizationName>--<name>".
+  // The plugin's namespace is derived from installationName (possibly hashed for
+  // long names), so this — NOT the definition's own `name` — must drive the
+  // plugin-proxy asset URL. It is also the only unique handle: two organizations
+  // may publish the same `name`.
   installationName: string;
+  // Publishing organization. Shown in the nav to tell apart two installations
+  // that share a plugin name.
+  organizationName: string;
   // The pluginVersion pinned in PluginInstallation.spec.definitionRef.
   // Drives the plugin-proxy iframe URL and appears in the minted token.
   installationVersion: string;
@@ -106,7 +110,9 @@ export interface CustomComponentMapping {
 // Navigation types
 
 export interface PluginNavGroup {
-  pluginName: string;
+  // The route segment: the installation name, since a plugin name alone does
+  // not identify an installation.
+  installationName: string;
   label: string;
   items: PluginNavItem[];
 }
@@ -121,6 +127,7 @@ export interface PluginInstallationItem {
   metadata: { name: string; uid: string };
   spec: {
     definitionRef: {
+      organizationName: string;
       pluginName: string;
       pluginVersion: string;
       definitionHash: string;

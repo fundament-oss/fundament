@@ -56,6 +56,10 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-dcim-api
+      - name: fun_marketplace_catalog_api
+        login: true
+        passwordSecret:
+          name: db-fun-marketplace-catalog-api
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true

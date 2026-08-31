@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/marketplace-catalog-api ./marketplace-api/cmd/fun-marketplace-catalog-api"
+entrypoint = "tmp/marketplace-catalog-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["marketplace-api"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false

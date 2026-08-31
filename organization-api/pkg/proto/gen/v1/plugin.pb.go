@@ -178,6 +178,7 @@ type PluginSummary struct {
 	xxx_hidden_Image            string                 `protobuf:"bytes,60,opt,name=image"`
 	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,70,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_DefinitionHash   string                 `protobuf:"bytes,80,opt,name=definition_hash,json=definitionHash"`
+	xxx_hidden_OrganizationName string                 `protobuf:"bytes,90,opt,name=organization_name,json=organizationName"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -281,6 +282,13 @@ func (x *PluginSummary) GetDefinitionHash() string {
 	return ""
 }
 
+func (x *PluginSummary) GetOrganizationName() string {
+	if x != nil {
+		return x.xxx_hidden_OrganizationName
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -321,13 +329,18 @@ func (x *PluginSummary) SetDefinitionHash(v string) {
 	x.xxx_hidden_DefinitionHash = v
 }
 
+func (x *PluginSummary) SetOrganizationName(v string) {
+	x.xxx_hidden_OrganizationName = v
+}
+
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Id string
 	// Stable identifier (e.g. "openfsc"), matching the plugin's definition.yaml
-	// metadata.name. This is the PluginInstallation resource name in the cluster —
-	// use display_name to show the plugin to a user.
+	// metadata.name. Unique only within organization_name, and NOT the cluster's
+	// PluginInstallation resource name — that is "<organization_name>--<name>".
+	// Use display_name to show the plugin to a user.
 	Name string
 	// Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
 	DisplayName      string
@@ -341,6 +354,9 @@ type PluginSummary_builder struct {
 	// be installed until one exists.
 	PluginVersion  string
 	DefinitionHash string
+	// Publishing organization's name. With `name` it forms the installation's
+	// metadata.name: "<organization_name>--<name>".
+	OrganizationName string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -357,6 +373,7 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_Image = b.Image
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
+	x.xxx_hidden_OrganizationName = b.OrganizationName
 	return m0
 }
 
@@ -855,6 +872,7 @@ type PluginDetail struct {
 	xxx_hidden_DocumentationLinks *[]*DocumentationLink  `protobuf:"bytes,80,rep,name=documentation_links,json=documentationLinks"`
 	xxx_hidden_PluginVersion      string                 `protobuf:"bytes,90,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_DefinitionHash     string                 `protobuf:"bytes,100,opt,name=definition_hash,json=definitionHash"`
+	xxx_hidden_OrganizationName   string                 `protobuf:"bytes,110,opt,name=organization_name,json=organizationName"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -974,6 +992,13 @@ func (x *PluginDetail) GetDefinitionHash() string {
 	return ""
 }
 
+func (x *PluginDetail) GetOrganizationName() string {
+	if x != nil {
+		return x.xxx_hidden_OrganizationName
+	}
+	return ""
+}
+
 func (x *PluginDetail) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -1022,6 +1047,10 @@ func (x *PluginDetail) SetDefinitionHash(v string) {
 	x.xxx_hidden_DefinitionHash = v
 }
 
+func (x *PluginDetail) SetOrganizationName(v string) {
+	x.xxx_hidden_OrganizationName = v
+}
+
 func (x *PluginDetail) HasAuthor() bool {
 	if x == nil {
 		return false
@@ -1051,6 +1080,8 @@ type PluginDetail_builder struct {
 	// Latest published definition; see PluginSummary.plugin_version.
 	PluginVersion  string
 	DefinitionHash string
+	// Publishing organization's name; see PluginSummary.organization_name.
+	OrganizationName string
 }
 
 func (b0 PluginDetail_builder) Build() *PluginDetail {
@@ -1069,6 +1100,7 @@ func (b0 PluginDetail_builder) Build() *PluginDetail {
 	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
+	x.xxx_hidden_OrganizationName = b.OrganizationName
 	return m0
 }
 
@@ -1405,11 +1437,12 @@ func (b0 PutPluginDefinitionResponse_builder) Build() *PutPluginDefinitionRespon
 }
 
 type GetPluginDefinitionRequest struct {
-	state                    protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_PluginName    string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
-	xxx_hidden_PluginVersion string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginName       string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
+	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_OrganizationName string                 `protobuf:"bytes,30,opt,name=organization_name,json=organizationName"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *GetPluginDefinitionRequest) Reset() {
@@ -1451,6 +1484,13 @@ func (x *GetPluginDefinitionRequest) GetPluginVersion() string {
 	return ""
 }
 
+func (x *GetPluginDefinitionRequest) GetOrganizationName() string {
+	if x != nil {
+		return x.xxx_hidden_OrganizationName
+	}
+	return ""
+}
+
 func (x *GetPluginDefinitionRequest) SetPluginName(v string) {
 	x.xxx_hidden_PluginName = v
 }
@@ -1459,11 +1499,18 @@ func (x *GetPluginDefinitionRequest) SetPluginVersion(v string) {
 	x.xxx_hidden_PluginVersion = v
 }
 
+func (x *GetPluginDefinitionRequest) SetOrganizationName(v string) {
+	x.xxx_hidden_OrganizationName = v
+}
+
 type GetPluginDefinitionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	PluginName    string
 	PluginVersion string
+	// Publishing organization (tenant.organizations.name). Required —
+	// (organization_name, plugin_name) is the plugin's identity.
+	OrganizationName string
 }
 
 func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest {
@@ -1472,6 +1519,7 @@ func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest
 	_, _ = b, x
 	x.xxx_hidden_PluginName = b.PluginName
 	x.xxx_hidden_PluginVersion = b.PluginVersion
+	x.xxx_hidden_OrganizationName = b.OrganizationName
 	return m0
 }
 
@@ -3071,7 +3119,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xf0\x02\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\x9d\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3085,7 +3133,8 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"categories\x12\x14\n" +
 	"\x05image\x18< \x01(\tR\x05image\x12%\n" +
 	"\x0eplugin_version\x18F \x01(\tR\rpluginVersion\x12'\n" +
-	"\x0fdefinition_hash\x18P \x01(\tR\x0edefinitionHash\"\x14\n" +
+	"\x0fdefinition_hash\x18P \x01(\tR\x0edefinitionHash\x12+\n" +
+	"\x11organization_name\x18Z \x01(\tR\x10organizationName\"\x14\n" +
 	"\x12ListPluginsRequest\"O\n" +
 	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +
@@ -3110,7 +3159,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x06Author\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x14 \x01(\tR\x03url\"\x86\x04\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\"\xb3\x04\n" +
 	"\fPluginDetail\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3126,7 +3175,8 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x0erepository_url\x18F \x01(\tR\rrepositoryUrl\x12S\n" +
 	"\x13documentation_links\x18P \x03(\v2\".organization.v1.DocumentationLinkR\x12documentationLinks\x12%\n" +
 	"\x0eplugin_version\x18Z \x01(\tR\rpluginVersion\x12'\n" +
-	"\x0fdefinition_hash\x18d \x01(\tR\x0edefinitionHash\"5\n" +
+	"\x0fdefinition_hash\x18d \x01(\tR\x0edefinitionHash\x12+\n" +
+	"\x11organization_name\x18n \x01(\tR\x10organizationName\"5\n" +
 	"\x16GetPluginDetailRequest\x12\x1b\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tR\bpluginId\"P\n" +
@@ -3144,12 +3194,13 @@ const file_v1_plugin_proto_rawDesc = "" +
 	" \x01(\tR\x02id\x12\x1b\n" +
 	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\x12%\n" +
 	"\x0eplugin_version\x18\x1e \x01(\tR\rpluginVersion\x12\x12\n" +
-	"\x04hash\x18( \x01(\tR\x04hash\"d\n" +
+	"\x04hash\x18( \x01(\tR\x04hash\"\x91\x01\n" +
 	"\x1aGetPluginDefinitionRequest\x12\x1f\n" +
 	"\vplugin_name\x18\n" +
 	" \x01(\tR\n" +
 	"pluginName\x12%\n" +
-	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\"\x90\x01\n" +
+	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12+\n" +
+	"\x11organization_name\x18\x1e \x01(\tR\x10organizationName\"\x90\x01\n" +
 	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
 	"\bmanifest\x18\n" +
 	" \x01(\fR\bmanifest\x12\x12\n" +

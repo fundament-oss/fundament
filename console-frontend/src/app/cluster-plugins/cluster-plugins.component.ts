@@ -110,6 +110,7 @@ export default class ClusterPluginsComponent implements OnInit {
         ...toInstall.map((p) =>
           this.pluginInstallationService.installPlugin(
             this.clusterId,
+            p.organizationName,
             p.name,
             p.pluginVersion,
             p.definitionHash,

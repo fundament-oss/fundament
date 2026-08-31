@@ -41,7 +41,7 @@
               </div>
 
               <!-- Install Status -->
-              @if (runningInstallCount(plugin.name) > 0) {
+              @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
                 <nldd-tag size="sm" color="success" icon="check-mark" text="Installed"></nldd-tag>
               }
             </div>
@@ -76,7 +76,7 @@
             <div class="flex gap-3">
               <!-- data-tour: target of the walkthrough's install slide
                    (src/app/presentation/tours.ts). Keep the attribute. -->
-              @if (isPluginInstalledAnywhere(plugin.name)) {
+              @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
                 <nldd-button
                   data-tour="plugin-install"
                   (click)="onInstallPlugin(plugin)"
@@ -260,7 +260,7 @@
               Status
             </p>
             <p class="mt-1 text-sm text-gray-900 dark:text-white">
-              {{ pluginStatusLabel(plugin.name) }}
+              {{ pluginStatusLabel(plugin.organizationName, plugin.name) }}
             </p>
           </div>
         </div>
@@ -272,7 +272,7 @@
         slot="footer"
         class="flex flex-col gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
       >
-        @if (isPluginInstalledAnywhere(plugin.name)) {
+        @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
           <nldd-button
             (click)="onInstallPlugin(plugin)"
             type="button"

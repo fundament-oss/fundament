@@ -41,7 +41,9 @@ import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { ToastService } from '../toast.service';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  pluginResourceName,
+} from '../plugin-installation/plugin-installation.service';
 
 const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
   plugin.categories.map((category) => category.name).join(', ') || '—';
@@ -59,6 +61,7 @@ interface PluginWithPresets extends Pick<
   PluginSummary,
   | 'id'
   | 'name'
+  | 'organizationName'
   | 'displayName'
   | 'descriptionShort'
   | 'description'
@@ -81,9 +84,12 @@ interface ClusterModalRow {
   running: boolean;
 }
 
-// Extended install type with cluster ID and live status phase
+// Extended install type with cluster ID and live status phase. organizationName +
+// pluginName is the plugin's identity — two organizations may publish the same
+// pluginName, so matching on pluginName alone would conflate their installs.
 interface InstallWithCluster {
   clusterId: string;
+  organizationName: string;
   pluginName: string;
   phase: string;
   ready: boolean;
@@ -251,6 +257,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return {
           id: backendPlugin.id,
           name: backendPlugin.name,
+          organizationName: backendPlugin.organizationName,
           displayName: backendPlugin.displayName,
           description: backendPlugin.description,
           descriptionShort: backendPlugin.descriptionShort,
@@ -337,7 +344,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           .then((items) =>
             items.map((item) => ({
               clusterId: cluster.id,
-              pluginName: item.metadata.name,
+              // metadata.name is the RFC-1123 slug of (organizationName, pluginName);
+              // definitionRef still carries the pair unslugified, so match catalog
+              // entries against that instead of re-deriving the slug here.
+              organizationName: item.spec.definitionRef.organizationName,
+              pluginName: item.spec.definitionRef.pluginName,
               phase: item.status?.phase ?? 'Pending',
               ready: item.status?.ready ?? false,
             })),
@@ -390,16 +401,19 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     // Detect phase transitions for in-flight installs.
     fresh.forEach((next) => {
       const prev = previous.find(
-        (p) => p.clusterId === next.clusterId && p.pluginName === next.pluginName,
+        (p) =>
+          p.clusterId === next.clusterId &&
+          p.organizationName === next.organizationName &&
+          p.pluginName === next.pluginName,
       );
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
         this.toastService.success(
-          `Plugin ${this.pluginDisplayName(next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
+          `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
         this.toastService.error(
-          `Failed to install plugin ${this.pluginDisplayName(next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
+          `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
     });
@@ -412,7 +426,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     previous.forEach((prev) => {
       if (!readClusterIds.has(prev.clusterId)) return;
       const stillThere = fresh.some(
-        (f) => f.clusterId === prev.clusterId && f.pluginName === prev.pluginName,
+        (f) =>
+          f.clusterId === prev.clusterId &&
+          f.organizationName === prev.organizationName &&
+          f.pluginName === prev.pluginName,
       );
       if (stillThere) return;
       if (prev.phase === 'Pending') {
@@ -420,7 +437,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return;
       }
       this.toastService.success(
-        `Plugin ${this.pluginDisplayName(prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
+        `Plugin ${this.pluginDisplayName(prev.organizationName, prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
       );
     });
 
@@ -554,7 +571,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     return this.clusters().map((cluster) => {
       const install = this.installs().find(
-        (i) => i.clusterId === cluster.id && i.pluginName === plugin.name,
+        (i) =>
+          i.clusterId === cluster.id &&
+          i.organizationName === plugin.organizationName &&
+          i.pluginName === plugin.name,
       );
       return {
         id: cluster.id,
@@ -566,14 +586,19 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   // True when the plugin is installed (in any phase) on at least one cluster.
-  isPluginInstalledAnywhere(pluginName: string): boolean {
-    return this.installs().some((install) => install.pluginName === pluginName);
+  isPluginInstalledAnywhere(organizationName: string, pluginName: string): boolean {
+    return this.installs().some(
+      (install) => install.organizationName === organizationName && install.pluginName === pluginName,
+    );
   }
 
   // Number of clusters where the plugin is up and running.
-  runningInstallCount(pluginName: string): number {
+  runningInstallCount(organizationName: string, pluginName: string): number {
     return this.installs().filter(
-      (install) => install.pluginName === pluginName && isInstallRunning(install.phase),
+      (install) =>
+        install.organizationName === organizationName &&
+        install.pluginName === pluginName &&
+        isInstallRunning(install.phase),
     ).length;
   }
 
@@ -617,8 +642,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   pluginCategoryLabel = pluginCategoryLabel;
 
-  pluginStatusLabel(pluginName: string): string {
-    const count = this.runningInstallCount(pluginName);
+  pluginStatusLabel(organizationName: string, pluginName: string): string {
+    const count = this.runningInstallCount(organizationName, pluginName);
     return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
   }
 
@@ -646,24 +671,35 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Look up a display name from an install identifier (e.g. "openfsc" → "OpenFSC").
+   * Look up a display name from an install's (organizationName, pluginName) pair
+   * (e.g. ("acme", "cert-manager") → "Cert Manager").
    *
    * Only the polling loop needs this: it reconciles `InstallWithCluster` rows, which
-   * carry just the identifier the PluginInstallation resource is named after. Code
+   * carry just the identity the PluginInstallation resource was created from. Code
    * that already holds a plugin reads `displayNameOf(plugin)` instead of paying for
    * this scan.
    *
-   * Falls back to the identifier when the plugin is not in the catalog (it may have
-   * been removed while still installed on a cluster) or has no display name set.
+   * Falls back to pluginName when the plugin is not in the catalog (it may have been
+   * removed while still installed on a cluster) or has no display name set.
    */
-  private pluginDisplayName(pluginName: string): string {
-    return this.plugins.find((p) => p.name === pluginName)?.displayName || pluginName;
+  private pluginDisplayName(organizationName: string, pluginName: string): string {
+    return (
+      this.plugins.find((p) => p.organizationName === organizationName && p.name === pluginName)
+        ?.displayName || pluginName
+    );
   }
 
-  private setInstallPhase(clusterId: string, pluginName: string, phase: string): void {
+  private setInstallPhase(
+    clusterId: string,
+    organizationName: string,
+    pluginName: string,
+    phase: string,
+  ): void {
     this.installs.update((current) =>
       current.map((install) =>
-        install.clusterId === clusterId && install.pluginName === pluginName
+        install.clusterId === clusterId &&
+        install.organizationName === organizationName &&
+        install.pluginName === pluginName
           ? { ...install, phase, ready: phase === 'Running' }
           : install,
       ),
@@ -675,7 +711,13 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     const targets = selection.clusterIds.filter(
-      (id) => !this.installs().some((i) => i.clusterId === id && i.pluginName === plugin.name),
+      (id) =>
+        !this.installs().some(
+          (i) =>
+            i.clusterId === id &&
+            i.organizationName === plugin.organizationName &&
+            i.pluginName === plugin.name,
+        ),
     );
     if (targets.length === 0) return;
 
@@ -684,6 +726,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       ...current,
       ...targets.map((clusterId) => ({
         clusterId,
+        organizationName: plugin.organizationName,
         pluginName: plugin.name,
         phase: 'Pending',
         ready: false,
@@ -694,6 +737,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       targets.map((clusterId) =>
         this.pluginInstallationService.installPlugin(
           clusterId,
+          plugin.organizationName,
           plugin.name,
           selection.version,
           selection.hash,
@@ -706,7 +750,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (failed.length > 0) {
       this.installs.update((current) =>
         current.filter(
-          (install) => !(failed.includes(install.clusterId) && install.pluginName === plugin.name),
+          (install) =>
+            !(
+              failed.includes(install.clusterId) &&
+              install.organizationName === plugin.organizationName &&
+              install.pluginName === plugin.name
+            ),
         ),
       );
       const names = failed.map((id) => this.clusterName(id)).join(', ');
@@ -721,9 +770,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     try {
-      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name);
+      await this.pluginInstallationService.uninstallPlugin(
+        clusterId,
+        pluginResourceName(plugin.organizationName, plugin.name),
+      );
       // Optimistically mark as terminating; the poll removes it once gone.
-      this.setInstallPhase(clusterId, plugin.name, 'Terminating');
+      this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(
@@ -737,14 +789,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     const clusterId = retry.clusterId;
-    this.setInstallPhase(clusterId, plugin.name, 'Pending');
+    const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
+    this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Pending');
     try {
       // The CRD from the failed install still exists, so remove it and wait for
       // it to be gone before re-creating (a plain re-POST would 409).
-      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
-      await this.waitForUninstall(clusterId, plugin.name);
+      await this.pluginInstallationService.uninstallPlugin(clusterId, resourceName).catch(() => {});
+      await this.waitForUninstall(clusterId, resourceName);
       await this.pluginInstallationService.installPlugin(
         clusterId,
+        plugin.organizationName,
         plugin.name,
         retry.version,
         retry.hash,
@@ -759,18 +813,18 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private async waitForUninstall(
     clusterId: string,
-    pluginName: string,
+    resourceName: string,
     // Wait up to ~30s for finalizers to clear the old CRD before re-creating it;
     // re-POSTing while it is still terminating would 409.
     attempts = 30,
   ): Promise<void> {
     if (attempts <= 0) return;
     const items = await this.pluginInstallationService.listInstallations(clusterId).catch(() => []);
-    if (!items.some((item) => item.metadata.name === pluginName)) return;
+    if (!items.some((item) => item.metadata.name === resourceName)) return;
     await new Promise((resolve) => {
       setTimeout(resolve, 1000);
     });
-    await this.waitForUninstall(clusterId, pluginName, attempts - 1);
+    await this.waitForUninstall(clusterId, resourceName, attempts - 1);
   }
 
   getPluginIconName = getPluginIconName;

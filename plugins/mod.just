@@ -66,27 +66,29 @@ undeploy:
 
 # --- Plugin commands ---
 
-# To install a plugin, publish its definition with `plugin-publish` (below), then
+# To install a plugin, publish its definition with `publish` (below), then
 # reference the published pluginVersion/definitionHash from a PluginInstallation.
 # The old `plugin-install` recipe is gone: it set spec.image (the CRD now sources
 # the image from the published definition, not the CR) and pinned a git-describe
 # pluginVersion that no stored definition is keyed under.
 
-# Delete a PluginInstallation CR
-plugin-uninstall plugin:
-    kubectl --context {{ kube_context }} delete plugininstallation {{ plugin }}
+# Delete a PluginInstallation CR (installation = metadata.name, e.g. system--cert-manager)
+uninstall installation:
+    kubectl --context {{ kube_context }} delete plugininstallation {{ installation }}
 
-# Stream logs for a specific plugin
-plugin-logs plugin:
-    kubectl --context {{ kube_context }} -n plugin-{{ plugin }} logs -l plugins.fundament.io/plugin={{ plugin }} -f
+# Stream plugin-controller's logs, or one plugin's given its installation name
+logs installation="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "{{ installation }}" ]; then
+        exec kubectl --context {{ kube_context }} -n fundament logs -l app.kubernetes.io/component=plugin-controller -f
+    fi
+    # Addressed by the Deployment's constant name, so a hashed namespace works too.
+    exec kubectl --context {{ kube_context }} -n "plugin-{{ installation }}" logs deployment/plugin -f
 
 # Show all PluginInstallation CRs
-plugin-status:
+status:
     kubectl --context {{ kube_context }} get plugininstallations
-
-# View logs from all pods
-logs:
-    kubectl --context {{ kube_context }} logs -n fundament -l app.kubernetes.io/component=plugin-controller -f
 
 
 # Wire the sandbox plugin-controller (k3d-fundament-plugin) to organization-api in
@@ -101,7 +103,7 @@ logs:
 # multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
 # which stops plugins pulling their images. Only the relay container is bridged.
 # Re-run this after recreating either cluster (the node IP is resolved fresh).
-plugin-sandbox-orgapi:
+sandbox-orgapi:
     #!/usr/bin/env bash
     set -euo pipefail
     HOSTPORT=38080
@@ -135,17 +137,17 @@ plugin-sandbox-orgapi:
 # to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112),
 # FUNDAMENT_ORG_API_URL and FUNDAMENT_ORGANIZATION_ID; FUNDAMENT_TOKEN for the
 # authenticated (org-scoped) endpoint.
-# Extra flags pass through to plugin-publish, e.g.:
-#   just plugin-publish gateway-api/envoy-gateway --replace
+# Extra flags pass through to publish, e.g.:
+#   just publish gateway-api/envoy-gateway --replace
 # (--replace republishes an existing pluginVersion, soft-deleting the old definition).
-plugin-publish name *flags:
+publish name *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     : "${PLUGIN_REGISTRY:?PLUGIN_REGISTRY is required (e.g. localhost:5112)}"
     : "${FUNDAMENT_ORG_API_URL:?FUNDAMENT_ORG_API_URL is required}"
     : "${FUNDAMENT_ORGANIZATION_ID:?FUNDAMENT_ORGANIZATION_ID is required}"
     # This Justfile runs recipes from plugins/, but the Docker build context, the
-    # plugins/<name>/Dockerfile path, `go run ./plugins/...`, and plugin-publish's
+    # plugins/<name>/Dockerfile path, `go run ./plugins/...`, and publish's
     # plugins/<name>/definition.yaml read are all repo-root relative — run from root.
     cd "$(git rev-parse --show-toplevel)"
     tag=$(git describe --always --dirty)

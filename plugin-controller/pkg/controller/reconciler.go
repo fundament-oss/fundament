@@ -150,8 +150,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // re-queue with updated resource version
 	}
 
-	// Validate installation name (used to derive every child resource name).
-	if err := validateInstallationName(cr.Name); err != nil {
+	// Validate the installation's identity (it derives every child resource name).
+	if err := validateInstallation(&cr); err != nil {
 		cr.Status = pluginsv1.PluginInstallationStatus{
 			Phase:              pluginsv1.PluginPhaseFailed,
 			Message:            err.Error(),
@@ -186,6 +186,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	status := r.statusPoller.poll(ctx, &cr)
 	status.Conditions = cr.Status.Conditions
 	cr.Status = status
+	cr.Status.Namespace = pluginNamespace(cr.Name)
 	if err := r.client.Status().Update(ctx, &cr); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 	}
@@ -291,7 +292,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// ServiceAccount (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childResourceName, Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, sa, func() error {
 		mutateServiceAccount(sa, cr)
@@ -304,7 +305,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// RoleBinding (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	rb := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childResourceName, Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, rb, func() error {
 		mutateRoleBinding(rb, cr)
@@ -341,7 +342,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	// Sourced AFTER the scope: the plugin pod must never observe an SA whose
 	// scope hasn't been reconciled yet.
 	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childResourceName, Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, deploy, func() error {
 		mutateDeployment(deploy, cr, def, fundEnvVars)
@@ -354,7 +355,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// Service (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childResourceName, Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, svc, func() error {
 		mutateService(svc, cr)
@@ -439,7 +440,7 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 	rpcCtx, cancel := context.WithTimeout(ctx, scopeRPCTimeout)
 	defer cancel()
 
-	got, err := r.defClient.GetDefinition(rpcCtx, cr.Spec.DefinitionRef.PluginName, cr.Spec.DefinitionRef.PluginVersion)
+	got, err := r.defClient.GetDefinition(rpcCtx, cr.Spec.DefinitionRef.OrganizationName, cr.Spec.DefinitionRef.PluginName, cr.Spec.DefinitionRef.PluginVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch definition: %w", err)
 	}

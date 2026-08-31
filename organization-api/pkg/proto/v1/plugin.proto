@@ -48,8 +48,9 @@ message Category {
 message PluginSummary {
   string id = 10;
   // Stable identifier (e.g. "openfsc"), matching the plugin's definition.yaml
-  // metadata.name. This is the PluginInstallation resource name in the cluster —
-  // use display_name to show the plugin to a user.
+  // metadata.name. Unique only within organization_name, and NOT the cluster's
+  // PluginInstallation resource name — that is "<organization_name>--<name>".
+  // Use display_name to show the plugin to a user.
   string name = 20;
   // Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
   string display_name = 25;
@@ -63,6 +64,9 @@ message PluginSummary {
   // be installed until one exists.
   string plugin_version = 70;
   string definition_hash = 80;
+  // Publishing organization's name. With `name` it forms the installation's
+  // metadata.name: "<organization_name>--<name>".
+  string organization_name = 90;
 }
 
 // List plugins request
@@ -120,6 +124,8 @@ message PluginDetail {
   // Latest published definition; see PluginSummary.plugin_version.
   string plugin_version = 90;
   string definition_hash = 100;
+  // Publishing organization's name; see PluginSummary.organization_name.
+  string organization_name = 110;
 }
 
 // Get plugin detail request
@@ -151,6 +157,9 @@ message PutPluginDefinitionResponse {
 message GetPluginDefinitionRequest {
   string plugin_name = 10;
   string plugin_version = 20;
+  // Publishing organization (tenant.organizations.name). Required —
+  // (organization_name, plugin_name) is the plugin's identity.
+  string organization_name = 30;
 }
 message GetPluginDefinitionResponse {
   bytes manifest = 10;
