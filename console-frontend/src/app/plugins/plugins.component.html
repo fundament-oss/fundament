@@ -15,9 +15,11 @@
 
 <div class="flex flex-col-reverse gap-6 lg:flex-row">
   <!-- Main Content Area -->
-  <div class="flex-1">
-    <!-- Plugin Cards Grid -->
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+  <div class="@container min-w-0 flex-1">
+    <!-- Plugin Cards Grid. Sized against this column's own width (@container)
+         rather than the viewport, because the app shell's left nav takes a
+         large, breakpoint-dependent slice out of it. -->
+    <div class="grid grid-cols-1 gap-6 @xl:grid-cols-2 @4xl:grid-cols-3">
       @for (plugin of filteredPlugins; track plugin.id) {
         <nldd-card class="block">
           <!-- Plugin Card Header -->
@@ -39,16 +41,16 @@
                 </h3>
                 <p class="text-sm text-gray-600 dark:text-gray-300">{{ mockPluginVendor }}</p>
               </div>
-
-              <!-- Install Status -->
-              @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
-                <nldd-tag size="sm" color="success" icon="check-mark" text="Installed"></nldd-tag>
-              }
             </div>
 
             <!-- Tags -->
-            @if (plugin.tags && plugin.tags.length > 0) {
-              <p class="mb-2 flex flex-wrap gap-1">
+            @if (
+              runningInstallCount(plugin.organizationName, plugin.name) > 0 || plugin.tags.length
+            ) {
+              <p class="mb-2 flex flex-wrap items-center gap-1">
+                @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
+                  <nldd-tag size="sm" color="success" icon="check-mark" text="Installed"></nldd-tag>
+                }
                 @for (tag of plugin.tags; track tag.id) {
                   <nldd-tag
                     size="sm"
@@ -68,12 +70,12 @@
 
           <!-- Plugin Card Actions -->
           <div
-            class="flex items-center justify-between border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
           >
-            <span class="font-mono text-sm text-gray-600 dark:text-gray-300">{{
+            <span class="shrink-0 font-mono text-sm text-gray-600 dark:text-gray-300">{{
               mockPluginVersion
             }}</span>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap justify-end gap-2">
               <!-- data-tour: target of the walkthrough's install slide
                    (src/app/presentation/tours.ts). Keep the attribute. -->
               @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
@@ -139,7 +141,7 @@
   </div>
 
   <!-- Right Sidebar with filters -->
-  <div class="shrink-0 space-y-6 lg:w-64">
+  <div class="shrink-0 space-y-6 lg:w-48 xl:w-56 2xl:w-64">
     <!-- Preset Filter -->
     <div>
       <h2 class="mb-3 px-3 text-lg font-semibold">Presets</h2>
@@ -152,11 +154,11 @@
                 ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
                 : 'text-gray-700 hover:bg-white dark:text-white dark:hover:bg-gray-800'
             "
-            class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"
+            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-200 xl:text-base"
             [title]="preset.description"
           >
-            <span>{{ preset.name }}</span>
-            <span class="text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
+            <span class="min-w-0 truncate">{{ preset.name }}</span>
+            <span class="shrink-0 text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
           </button>
         }
       </nav>
@@ -174,10 +176,10 @@
                 ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
                 : 'text-gray-700 hover:bg-white dark:text-white dark:hover:bg-gray-800'
             "
-            class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors duration-200"
+            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-200 xl:text-base"
           >
-            <span>{{ category.name }}</span>
-            <span class="text-gray-600 dark:text-gray-300">{{ category.count }}</span>
+            <span class="min-w-0 truncate">{{ category.name }}</span>
+            <span class="shrink-0 text-gray-600 dark:text-gray-300">{{ category.count }}</span>
           </button>
         }
       </nav>

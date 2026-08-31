@@ -13,9 +13,9 @@ import PluginLabelsComponent from './plugin-labels.component';
   template: `
     <a [routerLink]="['/plugins', plugin().id]" class="group block h-full">
       <nldd-card
-        class="hover:ring-accent-200 dark:hover:ring-accent-800 block h-full transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
+        class="hover:ring-accent-200 dark:hover:ring-accent-800 flex h-full flex-col transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
       >
-        <div class="flex h-full flex-col gap-3 p-5">
+        <div class="flex flex-1 flex-col gap-3 p-5">
           <div class="flex items-start gap-3">
             <app-plugin-icon
               [name]="plugin().icon"

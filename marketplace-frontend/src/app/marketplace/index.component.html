@@ -1,7 +1,15 @@
 <!-- Hero: a full-bleed band, so it breaks out of the page container and sits
-     flush under the top nav (which cancels the surrounding `main` top padding). -->
+     flush under the top nav (which cancels the surrounding `main` top padding).
+
+     The bleed is negative margins matching `main`'s own gutters, not a
+     `100vw` breakout: `100vw` counts the scrollbar, so wherever the scrollbar
+     is a classic one (the walkthrough's marketplace iframe, Windows) the band
+     lands half a scrollbar off-centre and the hero stops lining up with the
+     content below it. Below `xl` the page is narrower than `max-w-7xl`, so the
+     gutters alone reach the viewport edge; from `xl` up the container is capped
+     and centred, which is the one case that still needs the viewport. -->
 <section
-  class="border-dividers bg-surface-base relative left-1/2 -mt-8 mb-12 w-screen -translate-x-1/2 overflow-hidden border-b"
+  class="border-dividers bg-surface-base relative -mx-4 -mt-8 mb-12 overflow-hidden border-b sm:-mx-6 lg:-mx-8 xl:mx-[calc(50%-50vw)]"
 >
   <!-- Cluster canvas: faint node grid + soft accent glow -->
   <div
@@ -106,15 +114,18 @@
     <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
   </div>
 } @else {
-  <div class="flex flex-col gap-8 lg:flex-row">
-    <!-- Category sidebar -->
-    <aside class="shrink-0 self-start lg:sticky lg:top-24 lg:w-56">
+  <div class="flex flex-col gap-8 md:flex-row">
+    <!-- Category sidebar. Beside the content from `md` up (this app has no
+         shell nav eating the width, so the split still reads fine at ~800px);
+         stacked below that it is a full-width row of category chips, since a
+         shrink-to-fit column of half-empty rows is neither. -->
+    <aside class="shrink-0 md:sticky md:top-24 md:w-48 md:self-start lg:w-56">
       <h2
         class="mb-3 px-3 text-xs font-semibold tracking-[0.14em] text-gray-500 uppercase dark:text-gray-400"
       >
         Browse
       </h2>
-      <nav class="space-y-1.5" aria-label="Plugin categories">
+      <nav class="flex flex-wrap gap-1.5 md:block md:space-y-1.5" aria-label="Plugin categories">
         <button
           type="button"
           (click)="selectCategory('all')"
@@ -123,7 +134,7 @@
               ? 'bg-accent-75 text-accent-800 font-semibold'
               : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
           "
-          class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors md:w-full"
         >
           <span class="flex items-center gap-2.5">
             <nldd-icon name="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
@@ -142,7 +153,7 @@
                 ? 'bg-accent-75 text-accent-800 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
             "
-            class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
+            class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors md:w-full"
           >
             <span class="flex items-center gap-2.5">
               <nldd-icon
@@ -159,8 +170,9 @@
       </nav>
     </aside>
 
-    <!-- Main content -->
-    <div class="min-w-0 flex-1">
+    <!-- Main content. Card grids are sized with container queries: with the
+         sidebar alongside, the viewport is a poor proxy for what is left. -->
+    <div class="@container min-w-0 flex-1">
       @if (isFiltering()) {
         <!-- Flat results grid when filtering/searching -->
         <div class="mb-5 flex items-baseline justify-between gap-4">
@@ -200,7 +212,7 @@
             </nldd-inline-dialog>
           </nldd-box>
         } @else {
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">
             @for (plugin of filteredPlugins(); track plugin.id) {
               <app-plugin-card [plugin]="plugin" />
             }
@@ -265,7 +277,7 @@
           }
 
           @if (recentlyAdded().length > 0) {
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-5 @xl:grid-cols-2">
               @for (plugin of recentlyAdded(); track plugin.id) {
                 <app-plugin-card [plugin]="plugin" />
               }
