@@ -2,6 +2,9 @@ mod cert-manager
 mod openfsc
 mod envoy-gateway 'gateway-api/envoy-gateway'
 mod ceph-rook 'storage/ceph-rook'
+# TODO: external-dns and gateway-api/istio have source and a definition.yaml but are neither
+# registered here nor present in db/seed/0101-appstore-catalog.sql, so they cannot be published
+# or tested. Add the mod line and the catalog row.
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"

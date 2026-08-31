@@ -1,19 +1,29 @@
 ---
 title: "Runbook: verifying the Ceph/Rook plugin"
 sidebar:
-  order: 5
+  label: Ceph/Rook runbook
+  order: 9
 ---
 
-End-to-end verification of the `ceph-rook` plugin against a local k3d sandbox, from an
-empty machine to a pod writing to a Ceph-backed volume.
+End-to-end verification of the `ceph-rook` plugin against the local `k3d-fundament-plugin`
+sandbox cluster, from an empty machine to a pod writing to a Ceph-backed volume.
+
+**Advanced.** This is the longest path in the repo. For the standard plugin flow, start with
+[Install a plugin](./install-a-plugin.md).
 
 The unit tests cover the plugin's decision logic and its reconcilers against a fake
 client. They cannot tell you whether Rook actually builds an OSD out of a real block
 device, whether the CSI driver can map an RBD image, or whether the console pages render.
 That is what this runbook is for.
 
-Budget 45–60 minutes for a first run; most of it is Ceph pulling images and waiting for
-OSDs.
+Budget 45–60 minutes for a first run on a warm Docker cache; most of it is Ceph pulling
+images and waiting for OSDs. From no images at all, closer to two hours — the platform
+cluster and its 14 images account for most of the difference.
+
+New to the two-cluster setup? Read
+[The two development clusters](./dev-environment.md) first, and ideally do the shorter
+[Install a plugin](./install-a-plugin.md) walkthrough before this one. This runbook assumes both
+clusters already exist.
 
 ## What each phase proves
 
@@ -39,13 +49,21 @@ nothing you learn in phases 4–8 means anything.
   [Block devices for k3d](../fundament/k3d-block-devices.md).
 - **At least 8 GiB of VM memory.** Ceph needs roughly 2 GiB per OSD plus its daemons. On
   colima: `colima start --cpus 4 --memory 8`. Memory cannot be changed on a running VM.
-- **The management cluster (`k3d-fundament`) must be up**, because publishing goes through
-  organization-api. The sandbox cluster (`k3d-fundament-plugin`) is where the plugin runs.
+- **The `k3d-fundament` platform cluster must be up**, because publishing goes through
+  organization-api. The `k3d-fundament-plugin` sandbox cluster is where the plugin runs.
+- **An activated mise environment.** `just`, `skaffold`, `jq` and `yq` come from mise and are
+  otherwise not on `PATH`.
 
-:::caution[Check your kubectl context]
-`just dev` and skaffold deploy to the *current* context, and they do not switch for you.
-Every command below passes `--context` explicitly for that reason. If you drop the flag,
-confirm your context first.
+:::caution[Watch the `plugins` prefix]
+Every command below runs from the **repository root**. `just dev` and `just plugins dev` are
+different recipes deploying different things to different clusters — the root one deploys the
+platform to `k3d-fundament`, the `plugins` module one deploys the plugin-controller to
+`k3d-fundament-plugin`. `cd`-ing into `plugins/` does not select the latter: `mod.just` is not a
+`Justfile`, so `just` walks up and finds the root recipe anyway.
+
+Your kubectl context does not disambiguate them: both skaffold configurations pin
+`kubeContext`, so `kubectl config use-context` has no effect on where they deploy. Every
+`kubectl` command below passes `--context` explicitly for the same reason.
 :::
 
 ## Phase 0 · Clean slate
@@ -71,10 +89,9 @@ If a previous Ceph cluster is still running, take it down in Rook's order *befor
 deleting the k3d cluster, so its finalizers get cleared:
 
 ```bash
-cd plugins
-../deploy/k3d/rook-smoke.sh down     # if the leftovers came from the smoke script
-just plugin-uninstall ceph-rook      # if they came from the plugin
-just cluster-delete
+./deploy/k3d/rook-smoke.sh down     # if the leftovers came from the smoke script
+just plugins uninstall system--ceph-rook      # if they came from the plugin
+just plugins cluster-delete
 ```
 
 `cluster-delete` drains Ceph consumers first, so it is safe even mid-experiment.
@@ -82,11 +99,16 @@ just cluster-delete
 ## Phase 1 · Environment
 
 ```bash
-cd plugins
-just cluster-create-storage    # binds /dev and /run/udev into the node
-just storage-disks doctor      # inspect the kernel Docker actually runs on
-just storage-disks attach      # 3 × 20 GiB sparse images -> /dev/loop0p1 .. /dev/loop2p1
+just plugins cluster-create-storage    # binds /dev and /run/udev into the node
+just plugins storage-disks doctor      # inspect the kernel Docker actually runs on
+just plugins storage-disks attach      # 3 × 20 GiB sparse images -> /dev/loop0p1 .. /dev/loop2p1
+just plugins dev                       # plugin-controller into the sandbox; leave it running
 ```
+
+`just plugins dev` deploys the plugin-controller to `k3d-fundament-plugin` — note the prefix; a
+bare `just dev` deploys the platform instead. Without it the sandbox has the
+`PluginInstallation` CRD but nothing that reconciles it, and phase 4 will apply a CR that never
+progresses.
 
 `doctor` is worth reading rather than skimming. The line that matters most:
 
@@ -102,7 +124,7 @@ phases 4–6 remain testable and only phase 7 is blocked. On macOS, colima provi
 Confirm the devices reached the node:
 
 ```bash
-just storage-disks status
+just plugins storage-disks status
 ```
 
 Expect `/dev/loop0p1`, `/dev/loop1p1`, `/dev/loop2p1` both on the host and in the node.
@@ -110,15 +132,15 @@ Three is the useful floor — it is what lets a pool hold 3 replicas across OSDs
 
 :::note[After a reboot]
 The backing files survive reboots; the loop devices do not, because those are kernel
-state. Recovery is `just storage-disks attach` and nothing else.
+state. Recovery is `just plugins storage-disks attach` and nothing else.
 :::
 
 ## Phase 2 · Baseline without the plugin
 
 ```bash
-../deploy/k3d/rook-smoke.sh up      # upstream chart + a hand-written CephCluster
-../deploy/k3d/rook-smoke.sh status  # expect HEALTH_OK (or HEALTH_WARN about redundancy)
-../deploy/k3d/rook-smoke.sh test    # 1Gi PVC + a pod that writes and verifies -> SMOKE-OK
+./deploy/k3d/rook-smoke.sh up      # upstream chart + a hand-written CephCluster
+./deploy/k3d/rook-smoke.sh status  # expect HEALTH_OK (or HEALTH_WARN about redundancy)
+./deploy/k3d/rook-smoke.sh test    # 1Gi PVC + a pod that writes and verifies -> SMOKE-OK
 ```
 
 `rook-smoke.sh` contains no Fundament code, so it cleanly separates "the environment is
@@ -136,7 +158,7 @@ and says so rather than failing:
     unaffected, so this is not a failure of the environment.
 ```
 
-This plugin is block-only, so RBD is the whole story. `just storage-disks has-module ceph`
+This plugin is block-only, so RBD is the whole story. `just plugins storage-disks has-module ceph`
 answers the question on its own.
 :::
 
@@ -156,8 +178,8 @@ missing `/dev` bind fails every time. Confirm with
 Then free the namespace — the plugin wants the same one:
 
 ```bash
-../deploy/k3d/rook-smoke.sh down
-just storage-disks reset            # wipe stale OSD metadata, reattach
+./deploy/k3d/rook-smoke.sh down
+just plugins storage-disks reset            # wipe stale OSD metadata, reattach
 ```
 
 `reset` is not optional between installs. Stale BlueStore metadata on the images, or Rook
@@ -165,22 +187,22 @@ state under `dataDirHostPath`, is the usual reason a second install fails.
 
 ## Phase 3 · Build and publish
 
-Publishing resolves the plugin's catalog id by name, so the appstore seed must be applied
-in the management cluster. This PR adds the `ceph-rook` catalog entry and a `Storage`
-category, so **the seed must be re-applied** — it is idempotent (`ON CONFLICT DO UPDATE`),
-and the `db-migrations` Job runs it:
+Publishing resolves the plugin's catalog id by name, so the appstore seed must be present in
+the `k3d-fundament` platform cluster. The seed carries the `ceph-rook` catalog entry and its `Storage`
+category, is idempotent (`ON CONFLICT DO UPDATE`), and is applied by the `db-migrations` Job. If
+the database predates that entry, re-run the Job:
+
+This is the root `dev`, without the `plugins` prefix — see the caution above:
 
 ```bash
-kubectl config use-context k3d-fundament
-just dev                            # or: just deploy — re-runs db-migrations
+just dev                            # or: just deploy local — re-runs db-migrations
 ```
 
 Bridge the sandbox controller to organization-api (re-run after recreating either cluster,
 since it resolves the node IP fresh):
 
 ```bash
-cd plugins
-just plugin-sandbox-orgapi
+just plugins sandbox-orgapi
 ```
 
 Now build, push and publish:
@@ -213,13 +235,12 @@ One `admin`/`accepted` row is what you need. If it is missing, re-run the migrat
 `db.reset: true`, or insert `db/testdata/033_0101-content.sql` by hand.
 :::
 
-```bash
-export PLUGIN_REGISTRY=localhost:5112
-export FUNDAMENT_ORG_API_URL=https://organization.fundament.localhost:8443
-export FUNDAMENT_ORGANIZATION_ID=019b4000-0000-7000-8000-000000000000   # seeded "system" org
-export FUNDAMENT_TOKEN=...      # a token for platform-admin@fundament.io — required
+Set the four publish variables exactly as in
+[Install a plugin, step 3](./install-a-plugin.md#3-publish-the-plugin-definition) — that page is
+canonical for them — then:
 
-just plugin-publish storage/ceph-rook
+```bash
+just plugins publish storage/ceph-rook
 ```
 
 Authorization also depends on two OpenFGA tuples, written by the authz-worker from the
@@ -245,7 +266,7 @@ Republishing the same `v0.1.0` needs `--replace`, which soft-deletes the previou
 definition:
 
 ```bash
-just plugin-publish storage/ceph-rook --replace
+just plugins publish storage/ceph-rook --replace
 ```
 
 If it fails with `no catalog entry for "ceph-rook"`, the seed did not reach the database —
@@ -261,9 +282,10 @@ kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: ceph-rook
+  name: system--ceph-rook
 spec:
   definitionRef:
+    organizationName: system
     pluginName: ceph-rook
     pluginVersion: v0.1.0
     definitionHash: sha256:PASTE_THE_HASH_FROM_PHASE_3
@@ -290,8 +312,8 @@ OSD. With this flag the filter is *replaced* by loop-partitions-only, not extend
 Watch it come up:
 
 ```bash
-just plugin-status
-just plugin-logs ceph-rook
+just plugins status
+just plugins logs system--ceph-rook
 ```
 
 Expect `PHASE=Running`, `READY=true`, and a log line `rook-ceph storage plugin running`.
@@ -316,8 +338,8 @@ kubectl --context k3d-fundament-plugin get disks
 Expect exactly three, one per loop partition:
 
 ```
-NAME                                  NODE                            SIZE          AVAILABLE
-k3d-fundament-plugin-server-0-1a2b3c  k3d-fundament-plugin-server-0   21472739328   true
+NAME                                      NODE                            PATH           SIZE          AVAILABLE
+k3d-fundament-plugin-server-0-2e7309e042  k3d-fundament-plugin-server-0   /dev/loop0p1   21472739328   true
 ...
 ```
 
@@ -370,6 +392,10 @@ Watch it provision — the first OSD takes a few minutes:
 ```bash
 kubectl --context k3d-fundament-plugin get storagepool test-pool -w
 ```
+
+The pool stays `Provisioning` for another 60–90 seconds after its `CephBlockPool` reports
+`Ready`; the reconciler picks the change up on its next pass. That wait is normal, not a
+stall.
 
 ```bash
 kubectl --context k3d-fundament-plugin get storagepool test-pool -o yaml | yq .status
@@ -480,8 +506,8 @@ them to confirm they hold against a real API server.
 Previously the pages were embedded but never routed, and the iframe 404'd.
 
 ```bash
-kubectl --context k3d-fundament-plugin -n plugin-ceph-rook \
-  port-forward deploy/ceph-rook 8080:8080 &
+kubectl --context k3d-fundament-plugin -n plugin-system--ceph-rook \
+  port-forward deploy/plugin 8080:8080 &
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/storagepools-list.html
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/storagepools-create.html
 kill %1
@@ -494,6 +520,22 @@ and that clicking a pool row navigates — the previous version's inline styles 
 ```
 https://console.fundament.localhost:8443/
 ```
+
+The console reaches the plugin through plugin-proxy in the `k3d-fundament` platform cluster,
+which needs a
+kubeconfig for the sandbox. Create it once per cluster pair, with the root recipe:
+
+```bash
+just plugin-sandbox-kubeconfig
+```
+
+The recipe restarts plugin-proxy and kube-api-proxy and waits until the switch is confirmed,
+ending with `- kube-api-proxy is proxying to the sandbox (mock disabled)`.
+
+The Secret is mounted optionally, so plugin-proxy starts and reports healthy without it and
+fails only when a plugin page is opened. A blank or erroring plugin iframe with a healthy
+plugin pod usually means this step is missing, or that the sandbox cluster was recreated
+since it last ran.
 
 Check the browser console for CSP violations. There should be none.
 
@@ -523,46 +565,7 @@ violation anywhere here is a failure, not cosmetic.
    `Claimed by` is set for a pooled disk (plain text — cross-kind links are not
    expressible in the host contract).
 
-### 8b · Foreign objects are not adopted
-
-The old code would adopt a same-named StorageClass and delete it when the pool went away.
-
-```bash
-kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ceph-squatter
-provisioner: rancher.io/local-path
-YAML
-
-kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
-apiVersion: storage.fundament.io/v1alpha1
-kind: StoragePool
-metadata:
-  name: squatter
-spec:
-  replication: auto
-  disks: []
-YAML
-
-kubectl --context k3d-fundament-plugin get storagepool squatter -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
-```
-
-Expect `Degraded` and a message naming the conflict. Critically, the foreign object must be
-untouched:
-
-```bash
-kubectl --context k3d-fundament-plugin get storageclass ceph-squatter \
-  -o jsonpath='{.provisioner}{" owners="}{.metadata.ownerReferences}{"\n"}'
-# rancher.io/local-path owners=      <- unchanged, no owner reference
-
-kubectl --context k3d-fundament-plugin delete storagepool squatter
-kubectl --context k3d-fundament-plugin get storageclass ceph-squatter   # must still exist
-kubectl --context k3d-fundament-plugin delete storageclass ceph-squatter
-```
-
-### 8c · `claimedBy` updates immediately
+### 8b · `claimedBy` updates immediately
 
 It used to wait for the discovery daemon's next sweep (~60m), long enough to hand one disk
 to two pools through the UI.
@@ -576,7 +579,7 @@ Every disk in `test-pool` must already show `claimedBy=test-pool` — no waiting
 also what makes the create form's picker correct, so re-open it and confirm it offers no
 disks.
 
-### 8d · Deleting a pool shrinks the CephCluster
+### 8c · Deleting a pool shrinks the CephCluster
 
 Nothing else recomputes this: the CephCluster carries no owner reference.
 
@@ -598,25 +601,117 @@ explicit Ceph purge. `kubectl -n rook-ceph get pods -l app=rook-ceph-osd` will s
 them. This is expected and documented; it is why disk removal is a two-step operation.
 :::
 
+### 8d · Foreign objects are not adopted
+
+The old code would adopt a same-named StorageClass and delete it when the pool went away.
+
+This check runs last on purpose. The guard only fires once the reconciler actually reaches
+the StorageClass write, which needs the pool to resolve at least one disk — a pool with
+`disks: []` goes `Degraded` with `no disks selected` and never gets that far. Step 8c freed
+the disks, so they can be reused here.
+
+```bash
+kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ceph-squatter
+provisioner: rancher.io/local-path
+YAML
+
+DISKS=$(kubectl --context k3d-fundament-plugin get disks -o jsonpath='{range .items[*]}      - {.metadata.name}{"\n"}{end}')
+kubectl --context k3d-fundament-plugin apply -f - <<YAML
+apiVersion: storage.fundament.io/v1alpha1
+kind: StoragePool
+metadata:
+  name: squatter
+spec:
+  replication: auto
+  disks:
+$DISKS
+YAML
+
+kubectl --context k3d-fundament-plugin get storagepool squatter -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
+```
+
+Expect `Degraded`, and a message naming the conflict:
+
+```
+apply StorageClass ceph-squatter: terminal error: StorageClass "ceph-squatter" already
+exists and is not owned by this StoragePool; refusing to adopt it (deleting the pool would
+then delete that object). Rename the StoragePool or remove the conflicting StorageClass
+```
+
+Critically, the foreign object must be untouched:
+
+```bash
+kubectl --context k3d-fundament-plugin get storageclass ceph-squatter \
+  -o jsonpath='{.provisioner}{" owners="}{.metadata.ownerReferences}{"\n"}'
+# rancher.io/local-path owners=      <- unchanged, no owner reference
+
+kubectl --context k3d-fundament-plugin delete storagepool squatter
+kubectl --context k3d-fundament-plugin get storageclass ceph-squatter   # must still exist
+kubectl --context k3d-fundament-plugin delete storageclass ceph-squatter
+```
+
 ## Phase 9 · Teardown
 
 Order matters. Ceph consumers must release volumes while Ceph is still running to service
 the unmounts:
 
 ```bash
-cd plugins
-just plugin-uninstall ceph-rook
-just cluster-delete            # drains first
-just storage-disks purge       # detach and delete the backing images, freeing the space
+just plugins uninstall system--ceph-rook
+just plugins cluster-delete    # drains first
+just plugins storage-disks purge       # detach and delete the backing images, freeing the space
 ```
 
-To keep the disks for a future run, use `just storage-disks reset` instead of `purge`.
+To keep the disks for a future run, use `just plugins storage-disks reset` instead of `purge`.
+
+`cluster-stop` and `cluster-delete` drain the node first, which evicts pods — a bare
+verification pod is deleted, not restarted. Only its PersistentVolumeClaim survives a
+stop/start cycle.
+
+## When the platform cluster changes under you
+
+Both failure modes below are described in full, with recovery, under
+[Install a plugin → Known issues on this path](./install-a-plugin.md#known-issues-on-this-path).
+That page is canonical; this section adds only what is specific to a mid-runbook redeploy.
+
+A `just dev` at the repository root re-seeds the platform database and drops every published
+`PluginDefinition`, so it invalidates what phase 3 published. `just plugins status` will not tell
+you — the CR keeps reporting `Running`/`READY=true`. The controller log is where it shows:
+
+```bash
+kubectl --context k3d-fundament-plugin -n fundament logs deploy/fundament-plugin-controller | tail
+# fetch definition: GetPluginDefinition RPC: not_found: plugin definition ceph-rook@v0.1.0 not found
+```
+
+Redo phase 3, then delete and re-apply the `PluginInstallation` with the new hash —
+`definitionRef` is immutable, so it cannot be edited in place. Deleting runs the uninstall path,
+which for `ceph-rook` tears down the CephCluster; on a verification run that is usually what you
+want anyway, but do not do it to a pool holding data you care about.
+
+If publishing then fails with `permission_denied` while both checks in phase 3 look right —
+the `admin`/`accepted` row present and both OpenFGA tuples present — the OpenFGA store was
+recreated during the reset and the tuples belong to the previous one:
+
+```bash
+kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
+  psql -U postgres -d openfga -c "SELECT store, count(*) FROM tuple GROUP BY 1;"
+kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
+  psql -U postgres -d openfga -c "SELECT id FROM store;"
+```
+
+The two store ids must match. When they do not, every authorization decision resolves to
+false while every pod looks healthy. Restarting `organization-api`, `kube-api-proxy` or
+`authz-worker` does not repair it — the tuples are already written and the outbox is
+drained. Another platform redeploy does.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `REFUSING: the Docker host is not a virtual machine`, `Detected: unknown`, on macOS | VM probes could not answer | Fixed — an aarch64 guest has no DMI and often no systemd, so detection now also reads the device tree and the virtio bus. If it recurs, `just storage-disks doctor` prints what was detected |
+| `REFUSING: the Docker host is not a virtual machine`, `Detected: unknown`, on macOS | VM probes could not answer | Fixed — an aarch64 guest has no DMI and often no systemd, so detection now also reads the device tree and the virtio bus. If it recurs, `just plugins storage-disks doctor` prints what was detected |
 | `losetup: unrecognized option: show` (or `: j`) | Docker host ships BusyBox, not util-linux | Fixed — association no longer uses `--show`/`-j`. OrbStack and colima both ship BusyBox |
 | `attach` exits 1 printing nothing | A failing test as a loop body's last command, under `set -e` | Fixed. If a similar silent exit appears, re-run with `bash -x` |
 | Smoke test times out; events show `modprobe args: [ceph]` repeating | No `ceph` kernel module — CephFS cannot mount | Not a failure. The plugin is block-only; the smoke test now skips CephFS automatically |
@@ -627,11 +722,15 @@ To keep the disks for a future run, use `just storage-disks reset` instead of `p
 | OSD prepare job: `unsupported diskType loop` | `allowLoopDevices` did not take | Confirm `DEV_LOOP_DEVICES` is set on the PluginInstallation |
 | Mons never reach quorum | 3 mons on one node | Set `MON_COUNT: "1"` and `ALLOW_MULTIPLE_PER_NODE: "true"` |
 | CephCluster rejected on version | Ceph release outside Rook's table | Only if you overrode `CEPH_IMAGE`: set `ALLOW_UNSUPPORTED_CEPH: "true"` (default `false`) |
-| `csi-rbdplugin` CrashLoopBackOff | `rbd` kernel module missing | `just storage-disks doctor`; use colima |
+| `csi-rbdplugin` CrashLoopBackOff | `rbd` kernel module missing | `just plugins storage-disks doctor`; use colima |
 | PVC Pending, provisioner logs quiet | No OSD is up | `kubectl -n rook-ceph get pods -l app=rook-ceph-osd` |
-| `rbd: mapping succeeded but /dev/rbd0 is not accessible` | No `/dev` bind | Recreate with `just cluster-create-storage` |
-| Second install fails after a first attempt | Stale OSD metadata | `just storage-disks reset` |
-| Node container will not stop | Stale RBD mapping | `just storage-disks unmap-stale` |
+| `rbd: mapping succeeded but /dev/rbd0 is not accessible` | No `/dev` bind | Recreate with `just plugins cluster-create-storage` |
+| Second install fails after a first attempt | Stale OSD metadata | `just plugins storage-disks reset` |
+| `PluginInstallation` never leaves `Deploying`, no plugin namespace appears | No plugin-controller in the sandbox | `just plugins dev` (phase 1) |
+| `GetPluginDefinition … not found` after a platform redeploy | `db.reset: true` wiped the published definition | Redo phase 3 — see "When the platform cluster changes under you" |
+| `permission_denied` on publish, but both phase 3 checks look right | OpenFGA store recreated; tuples in the old store | Redeploy the platform again — same section |
+| Plugin iframe blank in the console, plugin pod healthy | `plugin-sandbox-kubeconfig` Secret missing or stale | `just plugin-sandbox-kubeconfig` from the root, then restart plugin-proxy |
+| Node container will not stop | Stale RBD mapping | `just plugins storage-disks unmap-stale` |
 | Pool stuck `Provisioning` | CephBlockPool not Ready | `kubectl -n rook-ceph describe cephblockpool ceph-<pool>` |
 | Pool `Degraded` | Conflict or drift | Read `status.message` — it names the action |
 

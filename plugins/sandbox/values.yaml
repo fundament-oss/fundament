@@ -34,7 +34,11 @@ ingress:
 pluginController:
   enabled: true
   logLevel: debug
-  # `just plugin-install` sets an empty definitionHash; allow it in the sandbox.
+  # Allow a PluginInstallation that pins no definitionHash; the sandbox trusts its own registry.
+  # TODO: this cannot actually be used. The CRD marks definitionRef immutable (self == oldSelf)
+  # and the controller round-trips an absent definitionHash as "", so its first update is
+  # rejected and the installation never reconciles. Either make the rule tolerate an absent
+  # hash, or drop this flag.
   allowUnpinnedHash: true
   # The sandbox cluster is network-isolated from organization-api (which lives in
   # the management cluster). `just plugins sandbox-orgapi` bridges the two via a
