@@ -64,6 +64,24 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "browser": "src/main.demo.ts",
+              "ssr": false,
+              "server": false,
+              "outputMode": "static",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "2MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "60kB"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

@@ -368,6 +368,12 @@ html.presenting body {
 html.presenting-full body {
   padding-left: 0;
 }
+/* An `embed` slide frames the marketplace demo over the right pane. The console
+   stays mounted underneath, keeping its state for the slide that comes back to
+   it, and is only taken out of view. */
+html.presenting-embed app-root {
+  visibility: hidden;
+}
 /* While presenting, the left 40vw is the narration panel, so app dialogs are
    centered in the right pane. modal-pane.ts fixes the dialog to the viewport and
    reads this inset from the custom property, which inherits into the modal

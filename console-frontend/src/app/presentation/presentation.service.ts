@@ -12,6 +12,11 @@ import {
   UI,
 } from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
+import {
+  EMBED_NAVIGATE_MESSAGE,
+  EMBED_READY_MESSAGE,
+  MARKETPLACE_EMBED_BASE,
+} from './presentation.tokens';
 import runDrive from './drive-runner';
 import { closeOpenAppDialogs } from './app-dialogs';
 import { ToastService } from '../toast.service';
@@ -71,6 +76,12 @@ export default class PresentationService {
   /** Full-bleed slide (opening/closing) — hides the app; unrelated to browser fullscreen. */
   readonly isFull = computed(() => !!this.currentSlide()?.full);
 
+  /**
+   * Path inside the embedded marketplace demo for this slide, or '' when the app
+   * pane shows the console. The overlay renders the frame off this.
+   */
+  readonly embedPath = computed(() => (this.mode() === 'tour' && this.currentSlide()?.embed) || '');
+
   /** Whether the panel fills the viewport: full-bleed slides and the chooser. */
   readonly deckFull = computed(() => this.mode() === 'chooser' || this.isFull());
 
@@ -81,6 +92,12 @@ export default class PresentationService {
     String(this.index() + 1).padStart(String(this.total()).length, '0'),
   );
 
+  /** The overlay's iframe, once it exists. Only set while an embed slide is up. */
+  private embedFrame: HTMLIFrameElement | null = null;
+
+  /** Resolves when the framed app has bootstrapped and can be navigated. */
+  private embedReady: Promise<void> | null = null;
+
   private driveController: AbortController | null = null;
 
   /** Bumped on every cancelDrive(); only the newest navigation may start a drive. */
@@ -90,10 +107,26 @@ export default class PresentationService {
 
   private static readonly AUTOPLAY_MS = 6000;
 
+  private static readonly EMBED_TIMEOUT_MS = 5000;
+
   constructor() {
     document.addEventListener('fullscreenchange', () => {
       this.browserFullscreen.set(!!document.fullscreenElement);
     });
+  }
+
+  /**
+   * Handed the overlay's iframe when it enters the DOM, and null when it leaves.
+   * The element is the overlay's to render and the service's to drive, so this is
+   * the seam between them.
+   */
+  registerEmbedFrame(frame: HTMLIFrameElement | null): void {
+    if (frame === this.embedFrame) return;
+    this.embedFrame = frame;
+    // A frame that just appeared has no app in it yet, and one that went away
+    // takes its readiness with it. Loading is showEmbed()'s job, so that the
+    // slide's drive can wait for the same promise.
+    this.embedReady = null;
   }
 
   /**
@@ -286,7 +319,7 @@ export default class PresentationService {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
     this.mode.set('chooser');
-    document.documentElement.classList.remove('presenting', 'presenting-full');
+    document.documentElement.classList.remove('presenting', 'presenting-full', 'presenting-embed');
     // Hand the title back to the console; the next route change re-sets it.
     this.title.setTitle(this.ui().consoleTitle);
     this.router.navigate([this.currentPath()], { queryParams: {} });
@@ -297,6 +330,9 @@ export default class PresentationService {
     const root = document.documentElement.classList;
     root.toggle('presenting', this.active());
     root.toggle('presenting-full', this.active() && (this.isFull() || this.mode() === 'chooser'));
+    // The console stays mounted behind the frame, keeping its state for the
+    // slide that comes back to it; it is only taken out of view.
+    root.toggle('presenting-embed', this.active() && !!this.embedPath());
   }
 
   private currentPath(): string {
@@ -316,23 +352,104 @@ export default class PresentationService {
       slide: this.index() + 1,
       lang: this.locale(),
     };
-    const path = slide?.route ?? this.currentPath();
-    this.router.navigate([path], { queryParams }).then(() => {
+    // An embed slide leaves the console where it stands and moves the framed
+    // marketplace instead, but still writes the deck's own query params so the
+    // slide stays deep-linkable and survives a reload.
+    const path = (slide?.embed ? undefined : slide?.route) ?? this.currentPath();
+    this.router.navigate([path], { queryParams }).then(async () => {
       // A navigation that a later goto() superseded still resolves (with false),
       // so without this guard holding down → would let the abandoned slide's
       // callback cancel the current slide's drive and run its own script against
       // whatever route is on screen by then.
       if (token !== this.navToken) return;
-      if (slide?.drive?.length) this.startDrive(slide);
+      const doc = slide?.embed ? await this.showEmbed(slide.embed) : document;
+      // Awaiting the frame gave a later goto() the chance to move on.
+      if (token !== this.navToken || !doc) return;
+      if (slide?.drive?.length) this.startDrive(slide, doc);
     });
   }
 
-  private startDrive(slide: Slide): void {
+  /**
+   * Points the framed marketplace at `path` and resolves with its document once
+   * the app in it can be driven. The first embed slide loads the bundle; later
+   * ones are a message the frame routes on internally, so stepping between
+   * marketplace slides does not reload and reset the app.
+   *
+   * Resolves with null when there is no frame (the overlay has not rendered it
+   * yet) or the slide is not an embed slide.
+   */
+  private async showEmbed(path: string): Promise<Document | null> {
+    if (!path) return null;
+    const frame = await this.waitForFrame();
+    if (!frame) return null;
+    const src = `${MARKETPLACE_EMBED_BASE}#${path}`;
+    if (!this.embedReady) {
+      this.embedReady = PresentationService.loadEmbed(frame, src);
+    } else {
+      frame.contentWindow?.postMessage(
+        { type: EMBED_NAVIGATE_MESSAGE, path },
+        window.location.origin,
+      );
+    }
+    await this.embedReady;
+    return frame.contentDocument;
+  }
+
+  /**
+   * The overlay renders the frame off `embedPath()`, so it appears a change
+   * detection cycle after the slide index moved. Navigation can win that race,
+   * hence the short poll rather than reading `embedFrame` once.
+   */
+  private async waitForFrame(): Promise<HTMLIFrameElement | null> {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (this.embedFrame) return this.embedFrame;
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    }
+    return this.embedFrame;
+  }
+
+  /**
+   * Loads the marketplace demo into `frame` and waits for it to say it has
+   * bootstrapped. The iframe's own `load` fires when the HTML arrives, well
+   * before Angular has rendered anything worth driving, so the frame posts a
+   * ready message and this listens for it. The timeout is the fallback for a
+   * frame that never reports in: a slide that shows a half-loaded app beats one
+   * that hangs the deck.
+   */
+  private static loadEmbed(frame: HTMLIFrameElement, src: string): Promise<void> {
+    const target = frame;
+    return new Promise((resolve) => {
+      // One exit: abort. It unregisters the message listener (which is bound to
+      // the same signal), stops the timer and resolves, whether the frame
+      // reported in or the timeout ran out.
+      const listening = new AbortController();
+      const timer = setTimeout(() => listening.abort(), PresentationService.EMBED_TIMEOUT_MS);
+      listening.signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      window.addEventListener(
+        'message',
+        (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if ((event.data as { type?: string } | null)?.type !== EMBED_READY_MESSAGE) return;
+          listening.abort();
+        },
+        { signal: listening.signal },
+      );
+      target.src = src;
+    });
+  }
+
+  private startDrive(slide: Slide, doc: Document): void {
     this.cancelDrive();
     const controller = new AbortController();
     this.driveController = controller;
     // runDrive swallows its own errors (including aborts), so nothing to handle here.
-    runDrive(slide.drive ?? [], controller.signal);
+    runDrive(slide.drive ?? [], controller.signal, doc);
   }
 
   private cancelDrive(): void {

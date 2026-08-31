@@ -25,3 +25,25 @@ export const PLUGIN_INSTALLS_RESET_EVENT = 'demo:reset-plugin-installs';
  * A no-op when the plugin is already installed. Never fires in production.
  */
 export const PLUGIN_INSTALLS_ENSURE_EVENT = 'demo:ensure-plugin-installs';
+
+/**
+ * Base path of the marketplace's demo bundle inside the console demo's own
+ * output. `bun scripts/build-marketplace-demo.ts` writes it to
+ * public/marketplace/, which Angular copies into the build, so the walkthrough
+ * can frame it same-origin: the demo is served with `frame-ancestors 'self'`
+ * and drive scripts reach into the frame's document.
+ */
+export const MARKETPLACE_EMBED_BASE = '/marketplace/';
+
+/**
+ * postMessage contract with the embedded marketplace demo, whose other half
+ * lives in marketplace-frontend/src/main.demo.ts. The two apps share no code,
+ * so keep the strings in step.
+ *
+ * `navigate` moves the frame to another marketplace route without reloading it;
+ * `ready` is the frame telling the deck that Angular has bootstrapped, which
+ * happens well after the iframe's own `load` event.
+ */
+export const EMBED_NAVIGATE_MESSAGE = 'fundament-demo:navigate';
+
+export const EMBED_READY_MESSAGE = 'fundament-demo:ready';
