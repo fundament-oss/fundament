@@ -24,3 +24,8 @@ charts/fundament/values-gardener-local.yaml
 
 # Sandbox plugin config recorded by recipes like `just openfsc::operator-push`
 plugins/*/.sandbox-config
+
+# npm's lockfile in a bun workspace. The frontends resolve through bun.lock,
+# and running npm or npx in one of them leaves a second lockfile behind that
+# nobody reads and that drifts from the one that counts.
+package-lock.json
