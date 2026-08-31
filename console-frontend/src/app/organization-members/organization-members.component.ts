@@ -132,9 +132,11 @@ const FILTER_LABELS: Record<string, string> = {
   members: 'Members',
 };
 
+// The key is the field, the label is the word the app uses for it everywhere
+// else: the invite form and both sort menus say Role, so the button does too.
 const SORT_LABELS: Record<MemberSort, string> = {
   status: 'Status',
-  permission: 'Permission',
+  permission: 'Role',
   joined: 'Joined (newest first)',
   'joined-oldest': 'Joined (oldest first)',
 };
