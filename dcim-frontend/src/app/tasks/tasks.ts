@@ -116,7 +116,6 @@ const BULK_CONCURRENCY = 6;
     // No styling of its own. The page inside paints the surface and owns the
     // layout, and styles.css takes this element out of the flow entirely
     // (display: contents), so it cannot come between the pane and the page.
-    '(document:keydown.escape)': 'onEscape()',
   },
 })
 export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit, OnDestroy {
@@ -188,13 +187,16 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     });
     // The add menu in the bar asks for this form through the address.
     openOnCreateRequest(() => this.openNewTask());
-    // A selection survives no further than the view it was made in. Half of it
-    // would be off screen after a move to another view, and the bulk actions
-    // act on the whole set: deleting six tasks of which you can see two is the
-    // kind of thing you only notice afterwards.
+    // A selection survives no further than the view it was made in, and neither
+    // does the mode that made it. Half of a selection would be off screen after
+    // a move to another view, and the bulk actions act on the whole set:
+    // deleting six tasks of which you can see two is the kind of thing you only
+    // notice afterwards. The mode goes with it because it was switched on for
+    // the list you have left; arriving somewhere new in a mode you did not
+    // choose here is a mode at its worst.
     effect(() => {
       this.menuSelection();
-      this.selectedTasks.set(new Set());
+      this.setSelectionMode(false);
     });
 
     // Holds on to rows that stop belonging here while you are looking at them,
@@ -1117,12 +1119,15 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return !this.rosterLoaded() && task.assignee !== null;
   }
 
-  // Goes through the same closer as the button: hiding the sheet without
-  // clearing detailTaskId would leave a "closed" task still addressable by
-  // addNote() and detailTask(). The task form closes itself, in the shell.
-  onEscape(): void {
-    this.closeDetail();
-    this.overlays.closeTask();
+  /**
+   * The sheet has gone, by whatever route: the button, Escape, a click outside.
+   *
+   * Only the state is cleared here, never hide() again — this runs because the
+   * sheet is already closing. Hiding the sheet without clearing detailTaskId
+   * would leave a "closed" task still addressable by addNote() and detailTask().
+   */
+  onDetailSheetClosed(): void {
+    this.detailTaskId.set(null);
   }
 
   statusTagColor(status: string): string {

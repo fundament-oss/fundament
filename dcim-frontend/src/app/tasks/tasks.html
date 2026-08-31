@@ -517,7 +517,16 @@
 <!-- ══════════════════════════════════════════════════════════════
      TASK DETAIL SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #detailSheetEl accessible-label="Task details" placement="right">
+<!-- (close) rather than a document-wide Escape key: the sheet already says when
+     it goes away, whichever route closed it, and a handler on the document
+     cannot see what is on top of it. With a confirmation open over this sheet,
+     Escape belongs to that dialog. -->
+<nldd-sheet
+  #detailSheetEl
+  accessible-label="Task details"
+  placement="right"
+  (close)="onDetailSheetClosed()"
+>
   <!-- The round is the page's to open, not the sheet's: the sheet holds one
        task and the round is a view over all of them. -->
   <app-task-detail
