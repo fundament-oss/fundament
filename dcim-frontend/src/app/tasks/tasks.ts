@@ -816,7 +816,11 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    */
   readonly selectionSummary = computed(() => {
     const selected = this.selectedTasks().size;
-    return selected === 0 ? 'Nothing selected' : `${selected} selected`;
+    if (selected === 0) return 'Nothing selected';
+    // Out of how many, because the bar acts on a view and not on every task
+    // there is: two of four is a different thing to have picked than two of
+    // ninety, and the count at the top is gone once you have scrolled.
+    return `${selected} of ${this.filteredTasks().length} selected`;
   });
 
   readonly kanbanSheetEl = viewChild<ElementRef<NlddSheet>>('kanbanSheetEl');
