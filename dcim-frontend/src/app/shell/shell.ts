@@ -20,6 +20,7 @@ import RackSheetComponent from '../racks/rack-sheet/rack-sheet';
 import TaskSheetComponent from '../tasks/task-sheet/task-sheet';
 import AssetSheetComponent from '../inventory/asset-sheet/asset-sheet';
 import CableSheetComponent from '../patch-mapping/cable-sheet/cable-sheet';
+import PlacementSheetComponent from '../racks/placement-sheet/placement-sheet';
 import InventoryStatsService from '../inventory/inventory-stats.service';
 import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
@@ -68,6 +69,9 @@ const CREATE_ACTIONS = [
   { text: 'New rack…', opens: 'newRack' },
   { text: 'New cable…', opens: 'newCable' },
   { text: 'New task…', opens: 'newTask' },
+  // Apart from the six above it: this one does not make a record, it puts one
+  // that exists into a rack. Hence a different verb, and the last place.
+  { text: 'Add asset to rack…', opens: 'newPlacement' },
 ] as const satisfies readonly { text: string; opens: keyof OverlayService }[];
 
 type CreateAction = (typeof CREATE_ACTIONS)[number];
@@ -107,6 +111,7 @@ function sectionOf(url: string): string {
     TaskSheetComponent,
     AssetSheetComponent,
     CableSheetComponent,
+    PlacementSheetComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })

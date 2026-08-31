@@ -1,0 +1,130 @@
+<nldd-sheet #placementSheet accessible-label="Add asset to rack" placement="right">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Add asset to rack"
+      dismiss-text="Cancel"
+      (dismiss)="close()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (errorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      }
+      @if (form()) {
+        <nldd-form>
+          <!-- What you are placing, then where it goes, narrowing as it reads:
+               data center, rack, and the unit in that rack. Every field only
+               leans on the ones above it. -->
+          <nldd-form-field label="Asset">
+            <nldd-combo-box
+              #fAsset
+              [attr.invalid]="isFieldInvalid('asset_id') ? '' : null"
+              unmet="error-placement-asset"
+            >
+              <nldd-menu>
+                @for (asset of assetOptions(); track asset.id) {
+                  <nldd-menu-item [attr.value]="asset.id" [attr.text]="asset.label"></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-combo-box>
+            @if (isFieldInvalid('asset_id')) {
+              <nldd-validation-list>
+                <nldd-validation-item id="error-placement-asset">{{
+                  fieldError('asset_id')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
+            }
+            @if (assetOptions().length === 0) {
+              <nldd-validation-list>
+                <nldd-validation-item hint id="error-no-assets"
+                  >No assets found. Create one on the Inventory page first.</nldd-validation-item
+                >
+              </nldd-validation-list>
+            }
+          </nldd-form-field>
+          <!-- The data center you were looking at is the one it lands in, and
+               picking another swaps the racks you can choose from. -->
+          <nldd-form-field label="Data center">
+            <nldd-toggle-button-group type="radio" accessible-label="Data center">
+              @for (dc of datacenters(); track dc.id) {
+                <nldd-toggle-button
+                  [attr.value]="dc.id"
+                  [attr.text]="dc.name"
+                  [attr.selected]="formDcId() === dc.id ? '' : null"
+                  (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+          </nldd-form-field>
+          <!-- A data center can hold dozens of racks, so this is a field you
+               type the name into rather than a row of buttons. -->
+          <nldd-form-field label="Rack">
+            <nldd-combo-box
+              #fRack
+              [attr.value]="formRackId()"
+              [attr.invalid]="isFieldInvalid('location.rack.rack_id') ? '' : null"
+              unmet="error-placement-rack"
+              (change)="onRackChange($any($event).target.value)"
+            >
+              <nldd-menu>
+                @for (rack of racksForDc(); track rack.id) {
+                  <nldd-menu-item [attr.value]="rack.id" [attr.text]="rack.name"></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-combo-box>
+            @if (isFieldInvalid('location.rack.rack_id')) {
+              <nldd-validation-list>
+                <nldd-validation-item id="error-placement-rack">{{
+                  fieldError('location.rack.rack_id')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
+            }
+            @if (racksForDc().length === 0) {
+              <nldd-validation-list>
+                <nldd-validation-item hint id="error-no-racks"
+                  >No racks in this data center yet.</nldd-validation-item
+                >
+              </nldd-validation-list>
+            }
+          </nldd-form-field>
+          <!-- Three kinds, all of them worth showing: a choice this small is
+               quicker as buttons than behind a dropdown. -->
+          <nldd-form-field label="Slot type">
+            <nldd-toggle-button-group type="radio" accessible-label="Slot type">
+              @for (st of slotTypes; track st.value) {
+                <nldd-toggle-button
+                  [attr.value]="st.value"
+                  [attr.text]="st.label"
+                  [attr.selected]="slotType() === st.value ? '' : null"
+                  (change)="onSlotTypeToggle(st.value, $any($event).detail.selected)"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+          </nldd-form-field>
+          <nldd-form-field label="Rack unit">
+            <nldd-number-field
+              #fRackUnit
+              [attr.value]="form()?.rackUnitStart ?? 1"
+              min="1"
+              [attr.max]="maxUnit()"
+              full-width
+              [attr.invalid]="isFieldInvalid('location.rack.rack_unit_start') ? '' : null"
+              unmet="error-placement-rack-unit"
+              (keydown.enter)="save()"
+            ></nldd-number-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-placement-rack-unit">{{
+                fieldError('location.rack.rack_unit_start')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
+          </nldd-form-field>
+          <!-- Under the form rather than docked at the bottom of the sheet: the
+               button belongs to the fields above it. -->
+          <nldd-form-actions>
+            <nldd-button variant="primary" width="full" text="Add" (click)="save()"></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

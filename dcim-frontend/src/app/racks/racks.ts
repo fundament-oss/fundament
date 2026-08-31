@@ -728,50 +728,14 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   openAddDevice(unit?: number): void {
     const rack = this.currentRack();
     if (!rack) return;
-    this.clearDeviceErrors();
-    const firstFree = findFirstFreeSlot(rack, 1);
-    this.addDeviceForm.set({
-      assetId: '',
-      rackUnitStart: unit ?? firstFree ?? rack.totalU,
-      slotType: RackSlotType.UNIT,
+    // The form itself lives in the shell, because the add button in the bar
+    // offers it from every page. From here it opens on this rack and, when you
+    // clicked a free slot, on that unit.
+    this.overlays.newPlacement({
+      dcId: rack.dcId,
+      rackId: rack.id,
+      rackUnitStart: unit ?? findFirstFreeSlot(rack, 1) ?? rack.totalU,
     });
-    this.deviceSlotType.set(RackSlotType.UNIT);
-    firstValueFrom(
-      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
-    )
-      .then((res) => {
-        this.assetOptions.set(
-          res.assets.map((a) => ({
-            id: a.id,
-            label: a.assetTag || a.id,
-          })),
-        );
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
-  }
-
-  closeAddDevice(): void {
-    this.clearDeviceErrors();
-    this.addDeviceForm.set(null);
-  }
-
-  saveDevice(): void {
-    const rack = this.currentRack();
-    const form = this.addDeviceForm();
-    if (!rack || !form) return;
-    this.clearDeviceErrors();
-    const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType = this.deviceSlotType();
-    const rackUnitStart =
-      parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
-    firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
-      .then(() => {
-        this.addDeviceForm.set(null);
-        this.reloadDevicesForRack(rack.id);
-        this.reloadRacks(this.selectedDcId());
-      })
-      .catch((err) => this.handleDeviceError(err));
   }
 
   isDeviceFieldInvalid(field: string): boolean {

@@ -5,6 +5,14 @@ import type { Rack } from '../racks/rack.model';
 import type { TaskData } from '../task-management/task-api.service';
 import type { Cable } from '../patch-mapping/cable.model';
 
+/** Where a placement form starts. Every field is a starting point the form
+ *  still asks about, so all of them are optional. */
+export interface PlacementDraft {
+  dcId?: string;
+  rackId?: string;
+  rackUnitStart?: number;
+}
+
 /**
  * The sheets the shell owns rather than a page.
  *
@@ -163,6 +171,26 @@ export default class OverlayService {
     this.cableSheet.set(null);
   }
 
+  /**
+   * Putting an asset in a rack. Null when closed.
+   *
+   * Not a record of its own but a placement: which asset, which rack, which
+   * unit. The rack and the unit are a starting point, not the answer — the form
+   * asks for both, so the same sheet works from a free slot in a rack and from
+   * the add button in the bar, where there is no rack to inherit.
+   */
+  readonly placementSheet = signal<PlacementDraft | null>(null);
+
+  /** Open it on a blank placement. Whatever you were looking at comes along:
+   *  from a rack that rack, from a free slot that unit as well. */
+  newPlacement(draft: PlacementDraft = {}): void {
+    this.placementSheet.set({ ...draft });
+  }
+
+  closePlacement(): void {
+    this.placementSheet.set(null);
+  }
+
   closeAll(): void {
     this.productSheet.set(null);
     this.datacenterSheet.set(null);
@@ -170,5 +198,6 @@ export default class OverlayService {
     this.taskSheet.set(null);
     this.assetSheet.set(null);
     this.cableSheet.set(null);
+    this.placementSheet.set(null);
   }
 }
