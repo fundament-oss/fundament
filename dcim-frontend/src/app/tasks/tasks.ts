@@ -536,16 +536,18 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    *  words underneath them. */
   private readonly expandedTags = signal<ReadonlySet<string>>(new Set());
 
-  /** Open when you opened it, and open when what you are filtering on lives
-   *  inside it: a view you cannot see in the menu reads as no view at all. */
+  /**
+   * Open when you opened it, and shut when you shut it.
+   *
+   * It used to force a branch open while what you filter on lived inside it,
+   * so a view was never hidden in the menu. The cost was a chevron that did
+   * nothing: pressing it took the path out of the set and the rule below put
+   * it straight back. A control that visibly refuses is worse than the thing
+   * it was guarding against, and the heading above the list says which tag you
+   * are on either way.
+   */
   isTagExpanded(path: string): boolean {
-    if (this.expandedTags().has(path)) return true;
-    const selection = this.menuSelection();
-    return (
-      this.hasSelection() &&
-      selection.kind === 'tag' &&
-      String(selection.value).startsWith(`${path}/`)
-    );
+    return this.expandedTags().has(path);
   }
 
   /** Folds a branch open or shut. Separate from picking it: the chevron is its
