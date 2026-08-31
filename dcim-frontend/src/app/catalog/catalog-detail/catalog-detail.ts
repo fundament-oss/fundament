@@ -225,7 +225,14 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
 
   readonly backText = catalogViewTitle(this.cameFrom);
 
-  goToCatalog(): void {
+  /**
+   * The back event bubbles out of the shadow root and composes, so the shell's
+   * split view hears it too and would navigate to the section on its own. That
+   * is a step short of where this button says it goes: the shell knows the
+   * section, this page knows which list of it you left.
+   */
+  goToCatalog(event: Event): void {
+    event.stopPropagation();
     this.router.navigateByUrl(this.cameFrom);
   }
 

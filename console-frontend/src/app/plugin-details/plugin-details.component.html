@@ -10,7 +10,7 @@
     [attr.text]="plugin()?.displayName || plugin()?.name || 'Plugin'"
     back-text="Plugins"
     collapse-anchor="plugin-title"
-    (back)="pageNav.goTo('/plugins')"
+    (back)="$event.stopPropagation(); pageNav.goTo('/plugins')"
   ></nldd-top-title-bar>
   <nldd-simple-section>
     @if (errorMessage() && !isLoading()) {

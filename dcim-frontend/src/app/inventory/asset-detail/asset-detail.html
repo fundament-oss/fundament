@@ -11,7 +11,7 @@
     [attr.text]="asset()?.model ?? 'Asset'"
     [attr.back-text]="backText"
     collapse-anchor="asset-title"
-    (back)="goToInventory()"
+    (back)="goToInventory($event)"
   ></nldd-top-title-bar>
   @if (asset(); as a) {
     <nldd-simple-section>

@@ -10,7 +10,7 @@
     [attr.text]="clusterData.basics.name || 'Cluster'"
     back-text="Clusters"
     collapse-anchor="cluster-title"
-    (back)="pageNav.goTo('/clusters')"
+    (back)="$event.stopPropagation(); pageNav.goTo('/clusters')"
   ></nldd-top-title-bar>
   <nldd-simple-section>
     <!-- Loading State -->

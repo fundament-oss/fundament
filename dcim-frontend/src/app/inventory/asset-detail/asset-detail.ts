@@ -238,7 +238,11 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
   }
 
   /** Back from this page is back to the list it was opened from. */
-  goToInventory(): void {
+  goToInventory(event: Event): void {
+    // The back event bubbles and composes, so the shell's split view hears it
+    // too and would navigate to the section on its own, a step short of where
+    // this button says it goes.
+    event.stopPropagation();
     this.router.navigateByUrl(this.cameFrom);
   }
 

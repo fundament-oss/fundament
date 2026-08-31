@@ -10,7 +10,7 @@
     [attr.text]="entry()?.model ?? 'Product'"
     [attr.back-text]="backText"
     collapse-anchor="product-title"
-    (back)="goToCatalog()"
+    (back)="goToCatalog($event)"
   ></nldd-top-title-bar>
   @if (entry(); as e) {
     <nldd-simple-section>

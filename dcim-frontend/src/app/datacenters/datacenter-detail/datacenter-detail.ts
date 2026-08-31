@@ -258,7 +258,11 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
 
   /** Back to the floor map of this data center: a page steps up to it, a sheet
    *  closes and reveals it. */
-  backToFloorMap(): void {
+  backToFloorMap(event: Event): void {
+    // The back event bubbles and composes, so the shell's split view hears it
+    // too and would navigate to the section on its own, a step short of where
+    // this button says it goes.
+    event.stopPropagation();
     if (this.inSheet()) {
       this.dismiss.emit();
       return;

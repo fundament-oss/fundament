@@ -201,7 +201,10 @@ export default class ResourceDetailComponent implements OnInit {
     return projectId ? `/projects/${projectId}` : '/';
   });
 
-  goToList() {
+  goToList(event?: Event) {
+    // The back event bubbles and composes, so the split view in the shell hears
+    // it too and would navigate one step further up on its own.
+    event?.stopPropagation();
     this.router.navigate(this.listLink, { relativeTo: this.route });
   }
 

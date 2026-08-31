@@ -12,7 +12,7 @@
     [attr.back-text]="inSheet() ? null : (dc()?.name ?? 'Data center')"
     [attr.dismiss-text]="inSheet() ? 'Close' : null"
     collapse-anchor="layout-title"
-    (back)="backToFloorMap()"
+    (back)="backToFloorMap($event)"
     (dismiss)="dismiss.emit()"
   ></nldd-top-title-bar>
   @if (dc(); as site) {

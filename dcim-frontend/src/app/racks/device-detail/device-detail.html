@@ -7,7 +7,7 @@
     [attr.text]="device()?.name ?? 'Device'"
     [attr.back-text]="rack()?.name ?? 'Racks'"
     collapse-anchor="device-title"
-    (back)="backToRack()"
+    (back)="backToRack($event)"
   ></nldd-top-title-bar>
   @if (device(); as dev) {
     <nldd-simple-section>

@@ -23,7 +23,7 @@
       slot="header"
       [attr.text]="resource()!.metadata.name"
       [attr.back-text]="kindLabel()"
-      (back)="goToList()"
+      (back)="goToList($event)"
       collapse-anchor="resource-detail-title"
     ></nldd-top-title-bar>
     <nldd-simple-section>
