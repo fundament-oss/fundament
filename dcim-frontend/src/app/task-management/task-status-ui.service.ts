@@ -13,6 +13,14 @@ import { TaskPatch, TaskStatusLabel } from './task-api.service';
  * The dialogs themselves are one component, app-task-status-dialogs, rendered
  * wherever a status menu can be opened.
  */
+/** The four things a copy of app-task-status-dialogs can be asked to do. */
+export interface DialogHandles {
+  showWaiting: () => void;
+  hideWaiting: () => void;
+  showTakeOver: () => void;
+  hideTakeOver: () => void;
+}
+
 @Injectable({ providedIn: 'root' })
 export default class TaskStatusUi {
   private readonly store = inject(TaskStore);
@@ -32,14 +40,77 @@ export default class TaskStatusUi {
     queueMicrotask(show);
   }
 
-  /** Set by the dialogs component, so this service can open and close them. */
-  showWaiting: (() => void) | null = null;
+  /**
+   * Every app-task-status-dialogs on screen, by the element it sits in.
+   *
+   * There is more than one: the tasks page has a copy, and so does the task
+   * beside it, which is in a sheet. A single pair of handles was therefore
+   * whichever copy had rendered last, so choosing Waiting on a row opened the
+   * window inside the sheet. A closed sheet shows nothing, and a modal in it
+   * still takes the top layer, which is a page gone blank that swallows every
+   * click.
+   */
+  private readonly copies = new Map<HTMLElement, DialogHandles>();
 
-  hideWaiting: (() => void) | null = null;
+  /** The copy a question was opened in, so the same one closes it again. */
+  private openIn: DialogHandles | null = null;
 
-  showTakeOver: (() => void) | null = null;
+  registerDialogs(host: HTMLElement, handles: DialogHandles): void {
+    this.copies.set(host, handles);
+  }
 
-  hideTakeOver: (() => void) | null = null;
+  unregisterDialogs(host: HTMLElement): void {
+    this.copies.delete(host);
+  }
+
+  /**
+   * Which copy a menu belongs to: the one you can see, and of those the one
+   * nearest the menu in the tree. Visibility settles the sheet, which is hidden
+   * while it is closed; nearness settles the other direction, because with the
+   * sheet open both copies are on screen and the menu in it means the one in it.
+   */
+  private copyFor(from?: Event): DialogHandles | null {
+    const trigger = (from?.target as Element | null) ?? null;
+    let best: DialogHandles | null = null;
+    let bestDepth = -1;
+    let bestNesting = Infinity;
+    this.copies.forEach((handles, host) => {
+      if (!host.checkVisibility()) return;
+      const depth = trigger ? TaskStatusUi.sharedDepth(trigger, host) : 0;
+      const nesting = TaskStatusUi.depthOf(host);
+      // A menu in the sheet shares more of its ancestry with the copy in there,
+      // so that one wins on the first number. A menu on the page shares exactly
+      // as much with both, because both copies hang under the page: the second
+      // number then picks the one that is not tucked away inside the sheet.
+      if (depth > bestDepth || (depth === bestDepth && nesting < bestNesting)) {
+        bestDepth = depth;
+        bestNesting = nesting;
+        best = handles;
+      }
+    });
+    return best;
+  }
+
+  /** How far down the tree an element sits. */
+  private static depthOf(el: Element): number {
+    let depth = 0;
+    for (let e: Element | null = el; e; e = e.parentElement) depth += 1;
+    return depth;
+  }
+
+  /** How many elements deep the two sit under the same ancestor. */
+  private static sharedDepth(a: Element, b: Element): number {
+    const ancestors = (el: Element): Element[] => {
+      const out: Element[] = [];
+      for (let e: Element | null = el; e; e = e.parentElement) out.unshift(e);
+      return out;
+    };
+    const one = ancestors(a);
+    const other = ancestors(b);
+    let i = 0;
+    while (i < one.length && i < other.length && one[i] === other[i]) i += 1;
+    return i;
+  }
 
   // — Status ————————————————————————————————————————————————————————————————
 
@@ -82,11 +153,12 @@ export default class TaskStatusUi {
    */
   private askToTakeOver(task: Task, status: TaskStatusLabel, from?: Event): void {
     this.takeOver.set({ task, status });
-    TaskStatusUi.openFromMenu(from, () => this.showTakeOver?.());
+    this.openIn = this.copyFor(from);
+    TaskStatusUi.openFromMenu(from, () => this.openIn?.showTakeOver());
   }
 
   cancelTakeOver(): void {
-    this.hideTakeOver?.();
+    this.openIn?.hideTakeOver();
     this.takeOver.set(null);
   }
 
@@ -186,11 +258,12 @@ export default class TaskStatusUi {
     } else {
       this.waitingChoice.set(task.status === 'Doing' ? 'finish' : 'start');
     }
-    TaskStatusUi.openFromMenu(from, () => this.showWaiting?.());
+    this.openIn = this.copyFor(from);
+    TaskStatusUi.openFromMenu(from, () => this.openIn?.showWaiting());
   }
 
   closeWaitingDialog(): void {
-    this.hideWaiting?.();
+    this.openIn?.hideWaiting();
     this.waitingSubject.set(null);
     this.waitingWriter = null;
   }

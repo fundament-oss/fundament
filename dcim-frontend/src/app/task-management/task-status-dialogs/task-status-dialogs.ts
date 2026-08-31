@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -83,17 +84,26 @@ export default class TaskStatusDialogsComponent {
 
   private readonly takeOverDialogEl = viewChild<ElementRef<HTMLElement>>('takeOverDialogEl');
 
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   constructor() {
     // The service decides when a dialog opens; it cannot reach into a template
-    // to do it, so the template hands it the two handles. Re-registered when the
-    // elements arrive, and again if this component is torn down and rebuilt.
+    // to do it, so the template hands it the four handles. Registered under this
+    // copy's own element, because there is more than one copy on screen and the
+    // service picks the one the menu belongs to.
     effect(() => {
       const waiting = this.waitingDialogEl() as DialogRef | undefined;
       const takeOver = this.takeOverDialogEl() as DialogRef | undefined;
-      this.ui.showWaiting = () => waiting?.nativeElement.show?.();
-      this.ui.hideWaiting = () => waiting?.nativeElement.hide?.();
-      this.ui.showTakeOver = () => takeOver?.nativeElement.show?.();
-      this.ui.hideTakeOver = () => takeOver?.nativeElement.hide?.();
+      this.ui.registerDialogs(this.host.nativeElement as HTMLElement, {
+        showWaiting: () => waiting?.nativeElement.show?.(),
+        hideWaiting: () => waiting?.nativeElement.hide?.(),
+        showTakeOver: () => takeOver?.nativeElement.show?.(),
+        hideTakeOver: () => takeOver?.nativeElement.hide?.(),
+      });
     });
+
+    inject(DestroyRef).onDestroy(() =>
+      this.ui.unregisterDialogs(this.host.nativeElement as HTMLElement),
+    );
   }
 }
