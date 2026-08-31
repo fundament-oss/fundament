@@ -3,7 +3,6 @@
 // applies to Starlight-rendered doc pages, and this layout is outside that
 // pipeline, so the landing page would otherwise ship without the design system.
 import '@nldd/design-system/styles';
-import '../styles/global.css';
 
 export interface Props {
   title?: string;
@@ -33,78 +32,70 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
-    <header>
-      <div class="topbar-inner">
-        <a href="/" class="wordmark">
-          <span class="wordmark-logo text-indigo-600 dark:text-indigo-400" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-              ></path>
-            </svg>
-          </span>
-          Fundament
-        </a>
-        <nav class="topnav" aria-label="Primary">
-          <a href="/" aria-current={isActive('/') ? 'page' : undefined}>Home</a>
-          <a href="/about" aria-current={isActive('/about') ? 'page' : undefined}>About</a>
-          <a href="/docs" aria-current={isActive('/docs') ? 'page' : undefined}>Docs</a>
-        </nav>
-        <div class="topbar-spacer"></div>
-        <nldd-icon-button id="theme-toggle" icon="moon" aria-label="Toggle theme" type="button"
-        ></nldd-icon-button>
-        <nldd-icon-button
-          class="-ml-5.5"
-          href="https://github.com/fundament-oss/fundament"
-          target="_blank"
-          rel="nofollow noopener noreferrer"
-          aria-label="GitHub repository"
-        >
-          <svg
-            slot="icon"
-            class="h-6 w-6"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+    <nldd-app-view>
+    <nldd-page>
+    <nldd-skip-link slot="header" text="Skip navigation">
+      <nldd-top-navigation-bar
+        logo-href="/"
+        website-title="Fundament"
+        website-href="/"
+        width="1280px"
+      >
+        <nldd-menu-bar slot="global">
+          <nldd-menu-bar-item text="Home" href="/" current={isActive('/') ? '' : undefined} />
+          <nldd-menu-bar-item text="About" href="/about" current={isActive('/about') ? '' : undefined} />
+          <nldd-menu-bar-item text="Docs" href="/docs" current={isActive('/docs') ? '' : undefined} />
+        </nldd-menu-bar>
+        <nldd-menu-bar slot="utility">
+          {/* The three appearance choices as radio items, the way the console
+              account menu offers them. The script below marks the current one and
+              writes it to the same key Starlight reads, so the docs follow. */}
+          <nldd-menu-bar-item
+            id="appearance-menu"
+            text="Appearance"
+            expandable
           >
-            <path
-              fill-rule="evenodd"
-              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-              clip-rule="evenodd"></path>
-          </svg>
-        </nldd-icon-button>
-      </div>
-    </header>
+            <nldd-menu>
+              <nldd-menu-item data-scheme="auto" text="System" icon="display" type="radio" />
+              <nldd-menu-item data-scheme="light" text="Light" icon="light-mode" type="radio" />
+              <nldd-menu-item data-scheme="dark" text="Dark" icon="dark-mode" type="radio" />
+            </nldd-menu>
+          </nldd-menu-bar-item>
+          <nldd-menu-bar-item
+            text="GitHub"
+            href="https://github.com/fundament-oss/fundament"
+            target="_blank"
+            rel="nofollow noopener noreferrer"
+          />
+        </nldd-menu-bar>
+      </nldd-top-navigation-bar>
+    </nldd-skip-link>
 
     <slot />
 
-    <footer>
-      <div class="foot-inner">
-        <span class="wordmark cursor-default">
-          <span class="wordmark-logo" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path
-                fill="currentColor"
-                d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-              ></path>
-            </svg>
-          </span>
-          Fundament
-        </span>
-        <div class="foot-links">
-          <a href="https://digilab.overheid.nl/" target="_blank" rel="noopener noreferrer"
-            >Digilab</a
-          >
-          <a
-            href="https://github.com/fundament-oss/fundament"
-            target="_blank"
-            rel="nofollow noopener noreferrer">GitHub</a
-          >
-        </div>
-        <div class="foot-meta">Open source · AGPL</div>
-      </div>
-    </footer>
+    {/* Only a legal bar: the whole footer is one line, and that is the row the
+        design system reserves for it. The lintje comes with it. */}
+    <nldd-page-footer slot="footer" width="1280px">
+      <nldd-page-footer-legal-bar slot="legal-bar">
+        <nldd-page-footer-legal-bar-item slot="start" text="Fundament · Open source · AGPL" />
+        <nldd-page-footer-legal-bar-item
+          slot="end"
+          text="Digilab"
+          href="https://digilab.overheid.nl/"
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <nldd-page-footer-legal-bar-item
+          slot="end"
+          text="GitHub"
+          href="https://github.com/fundament-oss/fundament"
+          target="_blank"
+          rel="nofollow noopener noreferrer"
+        />
+      </nldd-page-footer-legal-bar>
+    </nldd-page-footer>
+    </nldd-page>
+    </nldd-app-view>
   </body>
 </html>
 
@@ -112,115 +103,54 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   import '@nldd/design-system/button';
   import '@nldd/design-system/icon';
   import '@nldd/design-system/icon-button';
+  import '@nldd/design-system/top-navigation-bar';
+  import '@nldd/design-system/skip-link';
+  import '@nldd/design-system/menu-bar';
+  import '@nldd/design-system/menu-bar-item';
+  import '@nldd/design-system/menu';
+  import '@nldd/design-system/page-footer';
+  import '@nldd/design-system/page';
+  import '@nldd/design-system/app-view';
 </script>
 
 <script is:inline>
   /* eslint-disable */
   (function () {
     var htmlEl = document.documentElement;
+    var media = window.matchMedia('(prefers-color-scheme: dark)');
 
-    function apply(isDark) {
+    /* 'auto' rather than 'system', because Starlight reads the same key and
+       that is the word it uses. The menu says System, which is what a reader
+       expects to see. */
+    function paint(choice) {
+      var isDark = choice === 'dark' || (choice === 'auto' && media.matches);
       htmlEl.dataset.scheme = isDark ? 'dark' : 'light';
       htmlEl.classList.toggle('dark', isDark);
 
-      var btn = document.getElementById('theme-toggle');
-      if (btn) btn.setAttribute('icon', isDark ? 'sun' : 'moon');
+      var menu = document.getElementById('appearance-menu');
+      if (!menu) return;
+      menu.querySelectorAll('nldd-menu-item[data-scheme]').forEach(function (item) {
+        item.toggleAttribute('selected', item.dataset.scheme === choice);
+      });
     }
 
     var saved = localStorage.getItem('starlight-theme') || localStorage.getItem('fnd-scheme');
-    var isDark =
-      saved === 'dark'
-        ? true
-        : saved === 'light'
-          ? false
-          : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var choice = saved === 'dark' || saved === 'light' || saved === 'auto' ? saved : 'auto';
+    paint(choice);
 
-    apply(isDark);
+    /* Following the system means following it while the page is open, not only
+       at load: a laptop that switches at sunset switches this page with it. */
+    media.addEventListener('change', function () {
+      if (choice === 'auto') paint(choice);
+    });
 
-    document.getElementById('theme-toggle')?.addEventListener('click', function () {
-      isDark = !isDark;
-      localStorage.setItem('starlight-theme', isDark ? 'dark' : 'light');
-      localStorage.setItem('fnd-scheme', isDark ? 'dark' : 'light');
-      if (document.startViewTransition) {
-        document.startViewTransition(function () {
-          apply(isDark);
-        });
-      } else {
-        apply(isDark);
-      }
+    document.addEventListener('select', function (event) {
+      var item = event.target.closest && event.target.closest('nldd-menu-item[data-scheme]');
+      if (!item) return;
+      choice = item.dataset.scheme;
+      localStorage.setItem('starlight-theme', choice);
+      localStorage.setItem('fnd-scheme', choice);
+      paint(choice);
     });
   })();
 </script>
-
-<style is:global>
-  @reference "../styles/global.css";
-
-  body {
-    @apply text-body-md font-body text-content bg-surface-bg m-0 font-normal antialiased;
-  }
-
-  *:focus-visible {
-    outline: var(--semantics-focus-ring-outline);
-    box-shadow: var(--semantics-focus-ring-box-shadow);
-  }
-
-  a {
-    @apply text-links underline decoration-1 underline-offset-[3px];
-  }
-  a:hover {
-    @apply text-links-hover;
-  }
-
-  /* Top bar / header */
-  header {
-    @apply border-dividers bg-surface-bg/95 sticky top-0 z-100 border-b backdrop-blur-sm;
-  }
-  .topbar-inner {
-    @apply gap-primitives-space-32 px-primitives-space-32 mx-auto flex h-16 max-w-7xl items-center py-0;
-  }
-  .wordmark {
-    @apply text-content text-body-lg font-body inline-flex items-center gap-2.5 leading-tight font-semibold tracking-tight no-underline;
-  }
-  .wordmark:hover {
-    @apply text-content;
-  }
-  .wordmark-logo {
-    @apply inline-flex h-5.5 w-5.5 items-center justify-center;
-  }
-  .wordmark-logo svg {
-    @apply h-full w-full;
-  }
-
-  .topnav {
-    @apply gap-primitives-space-24 ml-primitives-space-16 flex;
-  }
-  .topnav a {
-    @apply text-body-md font-body text-content px-0 py-1 font-normal no-underline;
-  }
-  .topnav a[aria-current='page'] {
-    @apply border-accent-600 border-b-2 font-medium;
-  }
-  .topnav a:hover {
-    @apply text-links-hover;
-  }
-  .topbar-spacer {
-    @apply flex-1;
-  }
-
-  /* Footer */
-  footer {
-    @apply border-dividers border-t;
-  }
-  .foot-inner {
-    @apply gap-primitives-space-24 p-primitives-space-32 mx-auto flex max-w-7xl items-center justify-between;
-  }
-  .foot-links {
-    @apply text-body-sm font-body gap-primitives-space-24 flex font-normal;
-  }
-  .foot-links a:hover {
-    @apply no-underline;
-  }
-  .foot-meta {
-    @apply text-body-sm font-body text-content-secondary font-normal;
-  }
-</style>
