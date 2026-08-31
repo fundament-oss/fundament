@@ -21,62 +21,74 @@
   @if (selectionMode()) {
     <nldd-simple-section slot="footer" padding-block="12">
       <nldd-toolbar label="Bulk actions">
-        <nldd-toolbar-title slot="start" [attr.text]="selectionSummary()"></nldd-toolbar-title>
-        <nldd-toolbar-item slot="end">
-          <!-- The menu is slotted into the button that opens it, so it
-               anchors and closes itself: no id to keep in step with an anchor,
-               and no handle to reach for when an item is picked. -->
+        <nldd-toolbar-item slot="start">
+          <nldd-text size="sm" color="secondary">{{ selectionSummary() }}</nldd-text>
+        </nldd-toolbar-item>
+        <!-- Beside the count it changes, and in the docked bar rather than above
+             the rows: the list toolbar scrolls away, and reaching everything is
+             the one thing you want most at the bottom of a long list. -->
+        <nldd-toolbar-item slot="start">
           <nldd-button
             variant="secondary"
-            text="Status"
-            start-icon="pencil"
-            expandable
-            popup-type="menu"
-            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
-          >
-            <nldd-menu slot="popup" accessible-label="Set status">
-              @for (s of kanbanColumns; track s) {
-                <nldd-menu-item
-                  [attr.text]="s"
-                  [attr.icon]="statusIcon(s)"
-                  (select)="bulkSetStatus(s)"
-                ></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-button>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item slot="end">
-          <nldd-button
-            variant="secondary"
-            text="Assign"
-            start-icon="person"
-            expandable
-            popup-type="menu"
-            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
-          >
-            <!-- Names without their avatars: a face helps you scan a board, a
-                 menu you read. -->
-            <nldd-menu slot="popup" accessible-label="Assign to">
-              <nldd-menu-item text="Unassigned" (select)="bulkAssign(null)"></nldd-menu-item>
-              <nldd-menu-divider></nldd-menu-divider>
-              @for (tech of technicians(); track tech.id) {
-                <nldd-menu-item
-                  [attr.text]="tech.name"
-                  (select)="bulkAssign(tech.id)"
-                ></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-button>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item slot="end">
-          <nldd-button
-            variant="destructive"
-            start-icon="trash"
-            accessible-label="Delete selected"
-            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
-            (click)="openBulkDeleteDialog()"
+            [attr.text]="allFilteredSelected() ? 'Deselect all' : 'Select all'"
+            (click)="toggleSelectAll(!allFilteredSelected())"
           ></nldd-button>
         </nldd-toolbar-item>
+        <!-- Not disabled but absent until there is something to act on. A
+             control you cannot press does not say why; one that is not there
+             yet arrives the moment it has work to do. -->
+        @if (selectedTasks().size > 0) {
+          <nldd-toolbar-item slot="end">
+            <!-- The menu is slotted into the button that opens it, so it
+                 anchors and closes itself: no id to keep in step with an anchor,
+                 and no handle to reach for when an item is picked. -->
+            <nldd-button
+              variant="secondary"
+              text="Set status"
+              expandable
+              popup-type="menu"
+            >
+              <nldd-menu slot="popup" accessible-label="Set status">
+                @for (s of kanbanColumns; track s) {
+                  <nldd-menu-item
+                    [attr.text]="s"
+                    [attr.icon]="statusIcon(s)"
+                    (select)="bulkSetStatus(s)"
+                  ></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-button>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              variant="secondary"
+              text="Assign"
+              expandable
+              popup-type="menu"
+            >
+              <!-- Names without their avatars: a face helps you scan a board, a
+                   menu you read. -->
+              <nldd-menu slot="popup" accessible-label="Assign to">
+                <nldd-menu-item text="Unassigned" (select)="bulkAssign(null)"></nldd-menu-item>
+                <nldd-menu-divider></nldd-menu-divider>
+                @for (tech of technicians(); track tech.id) {
+                  <nldd-menu-item
+                    [attr.text]="tech.name"
+                    (select)="bulkAssign(tech.id)"
+                  ></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-button>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              variant="destructive"
+              text="Delete"
+              start-icon="trash"
+              (click)="openBulkDeleteDialog()"
+            ></nldd-button>
+          </nldd-toolbar-item>
+        }
       </nldd-toolbar>
     </nldd-simple-section>
   }
@@ -90,50 +102,58 @@
            takes a second and a third action without the title growing a row of
            controls, and it moves what does not fit into its overflow menu. -->
       <nldd-toolbar label="Task actions">
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="primary"
-            text="New task"
-            start-icon="plus-small"
-            (click)="openNewTask()"
-          ></nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            icon="plus-small"
-            text="New task"
-            (select)="openNewTask()"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
+        <!-- Both gone while you are picking rows: making a task and opening the
+             board are ways out of the mode you did not ask for, and the bar
+             should hold what the mode is for. -->
+        @if (!selectionMode()) {
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              variant="primary"
+              text="New task"
+              start-icon="plus-small"
+              (click)="openNewTask()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="plus-small"
+              text="New task"
+              (select)="openNewTask()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        }
         <!-- Picking tasks is a mode, not a column of checkboxes standing by. -->
-        <nldd-toolbar-item slot="end">
-          <nldd-toggle-button
-            text="Select"
-            [attr.selected]="selectionMode() ? '' : null"
-            (change)="setSelectionMode($any($event).detail.selected)"
-          ></nldd-toggle-button>
-          <nldd-menu-item
-            slot="overflow"
-            type="checkbox"
-            text="Select"
-            [attr.selected]="selectionMode() ? '' : null"
-            (select)="setSelectionMode(!selectionMode())"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
         <!-- The board is a way of working on the tasks, not a second version of
              this page: it opens over the list and hands it back on close, so the
              view you left is the view you return to. -->
+        @if (!selectionMode()) {
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              variant="secondary"
+              text="Kanban"
+              start-icon="kanban"
+              (click)="openKanban()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="kanban"
+              text="Kanban"
+              (select)="openKanban()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        }
+        <!-- One button in two states: it turns the mode on, and once you are in
+             it, it is the way out. Done rather than a pressed Select, because
+             leaving is what you want from it by then. -->
         <nldd-toolbar-item slot="end">
           <nldd-button
-            variant="secondary"
-            text="Kanban"
-            start-icon="kanban"
-            (click)="openKanban()"
+            [attr.variant]="selectionMode() ? 'primary' : 'secondary'"
+            [attr.text]="selectionMode() ? 'Done' : 'Select'"
+            (click)="setSelectionMode(!selectionMode())"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
-            icon="kanban"
-            text="Kanban"
-            (select)="openKanban()"
+            [attr.text]="selectionMode() ? 'Done' : 'Select'"
+            (select)="setSelectionMode(!selectionMode())"
           ></nldd-menu-item>
         </nldd-toolbar-item>
       </nldd-toolbar>
@@ -161,24 +181,11 @@
              had nothing left to explain. Which columns are on screen follows the
              width of this list through hide-below, so the widest ones drop out in
              a narrow pane instead of squeezing the title to nothing. -->
+        <!-- How many rows, the way the other lists say it. A toolbar would be a
+             row of controls around one sentence. -->
+        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
         <nldd-list accessible-label="Tasks">
-          <!-- Above the rows, select-all and how many rows there are. What you do
-               with a selection sits in the footer, where it stays in reach after
-               you have scrolled. -->
-          <nldd-toolbar slot="toolbar" size="sm" label="Task selection">
-            <nldd-toolbar-item slot="start">
-              @if (selectionMode()) {
-                <nldd-checkbox-field
-                  [attr.label]="listSummary()"
-                  [attr.checked]="allFilteredSelected() ? '' : null"
-                  [attr.indeterminate]="someFilteredSelected() ? '' : null"
-                  (change)="toggleSelectAll($any($event).detail.checked)"
-                ></nldd-checkbox-field>
-              } @else {
-                <nldd-toolbar-title [attr.text]="listSummary()"></nldd-toolbar-title>
-              }
-            </nldd-toolbar-item>
-          </nldd-toolbar>
           <!-- Outside selection mode the row is cut into two: the icon sets the
                state, the rest opens the task. Inside it the row itself is the
                checkbox and the icon goes back to being a picture, because a
@@ -195,13 +202,18 @@
               >
                 <!-- The row carries the role and the state, so the box beside the
                      text is a picture of it and nothing more. -->
-                <nldd-cell width="fit-content">
+                <!-- The measurements of the state icon it stands in for: a cell
+                     of 32 against the row's own padding, then 16 to the title.
+                     Centred in that cell, so the box lands on the middle of the
+                     icon it replaces and neither the row nor the title moves
+                     when the mode goes on. -->
+                <nldd-cell width="32px" horizontal-alignment="center" vertical-alignment="top">
                   <nldd-checkbox
                     decorative
                     [attr.checked]="isSelected(task.id) ? '' : null"
                   ></nldd-checkbox>
                 </nldd-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-spacer-cell size="16"></nldd-spacer-cell>
                 <!-- No state icon here. Outside this mode it opens a menu, and an
                      icon that looks like a control but has stopped being one
                      teaches people not to trust it. Picking rows by state is what
