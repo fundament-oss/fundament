@@ -116,10 +116,9 @@
                menu longer than the pane would be cut off without one. -->
           <nldd-page>
             <nldd-simple-section>
-              <nldd-title size="3">
-                <h1>DCIM</h1>
-              </nldd-title>
-              <nldd-spacer size="8"></nldd-spacer>
+              <!-- No heading of its own: it would read "DCIM" under a toolbar
+                   that already says "Fundament DCIM", and neither ever changes.
+                   The list carries its own name for screen readers. -->
               <nldd-list type="navigation" dividers="on-touch" aria-label="Sections">
                 @for (item of sections; track item.path) {
                   <nldd-list-item
