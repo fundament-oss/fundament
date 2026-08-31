@@ -35,7 +35,7 @@ func accessLabel(verbs []string) string {
 	for _, verb := range verbs {
 		switch verb {
 		case "create", "update", "patch", "delete", "deletecollection",
-			"bind", "escalate", "impersonate", "*":
+			"bind", "escalate", "impersonate", "approve", "sign", "use", "*":
 			return "Read and write"
 		}
 	}

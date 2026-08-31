@@ -151,3 +151,17 @@ func TestRLSHidesRestrictedPluginManifest(t *testing.T) {
 
 	assert.ErrorIs(t, err, pgx.ErrNoRows, "a RESTRICTED plugin's manifest must never be readable")
 }
+
+// Same surface as TestRLSHidesRestrictedPluginManifest, for the other half of
+// plugins' policy. plugin_definitions' own policy checks only published and its
+// own deleted, so a soft-deleted listing's manifest is held back by the JOIN in
+// the query alone — a policy could not do it without recursing through plugins.
+func TestRLSHidesSoftDeletedPluginManifest(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{Name: "rls-manifest-deleted", Visibility: "public", Published: true, Deleted: true})
+
+	_, err := db.New(env.catalogPool).PluginLatestPublishedDefinition(context.Background(),
+		db.PluginLatestPublishedDefinitionParams{PluginID: id})
+
+	assert.ErrorIs(t, err, pgx.ErrNoRows, "a soft-deleted plugin's manifest must never be readable")
+}

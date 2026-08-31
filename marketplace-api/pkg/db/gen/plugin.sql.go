@@ -183,7 +183,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-    ORDER BY appstore.plugin_definitions.published DESC
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
   (
@@ -340,7 +340,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-    ORDER BY appstore.plugin_definitions.published DESC
+    ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
   (

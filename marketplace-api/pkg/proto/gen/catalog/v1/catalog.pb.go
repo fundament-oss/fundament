@@ -701,8 +701,8 @@ type PublishedVersion_builder struct {
 	Version   string
 	Published *timestamppb.Timestamp
 	// sha256 of the definition manifest. The console pins an install to
-	// (version, definition_hash); the manifest bytes are served to authenticated
-	// installers by organization-api, never from here.
+	// (version, definition_hash); the manifest bytes come from organization-api's
+	// GetPluginDefinition, never from here.
 	DefinitionHash string
 	ReleaseNotes   string
 }

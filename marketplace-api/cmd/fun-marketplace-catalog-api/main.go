@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -74,18 +75,7 @@ func run() error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(cfg.DeploymentVersion))
 	})
-	outerMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		defer cancel()
-
-		if err := db.Pool.Ping(ctx); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("database: " + err.Error()))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+	outerMux.HandleFunc("/readyz", readyz(logger, db.Pool))
 	outerMux.Handle("/", server.Handler())
 
 	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.
@@ -107,4 +97,22 @@ func run() error {
 	}
 
 	return nil
+}
+
+// The probe is anonymous and publicly routed, and a pgx error names the host,
+// port, database and role, so the detail goes to the log and never to the body.
+func readyz(logger *slog.Logger, pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(ctx); err != nil {
+			logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database unavailable"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}
 }
