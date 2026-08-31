@@ -120,11 +120,15 @@ export default class TaskStatusUi {
    * of the other; that is why there is no separate way to stop waiting.
    */
   setStatus(task: Task, status: TaskStatusLabel, from?: Event): void {
+    // Before the question below, not after: picking the state a task is already
+    // in changes nothing, and asking who that non-change is for is a question
+    // with nothing behind it. Taking a task over is not lost by this — the
+    // sheet has a field for who it is assigned to, which is where that belongs.
+    if (task.status === status && task.blockedReason === null) return;
     if (status !== 'Done' && this.store.somebodyElses(task) && this.store.currentUser()) {
       this.askToTakeOver(task, status, from);
       return;
     }
-    if (task.status === status && task.blockedReason === null) return;
     const patch: TaskPatch = { status };
     if (task.blockedReason !== null) patch.blockedReason = null;
     this.store.patchTask(task, patch, 'the status');
@@ -135,21 +139,38 @@ export default class TaskStatusUi {
   /** The task and the status waiting on an answer to "then it becomes yours". */
   readonly takeOver = signal<{ task: Task; status: TaskStatusLabel } | null>(null);
 
-  /** What the handover costs, spelled out: who has it now and what happens. */
-  readonly takeOverExplanation = computed(() => {
+  /** Whose task it is, for the question and for the button that answers it. */
+  readonly takeOverAssignee = computed(() => {
+    const pending = this.takeOver();
+    return pending ? this.store.assigneeName(pending.task) : '';
+  });
+
+  /** The question: the change you asked for, and who it would be for. */
+  readonly takeOverQuestion = computed(() => {
     const pending = this.takeOver();
     if (!pending) return '';
-    return `It is assigned to ${this.store.assigneeName(pending.task)}. Setting it to ${pending.status} assigns it to you.`;
+    return `Set it to ${pending.status} for ${this.takeOverAssignee()}?`;
   });
+
+  /** The other answer, so the button below is not the only place it is said. */
+  readonly takeOverExplanation = computed(() =>
+    this.takeOver() ? 'The task is theirs. Taking it over assigns it to you instead.' : '',
+  );
+
+  /** What the button that keeps it with them says. */
+  readonly takeOverKeepAction = computed(() => `Set it for ${this.takeOverAssignee()}`);
 
   /**
    * Setting the status of a task that is somebody else's.
    *
-   * To do and Doing are states the person holding it is in, so choosing one for
-   * a task that is not yours only makes sense if you are taking it over. That is
-   * a second change, to the assignee, and a status menu is no place to make one
-   * quietly — hence the question. Done is not the same: closing somebody else's
-   * task does not make it yours.
+   * To do and Doing are states the person holding it is in, so choosing one on
+   * a task that is not yours reads two ways: you know they have started, or you
+   * are taking it off them. The second is a change of assignee as well, and a
+   * status menu is no place to make one on the quiet — hence the question.
+   *
+   * Recording it for them is the answer that leaves everything else alone, so
+   * that is the one the dialog opens on. Done is not asked at all: closing
+   * somebody else's task does not make it yours.
    */
   private askToTakeOver(task: Task, status: TaskStatusLabel, from?: Event): void {
     this.takeOver.set({ task, status });
@@ -160,6 +181,18 @@ export default class TaskStatusUi {
   cancelTakeOver(): void {
     this.openIn?.hideTakeOver();
     this.takeOver.set(null);
+  }
+
+  /** Their task, their status: only the status moves, the assignee stays. */
+  confirmForAssignee(): void {
+    const pending = this.takeOver();
+    this.cancelTakeOver();
+    if (!pending) return;
+    this.store.patchTask(
+      pending.task,
+      { status: pending.status, blockedReason: null },
+      'the status',
+    );
   }
 
   confirmTakeOver(): void {

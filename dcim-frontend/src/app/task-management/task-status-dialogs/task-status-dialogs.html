@@ -103,19 +103,28 @@
 </nldd-window>
 
 <!-- To do and Doing are states the person holding the task is in, so picking one
-     on somebody else's task is really two changes. The second one is said out
-     loud here rather than made on the quiet. -->
+     on somebody else's task reads two ways: you know they have started, or you
+     are taking it off them. Both are offered, because guessing wrong either
+     silently reassigns their work or refuses to record what you know.
+     Recording it for them comes first: it is the answer that changes one thing
+     rather than two. -->
 <nldd-modal-dialog
   #takeOverDialogEl
   icon="switch"
-  text="Take this task over?"
+  [attr.text]="ui.takeOverQuestion()"
   [attr.supporting-text]="ui.takeOverExplanation()"
-  accessible-label="Take this task over"
+  accessible-label="Who this change is for"
 >
   @if (ui.takeOver()) {
     <nldd-button
       slot="actions"
       variant="primary"
+      [attr.text]="ui.takeOverKeepAction()"
+      (click)="ui.confirmForAssignee()"
+    ></nldd-button>
+    <nldd-button
+      slot="actions"
+      variant="secondary"
       text="Take it over"
       (click)="ui.confirmTakeOver()"
     ></nldd-button>
