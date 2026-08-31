@@ -26,11 +26,12 @@ rolling `terraform-provider-latest` release, named so that OpenTofu finds them
 in its local plugin directory without any CLI configuration:
 
 ```bash
-# Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
+# Pick your platform: linux_amd64, linux_arm64 or darwin_arm64
+PLATFORM=linux_amd64
 MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
 mkdir -p "$MIRROR"
-curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_linux_amd64.zip" \
-  https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_linux_amd64.zip
+curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_${PLATFORM}.zip" \
+  "https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_${PLATFORM}.zip"
 ```
 
 Keep the zip as downloaded: its name is how OpenTofu discovers the version

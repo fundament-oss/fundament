@@ -60,16 +60,27 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Move the rolling tag to the current commit.
-          git tag -f terraform-provider-latest
-          git push -f origin terraform-provider-latest
-
           if ! gh release view terraform-provider-latest > /dev/null 2>&1; then
             gh release create terraform-provider-latest \
+              --target "$GITHUB_SHA" \
               --prerelease \
               --title "terraform-provider (rolling)" \
               --notes "placeholder"
           fi
+
+          # Upload the packages before anything advertises the new build, so a
+          # failed upload leaves the release still describing the previous one.
+          # --clobber deletes an existing asset before uploading its replacement,
+          # and uploads within one call run concurrently, so the checksums go
+          # up in a second call once all packages are in place.
+          gh release upload terraform-provider-latest dist/*.zip --clobber
+          gh release upload terraform-provider-latest \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS" \
+            --clobber
+
+          # Move the rolling tag to the current commit.
+          git tag -f terraform-provider-latest
+          git push -f origin terraform-provider-latest
 
           gh release edit terraform-provider-latest \
             --prerelease \
@@ -81,11 +92,3 @@ jobs:
           - Commit: ${GITHUB_SHA}
 
           See terraform-provider/README.md for install instructions."
-
-          gh release upload terraform-provider-latest \
-            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_amd64.zip" \
-            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_arm64.zip" \
-            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_darwin_arm64.zip" \
-            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_windows_amd64.zip" \
-            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS" \
-            --clobber

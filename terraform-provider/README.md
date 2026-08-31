@@ -5,7 +5,7 @@ This OpenTofu provider allows you to interact with the Fundament organization AP
 ## Requirements
 
 - [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.11
-- [Go](https://golang.org/doc/install) >= 1.25 (for building from source)
+- [Go](https://golang.org/doc/install) >= 1.26 (for building from source)
 - A running Fundament instance
 
 ## Installation
@@ -15,11 +15,12 @@ This OpenTofu provider allows you to interact with the Fundament organization AP
 The provider is not (yet) published to a provider registry. Every push to master publishes packages for Linux (amd64, arm64), macOS (Apple Silicon) and Windows (amd64) to the rolling [`terraform-provider-latest`](https://github.com/fundament-oss/fundament/releases/tag/terraform-provider-latest) release, named in the registry layout that OpenTofu and Terraform understand for local plugin mirrors. Drop the zip, unchanged, into the implied plugin directory and `tofu init` picks it up without any CLI configuration:
 
 ```bash
-# Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
+# Pick your platform: linux_amd64, linux_arm64 or darwin_arm64
+PLATFORM=linux_amd64
 MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
 mkdir -p "$MIRROR"
-curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_linux_amd64.zip" \
-  https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_linux_amd64.zip
+curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_${PLATFORM}.zip" \
+  "https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_${PLATFORM}.zip"
 ```
 
 On Windows (PowerShell):

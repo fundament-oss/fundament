@@ -11,7 +11,11 @@ install: build
     set -euo pipefail
     OS=$(go env GOOS)
     ARCH=$(go env GOARCH)
-    PLUGIN_DIR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament/0.1.0/${OS}_${ARCH}
+    MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
+    PLUGIN_DIR=${MIRROR}/0.1.0/${OS}_${ARCH}
+    # Remove downloaded release packages so this dev build is the only 0.1.0
+    # in the mirror.
+    rm -f "$MIRROR"/terraform-provider-fundament_*.zip
     mkdir -p "$PLUGIN_DIR"
     cp terraform-provider-fundament "$PLUGIN_DIR/"
 
