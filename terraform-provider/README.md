@@ -8,7 +8,40 @@ This OpenTofu provider allows you to interact with the Fundament organization AP
 - [Go](https://golang.org/doc/install) >= 1.25 (for building from source)
 - A running Fundament instance
 
-## Building the Provider
+## Installation
+
+### Download a prebuilt package
+
+The provider is not (yet) published to a provider registry. Every push to master publishes packages for Linux (amd64, arm64), macOS (Apple Silicon) and Windows (amd64) to the rolling [`terraform-provider-latest`](https://github.com/fundament-oss/fundament/releases/tag/terraform-provider-latest) release, named in the registry layout that OpenTofu and Terraform understand for local plugin mirrors. Drop the zip, unchanged, into the implied plugin directory and `tofu init` picks it up without any CLI configuration:
+
+```bash
+# Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
+MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
+mkdir -p "$MIRROR"
+curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_linux_amd64.zip" \
+  https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_linux_amd64.zip
+```
+
+On Windows (PowerShell):
+
+```powershell
+$mirror = "$env:APPDATA\terraform.d\plugins\registry.opentofu.org\fundament\fundament"
+New-Item -ItemType Directory -Force $mirror | Out-Null
+Invoke-WebRequest -Uri https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_windows_amd64.zip -OutFile "$mirror\terraform-provider-fundament_0.1.0_windows_amd64.zip"
+```
+
+Do not rename or unpack the zip: the filename is how OpenTofu discovers the provider version and platform. For Terraform instead of OpenTofu, use the same layout under `registry.terraform.io/fundament/fundament/`.
+
+Checksums are published alongside the packages as `terraform-provider-fundament_0.1.0_SHA256SUMS`. `tofu init` reports the provider as `(unauthenticated)` because the packages are not GPG-signed.
+
+The rolling release always carries provider version `0.1.0`, so `tofu init` alone will keep using the copy it already unpacked. To pick up a newer build after re-downloading the zip:
+
+```bash
+rm .terraform.lock.hcl
+tofu init -upgrade
+```
+
+### Build from source
 
 ```bash
 # From the terraform-provider directory
