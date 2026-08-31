@@ -74,7 +74,28 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   readonly dcSelected = output<string>();
 
-  readonly addCable = output<void>();
+  readonly addCable = output<Partial<Cable>>();
+
+  /**
+   * What the view you are in already answers.
+   *
+   * A form opened from inside a view starts in that view: asking again which
+   * status these cables have, while the heading above the list says it, is a
+   * question with the answer on screen. Unspecified is a view too, and its
+   * answer is no status at all.
+   */
+  readonly newCableDraft = computed<Partial<Cable>>(() => {
+    const draft: Partial<Cable> = {};
+    if (this.filterUnspecified()) draft.status = undefined;
+    else if (this.filterStatus()) draft.status = this.filterStatus() as CableStatus;
+    if (this.filterType()) draft.type = this.filterType() as CableType;
+    if (this.filterColor()) draft.color = this.filterColor() as CableColor;
+    // The device view is one end of a cable, so it fills the A side and leaves
+    // the B side to be picked: that is the whole point of adding one here.
+    const deviceId = this.filterDeviceId();
+    if (deviceId) draft.aSide = { deviceId } as Cable['aSide'];
+    return draft;
+  });
 
   readonly showShoppingList = output<void>();
 

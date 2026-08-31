@@ -156,10 +156,17 @@ export default class OverlayService {
   /** The cable form. Null when closed. */
   readonly cableSheet = signal<Partial<Cable> | null>(null);
 
-  /** Open the cable form on a blank cable. The data center you were looking at
-   *  comes along when there is one; the form asks for it either way. */
-  newCable(dcId = ''): void {
-    this.cableSheet.set({ dcId, status: 'connected' });
+  /**
+   * Open the cable form on a blank cable.
+   *
+   * Whatever the view you came from already answers comes along: the data
+   * center, and on the section's own views the status, the type, the colour or
+   * the device at one end. The form asks for all of it either way, so this is a
+   * starting point and not a decision. Connected is the fallback status,
+   * because a cable you add by hand is usually one that is already there.
+   */
+  newCable(prefill: Partial<Cable> = {}): void {
+    this.cableSheet.set({ dcId: '', status: 'connected', ...prefill });
   }
 
   /** Open the cable form on one that exists. */

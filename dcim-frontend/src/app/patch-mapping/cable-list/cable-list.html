@@ -25,13 +25,13 @@
             variant="primary"
             text="Add cable"
             start-icon="plus-small"
-            (click)="addCable.emit()"
+            (click)="addCable.emit(newCableDraft())"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
             icon="plus-small"
             text="Add cable"
-            (select)="addCable.emit()"
+            (select)="addCable.emit(newCableDraft())"
           ></nldd-menu-item>
         </nldd-toolbar-item>
         <!-- Only where its own set is on screen. On Planned the button would

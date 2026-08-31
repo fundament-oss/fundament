@@ -112,6 +112,17 @@ export default class CableFormComponent {
   readonly portManagementDevice = signal<{ id: string; name: string } | null>(null);
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
+  /**
+   * The name behind an id, for the field that shows it.
+   *
+   * The combo box works out its own label from the item you pick, but a value
+   * set from outside — the device view fills the A side — arrives before there
+   * is a pick, and the field would sit there filled in and looking empty.
+   */
+  deviceName(id: string): string {
+    return this.dcDevices().find((device) => device.id === id)?.name ?? '';
+  }
+
   readonly dcDevices = computed<DeviceOption[]>(() =>
     [...this.devices()].sort((a, b) => a.name.localeCompare(b.name)),
   );
@@ -267,7 +278,12 @@ export default class CableFormComponent {
       const isExisting = !!c.id;
       const type = c.type ?? (isExisting ? '' : this.CABLE_TYPES[0]);
       this.cableType.set(type);
-      this.cableStatus.set(c.status ?? (isExisting ? '' : 'connected'));
+      // Whether the key is there, not whether it holds something: a new cable
+      // opened from the Unspecified view says status: undefined on purpose, and
+      // `??` would read that as "nothing given" and fill in Connected.
+      const givenStatus = 'status' in c;
+      const fallbackStatus = isExisting ? '' : 'connected';
+      this.cableStatus.set(givenStatus ? (c.status ?? '') : fallbackStatus);
       this.cableLabel.set(c.label ?? '');
       if (c.color !== undefined) {
         // Keep a stored color and treat it as a manual choice so a later type

@@ -280,8 +280,8 @@ export default class PatchMappingComponent implements OnInit {
   /** Both routes into the form open the one the shell holds: it outlives this
    *  page, and the add button in the bar opens the same one. The data center on
    *  screen comes along as the form's first answer. */
-  openAddCable(): void {
-    this.overlays.newCable(this.selectedDcId());
+  openAddCable(prefill: Partial<Cable> = {}): void {
+    this.overlays.newCable({ dcId: this.selectedDcId(), ...prefill });
   }
 
   openEditCable(cable: Cable): void {

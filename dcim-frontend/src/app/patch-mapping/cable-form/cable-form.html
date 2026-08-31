@@ -98,6 +98,7 @@
           <nldd-combo-box
             id="a-device"
             [attr.value]="aDeviceId()"
+            [attr.text]="deviceName(aDeviceId())"
             [attr.invalid]="aDeviceError() ? '' : null"
             [attr.unmet]="aDeviceError() ? 'a-device-error' : null"
             (change)="onADeviceChange($any($event).detail.value)"
@@ -181,6 +182,7 @@
           <nldd-combo-box
             id="b-device"
             [attr.value]="bDeviceId()"
+            [attr.text]="deviceName(bDeviceId())"
             [attr.invalid]="bDeviceError() ? '' : null"
             [attr.unmet]="bDeviceError() ? 'b-device-error' : null"
             (change)="onBDeviceChange($any($event).detail.value)"
