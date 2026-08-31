@@ -58,8 +58,7 @@ export interface MarketplacePluginSummary {
   categoryName: string; // first category, resolved for display
   tags: string[];
   labels: PluginLabel[];
-  featured: boolean;
-  addedAt: string; // ISO date, used to sort "recently added"
+  addedAt: string; // ISO date, used to sort "recently added"; '' when unpublished
 }
 
 // Mirrors catalog.v1.PluginDetails: everything the detail page adds on top.
@@ -93,7 +92,6 @@ type ListingFields = Pick<
   | 'categoryIds'
   | 'tags'
   | 'labels'
-  | 'featured'
   | 'published'
 >;
 
@@ -189,7 +187,6 @@ export default class MarketplaceService {
       categoryName: MarketplaceService.categoryName(plugin.categoryIds, categories),
       tags: plugin.tags,
       labels: MarketplaceService.toLabels(plugin.labels),
-      featured: plugin.featured,
       addedAt: toIsoDate(plugin.published),
     };
   }

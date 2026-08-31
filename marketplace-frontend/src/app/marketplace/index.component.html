@@ -68,7 +68,7 @@
       }
     </div>
 
-    <!-- Signature: featured plugins floating above the cluster -->
+    <!-- Signature: recent plugins floating above the cluster -->
     <div class="relative hidden lg:block" aria-hidden="true">
       <div class="relative mx-auto h-85 w-full max-w-md">
         @for (p of heroPlugins(); track p.name; let i = $index) {
@@ -207,19 +207,19 @@
           </div>
         }
       } @else {
-        <!-- Curated home sections -->
-        <section class="mb-12">
+        <!-- Curated home section -->
+        <section>
           <div class="mb-5">
             <p class="text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase">
-              Featured
+              Recently added
             </p>
-            <h2 class="font-display mt-1 text-2xl font-semibold">Production-ready picks</h2>
+            <h2 class="font-display mt-1 text-2xl font-semibold">Fresh from the registry</h2>
             <p class="mt-1 text-gray-600 dark:text-gray-300">
-              Hand-picked plugins to get your clusters production-ready.
+              The newest plugins in the marketplace.
             </p>
           </div>
 
-          <!-- Spotlight: the top featured pick -->
+          <!-- Spotlight: the most recently published listing -->
           @if (spotlightPlugin(); as p) {
             <a [routerLink]="['/plugins', p.name]" class="group mb-5 block">
               <nldd-card
@@ -236,7 +236,7 @@
                       <span
                         class="text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase"
                       >
-                        Editors’ pick
+                        Just published
                       </span>
                       <app-plugin-labels [labels]="p.labels" />
                     </div>
@@ -264,30 +264,13 @@
             </a>
           }
 
-          @if (gridFeatured().length > 0) {
+          @if (recentlyAdded().length > 0) {
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              @for (plugin of gridFeatured(); track plugin.id) {
+              @for (plugin of recentlyAdded(); track plugin.id) {
                 <app-plugin-card [plugin]="plugin" />
               }
             </div>
           }
-        </section>
-
-        <section>
-          <div class="mb-5">
-            <p class="text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase">
-              Recently added
-            </p>
-            <h2 class="font-display mt-1 text-2xl font-semibold">Fresh from the registry</h2>
-            <p class="mt-1 text-gray-600 dark:text-gray-300">
-              The newest plugins in the marketplace.
-            </p>
-          </div>
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            @for (plugin of recentlyAdded(); track plugin.id) {
-              <app-plugin-card [plugin]="plugin" />
-            }
-          </div>
         </section>
 
         <!-- Build-a-plugin call to action -->

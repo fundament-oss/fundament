@@ -87,19 +87,20 @@ export default class MarketplaceIndexComponent implements OnInit {
   // search that comes up empty can still point at where the matches live.
   searchMatches = computed(() => this.plugins().filter(this.matchesSearch));
 
-  featuredPlugins = computed(() => this.plugins().filter((plugin) => plugin.featured));
-
-  // The single featured pick gets a larger spotlight treatment; the rest fill the grid.
-  spotlightPlugin = computed(() => this.featuredPlugins()[0] ?? null);
-
-  gridFeatured = computed(() => this.featuredPlugins().slice(1));
-
-  // Three featured plugins shown as floating preview cards in the hero panel.
-  heroPlugins = computed(() => this.featuredPlugins().slice(0, 3));
-
-  recentlyAdded = computed(() =>
-    [...this.plugins()].sort((a, b) => b.addedAt.localeCompare(a.addedAt)).slice(0, 6),
+  // Newest listing first. The catalog carries no curation flag, so publication
+  // date is what orders the home page. Listings with no publication date sort
+  // last: addedAt is '' for those, which compares below any real ISO date.
+  newestPlugins = computed(() =>
+    [...this.plugins()].sort((a, b) => b.addedAt.localeCompare(a.addedAt)),
   );
+
+  // The newest listing gets a larger spotlight treatment; the rest fill the grid.
+  spotlightPlugin = computed(() => this.newestPlugins()[0] ?? null);
+
+  recentlyAdded = computed(() => this.newestPlugins().slice(1, 7));
+
+  // Three recent plugins shown as floating preview cards in the hero panel.
+  heroPlugins = computed(() => this.newestPlugins().slice(0, 3));
 
   coreCount = computed(
     () => this.plugins().filter((plugin) => plugin.labels.includes('core')).length,
