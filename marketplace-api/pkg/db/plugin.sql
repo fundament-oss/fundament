@@ -14,6 +14,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
@@ -57,6 +58,15 @@ WHERE
         AND appstore.categories_plugins.category_id = sqlc.narg('category_id')::uuid
     )
   )
+  AND EXISTS (
+    -- The storefront shows a listing only once it has a published version.
+    -- plugins_select_catalog no longer checks this: the catalog role reads
+    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    SELECT 1
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
+  )
 ORDER BY
   CASE WHEN sqlc.arg('sort')::text = 'recently_added' THEN (
     SELECT MIN(appstore.plugin_definitions.published)
@@ -82,6 +92,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
@@ -91,7 +102,16 @@ SELECT
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
   ) AS published
 FROM appstore.plugins
-WHERE appstore.plugins.id = sqlc.arg('id')::uuid;
+WHERE appstore.plugins.id = sqlc.arg('id')::uuid
+  AND EXISTS (
+    -- The storefront shows a listing only once it has a published version.
+    -- plugins_select_catalog no longer checks this: the catalog role reads
+    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    SELECT 1
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
+  );
 
 -- name: PluginLabelsList :many
 SELECT appstore.plugin_labels.plugin_id, appstore.plugin_labels.name
@@ -149,6 +169,9 @@ WHERE appstore.plugin_documentation_links.plugin_id = sqlc.arg('plugin_id')::uui
 ORDER BY appstore.plugin_documentation_links.title;
 
 -- name: PluginVersionListByPluginID :many
+-- published IS NOT NULL is explicit because plugin_definitions' policy no longer
+-- filters it: the catalog role reads drafts so GetPluginDefinition can serve
+-- plugin-controller. The storefront must still only show published history.
 -- Joined through appstore.plugins so the plugin's own RLS policy gates the rows:
 -- a restricted or soft-deleted listing must not keep leaking its version history
 -- to anyone who already knows the id. The check cannot live in
@@ -163,6 +186,7 @@ SELECT
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
+  AND appstore.plugin_definitions.published IS NOT NULL
 ORDER BY appstore.plugin_definitions.published DESC;
 
 -- name: PluginLatestPublishedDefinition :one
@@ -177,3 +201,31 @@ WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
   AND appstore.plugin_definitions.published IS NOT NULL
 ORDER BY appstore.plugin_definitions.published DESC
 LIMIT 1;
+
+-- name: PluginDefinitionGetPublished :one
+-- Deliberately does not filter published: plugin-controller installs definitions
+-- that were never published, and plugin_definitions' policy no longer hides them.
+-- Joined through appstore.plugins for the same reason as
+-- PluginLatestPublishedDefinition: plugin_definitions' policy cannot reach the
+-- plugin's visibility or deleted without recursing, so the join is what keeps a
+-- RESTRICTED or taken-down listing from handing out its manifest. published and
+-- deleted are left to the policies.
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
+WHERE appstore.plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
+  AND appstore.plugin_definitions.plugin_version = sqlc.arg('version')::text;
+
+-- name: PluginDefinitionGetByName :one
+-- The same lookup as PluginDefinitionGetPublished, keyed the way a
+-- PluginInstallation names a plugin: plugin names are unique per publisher, so
+-- tenant.organizations is part of the key rather than a decoration. Every table
+-- here is RLS-gated for the catalog role, which is what keeps a RESTRICTED or
+-- soft-deleted listing unreachable by name as well as by id.
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
+JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
+WHERE tenant.organizations.name = sqlc.arg('organization_name')::text
+  AND appstore.plugins.name = sqlc.arg('plugin_name')::text
+  AND appstore.plugin_definitions.plugin_version = sqlc.arg('version')::text;

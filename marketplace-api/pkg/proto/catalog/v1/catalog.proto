@@ -29,6 +29,11 @@ service CatalogService {
   // Organizations with at least one public listing, so the storefront can
   // resolve organization_id without a credential for organization-api.
   rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+  // Verbatim manifest for one version, plus the hash an install pins against.
+  // Any version of a PUBLIC listing is reachable, published or not, so
+  // plugin-controller can install what it installs today — it holds no user JWT.
+  // RESTRICTED listings stay hidden, as everywhere else in this service.
+  rpc GetPluginDefinition(GetPluginDefinitionRequest) returns (GetPluginDefinitionResponse);
 }
 
 // Listing as it appears on a card or in a results grid.
@@ -92,9 +97,8 @@ message PublishedVersion {
   string id = 10;
   string version = 20;
   google.protobuf.Timestamp published = 30;
-  // sha256 of the definition manifest. The console pins an install to
-  // (version, definition_hash); the manifest bytes come from organization-api's
-  // GetPluginDefinition, never from here.
+  // sha256 of the definition manifest; the console pins an install to
+  // (version, definition_hash) and fetches the bytes with GetPluginDefinition.
   string definition_hash = 40;
   string release_notes = 50;
 }
@@ -139,4 +143,39 @@ message ListPublishersRequest {}
 
 message ListPublishersResponse {
   repeated marketplace.v1.Publisher publishers = 10;
+}
+
+message GetPluginDefinitionRequest {
+  // Two ways to name the same listing. plugin_id is what the storefront holds,
+  // having just listed it; the name pair is what a PluginInstallation carries,
+  // and plugin-controller reads those rather than calling ListPlugins.
+  oneof lookup {
+    option (buf.validate.oneof).required = true;
+    string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+    PluginRef name = 30;
+  }
+  string version = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// A listing named the way it is published: plugin names are unique per
+// publisher, so neither half identifies a listing on its own.
+message PluginRef {
+  string organization_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 63
+  }];
+  string plugin_name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 63
+  }];
+}
+
+message GetPluginDefinitionResponse {
+  // The stored bytes, not a re-serialization: definition_hash is the sha256 of
+  // exactly these, so a caller can verify what it pins.
+  bytes manifest = 10;
+  string definition_hash = 20;
 }

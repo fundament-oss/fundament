@@ -249,3 +249,40 @@ func textOrEmpty(value pgtype.Text) string {
 	}
 	return value.String
 }
+
+func (s *Server) GetPluginDefinition(
+	ctx context.Context,
+	req *catalogv1.GetPluginDefinitionRequest,
+) (*catalogv1.GetPluginDefinitionResponse, error) {
+	var (
+		row db.PluginDefinitionGetPublishedRow
+		err error
+	)
+	if name := req.GetName(); name != nil {
+		var byName db.PluginDefinitionGetByNameRow
+		byName, err = s.queries.PluginDefinitionGetByName(ctx, db.PluginDefinitionGetByNameParams{
+			OrganizationName: name.GetOrganizationName(),
+			PluginName:       name.GetPluginName(),
+			Version:          req.GetVersion(),
+		})
+		row = db.PluginDefinitionGetPublishedRow(byName)
+	} else {
+		row, err = s.queries.PluginDefinitionGetPublished(ctx, db.PluginDefinitionGetPublishedParams{
+			PluginID: uuid.MustParse(req.GetPluginId()),
+			Version:  req.GetVersion(),
+		})
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		// As in GetPlugin: unknown version, unpublished, restricted and
+		// soft-deleted are one answer on purpose.
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plugin definition not found"))
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("getting plugin definition: %w", err))
+	}
+
+	return catalogv1.GetPluginDefinitionResponse_builder{
+		Manifest:       row.Manifest,
+		DefinitionHash: row.Hash,
+	}.Build(), nil
+}

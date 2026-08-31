@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-api/pkg/catalog"
@@ -345,4 +346,131 @@ func TestGetPluginTreatsEscalationVerbsAsWrite(t *testing.T) {
 
 	require.Len(t, resp.GetPlugin().GetPermissions(), 1)
 	assert.Equal(t, "Read and write", resp.GetPlugin().GetPermissions()[0].GetAccess())
+}
+
+func TestGetPluginDefinitionReturnsManifestAndHash(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-published", Visibility: "public", Published: true, Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, testManifest, string(resp.GetManifest()), "the stored bytes must come back verbatim")
+	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
+}
+
+// plugin-controller installs definitions that were never published, so the
+// catalog must serve them.
+func TestGetPluginDefinitionServesUnpublishedVersion(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{Name: "definition-draft", Visibility: "public", Published: true})
+	seedVersion(t, env, id, "2.0.0", false)
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "2.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp.GetManifest())
+}
+
+// The listing-level cases, one per way a listing stays unreachable: not public,
+// taken down. Both are the plugins policy reached through the query's join.
+
+func TestGetPluginDefinitionHidesRestrictedPlugin(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{Name: "definition-restricted", Visibility: "restricted", Published: true})
+
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+	require.Error(t, err)
+
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+func TestGetPluginDefinitionHidesSoftDeletedPlugin(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{Name: "definition-deleted", Visibility: "public", Published: true, Deleted: true})
+
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+	require.Error(t, err)
+
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+// plugin-controller reads (organization, plugin, version) off the
+// PluginInstallation CR, so the catalog has to accept that spelling too.
+func TestGetPluginDefinitionByNameReturnsManifest(t *testing.T) {
+	env := newTestEnv(t)
+	seedPlugin(t, env, seedOptions{
+		Name: "by-name-published", Visibility: "public", Published: true, Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{
+			Name: catalogv1.PluginRef_builder{
+				OrganizationName: seededOrganizationName, PluginName: "by-name-published",
+			}.Build(),
+			Version: "1.0.0",
+		}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, testManifest, string(resp.GetManifest()))
+	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
+}
+
+// The controller installs versions that were never published, and in a real
+// environment nothing has been: PutPluginDefinition never sets published. So an
+// organization whose every plugin is a draft still has to be resolvable.
+func TestGetPluginDefinitionByNameServesUnpublishedPlugin(t *testing.T) {
+	env := newTestEnv(t)
+	seedPlugin(t, env, seedOptions{
+		Name: "by-name-draft", Visibility: "public", Published: false, Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{
+			Name: catalogv1.PluginRef_builder{
+				OrganizationName: seededOrganizationName, PluginName: "by-name-draft",
+			}.Build(),
+			Version: "1.0.0",
+		}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, testManifest, string(resp.GetManifest()))
+}
+
+func TestGetPluginDefinitionByNameHidesRestrictedPlugin(t *testing.T) {
+	env := newTestEnv(t)
+	seedPlugin(t, env, seedOptions{Name: "by-name-restricted", Visibility: "restricted", Published: true})
+
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{
+			Name: catalogv1.PluginRef_builder{
+				OrganizationName: seededOrganizationName, PluginName: "by-name-restricted",
+			}.Build(),
+			Version: "1.0.0",
+		}.Build())
+	require.Error(t, err)
+
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+func TestGetPluginDefinitionByNameRejectsUnknownPublisher(t *testing.T) {
+	env := newTestEnv(t)
+	seedPlugin(t, env, seedOptions{Name: "by-name-wrong-org", Visibility: "public", Published: true})
+
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{
+			Name: catalogv1.PluginRef_builder{
+				OrganizationName: "no-such-publisher", PluginName: "by-name-wrong-org",
+			}.Build(),
+			Version: "1.0.0",
+		}.Build())
+	require.Error(t, err)
+
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }

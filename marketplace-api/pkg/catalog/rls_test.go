@@ -16,6 +16,9 @@ import (
 // overrides seedOptions.OrganizationID.
 var seededOrganizationID = uuid.MustParse("019b4000-0000-7000-8000-000000000000")
 
+// The same organization by name, as db/seed/0100-system-org.sql writes it.
+const seededOrganizationName = "system"
+
 // seedOptions describes one plugin plus its single definition.
 type seedOptions struct {
 	Name       string
@@ -111,6 +114,9 @@ func listAsCatalog(t *testing.T, env *testEnv) []uuid.UUID {
 	return ids
 }
 
+// Kept under its old name, but this is now PluginList's own EXISTS filter, not
+// a policy: plugins_select_catalog stopped requiring a published version so the
+// catalog role can reach unpublished manifests for plugin-controller.
 func TestRLSHidesUnpublishedPlugin(t *testing.T) {
 	env := newTestEnv(t)
 	id := seedPlugin(t, env, seedOptions{Name: "rls-unpublished", Visibility: "public", Published: false})

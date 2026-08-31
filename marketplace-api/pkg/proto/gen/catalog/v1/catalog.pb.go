@@ -700,9 +700,8 @@ type PublishedVersion_builder struct {
 	Id        string
 	Version   string
 	Published *timestamppb.Timestamp
-	// sha256 of the definition manifest. The console pins an install to
-	// (version, definition_hash); the manifest bytes come from organization-api's
-	// GetPluginDefinition, never from here.
+	// sha256 of the definition manifest; the console pins an install to
+	// (version, definition_hash) and fetches the bytes with GetPluginDefinition.
 	DefinitionHash string
 	ReleaseNotes   string
 }
@@ -1309,6 +1308,340 @@ func (b0 ListPublishersResponse_builder) Build() *ListPublishersResponse {
 	return m0
 }
 
+type GetPluginDefinitionRequest struct {
+	state              protoimpl.MessageState              `protogen:"opaque.v1"`
+	xxx_hidden_Lookup  isGetPluginDefinitionRequest_Lookup `protobuf_oneof:"lookup"`
+	xxx_hidden_Version string                              `protobuf:"bytes,20,opt,name=version"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetPluginDefinitionRequest) Reset() {
+	*x = GetPluginDefinitionRequest{}
+	mi := &file_catalog_v1_catalog_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDefinitionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDefinitionRequest) ProtoMessage() {}
+
+func (x *GetPluginDefinitionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_v1_catalog_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPluginDefinitionRequest) GetPluginId() string {
+	if x != nil {
+		if x, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_PluginId); ok {
+			return x.PluginId
+		}
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionRequest) GetName() *PluginRef {
+	if x != nil {
+		if x, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_Name); ok {
+			return x.Name
+		}
+	}
+	return nil
+}
+
+func (x *GetPluginDefinitionRequest) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionRequest) SetPluginId(v string) {
+	x.xxx_hidden_Lookup = &getPluginDefinitionRequest_PluginId{v}
+}
+
+func (x *GetPluginDefinitionRequest) SetName(v *PluginRef) {
+	if v == nil {
+		x.xxx_hidden_Lookup = nil
+		return
+	}
+	x.xxx_hidden_Lookup = &getPluginDefinitionRequest_Name{v}
+}
+
+func (x *GetPluginDefinitionRequest) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *GetPluginDefinitionRequest) HasLookup() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Lookup != nil
+}
+
+func (x *GetPluginDefinitionRequest) HasPluginId() bool {
+	if x == nil {
+		return false
+	}
+	_, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_PluginId)
+	return ok
+}
+
+func (x *GetPluginDefinitionRequest) HasName() bool {
+	if x == nil {
+		return false
+	}
+	_, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_Name)
+	return ok
+}
+
+func (x *GetPluginDefinitionRequest) ClearLookup() {
+	x.xxx_hidden_Lookup = nil
+}
+
+func (x *GetPluginDefinitionRequest) ClearPluginId() {
+	if _, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_PluginId); ok {
+		x.xxx_hidden_Lookup = nil
+	}
+}
+
+func (x *GetPluginDefinitionRequest) ClearName() {
+	if _, ok := x.xxx_hidden_Lookup.(*getPluginDefinitionRequest_Name); ok {
+		x.xxx_hidden_Lookup = nil
+	}
+}
+
+const GetPluginDefinitionRequest_Lookup_not_set_case case_GetPluginDefinitionRequest_Lookup = 0
+const GetPluginDefinitionRequest_PluginId_case case_GetPluginDefinitionRequest_Lookup = 10
+const GetPluginDefinitionRequest_Name_case case_GetPluginDefinitionRequest_Lookup = 30
+
+func (x *GetPluginDefinitionRequest) WhichLookup() case_GetPluginDefinitionRequest_Lookup {
+	if x == nil {
+		return GetPluginDefinitionRequest_Lookup_not_set_case
+	}
+	switch x.xxx_hidden_Lookup.(type) {
+	case *getPluginDefinitionRequest_PluginId:
+		return GetPluginDefinitionRequest_PluginId_case
+	case *getPluginDefinitionRequest_Name:
+		return GetPluginDefinitionRequest_Name_case
+	default:
+		return GetPluginDefinitionRequest_Lookup_not_set_case
+	}
+}
+
+type GetPluginDefinitionRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Two ways to name the same listing. plugin_id is what the storefront holds,
+	// having just listed it; the name pair is what a PluginInstallation carries,
+	// and plugin-controller reads those rather than calling ListPlugins.
+
+	// Fields of oneof xxx_hidden_Lookup:
+	PluginId *string
+	Name     *PluginRef
+	// -- end of xxx_hidden_Lookup
+	Version string
+}
+
+func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest {
+	m0 := &GetPluginDefinitionRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.PluginId != nil {
+		x.xxx_hidden_Lookup = &getPluginDefinitionRequest_PluginId{*b.PluginId}
+	}
+	if b.Name != nil {
+		x.xxx_hidden_Lookup = &getPluginDefinitionRequest_Name{b.Name}
+	}
+	x.xxx_hidden_Version = b.Version
+	return m0
+}
+
+type case_GetPluginDefinitionRequest_Lookup protoreflect.FieldNumber
+
+func (x case_GetPluginDefinitionRequest_Lookup) String() string {
+	md := file_catalog_v1_catalog_proto_msgTypes[13].Descriptor()
+	if x == 0 {
+		return "not set"
+	}
+	return protoimpl.X.MessageFieldStringOf(md, protoreflect.FieldNumber(x))
+}
+
+type isGetPluginDefinitionRequest_Lookup interface {
+	isGetPluginDefinitionRequest_Lookup()
+}
+
+type getPluginDefinitionRequest_PluginId struct {
+	PluginId string `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId,oneof"`
+}
+
+type getPluginDefinitionRequest_Name struct {
+	Name *PluginRef `protobuf:"bytes,30,opt,name=name,oneof"`
+}
+
+func (*getPluginDefinitionRequest_PluginId) isGetPluginDefinitionRequest_Lookup() {}
+
+func (*getPluginDefinitionRequest_Name) isGetPluginDefinitionRequest_Lookup() {}
+
+// A listing named the way it is published: plugin names are unique per
+// publisher, so neither half identifies a listing on its own.
+type PluginRef struct {
+	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_OrganizationName string                 `protobuf:"bytes,10,opt,name=organization_name,json=organizationName"`
+	xxx_hidden_PluginName       string                 `protobuf:"bytes,20,opt,name=plugin_name,json=pluginName"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *PluginRef) Reset() {
+	*x = PluginRef{}
+	mi := &file_catalog_v1_catalog_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginRef) ProtoMessage() {}
+
+func (x *PluginRef) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_v1_catalog_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginRef) GetOrganizationName() string {
+	if x != nil {
+		return x.xxx_hidden_OrganizationName
+	}
+	return ""
+}
+
+func (x *PluginRef) GetPluginName() string {
+	if x != nil {
+		return x.xxx_hidden_PluginName
+	}
+	return ""
+}
+
+func (x *PluginRef) SetOrganizationName(v string) {
+	x.xxx_hidden_OrganizationName = v
+}
+
+func (x *PluginRef) SetPluginName(v string) {
+	x.xxx_hidden_PluginName = v
+}
+
+type PluginRef_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	OrganizationName string
+	PluginName       string
+}
+
+func (b0 PluginRef_builder) Build() *PluginRef {
+	m0 := &PluginRef{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_OrganizationName = b.OrganizationName
+	x.xxx_hidden_PluginName = b.PluginName
+	return m0
+}
+
+type GetPluginDefinitionResponse struct {
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Manifest       []byte                 `protobuf:"bytes,10,opt,name=manifest"`
+	xxx_hidden_DefinitionHash string                 `protobuf:"bytes,20,opt,name=definition_hash,json=definitionHash"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *GetPluginDefinitionResponse) Reset() {
+	*x = GetPluginDefinitionResponse{}
+	mi := &file_catalog_v1_catalog_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDefinitionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDefinitionResponse) ProtoMessage() {}
+
+func (x *GetPluginDefinitionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_v1_catalog_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPluginDefinitionResponse) GetManifest() []byte {
+	if x != nil {
+		return x.xxx_hidden_Manifest
+	}
+	return nil
+}
+
+func (x *GetPluginDefinitionResponse) GetDefinitionHash() string {
+	if x != nil {
+		return x.xxx_hidden_DefinitionHash
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionResponse) SetManifest(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Manifest = v
+}
+
+func (x *GetPluginDefinitionResponse) SetDefinitionHash(v string) {
+	x.xxx_hidden_DefinitionHash = v
+}
+
+type GetPluginDefinitionResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// The stored bytes, not a re-serialization: definition_hash is the sha256 of
+	// exactly these, so a caller can verify what it pins.
+	Manifest       []byte
+	DefinitionHash string
+}
+
+func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionResponse {
+	m0 := &GetPluginDefinitionResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Manifest = b.Manifest
+	x.xxx_hidden_DefinitionHash = b.DefinitionHash
+	return m0
+}
+
 var File_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_catalog_v1_catalog_proto_rawDesc = "" +
@@ -1391,68 +1724,90 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"publishers\x18\n" +
 	" \x03(\v2\x19.marketplace.v1.PublisherR\n" +
-	"publishers2\xc1\x03\n" +
+	"publishers\"\xa8\x01\n" +
+	"\x1aGetPluginDefinitionRequest\x12'\n" +
+	"\tplugin_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\bpluginId\x12+\n" +
+	"\x04name\x18\x1e \x01(\v2\x15.catalog.v1.PluginRefH\x00R\x04name\x12#\n" +
+	"\aversion\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aversionB\x0f\n" +
+	"\x06lookup\x12\x05\xbaH\x02\b\x01\"o\n" +
+	"\tPluginRef\x126\n" +
+	"\x11organization_name\x18\n" +
+	" \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\x10organizationName\x12*\n" +
+	"\vplugin_name\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\n" +
+	"pluginName\"b\n" +
+	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
+	"\bmanifest\x18\n" +
+	" \x01(\fR\bmanifest\x12'\n" +
+	"\x0fdefinition_hash\x18\x14 \x01(\tR\x0edefinitionHash2\xa9\x04\n" +
 	"\x0eCatalogService\x12N\n" +
 	"\vListPlugins\x12\x1e.catalog.v1.ListPluginsRequest\x1a\x1f.catalog.v1.ListPluginsResponse\x12H\n" +
 	"\tGetPlugin\x12\x1c.catalog.v1.GetPluginRequest\x1a\x1d.catalog.v1.GetPluginResponse\x12c\n" +
 	"\x12ListPluginVersions\x12%.catalog.v1.ListPluginVersionsRequest\x1a&.catalog.v1.ListPluginVersionsResponse\x12W\n" +
 	"\x0eListCategories\x12!.catalog.v1.ListCategoriesRequest\x1a\".catalog.v1.ListCategoriesResponse\x12W\n" +
-	"\x0eListPublishers\x12!.catalog.v1.ListPublishersRequest\x1a\".catalog.v1.ListPublishersResponseBaZUgithub.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0eListPublishers\x12!.catalog.v1.ListPublishersRequest\x1a\".catalog.v1.ListPublishersResponse\x12f\n" +
+	"\x13GetPluginDefinition\x12&.catalog.v1.GetPluginDefinitionRequest\x1a'.catalog.v1.GetPluginDefinitionResponseBaZUgithub.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_catalog_v1_catalog_proto_goTypes = []any{
-	(*PluginSummary)(nil),              // 0: catalog.v1.PluginSummary
-	(*PluginDetails)(nil),              // 1: catalog.v1.PluginDetails
-	(*PublishedVersion)(nil),           // 2: catalog.v1.PublishedVersion
-	(*ListPluginsRequest)(nil),         // 3: catalog.v1.ListPluginsRequest
-	(*ListPluginsResponse)(nil),        // 4: catalog.v1.ListPluginsResponse
-	(*GetPluginRequest)(nil),           // 5: catalog.v1.GetPluginRequest
-	(*GetPluginResponse)(nil),          // 6: catalog.v1.GetPluginResponse
-	(*ListPluginVersionsRequest)(nil),  // 7: catalog.v1.ListPluginVersionsRequest
-	(*ListPluginVersionsResponse)(nil), // 8: catalog.v1.ListPluginVersionsResponse
-	(*ListCategoriesRequest)(nil),      // 9: catalog.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),     // 10: catalog.v1.ListCategoriesResponse
-	(*ListPublishersRequest)(nil),      // 11: catalog.v1.ListPublishersRequest
-	(*ListPublishersResponse)(nil),     // 12: catalog.v1.ListPublishersResponse
-	(PluginLabel)(0),                   // 13: catalog.v1.PluginLabel
-	(*timestamppb.Timestamp)(nil),      // 14: google.protobuf.Timestamp
-	(*v1.PluginPermission)(nil),        // 15: marketplace.v1.PluginPermission
-	(*v1.FeatureBlock)(nil),            // 16: marketplace.v1.FeatureBlock
-	(*v1.DocumentationLink)(nil),       // 17: marketplace.v1.DocumentationLink
-	(PluginSort)(0),                    // 18: catalog.v1.PluginSort
-	(*v1.Category)(nil),                // 19: marketplace.v1.Category
-	(*v1.Publisher)(nil),               // 20: marketplace.v1.Publisher
+	(*PluginSummary)(nil),               // 0: catalog.v1.PluginSummary
+	(*PluginDetails)(nil),               // 1: catalog.v1.PluginDetails
+	(*PublishedVersion)(nil),            // 2: catalog.v1.PublishedVersion
+	(*ListPluginsRequest)(nil),          // 3: catalog.v1.ListPluginsRequest
+	(*ListPluginsResponse)(nil),         // 4: catalog.v1.ListPluginsResponse
+	(*GetPluginRequest)(nil),            // 5: catalog.v1.GetPluginRequest
+	(*GetPluginResponse)(nil),           // 6: catalog.v1.GetPluginResponse
+	(*ListPluginVersionsRequest)(nil),   // 7: catalog.v1.ListPluginVersionsRequest
+	(*ListPluginVersionsResponse)(nil),  // 8: catalog.v1.ListPluginVersionsResponse
+	(*ListCategoriesRequest)(nil),       // 9: catalog.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil),      // 10: catalog.v1.ListCategoriesResponse
+	(*ListPublishersRequest)(nil),       // 11: catalog.v1.ListPublishersRequest
+	(*ListPublishersResponse)(nil),      // 12: catalog.v1.ListPublishersResponse
+	(*GetPluginDefinitionRequest)(nil),  // 13: catalog.v1.GetPluginDefinitionRequest
+	(*PluginRef)(nil),                   // 14: catalog.v1.PluginRef
+	(*GetPluginDefinitionResponse)(nil), // 15: catalog.v1.GetPluginDefinitionResponse
+	(PluginLabel)(0),                    // 16: catalog.v1.PluginLabel
+	(*timestamppb.Timestamp)(nil),       // 17: google.protobuf.Timestamp
+	(*v1.PluginPermission)(nil),         // 18: marketplace.v1.PluginPermission
+	(*v1.FeatureBlock)(nil),             // 19: marketplace.v1.FeatureBlock
+	(*v1.DocumentationLink)(nil),        // 20: marketplace.v1.DocumentationLink
+	(PluginSort)(0),                     // 21: catalog.v1.PluginSort
+	(*v1.Category)(nil),                 // 22: marketplace.v1.Category
+	(*v1.Publisher)(nil),                // 23: marketplace.v1.Publisher
 }
 var file_catalog_v1_catalog_proto_depIdxs = []int32{
-	13, // 0: catalog.v1.PluginSummary.labels:type_name -> catalog.v1.PluginLabel
-	14, // 1: catalog.v1.PluginSummary.published:type_name -> google.protobuf.Timestamp
-	13, // 2: catalog.v1.PluginDetails.labels:type_name -> catalog.v1.PluginLabel
-	14, // 3: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
-	15, // 4: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
-	16, // 5: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
-	17, // 6: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
-	14, // 7: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
-	18, // 8: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
+	16, // 0: catalog.v1.PluginSummary.labels:type_name -> catalog.v1.PluginLabel
+	17, // 1: catalog.v1.PluginSummary.published:type_name -> google.protobuf.Timestamp
+	16, // 2: catalog.v1.PluginDetails.labels:type_name -> catalog.v1.PluginLabel
+	17, // 3: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
+	18, // 4: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
+	19, // 5: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
+	20, // 6: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	17, // 7: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
+	21, // 8: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
 	0,  // 9: catalog.v1.ListPluginsResponse.plugins:type_name -> catalog.v1.PluginSummary
 	1,  // 10: catalog.v1.GetPluginResponse.plugin:type_name -> catalog.v1.PluginDetails
 	2,  // 11: catalog.v1.ListPluginVersionsResponse.versions:type_name -> catalog.v1.PublishedVersion
-	19, // 12: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
-	20, // 13: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
-	3,  // 14: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
-	5,  // 15: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
-	7,  // 16: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
-	9,  // 17: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
-	11, // 18: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
-	4,  // 19: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
-	6,  // 20: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
-	8,  // 21: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
-	10, // 22: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
-	12, // 23: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
-	19, // [19:24] is the sub-list for method output_type
-	14, // [14:19] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	22, // 12: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
+	23, // 13: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
+	14, // 14: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
+	3,  // 15: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
+	5,  // 16: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
+	7,  // 17: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
+	9,  // 18: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
+	11, // 19: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
+	13, // 20: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
+	4,  // 21: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
+	6,  // 22: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
+	8,  // 23: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
+	10, // 24: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
+	12, // 25: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
+	15, // 26: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_catalog_v1_catalog_proto_init() }
@@ -1461,13 +1816,17 @@ func file_catalog_v1_catalog_proto_init() {
 		return
 	}
 	file_catalog_v1_common_proto_init()
+	file_catalog_v1_catalog_proto_msgTypes[13].OneofWrappers = []any{
+		(*getPluginDefinitionRequest_PluginId)(nil),
+		(*getPluginDefinitionRequest_Name)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog_v1_catalog_proto_rawDesc), len(file_catalog_v1_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

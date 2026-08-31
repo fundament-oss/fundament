@@ -83,6 +83,71 @@ func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg Plugin
 	return items, nil
 }
 
+const pluginDefinitionGetByName = `-- name: PluginDefinitionGetByName :one
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
+JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
+WHERE tenant.organizations.name = $1::text
+  AND appstore.plugins.name = $2::text
+  AND appstore.plugin_definitions.plugin_version = $3::text
+`
+
+type PluginDefinitionGetByNameParams struct {
+	OrganizationName string
+	PluginName       string
+	Version          string
+}
+
+type PluginDefinitionGetByNameRow struct {
+	Manifest []byte
+	Hash     string
+}
+
+// The same lookup as PluginDefinitionGetPublished, keyed the way a
+// PluginInstallation names a plugin: plugin names are unique per publisher, so
+// tenant.organizations is part of the key rather than a decoration. Every table
+// here is RLS-gated for the catalog role, which is what keeps a RESTRICTED or
+// soft-deleted listing unreachable by name as well as by id.
+func (q *Queries) PluginDefinitionGetByName(ctx context.Context, arg PluginDefinitionGetByNameParams) (PluginDefinitionGetByNameRow, error) {
+	row := q.db.QueryRow(ctx, pluginDefinitionGetByName, arg.OrganizationName, arg.PluginName, arg.Version)
+	var i PluginDefinitionGetByNameRow
+	err := row.Scan(&i.Manifest, &i.Hash)
+	return i, err
+}
+
+const pluginDefinitionGetPublished = `-- name: PluginDefinitionGetPublished :one
+SELECT appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
+WHERE appstore.plugin_definitions.plugin_id = $1::uuid
+  AND appstore.plugin_definitions.plugin_version = $2::text
+`
+
+type PluginDefinitionGetPublishedParams struct {
+	PluginID uuid.UUID
+	Version  string
+}
+
+type PluginDefinitionGetPublishedRow struct {
+	Manifest []byte
+	Hash     string
+}
+
+// Deliberately does not filter published: plugin-controller installs definitions
+// that were never published, and plugin_definitions' policy no longer hides them.
+// Joined through appstore.plugins for the same reason as
+// PluginLatestPublishedDefinition: plugin_definitions' policy cannot reach the
+// plugin's visibility or deleted without recursing, so the join is what keeps a
+// RESTRICTED or taken-down listing from handing out its manifest. published and
+// deleted are left to the policies.
+func (q *Queries) PluginDefinitionGetPublished(ctx context.Context, arg PluginDefinitionGetPublishedParams) (PluginDefinitionGetPublishedRow, error) {
+	row := q.db.QueryRow(ctx, pluginDefinitionGetPublished, arg.PluginID, arg.Version)
+	var i PluginDefinitionGetPublishedRow
+	err := row.Scan(&i.Manifest, &i.Hash)
+	return i, err
+}
+
 const pluginDocumentationLinksList = `-- name: PluginDocumentationLinksList :many
 SELECT
   appstore.plugin_documentation_links.id,
@@ -183,6 +248,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
@@ -193,6 +259,15 @@ SELECT
   ) AS published
 FROM appstore.plugins
 WHERE appstore.plugins.id = $1::uuid
+  AND EXISTS (
+    -- The storefront shows a listing only once it has a published version.
+    -- plugins_select_catalog no longer checks this: the catalog role reads
+    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    SELECT 1
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
+  )
 `
 
 type PluginGetByIDParams struct {
@@ -340,6 +415,7 @@ SELECT
     SELECT appstore.plugin_definitions.id
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
     ORDER BY appstore.plugin_definitions.published DESC, appstore.plugin_definitions.id DESC
     LIMIT 1
   ) AS latest_version_id,
@@ -382,6 +458,15 @@ WHERE
       WHERE appstore.categories_plugins.plugin_id = appstore.plugins.id
         AND appstore.categories_plugins.category_id = $2::uuid
     )
+  )
+  AND EXISTS (
+    -- The storefront shows a listing only once it has a published version.
+    -- plugins_select_catalog no longer checks this: the catalog role reads
+    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    SELECT 1
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
+      AND appstore.plugin_definitions.published IS NOT NULL
   )
 ORDER BY
   CASE WHEN $3::text = 'recently_added' THEN (
@@ -522,6 +607,7 @@ SELECT
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 WHERE appstore.plugin_definitions.plugin_id = $1::uuid
+  AND appstore.plugin_definitions.published IS NOT NULL
 ORDER BY appstore.plugin_definitions.published DESC
 `
 
@@ -537,6 +623,9 @@ type PluginVersionListByPluginIDRow struct {
 	ReleaseNotes  string
 }
 
+// published IS NOT NULL is explicit because plugin_definitions' policy no longer
+// filters it: the catalog role reads drafts so GetPluginDefinition can serve
+// plugin-controller. The storefront must still only show published history.
 // Joined through appstore.plugins so the plugin's own RLS policy gates the rows:
 // a restricted or soft-deleted listing must not keep leaking its version history
 // to anyone who already knows the id. The check cannot live in
