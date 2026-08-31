@@ -51,7 +51,7 @@
       <!-- How many rows the view and the search left, right above them. Absent
            when there are none: the empty state below says that already. -->
       @if (rows().length > 0) {
-        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-text color="secondary">{{ listSummary() }}</nldd-text>
         <nldd-spacer size="8"></nldd-spacer>
       }
       <!-- A list, not a table: every cell says what it is (a category tag, a

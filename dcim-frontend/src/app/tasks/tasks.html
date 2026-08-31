@@ -22,7 +22,7 @@
     <nldd-simple-section slot="footer" padding-block="12">
       <nldd-toolbar label="Bulk actions">
         <nldd-toolbar-item slot="start">
-          <nldd-text size="sm" color="secondary">{{ selectionSummary() }}</nldd-text>
+          <nldd-text color="secondary">{{ selectionSummary() }}</nldd-text>
         </nldd-toolbar-item>
         <!-- Beside the count it changes, and in the docked bar rather than above
              the rows: the list toolbar scrolls away, and reaching everything is
@@ -183,7 +183,7 @@
              a narrow pane instead of squeezing the title to nothing. -->
         <!-- How many rows, the way the other lists say it. A toolbar would be a
              row of controls around one sentence. -->
-        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-text color="secondary">{{ listSummary() }}</nldd-text>
         <nldd-spacer size="8"></nldd-spacer>
         <nldd-list accessible-label="Tasks">
           <!-- Outside selection mode the row is cut into two: the icon sets the

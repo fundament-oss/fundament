@@ -94,7 +94,7 @@
          when there are none: the empty state below says that already, and "0 of
          70" reads as if this view were a filter over everything. -->
       @if (orderedAssets().length > 0 && !switchingView()) {
-        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-text color="secondary">{{ listSummary() }}</nldd-text>
         <nldd-spacer size="8"></nldd-spacer>
       }
       <!-- A list, not a table: the category is a tag and the status is a tag, so
