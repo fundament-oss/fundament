@@ -79,7 +79,7 @@ export default class TaskStatusDialogsComponent {
       return;
     }
     this.missingWho.set(false);
-    this.ui.commitWaiting(task);
+    this.ui.commitWaiting();
   }
 
   private readonly takeOverDialogEl = viewChild<ElementRef<HTMLElement>>('takeOverDialogEl');

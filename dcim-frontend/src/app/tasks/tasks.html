@@ -59,6 +59,17 @@
                     [attr.icon]="statusIcon(s)"
                     (select)="bulkSetStatus(s)"
                   ></nldd-menu-item>
+                  <!-- Under To do, where the row menu keeps it. It opens the same
+                       window on the whole selection: with more than one task
+                       there is nobody the first two options could already be
+                       about, so it asks who, and answering hands them all over. -->
+                  @if (s === 'To do') {
+                    <nldd-menu-item
+                      icon="clock"
+                      text="Waiting…"
+                      (select)="bulkWaiting($event)"
+                    ></nldd-menu-item>
+                  }
                 }
               </nldd-menu>
             </nldd-button>

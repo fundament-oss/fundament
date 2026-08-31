@@ -217,13 +217,21 @@ export default class TaskStatusUi {
    * the dialog opened. It falls back to what it was opened with, for the one
    * task the list cannot hold: one that has not been written yet.
    */
-  private readonly waitingSubject = signal<Task | null>(null);
+  private readonly waitingSubject = signal<Task[]>([]);
 
-  readonly waitingTask = computed(() => {
+  readonly waitingTasks = computed(() => {
     const held = this.waitingSubject();
-    if (!held) return null;
-    return this.store.tasks().find((task) => task.id === held.id) ?? held;
+    if (!held.length) return [];
+    const known = this.store.tasks();
+    return held.map((held1) => known.find((task) => task.id === held1.id) ?? held1);
   });
+
+  /** The first, for the labels. Everything they say holds for the rest too:
+   *  what several tasks have in common is that none of them names a person. */
+  readonly waitingTask = computed(() => this.waitingTasks()[0] ?? null);
+
+  /** More than one, so nothing the dialog says may be about one in particular. */
+  readonly waitingIsBulk = computed(() => this.waitingTasks().length > 1);
 
   /**
    * Who writes what this dialog decides.
@@ -258,8 +266,16 @@ export default class TaskStatusUi {
    */
   readonly waitingWho = signal<string | null>(null);
 
-  /** The person the first two options are about, if the task already names one. */
+  /**
+   * The person the first two options are about, if the task already names one.
+   *
+   * Null for a selection, whatever the tasks in it say: five tasks can be five
+   * people's, so there is nobody the options could be about until you name one.
+   * The dialog reads that as "someone" and asks below, which is what it already
+   * does for a task of your own.
+   */
   waitingPerson(task: Task): string | null {
+    if (this.waitingIsBulk()) return null;
     return this.store.somebodyElses(task) ? this.store.assigneeName(task) : null;
   }
 
@@ -280,16 +296,35 @@ export default class TaskStatusUi {
     from?: Event,
     write?: (task: Task, patch: TaskPatch, what: string) => void,
   ): void {
-    this.waitingSubject.set(task);
+    this.openWaitingDialogFor([task], from, write);
+  }
+
+  /**
+   * The same window on a selection.
+   *
+   * Nothing about it forks: with more than one task there is no person any of
+   * the options could already be about, so the labels fall back to "someone"
+   * and the field that names one appears, exactly as it does on a task of your
+   * own. It opens on a reason, the one answer that needs nobody named.
+   */
+  openWaitingDialogFor(
+    tasks: Task[],
+    from?: Event,
+    write?: (task: Task, patch: TaskPatch, what: string) => void,
+  ): void {
+    if (!tasks.length) return;
+    this.waitingSubject.set(tasks);
     this.waitingWriter = write ?? null;
-    this.waitingDraft.set(task.blockedReason ?? '');
+    const [first] = tasks;
+    const bulk = tasks.length > 1;
+    this.waitingDraft.set(bulk ? '' : (first.blockedReason ?? ''));
     this.waitingWho.set(null);
     // Opens on what it already is: a reason of its own, or where the person who
-    // has it stands with it.
-    if (task.blockedReason !== null || !this.store.somebodyElses(task)) {
+    // has it stands with it. A selection has neither, so it opens on the reason.
+    if (bulk || first.blockedReason !== null || !this.store.somebodyElses(first)) {
       this.waitingChoice.set('other');
     } else {
-      this.waitingChoice.set(task.status === 'Doing' ? 'finish' : 'start');
+      this.waitingChoice.set(first.status === 'Doing' ? 'finish' : 'start');
     }
     this.openIn = this.copyFor(from);
     TaskStatusUi.openFromMenu(from, () => this.openIn?.showWaiting());
@@ -297,7 +332,7 @@ export default class TaskStatusUi {
 
   closeWaitingDialog(): void {
     this.openIn?.hideWaiting();
-    this.waitingSubject.set(null);
+    this.waitingSubject.set([]);
     this.waitingWriter = null;
   }
 
@@ -309,23 +344,32 @@ export default class TaskStatusUi {
    * nobody could have known. Picking one of the first two clears any reason,
    * because a task waits on one thing at a time.
    */
-  commitWaiting(task: Task): void {
+  commitWaiting(): void {
+    const tasks = this.waitingTasks();
+    const [first] = tasks;
+    if (!first) return;
     const choice = this.waitingChoice();
-    if (choice !== 'other' && !this.canSaveWaiting(task)) return;
+    if (choice !== 'other' && !this.canSaveWaiting(first)) return;
     const write = this.takeWaitingWriter();
     this.closeWaitingDialog();
     if (choice === 'other') {
       const reason = this.waitingDraft().trim();
-      if (reason === (task.blockedReason ?? '')) return;
-      write(task, { blockedReason: reason }, 'what it is waiting on');
+      // Each task on its own: one of the selected may already say this, and
+      // writing what it already says would put a line in its history for a
+      // change that never happened.
+      tasks
+        .filter((task) => reason !== (task.blockedReason ?? ''))
+        .forEach((task) => write(task, { blockedReason: reason }, 'what it is waiting on'));
       return;
     }
     const status: TaskStatusLabel = choice === 'finish' ? 'Doing' : 'To do';
-    const patch: TaskPatch = { status, blockedReason: null };
-    // Handing it over is part of the same sentence: you cannot wait for somebody
-    // to start a task that is not theirs.
     const who = this.waitingWho();
-    if (who !== null && who !== task.assignee) patch.assignee = who;
-    write(task, patch, 'what it is waiting on');
+    tasks.forEach((task) => {
+      const patch: TaskPatch = { status, blockedReason: null };
+      // Handing it over is part of the same sentence: you cannot wait for
+      // somebody to start a task that is not theirs.
+      if (who !== null && who !== task.assignee) patch.assignee = who;
+      write(task, patch, 'what it is waiting on');
+    });
   }
 }

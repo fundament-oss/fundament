@@ -1045,6 +1045,16 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.bulkUpdate({ status });
   }
 
+  /** Waiting is a question, not a status, so it opens the window that asks it,
+   *  on everything picked. */
+  bulkWaiting(from: Event): void {
+    const chosen = new Set(this.selectedTasks());
+    this.ui.openWaitingDialogFor(
+      this.tasks().filter((task) => chosen.has(task.id)),
+      from,
+    );
+  }
+
   // assignee of null unassigns the selected tasks (the "Unassigned" option).
   bulkAssign(assigneeId: string | null): void {
     this.bulkUpdate({ assignee: assigneeId });
