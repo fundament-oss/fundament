@@ -33,7 +33,12 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
-import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import {
+  getStatusTagColor,
+  getStatusLabel,
+  isKubeconfigAvailable,
+  isTransitionalStatus,
+} from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
@@ -362,8 +367,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   isDownloadingKubeconfig = signal<boolean>(false);
 
+  canDownloadKubeconfig(): boolean {
+    return isKubeconfigAvailable(this.clusterData.status);
+  }
+
   async downloadKubeconfig(): Promise<void> {
-    if (this.isDownloadingKubeconfig()) {
+    if (this.isDownloadingKubeconfig() || !this.canDownloadKubeconfig()) {
       return;
     }
     this.isDownloadingKubeconfig.set(true);
