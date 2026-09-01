@@ -259,6 +259,10 @@ const (
 	ConstraintPlacementsCkSlotType = "placements_ck_slot_type"
 	// ConstraintPlacementsCkUnitStart is defined on dcim.placements.
 	ConstraintPlacementsCkUnitStart = "placements_ck_unit_start"
+	// ConstraintPluginAllowedOrganizationsFkOrganization is defined on appstore.plugin_allowed_organizations.
+	ConstraintPluginAllowedOrganizationsFkOrganization = "plugin_allowed_organizations_fk_organization"
+	// ConstraintPluginAllowedOrganizationsFkPlugin is defined on appstore.plugin_allowed_organizations.
+	ConstraintPluginAllowedOrganizationsFkPlugin = "plugin_allowed_organizations_fk_plugin"
 	// ConstraintPluginDefinitionsCkStatus is defined on appstore.plugin_definitions.
 	ConstraintPluginDefinitionsCkStatus = "plugin_definitions_ck_status"
 	// ConstraintPluginDefinitionsFkPlugin is defined on appstore.plugin_definitions.
@@ -359,6 +363,16 @@ const (
 	ConstraintRoomsUqSiteName = "rooms_uq_site_name"
 	// ConstraintSitesUqName is defined on dcim.sites.
 	ConstraintSitesUqName = "sites_uq_name"
+	// ConstraintSubmissionsCkClosed is defined on appstore.submissions.
+	ConstraintSubmissionsCkClosed = "submissions_ck_closed"
+	// ConstraintSubmissionsCkRejectionReason is defined on appstore.submissions.
+	ConstraintSubmissionsCkRejectionReason = "submissions_ck_rejection_reason"
+	// ConstraintSubmissionsCkReviewed is defined on appstore.submissions.
+	ConstraintSubmissionsCkReviewed = "submissions_ck_reviewed"
+	// ConstraintSubmissionsFkPluginDefinition is defined on appstore.submissions.
+	ConstraintSubmissionsFkPluginDefinition = "submissions_fk_plugin_definition"
+	// ConstraintSubmissionsUqOpen is defined on appstore.submissions.
+	ConstraintSubmissionsUqOpen = "submissions_uq_open"
 	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
 	// ConstraintTaskStepsUqTaskOrdinal is defined on dcim.task_steps.

@@ -1068,6 +1068,7 @@ CREATE TABLE appstore.plugins (
 	image text NOT NULL DEFAULT '',
 	license text NOT NULL DEFAULT '',
 	visibility text NOT NULL DEFAULT 'public',
+	updated timestamptz NOT NULL DEFAULT now(),
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
@@ -1082,7 +1083,9 @@ COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plu
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
 -- ddl-end --
-COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Nothing writes this until the registry API lands.';
+COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Written by the registry API''s UpdatePlugin.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugins.updated IS E'Set by the application on every UpdatePlugin; there is no trigger.';
 -- ddl-end --
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --
@@ -1113,6 +1116,16 @@ CREATE POLICY plugins_update_owner ON appstore.plugins
 	AS PERMISSIVE
 	FOR UPDATE
 	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id())
+	WITH CHECK (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: plugins_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_all_registry ON appstore.plugins CASCADE;
+CREATE POLICY plugins_all_registry ON appstore.plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
 	USING (organization_id = authn.current_organization_id())
 	WITH CHECK (organization_id = authn.current_organization_id());
 -- ddl-end --
@@ -1252,6 +1265,73 @@ USING btree
 	published
 )
 WHERE (published IS NOT NULL AND deleted IS NULL);
+-- ddl-end --
+
+-- object: appstore.submissions | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.submissions CASCADE;
+CREATE TABLE appstore.submissions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_definition_id uuid NOT NULL,
+	submitter_user_id uuid NOT NULL,
+	reviewer_user_id uuid,
+	rejection_reason text,
+	feedback text NOT NULL DEFAULT '',
+	submitted timestamptz NOT NULL DEFAULT now(),
+	reviewed timestamptz,
+	closed timestamptz,
+	deleted timestamptz,
+	CONSTRAINT submissions_pk PRIMARY KEY (id),
+	CONSTRAINT submissions_ck_rejection_reason CHECK (rejection_reason IS NULL OR rejection_reason IN ('incomplete_metadata', 'duplicate', 'security_concerns', 'naming_guidelines', 'out_of_scope', 'other')),
+	CONSTRAINT submissions_ck_reviewed CHECK ((reviewed IS NULL) = (reviewer_user_id IS NULL)),
+	CONSTRAINT submissions_ck_closed CHECK (reviewed IS NULL OR closed IS NOT NULL)
+);
+-- ddl-end --
+COMMENT ON TABLE appstore.submissions IS E'One review round for one plugin version. The version''s own status column stays authoritative; this table records who submitted, who decided, when and why.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.reviewer_user_id IS E'Which store reviewers authenticate against is undecided, so this carries no foreign key.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.submitted IS E'A submission is created by being submitted, so this is also its creation timestamp and there is no separate created column.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.closed IS E'Set by any terminal outcome. A withdrawal closes a round without a reviewer, which is why this is separate from reviewed.';
+-- ddl-end --
+ALTER TABLE appstore.submissions OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.submissions ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: submissions_uq_open | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.submissions_uq_open CASCADE;
+CREATE UNIQUE INDEX submissions_uq_open ON appstore.submissions
+USING btree
+(
+	plugin_definition_id
+)
+WHERE (closed IS NULL AND deleted IS NULL);
+-- ddl-end --
+
+-- object: appstore.plugin_allowed_organizations | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_allowed_organizations CASCADE;
+CREATE TABLE appstore.plugin_allowed_organizations (
+	plugin_id uuid NOT NULL,
+	organization_id uuid NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT plugin_allowed_organizations_pk PRIMARY KEY (plugin_id,organization_id)
+);
+-- ddl-end --
+COMMENT ON TABLE appstore.plugin_allowed_organizations IS E'Organizations permitted to install a RESTRICTED listing. A pure association table, replaced wholesale by UpdatePlugin, so it carries no deleted column.';
+-- ddl-end --
+ALTER TABLE appstore.plugin_allowed_organizations OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_allowed_organizations ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_idx_organization_id | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.plugin_allowed_organizations_idx_organization_id CASCADE;
+CREATE INDEX plugin_allowed_organizations_idx_organization_id ON appstore.plugin_allowed_organizations
+USING btree
+(
+	organization_id
+);
 -- ddl-end --
 
 -- object: appstore.presets | type: TABLE --
@@ -1416,8 +1496,14 @@ CREATE TABLE appstore.plugin_documentation_links (
 	title text NOT NULL,
 	url_name text NOT NULL,
 	url text NOT NULL,
+	"position" integer NOT NULL DEFAULT 0,
+	deleted timestamptz,
 	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_documentation_links."position" IS E'Render order within a listing, matching appstore.plugin_features.position.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_documentation_links.deleted IS E'UpdatePlugin replaces links wholesale; a dropped link is soft-deleted rather than removed, per the project-wide rule.';
 -- ddl-end --
 ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
 -- ddl-end --
@@ -1440,6 +1526,85 @@ CREATE POLICY plugin_documentation_links_select_catalog ON appstore.plugin_docum
 	FOR SELECT
 	TO fun_marketplace_catalog_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id));
+-- ddl-end --
+
+-- object: plugin_definitions_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_all_registry ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_all_registry ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: submissions_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS submissions_all_registry ON appstore.submissions CASCADE;
+CREATE POLICY submissions_all_registry ON appstore.submissions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_features_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_features_all_registry ON appstore.plugin_features CASCADE;
+CREATE POLICY plugin_features_all_registry ON appstore.plugin_features
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_documentation_links_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_documentation_links_all_registry ON appstore.plugin_documentation_links CASCADE;
+CREATE POLICY plugin_documentation_links_all_registry ON appstore.plugin_documentation_links
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugins_tags_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_all_registry ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_all_registry ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: categories_plugins_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_all_registry ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_all_registry ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_allowed_organizations_all_registry ON appstore.plugin_allowed_organizations CASCADE;
+CREATE POLICY plugin_allowed_organizations_all_registry ON appstore.plugin_allowed_organizations
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_select_api | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations CASCADE;
+CREATE POLICY plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: require_admin | type: TRIGGER --
@@ -2957,6 +3122,27 @@ REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: submissions_fk_plugin_definition | type: CONSTRAINT --
+-- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_plugin_definition CASCADE;
+ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_plugin_definition FOREIGN KEY (plugin_definition_id)
+REFERENCES appstore.plugin_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_allowed_organizations DROP CONSTRAINT IF EXISTS plugin_allowed_organizations_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_allowed_organizations ADD CONSTRAINT plugin_allowed_organizations_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_allowed_organizations DROP CONSTRAINT IF EXISTS plugin_allowed_organizations_fk_organization CASCADE;
+ALTER TABLE appstore.plugin_allowed_organizations ADD CONSTRAINT plugin_allowed_organizations_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: plugins_presets_plugin_id | type: CONSTRAINT --
 -- ALTER TABLE appstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
 ALTER TABLE appstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
@@ -3716,6 +3902,14 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
+-- object: grant_r_91e308bb11 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_allowed_organizations
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
 -- object: grant_raw_799c333c27 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE appstore.plugin_definitions
@@ -4392,6 +4586,134 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE appstore.preset_plugins
    TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_5bbfd58279" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_cdf2d83602" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_58b7ef10c5" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_d6c0a87ef1 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_04e3e3c135 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugins
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_9d426cee08 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_ra_3148141987 | type: PERMISSION --
+GRANT SELECT,INSERT
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_bb41bdda39 | type: PERMISSION --
+GRANT UPDATE(closed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_27b9f47f46 | type: PERMISSION --
+GRANT UPDATE(deleted)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b5e07e3db2 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_features
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_58e0ba59de | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_documentation_links
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_0cb5215905 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_cac5c95b57 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_a8c38567c0 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.plugin_allowed_organizations
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_ra_478b81c02e | type: PERMISSION --
+GRANT SELECT,INSERT
+   ON TABLE appstore.tags
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_c0d2d103bf | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_registry_api;
 
 -- ddl-end --
 
