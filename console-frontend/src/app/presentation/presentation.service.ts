@@ -385,13 +385,20 @@ export default class PresentationService {
     const src = `${MARKETPLACE_EMBED_BASE}#${path}`;
     if (!this.embedReady) {
       this.embedReady = PresentationService.loadEmbed(frame, src);
-    } else {
-      frame.contentWindow?.postMessage(
-        { type: EMBED_NAVIGATE_MESSAGE, path },
-        window.location.origin,
-      );
+      await this.embedReady;
+      return frame.contentDocument;
     }
+    // Awaited before posting, not after: `embedReady` is set the moment the
+    // first embed slide starts loading, and the frame only registers its
+    // message listener once its app has bootstrapped — up to EMBED_TIMEOUT_MS
+    // later. Advancing a slide inside that window used to post into a frame
+    // that could not hear it, so the deck moved on while the frame still
+    // showed the previous slide's screen and the drive script ran against it.
     await this.embedReady;
+    frame.contentWindow?.postMessage(
+      { type: EMBED_NAVIGATE_MESSAGE, path },
+      window.location.origin,
+    );
     return frame.contentDocument;
   }
 

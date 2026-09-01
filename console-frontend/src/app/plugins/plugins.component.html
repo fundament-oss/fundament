@@ -201,7 +201,16 @@
 ></app-install-plugin-modal>
 
 <!-- Plugin Details Sheet -->
-<nldd-sheet #pluginSheet accessible-label="Plugin details" placement="right" width="420px">
+<!-- (close) keeps `sheetPlugin` in step with dismissals the component makes on its
+     own (Escape, backdrop click). Without it the signal keeps holding the plugin, so
+     clicking the same card's "Details" again is a no-op and the sheet never reopens. -->
+<nldd-sheet
+  #pluginSheet
+  accessible-label="Plugin details"
+  placement="right"
+  width="420px"
+  (close)="closePluginDetails()"
+>
   <nldd-page sticky-header="" sticky-footer="">
     <div slot="header" class="flex justify-end px-4 py-3">
       <nldd-icon-button

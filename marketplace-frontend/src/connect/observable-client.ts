@@ -1,6 +1,6 @@
 // Based on: https://github.com/connectrpc/examples-es/blob/main/angular/src/connect/observable-client.ts
 
-import { makeAnyClient, CallOptions, Transport } from '@connectrpc/connect';
+import { Code, ConnectError, makeAnyClient, CallOptions, Transport } from '@connectrpc/connect';
 import { createAsyncIterable } from '@connectrpc/connect/protocol';
 import {
   DescService,
@@ -37,6 +37,35 @@ export type UnaryInterceptor = <I extends DescMessage, O extends DescMessage>(
   call: () => Observable<MessageShape<O>>,
 ) => Observable<MessageShape<O>>;
 
+/**
+ * Cancellation raised by our own teardown, which the caller never asked to see.
+ * Connect surfaces an aborted call as a ConnectError with Code.Canceled rather
+ * than a DOMException.
+ */
+function isCanceled(err: unknown): boolean {
+  return err instanceof ConnectError && err.code === Code.Canceled;
+}
+
+/**
+ * An AbortController for one call, chained to any caller-supplied signal.
+ *
+ * The transport passes a signal straight to fetch but registers no teardown of
+ * its own, and RxJS never calls `return()` on an async iterator it stops
+ * walking. Without aborting on unsubscribe the request keeps draining and the
+ * server keeps producing for a subscriber that has gone away.
+ */
+function callController(upstream: AbortSignal | undefined): AbortController {
+  const controller = new AbortController();
+  if (upstream) {
+    if (upstream.aborted) {
+      controller.abort(upstream.reason);
+    } else {
+      upstream.addEventListener('abort', () => controller.abort(upstream.reason), { once: true });
+    }
+  }
+  return controller;
+}
+
 function createUnaryFn<I extends DescMessage, O extends DescMessage>(
   transport: Transport,
   method: DescMethodUnary<I, O>,
@@ -44,21 +73,27 @@ function createUnaryFn<I extends DescMessage, O extends DescMessage>(
 ): UnaryFn<I, O> {
   const call = (requestMessage: MessageInitShape<I>, options?: CallOptions) =>
     new Observable<MessageShape<O>>((subscriber) => {
+      const controller = callController(options?.signal);
+
       transport
-        .unary(method, options?.signal, options?.timeoutMs, options?.headers, requestMessage)
+        .unary(method, controller.signal, options?.timeoutMs, options?.headers, requestMessage)
         .then(
           (response) => {
             options?.onHeader?.(response.header);
             subscriber.next(response.message);
             options?.onTrailer?.(response.trailer);
+            subscriber.complete();
           },
-          (err) => {
+          (err: unknown) => {
+            if (controller.signal.aborted && isCanceled(err)) {
+              subscriber.complete();
+              return;
+            }
             subscriber.error(err);
           },
-        )
-        .finally(() => {
-          subscriber.complete();
-        });
+        );
+
+      return () => controller.abort();
     });
 
   return function unary(requestMessage, options) {
@@ -80,34 +115,45 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
 ): ServerStreamingFn<I, O> {
   return function serverStreaming(input, options) {
     return new Observable<MessageShape<O>>((subscriber) => {
-      transport
-        .stream<I, O>(
+      const controller = callController(options?.signal);
+
+      const run = async (): Promise<void> => {
+        const streamResponse = await transport.stream<I, O>(
           method,
-          options?.signal,
+          controller.signal,
           options?.timeoutMs,
           options?.headers,
           createAsyncIterable([input]),
-        )
-        .then(
-          async (streamResponse) => {
-            options?.onHeader?.(streamResponse.header);
-            const iterator = streamResponse.message[Symbol.asyncIterator]();
-            const drain = async (): Promise<void> => {
-              const result = await iterator.next();
-              if (result.done) return;
-              subscriber.next(result.value);
-              await drain();
-            };
-            await drain();
-            options?.onTrailer?.(streamResponse.trailer);
-          },
-          (err) => {
-            subscriber.error(err);
-          },
-        )
-        .finally(() => {
-          subscriber.complete();
-        });
+        );
+        options?.onHeader?.(streamResponse.header);
+        // A for-await loop, not awaited recursion: recursion suspends the caller
+        // on every message, so one frame per streamed message — each retaining
+        // its message — stays alive until the stream ends. A log tail emits per
+        // line, which turns that into unbounded retention. An async iterable has
+        // no array form to iterate instead, so no-restricted-syntax cannot apply.
+        // eslint-disable-next-line no-restricted-syntax
+        for await (const message of streamResponse.message) {
+          if (subscriber.closed) return;
+          subscriber.next(message);
+        }
+        options?.onTrailer?.(streamResponse.trailer);
+      };
+
+      // A rejection inside the drain must reach subscriber.error. Handling it in
+      // the second argument of .then() would only cover stream setup, letting a
+      // mid-stream failure arrive as a clean completion.
+      run().then(
+        () => subscriber.complete(),
+        (err: unknown) => {
+          if (controller.signal.aborted && isCanceled(err)) {
+            subscriber.complete();
+            return;
+          }
+          subscriber.error(err);
+        },
+      );
+
+      return () => controller.abort();
     });
   };
 }

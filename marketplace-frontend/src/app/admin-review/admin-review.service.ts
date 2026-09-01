@@ -123,17 +123,35 @@ export default class AdminReviewService {
   }
 
   private loadPublishers(): Promise<Map<string, string>> {
-    this.publishers ??= firstValueFrom(this.client.listPublishers({})).then(
-      (response) =>
-        new Map(response.publishers.map((publisher) => [publisher.id, publisher.displayName])),
-    );
+    this.publishers ??= firstValueFrom(this.client.listPublishers({}))
+      .then(
+        (response) =>
+          new Map(response.publishers.map((publisher) => [publisher.id, publisher.displayName])),
+      )
+      .catch((err: unknown) => {
+        // The promise is memoized to coalesce concurrent callers, but a failure
+        // must not be: keeping a rejected promise here would fail every later
+        // caller for the life of the page. Clearing the slot lets the next one
+        // retry.
+        this.publishers = undefined;
+        throw err;
+      });
     return this.publishers;
   }
 
   private loadCategories(): Promise<Map<string, string>> {
-    this.categories ??= firstValueFrom(this.client.listCategories({})).then(
-      (response) => new Map(response.categories.map((category) => [category.id, category.name])),
-    );
+    this.categories ??= firstValueFrom(this.client.listCategories({}))
+      .then(
+        (response) => new Map(response.categories.map((category) => [category.id, category.name])),
+      )
+      .catch((err: unknown) => {
+        // The promise is memoized to coalesce concurrent callers, but a failure
+        // must not be: keeping a rejected promise here would fail every later
+        // caller for the life of the page. Clearing the slot lets the next one
+        // retry.
+        this.categories = undefined;
+        throw err;
+      });
     return this.categories;
   }
 

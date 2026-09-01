@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { PUBLICATION_CLIENT } from '../../connect/tokens';
-import toIsoDate from '../../connect/timestamp';
+import toIsoDate, { toEpochMs } from '../../connect/timestamp';
 import { type SubmissionStatus, fromProtoStatus } from '../status/submission-status';
 import {
   type Plugin as RegistryPlugin,
@@ -107,9 +107,18 @@ export default class PluginDevelopmentService {
   private loadCategories(): Promise<Map<string, string>> {
     // Duplicated from the catalog on purpose (FUN-20): publishing does not
     // depend on the public storefront being reachable.
-    this.categories ??= firstValueFrom(this.client.listCategories({})).then(
-      (response) => new Map(response.categories.map((category) => [category.id, category.name])),
-    );
+    this.categories ??= firstValueFrom(this.client.listCategories({}))
+      .then(
+        (response) => new Map(response.categories.map((category) => [category.id, category.name])),
+      )
+      .catch((err: unknown) => {
+        // The promise is memoized to coalesce concurrent callers, but a failure
+        // must not be: keeping a rejected promise here would fail every later
+        // caller for the life of the page. Clearing the slot lets the next one
+        // retry.
+        this.categories = undefined;
+        throw err;
+      });
     return this.categories;
   }
 
@@ -120,9 +129,17 @@ export default class PluginDevelopmentService {
   ): AuthoredPlugin {
     // ListPluginVersions does not promise an order, and every "latest" on this
     // page depends on one, so sort here rather than trusting the server.
+    //
+    // Sorted on the raw timestamp, not the `pushedAt` day the UI renders:
+    // pushing several builds a day is the normal case while iterating on a
+    // plugin, and a truncated key would make those compare equal, dropping the
+    // sort back to the server order it exists to distrust. The version string
+    // breaks a tie so the result is at least stable.
     const sorted = [...versions]
-      .map(PluginDevelopmentService.toVersion)
-      .sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
+      .sort(
+        (a, b) => toEpochMs(b.created) - toEpochMs(a.created) || b.version.localeCompare(a.version),
+      )
+      .map(PluginDevelopmentService.toVersion);
     const latest = sorted[0];
     return {
       id: plugin.id,
