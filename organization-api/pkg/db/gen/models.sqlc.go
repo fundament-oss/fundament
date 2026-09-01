@@ -9,14 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AppstorePluginDocumentationLink struct {
-	ID       uuid.UUID
-	PluginID uuid.UUID
-	Title    string
-	UrlName  string
-	Url      string
-}
-
 type AppstorePreset struct {
 	ID          uuid.UUID
 	Name        string
