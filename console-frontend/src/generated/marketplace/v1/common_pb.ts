@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file marketplace/v1/common.proto.
  */
 export const file_marketplace_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiOwoJUHVibGlzaGVyEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMZGlzcGxheV9uYW1lGB4gASgJIjQKEFBsdWdpblBlcm1pc3Npb24SEAoIcmVzb3VyY2UYCiABKAkSDgoGYWNjZXNzGBQgASgJIisKDEZlYXR1cmVCbG9jaxINCgV0aXRsZRgKIAEoCRIMCgRib2R5GBQgASgJIk0KEURvY3VtZW50YXRpb25MaW5rEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhAKCHVybF9uYW1lGB4gASgJEgsKA3VybBgoIAEoCSr7AQoQU3VibWlzc2lvblN0YXR1cxIhCh1TVUJNSVNTSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF1NVQk1JU1NJT05fU1RBVFVTX0RSQUZUEAESHQoZU1VCTUlTU0lPTl9TVEFUVVNfUEVORElORxACEicKI1NVQk1JU1NJT05fU1RBVFVTX0NIQU5HRVNfUkVRVUVTVEVEEAMSHgoaU1VCTUlTU0lPTl9TVEFUVVNfQVBQUk9WRUQQBBIeChpTVUJNSVNTSU9OX1NUQVRVU19SRUpFQ1RFRBAFEh8KG1NVQk1JU1NJT05fU1RBVFVTX1dJVEhEUkFXThAGQmlaXWdpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvbWFya2V0cGxhY2UtYXBpL3BrZy9wcm90by9nZW4vbWFya2V0cGxhY2UvdjE7bWFya2V0cGxhY2V2MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features]);
+  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiKwoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkiTQoRRG9jdW1lbnRhdGlvbkxpbmsSCgoCaWQYCiABKAkSDQoFdGl0bGUYFCABKAkSEAoIdXJsX25hbWUYHiABKAkSCwoDdXJsGCggASgJKvsBChBTdWJtaXNzaW9uU3RhdHVzEiEKHVNVQk1JU1NJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGwoXU1VCTUlTU0lPTl9TVEFUVVNfRFJBRlQQARIdChlTVUJNSVNTSU9OX1NUQVRVU19QRU5ESU5HEAISJwojU1VCTUlTU0lPTl9TVEFUVVNfQ0hBTkdFU19SRVFVRVNURUQQAxIeChpTVUJNSVNTSU9OX1NUQVRVU19BUFBST1ZFRBAEEh4KGlNVQk1JU1NJT05fU1RBVFVTX1JFSkVDVEVEEAUSHwobU1VCTUlTU0lPTl9TVEFUVVNfV0lUSERSQVdOEAZCaVpdZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1hcGkvcGtnL3Byb3RvL2dlbi9tYXJrZXRwbGFjZS92MTttYXJrZXRwbGFjZXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
 
 /**
  * appstore.categories. A curated vocabulary: a developer picks from it rather
@@ -38,6 +38,42 @@ export type Category = Message<"marketplace.v1.Category"> & {
  */
 export const CategorySchema: GenMessage<Category> = /*@__PURE__*/
   messageDesc(file_marketplace_v1_common, 0);
+
+/**
+ * A curated set of plugins the storefront offers as a starting point.
+ * plugin_ids carries only the listings the caller can see, so an anonymous
+ * visitor never learns of a RESTRICTED or unpublished one through a preset.
+ *
+ * @generated from message marketplace.v1.Preset
+ */
+export type Preset = Message<"marketplace.v1.Preset"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 20;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 30;
+   */
+  description: string;
+
+  /**
+   * @generated from field: repeated string plugin_ids = 40;
+   */
+  pluginIds: string[];
+};
+
+/**
+ * Describes the message marketplace.v1.Preset.
+ * Use `create(PresetSchema)` to create a new message.
+ */
+export const PresetSchema: GenMessage<Preset> = /*@__PURE__*/
+  messageDesc(file_marketplace_v1_common, 1);
 
 /**
  * A publishing organization, projected from tenant.organizations. Served by
@@ -73,7 +109,7 @@ export type Publisher = Message<"marketplace.v1.Publisher"> & {
  * Use `create(PublisherSchema)` to create a new message.
  */
 export const PublisherSchema: GenMessage<Publisher> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 1);
+  messageDesc(file_marketplace_v1_common, 2);
 
 /**
  * Human-readable projection of a version's RBAC rules, e.g.
@@ -98,7 +134,7 @@ export type PluginPermission = Message<"marketplace.v1.PluginPermission"> & {
  * Use `create(PluginPermissionSchema)` to create a new message.
  */
 export const PluginPermissionSchema: GenMessage<PluginPermission> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 2);
+  messageDesc(file_marketplace_v1_common, 3);
 
 /**
  * A selling point the developer writes; rendered as a card on the public
@@ -123,7 +159,7 @@ export type FeatureBlock = Message<"marketplace.v1.FeatureBlock"> & {
  * Use `create(FeatureBlockSchema)` to create a new message.
  */
 export const FeatureBlockSchema: GenMessage<FeatureBlock> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 3);
+  messageDesc(file_marketplace_v1_common, 4);
 
 /**
  * appstore.plugin_documentation_links. url_name is the link text; title labels
@@ -158,7 +194,7 @@ export type DocumentationLink = Message<"marketplace.v1.DocumentationLink"> & {
  * Use `create(DocumentationLinkSchema)` to create a new message.
  */
 export const DocumentationLinkSchema: GenMessage<DocumentationLink> = /*@__PURE__*/
-  messageDesc(file_marketplace_v1_common, 4);
+  messageDesc(file_marketplace_v1_common, 5);
 
 /**
  * Where a version sits in the push -> submit -> review -> publish pipeline.

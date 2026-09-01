@@ -48,6 +48,9 @@ const (
 	// CatalogServiceListPublishersProcedure is the fully-qualified name of the CatalogService's
 	// ListPublishers RPC.
 	CatalogServiceListPublishersProcedure = "/catalog.v1.CatalogService/ListPublishers"
+	// CatalogServiceListPresetsProcedure is the fully-qualified name of the CatalogService's
+	// ListPresets RPC.
+	CatalogServiceListPresetsProcedure = "/catalog.v1.CatalogService/ListPresets"
 	// CatalogServiceGetPluginDefinitionProcedure is the fully-qualified name of the CatalogService's
 	// GetPluginDefinition RPC.
 	CatalogServiceGetPluginDefinitionProcedure = "/catalog.v1.CatalogService/GetPluginDefinition"
@@ -67,6 +70,8 @@ type CatalogServiceClient interface {
 	// Organizations with at least one public listing, so the storefront can
 	// resolve organization_id without a credential for organization-api.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Curated plugin sets for the storefront's browse filters.
+	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	// Verbatim manifest for one version, plus the hash an install pins against.
 	// Any version of a PUBLIC listing is reachable, published or not, so
 	// plugin-controller can install what it installs today — it holds no user JWT.
@@ -115,6 +120,12 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("ListPublishers")),
 			connect.WithClientOptions(opts...),
 		),
+		listPresets: connect.NewClient[v1.ListPresetsRequest, v1.ListPresetsResponse](
+			httpClient,
+			baseURL+CatalogServiceListPresetsProcedure,
+			connect.WithSchema(catalogServiceMethods.ByName("ListPresets")),
+			connect.WithClientOptions(opts...),
+		),
 		getPluginDefinition: connect.NewClient[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse](
 			httpClient,
 			baseURL+CatalogServiceGetPluginDefinitionProcedure,
@@ -131,6 +142,7 @@ type catalogServiceClient struct {
 	listPluginVersions  *connect.Client[v1.ListPluginVersionsRequest, v1.ListPluginVersionsResponse]
 	listCategories      *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
 	listPublishers      *connect.Client[v1.ListPublishersRequest, v1.ListPublishersResponse]
+	listPresets         *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
 	getPluginDefinition *connect.Client[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse]
 }
 
@@ -179,6 +191,15 @@ func (c *catalogServiceClient) ListPublishers(ctx context.Context, req *v1.ListP
 	return nil, err
 }
 
+// ListPresets calls catalog.v1.CatalogService.ListPresets.
+func (c *catalogServiceClient) ListPresets(ctx context.Context, req *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error) {
+	response, err := c.listPresets.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // GetPluginDefinition calls catalog.v1.CatalogService.GetPluginDefinition.
 func (c *catalogServiceClient) GetPluginDefinition(ctx context.Context, req *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error) {
 	response, err := c.getPluginDefinition.CallUnary(ctx, connect.NewRequest(req))
@@ -202,6 +223,8 @@ type CatalogServiceHandler interface {
 	// Organizations with at least one public listing, so the storefront can
 	// resolve organization_id without a credential for organization-api.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Curated plugin sets for the storefront's browse filters.
+	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	// Verbatim manifest for one version, plus the hash an install pins against.
 	// Any version of a PUBLIC listing is reachable, published or not, so
 	// plugin-controller can install what it installs today — it holds no user JWT.
@@ -246,6 +269,12 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 		connect.WithSchema(catalogServiceMethods.ByName("ListPublishers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	catalogServiceListPresetsHandler := connect.NewUnaryHandlerSimple(
+		CatalogServiceListPresetsProcedure,
+		svc.ListPresets,
+		connect.WithSchema(catalogServiceMethods.ByName("ListPresets")),
+		connect.WithHandlerOptions(opts...),
+	)
 	catalogServiceGetPluginDefinitionHandler := connect.NewUnaryHandlerSimple(
 		CatalogServiceGetPluginDefinitionProcedure,
 		svc.GetPluginDefinition,
@@ -264,6 +293,8 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 			catalogServiceListCategoriesHandler.ServeHTTP(w, r)
 		case CatalogServiceListPublishersProcedure:
 			catalogServiceListPublishersHandler.ServeHTTP(w, r)
+		case CatalogServiceListPresetsProcedure:
+			catalogServiceListPresetsHandler.ServeHTTP(w, r)
 		case CatalogServiceGetPluginDefinitionProcedure:
 			catalogServiceGetPluginDefinitionHandler.ServeHTTP(w, r)
 		default:
@@ -293,6 +324,10 @@ func (UnimplementedCatalogServiceHandler) ListCategories(context.Context, *v1.Li
 
 func (UnimplementedCatalogServiceHandler) ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("catalog.v1.CatalogService.ListPublishers is not implemented"))
+}
+
+func (UnimplementedCatalogServiceHandler) ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("catalog.v1.CatalogService.ListPresets is not implemented"))
 }
 
 func (UnimplementedCatalogServiceHandler) GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error) {
