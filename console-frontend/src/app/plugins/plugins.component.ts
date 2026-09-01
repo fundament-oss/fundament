@@ -593,7 +593,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // True when the plugin is installed (in any phase) on at least one cluster.
   isPluginInstalledAnywhere(organizationName: string, pluginName: string): boolean {
     return this.installs().some(
-      (install) => install.organizationName === organizationName && install.pluginName === pluginName,
+      (install) =>
+        install.organizationName === organizationName && install.pluginName === pluginName,
     );
   }
 

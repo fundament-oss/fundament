@@ -266,7 +266,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       // Couldn't read this cluster — keep its current state rather than treating
       // an unreadable cluster as "plugin removed".
       if (items === null) return c;
-      const phase = items.find((item) => item.metadata.name === resourceName)?.status?.phase ?? null;
+      const phase =
+        items.find((item) => item.metadata.name === resourceName)?.status?.phase ?? null;
       // A 'Pending' row that has vanished is an optimistic install (or in-flight
       // retry) the backend has not listed yet — keep showing it as pending.
       const resolved = phase === null && c.phase === 'Pending' ? 'Pending' : phase;
