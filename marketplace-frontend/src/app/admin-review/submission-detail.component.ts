@@ -128,12 +128,19 @@ export default class SubmissionDetailComponent implements OnInit {
   }
 
   openReject() {
-    this.decisionMode.set('reject');
-    this.showDecisionSheet.set(true);
+    this.openDecision('reject');
   }
 
   openRequestChanges() {
-    this.decisionMode.set('changes');
+    this.openDecision('changes');
+  }
+
+  // Each decision starts from a blank sheet: a note or reason the reviewer
+  // typed and then abandoned must never ride along with the next decision.
+  private openDecision(mode: DecisionMode) {
+    this.decisionMode.set(mode);
+    this.selectedReason.set('');
+    this.feedback.set('');
     this.showDecisionSheet.set(true);
   }
 

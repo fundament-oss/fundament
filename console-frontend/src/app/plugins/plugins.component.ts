@@ -524,10 +524,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         this.selectedCategory === 'all' ||
         plugin.categories.some((cat) => cat.id === this.selectedCategory);
 
-      // Filter by search query across name, description and tags
+      // Filter by search query across name, display name, description and tags
       const matchesQuery =
         !query ||
-        [plugin.name, plugin.descriptionShort, ...plugin.tags.map((tag) => tag.name)]
+        [
+          plugin.name,
+          displayNameOf(plugin),
+          plugin.descriptionShort,
+          ...plugin.tags.map((tag) => tag.name),
+        ]
           .join(' ')
           .toLowerCase()
           .includes(query);

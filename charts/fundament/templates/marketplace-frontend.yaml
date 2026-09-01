@@ -46,6 +46,11 @@ spec:
       {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 6 }}
   template:
     metadata:
+      annotations:
+        # server.ts reads the mounted config.json once at process start, so a
+        # changed URL only reaches the browser; roll the pods to keep the
+        # server-rendered first paint on the same APIs.
+        checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.console | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
     spec:
