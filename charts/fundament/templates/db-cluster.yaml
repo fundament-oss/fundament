@@ -60,6 +60,10 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-marketplace-catalog-api
+      - name: fun_marketplace_registry_api
+        login: true
+        passwordSecret:
+          name: db-fun-marketplace-registry-api
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true

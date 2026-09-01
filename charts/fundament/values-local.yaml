@@ -216,6 +216,12 @@ marketplaceCatalogApi:
   replicas: 1
   logLevel: debug
 
+# Publisher API. Authenticated, so it picks up the shared jwtSecret above.
+marketplaceRegistryApi:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+
 authzWorker:
   enabled: true
   replicas: 1

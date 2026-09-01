@@ -90,6 +90,11 @@ build:
       docker:
         dockerfile: marketplace-api/Dockerfile
 
+    - image: marketplace-registry-api
+      context: .
+      docker:
+        dockerfile: marketplace-api/Dockerfile.registry
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -117,6 +122,7 @@ deploy:
           images.dcimAuthnApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_authn_api}}"
           images.pluginProxy: "{{.IMAGE_FULLY_QUALIFIED_plugin_proxy}}"
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
+          images.marketplaceRegistryApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_api}}"
 
 profiles:
   - name: env-local
@@ -246,6 +252,12 @@ profiles:
         value: marketplace-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/14/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/15/docker/dockerfile
+        value: marketplace-api/hotreload/Dockerfile.registry
+      - op: add
+        path: /build/artifacts/15/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)
