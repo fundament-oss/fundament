@@ -48,6 +48,9 @@ const (
 	// CatalogServiceListPublishersProcedure is the fully-qualified name of the CatalogService's
 	// ListPublishers RPC.
 	CatalogServiceListPublishersProcedure = "/catalog.v1.CatalogService/ListPublishers"
+	// CatalogServiceGetPluginDefinitionProcedure is the fully-qualified name of the CatalogService's
+	// GetPluginDefinition RPC.
+	CatalogServiceGetPluginDefinitionProcedure = "/catalog.v1.CatalogService/GetPluginDefinition"
 )
 
 // CatalogServiceClient is a client for the catalog.v1.CatalogService service.
@@ -64,6 +67,11 @@ type CatalogServiceClient interface {
 	// Organizations with at least one public listing, so the storefront can
 	// resolve organization_id without a credential for organization-api.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Verbatim manifest for one version, plus the hash an install pins against.
+	// Any version of a PUBLIC listing is reachable, published or not, so
+	// plugin-controller can install what it installs today — it holds no user JWT.
+	// RESTRICTED listings stay hidden, as everywhere else in this service.
+	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 
 // NewCatalogServiceClient constructs a client for the catalog.v1.CatalogService service. By
@@ -107,16 +115,23 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("ListPublishers")),
 			connect.WithClientOptions(opts...),
 		),
+		getPluginDefinition: connect.NewClient[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse](
+			httpClient,
+			baseURL+CatalogServiceGetPluginDefinitionProcedure,
+			connect.WithSchema(catalogServiceMethods.ByName("GetPluginDefinition")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // catalogServiceClient implements CatalogServiceClient.
 type catalogServiceClient struct {
-	listPlugins        *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
-	getPlugin          *connect.Client[v1.GetPluginRequest, v1.GetPluginResponse]
-	listPluginVersions *connect.Client[v1.ListPluginVersionsRequest, v1.ListPluginVersionsResponse]
-	listCategories     *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
-	listPublishers     *connect.Client[v1.ListPublishersRequest, v1.ListPublishersResponse]
+	listPlugins         *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
+	getPlugin           *connect.Client[v1.GetPluginRequest, v1.GetPluginResponse]
+	listPluginVersions  *connect.Client[v1.ListPluginVersionsRequest, v1.ListPluginVersionsResponse]
+	listCategories      *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
+	listPublishers      *connect.Client[v1.ListPublishersRequest, v1.ListPublishersResponse]
+	getPluginDefinition *connect.Client[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse]
 }
 
 // ListPlugins calls catalog.v1.CatalogService.ListPlugins.
@@ -164,6 +179,15 @@ func (c *catalogServiceClient) ListPublishers(ctx context.Context, req *v1.ListP
 	return nil, err
 }
 
+// GetPluginDefinition calls catalog.v1.CatalogService.GetPluginDefinition.
+func (c *catalogServiceClient) GetPluginDefinition(ctx context.Context, req *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error) {
+	response, err := c.getPluginDefinition.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // CatalogServiceHandler is an implementation of the catalog.v1.CatalogService service.
 type CatalogServiceHandler interface {
 	// Browse the storefront. Filters are AND-ed; an empty request returns the
@@ -178,6 +202,11 @@ type CatalogServiceHandler interface {
 	// Organizations with at least one public listing, so the storefront can
 	// resolve organization_id without a credential for organization-api.
 	ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error)
+	// Verbatim manifest for one version, plus the hash an install pins against.
+	// Any version of a PUBLIC listing is reachable, published or not, so
+	// plugin-controller can install what it installs today — it holds no user JWT.
+	// RESTRICTED listings stay hidden, as everywhere else in this service.
+	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 
 // NewCatalogServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -217,6 +246,12 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 		connect.WithSchema(catalogServiceMethods.ByName("ListPublishers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	catalogServiceGetPluginDefinitionHandler := connect.NewUnaryHandlerSimple(
+		CatalogServiceGetPluginDefinitionProcedure,
+		svc.GetPluginDefinition,
+		connect.WithSchema(catalogServiceMethods.ByName("GetPluginDefinition")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/catalog.v1.CatalogService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CatalogServiceListPluginsProcedure:
@@ -229,6 +264,8 @@ func NewCatalogServiceHandler(svc CatalogServiceHandler, opts ...connect.Handler
 			catalogServiceListCategoriesHandler.ServeHTTP(w, r)
 		case CatalogServiceListPublishersProcedure:
 			catalogServiceListPublishersHandler.ServeHTTP(w, r)
+		case CatalogServiceGetPluginDefinitionProcedure:
+			catalogServiceGetPluginDefinitionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -256,4 +293,8 @@ func (UnimplementedCatalogServiceHandler) ListCategories(context.Context, *v1.Li
 
 func (UnimplementedCatalogServiceHandler) ListPublishers(context.Context, *v1.ListPublishersRequest) (*v1.ListPublishersResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("catalog.v1.CatalogService.ListPublishers is not implemented"))
+}
+
+func (UnimplementedCatalogServiceHandler) GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("catalog.v1.CatalogService.GetPluginDefinition is not implemented"))
 }

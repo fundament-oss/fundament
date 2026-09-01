@@ -10,15 +10,34 @@ option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/pro
 
 // PluginService provides information about available plugins and presets
 service PluginService {
-  // List all available plugins
-  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
-  // Get detailed information about a specific plugin
-  rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse);
+  // List all available plugins.
+  //
+  // Deprecated: browse now belongs to catalog.v1.CatalogService.ListPlugins in
+  // marketplace-api, which serves it anonymously. Move console callers there;
+  // this copy also returns RESTRICTED and unpublished listings.
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse) {
+    option deprecated = true;
+  }
+  // Get detailed information about a specific plugin.
+  //
+  // Deprecated: superseded by catalog.v1.CatalogService.GetPlugin in
+  // marketplace-api. Note the replacement derives capabilities and permissions
+  // from the pinned manifest rather than from columns.
+  rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse) {
+    option deprecated = true;
+  }
   // List all available presets
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
-  // List the published definitions (version + hash) for a plugin, latest first.
-  // Used by the console to offer a version to pin on install.
-  rpc ListPluginDefinitions(ListPluginDefinitionsRequest) returns (ListPluginDefinitionsResponse);
+  // List the definitions (version + hash) for a plugin, latest first. Used by
+  // the console to offer a version to pin on install.
+  //
+  // Deprecated: moves to catalog.v1.CatalogService.ListPluginVersions. Note the
+  // rename is not cosmetic — despite the name this returns every non-deleted
+  // definition including unpublished drafts, and the catalog returns only
+  // published ones, which is what an unauthenticated caller must ever see.
+  rpc ListPluginDefinitions(ListPluginDefinitionsRequest) returns (ListPluginDefinitionsResponse) {
+    option deprecated = true;
+  }
   // Idempotent upsert of a plugin definition. Server computes the hash from the
   // manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
   // same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
@@ -29,7 +48,18 @@ service PluginService {
   // Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
   // resolved via the plugin catalog by name. Returns the verbatim manifest
   // bytes, the sha256 hash, and a parsed PluginDefinition.
-  rpc GetPluginDefinition(GetPluginDefinitionRequest) returns (GetPluginDefinitionResponse);
+  //
+  // Deprecated: belongs in marketplace-api's catalog, which gates every read
+  // with RLS. This RPC is in isPublicEndpoint, so it is anonymous, and
+  // PluginDefinitionGetActive filters neither plugins.visibility nor
+  // plugin_definitions.published — an anonymous caller who knows
+  // organization/plugin@version gets draft and RESTRICTED manifests. The
+  // replacement must serve published, PUBLIC definitions only; plugin-controller
+  // (pkg/defclient) is the caller to migrate, and it installs unpublished
+  // definitions today, so it needs a credentialed path rather than the catalog.
+  rpc GetPluginDefinition(GetPluginDefinitionRequest) returns (GetPluginDefinitionResponse) {
+    option deprecated = true;
+  }
 }
 
 // Tag information

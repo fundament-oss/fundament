@@ -3306,14 +3306,14 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x11PluginStatusValue\x12\x14\n" +
 	"\x05badge\x18\n" +
 	" \x01(\tR\x05badge\x12\x14\n" +
-	"\x05label\x18\x14 \x01(\tR\x05label2\x85\x05\n" +
-	"\rPluginService\x12X\n" +
-	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12d\n" +
-	"\x0fGetPluginDetail\x12'.organization.v1.GetPluginDetailRequest\x1a(.organization.v1.GetPluginDetailResponse\x12X\n" +
-	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponse\x12v\n" +
-	"\x15ListPluginDefinitions\x12-.organization.v1.ListPluginDefinitionsRequest\x1a..organization.v1.ListPluginDefinitionsResponse\x12p\n" +
-	"\x13PutPluginDefinition\x12+.organization.v1.PutPluginDefinitionRequest\x1a,.organization.v1.PutPluginDefinitionResponse\x12p\n" +
-	"\x13GetPluginDefinition\x12+.organization.v1.GetPluginDefinitionRequest\x1a,.organization.v1.GetPluginDefinitionResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x05label\x18\x14 \x01(\tR\x05label2\x99\x05\n" +
+	"\rPluginService\x12]\n" +
+	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\"\x03\x88\x02\x01\x12i\n" +
+	"\x0fGetPluginDetail\x12'.organization.v1.GetPluginDetailRequest\x1a(.organization.v1.GetPluginDetailResponse\"\x03\x88\x02\x01\x12X\n" +
+	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponse\x12{\n" +
+	"\x15ListPluginDefinitions\x12-.organization.v1.ListPluginDefinitionsRequest\x1a..organization.v1.ListPluginDefinitionsResponse\"\x03\x88\x02\x01\x12p\n" +
+	"\x13PutPluginDefinition\x12+.organization.v1.PutPluginDefinitionRequest\x1a,.organization.v1.PutPluginDefinitionResponse\x12u\n" +
+	"\x13GetPluginDefinition\x12+.organization.v1.GetPluginDefinitionRequest\x1a,.organization.v1.GetPluginDefinitionResponse\"\x03\x88\x02\x01B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_v1_plugin_proto_goTypes = []any{
