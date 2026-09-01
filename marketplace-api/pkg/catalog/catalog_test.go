@@ -509,6 +509,4 @@ func TestListPresetsOmitsHiddenPluginsFromMembership(t *testing.T) {
 
 	assert.Equal(t, []string{visibleID.String()}, pluginIDs,
 		"a preset must not name a RESTRICTED or unpublished plugin")
-	_ = restrictedID
-	_ = draftID
 }

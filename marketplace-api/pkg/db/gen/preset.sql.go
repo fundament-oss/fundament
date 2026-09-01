@@ -10,9 +10,9 @@ import (
 )
 
 const presetList = `-- name: PresetList :many
-SELECT appstore.presets.id, appstore.presets.name, appstore.presets.description
+SELECT id, name, description
 FROM appstore.presets
-ORDER BY appstore.presets.name
+ORDER BY name
 `
 
 func (q *Queries) PresetList(ctx context.Context) ([]AppstorePreset, error) {
@@ -36,7 +36,7 @@ func (q *Queries) PresetList(ctx context.Context) ([]AppstorePreset, error) {
 }
 
 const presetPluginsList = `-- name: PresetPluginsList :many
-SELECT appstore.preset_plugins.preset_id, appstore.preset_plugins.plugin_id
+SELECT preset_id, plugin_id
 FROM appstore.preset_plugins
 WHERE EXISTS (
   SELECT 1
