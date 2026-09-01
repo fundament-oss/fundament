@@ -3,54 +3,33 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type {
-  GenFile,
-  GenMessage,
-  GenService,
-} from '@bufbuild/protobuf/codegenv2';
-import {
-  fileDesc,
-  messageDesc,
-  serviceDesc,
-} from '@bufbuild/protobuf/codegenv2';
-import { file_buf_validate_validate } from '../buf/validate/validate_pb';
-import type { Timestamp } from '@bufbuild/protobuf/wkt';
-import {
-  file_google_protobuf_go_features,
-  file_google_protobuf_timestamp,
-} from '@bufbuild/protobuf/wkt';
-import { file_v1_common } from './common_pb';
-import type { Message } from '@bufbuild/protobuf';
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../buf/validate/validate_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import { file_v1_common } from "./common_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/member.proto.
  */
-export const file_v1_member: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiUQoQR2V0TWVtYmVyUmVxdWVzdBIWCgJpZBgKIAEoCUIIukgFcgOwAQFIABIbCgd1c2VyX2lkGBQgASgJQgi6SAVyA7ABAUgAQggKBmxvb2t1cCI8ChFHZXRNZW1iZXJSZXNwb25zZRInCgZtZW1iZXIYCiABKAsyFy5vcmdhbml6YXRpb24udjEuTWVtYmVyIj8KE0xpc3RNZW1iZXJzUmVzcG9uc2USKAoHbWVtYmVycxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UiXwodVXBkYXRlTWVtYmVyUGVybWlzc2lvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIiAKHlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZSK3AQoGTWVtYmVyEgoKAmlkGAogASgJEg8KB3VzZXJfaWQYUCABKAkSDAoEbmFtZRgUIAEoCRIbCgxleHRlcm5hbF9yZWYYHiABKAlCBaoBAggBEhQKBWVtYWlsGDIgASgJQgWqAQIIARISCgpwZXJtaXNzaW9uGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDKVAwoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJSCglHZXRNZW1iZXISIS5vcmdhbml6YXRpb24udjEuR2V0TWVtYmVyUmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRNZW1iZXJSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZRJ5ChZVcGRhdGVNZW1iZXJQZXJtaXNzaW9uEi4ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXF1ZXN0Gi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH',
-    [
-      file_buf_validate_validate,
-      file_google_protobuf_go_features,
-      file_google_protobuf_timestamp,
-      file_v1_common,
-    ],
-  );
+export const file_v1_member: GenFile = /*@__PURE__*/
+  fileDesc("Cg92MS9tZW1iZXIucHJvdG8SD29yZ2FuaXphdGlvbi52MSIUChJMaXN0TWVtYmVyc1JlcXVlc3QiUQoQR2V0TWVtYmVyUmVxdWVzdBIWCgJpZBgKIAEoCUIIukgFcgOwAQFIABIbCgd1c2VyX2lkGBQgASgJQgi6SAVyA7ABAUgAQggKBmxvb2t1cCI8ChFHZXRNZW1iZXJSZXNwb25zZRInCgZtZW1iZXIYCiABKAsyFy5vcmdhbml6YXRpb24udjEuTWVtYmVyIj8KE0xpc3RNZW1iZXJzUmVzcG9uc2USKAoHbWVtYmVycxgKIAMoCzIXLm9yZ2FuaXphdGlvbi52MS5NZW1iZXIiKwoTRGVsZXRlTWVtYmVyUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFgoURGVsZXRlTWVtYmVyUmVzcG9uc2UiXwodVXBkYXRlTWVtYmVyUGVybWlzc2lvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEigKCnBlcm1pc3Npb24YFCABKAlCFLpIEXIPUgZ2aWV3ZXJSBWFkbWluIiAKHlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZSK3AQoGTWVtYmVyEgoKAmlkGAogASgJEg8KB3VzZXJfaWQYUCABKAkSDAoEbmFtZRgUIAEoCRIbCgxleHRlcm5hbF9yZWYYHiABKAlCBaoBAggBEhQKBWVtYWlsGDIgASgJQgWqAQIIARISCgpwZXJtaXNzaW9uGDwgASgJEg4KBnN0YXR1cxhGIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDKVAwoNTWVtYmVyU2VydmljZRJYCgtMaXN0TWVtYmVycxIjLm9yZ2FuaXphdGlvbi52MS5MaXN0TWVtYmVyc1JlcXVlc3QaJC5vcmdhbml6YXRpb24udjEuTGlzdE1lbWJlcnNSZXNwb25zZRJSCglHZXRNZW1iZXISIS5vcmdhbml6YXRpb24udjEuR2V0TWVtYmVyUmVxdWVzdBoiLm9yZ2FuaXphdGlvbi52MS5HZXRNZW1iZXJSZXNwb25zZRJbCgxEZWxldGVNZW1iZXISJC5vcmdhbml6YXRpb24udjEuRGVsZXRlTWVtYmVyUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5EZWxldGVNZW1iZXJSZXNwb25zZRJ5ChZVcGRhdGVNZW1iZXJQZXJtaXNzaW9uEi4ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXF1ZXN0Gi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU1lbWJlclBlcm1pc3Npb25SZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List members request
  *
  * @generated from message organization.v1.ListMembersRequest
  */
-export type ListMembersRequest =
-  Message<'organization.v1.ListMembersRequest'> & {};
+export type ListMembersRequest = Message<"organization.v1.ListMembersRequest"> & {
+};
 
 /**
  * Describes the message organization.v1.ListMembersRequest.
  * Use `create(ListMembersRequestSchema)` to create a new message.
  */
-export const ListMembersRequestSchema: GenMessage<ListMembersRequest> =
-  /*@__PURE__*/
+export const ListMembersRequestSchema: GenMessage<ListMembersRequest> = /*@__PURE__*/
   messageDesc(file_v1_member, 0);
 
 /**
@@ -58,34 +37,30 @@ export const ListMembersRequestSchema: GenMessage<ListMembersRequest> =
  *
  * @generated from message organization.v1.GetMemberRequest
  */
-export type GetMemberRequest = Message<'organization.v1.GetMemberRequest'> & {
+export type GetMemberRequest = Message<"organization.v1.GetMemberRequest"> & {
   /**
    * @generated from oneof organization.v1.GetMemberRequest.lookup
    */
-  lookup:
-    | {
-        /**
-         * @generated from field: string id = 10;
-         */
-        value: string;
-        case: 'id';
-      }
-    | {
-        /**
-         * @generated from field: string user_id = 20;
-         */
-        value: string;
-        case: 'userId';
-      }
-    | { case: undefined; value?: undefined };
+  lookup: {
+    /**
+     * @generated from field: string id = 10;
+     */
+    value: string;
+    case: "id";
+  } | {
+    /**
+     * @generated from field: string user_id = 20;
+     */
+    value: string;
+    case: "userId";
+  } | { case: undefined; value?: undefined };
 };
 
 /**
  * Describes the message organization.v1.GetMemberRequest.
  * Use `create(GetMemberRequestSchema)` to create a new message.
  */
-export const GetMemberRequestSchema: GenMessage<GetMemberRequest> =
-  /*@__PURE__*/
+export const GetMemberRequestSchema: GenMessage<GetMemberRequest> = /*@__PURE__*/
   messageDesc(file_v1_member, 1);
 
 /**
@@ -93,7 +68,7 @@ export const GetMemberRequestSchema: GenMessage<GetMemberRequest> =
  *
  * @generated from message organization.v1.GetMemberResponse
  */
-export type GetMemberResponse = Message<'organization.v1.GetMemberResponse'> & {
+export type GetMemberResponse = Message<"organization.v1.GetMemberResponse"> & {
   /**
    * @generated from field: organization.v1.Member member = 10;
    */
@@ -104,8 +79,7 @@ export type GetMemberResponse = Message<'organization.v1.GetMemberResponse'> & {
  * Describes the message organization.v1.GetMemberResponse.
  * Use `create(GetMemberResponseSchema)` to create a new message.
  */
-export const GetMemberResponseSchema: GenMessage<GetMemberResponse> =
-  /*@__PURE__*/
+export const GetMemberResponseSchema: GenMessage<GetMemberResponse> = /*@__PURE__*/
   messageDesc(file_v1_member, 2);
 
 /**
@@ -113,20 +87,18 @@ export const GetMemberResponseSchema: GenMessage<GetMemberResponse> =
  *
  * @generated from message organization.v1.ListMembersResponse
  */
-export type ListMembersResponse =
-  Message<'organization.v1.ListMembersResponse'> & {
-    /**
-     * @generated from field: repeated organization.v1.Member members = 10;
-     */
-    members: Member[];
-  };
+export type ListMembersResponse = Message<"organization.v1.ListMembersResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.Member members = 10;
+   */
+  members: Member[];
+};
 
 /**
  * Describes the message organization.v1.ListMembersResponse.
  * Use `create(ListMembersResponseSchema)` to create a new message.
  */
-export const ListMembersResponseSchema: GenMessage<ListMembersResponse> =
-  /*@__PURE__*/
+export const ListMembersResponseSchema: GenMessage<ListMembersResponse> = /*@__PURE__*/
   messageDesc(file_v1_member, 3);
 
 /**
@@ -134,20 +106,18 @@ export const ListMembersResponseSchema: GenMessage<ListMembersResponse> =
  *
  * @generated from message organization.v1.DeleteMemberRequest
  */
-export type DeleteMemberRequest =
-  Message<'organization.v1.DeleteMemberRequest'> & {
-    /**
-     * @generated from field: string id = 10;
-     */
-    id: string;
-  };
+export type DeleteMemberRequest = Message<"organization.v1.DeleteMemberRequest"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
+};
 
 /**
  * Describes the message organization.v1.DeleteMemberRequest.
  * Use `create(DeleteMemberRequestSchema)` to create a new message.
  */
-export const DeleteMemberRequestSchema: GenMessage<DeleteMemberRequest> =
-  /*@__PURE__*/
+export const DeleteMemberRequestSchema: GenMessage<DeleteMemberRequest> = /*@__PURE__*/
   messageDesc(file_v1_member, 4);
 
 /**
@@ -155,15 +125,14 @@ export const DeleteMemberRequestSchema: GenMessage<DeleteMemberRequest> =
  *
  * @generated from message organization.v1.DeleteMemberResponse
  */
-export type DeleteMemberResponse =
-  Message<'organization.v1.DeleteMemberResponse'> & {};
+export type DeleteMemberResponse = Message<"organization.v1.DeleteMemberResponse"> & {
+};
 
 /**
  * Describes the message organization.v1.DeleteMemberResponse.
  * Use `create(DeleteMemberResponseSchema)` to create a new message.
  */
-export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> =
-  /*@__PURE__*/
+export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> = /*@__PURE__*/
   messageDesc(file_v1_member, 5);
 
 /**
@@ -171,25 +140,23 @@ export const DeleteMemberResponseSchema: GenMessage<DeleteMemberResponse> =
  *
  * @generated from message organization.v1.UpdateMemberPermissionRequest
  */
-export type UpdateMemberPermissionRequest =
-  Message<'organization.v1.UpdateMemberPermissionRequest'> & {
-    /**
-     * @generated from field: string id = 10;
-     */
-    id: string;
+export type UpdateMemberPermissionRequest = Message<"organization.v1.UpdateMemberPermissionRequest"> & {
+  /**
+   * @generated from field: string id = 10;
+   */
+  id: string;
 
-    /**
-     * @generated from field: string permission = 20;
-     */
-    permission: string;
-  };
+  /**
+   * @generated from field: string permission = 20;
+   */
+  permission: string;
+};
 
 /**
  * Describes the message organization.v1.UpdateMemberPermissionRequest.
  * Use `create(UpdateMemberPermissionRequestSchema)` to create a new message.
  */
-export const UpdateMemberPermissionRequestSchema: GenMessage<UpdateMemberPermissionRequest> =
-  /*@__PURE__*/
+export const UpdateMemberPermissionRequestSchema: GenMessage<UpdateMemberPermissionRequest> = /*@__PURE__*/
   messageDesc(file_v1_member, 6);
 
 /**
@@ -197,15 +164,14 @@ export const UpdateMemberPermissionRequestSchema: GenMessage<UpdateMemberPermiss
  *
  * @generated from message organization.v1.UpdateMemberPermissionResponse
  */
-export type UpdateMemberPermissionResponse =
-  Message<'organization.v1.UpdateMemberPermissionResponse'> & {};
+export type UpdateMemberPermissionResponse = Message<"organization.v1.UpdateMemberPermissionResponse"> & {
+};
 
 /**
  * Describes the message organization.v1.UpdateMemberPermissionResponse.
  * Use `create(UpdateMemberPermissionResponseSchema)` to create a new message.
  */
-export const UpdateMemberPermissionResponseSchema: GenMessage<UpdateMemberPermissionResponse> =
-  /*@__PURE__*/
+export const UpdateMemberPermissionResponseSchema: GenMessage<UpdateMemberPermissionResponse> = /*@__PURE__*/
   messageDesc(file_v1_member, 7);
 
 /**
@@ -213,7 +179,7 @@ export const UpdateMemberPermissionResponseSchema: GenMessage<UpdateMemberPermis
  *
  * @generated from message organization.v1.Member
  */
-export type Member = Message<'organization.v1.Member'> & {
+export type Member = Message<"organization.v1.Member"> & {
   /**
    * @generated from field: string id = 10;
    */
@@ -269,8 +235,7 @@ export type Member = Message<'organization.v1.Member'> & {
  * Describes the message organization.v1.Member.
  * Use `create(MemberSchema)` to create a new message.
  */
-export const MemberSchema: GenMessage<Member> =
-  /*@__PURE__*/
+export const MemberSchema: GenMessage<Member> = /*@__PURE__*/
   messageDesc(file_v1_member, 8);
 
 /**
@@ -285,38 +250,40 @@ export const MemberService: GenService<{
    * @generated from rpc organization.v1.MemberService.ListMembers
    */
   listMembers: {
-    methodKind: 'unary';
+    methodKind: "unary";
     input: typeof ListMembersRequestSchema;
     output: typeof ListMembersResponseSchema;
-  };
+  },
   /**
    * Get a member by membership ID or user ID
    *
    * @generated from rpc organization.v1.MemberService.GetMember
    */
   getMember: {
-    methodKind: 'unary';
+    methodKind: "unary";
     input: typeof GetMemberRequestSchema;
     output: typeof GetMemberResponseSchema;
-  };
+  },
   /**
    * Delete a member from the organization
    *
    * @generated from rpc organization.v1.MemberService.DeleteMember
    */
   deleteMember: {
-    methodKind: 'unary';
+    methodKind: "unary";
     input: typeof DeleteMemberRequestSchema;
     output: typeof DeleteMemberResponseSchema;
-  };
+  },
   /**
    * Update a member's permission
    *
    * @generated from rpc organization.v1.MemberService.UpdateMemberPermission
    */
   updateMemberPermission: {
-    methodKind: 'unary';
+    methodKind: "unary";
     input: typeof UpdateMemberPermissionRequestSchema;
     output: typeof UpdateMemberPermissionResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_v1_member, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_v1_member, 0);
+
