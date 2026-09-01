@@ -138,6 +138,32 @@ export default class App implements OnInit {
 
   isMobile = signal(this.mobileMq.matches);
 
+  /**
+   * Width of the app shell, which is not the viewport while the walkthrough is
+   * presenting: it pins a narration panel over the left 40vw and the console gets
+   * what is left. A viewport media query cannot see that, so the sidebar would
+   * keep its two-column layout in a pane too narrow to hold one.
+   */
+  private readonly shellWidth = signal(window.innerWidth);
+
+  /**
+   * Below this shell width the sidebar moves into a sheet. Kept just above the
+   * split view's own fold-to-one-column threshold (its sidebar and main
+   * min-widths, 192px + 320px), so it never drops the sidebar on its own — the
+   * app decides, and puts the toggle in the header when it does.
+   */
+  private static readonly NARROW_SHELL_PX = 560;
+
+  /**
+   * The sidebar is a sheet rather than a column. The split view's attribute and
+   * the header toggle both read this signal: showSidebarSheet() only opens the
+   * sheet when the attribute is set, so a sidebar hidden with no toggle to bring
+   * it back is exactly what a single source of truth here prevents.
+   */
+  sidebarAsSheet = computed(
+    () => !this.isLoginPage() && (this.isMobile() || this.shellWidth() < App.NARROW_SHELL_PX),
+  );
+
   private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
@@ -223,6 +249,11 @@ export default class App implements OnInit {
 
   async ngOnInit() {
     this.mobileMq.addEventListener('change', (e) => this.isMobile.set(e.matches));
+    // The body's content box is the shell: while presenting, its 40vw padding-left
+    // is the narration panel, which the content box already leaves out.
+    new ResizeObserver(([entry]) => this.shellWidth.set(entry.contentRect.width)).observe(
+      document.body,
+    );
     this.initializeTheme();
     this.tourUrl.set(App.tourUrlInEnglish(this.configService.getConfig().consoleDemoUrl));
 

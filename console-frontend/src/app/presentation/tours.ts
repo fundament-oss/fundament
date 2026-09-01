@@ -375,8 +375,11 @@ const intro: Tour = {
           'Your team manages its certificates without kubectl or a separate dashboard.',
         ),
       ],
-      // The menu links to the CRD by `plural.group`, so the route carries that too.
-      route: '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io',
+      // Routes address an *installation*, not a plugin name, so the segment is the
+      // installation name the fixtures give cert-manager. The menu links to the CRD
+      // by `plural.group`, so the route carries that too.
+      route:
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io',
       drive: installedPluginDrive,
     },
     {
@@ -400,7 +403,7 @@ const intro: Tour = {
       // it the console falls back to matching the object by name, which is what the
       // list links to here anyway.
       route:
-        '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
       drive: installedPluginDrive,
     },
     closing(
