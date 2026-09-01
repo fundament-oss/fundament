@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file catalog/v1/catalog.proto.
  */
 export const file_catalog_v1_catalog: GenFile = /*@__PURE__*/
-  fileDesc("ChhjYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SCmNhdGFsb2cudjEimQIKDVBsdWdpblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDIgASgJEg0KBWltYWdlGDwgASgJEhQKDGNhdGVnb3J5X2lkcxhGIAMoCRIMCgR0YWdzGFAgAygJEicKBmxhYmVscxhaIAMoDjIXLmNhdGFsb2cudjEuUGx1Z2luTGFiZWwSGQoRbGF0ZXN0X3ZlcnNpb25faWQYZCABKAkSLQoJcHVibGlzaGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLFBAoNUGx1Z2luRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgoIAEoCRIXCg9vcmdhbml6YXRpb25faWQYMiABKAkSDQoFaW1hZ2UYPCABKAkSFAoMY2F0ZWdvcnlfaWRzGEYgAygJEgwKBHRhZ3MYUCADKAkSJwoGbGFiZWxzGFogAygOMhcuY2F0YWxvZy52MS5QbHVnaW5MYWJlbBIZChFsYXRlc3RfdmVyc2lvbl9pZBhkIAEoCRItCglwdWJsaXNoZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2Rlc2NyaXB0aW9uGHggASgJEhQKC2F1dGhvcl9uYW1lGIIBIAEoCRITCgphdXRob3JfdXJsGIwBIAEoCRIXCg5yZXBvc2l0b3J5X3VybBiWASABKAkSEAoHbGljZW5zZRigASABKAkSFQoMY2FwYWJpbGl0aWVzGKoBIAMoCRI2CgtwZXJtaXNzaW9ucxi0ASADKAsyIC5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9uEi8KCGZlYXR1cmVzGL4BIAMoCzIcLm1hcmtldHBsYWNlLnYxLkZlYXR1cmVCbG9jaxI/ChNkb2N1bWVudGF0aW9uX2xpbmtzGMgBIAMoCzIhLm1hcmtldHBsYWNlLnYxLkRvY3VtZW50YXRpb25MaW5rIo4BChBQdWJsaXNoZWRWZXJzaW9uEgoKAmlkGAogASgJEg8KB3ZlcnNpb24YFCABKAkSLQoJcHVibGlzaGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9kZWZpbml0aW9uX2hhc2gYKCABKAkSFQoNcmVsZWFzZV9ub3RlcxgyIAEoCSKWAQoSTGlzdFBsdWdpbnNSZXF1ZXN0EhcKBXF1ZXJ5GAogASgJQgi6SAVyAxjIARIgCgtjYXRlZ29yeV9pZBgUIAEoCUILukgI2AEBcgOwAQESFQoNZmVhdHVyZWRfb25seRgeIAEoCBIuCgRzb3J0GCggASgOMhYuY2F0YWxvZy52MS5QbHVnaW5Tb3J0Qgi6SAWCAQIQASJBChNMaXN0UGx1Z2luc1Jlc3BvbnNlEioKB3BsdWdpbnMYCiADKAsyGS5jYXRhbG9nLnYxLlBsdWdpblN1bW1hcnkiLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIj4KEUdldFBsdWdpblJlc3BvbnNlEikKBnBsdWdpbhgKIAEoCzIZLmNhdGFsb2cudjEuUGx1Z2luRGV0YWlscyI4ChlMaXN0UGx1Z2luVmVyc2lvbnNSZXF1ZXN0EhsKCXBsdWdpbl9pZBgKIAEoCUIIukgFcgOwAQEiTAoaTGlzdFBsdWdpblZlcnNpb25zUmVzcG9uc2USLgoIdmVyc2lvbnMYCiADKAsyHC5jYXRhbG9nLnYxLlB1Ymxpc2hlZFZlcnNpb24iFwoVTGlzdENhdGVnb3JpZXNSZXF1ZXN0IkYKFkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USLAoKY2F0ZWdvcmllcxgKIAMoCzIYLm1hcmtldHBsYWNlLnYxLkNhdGVnb3J5IhcKFUxpc3RQdWJsaXNoZXJzUmVxdWVzdCJHChZMaXN0UHVibGlzaGVyc1Jlc3BvbnNlEi0KCnB1Ymxpc2hlcnMYCiADKAsyGS5tYXJrZXRwbGFjZS52MS5QdWJsaXNoZXIywQMKDkNhdGFsb2dTZXJ2aWNlEk4KC0xpc3RQbHVnaW5zEh4uY2F0YWxvZy52MS5MaXN0UGx1Z2luc1JlcXVlc3QaHy5jYXRhbG9nLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USSAoJR2V0UGx1Z2luEhwuY2F0YWxvZy52MS5HZXRQbHVnaW5SZXF1ZXN0Gh0uY2F0YWxvZy52MS5HZXRQbHVnaW5SZXNwb25zZRJjChJMaXN0UGx1Z2luVmVyc2lvbnMSJS5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1JlcXVlc3QaJi5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1Jlc3BvbnNlElcKDkxpc3RDYXRlZ29yaWVzEiEuY2F0YWxvZy52MS5MaXN0Q2F0ZWdvcmllc1JlcXVlc3QaIi5jYXRhbG9nLnYxLkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USVwoOTGlzdFB1Ymxpc2hlcnMSIS5jYXRhbG9nLnYxLkxpc3RQdWJsaXNoZXJzUmVxdWVzdBoiLmNhdGFsb2cudjEuTGlzdFB1Ymxpc2hlcnNSZXNwb25zZUJhWlVnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_catalog_v1_common, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
+  fileDesc("ChhjYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SCmNhdGFsb2cudjEimQIKDVBsdWdpblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDIgASgJEg0KBWltYWdlGDwgASgJEhQKDGNhdGVnb3J5X2lkcxhGIAMoCRIMCgR0YWdzGFAgAygJEicKBmxhYmVscxhaIAMoDjIXLmNhdGFsb2cudjEuUGx1Z2luTGFiZWwSGQoRbGF0ZXN0X3ZlcnNpb25faWQYZCABKAkSLQoJcHVibGlzaGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLFBAoNUGx1Z2luRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgoIAEoCRIXCg9vcmdhbml6YXRpb25faWQYMiABKAkSDQoFaW1hZ2UYPCABKAkSFAoMY2F0ZWdvcnlfaWRzGEYgAygJEgwKBHRhZ3MYUCADKAkSJwoGbGFiZWxzGFogAygOMhcuY2F0YWxvZy52MS5QbHVnaW5MYWJlbBIZChFsYXRlc3RfdmVyc2lvbl9pZBhkIAEoCRItCglwdWJsaXNoZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2Rlc2NyaXB0aW9uGHggASgJEhQKC2F1dGhvcl9uYW1lGIIBIAEoCRITCgphdXRob3JfdXJsGIwBIAEoCRIXCg5yZXBvc2l0b3J5X3VybBiWASABKAkSEAoHbGljZW5zZRigASABKAkSFQoMY2FwYWJpbGl0aWVzGKoBIAMoCRI2CgtwZXJtaXNzaW9ucxi0ASADKAsyIC5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9uEi8KCGZlYXR1cmVzGL4BIAMoCzIcLm1hcmtldHBsYWNlLnYxLkZlYXR1cmVCbG9jaxI/ChNkb2N1bWVudGF0aW9uX2xpbmtzGMgBIAMoCzIhLm1hcmtldHBsYWNlLnYxLkRvY3VtZW50YXRpb25MaW5rIo4BChBQdWJsaXNoZWRWZXJzaW9uEgoKAmlkGAogASgJEg8KB3ZlcnNpb24YFCABKAkSLQoJcHVibGlzaGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9kZWZpbml0aW9uX2hhc2gYKCABKAkSFQoNcmVsZWFzZV9ub3RlcxgyIAEoCSJ/ChJMaXN0UGx1Z2luc1JlcXVlc3QSFwoFcXVlcnkYCiABKAlCCLpIBXIDGMgBEiAKC2NhdGVnb3J5X2lkGBQgASgJQgu6SAjYAQFyA7ABARIuCgRzb3J0GB4gASgOMhYuY2F0YWxvZy52MS5QbHVnaW5Tb3J0Qgi6SAWCAQIQASJBChNMaXN0UGx1Z2luc1Jlc3BvbnNlEioKB3BsdWdpbnMYCiADKAsyGS5jYXRhbG9nLnYxLlBsdWdpblN1bW1hcnkiLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIj4KEUdldFBsdWdpblJlc3BvbnNlEikKBnBsdWdpbhgKIAEoCzIZLmNhdGFsb2cudjEuUGx1Z2luRGV0YWlscyI4ChlMaXN0UGx1Z2luVmVyc2lvbnNSZXF1ZXN0EhsKCXBsdWdpbl9pZBgKIAEoCUIIukgFcgOwAQEiTAoaTGlzdFBsdWdpblZlcnNpb25zUmVzcG9uc2USLgoIdmVyc2lvbnMYCiADKAsyHC5jYXRhbG9nLnYxLlB1Ymxpc2hlZFZlcnNpb24iFwoVTGlzdENhdGVnb3JpZXNSZXF1ZXN0IkYKFkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USLAoKY2F0ZWdvcmllcxgKIAMoCzIYLm1hcmtldHBsYWNlLnYxLkNhdGVnb3J5IhcKFUxpc3RQdWJsaXNoZXJzUmVxdWVzdCJHChZMaXN0UHVibGlzaGVyc1Jlc3BvbnNlEi0KCnB1Ymxpc2hlcnMYCiADKAsyGS5tYXJrZXRwbGFjZS52MS5QdWJsaXNoZXIijwEKGkdldFBsdWdpbkRlZmluaXRpb25SZXF1ZXN0Eh0KCXBsdWdpbl9pZBgKIAEoCUIIukgFcgOwAQFIABIlCgRuYW1lGB4gASgLMhUuY2F0YWxvZy52MS5QbHVnaW5SZWZIABIaCgd2ZXJzaW9uGBQgASgJQgm6SAZyBBABGEBCDwoGbG9va3VwEgW6SAIIASJRCglQbHVnaW5SZWYSJAoRb3JnYW5pemF0aW9uX25hbWUYCiABKAlCCbpIBnIEEAEYPxIeCgtwbHVnaW5fbmFtZRgUIAEoCUIJukgGcgQQARg/IkgKG0dldFBsdWdpbkRlZmluaXRpb25SZXNwb25zZRIQCghtYW5pZmVzdBgKIAEoDBIXCg9kZWZpbml0aW9uX2hhc2gYFCABKAkyqQQKDkNhdGFsb2dTZXJ2aWNlEk4KC0xpc3RQbHVnaW5zEh4uY2F0YWxvZy52MS5MaXN0UGx1Z2luc1JlcXVlc3QaHy5jYXRhbG9nLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USSAoJR2V0UGx1Z2luEhwuY2F0YWxvZy52MS5HZXRQbHVnaW5SZXF1ZXN0Gh0uY2F0YWxvZy52MS5HZXRQbHVnaW5SZXNwb25zZRJjChJMaXN0UGx1Z2luVmVyc2lvbnMSJS5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1JlcXVlc3QaJi5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1Jlc3BvbnNlElcKDkxpc3RDYXRlZ29yaWVzEiEuY2F0YWxvZy52MS5MaXN0Q2F0ZWdvcmllc1JlcXVlc3QaIi5jYXRhbG9nLnYxLkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USVwoOTGlzdFB1Ymxpc2hlcnMSIS5jYXRhbG9nLnYxLkxpc3RQdWJsaXNoZXJzUmVxdWVzdBoiLmNhdGFsb2cudjEuTGlzdFB1Ymxpc2hlcnNSZXNwb25zZRJmChNHZXRQbHVnaW5EZWZpbml0aW9uEiYuY2F0YWxvZy52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBonLmNhdGFsb2cudjEuR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlQmFaVWdpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvbWFya2V0cGxhY2UtYXBpL3BrZy9wcm90by9nZW4vY2F0YWxvZy92MTtjYXRhbG9ndjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_catalog_v1_common, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
 
 /**
  * Listing as it appears on a card or in a results grid.
@@ -256,9 +256,8 @@ export type PublishedVersion = Message<"catalog.v1.PublishedVersion"> & {
   published?: Timestamp | undefined;
 
   /**
-   * sha256 of the definition manifest. The console pins an install to
-   * (version, definition_hash); the manifest bytes are served to authenticated
-   * installers by organization-api, never from here.
+   * sha256 of the definition manifest; the console pins an install to
+   * (version, definition_hash) and fetches the bytes with GetPluginDefinition.
    *
    * @generated from field: string definition_hash = 40;
    */
@@ -294,12 +293,7 @@ export type ListPluginsRequest = Message<"catalog.v1.ListPluginsRequest"> & {
   categoryId: string;
 
   /**
-   * @generated from field: bool featured_only = 30;
-   */
-  featuredOnly: boolean;
-
-  /**
-   * @generated from field: catalog.v1.PluginSort sort = 40;
+   * @generated from field: catalog.v1.PluginSort sort = 30;
    */
   sort: PluginSort;
 };
@@ -457,6 +451,94 @@ export const ListPublishersResponseSchema: GenMessage<ListPublishersResponse> = 
   messageDesc(file_catalog_v1_catalog, 12);
 
 /**
+ * @generated from message catalog.v1.GetPluginDefinitionRequest
+ */
+export type GetPluginDefinitionRequest = Message<"catalog.v1.GetPluginDefinitionRequest"> & {
+  /**
+   * Two ways to name the same listing. plugin_id is what the storefront holds,
+   * having just listed it; the name pair is what a PluginInstallation carries,
+   * and plugin-controller reads those rather than calling ListPlugins.
+   *
+   * @generated from oneof catalog.v1.GetPluginDefinitionRequest.lookup
+   */
+  lookup: {
+    /**
+     * @generated from field: string plugin_id = 10;
+     */
+    value: string;
+    case: "pluginId";
+  } | {
+    /**
+     * @generated from field: catalog.v1.PluginRef name = 30;
+     */
+    value: PluginRef;
+    case: "name";
+  } | { case: undefined; value?: undefined };
+
+  /**
+   * @generated from field: string version = 20;
+   */
+  version: string;
+};
+
+/**
+ * Describes the message catalog.v1.GetPluginDefinitionRequest.
+ * Use `create(GetPluginDefinitionRequestSchema)` to create a new message.
+ */
+export const GetPluginDefinitionRequestSchema: GenMessage<GetPluginDefinitionRequest> = /*@__PURE__*/
+  messageDesc(file_catalog_v1_catalog, 13);
+
+/**
+ * A listing named the way it is published: plugin names are unique per
+ * publisher, so neither half identifies a listing on its own.
+ *
+ * @generated from message catalog.v1.PluginRef
+ */
+export type PluginRef = Message<"catalog.v1.PluginRef"> & {
+  /**
+   * @generated from field: string organization_name = 10;
+   */
+  organizationName: string;
+
+  /**
+   * @generated from field: string plugin_name = 20;
+   */
+  pluginName: string;
+};
+
+/**
+ * Describes the message catalog.v1.PluginRef.
+ * Use `create(PluginRefSchema)` to create a new message.
+ */
+export const PluginRefSchema: GenMessage<PluginRef> = /*@__PURE__*/
+  messageDesc(file_catalog_v1_catalog, 14);
+
+/**
+ * @generated from message catalog.v1.GetPluginDefinitionResponse
+ */
+export type GetPluginDefinitionResponse = Message<"catalog.v1.GetPluginDefinitionResponse"> & {
+  /**
+   * The stored bytes, not a re-serialization: definition_hash is the sha256 of
+   * exactly these, so a caller can verify what it pins.
+   *
+   * @generated from field: bytes manifest = 10;
+   */
+  manifest: Uint8Array;
+
+  /**
+   * @generated from field: string definition_hash = 20;
+   */
+  definitionHash: string;
+};
+
+/**
+ * Describes the message catalog.v1.GetPluginDefinitionResponse.
+ * Use `create(GetPluginDefinitionResponseSchema)` to create a new message.
+ */
+export const GetPluginDefinitionResponseSchema: GenMessage<GetPluginDefinitionResponse> = /*@__PURE__*/
+  messageDesc(file_catalog_v1_catalog, 15);
+
+/**
  * CatalogService serves the public marketplace storefront. It is unauthenticated
  * and returns only PUBLIC listings that have at least one published version;
  * RESTRICTED listings are never returned, so no visibility field is exposed.
@@ -516,6 +598,19 @@ export const CatalogService: GenService<{
     methodKind: "unary";
     input: typeof ListPublishersRequestSchema;
     output: typeof ListPublishersResponseSchema;
+  },
+  /**
+   * Verbatim manifest for one version, plus the hash an install pins against.
+   * Any version of a PUBLIC listing is reachable, published or not, so
+   * plugin-controller can install what it installs today — it holds no user JWT.
+   * RESTRICTED listings stay hidden, as everywhere else in this service.
+   *
+   * @generated from rpc catalog.v1.CatalogService.GetPluginDefinition
+   */
+  getPluginDefinition: {
+    methodKind: "unary";
+    input: typeof GetPluginDefinitionRequestSchema;
+    output: typeof GetPluginDefinitionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_catalog_v1_catalog, 0);

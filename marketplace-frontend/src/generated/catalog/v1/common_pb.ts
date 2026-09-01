@@ -11,7 +11,7 @@ import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
  * Describes the file catalog/v1/common.proto.
  */
 export const file_catalog_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXRhbG9nL3YxL2NvbW1vbi5wcm90bxIKY2F0YWxvZy52MSqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQAyp5CgpQbHVnaW5Tb3J0EhsKF1BMVUdJTl9TT1JUX1VOU1BFQ0lGSUVEEAASHgoaUExVR0lOX1NPUlRfUkVDRU5UTFlfQURERUQQARIUChBQTFVHSU5fU09SVF9OQU1FEAISGAoUUExVR0lOX1NPUlRfRkVBVFVSRUQQA0JhWlVnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
+  fileDesc("ChdjYXRhbG9nL3YxL2NvbW1vbi5wcm90bxIKY2F0YWxvZy52MSqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQAypfCgpQbHVnaW5Tb3J0EhsKF1BMVUdJTl9TT1JUX1VOU1BFQ0lGSUVEEAASHgoaUExVR0lOX1NPUlRfUkVDRU5UTFlfQURERUQQARIUChBQTFVHSU5fU09SVF9OQU1FEAJCYVpVZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1hcGkvcGtnL3Byb3RvL2dlbi9jYXRhbG9nL3YxO2NhdGFsb2d2MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features]);
 
 /**
  * Trust and support badges a listing carries. A listing may hold several at once:
@@ -49,7 +49,7 @@ export const PluginLabelSchema: GenEnum<PluginLabel> = /*@__PURE__*/
   enumDesc(file_catalog_v1_common, 0);
 
 /**
- * Ordering applied by ListPlugins. UNSPECIFIED sorts as FEATURED.
+ * Ordering applied by ListPlugins. UNSPECIFIED sorts as NAME.
  *
  * @generated from enum catalog.v1.PluginSort
  */
@@ -68,11 +68,6 @@ export enum PluginSort {
    * @generated from enum value: PLUGIN_SORT_NAME = 2;
    */
   NAME = 2,
-
-  /**
-   * @generated from enum value: PLUGIN_SORT_FEATURED = 3;
-   */
-  FEATURED = 3,
 }
 
 /**
