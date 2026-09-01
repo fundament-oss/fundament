@@ -222,34 +222,52 @@
           <nldd-container padding="16">
             <nldd-title size="5">
               <h3>Resource usage</h3>
+              <nldd-button
+                slot="end"
+                [attr.href]="pageNav.path('/metrics')"
+                (click)="pageNav.navigate($event, '/metrics')"
+                text="View metrics"
+                variant="secondary"
+                size="sm"
+              ></nldd-button>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
-            <!-- Two per column: four bars in one stack leave the right half of a
-                 wide box empty, and a bar that wide reads as a page divider. The
-                 grid keeps its own 280px minimum, so the pairs sit side by side
-                 where there is room and stack where there is not. -->
-            <nldd-container
-              layout="grid"
-              gap="16"
-            >
-              @for (pair of resourceMetricPairs; track $index) {
-                <nldd-container
-                  layout="stack"
-                  gap="16"
-                >
-                  @for (metric of pair; track metric.label) {
-                    <nldd-progress-bar
-                      [attr.text]="metric.label"
-                      [attr.value]="metric.used"
-                      [attr.max]="metric.limit"
-                      [attr.color]="metric.color"
-                      [attr.value-text]="metric.valueText"
-                      [attr.accessible-label]="metric.accessibleLabel"
-                    ></nldd-progress-bar>
-                  }
-                </nldd-container>
-              }
-            </nldd-container>
+            @if (resourceMetricPairs.length === 0) {
+              <!-- The totals come from the cluster's own metrics backend, which
+                   is not up before the cluster is. -->
+              <nldd-inline-dialog
+                icon="analytics"
+                icon-color="secondary"
+                text="Usage data becomes available once the cluster is ready."
+              ></nldd-inline-dialog>
+            } @else {
+              <!-- Two per column: the bars in one stack leave the right half of a
+                   wide box empty, and a bar that wide reads as a page divider. The
+                   grid keeps its own 280px minimum, so the pairs sit side by side
+                   where there is room and stack where there is not. -->
+              <nldd-container
+                layout="grid"
+                gap="16"
+              >
+                @for (pair of resourceMetricPairs; track $index) {
+                  <nldd-container
+                    layout="stack"
+                    gap="16"
+                  >
+                    @for (metric of pair; track metric.label) {
+                      <nldd-progress-bar
+                        [attr.text]="metric.label"
+                        [attr.value]="metric.used"
+                        [attr.max]="metric.limit"
+                        [attr.color]="metric.color"
+                        [attr.value-text]="metric.valueText"
+                        [attr.accessible-label]="metric.accessibleLabel"
+                      ></nldd-progress-bar>
+                    }
+                  </nldd-container>
+                }
+              </nldd-container>
+            }
           </nldd-container>
         </nldd-box>
         <!-- Event History -->
@@ -450,44 +468,6 @@
             }
           </nldd-container>
         </nldd-box>
-        <!-- Monitoring Block -->
-        <nldd-box>
-          <nldd-container padding="16">
-            <nldd-title size="5">
-              <h3>Monitoring</h3>
-            </nldd-title>
-            <nldd-spacer size="16"></nldd-spacer>
-            @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
-              <nldd-rich-text>
-                <p>
-                  Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
-                  Gardener-issued basic-auth credentials.
-                </p>
-              </nldd-rich-text>
-              <nldd-spacer size="16"></nldd-spacer>
-              <nldd-button-group orientation="horizontal">
-                <nldd-button
-                  type="button"
-                  (click)="openObservabilityDashboard()"
-                  text="Open dashboard"
-                  start-icon="analytics"
-                  variant="primary"
-                ></nldd-button>
-                <nldd-button
-                  type="button"
-                  (click)="openCredentialsModal()"
-                  text="Show credentials"
-                  start-icon="secure"
-                  variant="secondary"
-                ></nldd-button>
-              </nldd-button-group>
-            } @else {
-              <nldd-rich-text>
-                <p>Metrics dashboard becomes available once the cluster is ready.</p>
-              </nldd-rich-text>
-            }
-          </nldd-container>
-        </nldd-box>
         <!-- Danger Zone -->
         <nldd-box background="critical">
           <nldd-container padding="16">
@@ -535,9 +515,7 @@
 </nldd-page>
 <!-- The node pool and plugin editors, each opening as a sheet over this page. -->
 <router-outlet />
-<!-- Metrics credentials modal -->
-<!-- Two dialogs, because a failure is not the same screen with a red stripe in
-     it. Nothing was fetched, so there is nothing to lay out: the alert says what
+<!-- Nothing was downloaded, so there is nothing to lay out: the alert says what
      went wrong and offers the way out. -->
 <nldd-modal-dialog
   appDialogSync
@@ -557,102 +535,6 @@
     (click)="closeKubeconfigError()"
   ></nldd-button>
 </nldd-modal-dialog>
-<nldd-modal-dialog
-  appDialogSync
-  [show]="showCredentialsModal() && !!credentialsError()"
-  variant="alert"
-  text="Metrics dashboard credentials could not be loaded"
-  [attr.supporting-text]="credentialsError()"
-  accessible-label="Metrics dashboard credentials error"
-  (close)="closeCredentialsModal()"
->
-  <nldd-button
-    slot="actions"
-    type="button"
-    text="Close"
-    variant="primary"
-    width="full"
-    (click)="closeCredentialsModal()"
-  ></nldd-button>
-</nldd-modal-dialog>
-<!-- A sheet, not a dialog: these are two values you copy into another window,
-     so it helps if this one can stay open beside it. -->
-<nldd-sheet
-  appSheetSync
-  [show]="showCredentialsModal() && !credentialsError()"
-  placement="right"
-  [attr.accessible-label]="metricsCredentialsTitle()"
-  (close)="closeCredentialsModal()"
->
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="metricsCredentialsTitle()"
-      collapse-anchor="metrics-credentials-title"
-      dismiss-text="Close"
-      (dismiss)="closeCredentialsModal()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title
-        id="metrics-credentials-title"
-        size="3"
-      >
-        <h1>{{ metricsCredentialsTitle() }}</h1>
-      </nldd-title>
-      <nldd-spacer size="16"></nldd-spacer>
-      @if (credentialsLoading()) {
-        <nldd-inline-dialog
-          variant="loading"
-          text="Loading credentials..."
-        ></nldd-inline-dialog>
-      } @else if (credentials(); as creds) {
-        <!-- The value gets the full width and wraps: a shoot name or a rotated
-             password is long, and cut off is worse than two lines. The button
-             sits under it rather than beside it, where it would squeeze the
-             value back into one truncated line. -->
-        <nldd-form-field label="Username">
-          <nldd-multi-line-text-field
-            id="metricsUsername"
-            [value]="creds.username"
-            readonly
-            rows="1"
-            no-spellcheck
-          ></nldd-multi-line-text-field>
-        </nldd-form-field>
-        <nldd-spacer size="8"></nldd-spacer>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('username')"
-          [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'copy'"
-          variant="secondary"
-        ></nldd-button>
-        <nldd-spacer size="16"></nldd-spacer>
-        <!-- The value gets the full width and wraps: a shoot name or a rotated
-             password is long, and cut off is worse than two lines. The button
-             sits under it rather than beside it, where it would squeeze the
-             value back into one truncated line. -->
-        <nldd-form-field label="Password">
-          <nldd-multi-line-text-field
-            id="metricsPassword"
-            [value]="creds.password"
-            readonly
-            rows="1"
-            no-spellcheck
-          ></nldd-multi-line-text-field>
-        </nldd-form-field>
-        <nldd-spacer size="8"></nldd-spacer>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('password')"
-          [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'copy'"
-          variant="secondary"
-        ></nldd-button>
-      }
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
 <!-- Delete Cluster Modal -->
 <nldd-modal-dialog
   #deleteDialog

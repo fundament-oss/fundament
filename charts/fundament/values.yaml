@@ -50,6 +50,7 @@ images:
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
+  marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
 
 # Database (CloudNativePG)
 db:
@@ -78,7 +79,21 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
-  prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
+  # Metrics backend: "mock" uses generated data; "per-shoot" queries each
+  # cluster's per-shoot Gardener Prometheus at the monitoring secret's
+  # prometheus-url annotation (requires the Gardener kubeconfig); any other
+  # URL queries that single Prometheus.
+  prometheusURL: mock
+  # Logs backend: "mock" uses generated data; "per-shoot" queries each
+  # cluster's per-shoot Gardener Vali through its Plutono datasource proxy,
+  # resolved from the monitoring secret (requires the Gardener kubeconfig);
+  # any other URL queries that single Loki-compatible backend.
+  logsURL: mock
+  # Optional Secret (key ca.crt, PEM bundle) trusted for the seed-ingress
+  # TLS (per-shoot Prometheus and Plutono/Vali share those certificates).
+  # Needed in local dev where seed ingress certs are shoot-CA-signed;
+  # leave empty on landscapes with publicly trusted ingress certificates.
+  prometheusCASecret: ""
   httproute:
     enabled: false
     parentRefs: []
@@ -274,6 +289,16 @@ dexDcim:
 dcimFrontend:
   enabled: false
   replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Marketplace Catalog API
+marketplaceCatalogApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
   httproute:
     enabled: false
     parentRefs: []

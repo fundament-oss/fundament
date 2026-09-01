@@ -4,62 +4,104 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 const (
-	labelManagedBy        = "app.kubernetes.io/managed-by"
-	labelPlugin           = "plugins.fundament.io/plugin"
-	labelInstallationName = "plugins.fundament.io/installation-name"
-	managedByValue        = "plugin-controller"
+	labelManagedBy    = "app.kubernetes.io/managed-by"
+	labelInstallation = "plugins.fundament.io/installation"
+	labelOrganization = "plugins.fundament.io/organization"
+	labelPlugin       = "plugins.fundament.io/plugin"
+	managedByValue    = "plugin-controller"
+
+	// childResourceName names every namespace-scoped child, shared with
+	// plugin-proxy and kube-api-proxy so the three cannot disagree.
+	childResourceName = kubename.PluginChildName
 )
 
-// dnsLabelRegex matches valid DNS label names (RFC 1123).
-var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+// maxInstallationNameLen caps metadata.name so the cluster-scoped
+// "plugin-<name>-scope" ClusterRole stays inside the 253-char limit.
+const maxInstallationNameLen = 239
 
-// maxInstallationNameLen caps metadata.name so that child resource names —
-// which are prefixed with "plugin-" — stay within Kubernetes' 63-character
-// DNS-label limit.
-const maxInstallationNameLen = 56
+// installationNameSeparator joins the organization and plugin names into
+// metadata.name. A double dash, because neither half may contain one — that is
+// what makes the pair recoverable and keeps two different pairs from colliding
+// on the same name.
+const installationNameSeparator = "--"
 
-// validateInstallationName checks that the PluginInstallation's metadata.name
-// is a valid DNS label and short enough to derive prefixed child resource
-// names from it.
-func validateInstallationName(name string) error {
-	if name == "" {
-		return fmt.Errorf("metadata.name must not be empty")
+// installationNameRegex is the DNS-1123 *label* charset without the 63-char
+// limit. The namespace is derived from this name, so dots (legal in a subdomain)
+// must not appear.
+var installationNameRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// validateInstallation checks that the CR's identity is well-formed: the
+// organization and plugin names are present and metadata.name is exactly
+// "<organizationName>--<pluginName>", which is what makes the apiserver enforce
+// uniqueness of the pair.
+//
+// The separator is a double dash, and neither half may contain one (enforced by
+// organizations_ck_name and plugins_ck_name): a single dash would be ambiguous,
+// since ("system", "cert-manager") and ("system-cert", "manager") would both
+// produce "system-cert-manager" and collide on a name neither owns.
+func validateInstallation(cr *pluginsv1.PluginInstallation) error {
+	org := cr.Spec.DefinitionRef.OrganizationName
+	plugin := cr.Spec.DefinitionRef.PluginName
+	if org == "" {
+		return fmt.Errorf("spec.definitionRef.organizationName must not be empty")
 	}
-	if len(name) > maxInstallationNameLen {
-		return fmt.Errorf("metadata.name %q exceeds maximum length of %d characters (child resources are prefixed with %q)", name, maxInstallationNameLen, "plugin-")
+	if plugin == "" {
+		return fmt.Errorf("spec.definitionRef.pluginName must not be empty")
 	}
-	if !dnsLabelRegex.MatchString(name) {
-		return fmt.Errorf("metadata.name %q is not a valid DNS label (must be lowercase alphanumeric or '-', and must start and end with an alphanumeric character)", name)
+	if strings.Contains(org, installationNameSeparator) {
+		return fmt.Errorf("spec.definitionRef.organizationName %q must not contain %q", org, installationNameSeparator)
+	}
+	if strings.Contains(plugin, installationNameSeparator) {
+		return fmt.Errorf("spec.definitionRef.pluginName %q must not contain %q", plugin, installationNameSeparator)
+	}
+	want := org + installationNameSeparator + plugin
+	if cr.Name != want {
+		return fmt.Errorf("metadata.name %q must equal %q (\"<organizationName>--<pluginName>\")", cr.Name, want)
+	}
+	if len(cr.Name) > maxInstallationNameLen {
+		return fmt.Errorf("metadata.name %q exceeds maximum length of %d characters", cr.Name, maxInstallationNameLen)
+	}
+	if !installationNameRegex.MatchString(cr.Name) {
+		return fmt.Errorf("metadata.name %q must be lowercase alphanumeric or '-', starting and ending with an alphanumeric character", cr.Name)
 	}
 	return nil
 }
 
-func childName(installationName string) string {
-	return fmt.Sprintf("plugin-%s", installationName)
-}
-
+// pluginNamespace derives the plugin's namespace. plugin-proxy and kube-api-proxy
+// derive it the same way through the shared helper, so the three cannot drift.
 func pluginNamespace(installationName string) string {
-	return fmt.Sprintf("plugin-%s", installationName)
+	return kubename.PluginNamespace(installationName)
 }
 
 func childLabels(cr *pluginsv1.PluginInstallation) map[string]string {
-	return map[string]string{
-		labelManagedBy:        managedByValue,
-		labelPlugin:           cr.Name,
-		labelInstallationName: cr.Name,
+	labels := map[string]string{
+		labelManagedBy:    managedByValue,
+		labelInstallation: pluginNamespace(cr.Name),
 	}
+	// Decorative, and label values cap at 63 chars — omit rather than emit an
+	// invalid object when a name is long.
+	if org := cr.Spec.DefinitionRef.OrganizationName; len(org) <= validation.DNS1123LabelMaxLength {
+		labels[labelOrganization] = org
+	}
+	if plugin := cr.Spec.DefinitionRef.PluginName; len(plugin) <= validation.DNS1123LabelMaxLength {
+		labels[labelPlugin] = plugin
+	}
+	return labels
 }
 
 // mergeLabels merges src labels into dst, initializing the map if needed.
@@ -74,10 +116,11 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 	return dst
 }
 
+// selectorLabels is the immutable Deployment selector, so it carries only the
+// bounded, unique installation slug.
 func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
-		labelPlugin:           cr.Name,
-		labelInstallationName: cr.Name,
+		labelInstallation: pluginNamespace(cr.Name),
 	}
 }
 
@@ -103,7 +146,7 @@ func mutateRoleBinding(rb *rbacv1.RoleBinding, cr *pluginsv1.PluginInstallation)
 	rb.Subjects = []rbacv1.Subject{
 		{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Name),
+			Name:      childResourceName,
 			Namespace: pluginNamespace(cr.Name),
 		},
 	}
@@ -146,7 +189,7 @@ func mutatePluginScopeClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *plu
 	}
 	crb.Subjects = []rbacv1.Subject{{
 		Kind:      rbacv1.ServiceAccountKind,
-		Name:      childName(cr.Name),
+		Name:      childResourceName,
 		Namespace: pluginNamespace(cr.Name),
 	}}
 }
@@ -180,10 +223,10 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Labels: labels,
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: childName(cr.Name),
+			ServiceAccountName: childResourceName,
 			Containers: []corev1.Container{
 				{
-					Name:            cr.Name,
+					Name:            childResourceName,
 					Image:           def.Spec.Image,
 					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
 					Ports: []corev1.ContainerPort{

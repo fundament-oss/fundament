@@ -16,6 +16,8 @@ const organizationGetByID = `-- name: OrganizationGetByID :one
 SELECT id, name, alias, created
 FROM tenant.organizations
 WHERE id = $1
+  AND (tenant.organizations.id = authn.current_organization_id()
+       OR authn.is_organization_member(tenant.organizations.id))
 `
 
 type OrganizationGetByIDParams struct {
@@ -29,6 +31,8 @@ type OrganizationGetByIDRow struct {
 	Created pgtype.Timestamptz
 }
 
+// Membership is asserted here rather than left to RLS: the plugin-publisher
+// policy also grants SELECT on this table, and this endpoint must not expose it.
 func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetByIDParams) (OrganizationGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, organizationGetByID, arg.ID)
 	var i OrganizationGetByIDRow
@@ -44,6 +48,8 @@ func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetBy
 const organizationList = `-- name: OrganizationList :many
 SELECT id, name, alias, created
 FROM tenant.organizations
+WHERE tenant.organizations.id = authn.current_organization_id()
+   OR authn.is_organization_member(tenant.organizations.id)
 ORDER BY created
 `
 
@@ -54,6 +60,8 @@ type OrganizationListRow struct {
 	Created pgtype.Timestamptz
 }
 
+// Membership is asserted here rather than left to RLS: the plugin-publisher
+// policy also grants SELECT on this table, and listing must stay member-scoped.
 func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, error) {
 	rows, err := q.db.Query(ctx, organizationList)
 	if err != nil {

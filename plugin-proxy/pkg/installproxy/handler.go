@@ -19,11 +19,13 @@ const (
 
 // Route identifies the backend a request targets.
 type Route struct {
-	Kind          RouteKind
-	ClusterID     string
-	InstallID     string
-	PluginName    string
-	RemainingPath string
+	Kind      RouteKind
+	ClusterID string
+	InstallID string
+	// InstallationName is the CR's metadata.name ("<organizationName>--<pluginName>"),
+	// which the plugin's namespace is derived from — not the bare plugin name.
+	InstallationName string
+	RemainingPath    string
 }
 
 // Backend forwards an authorized request to the plugin pod / plugin-controller.
@@ -101,7 +103,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	route.ClusterID = claims.ClusterID
-	route.PluginName = claims.PluginName
+	route.InstallationName = claims.InstallationName
 
 	h.backend.Serve(w, r, route)
 }

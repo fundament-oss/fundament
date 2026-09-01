@@ -1,5 +1,6 @@
 -- name: PluginList :many
 SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image,
+  tenant.organizations.name AS organization_name,
   COALESCE((
     SELECT appstore.plugin_definitions.plugin_version
     FROM appstore.plugin_definitions
@@ -15,6 +16,7 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     LIMIT 1
   ), '')::text AS latest_hash
 FROM appstore.plugins
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.deleted IS NULL
 ORDER BY COALESCE(NULLIF(appstore.plugins.display_name, ''), appstore.plugins.name);
 
@@ -34,6 +36,7 @@ ORDER BY c.name;
 
 -- name: PluginGetByID :one
 SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image, appstore.plugins.author_name, appstore.plugins.author_url, appstore.plugins.repository_url,
+  tenant.organizations.name AS organization_name,
   COALESCE((
     SELECT appstore.plugin_definitions.plugin_version
     FROM appstore.plugin_definitions
@@ -49,6 +52,7 @@ SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name
     LIMIT 1
   ), '')::text AS latest_hash
 FROM appstore.plugins
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.id = $1 AND appstore.plugins.deleted IS NULL;
 
 -- name: PluginTagsListByPluginID :many

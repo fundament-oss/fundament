@@ -38,7 +38,7 @@ type fakeDefClient struct {
 	err      error
 }
 
-func (f fakeDefClient) GetDefinition(_ context.Context, _, _ string) (defclient.Definition, error) {
+func (f fakeDefClient) GetDefinition(_ context.Context, _, _, _ string) (defclient.Definition, error) {
 	if f.err != nil {
 		return defclient.Definition{}, f.err
 	}
@@ -52,9 +52,10 @@ type countingDefClient struct {
 	calls int
 }
 
-func (c *countingDefClient) GetDefinition(ctx context.Context, name, version string) (defclient.Definition, error) {
+func (c *countingDefClient) GetDefinition(ctx context.Context, org, name, version string) (defclient.Definition, error) {
 	c.calls++
-	return c.inner.GetDefinition(ctx, name, version)
+	//nolint:wrapcheck // this decorator only counts; callers assert on the inner client's own error
+	return c.inner.GetDefinition(ctx, org, name, version)
 }
 
 // sampleManifest returns a valid PluginDefinition YAML and its sha256 pin.
@@ -138,7 +139,7 @@ func TestMutateRoleBinding(t *testing.T) {
 	assert.Equal(t, "admin", rb.RoleRef.Name)
 	assert.Equal(t, "ClusterRole", rb.RoleRef.Kind)
 	require.Len(t, rb.Subjects, 1)
-	assert.Equal(t, "plugin-cert-manager", rb.Subjects[0].Name)
+	assert.Equal(t, "plugin", rb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", rb.Subjects[0].Namespace)
 }
 
@@ -197,7 +198,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	// Verify ServiceAccount created in plugin namespace
 	var sa corev1.ServiceAccount
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: nsName,
+		Name: "plugin", Namespace: nsName,
 	}, &sa)
 	require.NoError(t, err)
 	assert.Equal(t, managedByValue, sa.Labels[labelManagedBy])
@@ -205,7 +206,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	// Verify RoleBinding created in plugin namespace
 	var rb rbacv1.RoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: nsName,
+		Name: "plugin", Namespace: nsName,
 	}, &rb)
 	require.NoError(t, err)
 	assert.Equal(t, "admin", rb.RoleRef.Name)
@@ -220,7 +221,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	// Verify Deployment created in plugin namespace with image from manifest
 	var deploy appsv1.Deployment
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: nsName,
+		Name: "plugin", Namespace: nsName,
 	}, &deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
@@ -230,7 +231,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	// Verify Service created in plugin namespace
 	var svc corev1.Service
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: nsName,
+		Name: "plugin", Namespace: nsName,
 	}, &svc)
 	require.NoError(t, err)
 }
@@ -280,7 +281,7 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "plugin-cert-manager-scope", crb.RoleRef.Name)
 	require.Len(t, crb.Subjects, 1)
-	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
+	assert.Equal(t, "plugin", crb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
 }
 
@@ -317,7 +318,7 @@ func TestReconcileChildren_DeploymentUsesManifestImage(t *testing.T) {
 
 	var deploy appsv1.Deployment
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
+		Name: "plugin", Namespace: pluginNamespace(cr.Name),
 	}, &deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
@@ -357,7 +358,7 @@ func TestReconcileChildren_DeploymentNotCreatedWhenScopeFails(t *testing.T) {
 	// Deployment must NOT exist yet — scope failure aborts before Deployment.
 	var deploy appsv1.Deployment
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
+		Name: "plugin", Namespace: pluginNamespace(cr.Name),
 	}, &deploy)
 	require.Error(t, err, "Deployment must not be created when scope reconcile fails")
 }
@@ -518,6 +519,10 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 	manifest, pin := sampleManifest(t)
 
 	cr := testCR()
+	// Reconcile() (unlike reconcileChildren, called directly elsewhere in this
+	// file) validates the CR's identity, so metadata.name must be qualified.
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
 	cr.SetUID("test-uid")
 	cr.Finalizers = []string{finalizerName}
 	cr.Spec.DefinitionRef.DefinitionHash = pin
@@ -541,7 +546,7 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
 	ctx := context.Background()
-	deployKey := types.NamespacedName{Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name)}
+	deployKey := types.NamespacedName{Name: childResourceName, Namespace: pluginNamespace(cr.Name)}
 
 	// First reconcile: materialise children; one fetch.
 	_, err := r.Reconcile(ctx, req)
@@ -560,6 +565,45 @@ func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, fakeClient.Get(ctx, deployKey, &appsv1.Deployment{}), "drifted child must be recreated")
 	assert.Equal(t, 1, counting.calls, "pinned definition must be served from cache, not re-fetched")
+}
+
+// TestReconcile_PublishesResolvedNamespace verifies status.namespace is
+// populated so operators can find a plugin's namespace without recomputing the
+// (possibly hashed) derivation themselves.
+func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
+		statusPoller:        newStatusPoller(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	assert.Equal(t, pluginNamespace(cr.Name), got.Status.Namespace)
 }
 
 func TestMapPhase(t *testing.T) {
@@ -719,7 +763,7 @@ func TestPluginNamespace(t *testing.T) {
 
 func TestPluginServiceURL(t *testing.T) {
 	url := pluginServiceURL("cert-manager")
-	assert.Equal(t, "http://plugin-cert-manager.plugin-cert-manager.svc.cluster.local:8080", url)
+	assert.Equal(t, "http://plugin.plugin-cert-manager.svc.cluster.local:8080", url)
 }
 
 // mockPluginHandlers lets a test wire specific RPC responses without having to

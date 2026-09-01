@@ -280,6 +280,20 @@ const routes: Routes = [
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
       },
       {
+        path: 'logs',
+        loadComponent: () =>
+          import('./logs/log-explorer/log-explorer.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Log explorer' }],
+        },
+      },
+      // 'logs/analytics' is intentionally unrouted. Every figure on that page is
+      // a client-side reduce over the newest logs.MaxLimit lines, so "Total
+      // logs" pins at 5,000 and "Volume over time" renders a traffic cliff that
+      // does not exist. It needs a server-side aggregation query (Vali
+      // count_over_time / sum by level) before it can be exposed; the component
+      // is kept so that work has a starting point.
+      {
         path: 'projects/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
       },

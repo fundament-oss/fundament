@@ -1,14 +1,14 @@
 # Bun sdk-builder — bundles the plugin-sdk + NLDD Design System JS/CSS so
 # plugin-proxy can serve them at /plugins/sdk/v1/ during hotreload dev sessions
 # (matches the production Dockerfile's setup).
-FROM oven/bun:1.3-alpine AS sdk-builder
+FROM oven/bun:1.4-alpine AS sdk-builder
 WORKDIR /console-frontend
 COPY console-frontend/package.json console-frontend/bun.lock* ./
 RUN bun install --frozen-lockfile
 COPY console-frontend/src/plugin-sdk/ ./src/plugin-sdk/
 RUN mkdir -p public/plugin-ui && bun run build:plugin-ui
 
-FROM golang:1.26.5-alpine
+FROM golang:1.26.6-alpine
 RUN go install github.com/air-verse/air@v1.65.0
 WORKDIR /src
 COPY go.mod go.sum ./

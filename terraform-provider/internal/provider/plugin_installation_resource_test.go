@@ -7,48 +7,64 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestInstallationName(t *testing.T) {
+	assert.Equal(t, "acme--cert-manager", installationName("acme", "cert-manager"))
+}
+
+func TestParseImportID_QualifiedName(t *testing.T) {
+	clusterID, name, err := parseImportID("cluster-abc/acme--cert-manager")
+	require.NoError(t, err)
+	assert.Equal(t, "cluster-abc", clusterID)
+	assert.Equal(t, "acme--cert-manager", name)
+}
+
+// The pair is recoverable from the name even when both halves contain dashes —
+// the case a single-dash separator could not resolve, since ("acme",
+// "corp-grafana") and ("acme-corp", "grafana") would spell the same name.
+func TestInstallationName_RoundTripsWithDashesInBothHalves(t *testing.T) {
+	name := installationName("acme-corp", "cert-manager")
+	assert.Equal(t, "acme-corp--cert-manager", name)
+
+	org, plugin, ok := strings.Cut(name, "--")
+	require.True(t, ok)
+	assert.Equal(t, "acme-corp", org)
+	assert.Equal(t, "cert-manager", plugin)
+}
 
 func TestPluginInstallationResourceModel(t *testing.T) {
 	model := PluginInstallationResourceModel{
-		ID:             types.StringValue("cluster-123/grafana"),
-		ClusterID:      types.StringValue("cluster-123"),
-		PluginName:     types.StringValue("grafana"),
-		PluginVersion:  types.StringValue("10.2.0"),
-		DefinitionHash: types.StringValue("sha256:abc123"),
-		Phase:          types.StringValue("Running"),
+		ID:               types.StringValue("cluster-123/acme-grafana"),
+		ClusterID:        types.StringValue("cluster-123"),
+		OrganizationName: types.StringValue("acme"),
+		PluginName:       types.StringValue("grafana"),
+		PluginVersion:    types.StringValue("10.2.0"),
+		DefinitionHash:   types.StringValue("sha256:abc123"),
+		Phase:            types.StringValue("Running"),
 	}
 
-	if model.ID.ValueString() != "cluster-123/grafana" {
-		t.Errorf("expected ID 'cluster-123/grafana', got %q", model.ID.ValueString())
-	}
-	if model.ClusterID.ValueString() != "cluster-123" {
-		t.Errorf("expected ClusterID 'cluster-123', got %q", model.ClusterID.ValueString())
-	}
-	if model.PluginName.ValueString() != "grafana" {
-		t.Errorf("expected PluginName 'grafana', got %q", model.PluginName.ValueString())
-	}
-	if model.PluginVersion.ValueString() != "10.2.0" {
-		t.Errorf("expected PluginVersion '10.2.0', got %q", model.PluginVersion.ValueString())
-	}
-	if model.DefinitionHash.ValueString() != "sha256:abc123" {
-		t.Errorf("expected DefinitionHash 'sha256:abc123', got %q", model.DefinitionHash.ValueString())
-	}
-	if model.Phase.ValueString() != "Running" {
-		t.Errorf("expected Phase 'Running', got %q", model.Phase.ValueString())
-	}
+	assert.Equal(t, "cluster-123/acme-grafana", model.ID.ValueString())
+	assert.Equal(t, "cluster-123", model.ClusterID.ValueString())
+	assert.Equal(t, "acme", model.OrganizationName.ValueString())
+	assert.Equal(t, "grafana", model.PluginName.ValueString())
+	assert.Equal(t, "10.2.0", model.PluginVersion.ValueString())
+	assert.Equal(t, "sha256:abc123", model.DefinitionHash.ValueString())
+	assert.Equal(t, "Running", model.Phase.ValueString())
 }
 
 func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
 	payload := pluginInstallationCreatePayload{
 		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
-		Metadata:   pluginInstallationMetadata{Name: "grafana"},
+		Metadata:   pluginInstallationMetadata{Name: "acme-grafana"},
 		Spec: pluginInstallationSpec{
 			DefinitionRef: pluginDefinitionRef{
-				PluginName:     "grafana",
-				PluginVersion:  "unknown",
-				DefinitionHash: "sha256:unknown",
+				OrganizationName: "acme",
+				PluginName:       "grafana",
+				PluginVersion:    "unknown",
+				DefinitionHash:   "sha256:unknown",
 			},
 		},
 	}
@@ -60,7 +76,7 @@ func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
 
 	got := string(body)
 	for _, want := range []string{
-		`"definitionRef":{"pluginName":"grafana","pluginVersion":"unknown","definitionHash":"sha256:unknown"}`,
+		`"definitionRef":{"organizationName":"acme","pluginName":"grafana","pluginVersion":"unknown","definitionHash":"sha256:unknown"}`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("payload %s does not contain %s", got, want)

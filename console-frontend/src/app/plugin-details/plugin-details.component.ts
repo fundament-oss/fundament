@@ -34,7 +34,9 @@ import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
 import { NotificationService } from '../notification.service';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  pluginResourceName,
+} from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state. `phase` is null when the plugin is not
 // installed on the cluster, otherwise the PluginInstallation status phase.
@@ -136,7 +138,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.plugin.set(pluginResponse.plugin);
       this.titleService.setTitle(displayNameOf(pluginResponse.plugin));
 
-      const pluginName = pluginResponse.plugin.name;
+      // metadata.name is the RFC-1123 slug of (organizationName, pluginName) — the
+      // qualified pair is the plugin's identity, so match on that, not pluginName alone.
+      const resourceName = pluginResourceName(
+        pluginResponse.plugin.organizationName,
+        pluginResponse.plugin.name,
+      );
 
       const installResults = await Promise.all(
         clustersResponse.clusters.map((cluster) =>
@@ -148,11 +155,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
           phase:
-            installResults[i].find((item) => item.metadata.name === pluginName)?.status?.phase ??
+            installResults[i].find((item) => item.metadata.name === resourceName)?.status?.phase ??
             null,
           version:
-            installResults[i].find((item) => item.metadata.name === pluginName)?.spec?.definitionRef
-              ?.pluginVersion ?? '',
+            installResults[i].find((item) => item.metadata.name === resourceName)?.spec
+              ?.definitionRef?.pluginVersion ?? '',
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );
@@ -254,6 +261,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     const plugin = this.plugin();
     if (!plugin) return;
 
+    const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
     const clusters = this.clusters();
     let results: (PluginInstallationItem[] | null)[];
     try {
@@ -273,7 +281,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       // Couldn't read this cluster — keep its current state rather than treating
       // an unreadable cluster as "plugin removed".
       if (items === null) return c;
-      const phase = items.find((item) => item.metadata.name === plugin.name)?.status?.phase ?? null;
+      const phase =
+        items.find((item) => item.metadata.name === resourceName)?.status?.phase ?? null;
       // A 'Pending' row that has vanished is an optimistic install (or in-flight
       // retry) the backend has not listed yet — keep showing it as pending.
       const resolved = phase === null && c.phase === 'Pending' ? 'Pending' : phase;
@@ -318,6 +327,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       targets.map((id) =>
         this.pluginInstallationService.installPlugin(
           id,
+          plugin.organizationName,
           plugin.name,
           selection.version,
           selection.hash,
@@ -341,7 +351,10 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     try {
-      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name);
+      await this.pluginInstallationService.uninstallPlugin(
+        clusterId,
+        pluginResourceName(plugin.organizationName, plugin.name),
+      );
       this.setPhase(clusterId, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
@@ -356,12 +369,14 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     const clusterId = retry.clusterId;
+    const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
     this.setPhase(clusterId, 'Pending');
     try {
-      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
-      await this.waitForUninstall(clusterId, plugin.name);
+      await this.pluginInstallationService.uninstallPlugin(clusterId, resourceName).catch(() => {});
+      await this.waitForUninstall(clusterId, resourceName);
       await this.pluginInstallationService.installPlugin(
         clusterId,
+        plugin.organizationName,
         plugin.name,
         retry.version,
         retry.hash,
@@ -376,18 +391,18 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private async waitForUninstall(
     clusterId: string,
-    pluginName: string,
+    resourceName: string,
     // Wait up to ~30s for finalizers to clear the old CRD before re-creating it;
     // re-POSTing while it is still terminating would 409.
     attempts = 30,
   ): Promise<void> {
     if (attempts <= 0) return;
     const items = await this.pluginInstallationService.listInstallations(clusterId).catch(() => []);
-    if (!items.some((item) => item.metadata.name === pluginName)) return;
+    if (!items.some((item) => item.metadata.name === resourceName)) return;
     await new Promise((resolve) => {
       setTimeout(resolve, 1000);
     });
-    await this.waitForUninstall(clusterId, pluginName, attempts - 1);
+    await this.waitForUninstall(clusterId, resourceName, attempts - 1);
   }
 
   hasInstalledClusters(): boolean {

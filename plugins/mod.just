@@ -1,0 +1,164 @@
+mod cert-manager
+mod openfsc
+mod envoy-gateway 'gateway-api/envoy-gateway'
+mod ceph-rook 'storage/ceph-rook'
+
+cluster := "fundament-plugin"
+registry := "plugin-registry.localhost"
+registry_port := "5112"
+export kube_context := "k3d-" + cluster
+
+# Both binds are required; see docs/developer/fundament/k3d-block-devices.md.
+# Off by default: they expose the host's devices.
+storage_volumes := "--volume /dev:/dev@server:0 --volume /run/udev:/run/udev:ro@server:0"
+
+_default:
+    @just --list
+
+# --- Cluster commands ---
+
+# Create a local K3D cluster for plugin development with local registry
+cluster-create:
+    k3d cluster create --config=sandbox/k3d-config.yaml
+
+# Create the cluster with the host's block devices bound in (storage plugin work)
+cluster-create-storage:
+    k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
+
+# Start the cluster (creates if it doesn't exist), clearing any leftover cordon.
+# uncordon is a no-op unless storage disks were ever attached.
+cluster-start:
+    @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
+
+# Stop the cluster, evicting Ceph consumers first. drain fails on purpose while a
+# volume is still mapped, because stopping then wedges the Docker host — so do not
+# add a `-` prefix here.
+cluster-stop:
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
+    k3d cluster stop {{ cluster }}
+
+# Delete the local K3D cluster and registry
+cluster-delete:
+    -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
+    k3d cluster delete {{ cluster }}
+    @k3d registry delete {{ registry }} 2>/dev/null || true
+
+# Loop-backed block devices for a storage plugin; run without arguments for usage
+storage-disks *args:
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh {{ args }}
+
+# --- Deployment commands ---
+
+# Deploy plugin-controller with file watching (auto-rebuild on changes)
+dev *flags:
+    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
+    skaffold dev -f sandbox/skaffold.yaml --cleanup=false {{ flags }}
+
+# Deploy plugin-controller (one-time)
+deploy:
+    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
+    skaffold run -f sandbox/skaffold.yaml
+
+# Remove the deployment
+undeploy:
+    skaffold delete -f sandbox/skaffold.yaml
+
+# --- Plugin commands ---
+
+# To install a plugin, publish its definition with `publish` (below), then
+# reference the published pluginVersion/definitionHash from a PluginInstallation.
+# The old `plugin-install` recipe is gone: it set spec.image (the CRD now sources
+# the image from the published definition, not the CR) and pinned a git-describe
+# pluginVersion that no stored definition is keyed under.
+
+# Delete a PluginInstallation CR (installation = metadata.name, e.g. system--cert-manager)
+uninstall installation:
+    kubectl --context {{ kube_context }} delete plugininstallation {{ installation }}
+
+# Stream plugin-controller's logs, or one plugin's given its installation name
+logs installation="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "{{ installation }}" ]; then
+        exec kubectl --context {{ kube_context }} -n fundament logs -l app.kubernetes.io/component=plugin-controller -f
+    fi
+    # Addressed by the Deployment's constant name, so a hashed namespace works too.
+    exec kubectl --context {{ kube_context }} -n "plugin-{{ installation }}" logs deployment/plugin -f
+
+# Show all PluginInstallation CRs
+status:
+    kubectl --context {{ kube_context }} get plugininstallations
+
+
+# Wire the sandbox plugin-controller (k3d-fundament-plugin) to organization-api in
+# the management cluster (k3d-fundament) so it can fetch PluginDefinitions (FUN-19).
+# Local dev only: the two k3d clusters are network-isolated. We expose org-api as a
+# NodePort in the management cluster and run a small relay container on the
+# management cluster's docker network that publishes a host port; the sandbox
+# controller reaches it via host.k3d.internal (pluginController.organizationApiUrl
+# in plugins/sandbox/values.yaml is http://host.k3d.internal:38080).
+#
+# We deliberately do NOT bridge the sandbox k3d nodes onto the management network:
+# multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
+# which stops plugins pulling their images. Only the relay container is bridged.
+# Re-run this after recreating either cluster (the node IP is resolved fresh).
+sandbox-orgapi:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOSTPORT=38080
+    NODEPORT=30080
+    RELAY=fun-orgapi-relay
+
+    # 1. Expose organization-api's Connect port as a NodePort in the mgmt cluster.
+    #    Path is relative to plugins/ (this Justfile's dir), like the skaffold recipes.
+    kubectl --context k3d-fundament apply -f sandbox/organization-api-nodeport.yaml
+
+    # 2. Resolve a management-cluster node IP on its docker network.
+    node_ip=$(docker inspect k3d-fundament-server-0 \
+        --format '{{{{ (index .NetworkSettings.Networks "k3d-fundament").IPAddress }}')
+    if [ -z "$node_ip" ]; then
+        echo "Error: could not resolve k3d-fundament-server-0 IP on the k3d-fundament network"
+        exit 1
+    fi
+
+    # 3. (Re)start the relay: host 0.0.0.0:HOSTPORT -> node_ip:NODEPORT, attached to
+    #    the management network. Only this container is multi-homed; the k3d nodes
+    #    are left alone so the plugin registry mirror keeps working.
+    docker rm -f "$RELAY" >/dev/null 2>&1 || true
+    docker run -d --name "$RELAY" --network k3d-fundament --restart unless-stopped \
+        -p "0.0.0.0:${HOSTPORT}:8080" \
+        alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${NODEPORT}" >/dev/null
+
+    echo "- organization-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
+    echo "  (matches pluginController.organizationApiUrl in plugins/sandbox/values.yaml)"
+
+# Build+push a plugin image, then publish its definition (with the pushed digest)
+# to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112),
+# FUNDAMENT_ORG_API_URL and FUNDAMENT_ORGANIZATION_ID; FUNDAMENT_TOKEN for the
+# authenticated (org-scoped) endpoint.
+# Extra flags pass through to publish, e.g.:
+#   just publish gateway-api/envoy-gateway --replace
+# (--replace republishes an existing pluginVersion, soft-deleting the old definition).
+publish name *flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${PLUGIN_REGISTRY:?PLUGIN_REGISTRY is required (e.g. localhost:5112)}"
+    : "${FUNDAMENT_ORG_API_URL:?FUNDAMENT_ORG_API_URL is required}"
+    : "${FUNDAMENT_ORGANIZATION_ID:?FUNDAMENT_ORGANIZATION_ID is required}"
+    # This Justfile runs recipes from plugins/, but the Docker build context, the
+    # plugins/<name>/Dockerfile path, `go run ./plugins/...`, and publish's
+    # plugins/<name>/definition.yaml read are all repo-root relative — run from root.
+    cd "$(git rev-parse --show-toplevel)"
+    tag=$(git describe --always --dirty)
+    repo="${PLUGIN_REGISTRY}/{{ name }}-plugin"
+    # --provenance/--sbom=false: skip buildkit attestations so the push is a plain
+    # single-platform manifest, not an OCI index. The attestation index digest
+    # changes every build and leaves the old (now-untagged) index to be GC'd by the
+    # registry, which strands the digest a PluginInstallation pinned. See FUN-19.
+    docker build --provenance=false --sbom=false -t "${repo}:${tag}" -f "plugins/{{ name }}/Dockerfile" .
+    # Parse the manifest digest only from the `digest:` line — other sha256
+    # tokens in push output are layer/config digests, not the pushed manifest.
+    digest=$(docker push "${repo}:${tag}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
+    [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
+    go run ./plugins/cmd/plugin-publish --plugin '{{ name }}' --image "${repo}@${digest}" {{ flags }}

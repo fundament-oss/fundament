@@ -1,0 +1,27 @@
+edition = "2023";
+
+package catalog.v1;
+
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1";
+
+// Trust and support badges a listing carries. A listing may hold several at once:
+// CORE and RIJKSOVERHEID say where a plugin comes from, SUPPORT_9_TO_17 what
+// support it ships with.
+enum PluginLabel {
+  PLUGIN_LABEL_UNSPECIFIED = 0;
+  PLUGIN_LABEL_CORE = 1;
+  PLUGIN_LABEL_RIJKSOVERHEID = 2;
+  PLUGIN_LABEL_SUPPORT_9_TO_17 = 3;
+}
+
+// Ordering applied by ListPlugins. UNSPECIFIED sorts as FEATURED.
+enum PluginSort {
+  PLUGIN_SORT_UNSPECIFIED = 0;
+  PLUGIN_SORT_RECENTLY_ADDED = 1;
+  PLUGIN_SORT_NAME = 2;
+  PLUGIN_SORT_FEATURED = 3;
+}

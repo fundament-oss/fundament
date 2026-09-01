@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,9 +10,94 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
+
+func newInstallation(name, org, plugin string) *pluginsv1.PluginInstallation {
+	cr := &pluginsv1.PluginInstallation{}
+	cr.Name = name
+	cr.Spec.DefinitionRef.OrganizationName = org
+	cr.Spec.DefinitionRef.PluginName = plugin
+	return cr
+}
+
+func TestValidateInstallation_AcceptsQualifiedName(t *testing.T) {
+	require.NoError(t, validateInstallation(newInstallation("acme--cert-manager", "acme", "cert-manager")))
+}
+
+func TestValidateInstallation_RejectsMismatchedName(t *testing.T) {
+	err := validateInstallation(newInstallation("cert-manager", "acme", "cert-manager"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "acme--cert-manager")
+}
+
+func TestValidateInstallation_RejectsMissingOrganization(t *testing.T) {
+	err := validateInstallation(newInstallation("cert-manager", "", "cert-manager"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "organizationName")
+}
+
+func TestValidateInstallation_RejectsMissingPluginName(t *testing.T) {
+	err := validateInstallation(newInstallation("acme--", "acme", ""))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pluginName")
+}
+
+func TestValidateInstallation_RejectsInvalidCharacters(t *testing.T) {
+	// A dot is legal in a DNS subdomain but not in the namespace we derive.
+	err := validateInstallation(newInstallation("acme--cert.manager", "acme", "cert.manager"))
+	require.Error(t, err)
+}
+
+func TestValidateInstallation_RejectsOverLongName(t *testing.T) {
+	plugin := strings.Repeat("p", 240)
+	err := validateInstallation(newInstallation("acme--"+plugin, "acme", plugin))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "239")
+}
+
+func TestChildResourcesUseConstantNames(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+
+	crb := &rbacv1.ClusterRoleBinding{}
+	mutatePluginScopeClusterRoleBinding(crb, cr)
+
+	require.Len(t, crb.Subjects, 1)
+	// The namespace disambiguates, so the SA needs no name-derived suffix.
+	assert.Equal(t, "plugin", crb.Subjects[0].Name)
+	assert.Equal(t, "plugin-acme--cert-manager", crb.Subjects[0].Namespace)
+	assert.Equal(t, "plugin-acme--cert-manager-scope", crb.RoleRef.Name)
+}
+
+func TestMutateDeployment_UsesConstantContainerName(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{Image: "repo@sha256:" + strings.Repeat("a", 64)},
+	}
+
+	deploy := &appsv1.Deployment{}
+	mutateDeployment(deploy, cr, &def, nil)
+
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	// A container name is a 63-char DNS label; the installation name is not.
+	assert.Equal(t, "plugin", deploy.Spec.Template.Spec.Containers[0].Name)
+	assert.Equal(t, "plugin", deploy.Spec.Template.Spec.ServiceAccountName)
+}
+
+func TestSelectorLabels_FitLabelValueLimit(t *testing.T) {
+	long := strings.Repeat("x", 200)
+	cr := newInstallation("acme--"+long, "acme", long)
+
+	for k, v := range selectorLabels(cr) {
+		assert.LessOrEqual(t, len(v), 63, "label %q value must fit the 63-char limit", k)
+	}
+}
+
+func TestPluginNamespace_MatchesSharedHelper(t *testing.T) {
+	assert.Equal(t, kubename.PluginNamespace("acme--cert-manager"), pluginNamespace("acme--cert-manager"))
+}
 
 func TestMutatePluginScopeClusterRole_MaterialisesRules(t *testing.T) {
 	cr := &pluginsv1.PluginInstallation{}
@@ -54,7 +140,7 @@ func TestMutatePluginScopeClusterRoleBinding_BindsToPluginSA(t *testing.T) {
 	assert.Equal(t, "plugin-cert-manager-scope", crb.RoleRef.Name)
 	require.Len(t, crb.Subjects, 1)
 	assert.Equal(t, rbacv1.ServiceAccountKind, crb.Subjects[0].Kind)
-	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
+	assert.Equal(t, "plugin", crb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
 }
 
@@ -83,7 +169,8 @@ func TestMutateDeployment_UsesManifestImage(t *testing.T) {
 	container := deploy.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", container.Image)
 	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
-	assert.Equal(t, "cert-manager", container.Name)
+	// The namespace disambiguates, so the container needs no name-derived suffix.
+	assert.Equal(t, "plugin", container.Name)
 
 	// Should have fundament env vars + config env vars
 	foundClusterID := false

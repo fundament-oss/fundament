@@ -1,0 +1,227 @@
+edition = "2023";
+
+package registry.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "marketplace/v1/common.proto";
+import "registry/v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/registry/v1;registryv1";
+
+// PublicationService is the plugin developer's API. Every RPC is scoped to
+// plugins owned by the caller's organization. This is what `functl plugins push`
+// talks to.
+service PublicationService {
+  // List the calling organization's plugins.
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+  rpc GetPlugin(GetPluginRequest) returns (GetPluginResponse);
+  // Reserve the slug within the owning organization and create the listing.
+  rpc CreatePlugin(CreatePluginRequest) returns (CreatePluginResponse);
+  rpc UpdatePlugin(UpdatePluginRequest) returns (UpdatePluginResponse);
+  // Soft delete, per house convention.
+  rpc DeletePlugin(DeletePluginRequest) returns (DeletePluginResponse);
+
+  rpc ListPluginVersions(ListPluginVersionsRequest) returns (ListPluginVersionsResponse);
+  rpc GetPluginVersion(GetPluginVersionRequest) returns (GetPluginVersionResponse);
+  // Land a pushed build in DRAFT. The server computes definition_hash from the
+  // manifest bytes; the client does not supply it.
+  rpc CreatePluginVersion(CreatePluginVersionRequest) returns (CreatePluginVersionResponse);
+  // Move DRAFT, CHANGES_REQUESTED or WITHDRAWN to PENDING and open a submission.
+  rpc SubmitPluginVersion(SubmitPluginVersionRequest) returns (SubmitPluginVersionResponse);
+  // Pull a PENDING version back to WITHDRAWN, closing its open submission. The
+  // developer can submit it again.
+  rpc WithdrawPluginVersion(WithdrawPluginVersionRequest) returns (WithdrawPluginVersionResponse);
+
+  // Categories a developer can assign to a listing. Duplicated from the
+  // catalog rather than shared, so publishing does not depend on the
+  // public storefront being reachable.
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+}
+
+message ListPluginsRequest {}
+
+message ListPluginsResponse {
+  repeated Plugin plugins = 10;
+}
+
+message GetPluginRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPluginResponse {
+  Plugin plugin = 10;
+}
+
+// Reserves the name within the caller's organization and creates the listing.
+// Only the essentials; UpdatePlugin fills in the rest.
+message CreatePluginRequest {
+  string name = 10 [
+    (buf.validate.field).string = {max_len: 63},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    }
+  ];
+  string display_name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string description_short = 30 [(buf.validate.field).string = {max_len: 255}];
+  string description = 40 [(buf.validate.field).string = {max_len: 8000}];
+  // Categories are a curated set; pick from ListCategories.
+  repeated string category_ids = 50 [(buf.validate.field).repeated = {
+    max_items: 10
+    items: {
+      string: {uuid: true}
+    }
+  }];
+  // Tag names, not ids — the server upserts them.
+  repeated string tags = 60 [(buf.validate.field).repeated = {max_items: 20}];
+  // Listing artwork, not a container image.
+  string image = 70 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uri: true}
+  ];
+  string repository_url = 80 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uri: true}
+  ];
+  string license = 90 [(buf.validate.field).string = {max_len: 64}];
+  PluginVisibility visibility = 100 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+message CreatePluginResponse {
+  Plugin plugin = 10;
+}
+
+// A full replacement: omitted repeated fields are cleared, not preserved.
+// No name — it is immutable once reserved.
+message UpdatePluginRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string display_name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string description_short = 30 [(buf.validate.field).string = {max_len: 255}];
+  string description = 40 [(buf.validate.field).string = {max_len: 8000}];
+  repeated string category_ids = 50 [(buf.validate.field).repeated = {
+    max_items: 10
+    items: {
+      string: {uuid: true}
+    }
+  }];
+  // Tag names, not ids — the server upserts them.
+  repeated string tags = 60 [(buf.validate.field).repeated = {max_items: 20}];
+  // Listing artwork, not a container image.
+  string image = 70 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uri: true}
+  ];
+  string repository_url = 80 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uri: true}
+  ];
+  string license = 90 [(buf.validate.field).string = {max_len: 64}];
+  // A link with no id is created; one with an id replaces that link.
+  // Links the request omits are deleted, per the full-replacement rule.
+  repeated marketplace.v1.DocumentationLink documentation_links = 100 [(buf.validate.field).repeated = {max_items: 20}];
+  repeated marketplace.v1.FeatureBlock features = 110 [(buf.validate.field).repeated = {max_items: 20}];
+  PluginVisibility visibility = 120 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  repeated string allowed_organization_ids = 130 [(buf.validate.field).repeated = {
+    max_items: 500
+    items: {
+      string: {uuid: true}
+    }
+  }];
+  // Original author, which may differ from the publishing organization.
+  string author_name = 140 [(buf.validate.field).string = {max_len: 255}];
+  string author_url = 150 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uri: true}
+  ];
+}
+
+message UpdatePluginResponse {
+  Plugin plugin = 10;
+}
+
+message DeletePluginRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// Empty today; a dedicated message keeps the RPC lint-clean and lets the
+// response gain fields later without a breaking change.
+message DeletePluginResponse {}
+
+message ListPluginVersionsRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListPluginVersionsResponse {
+  repeated PluginVersion versions = 10;
+}
+
+message GetPluginVersionRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPluginVersionResponse {
+  PluginVersion version = 10;
+}
+
+message CreatePluginVersionRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string version = 20 [
+    (buf.validate.field).string = {max_len: 64},
+    (buf.validate.field).cel = {
+      id: "semver"
+      message: "must be a semantic version, optionally prefixed with v; build metadata is not accepted because it is not valid in an OCI tag"
+      expression: "this.matches('^v?[0-9]+\\\\.[0-9]+\\\\.[0-9]+(-[0-9A-Za-z.-]+)?$')"
+    }
+  ];
+  // Verbatim PluginDefinition YAML. The server hashes these bytes and reads the
+  // container image out of them, so the image is never sent separately and
+  // cannot drift from the manifest that gets pinned. 1 MiB is far above any
+  // real definition and bounds the request.
+  bytes manifest = 30 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 1048576
+  }];
+  string release_notes = 40 [(buf.validate.field).string = {max_len: 8000}];
+}
+
+message CreatePluginVersionResponse {
+  PluginVersion version = 10;
+}
+
+message SubmitPluginVersionRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message SubmitPluginVersionResponse {
+  PluginVersion version = 10;
+}
+
+message WithdrawPluginVersionRequest {
+  string plugin_version_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message WithdrawPluginVersionResponse {
+  PluginVersion version = 10;
+}
+
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+  repeated marketplace.v1.Category categories = 10;
+}

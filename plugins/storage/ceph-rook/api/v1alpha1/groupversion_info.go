@@ -1,0 +1,22 @@
+// Package v1alpha1 contains API Schema definitions for the storage.fundament.io v1alpha1 API group.
+// +kubebuilder:object:generate=true
+// +groupName=storage.fundament.io
+package v1alpha1
+
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+var (
+	// GroupVersion is group version used to register these objects.
+	GroupVersion = schema.GroupVersion{Group: "storage.fundament.io", Version: "v1alpha1"}
+
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
+	// The deprecation is about api packages pulling in controller-runtime; this
+	// package is a plugin-local API and already depends on it via the scheme.
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion} //nolint:staticcheck // SA1019: kubebuilder's scaffolded pattern
+
+	// AddToScheme adds the types in this group-version to the given scheme.
+	AddToScheme = SchemeBuilder.AddToScheme
+)

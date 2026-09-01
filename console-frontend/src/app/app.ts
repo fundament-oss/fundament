@@ -597,7 +597,9 @@ export default class App implements OnInit {
    */
   onPaneBack(event: Event): void {
     const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
-    this.pageNav.goTo(pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : parentOf(this.router.url));
+    this.pageNav.goTo(
+      pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : parentOf(this.router.url),
+    );
   }
 
   isMembersActive(): boolean {

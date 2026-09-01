@@ -19,6 +19,7 @@ import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
+import { getUsagePercentage } from '../utils/usage';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
@@ -78,6 +79,9 @@ interface ClusterSummaryData {
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
   pods: { used: number; total: number };
+  // The backend could not reach this cluster's Prometheus (provisioning,
+  // hibernated, ingress down). Its zeros are placeholders, not measurements.
+  unavailable: boolean;
 }
 
 export type TimeRangePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -102,11 +106,6 @@ const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> 
 };
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
-
-function getUsagePercentage(used: number, total: number): number {
-  if (total === 0) return 0;
-  return Math.round((used / total) * 100);
-}
 
 /** The DS progress bar takes a colour name, not a utility class. */
 function usageColor(used: number, total: number): string {
@@ -285,7 +284,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   selectedNamespace = signal('');
 
-  selectedPreset = signal<TimeRangePreset>('7d');
+  // Default to 1h: young clusters have little history, and the longer ranges
+  // render near-invisibly sparse lines until enough samples accumulate.
+  selectedPreset = signal<TimeRangePreset>('1h');
 
   // dateFrom, dateTo, and the chart series arrays are plain fields rather than
   // signals. Chart updates are imperative (Chart.js update()), so they don't
@@ -349,6 +350,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   clusterTotals = signal<ClusterUsageData | null>(null);
 
+  // The backend could not reach the metrics backend for the current cluster
+  // or project view; its zero totals are placeholders, not measurements.
+  totalsUnavailable = signal(false);
+
   nodeUsage = signal<NodeUsageData[]>([]);
 
   namespaceUsage = signal<NamespaceUsageData[]>([]);
@@ -369,7 +374,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   constructor() {
     this.titleService.setTitle('Metrics');
-    this.applyPreset('7d');
+    this.applyPreset('1h');
   }
 
   ngOnInit() {
@@ -757,6 +762,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         }
       : null;
 
+    this.totalsUnavailable.set(r.metricsUnavailable);
+
     if (this.viewMode() === 'project') {
       this.projectTotals.set(totals);
     } else if (this.selectedClusterId()) {
@@ -778,6 +785,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
           cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
           memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
           pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+          unavailable: c.metricsUnavailable,
         })),
       );
     }

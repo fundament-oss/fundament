@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 17
 :state: proposed
 
 = ADR-0017: Cloud sovereignty framework

@@ -8,6 +8,12 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "plugin-proxy" "component" "backend") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
+    {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+    # `auto` only tracks what a pod actually references, and the sandbox kubeconfig is
+    # mounted optional: true — created out of band after this pod is already running, so
+    # the pod never referenced it and a later create goes unnoticed. Name it explicitly.
+    secret.reloader.stakater.com/reload: {{ $.Values.pluginProxy.sandboxKubeconfigSecret | quote }}
+    {{- end }}
 spec:
   replicas: {{ $.Values.pluginProxy.replicas }}
   selector:

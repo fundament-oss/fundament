@@ -19,15 +19,16 @@ func (s *Server) GetPluginDefinition(
 ) (*organizationv1.GetPluginDefinitionResponse, error) {
 	name := req.GetPluginName()
 	version := req.GetPluginVersion()
-	if name == "" || version == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plugin_name and plugin_version are required"))
+	orgName := req.GetOrganizationName()
+	if orgName == "" || name == "" || version == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("organization_name, plugin_name and plugin_version are required"))
 	}
 	row, err := s.queries.PluginDefinitionGetActive(ctx, db.PluginDefinitionGetActiveParams{
-		Name: name, PluginVersion: version,
+		OrganizationName: orgName, PluginName: name, PluginVersion: version,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plugin definition %s@%s not found", name, version))
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plugin definition %s/%s@%s not found", orgName, name, version))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get plugin definition: %w", err))
 	}

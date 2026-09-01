@@ -280,25 +280,36 @@
               </h2>
             </nldd-title>
             <nldd-spacer size="16"></nldd-spacer>
-            <!-- No spinner here: the bars themselves are the loading state. They
-                 keep their labels, drain to zero and drop their value text, so
-                 nothing moves and the refill is the data arriving. -->
-            <nldd-container
-              layout="stack"
-              gap="16"
-            >
-              @for (metric of totalBars(); track metric.label) {
-                <nldd-progress-bar
-                  [attr.text]="metric.label"
-                  [attr.value]="metric.used"
-                  [attr.max]="metric.total"
-                  [attr.color]="metric.color"
-                  [attr.value-display]="metric.valueText ? null : 'none'"
-                  [attr.value-text]="metric.valueText || null"
-                  [attr.accessible-label]="metric.accessibleLabel"
-                ></nldd-progress-bar>
-              }
-            </nldd-container>
+            @if (totalsUnavailable()) {
+              <!-- The zeros behind this are an unreachable backend, not a
+                   measurement, and a drained bar would read as one. -->
+              <nldd-inline-dialog
+                icon="analytics"
+                icon-color="secondary"
+                text="Metrics are unavailable for this view"
+                supporting-text="The cluster may still be provisioning, or its monitoring stack is unreachable."
+              ></nldd-inline-dialog>
+            } @else {
+              <!-- No spinner here: the bars themselves are the loading state. They
+                   keep their labels, drain to zero and drop their value text, so
+                   nothing moves and the refill is the data arriving. -->
+              <nldd-container
+                layout="stack"
+                gap="16"
+              >
+                @for (metric of totalBars(); track metric.label) {
+                  <nldd-progress-bar
+                    [attr.text]="metric.label"
+                    [attr.value]="metric.used"
+                    [attr.max]="metric.total"
+                    [attr.color]="metric.color"
+                    [attr.value-display]="metric.valueText ? null : 'none'"
+                    [attr.value-text]="metric.valueText || null"
+                    [attr.accessible-label]="metric.accessibleLabel"
+                  ></nldd-progress-bar>
+                }
+              </nldd-container>
+            }
           </nldd-container>
         </nldd-box>
       }
@@ -382,21 +393,29 @@
                       <h3>{{ c.name }}</h3>
                     </nldd-title>
                     <nldd-spacer size="16"></nldd-spacer>
-                    <nldd-container
-                      layout="stack"
-                      gap="16"
-                    >
-                      @for (metric of usageBars(c); track metric.label) {
-                        <nldd-progress-bar
-                          [attr.text]="metric.label"
-                          [attr.value]="metric.used"
-                          [attr.max]="metric.total"
-                          [attr.color]="metric.color"
-                          [attr.value-text]="metric.valueText"
-                          [attr.accessible-label]="metric.label + ' used in ' + c.name"
-                        ></nldd-progress-bar>
-                      }
-                    </nldd-container>
+                    @if (c.unavailable) {
+                      <nldd-inline-dialog
+                        icon="analytics"
+                        icon-color="secondary"
+                        text="Metrics unavailable"
+                      ></nldd-inline-dialog>
+                    } @else {
+                      <nldd-container
+                        layout="stack"
+                        gap="16"
+                      >
+                        @for (metric of usageBars(c); track metric.label) {
+                          <nldd-progress-bar
+                            [attr.text]="metric.label"
+                            [attr.value]="metric.used"
+                            [attr.max]="metric.total"
+                            [attr.color]="metric.color"
+                            [attr.value-text]="metric.valueText"
+                            [attr.accessible-label]="metric.label + ' used in ' + c.name"
+                          ></nldd-progress-bar>
+                        }
+                      </nldd-container>
+                    }
                   </nldd-container>
                 </nldd-card>
               }

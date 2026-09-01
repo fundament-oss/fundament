@@ -20,6 +20,9 @@ spec:
         - name: Plugin
           type: string
           jsonPath: .spec.definitionRef.pluginName
+        - name: Organization
+          type: string
+          jsonPath: .spec.definitionRef.organizationName
         - name: Phase
           type: string
           jsonPath: .status.phase
@@ -45,11 +48,26 @@ spec:
                 definitionRef:
                   type: object
                   required:
+                    - organizationName
                     - pluginName
                     - pluginVersion
                   properties:
+                    organizationName:
+                      type: string
+                      pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+                      description: >-
+                        Publishing organization (tenant.organizations.name).
+                        metadata.name must equal
+                        "<organizationName>--<pluginName>". No consecutive
+                        dashes: the double dash is the separator, so allowing
+                        one here would make the pair ambiguous.
                     pluginName:
                       type: string
+                      pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
+                      description: >-
+                        Plugin name (appstore.plugins.name), unique within the
+                        publishing organization. No consecutive dashes, for the
+                        same reason as organizationName.
                     pluginVersion:
                       type: string
                     definitionHash:
@@ -89,6 +107,8 @@ spec:
                 observedGeneration:
                   type: integer
                   format: int64
+                namespace:
+                  type: string
                 conditions:
                   type: array
                   items:

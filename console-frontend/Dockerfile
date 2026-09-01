@@ -1,10 +1,5 @@
 # Build stage
-# Use a real Node.js (>= v24.15) for `ng build`; Angular CLI 22 rejects Bun's
-# Node-compat version (24.3.0). Bun is still used as the package manager.
-FROM oven/bun:1.3.14-alpine AS bun
-
-FROM node:24.17-alpine AS build
-COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+FROM oven/bun:1.4.0-alpine AS build
 WORKDIR /app
 
 # Copy package files
@@ -31,4 +26,4 @@ COPY --from=build /app/dist/fundament-console/browser /usr/share/nginx/html
 COPY console-frontend/nginx.conf /etc/nginx/conf.d/default.conf.template
 
 EXPOSE 80
-CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '${CONNECT_SRC} ${FRAME_SRC}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

@@ -51,9 +51,6 @@ service ClusterService {
   // Download kubeconfig for a cluster
   rpc GetKubeconfig(GetKubeconfigRequest) returns (GetKubeconfigResponse);
 
-  // Fetch the basic-auth credentials for a cluster's metrics dashboard.
-  rpc GetClusterMetricsCredentials(GetClusterMetricsCredentialsRequest) returns (GetClusterMetricsCredentialsResponse);
-
   // List node pools for a cluster
   rpc ListNodePools(ListNodePoolsRequest) returns (ListNodePoolsResponse);
 
@@ -114,12 +111,15 @@ message ClusterDetails {
   string kubernetes_version = 40;
   ClusterStatus status = 50;
   google.protobuf.Timestamp created = 60;
-  ResourceUsageInfo resource_usage = 70;
+  // 70 carried a never-populated usage stub; live usage comes from the
+  // MetricsService (GetClusterWorkloadMetrics) instead.
+  reserved 70;
+  reserved resource_usage;
   SyncState sync_state = 80;
-  // URL of the per-shoot metrics dashboard (Plutono), resolved from the
-  // <shoot>.monitoring secret in the project namespace. Empty when the
-  // cluster is not ready or the secret is not yet available.
-  string observability_url = 90;
+  // 90 carried the Plutono deep-link URL; retired when the console gained
+  // native metrics panels (ADR-0026).
+  reserved 90;
+  reserved observability_url;
 }
 
 // Resource usage information for a cluster
@@ -214,17 +214,6 @@ message GetKubeconfigRequest {
 // Get kubeconfig response
 message GetKubeconfigResponse {
   string kubeconfig_content = 10;
-}
-
-// Get cluster metrics credentials request
-message GetClusterMetricsCredentialsRequest {
-  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// Get cluster metrics credentials response
-message GetClusterMetricsCredentialsResponse {
-  string username = 10;
-  string password = 20;
 }
 
 // Create node pool request

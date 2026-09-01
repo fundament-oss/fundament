@@ -116,9 +116,12 @@
                   </h2>
                   <!-- Not a second green tag beside "Official": that one says what
                        the plugin is, this says what it does in your clusters. -->
-                  @if (runningInstallCount(plugin.name) > 0) {
+                  @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
                     <span slot="subtitle">
-                      Installed on {{ runningInstallCount(plugin.name) }}/{{ clusterCount }}
+                      Installed on
+                      {{ runningInstallCount(plugin.organizationName, plugin.name) }}/{{
+                        clusterCount
+                      }}
                     </span>
                   }
                 </nldd-title>
@@ -146,7 +149,11 @@
                     data-tour="plugin-install"
                     type="button"
                     (click)="onInstallPlugin(plugin)"
-                    [text]="isPluginInstalledAnywhere(plugin.name) ? 'Manage' : 'Install…'"
+                    [text]="
+                      isPluginInstalledAnywhere(plugin.organizationName, plugin.name)
+                        ? 'Manage'
+                        : 'Install…'
+                    "
                     variant="primary"
                   ></nldd-button>
                   <nldd-button

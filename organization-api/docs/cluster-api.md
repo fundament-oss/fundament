@@ -87,12 +87,6 @@ curl -X POST http://localhost:8081/organization.v1.ClusterService/GetCluster \
     "kubernetesVersion": "1.28",
     "status": "CLUSTER_STATUS_RUNNING",
     "created": "2025-01-15T10:30:00Z",
-    "resourceUsage": {
-      "cpu": { "used": 0, "total": 0, "unit": "cores" },
-      "memory": { "used": 0, "total": 0, "unit": "GB" },
-      "disk": { "used": 0, "total": 0, "unit": "GB" },
-      "pods": { "used": 0, "total": 0, "unit": "pods" }
-    },
     "nodePools": [],
     "members": [],
     "projects": []
@@ -200,7 +194,6 @@ curl -X POST http://localhost:8081/organization.v1.ClusterService/UpdateCluster 
     "kubernetesVersion": "1.29",
     "status": "CLUSTER_STATUS_UPGRADING",
     "created": "2025-01-15T10:30:00Z",
-    "resourceUsage": { ... },
     "nodePools": [],
     "members": [],
     "projects": []

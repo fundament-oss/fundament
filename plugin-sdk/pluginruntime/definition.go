@@ -159,7 +159,7 @@ type StatusValue struct {
 
 // ParseDefinition decodes and validates a complete, published PluginDefinition
 // from bytes. It is the shared parser used by organization-api and
-// just plugin-publish. It is strict: a valid PluginDefinition always carries an
+// just plugins publish. It is strict: a valid PluginDefinition always carries an
 // image (the image-free source definition.yaml is a template, not a valid
 // definition, until publish injects the image).
 func ParseDefinition(data []byte) (PluginDefinition, error) {

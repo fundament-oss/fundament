@@ -94,6 +94,10 @@ message GetClusterWorkloadMetricsResponse {
   repeated NodeWorkloadMetrics nodes = 20;
   // Per-namespace breakdown
   repeated NamespaceWorkloadMetrics namespaces = 30;
+  // True when the cluster's metrics backend could not be reached; the
+  // usage fields are then zero and should be rendered as unavailable
+  // rather than as real zeros.
+  bool metrics_unavailable = 40;
 }
 
 // NodeWorkloadMetrics describes workload usage for a single Kubernetes node.
@@ -137,6 +141,10 @@ message ClusterWorkloadSummary {
   ResourceUsage cpu = 20;
   ResourceUsage memory = 30;
   ResourceUsage pods = 40;
+  // True when this cluster's metrics backend could not be reached; the
+  // usage fields are then zero and should be rendered as unavailable
+  // rather than as real zeros.
+  bool metrics_unavailable = 50;
 }
 
 // GetOrgWorkloadTimeSeriesRequest requests org-wide aggregated time-series metrics.
@@ -161,6 +169,10 @@ message GetProjectWorkloadMetricsResponse {
   ResourceUsageInfo totals = 10;
   // Per-namespace breakdown limited to this project's namespaces
   repeated NamespaceWorkloadMetrics namespaces = 20;
+  // True when the cluster's metrics backend could not be reached; the
+  // usage fields are then zero and should be rendered as unavailable
+  // rather than as real zeros.
+  bool metrics_unavailable = 30;
 }
 
 // GetProjectWorkloadTimeSeriesRequest requests time-series metrics for a project.
@@ -226,4 +238,9 @@ message StreamWorkloadMetricsResponse {
   GetWorkloadTimeSeriesResponse time_series = 50;
   // Wall-clock time when this snapshot was computed.
   google.protobuf.Timestamp refreshed_at = 60;
+  // True when the metrics backend could not be reached — populated in
+  // cluster and project views (the org view marks individual clusters via
+  // ClusterWorkloadSummary.metrics_unavailable instead). The totals are
+  // then zero and should be rendered as unavailable, not as real zeros.
+  bool metrics_unavailable = 70;
 }

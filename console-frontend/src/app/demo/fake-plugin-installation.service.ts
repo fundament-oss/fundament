@@ -3,6 +3,7 @@
 // actually install a plugin and watch it come up.
 import { Injectable } from '@angular/core';
 import type PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import { pluginResourceName } from '../plugin-installation/plugin-installation.service';
 import { PluginInstallationItem } from '../plugin-resources/types';
 import {
   PLUGIN_INSTALLS_ENSURE_EVENT,
@@ -24,6 +25,7 @@ export const PLUGIN_INSTALLS_CHANGED_EVENT = 'demo:plugin-installs-changed';
 const INSTALL_MS = 3000;
 
 interface DemoInstall {
+  organizationName: string;
   pluginName: string;
   pluginVersion: string;
   definitionHash: string;
@@ -33,12 +35,14 @@ interface DemoInstall {
 
 function toItem(install: DemoInstall): PluginInstallationItem {
   const running = install.startedAt === null || Date.now() - install.startedAt > INSTALL_MS;
+  // Qualify metadata.name the same way the real API does: plugin-details reads it
+  // back through pluginResourceName(organizationName, pluginName) to find this row.
+  const resourceName = pluginResourceName(install.organizationName, install.pluginName);
   return {
-    // The plugins page matches installs to catalog entries on metadata.name, so
-    // keep the catalog name here rather than the RFC-1123 slug the real API uses.
-    metadata: { name: install.pluginName, uid: `demo-${install.pluginName}` },
+    metadata: { name: resourceName, uid: `demo-${install.pluginName}` },
     spec: {
       definitionRef: {
+        organizationName: install.organizationName,
         pluginName: install.pluginName,
         pluginVersion: install.pluginVersion,
         definitionHash: install.definitionHash,
@@ -71,6 +75,7 @@ export default class FakePluginInstallationService implements Pick<
   private static seededInstall(pluginName: string): DemoInstall {
     const plugin = fx.plugins.find((p) => p.name === pluginName);
     return {
+      organizationName: plugin?.organizationName || 'system',
       pluginName,
       pluginVersion: plugin?.pluginVersion || 'demo',
       definitionHash: plugin?.definitionHash || 'sha256:demo',
@@ -116,8 +121,12 @@ export default class FakePluginInstallationService implements Pick<
     return (this.byCluster.get(clusterId) ?? []).map(toItem);
   }
 
+  // `name` is the installation (resource) name, e.g. "system--cert-manager" — the
+  // same identity uninstallPlugin below and the real API take, not the catalog name.
   async getInstallation(clusterId: string, name: string): Promise<PluginInstallationItem | null> {
-    const install = (this.byCluster.get(clusterId) ?? []).find((i) => i.pluginName === name);
+    const install = (this.byCluster.get(clusterId) ?? []).find(
+      (i) => pluginResourceName(i.organizationName, i.pluginName) === name,
+    );
     return install ? toItem(install) : null;
   }
 
@@ -126,15 +135,19 @@ export default class FakePluginInstallationService implements Pick<
   // and the walkthrough's install slide must succeed regardless.
   async installPlugin(
     clusterId: string,
+    organizationName: string,
     pluginName: string,
     pluginVersion: string,
     definitionHash: string,
   ): Promise<void> {
     const current = this.byCluster.get(clusterId) ?? [];
-    if (current.some((i) => i.pluginName === pluginName)) return;
+    // Match on the pair: two organizations may publish the same pluginName.
+    if (current.some((i) => i.organizationName === organizationName && i.pluginName === pluginName))
+      return;
     this.byCluster.set(clusterId, [
       ...current,
       {
+        organizationName,
         pluginName,
         pluginVersion: pluginVersion || 'demo',
         definitionHash: definitionHash || 'sha256:demo',
@@ -144,11 +157,13 @@ export default class FakePluginInstallationService implements Pick<
     FakePluginInstallationService.notifyChanged();
   }
 
-  async uninstallPlugin(clusterId: string, pluginName: string): Promise<void> {
+  // Real callers pass the installation (resource) name — e.g.
+  // pluginResourceName(plugin.organizationName, plugin.name) — not the catalog name.
+  async uninstallPlugin(clusterId: string, resourceName: string): Promise<void> {
     const current = this.byCluster.get(clusterId) ?? [];
     this.byCluster.set(
       clusterId,
-      current.filter((i) => i.pluginName !== pluginName),
+      current.filter((i) => pluginResourceName(i.organizationName, i.pluginName) !== resourceName),
     );
     FakePluginInstallationService.notifyChanged();
   }

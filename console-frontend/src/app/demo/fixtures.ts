@@ -9,7 +9,6 @@ import {
   ClusterDetailsSchema,
   NodePoolSchema,
   ClusterEventSchema,
-  ResourceUsageInfoSchema,
   RegionSchema,
   RegionMachineTypeSchema,
   type NodePool,
@@ -34,7 +33,7 @@ import {
   type PluginDetail,
   type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, NodePoolStatus, ResourceUsageSchema } from '../../generated/v1/common_pb';
+import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
@@ -90,9 +89,6 @@ export const clusterSummaries = [
   }),
 ];
 
-const usage = (used: number, total: number, unit: string) =>
-  create(ResourceUsageSchema, { used, total, unit });
-
 export const clusterDetails = new Map(
   [
     create(ClusterDetailsSchema, {
@@ -102,13 +98,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.34.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(180),
-      observabilityUrl: 'https://grafana.fundament.example/d/production',
-      resourceUsage: create(ResourceUsageInfoSchema, {
-        cpu: usage(5200, 16000, 'm'),
-        memory: usage(11, 32, 'Gi'),
-        pods: usage(48, 330, 'pods'),
-        disk: usage(120, 500, 'Gi'),
-      }),
     }),
     create(ClusterDetailsSchema, {
       id: 'cl-staging',
@@ -117,13 +106,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.33.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(90),
-      observabilityUrl: 'https://grafana.fundament.example/d/staging',
-      resourceUsage: create(ResourceUsageInfoSchema, {
-        cpu: usage(1800, 8000, 'm'),
-        memory: usage(4, 16, 'Gi'),
-        pods: usage(17, 220, 'pods'),
-        disk: usage(40, 250, 'Gi'),
-      }),
     }),
   ].map((c) => [c.id, c] as const),
 );
@@ -532,6 +514,9 @@ const definitionHash = (name: string, version: string) => {
 
 /** The catalog fields that follow from a plugin's latest published version. */
 const published = (name: string) => ({
+  // First-party demo plugins are published by the seeded 'system' organization,
+  // mirroring db/migrations/033_org-owned-plugins.up.sql.
+  organizationName: 'system',
   image: `ghcr.io/fundament/plugins/${name}:${latestVersion(name)}`,
   pluginVersion: latestVersion(name),
   definitionHash: definitionHash(name, latestVersion(name)),
@@ -658,6 +643,7 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
   return create(PluginDetailSchema, {
     id: summary.id,
     name: summary.name,
+    organizationName: summary.organizationName,
     displayName: summary.displayName,
     description: summary.description,
     descriptionShort: summary.descriptionShort,
@@ -780,8 +766,9 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
       { group: 'cert-manager.io', version: 'v1', resource: 'certificates', verbs: ['get', 'list'] },
     ],
     installationId: 'demo-cert-manager',
-    installationName: 'cert-manager',
+    installationName: 'system--cert-manager',
     installationVersion: 'v1.17.2',
+    organizationName: 'system',
   },
 };
 

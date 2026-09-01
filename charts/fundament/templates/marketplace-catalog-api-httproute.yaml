@@ -1,0 +1,18 @@
+{{- if $.Values.marketplaceCatalogApi.httproute.enabled }}
+{{- if not $.Values.marketplaceCatalogApi.httproute.parentRefs }}{{ fail "marketplaceCatalogApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-marketplace-catalog-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-catalog-api" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.marketplaceCatalogApi.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.marketplaceCatalogApi.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: marketplace-catalog-api
+          port: 8080
+{{- end }}
