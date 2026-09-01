@@ -3,6 +3,7 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY marketplace-api/ ./marketplace-api/
+COPY plugin-sdk/pluginruntime/ ./plugin-sdk/pluginruntime/
 COPY common/ ./common/
 RUN CGO_ENABLED=0 go build -o /build/bin/marketplace-catalog-api ./marketplace-api/cmd/fun-marketplace-catalog-api
 

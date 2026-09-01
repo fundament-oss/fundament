@@ -71,14 +71,13 @@ func (x PluginLabel) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Ordering applied by ListPlugins. UNSPECIFIED sorts as FEATURED.
+// Ordering applied by ListPlugins. UNSPECIFIED sorts as NAME.
 type PluginSort int32
 
 const (
 	PluginSort_PLUGIN_SORT_UNSPECIFIED    PluginSort = 0
 	PluginSort_PLUGIN_SORT_RECENTLY_ADDED PluginSort = 1
 	PluginSort_PLUGIN_SORT_NAME           PluginSort = 2
-	PluginSort_PLUGIN_SORT_FEATURED       PluginSort = 3
 )
 
 // Enum value maps for PluginSort.
@@ -87,13 +86,11 @@ var (
 		0: "PLUGIN_SORT_UNSPECIFIED",
 		1: "PLUGIN_SORT_RECENTLY_ADDED",
 		2: "PLUGIN_SORT_NAME",
-		3: "PLUGIN_SORT_FEATURED",
 	}
 	PluginSort_value = map[string]int32{
 		"PLUGIN_SORT_UNSPECIFIED":    0,
 		"PLUGIN_SORT_RECENTLY_ADDED": 1,
 		"PLUGIN_SORT_NAME":           2,
-		"PLUGIN_SORT_FEATURED":       3,
 	}
 )
 
@@ -129,13 +126,12 @@ const file_catalog_v1_common_proto_rawDesc = "" +
 	"\x18PLUGIN_LABEL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11PLUGIN_LABEL_CORE\x10\x01\x12\x1e\n" +
 	"\x1aPLUGIN_LABEL_RIJKSOVERHEID\x10\x02\x12 \n" +
-	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03*y\n" +
+	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03*_\n" +
 	"\n" +
 	"PluginSort\x12\x1b\n" +
 	"\x17PLUGIN_SORT_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aPLUGIN_SORT_RECENTLY_ADDED\x10\x01\x12\x14\n" +
-	"\x10PLUGIN_SORT_NAME\x10\x02\x12\x18\n" +
-	"\x14PLUGIN_SORT_FEATURED\x10\x03BaZUgithub.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x10PLUGIN_SORT_NAME\x10\x02BaZUgithub.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_catalog_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_catalog_v1_common_proto_goTypes = []any{

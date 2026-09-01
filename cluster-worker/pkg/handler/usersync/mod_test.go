@@ -63,7 +63,7 @@ func TestApplyUserAccessNone(t *testing.T) {
 
 	// Pre-populate SA + CRB to verify they get deleted.
 	_ = mock.EnsureServiceAccount(context.Background(), clusterID, shoot.FundamentNamespace, shoot.SAName(userID), nil, nil)
-	_ = mock.EnsureClusterRoleBinding(context.Background(), clusterID, shoot.CRBName(userID), "", "", nil, nil)
+	_ = mock.EnsureClusterRoleBinding(context.Background(), clusterID, shoot.CRBName(userID), "cluster-admin", "", "", nil, nil)
 	require.True(t, mock.HasSA(clusterID, userID))
 	require.True(t, mock.HasCRB(clusterID, userID))
 
