@@ -409,7 +409,7 @@ func TestReconcileOrphanedSADeleted(t *testing.T) {
 		map[string]string{shoot.AnnotationUserName: "orphan@example.com"},
 	)
 	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
-		shoot.CRBName(orphanUserID), shoot.FundamentNamespace, shoot.SAName(orphanUserID),
+		shoot.CRBName(orphanUserID), "cluster-admin", shoot.FundamentNamespace, shoot.SAName(orphanUserID),
 		map[string]string{shoot.LabelUserID: orphanUserID.String()},
 		map[string]string{shoot.AnnotationUserName: "orphan@example.com"},
 	)
@@ -454,7 +454,7 @@ func TestReconcileCRBMismatchFixed(t *testing.T) {
 		map[string]string{shoot.AnnotationUserName: "user@example.com"},
 	)
 	_ = mock.EnsureClusterRoleBinding(t.Context(), clusterID,
-		shoot.CRBName(userID), shoot.FundamentNamespace, shoot.SAName(userID),
+		shoot.CRBName(userID), "cluster-admin", shoot.FundamentNamespace, shoot.SAName(userID),
 		map[string]string{shoot.LabelUserID: userID.String()},
 		map[string]string{shoot.AnnotationUserName: "user@example.com"},
 	)

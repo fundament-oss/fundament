@@ -223,7 +223,7 @@ func (h *Handler) applyUserAccess(ctx context.Context, clusterID, userID uuid.UU
 		if err := h.shoot.EnsureServiceAccount(ctx, clusterID, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 			return fmt.Errorf("ensure SA for admin: %w", err)
 		}
-		if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
+		if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.ClusterAdminRole, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 			return fmt.Errorf("ensure CRB for admin: %w", err)
 		}
 		h.logger.Info("synced admin access",
@@ -344,7 +344,7 @@ func (h *Handler) applyReconcilePlan(ctx context.Context, clusterID uuid.UUID, p
 			annotations := map[string]string{shoot.AnnotationUserName: action.Email}
 			saName := shoot.SAName(action.UserID)
 			crbName := shoot.CRBName(action.UserID)
-			if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
+			if err := h.shoot.EnsureClusterRoleBinding(ctx, clusterID, crbName, shoot.ClusterAdminRole, shoot.FundamentNamespace, saName, labels, annotations); err != nil {
 				errs = append(errs, err)
 			}
 		case ActionDeleteCRB:
@@ -446,7 +446,7 @@ func clusterRoleBindingMatches(resource *shoot.ResourceInfo, userID uuid.UUID, l
 	expectedRoleRef := rbacv1.RoleRef{
 		APIGroup: "rbac.authorization.k8s.io",
 		Kind:     "ClusterRole",
-		Name:     "cluster-admin",
+		Name:     shoot.ClusterAdminRole,
 	}
 
 	return resource.RoleRef == expectedRoleRef &&
