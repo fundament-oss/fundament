@@ -45,9 +45,10 @@ tofu init -upgrade
 ### Build from source
 
 ```bash
-# From the terraform-provider directory
-just terraform-provider::build
+just terraform-provider::install
 ```
+
+This builds the provider and installs it as version `0.1.0` for your platform in the local plugin directory, replacing any downloaded package for that platform.
 
 ## Using the Provider
 

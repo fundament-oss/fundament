@@ -13,9 +13,9 @@ install: build
     ARCH=$(go env GOARCH)
     MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
     PLUGIN_DIR=${MIRROR}/0.1.0/${OS}_${ARCH}
-    # Remove downloaded release packages so this dev build is the only 0.1.0
-    # in the mirror.
-    rm -f "$MIRROR"/terraform-provider-fundament_*.zip
+    # Remove a downloaded release package for this platform so the dev build
+    # is the only 0.1.0 in the mirror.
+    rm -fv "$MIRROR"/terraform-provider-fundament_*_${OS}_${ARCH}.zip
     mkdir -p "$PLUGIN_DIR"
     cp terraform-provider-fundament "$PLUGIN_DIR/"
 
