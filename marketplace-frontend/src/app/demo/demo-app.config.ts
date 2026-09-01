@@ -15,16 +15,33 @@ import { ConfigService, CONFIG_LOADER, AppConfiguration } from '../config.servic
 import { CATALOG_TRANSPORT, REGISTRY_TRANSPORT } from '../../connect/tokens';
 import { createDemoCatalogTransport, createDemoRegistryTransport } from './mock-transport';
 
-// Dummy URLs — the demo transports are in-memory and ignore baseUrl. `consoleUrl`
-// is deliberately empty: the storefront's "Install plugin" button would otherwise
-// navigate the embedded frame off the demo origin, so instead it explains the
-// hand-off with a toast and the walkthrough's next slide shows the console doing
-// the install for real. `adminApiUrl` is required by the type but unreachable:
-// `demoRoutes` drops the routes that would build the admin transport.
+// Dummy URLs — the demo transports are in-memory and ignore baseUrl.
+// `adminApiUrl` is required by the type but unreachable: `demoRoutes` drops the
+// routes that would build the admin transport.
+//
+// `consoleUrl` is the console demo's own origin, because that is where this
+// bundle is served from: `build-marketplace-demo.ts` drops it under
+// /marketplace/ on the console, and both demos seed the same plugin ids, so a
+// listing's "Install plugin" button lands on a console page that really
+// resolves.
+//
+// It stays set inside the deck's iframe too, which is what the slide narrates:
+// installing happens in the console. The stage then shows the console's plugin
+// page, loaded in this frame as its own instance, and the next slide is a
+// console slide that hides the frame, so the deck is back to one console by
+// itself.
+//
+// `present=0` is what keeps that instance a plain console: the demo build
+// presents by default, so without it the console arrives running its own
+// walkthrough over the page the visitor asked for — in a frame that narrow,
+// nothing but the deck's "works best on a large screen" notice. The storefront
+// carries the query through to the plugin page. `window` is safe at module
+// scope: this entrypoint is browser-only and never server-rendered.
 const demoConfig: AppConfiguration = {
   catalogApiUrl: 'demo://catalog',
   registryApiUrl: 'demo://registry',
   adminApiUrl: 'demo://admin',
+  consoleUrl: `${window.location.origin}/?present=0`,
 };
 
 // The backoffice is not part of the walkthrough and has no in-memory transport,

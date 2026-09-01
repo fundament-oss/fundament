@@ -45,11 +45,23 @@ export default class PluginDetailComponent implements OnInit {
   // authenticated console has, so the storefront's "Install plugin" button
   // hands the visitor over to it. Both apps list the same appstore.plugins
   // rows, so the id in the URL is the same key on the other side.
+  //
+  // Composed through URL rather than string concatenation so a query or hash on
+  // the configured value survives: the demo points this at a console that
+  // presents by default and has to say `?present=0` to land on the plugin page.
+  // An unparseable value falls back to the no-console behaviour instead of
+  // throwing, which during a server render would take the whole page down.
   consoleInstallUrl = computed(() => {
     const plugin = this.plugin();
     const consoleUrl = this.configService.getConfig().consoleUrl;
     if (!plugin || !consoleUrl) return '';
-    return `${consoleUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
+    try {
+      const url = new URL(consoleUrl);
+      url.pathname = `${url.pathname.replace(/\/+$/, '')}/plugins/${plugin.id}`;
+      return url.toString();
+    } catch {
+      return '';
+    }
   });
 
   async ngOnInit() {
