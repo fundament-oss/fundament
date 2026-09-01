@@ -18,19 +18,19 @@ import InstallPluginModalComponent, {
 } from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
-import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { PLUGIN, CLUSTER, CATALOG } from '../../connect/tokens';
 import {
   PRESENTATION_ENABLED,
   PLUGIN_INSTALLS_RESET_EVENT,
 } from '../presentation/presentation.tokens';
+import { ListPresetsRequestSchema, type Category, type Preset } from '../../generated/v1/plugin_pb';
 import {
   ListPluginsRequestSchema,
-  ListPresetsRequestSchema,
-  ListPluginDefinitionsRequestSchema,
-  type Category,
-  type Preset,
+  ListCategoriesRequestSchema,
+  ListPublishersRequestSchema,
+  ListPluginVersionsRequestSchema,
   type PluginSummary,
-} from '../../generated/v1/plugin_pb';
+} from '../../generated/catalog/v1/catalog_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
@@ -54,18 +54,14 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
 // resource name in the cluster; `displayName` (e.g. "OpenFSC") is what a user sees.
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  | 'id'
-  | 'name'
-  | 'organizationName'
-  | 'displayName'
-  | 'descriptionShort'
-  | 'description'
-  | 'categories'
-  | 'tags'
-  | 'image'
-  | 'pluginVersion'
-  | 'definitionHash'
+  'id' | 'name' | 'displayName' | 'descriptionShort' | 'image'
 > {
+  // Resolved from catalog.v1, which returns ids and leaves the names to
+  // ListPublishers and ListCategories rather than repeating them per plugin.
+  organizationName: string;
+  categories: { id: string; name: string }[];
+  // catalog.v1 tags are plain labels with no identity of their own.
+  tags: string[];
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
 
@@ -110,7 +106,10 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 export default class PluginsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
+  // organization.v1 for presets, which the catalog does not serve.
   private pluginClient = inject(PLUGIN);
+
+  private catalogClient = inject(CATALOG);
 
   private clusterClient = inject(CLUSTER);
 
@@ -207,11 +206,23 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
 
     try {
-      // Fetch plugins and presets in parallel; use pre-fetched cluster data from service
-      const [pluginsResponse, presetsResponse] = await Promise.all([
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
-        firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
-      ]);
+      // The catalog returns organization and category ids; their names come
+      // from ListPublishers and ListCategories, fetched alongside rather than
+      // per plugin. Presets are still organization.v1's.
+      const [pluginsResponse, categoriesResponse, publishersResponse, presetsResponse] =
+        await Promise.all([
+          firstValueFrom(this.catalogClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+          firstValueFrom(
+            this.catalogClient.listCategories(create(ListCategoriesRequestSchema, {})),
+          ),
+          firstValueFrom(
+            this.catalogClient.listPublishers(create(ListPublishersRequestSchema, {})),
+          ),
+          firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
+        ]);
+
+      const categoryNames = new Map(categoriesResponse.categories.map((c) => [c.id, c.name]));
+      const publisherNames = new Map(publishersResponse.publishers.map((p) => [p.id, p.name]));
 
       // Store backend presets
       this.backendPresets = presetsResponse.presets;
@@ -230,15 +241,19 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return {
           id: backendPlugin.id,
           name: backendPlugin.name,
-          organizationName: backendPlugin.organizationName,
+          // Every listed plugin's publisher has a live listing, so ListPublishers
+          // always has it; falling back to the id rather than '' keeps a miss
+          // traceable instead of installing under a nameless "--<plugin>".
+          organizationName:
+            publisherNames.get(backendPlugin.organizationId) ?? backendPlugin.organizationId,
           displayName: backendPlugin.displayName,
-          description: backendPlugin.description,
           descriptionShort: backendPlugin.descriptionShort,
-          categories: backendPlugin.categories,
+          categories: backendPlugin.categoryIds.map((id) => ({
+            id,
+            name: categoryNames.get(id) ?? id,
+          })),
           tags: backendPlugin.tags,
           image: backendPlugin.image,
-          pluginVersion: backendPlugin.pluginVersion,
-          definitionHash: backendPlugin.definitionHash,
           presets: assignedPresets,
         };
       });
@@ -532,7 +547,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // True when the plugin is installed (in any phase) on at least one cluster.
   isPluginInstalledAnywhere(organizationName: string, pluginName: string): boolean {
     return this.installs().some(
-      (install) => install.organizationName === organizationName && install.pluginName === pluginName,
+      (install) =>
+        install.organizationName === organizationName && install.pluginName === pluginName,
     );
   }
 
@@ -572,11 +588,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
     const resp = await firstValueFrom(
-      this.pluginClient.listPluginDefinitions(
-        create(ListPluginDefinitionsRequestSchema, { pluginId }),
-      ),
+      this.catalogClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
     );
-    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
+    return resp.versions.map((v) => ({ version: v.version, hash: v.definitionHash }));
   }
 
   closeInstallModal(): void {

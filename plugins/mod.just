@@ -91,28 +91,28 @@ status:
     kubectl --context {{ kube_context }} get plugininstallations
 
 
-# Wire the sandbox plugin-controller (k3d-fundament-plugin) to organization-api in
+# Wire the sandbox plugin-controller (k3d-fundament-plugin) to marketplace-catalog-api in
 # the management cluster (k3d-fundament) so it can fetch PluginDefinitions (FUN-19).
-# Local dev only: the two k3d clusters are network-isolated. We expose org-api as a
-# NodePort in the management cluster and run a small relay container on the
+# Local dev only: the two k3d clusters are network-isolated. We expose the catalog
+# as a NodePort in the management cluster and run a small relay container on the
 # management cluster's docker network that publishes a host port; the sandbox
-# controller reaches it via host.k3d.internal (pluginController.organizationApiUrl
+# controller reaches it via host.k3d.internal (pluginController.catalogApiUrl
 # in plugins/sandbox/values.yaml is http://host.k3d.internal:38080).
 #
 # We deliberately do NOT bridge the sandbox k3d nodes onto the management network:
 # multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
 # which stops plugins pulling their images. Only the relay container is bridged.
 # Re-run this after recreating either cluster (the node IP is resolved fresh).
-sandbox-orgapi:
+sandbox-catalog:
     #!/usr/bin/env bash
     set -euo pipefail
     HOSTPORT=38080
     NODEPORT=30080
-    RELAY=fun-orgapi-relay
+    RELAY=fun-catalog-relay
 
-    # 1. Expose organization-api's Connect port as a NodePort in the mgmt cluster.
+    # 1. Expose marketplace-catalog-api's Connect port as a NodePort in the mgmt cluster.
     #    Path is relative to plugins/ (this Justfile's dir), like the skaffold recipes.
-    kubectl --context k3d-fundament apply -f sandbox/organization-api-nodeport.yaml
+    kubectl --context k3d-fundament apply -f sandbox/marketplace-catalog-api-nodeport.yaml
 
     # 2. Resolve a management-cluster node IP on its docker network.
     node_ip=$(docker inspect k3d-fundament-server-0 \
@@ -130,8 +130,8 @@ sandbox-orgapi:
         -p "0.0.0.0:${HOSTPORT}:8080" \
         alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${NODEPORT}" >/dev/null
 
-    echo "- organization-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
-    echo "  (matches pluginController.organizationApiUrl in plugins/sandbox/values.yaml)"
+    echo "- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
+    echo "  (matches pluginController.catalogApiUrl in plugins/sandbox/values.yaml)"
 
 # Build+push a plugin image, then publish its definition (with the pushed digest)
 # to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112),

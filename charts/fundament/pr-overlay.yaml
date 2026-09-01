@@ -85,6 +85,7 @@ spec:
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
+      marketplace: https://marketplace-api.pr${PR_NUM}.${DOMAIN}
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}

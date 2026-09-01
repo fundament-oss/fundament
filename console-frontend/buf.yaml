@@ -2,6 +2,7 @@ version: v2
 modules:
   - path: ../authn-api/pkg/proto
   - path: ../organization-api/pkg/proto
+  - path: ../marketplace-api/pkg/proto
 deps:
   - buf.build/bufbuild/protovalidate
 lint:
