@@ -31,6 +31,16 @@ message Category {
   string name = 20;
 }
 
+// A curated set of plugins the storefront offers as a starting point.
+// plugin_ids carries only the listings the caller can see, so an anonymous
+// visitor never learns of a RESTRICTED or unpublished one through a preset.
+message Preset {
+  string id = 10;
+  string name = 20;
+  string description = 30;
+  repeated string plugin_ids = 40;
+}
+
 // A publishing organization, projected from tenant.organizations. Served by
 // each API's own ListPublishers, because organization-api's GetOrganization is
 // scoped to members and neither an anonymous visitor nor a Fundament reviewer

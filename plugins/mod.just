@@ -110,6 +110,13 @@ sandbox-catalog:
     NODEPORT=30080
     RELAY=fun-catalog-relay
 
+    # 0. Clean up what the pre-catalog recipe left behind: the old Service holds
+    #    the same fixed nodePort, and the old relay still binds HOSTPORT under a
+    #    name the rm below no longer matches. Both make this recipe fail.
+    kubectl --context k3d-fundament delete service organization-api-sandbox-np \
+        -n fundament --ignore-not-found
+    docker rm -f fun-orgapi-relay >/dev/null 2>&1 || true
+
     # 1. Expose marketplace-catalog-api's Connect port as a NodePort in the mgmt cluster.
     #    Path is relative to plugins/ (this Justfile's dir), like the skaffold recipes.
     kubectl --context k3d-fundament apply -f sandbox/marketplace-catalog-api-nodeport.yaml

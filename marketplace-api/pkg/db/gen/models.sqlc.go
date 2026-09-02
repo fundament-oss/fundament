@@ -3,3 +3,19 @@
 //   sqlc v1.30.0
 
 package db
+
+import (
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type AppstorePreset struct {
+	ID          uuid.UUID
+	Name        string
+	Description pgtype.Text
+}
+
+type AppstorePresetPlugin struct {
+	PresetID uuid.UUID
+	PluginID uuid.UUID
+}

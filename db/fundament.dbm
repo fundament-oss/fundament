@@ -1541,7 +1541,7 @@ END;]]> </definition>
 	<predicate> <![CDATA[published IS NOT NULL AND deleted IS NULL]]> </predicate>
 </index>
 
-<table name="presets" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
+<table name="presets" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="-200" y="2360"/>
@@ -1562,7 +1562,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="preset_plugins" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
+<table name="preset_plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="320" y="2160"/>
@@ -1661,6 +1661,22 @@ END;]]> </definition>
 		<columns names="plugin_id,category_id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<policy name="presets_all_api" table="appstore.presets" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="presets_select_catalog" table="appstore.presets" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="preset_plugins_all_api" table="appstore.preset_plugins" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="preset_plugins_select_catalog" table="appstore.preset_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.preset_plugins.plugin_id)]]> </expression>
+</policy>
 
 <policy name="categories_plugins_all_api" table="appstore.categories_plugins" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
@@ -5017,6 +5033,16 @@ END;]]> </definition>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_marketplace_catalog_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.presets" type="table"/>
+	<roles names="fun_marketplace_catalog_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.preset_plugins" type="table"/>
 	<roles names="fun_marketplace_catalog_api"/>
 	<privileges select="true"/>
 </permission>

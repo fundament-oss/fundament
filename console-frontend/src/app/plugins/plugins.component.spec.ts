@@ -5,9 +5,8 @@ import PluginsComponent from './plugins.component';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { ToastService } from '../toast.service';
-import { PLUGIN, CLUSTER, CATALOG } from '../../connect/tokens';
+import { CLUSTER, CATALOG } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
-import { PluginService } from '../../generated/v1/plugin_pb';
 import {
   PluginSummarySchema,
   CatalogService,
@@ -69,17 +68,12 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
   TestBed.configureTestingModule({
     providers: [
       {
-        provide: PLUGIN,
-        useValue: {
-          listPresets: () => of({ presets: [] }),
-        } as unknown as ObservableClient<typeof PluginService>,
-      },
-      {
         provide: CATALOG,
         useValue: {
           listPlugins: () => of({ plugins }),
           listCategories: () => of({ categories: [] }),
           listPublishers: () => of({ publishers }),
+          listPresets: () => of({ presets: [] }),
         } as unknown as ObservableClient<typeof CatalogService>,
       },
       {
