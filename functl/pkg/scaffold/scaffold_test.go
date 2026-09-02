@@ -73,8 +73,8 @@ func TestGenerateGolden(t *testing.T) {
 
 // TestGeneratedProjectBuilds is the test that actually protects the templates: a
 // golden diff catches drift, but only a compiler catches a template that emits
-// invalid Go. The generated go.mod points at this repo's plugin-sdk so the test
-// is hermetic and does not depend on a published tag.
+// invalid Go. The generated go.mod points at this repo so the test is hermetic
+// and does not depend on a published tag.
 func TestGeneratedProjectBuilds(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds each generated project; skipped under -short")
@@ -83,7 +83,7 @@ func TestGeneratedProjectBuilds(t *testing.T) {
 	if err != nil {
 		t.Skip("go not found in PATH")
 	}
-	sdk, err := filepath.Abs(filepath.Join("..", "..", "..", "plugin-sdk"))
+	sdk, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	require.NoError(t, err)
 	require.DirExists(t, sdk)
 

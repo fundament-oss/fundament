@@ -10,8 +10,6 @@ _default:
 fmt:
     @find . -type f \( -name "*.md" -o -name "*.adoc" -o -name "*.drawio.svg" \) -exec perl -pi -e 's/enterprise/𝑒𝑛𝑡𝑒𝑟𝑝𝑟𝑖𝑠𝑒/g' {} +
     go fmt ./...
-    # plugin-sdk is a separate Go module; ./... stops at the module boundary.
-    cd plugin-sdk && go fmt ./...
     # TODO md fmt
 
 # --- Cluster commands ---
@@ -231,8 +229,6 @@ db-shell:
 generate:
     cd db && trek generate --stdout
     go generate -x ./...
-    # plugin-sdk is a separate Go module; ./... stops at the module boundary.
-    cd plugin-sdk && go generate -x ./...
     cd console-frontend && buf generate
     cd console-frontend && bunx openapi-ts
     cd e2e && buf generate
@@ -242,9 +238,6 @@ generate:
 # Lint all Go code
 lint:
     golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
-    # plugin-sdk is a separate Go module; ./... stops at the module boundary.
-    # The root .golangci.yml is still found by upward search.
-    cd plugin-sdk && golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
 # Run funops against the local development instance/database
 funops *args:

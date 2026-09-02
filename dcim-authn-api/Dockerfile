@@ -2,7 +2,6 @@ FROM golang:1.26.6-alpine AS builder
 RUN apk add --no-cache ca-certificates
 WORKDIR /build
 COPY go.mod go.sum ./
-COPY plugin-sdk/go.mod plugin-sdk/go.sum ./plugin-sdk/
 RUN go mod download
 COPY dcim-authn-api/ ./dcim-authn-api/
 COPY common/ ./common/

@@ -1,7 +1,6 @@
 FROM golang:1.26.6-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
-COPY plugin-sdk/go.mod plugin-sdk/go.sum ./plugin-sdk/
 RUN go mod download
 COPY openfsc-operator/ ./openfsc-operator/
 RUN CGO_ENABLED=0 go build -o /bin/openfsc-operator ./openfsc-operator/cmd

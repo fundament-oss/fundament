@@ -2,7 +2,7 @@ module {{.Module}}
 
 go 1.26.6
 
-require github.com/fundament-oss/fundament/plugin-sdk {{.SDKVersion}}
+require github.com/fundament-oss/fundament {{.SDKVersion}}
 {{if .SDKReplace}}
-replace github.com/fundament-oss/fundament/plugin-sdk => {{.SDKReplace}}
+replace github.com/fundament-oss/fundament => {{.SDKReplace}}
 {{end}}

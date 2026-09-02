@@ -41,8 +41,8 @@ type PluginCreateCmd struct {
 	Kind        string `help:"Kubernetes Kind of that custom resource, e.g. Widget."`
 
 	Dir        string `help:"Directory to create the project in (default: ./<name>)."`
-	SDKVersion string `name:"sdk-version" help:"plugin-sdk version to pin." default:"${sdk_version}"`
-	SDKReplace string `name:"sdk-replace" help:"Point the generated go.mod at a local plugin-sdk checkout instead of a published release."`
+	SDKVersion string `name:"sdk-version" help:"fundament version to pin for the plugin SDK." default:"${sdk_version}"`
+	SDKReplace string `name:"sdk-replace" help:"Point the generated go.mod at a local fundament checkout instead of a published release."`
 
 	Git   bool `help:"Run 'git init' in the new project." default:"true" negatable:""`
 	Tidy  bool `help:"Run 'go mod tidy' in the new project." default:"true" negatable:""`
@@ -113,14 +113,14 @@ func (c *PluginCreateCmd) tidy(opts *scaffold.Options) bool {
 
 	if strings.Contains(string(out), "unknown revision") {
 		fmt.Fprintf(os.Stderr, `
-plugin-sdk %s is not published yet. Until it is, point the project at a local
+fundament %s is not published yet. Until it is, point the project at a local
 checkout of the fundament repository:
 
     cd %s
-    go mod edit -replace github.com/fundament-oss/fundament/plugin-sdk=/path/to/fundament/plugin-sdk
+    go mod edit -replace github.com/fundament-oss/fundament=/path/to/fundament
     go mod tidy
 
-Passing --sdk-replace=/path/to/fundament/plugin-sdk to 'functl plugin create'
+Passing --sdk-replace=/path/to/fundament to 'functl plugin create'
 does the same thing when the project is generated.
 `, opts.SDKVersion, opts.Dir)
 	}
