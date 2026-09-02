@@ -39,14 +39,17 @@ Given('my session is active', async function (this: ICustomWorld) {
 });
 
 When('I navigate to the dashboard', async function (this: ICustomWorld) {
-  await this.page!.goto('/');
+  // An address without an organization is sent into the one this browser was
+  // last in, so the clusters are reached by what they are, not by the root.
+  await this.page!.goto('/clusters');
   await this.page!.waitForLoadState('networkidle');
 });
 
 When(
   'I navigate to a page that loads organization data',
   async function (this: ICustomWorld) {
-    await this.page!.goto('/organization');
+    // The organization's own pages sit inside its address, under 'general'.
+    await this.page!.goto('/general');
     await this.page!.waitForLoadState('networkidle');
   },
 );
@@ -67,12 +70,14 @@ When('I trigger a token refresh', async function (this: ICustomWorld) {
 });
 
 When('I click the logout button', async function (this: ICustomWorld) {
-  // Open user dropdown
-  const userMenuButton = this.page!.locator('.user-dropdown button').first();
+  // Open the user menu
+  const userMenuButton = this.page!.locator(
+    'nldd-icon-button[accessible-label="User menu"]',
+  );
   await userMenuButton.click();
 
   // Click logout
-  const logoutButton = this.page!.getByRole('button', { name: 'Log out' });
+  const logoutButton = this.page!.locator('nldd-menu-item[text="Log out"]');
   await logoutButton.click();
 
   // Wait for navigation
@@ -80,7 +85,7 @@ When('I click the logout button', async function (this: ICustomWorld) {
 });
 
 Then('I should see the dashboard content', async function (this: ICustomWorld) {
-  // Dashboard has a heading with "Dashboard"
+  // The clusters page names itself in its own heading.
   const heading = this.page!.locator('h1:has-text("Clusters")');
   await expect(heading).toBeVisible({ timeout: 10000 });
 });
@@ -98,19 +103,21 @@ Then(
   'the organization data should load successfully',
   async function (this: ICustomWorld) {
     // Wait for loading to finish and data to appear
-    await this.page!.waitForSelector('text=Loading organization', {
-      state: 'hidden',
+    await expect(this.page!.locator('nldd-activity-indicator')).toBeHidden({
       timeout: 10000,
     });
 
-    // Check that organization ID is displayed (indicates successful API call)
-    const orgIdLabel = this.page!.locator('text=Organization ID');
-    await expect(orgIdLabel).toBeVisible();
+    // The row is there once the call came back: label on the left, id on the right.
+    const orgIdRow = this.page!.locator('nldd-list-item').filter({
+      has: this.page!.locator('nldd-text-cell[text="Organization ID"]'),
+    });
+    await expect(orgIdRow).toBeVisible({ timeout: 5000 });
 
-    // Check that the actual ID value is shown (a UUID-like string in a mono font element)
-    const orgIdValue = this.page!.locator('.font-mono').first();
+    const orgIdValue = orgIdRow.locator(
+      'nldd-text-cell[horizontal-alignment="right"]',
+    );
     await expect(orgIdValue).toBeVisible();
-    const idText = await orgIdValue.textContent();
+    const idText = await orgIdValue.getAttribute('text');
     expect(idText?.trim()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
@@ -121,7 +128,7 @@ Then(
   'I should not see an authentication error',
   async function (this: ICustomWorld) {
     // Check that no error message is visible
-    const errorMessage = this.page!.locator('.bg-danger-50, .bg-danger-950');
+    const errorMessage = this.page!.locator('nldd-banner[variant="critical"]');
     await expect(errorMessage).not.toBeVisible();
   },
 );
@@ -137,7 +144,7 @@ Then('I should remain authenticated', async function (this: ICustomWorld) {
 Then(
   'I should still have access to the dashboard',
   async function (this: ICustomWorld) {
-    await this.page!.goto('/');
+    await this.page!.goto('/clusters');
     await this.page!.waitForLoadState('networkidle');
 
     // Should not be redirected to login

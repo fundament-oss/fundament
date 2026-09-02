@@ -16,7 +16,8 @@ export class LoginPage {
       .locator('nldd-password-field#password')
       .locator('input');
     this.submitButton = page.locator('nldd-button[type="submit"]');
-    this.errorMessage = page.locator('.text-danger-800, .text-danger-200');
+    // The form reports a failed sign-in as a critical banner above it.
+    this.errorMessage = page.locator('nldd-banner[variant="critical"]');
     this.validationError = page
       .locator('nldd-validation-item')
       .filter({ hasText: /\S/ });
@@ -44,7 +45,12 @@ export class LoginPage {
   async getErrorMessage(): Promise<string | null> {
     try {
       await this.errorMessage.waitFor({ state: 'visible', timeout: 5000 });
-      return await this.errorMessage.textContent();
+      // The banner keeps its wording in attributes, not in light DOM text.
+      const [text, supporting] = await Promise.all([
+        this.errorMessage.getAttribute('text'),
+        this.errorMessage.getAttribute('supporting-text'),
+      ]);
+      return [text, supporting].filter(Boolean).join(' ');
     } catch {
       return null;
     }
@@ -60,8 +66,8 @@ export class LoginPage {
   }
 
   async isLoading(): Promise<boolean> {
-    const buttonText = await this.submitButton.textContent();
-    return buttonText?.includes('Signing in') ?? false;
+    // The button says it is busy with an attribute rather than with its label.
+    return (await this.submitButton.getAttribute('loading')) !== null;
   }
 
   async isOnLoginPage(): Promise<boolean> {

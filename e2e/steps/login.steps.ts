@@ -33,14 +33,19 @@ Then(
   'I should be redirected to the dashboard',
   async function (this: ICustomWorld) {
     await loginPage.waitForLoginSuccess();
-    // Dashboard is at root path
-    await expect(this.page!).toHaveURL('/');
+    // Logging in lands on the clusters, inside the organization the address names.
+    await expect(this.page!).toHaveURL(/\/organizations\/[^/]+\/clusters$/, {
+      timeout: 10000,
+    });
   },
 );
 
 Then('I should see the main navigation', async function (this: ICustomWorld) {
-  const mainContent = this.page!.locator('main').first();
-  await expect(mainContent).toBeVisible();
+  // The shell's toolbar is what only a logged-in page has.
+  const userMenu = this.page!.locator(
+    'nldd-icon-button[accessible-label="User menu"]',
+  );
+  await expect(userMenu).toBeVisible({ timeout: 10000 });
 });
 
 Then('I should see an error message', async function (this: ICustomWorld) {
@@ -51,7 +56,7 @@ Then(
   'I should see an error message {string}',
   async function (this: ICustomWorld, expectedMessage: string) {
     await expect(loginPage.errorMessage).toBeVisible({ timeout: 5000 });
-    await expect(loginPage.errorMessage).toContainText(expectedMessage);
+    expect(await loginPage.getErrorMessage()).toContain(expectedMessage);
   },
 );
 
