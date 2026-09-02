@@ -29,6 +29,10 @@ charts/fundament/values-gardener-local.yaml
 # Sandbox plugin config recorded by recipes like `just openfsc::operator-push`
 plugins/*/.sandbox-config
 
+# Angular's build cache. Each app ignores its own /.angular/cache, but a build
+# run from the repo root writes one here instead, outside every one of those.
+.angular/cache/
+
 # npm's lockfile in a bun workspace. The frontends resolve through bun.lock,
 # and running npm or npx in one of them leaves a second lockfile behind that
 # nobody reads and that drifts from the one that counts.

@@ -23,6 +23,8 @@ export default class TaskAttentionService {
 
   private pending = false;
 
+  private queued = false;
+
   readonly todayCount = computed(() => this.count());
 
   readonly tags = computed(() => this.allTags());
@@ -38,7 +40,13 @@ export default class TaskAttentionService {
   }
 
   refresh(): void {
-    if (this.pending) return;
+    if (this.pending) {
+      // A refresh asked for while one is in flight cannot be dropped: the
+      // answer on the wire was sent before whatever prompted this one, so it
+      // does not contain it. Remember it and count once more when this lands.
+      this.queued = true;
+      return;
+    }
     this.pending = true;
     const today = new Date().toISOString().slice(0, 10);
     firstValueFrom(this.taskApi.listTasks())
@@ -57,6 +65,10 @@ export default class TaskAttentionService {
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => {
         this.pending = false;
+        if (this.queued) {
+          this.queued = false;
+          this.refresh();
+        }
       });
   }
 }

@@ -35,8 +35,13 @@ export default class DatacenterNavComponent implements OnInit {
   readonly datacenters = this.list.datacenters;
 
   /** True while the list is still being fetched: an empty list is only empty
-   *  once you know it is, and until then "no data centers" is a lie. */
-  readonly loading = computed(() => !this.list.loaded());
+   *  once you know it is, and until then "no data centers" is a lie. A read
+   *  that failed is not still running either, so the message below takes over
+   *  rather than the indicator spinning on. */
+  readonly loading = computed(() => !this.list.loaded() && !this.list.loadError());
+
+  /** Why the menu is empty, when it is empty because the read failed. */
+  readonly loadError = this.list.loadError;
 
   readonly selectedId = input<string>('');
 

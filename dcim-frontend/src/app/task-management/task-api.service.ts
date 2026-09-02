@@ -66,6 +66,22 @@ const dueToDate = (due: string): Date => new Date(`${due}T00:00:00Z`);
 const CLEAR_DUE_DATE = new Date(0);
 
 /**
+ * Whether a field is unchanged. Every TaskInput field is a string or null bar
+ * `tags`, which is a fresh array on every load and so is never `===` the one it
+ * was mapped from; compared by reference it would report as edited on every
+ * save. Order does not count either: the server holds tags as a set, so the
+ * same words in another order are the same tags.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    const [left, right] = [[...a].sort(), [...b].sort()];
+    return left.every((value, i) => value === right[i]);
+  }
+  return a === b;
+}
+
+/**
  * Reached only when the server sends an enum value this build has no label for
  * — a schema that moved ahead of the frontend. The display falls back so the
  * board still renders, but the mismatch is logged rather than passed off as a
@@ -84,14 +100,14 @@ export default class TaskApiService {
   /**
    * The keys of `input` whose value differs from the task as the board last
    * loaded it. Every TaskInput field is also a TaskData field, and both use the
-   * same "empty" spellings ('' / null), so a plain !== comparison is enough —
-   * an untouched field never lands in the patch, and so is never written back
+   * same "empty" spellings ('' / null), so the comparison below is all it takes
+   * — an untouched field never lands in the patch, and so is never written back
    * over an edit someone else made in the meantime.
    */
   static changedFields(current: TaskData, input: TaskInput): TaskPatch {
     const patch: TaskPatch = {};
     (Object.keys(input) as (keyof TaskInput)[])
-      .filter((key) => input[key] !== current[key])
+      .filter((key) => !sameValue(input[key], current[key]))
       .forEach((key) => Object.assign(patch, { [key]: input[key] }));
     return patch;
   }
@@ -204,7 +220,11 @@ export default class TaskApiService {
       ...('title' in patch ? { title: patch.title } : {}),
       ...('status' in patch ? { status: TaskApiService.toProtoStatus(patch.status!) } : {}),
       ...('priority' in patch ? { priority: TaskApiService.toProtoPriority(patch.priority!) } : {}),
-      ...('tags' in patch ? { tags: patch.tags! } : {}),
+      // A repeated field has no presence, so an empty list cannot say "carry no
+      // tags" on its own — unset and "clear them" look the same on the wire.
+      // clear_tags is the field that says it, the way clearBlockedReason does
+      // for the column below.
+      ...('tags' in patch ? { tags: patch.tags!, clearTags: patch.tags!.length === 0 } : {}),
       // The empty value of a present field clears the column: the backend maps
       // an empty string / the epoch onto a NULL write.
       ...('description' in patch ? { description: patch.description ?? '' } : {}),

@@ -38,11 +38,15 @@
           <nldd-toolbar label="Application">
             <!-- The mark before the name, not instead of it: it is the same
                  glyph as the favicon, so the tab and the toolbar say the same
-                 thing. Empty alt because the name stands right beside it. -->
+                 thing. Empty alt because the name stands right beside it.
+                 It leads to Clusters rather than to the organization's own
+                 address: that one renders no page, so the logo would land you
+                 on an empty pane. -->
             <nldd-toolbar-title
               slot="start"
               text="Fundament"
-              [attr.href]="path()"
+              [attr.href]="path('/clusters')"
+              (click)="navigateFromSidebar($event, '/clusters')"
             >
               <img
                 slot="media"

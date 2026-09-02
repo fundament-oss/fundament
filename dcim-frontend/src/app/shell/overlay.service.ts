@@ -150,7 +150,6 @@ export default class OverlayService {
 
   closeAsset(): void {
     this.assetSheet.set(null);
-    this.cableSheet.set(null);
   }
 
   /** The cable form. Null when closed. */

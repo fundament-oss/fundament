@@ -167,8 +167,12 @@ export function roundsByDay(rounds: Round[]): { day: string; rounds: Round[] }[]
 /** A day as you read it: today and tomorrow by name, the rest by date. */
 export function dayLabel(day: string, today: string, locale = 'en-US'): string {
   if (day === today) return 'Today';
-  const next = new Date(`${today}T00:00:00`);
-  next.setDate(next.getDate() + 1);
+  // Both days are the UTC dates a due date carries, so tomorrow is stepped in
+  // UTC as well. Stepping a local midnight and reading it back as an ISO date
+  // lands on today again for every timezone east of UTC, and the day after
+  // today then never gets its name.
+  const next = new Date(`${today}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
   if (day === next.toISOString().slice(0, 10)) return 'Tomorrow';
   return new Date(`${day}T00:00:00`).toLocaleDateString(locale, {
     weekday: 'short',

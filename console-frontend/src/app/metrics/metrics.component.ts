@@ -632,7 +632,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     // period; blinking it off and on again only draws the eye to the switch.
     // Custom, an error and teardown each turn it off where they happen.
     this.connectionError.set(false);
-    this.metricsHealth.report(true);
     this.errorMessage.set(null);
 
     // Destroy charts so they are recreated fresh for the new stream/filter.
@@ -653,6 +652,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         this.applyStreamResponse(response);
         this.setLoading(false);
         this.isLive.set(true);
+        // The badge follows an answer, not an attempt: reporting healthy when
+        // the stream is opened puts the menu on OK while the backend is down,
+        // for as long as it takes the stream to fail.
+        this.metricsHealth.report(true);
         this.reconnectAttempt = 0;
         if (response.refreshedAt) {
           this.lastRefreshedAt.set(timestampDate(response.refreshedAt));

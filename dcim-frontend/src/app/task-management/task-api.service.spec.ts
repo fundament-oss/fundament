@@ -61,6 +61,41 @@ describe('TaskApiService.changedFields', () => {
     expect(patch).toEqual({ assignee: null, location: '', description: '' });
   });
 
+  it('compares tags by their contents, not by the array they arrived in', () => {
+    // The form hands back its own array, so a reference comparison would report
+    // tags as edited on every save and write them back over another admin's.
+    const patch = TaskApiService.changedFields(baseTask, {
+      ...inputFrom(baseTask),
+      tags: [...baseTask.tags],
+    });
+
+    expect(patch).toEqual({});
+  });
+
+  it('reads the same tags in another order as unchanged', () => {
+    // The server holds them as a set, so an order the picker happens to produce
+    // is not an edit.
+    const current: TaskData = { ...baseTask, tags: ['hardware', 'power'] };
+    const patch = TaskApiService.changedFields(current, {
+      ...inputFrom(current),
+      tags: ['power', 'hardware'],
+    });
+
+    expect(patch).toEqual({});
+  });
+
+  it('sends the tags when one is added or the last one is removed', () => {
+    expect(
+      TaskApiService.changedFields(baseTask, {
+        ...inputFrom(baseTask),
+        tags: ['hardware', 'power'],
+      }),
+    ).toEqual({ tags: ['hardware', 'power'] });
+    expect(TaskApiService.changedFields(baseTask, { ...inputFrom(baseTask), tags: [] })).toEqual({
+      tags: [],
+    });
+  });
+
   it('treats a clear and an overwrite in the same edit independently', () => {
     const patch = TaskApiService.changedFields(baseTask, {
       ...inputFrom(baseTask),

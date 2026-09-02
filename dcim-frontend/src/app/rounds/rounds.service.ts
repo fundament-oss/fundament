@@ -37,6 +37,9 @@ export default class RoundsService {
    *  thing. */
   private readonly stepCounts = signal<Record<string, { done: number; total: number }>>({});
 
+  /** False until the first read that comes back whole, so an empty list is only
+   *  reported as empty once it is known to be one. A failed read leaves it
+   *  false: what the days hold is unknown, not nothing. */
   readonly loaded = signal(false);
 
   readonly loadError = signal<string | null>(null);
@@ -115,7 +118,6 @@ export default class RoundsService {
     this.datacenterList.load();
     this.read().finally(() => {
       this.pending = false;
-      this.loaded.set(true);
     });
   }
 
@@ -130,6 +132,7 @@ export default class RoundsService {
       this.tasks.set(tasks);
       this.loadError.set(null);
       await this.readSteps(tasks.filter((t) => t.status !== 'Done'));
+      this.loaded.set(true);
     } catch (err) {
       const message = connectErrorMessage(err);
       // eslint-disable-next-line no-console

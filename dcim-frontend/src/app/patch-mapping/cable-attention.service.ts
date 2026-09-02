@@ -30,8 +30,16 @@ export default class CableAttentionService {
 
   private pending = false;
 
+  private queued = false;
+
   refresh(): void {
-    if (this.pending) return;
+    if (this.pending) {
+      // A refresh asked for while one is in flight cannot be dropped: the
+      // answer on the wire was sent before whatever prompted this one, so it
+      // does not contain it. Remember it and count once more when this lands.
+      this.queued = true;
+      return;
+    }
     this.pending = true;
     this.load()
       .catch((err) => {
@@ -40,6 +48,10 @@ export default class CableAttentionService {
       })
       .finally(() => {
         this.pending = false;
+        if (this.queued) {
+          this.queued = false;
+          this.refresh();
+        }
       });
   }
 

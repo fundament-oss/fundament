@@ -55,6 +55,14 @@
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
 
+    <!-- A read that failed says so. Without this the list below stands empty
+         and reads as "nothing is planned", which is a different answer than
+         "we could not ask". -->
+    @if (rounds.loadError(); as error) {
+      <nldd-banner variant="critical" [attr.text]="error"></nldd-banner>
+      <nldd-spacer size="12"></nldd-spacer>
+    }
+
     <!-- What is not in anybody's round, in one line rather than one per kind of
          gap. Which gap it is stands with the task, in the list this opens.
          A sentence with a link rather than a row in the menu: the rows here are
@@ -109,7 +117,7 @@
       </nldd-list>
     }
 
-    @if (!rounds.days().length) {
+    @if (!rounds.days().length && !rounds.loadError()) {
       <nldd-inline-dialog
         icon="tools"
         [attr.text]="rounds.loaded() ? 'No rounds planned' : 'Loading rounds'"
