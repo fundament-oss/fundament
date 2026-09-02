@@ -30,7 +30,7 @@ Plugin pods are ordinary workloads and never reach Vali, so plugin logs come fro
 
 A `LogsService` in organization-api (mirroring ADR-0026's `MetricsService` shape) queries each shoot's Vali through `{plutono-url}/api/datasources/proxy/{id}/vali/api/v1/*` with the monitoring secret's credentials. Because the datasource list is not readable, the numeric id is *discovered by probing* proxy ids with a cheap labels call, cached per cluster, and re-discovered when it stops answering. Plugin-scoped queries route through kube-api-proxy `pods/log` with the caller's own token.
 
-* Reuses the monitoring-secret plumbing, the per-shoot client cache pattern, and the CA-trust knob that ADR-0026's implementation already ships; credentials never leave organization-api.
+* Reuses the monitoring-secret plumbing, the per-shoot client cache pattern, and the CA trust that ADR-0026's implementation already ships; credentials never leave organization-api. Plutono's ingress certificate is signed by the same per-shoot cluster CA as Prometheus's, so both paths resolve trust from one `<shoot>.ca-cluster` read — see the amendment note in ADR-0026.
 * The only externally reachable route to Vali that exists today — no Gardener-side changes required.
 * The proxy hop and the id discovery are encapsulated behind a `logs.Client` interface; the console only sees typed RPCs and a backend marker.
 

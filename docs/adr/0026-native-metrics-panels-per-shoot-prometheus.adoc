@@ -59,4 +59,11 @@ Once verified against a live cluster, the cluster page's Monitoring card was rem
 * Every metrics query now transits the seed ingress; organization-api holds a resolver cache with the monitoring credentials in memory only.
 * Cross-shoot aggregation, retention beyond per-shoot defaults, and streaming against real backends remain open, tracked as follow-ups (see openspec change `metrics-per-shoot-prometheus` and ADR-0025's deferred items).
 * If Gardener's observability migration ever changes the ingress or annotation, the per-shoot client factory is the single place to re-point (e.g. at a central store).
-* Locally the seed ingress uses a self-signed CA, so the org-api → ingress TLS needs a CA knob in local dev (`prometheus.WithTransport`); real landscapes with publicly-trusted ingress certs need nothing.
+* The org-api → ingress TLS needs a CA knob (`prometheus.WithTransport`), wired as `PROMETHEUS_CA_FILE` / `organizationApi.prometheusCASecret`.
+
+[NOTE]
+====
+Amended 2026-09-02. This ADR originally recorded that "real landscapes with publicly-trusted ingress certs need nothing", i.e. that one static bundle covers every shoot. That holds only where the seed carries a wildcard certificate (a Secret labelled `gardener.cloud/role=controlplane-cert` in the seed's `garden` namespace). Otherwise gardenlet signs each shoot's Prometheus, Plutono, Vali and Alertmanager ingress certificate with *that shoot's own cluster CA* (`SigningCA: SecretNameCACluster`, gardener/gardener v1.139.4 `pkg/gardenlet/operation/botanist/monitoring.go`), so a static bundle silently loses every cluster created after it was built.
+
+Org-api therefore resolves the CA per shoot, from the `<shoot>.ca-cluster` ConfigMap in the same project namespace as `<shoot>.monitoring` (with a fallback to the same-named Secret, which Gardener has marked for removal). Trust is additive: whatever roots the image has, the operator-supplied bundle, and the shoot's own CA are all anchors. `prometheusCASecret` is now an extra anchor rather than the only one — and it is still the way to trust a seed-wide wildcard certificate, public or private, because org-api ships in a `scratch` image with no root store.
+====
