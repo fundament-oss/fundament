@@ -103,6 +103,10 @@ export class OrganizationDataService {
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
   projectsLoaded = signal(false);
 
+  /** True once the cluster list has come back for the current org. Anything that
+   *  reads "no clusters" as a state rather than as "not fetched yet" waits on this. */
+  clustersLoaded = signal(false);
+
   async loadOrganizationData(organizationId?: string) {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
@@ -111,6 +115,7 @@ export class OrganizationDataService {
     // Reset project cache so the next loadProjectsAndNamespaces() fetches fresh data.
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
+    this.clustersLoaded.set(false);
 
     this.loading.set(true);
     try {
@@ -126,6 +131,7 @@ export class OrganizationDataService {
       }
 
       this.clusterSummaries.set(clustersResponse.clusters);
+      this.clustersLoaded.set(true);
 
       const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
         id: cluster.id,
@@ -313,6 +319,7 @@ export class OrganizationDataService {
     this.organizations.set([]);
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);
+    this.clustersLoaded.set(false);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
   }

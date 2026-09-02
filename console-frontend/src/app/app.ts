@@ -91,6 +91,7 @@ import InviteMemberSheetComponent from './invite-member-sheet/invite-member-shee
 import AddProjectMemberSheetComponent from './add-project-member-sheet/add-project-member-sheet.component';
 import { OverlayService } from './overlay.service';
 import PageNavService from './page-nav.service';
+import { PRESENTATION_ENABLED } from './presentation/presentation.tokens';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
@@ -198,6 +199,10 @@ export default class App implements OnInit {
   protected overlays = inject(OverlayService);
 
   protected pageNav = inject(PageNavService);
+
+  /** The walkthrough build narrates its own path through the console, so a
+   *  coach-mark pointing at the create button only competes with it. */
+  private presentationEnabled = inject(PRESENTATION_ENABLED);
 
   private clusterNameCache = new Map<string, string>();
 
@@ -846,11 +851,15 @@ export default class App implements OnInit {
    * The first cluster is the thing everything else hangs off, and the button
    * that starts one is an icon in a corner. Only with nothing to show for it
    * yet and nothing open: once a page is in view the coach-mark would point
-   * across whatever you came to read.
+   * across whatever you came to read. Held back until the organization's data
+   * has landed, or every account with clusters gets a flash of it while the
+   * list is still empty.
    */
   showCreateEducation = computed(
     () =>
+      !this.presentationEnabled &&
       !this.educationDismissed() &&
+      this.organizationDataService.clustersLoaded() &&
       this.isProjectRoot() &&
       this.organizationDataService.clusterSummaries().length === 0,
   );
