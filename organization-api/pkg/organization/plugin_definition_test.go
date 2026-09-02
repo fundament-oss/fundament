@@ -406,8 +406,9 @@ func TestPutPluginDefinition_Replace(t *testing.T) {
 
 	// Get now serves the replacement.
 	getReq := organizationv1.GetPluginDefinitionRequest_builder{
-		PluginName:    testPluginName,
-		PluginVersion: "v1",
+		OrganizationName: "test-org",
+		PluginName:       testPluginName,
+		PluginVersion:    "v1",
 	}.Build()
 	getResp, err := client.GetPluginDefinition(ctx, getReq)
 	require.NoError(t, err)
@@ -598,8 +599,9 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 
 	// Act: Get the definition (public endpoint, no auth needed).
 	getReq := organizationv1.GetPluginDefinitionRequest_builder{
-		PluginName:    testPluginName,
-		PluginVersion: "v1",
+		OrganizationName: "test-org",
+		PluginName:       testPluginName,
+		PluginVersion:    "v1",
 	}.Build()
 
 	resp, err := client.GetPluginDefinition(ctx, getReq)
@@ -619,8 +621,9 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	getReq := organizationv1.GetPluginDefinitionRequest_builder{
-		PluginName:    "nope",
-		PluginVersion: "v1",
+		OrganizationName: "nope",
+		PluginName:       "nope",
+		PluginVersion:    "v1",
 	}.Build()
 
 	_, err := client.GetPluginDefinition(ctx, getReq)
@@ -707,4 +710,147 @@ func TestListPlugins_GlobalVisibility(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "plugin owned by another org must still be visible in the catalog")
+}
+
+func TestGetPluginDefinition_ResolvesWithinOrganization(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "org-a"),
+		WithOrganization(orgBID, "org-b"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgAID, orgBID},
+		}),
+	)
+
+	pluginAID := seedCatalogPlugin(t, env, "plugin-from-a", orgAID)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+	ctx := context.Background()
+
+	// PutPluginDefinition requires manifest metadata.name to match the catalog
+	// plugin's name, so retarget testManifest at "plugin-from-a".
+	manifestA := bytes.ReplaceAll(testManifest, []byte("name: test-plugin-def"), []byte("name: plugin-from-a"))
+
+	putCtx, putCallInfo := connect.NewClientContext(ctx)
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgAID.String())
+	_, err := client.PutPluginDefinition(putCtx, organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginAID.String(),
+		PluginVersion: "v1",
+		Manifest:      manifestA,
+	}.Build())
+	require.NoError(t, err)
+
+	// The owning organization resolves it.
+	got, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+		OrganizationName: "org-a",
+		PluginName:       "plugin-from-a",
+		PluginVersion:    "v1",
+	}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, manifestA, got.GetManifest())
+
+	// A different organization does not — the name alone is no longer the key.
+	_, err = client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+		OrganizationName: "org-b",
+		PluginName:       "plugin-from-a",
+		PluginVersion:    "v1",
+	}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+// TestGetPluginDefinition_SameNameAcrossOrganizations proves the headline
+// capability of org-qualified plugin identity: two different organizations
+// can each publish a plugin named "shared-name", and GetPluginDefinition
+// resolves each (org, name) pair to its own distinct, correctly attributed
+// definition.
+func TestGetPluginDefinition_SameNameAcrossOrganizations(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "org-alpha"),
+		WithOrganization(orgBID, "org-beta"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgAID, orgBID},
+		}),
+	)
+
+	// The same plugin name, published by two different organizations.
+	pluginA := seedCatalogPlugin(t, env, "shared-name", orgAID)
+	pluginB := seedCatalogPlugin(t, env, "shared-name", orgBID)
+
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+	ctx := context.Background()
+
+	// PutPluginDefinition requires manifest metadata.name to match the catalog
+	// plugin's name, so both manifests must declare "shared-name"; give B a
+	// distinct byte payload (trailing comment) so the two definitions differ.
+	manifestA := bytes.ReplaceAll(testManifest, []byte("name: test-plugin-def"), []byte("name: shared-name"))
+	manifestB := append(append([]byte{}, manifestA...), []byte("# org-b\n")...)
+
+	for _, tc := range []struct {
+		orgID    uuid.UUID
+		pluginID uuid.UUID
+		manifest []byte
+	}{
+		{orgAID, pluginA, manifestA},
+		{orgBID, pluginB, manifestB},
+	} {
+		putCtx, putCallInfo := connect.NewClientContext(ctx)
+		putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		putCallInfo.RequestHeader().Set("Fun-Organization", tc.orgID.String())
+		_, err := client.PutPluginDefinition(putCtx, organizationv1.PutPluginDefinitionRequest_builder{
+			PluginId:      tc.pluginID.String(),
+			PluginVersion: "v1",
+			Manifest:      tc.manifest,
+		}.Build())
+		require.NoError(t, err)
+	}
+
+	gotA, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+		OrganizationName: "org-alpha", PluginName: "shared-name", PluginVersion: "v1",
+	}.Build())
+	require.NoError(t, err)
+
+	gotB, err := client.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
+		OrganizationName: "org-beta", PluginName: "shared-name", PluginVersion: "v1",
+	}.Build())
+	require.NoError(t, err)
+
+	// Same name, different publishers, different definitions.
+	assert.Equal(t, manifestA, gotA.GetManifest())
+	assert.Equal(t, manifestB, gotB.GetManifest())
+	assert.NotEqual(t, gotA.GetHash(), gotB.GetHash())
+}
+
+func TestGetPluginDefinition_RequiresOrganizationName(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	env := newTestAPI(t, WithOrganization(orgID, "test-org"))
+
+	_, err := newPluginServiceClient(env).GetPluginDefinition(context.Background(),
+		organizationv1.GetPluginDefinitionRequest_builder{
+			PluginName:    testPluginName,
+			PluginVersion: "v1",
+		}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }

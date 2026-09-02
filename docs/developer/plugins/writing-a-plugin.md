@@ -256,9 +256,10 @@ definition by name, version and hash:
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: my-plugin
+  name: acme--my-plugin
 spec:
   definitionRef:
+    organizationName: acme
     pluginName: my-plugin
     pluginVersion: v1.0.0
     definitionHash: sha256:...
@@ -266,13 +267,17 @@ spec:
     SOME_SETTING: value
 ```
 
+`metadata.name` must equal `<organizationName>--<pluginName>` — a plugin's
+identity is that pair, not the plugin name alone (see
+[FUN-17](/funs/fun-17#plugin-identity-and-naming)).
+
 The image is **not** part of the CR: the controller fetches the definition from
 organization-api, checks its hash against `definitionHash`, and takes the image
 from there. `spec.config` entries are injected into the plugin as `FUNP_*`
 environment variables.
 
 Publishing a **standalone** plugin is not supported yet. Today definitions are
-published from inside the monorepo with `just plugin-publish <dir>`, which
+published from inside the monorepo with `just plugins publish <dir>`, which
 requires the plugin to live under `plugins/` and to have a catalog entry in the
 appstore.
 

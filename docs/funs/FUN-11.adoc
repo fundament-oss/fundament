@@ -185,26 +185,32 @@ The `plugin-controller` is a Kubernetes controller that manages the lifecycle of
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: cert-manager
+  name: system--cert-manager
 spec:
-  image: ghcr.io/fundament-plugins/cert-manager:v1.17.2
-  pluginName: cert-manager
-  clusterRoles: []       # optional: ClusterRoles to bind
+  definitionRef:
+    organizationName: system
+    pluginName: cert-manager
+    pluginVersion: v1.17.2
+    definitionHash: sha256:...  # optional only when the controller runs with PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true
   config: {}             # optional: key-value config (injected as FUNP_* env vars)
 ---
 
-Status fields: `phase`, `message`, `ready`, `observedGeneration`.
+A plugin's identity is the pair `(organizationName, pluginName)`, and
+`metadata.name` must equal `<organizationName>--<pluginName>` — see
+link:/funs/fun-17[FUN-17], "Plugin identity and naming".
+
+Status fields: `phase`, `message`, `ready`, `observedGeneration`, `namespace`.
 
 === Installation lifecycle
 
 When a `PluginInstallation` is created, the controller:
 
-. Validates the plugin name (must be a valid DNS label, max 56 chars).
-. Creates a namespace `plugin-{pluginName}`.
-. Creates a ServiceAccount `plugin-{pluginName}` in that namespace.
+. Validates that `metadata.name` equals `<organizationName>--<pluginName>` (see link:/funs/fun-17[FUN-17], "Plugin identity and naming").
+. Creates a namespace `plugin-{metadata.name}` (or a truncated, hashed form if that would exceed 63 chars).
+. Creates a ServiceAccount named `plugin` in that namespace — every namespace-scoped child is named `plugin`, not `plugin-{metadata.name}`, since the namespace already disambiguates.
 . Creates a RoleBinding binding the ServiceAccount to the built-in `admin` ClusterRole within the plugin namespace.
-. Optionally creates ClusterRoleBindings for any `clusterRoles` specified in the spec.
-. Creates a Deployment `runtime` in the plugin namespace with the specified container image.
+. Materialises a `ClusterRole`/`ClusterRoleBinding` from the pinned `PluginDefinition`'s `permissions.rbac`.
+. Creates a Deployment named `plugin` in the plugin namespace with the definition's container image.
 . The Deployment includes liveness (`/livez`) and readiness (`/readyz`) probes.
 . Plugin config values are injected as `FUNP_*` environment variables.
 . Polls the plugin's `PluginMetadataService` endpoint to track status and readiness.
@@ -212,9 +218,9 @@ When a `PluginInstallation` is created, the controller:
 All child resources are labeled with:
 
 * `app.kubernetes.io/managed-by: plugin-controller`
-* `plugins.fundament.io/plugin: {pluginName}`
-* `plugins.fundament.io/installation-name`
-* `plugins.fundament.io/installation-namespace`
+* `plugins.fundament.io/installation: {namespace}`
+* `plugins.fundament.io/organization: {organizationName}` (when it fits a label value)
+* `plugins.fundament.io/plugin: {pluginName}` (when it fits a label value)
 
 Deletion is handled via a finalizer; the controller cleans up child resources before removing the finalizer.
 
@@ -292,9 +298,9 @@ A reference implementation exists at `plugins/cert-manager/`:
 
 Scenario:
 
-. Organization Admin installs Plugin "cert-manager" into Cluster "foo" at version `v1.17.2`.
-. A `PluginInstallation` CR is created; `plugin-controller` reconciles it.
-. `plugin-controller` creates namespace `plugin-cert-manager`, ServiceAccount, RoleBinding, and Deployment.
+. Organization Admin in the `system` organization installs Plugin "cert-manager" into Cluster "foo" at version `v1.17.2`.
+. A `PluginInstallation` CR named `system--cert-manager` is created; `plugin-controller` reconciles it.
+. `plugin-controller` creates namespace `plugin-system--cert-manager`, ServiceAccount, RoleBinding, and Deployment.
 . The Plugin Runtime uses Helm to install cert-manager in its own namespace.
 . The Plugin Runtime starts hosting the metadata server. `plugin-controller` polls the metadata endpoint and tracks plugin status and readiness.
 . The Plugin Runtime starts hosting console assets at `/console/`.

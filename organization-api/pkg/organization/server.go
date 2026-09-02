@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
+	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
@@ -25,14 +26,17 @@ import (
 )
 
 type Config struct {
-	JWTSecret            []byte
-	CORSAllowedOrigins   []string
-	Clock                clock.Clock
-	MockPrometheusClient *prom.MockClient
-	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
-	PrometheusCAFile     string // PEM bundle trusted for Prometheus/ingress TLS (e.g. Gardener seed CAs in local dev)
-	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
-	GardenerClient       gardener.Client
+	JWTSecret               []byte
+	CORSAllowedOrigins      []string
+	Clock                   clock.Clock
+	MockPrometheusClient    *prom.MockClient
+	MockLogsClient          *logs.MockClient
+	PrometheusURL           string // Prometheus URL for metrics; "mock" uses generated data
+	LogsURL                 string // Logs backend selector: "mock", "per-shoot", or a global Loki-API URL
+	PrometheusCAFile        string // PEM bundle trusted for Prometheus/Plutono/ingress TLS (e.g. Gardener seed CAs in local dev)
+	KubeAPIProxyURL         string // Browser-facing kube-api-proxy URL (embedded in kubeconfigs handed to users)
+	KubeAPIProxyInternalURL string // kube-api-proxy URL for org-api's own server-side calls; falls back to KubeAPIProxyURL
+	GardenerClient          gardener.Client
 }
 
 type Server struct {
@@ -46,10 +50,14 @@ type Server struct {
 	clock          clock.Clock
 	handler        http.Handler
 	mockPromClient *prom.MockClient
+	mockLogsClient *logs.MockClient
 	prometheusURL  string
+	logsURL        string
 	promOpts       []prom.Option
+	logsOpts       []logs.Option
 	gardener       gardener.Client
 	perShoot       *perShootClients
+	perShootLogs   *perShootLogs
 }
 
 // Option configures optional Server dependencies.
@@ -73,13 +81,17 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		gardenerClient = gardener.NoopClient{}
 	}
 
+	// One CA bundle covers every seed-ingress upstream (per-shoot Prometheus
+	// and Plutono/Vali share the same ingress certificates).
 	var promOpts []prom.Option
+	var logsOpts []logs.Option
 	if cfg.PrometheusCAFile != "" {
 		transport, err := prom.TransportWithCA(cfg.PrometheusCAFile)
 		if err != nil {
 			return nil, fmt.Errorf("load prometheus CA bundle: %w", err)
 		}
 		promOpts = append(promOpts, prom.WithTransport(transport))
+		logsOpts = append(logsOpts, logs.WithTransport(transport))
 	}
 
 	s := &Server{
@@ -91,10 +103,14 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authz:          authzClient,
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
+		mockLogsClient: cfg.MockLogsClient,
 		prometheusURL:  cfg.PrometheusURL,
+		logsURL:        cfg.LogsURL,
 		promOpts:       promOpts,
+		logsOpts:       logsOpts,
 		gardener:       gardenerClient,
 		perShoot:       newPerShootClients(gardenerClient, logger, promOpts...),
+		perShootLogs:   newPerShootLogs(gardenerClient, logger, logsOpts...),
 	}
 
 	for _, opt := range opts {
@@ -152,6 +168,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.APIKeyService",
 		"organization.v1.NamespaceService",
 		"organization.v1.MetricsService",
+		"organization.v1.LogsService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -175,6 +192,14 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
 	mux.Handle(metricsPath, metricsHandler)
+
+	// A log response is the one payload here built entirely from
+	// tenant-controlled content, so it gets an explicit transport ceiling on top
+	// of the entry limit and per-entry field cap.
+	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(
+		s, interceptors, connect.WithSendMaxBytes(maxLogsResponseBytes),
+	)
+	mux.Handle(logsPath, logsHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

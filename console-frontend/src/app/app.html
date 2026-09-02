@@ -257,6 +257,17 @@
               </li>
               <li>
                 <a
+                  routerLink="/logs"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="bullet-list" class="mr-3 h-5 w-5"></nldd-icon>
+                  Logs
+                </a>
+              </li>
+              <li>
+                <a
                   routerLink="/plugins"
                   routerLinkActive="active"
                   class="nav-link"
@@ -380,7 +391,7 @@
                 </a>
               </li>
 
-              @for (group of pluginNavService.projectNav(); track group.pluginName) {
+              @for (group of pluginNavService.projectNav(); track group.installationName) {
                 <li class="mt-2">
                   <p
                     class="px-3 pt-3 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
@@ -395,7 +406,7 @@
                             '/projects',
                             selectedProjectId(),
                             'plugin-resources',
-                            group.pluginName,
+                            group.installationName,
                             item.crdPlural,
                           ]"
                           routerLinkActive="active"

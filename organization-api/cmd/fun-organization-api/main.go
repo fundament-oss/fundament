@@ -22,20 +22,32 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
+	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
 
 type config struct {
-	Database                   psqldb.Config
-	OpenFGA                    authz.Config
-	JWTSecret                  string        `env:"JWT_SECRET,required,notEmpty" `
-	ListenAddr                 string        `env:"LISTEN_ADDR" envDefault:":8080"`
-	LogLevel                   slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins         []string      `env:"CORS_ALLOWED_ORIGINS"`
-	PrometheusURL              string        `env:"PROMETHEUS_URL" envDefault:"mock"`
-	PrometheusCAFile           string        `env:"PROMETHEUS_CA_FILE"`
-	KubeAPIProxyURL            string        `env:"KUBE_API_PROXY_URL"`
+	Database           psqldb.Config
+	OpenFGA            authz.Config
+	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty" `
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8080"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	PrometheusURL      string     `env:"PROMETHEUS_URL" envDefault:"mock"`
+	// LOGS_URL is a tri-state like PROMETHEUS_URL: "mock" (generated data),
+	// "per-shoot" (each cluster's Vali via its Plutono datasource proxy), or a
+	// global Loki-API URL. "per-shoot" is an explicit sentinel: caarlos0/env
+	// substitutes envDefault for set-but-empty variables, so "" cannot select
+	// anything.
+	LogsURL          string `env:"LOGS_URL" envDefault:"mock"`
+	PrometheusCAFile string `env:"PROMETHEUS_CA_FILE"`
+	KubeAPIProxyURL  string `env:"KUBE_API_PROXY_URL"`
+	// KUBE_API_PROXY_INTERNAL_URL is the in-cluster address for org-api's own
+	// calls to the proxy (plugin-pod logs); KUBE_API_PROXY_URL is the
+	// browser-facing URL and is not necessarily routable from inside the
+	// cluster. Falls back to KUBE_API_PROXY_URL when unset.
+	KubeAPIProxyInternalURL    string        `env:"KUBE_API_PROXY_INTERNAL_URL"`
 	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
@@ -158,14 +170,17 @@ func run() error {
 	}
 
 	orgcfg := &organization.Config{
-		JWTSecret:            []byte(cfg.JWTSecret),
-		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
-		Clock:                clock.New(),
-		MockPrometheusClient: mockClient,
-		PrometheusURL:        cfg.PrometheusURL,
-		PrometheusCAFile:     cfg.PrometheusCAFile,
-		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
-		GardenerClient:       gardenerClient,
+		JWTSecret:               []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
+		Clock:                   clock.New(),
+		MockPrometheusClient:    mockClient,
+		MockLogsClient:          logs.NewMockClient(),
+		PrometheusURL:           cfg.PrometheusURL,
+		LogsURL:                 cfg.LogsURL,
+		KubeAPIProxyInternalURL: cfg.KubeAPIProxyInternalURL,
+		PrometheusCAFile:        cfg.PrometheusCAFile,
+		KubeAPIProxyURL:         cfg.KubeAPIProxyURL,
+		GardenerClient:          gardenerClient,
 	}
 
 	server, err := organization.New(logger, orgcfg, db, authzClient, idempotencyStore, opts...)

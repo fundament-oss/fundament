@@ -18,10 +18,9 @@ enum PluginLabel {
   PLUGIN_LABEL_SUPPORT_9_TO_17 = 3;
 }
 
-// Ordering applied by ListPlugins. UNSPECIFIED sorts as FEATURED.
+// Ordering applied by ListPlugins. UNSPECIFIED sorts as NAME.
 enum PluginSort {
   PLUGIN_SORT_UNSPECIFIED = 0;
   PLUGIN_SORT_RECENTLY_ADDED = 1;
   PLUGIN_SORT_NAME = 2;
-  PLUGIN_SORT_FEATURED = 3;
 }

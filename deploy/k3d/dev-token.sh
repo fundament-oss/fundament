@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prints a user JWT from authn-api for dev tooling that needs a bearer token,
-# plugin-publish above all. Defaults to platform-admin@fundament.io: publishing
+# plugins publish above all. Defaults to platform-admin@fundament.io: publishing
 # needs admin of the system org that owns the first-party plugins, so other dev
 # logins are refused.
 #

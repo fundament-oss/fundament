@@ -4,9 +4,9 @@
 // on the CR at request time.
 //
 // plugin-controller runs on every tenant cluster, so both the PluginInstallation
-// CR and the SA it created (`plugin-{installationName}` in namespace
-// `plugin-{installationName}`) live on the same cluster the plugin JS is
-// trying to reach.
+// CR and the SA it created (always named `plugin`, inside the namespace derived
+// from installationName via kubename.PluginNamespace) live on the same cluster
+// the plugin JS is trying to reach.
 //
 // The gateway forwards the request to the target cluster impersonating the
 // plugin SA; the cluster's RBAC on that SA — the ClusterRole plugin-controller

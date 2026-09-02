@@ -16,12 +16,16 @@ const pluginDefinitionGetActive = `-- name: PluginDefinitionGetActive :one
 SELECT appstore.plugin_definitions.id, appstore.plugin_definitions.plugin_id, appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.manifest, appstore.plugin_definitions.hash, appstore.plugin_definitions.created
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
-WHERE appstore.plugins.name = $1 AND appstore.plugins.deleted IS NULL AND appstore.plugin_definitions.plugin_version = $2 AND appstore.plugin_definitions.deleted IS NULL
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
+WHERE tenant.organizations.name = $1 AND tenant.organizations.deleted IS NULL
+  AND appstore.plugins.name = $2 AND appstore.plugins.deleted IS NULL
+  AND appstore.plugin_definitions.plugin_version = $3 AND appstore.plugin_definitions.deleted IS NULL
 `
 
 type PluginDefinitionGetActiveParams struct {
-	Name          string
-	PluginVersion string
+	OrganizationName string
+	PluginName       string
+	PluginVersion    string
 }
 
 type PluginDefinitionGetActiveRow struct {
@@ -34,7 +38,7 @@ type PluginDefinitionGetActiveRow struct {
 }
 
 func (q *Queries) PluginDefinitionGetActive(ctx context.Context, arg PluginDefinitionGetActiveParams) (PluginDefinitionGetActiveRow, error) {
-	row := q.db.QueryRow(ctx, pluginDefinitionGetActive, arg.Name, arg.PluginVersion)
+	row := q.db.QueryRow(ctx, pluginDefinitionGetActive, arg.OrganizationName, arg.PluginName, arg.PluginVersion)
 	var i PluginDefinitionGetActiveRow
 	err := row.Scan(
 		&i.ID,

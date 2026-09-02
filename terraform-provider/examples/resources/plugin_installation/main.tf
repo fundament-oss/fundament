@@ -21,8 +21,9 @@ resource "fundament_cluster" "prod" {
 }
 
 resource "fundament_plugin_installation" "grafana" {
-  cluster_id  = fundament_cluster.prod.id
-  plugin_name = "grafana"
+  cluster_id        = fundament_cluster.prod.id
+  organization_name = "system"
+  plugin_name       = "grafana"
 
   # plugin_version and definition_hash pin an immutable, content-addressed
   # PluginDefinition (FUN-17). They are optional and default to placeholders
@@ -33,5 +34,6 @@ resource "fundament_plugin_installation" "grafana" {
   # definition_hash = "sha256:..."
 }
 
-# Import an existing plugin installation:
-# terraform import fundament_plugin_installation.grafana <cluster-id>/grafana
+# Import an existing plugin installation. The second path segment is the
+# installation name, "<organization_name>--<plugin_name>":
+# terraform import fundament_plugin_installation.grafana <cluster-id>/system-grafana

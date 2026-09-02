@@ -29,6 +29,13 @@ service CatalogService {
   // Organizations with at least one public listing, so the storefront can
   // resolve organization_id without a credential for organization-api.
   rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+  // Curated plugin sets for the storefront's browse filters.
+  rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
+  // Verbatim manifest for one version, plus the hash an install pins against.
+  // Any version of a PUBLIC listing is reachable, published or not, so
+  // plugin-controller can install what it installs today — it holds no user JWT.
+  // RESTRICTED listings stay hidden, as everywhere else in this service.
+  rpc GetPluginDefinition(GetPluginDefinitionRequest) returns (GetPluginDefinitionResponse);
 }
 
 // Listing as it appears on a card or in a results grid.
@@ -51,9 +58,8 @@ message PluginSummary {
   // The newest published version, resolved through ListPluginVersions. Points
   // at the version rather than repeating its version string.
   string latest_version_id = 100;
-  bool featured = 110;
   // When the listing was first published; drives "recently added".
-  google.protobuf.Timestamp published = 120;
+  google.protobuf.Timestamp published = 110;
 }
 
 // Full listing as it appears on a detail page.
@@ -72,20 +78,19 @@ message PluginDetails {
   repeated PluginLabel labels = 90;
   // See PluginSummary.latest_version_id.
   string latest_version_id = 100;
-  bool featured = 110;
   // When the listing was first published; drives "recently added".
-  google.protobuf.Timestamp published = 120;
-  string description = 130;
+  google.protobuf.Timestamp published = 110;
+  string description = 120;
   // Original author, which may differ from the publishing organization.
-  string author_name = 140;
-  string author_url = 150;
-  string repository_url = 160;
-  string license = 170;
+  string author_name = 130;
+  string author_url = 140;
+  string repository_url = 150;
+  string license = 160;
   // Platform capabilities the plugin declares, e.g. "internet_access".
-  repeated string capabilities = 180;
-  repeated marketplace.v1.PluginPermission permissions = 190;
-  repeated marketplace.v1.FeatureBlock features = 200;
-  repeated marketplace.v1.DocumentationLink documentation_links = 210;
+  repeated string capabilities = 170;
+  repeated marketplace.v1.PluginPermission permissions = 180;
+  repeated marketplace.v1.FeatureBlock features = 190;
+  repeated marketplace.v1.DocumentationLink documentation_links = 200;
 }
 
 // A published version of a listing. Carries the id that
@@ -94,9 +99,8 @@ message PublishedVersion {
   string id = 10;
   string version = 20;
   google.protobuf.Timestamp published = 30;
-  // sha256 of the definition manifest. The console pins an install to
-  // (version, definition_hash); the manifest bytes are served to authenticated
-  // installers by organization-api, never from here.
+  // sha256 of the definition manifest; the console pins an install to
+  // (version, definition_hash) and fetches the bytes with GetPluginDefinition.
   string definition_hash = 40;
   string release_notes = 50;
 }
@@ -108,8 +112,7 @@ message ListPluginsRequest {
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string = {uuid: true}
   ];
-  bool featured_only = 30;
-  PluginSort sort = 40 [(buf.validate.field).enum = {defined_only: true}];
+  PluginSort sort = 30 [(buf.validate.field).enum = {defined_only: true}];
 }
 
 message ListPluginsResponse {
@@ -142,4 +145,45 @@ message ListPublishersRequest {}
 
 message ListPublishersResponse {
   repeated marketplace.v1.Publisher publishers = 10;
+}
+
+message ListPresetsRequest {}
+
+message ListPresetsResponse {
+  repeated marketplace.v1.Preset presets = 10;
+}
+
+message GetPluginDefinitionRequest {
+  // Two ways to name the same listing. plugin_id is what the storefront holds,
+  // having just listed it; the name pair is what a PluginInstallation carries,
+  // and plugin-controller reads those rather than calling ListPlugins.
+  oneof lookup {
+    option (buf.validate.oneof).required = true;
+    string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+    PluginRef name = 30;
+  }
+  string version = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// A listing named the way it is published: plugin names are unique per
+// publisher, so neither half identifies a listing on its own.
+message PluginRef {
+  string organization_name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 63
+  }];
+  string plugin_name = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 63
+  }];
+}
+
+message GetPluginDefinitionResponse {
+  // The stored bytes, not a re-serialization: definition_hash is the sha256 of
+  // exactly these, so a caller can verify what it pins.
+  bytes manifest = 10;
+  string definition_hash = 20;
 }

@@ -227,6 +227,35 @@ const (
 	PlacementSlotType_ZeroU PlacementSlotType = "zero_u"
 )
 
+// PluginDefinitionStatus represents valid values for appstore.plugin_definitions.status.
+type PluginDefinitionStatus string
+
+const (
+	PluginDefinitionStatus_Draft            PluginDefinitionStatus = "draft"
+	PluginDefinitionStatus_Pending          PluginDefinitionStatus = "pending"
+	PluginDefinitionStatus_ChangesRequested PluginDefinitionStatus = "changes_requested"
+	PluginDefinitionStatus_Approved         PluginDefinitionStatus = "approved"
+	PluginDefinitionStatus_Rejected         PluginDefinitionStatus = "rejected"
+	PluginDefinitionStatus_Withdrawn        PluginDefinitionStatus = "withdrawn"
+)
+
+// PluginLabelName represents valid values for appstore.plugin_labels.name.
+type PluginLabelName string
+
+const (
+	PluginLabelName_Core          PluginLabelName = "core"
+	PluginLabelName_Rijksoverheid PluginLabelName = "rijksoverheid"
+	PluginLabelName_Support9To17  PluginLabelName = "support_9_to_17"
+)
+
+// PluginVisibility represents valid values for appstore.plugins.visibility.
+type PluginVisibility string
+
+const (
+	PluginVisibility_Public     PluginVisibility = "public"
+	PluginVisibility_Restricted PluginVisibility = "restricted"
+)
+
 // PortCompatibilitieCompatibleCategory represents valid values for dcim.port_compatibilities.compatible_category.
 type PortCompatibilitieCompatibleCategory string
 

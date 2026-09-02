@@ -46,9 +46,9 @@ export default function buildPluginConsoleUrl(args: {
  * through without an adapter.
  */
 export interface PluginLike {
-  // The PluginInstallation CR name (metadata.name). plugin-proxy derives the
-  // plugin's namespace/Service as `plugin-<installationName>`, so this — not
-  // the definition's own display `name` — drives the asset URL.
+  // The PluginInstallation CR name (metadata.name). The plugin's namespace is
+  // derived from installationName, so this — not the definition's own display
+  // `name` — drives the asset URL.
   installationName: string;
   installationVersion: string;
   customComponents?: Record<

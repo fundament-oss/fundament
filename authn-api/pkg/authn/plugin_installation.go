@@ -16,7 +16,8 @@ import (
 // time. authn-api signs these fields into the PluginToken.
 type InstallationManifest struct {
 	// InstallationName is the CR's metadata.name — signed into the token so
-	// kube-api-proxy can address the plugin SA (plugin-{name}) without a
+	// kube-api-proxy can address the plugin SA ("plugin", in the namespace
+	// derived from this name) without a
 	// UID-keyed lookup.
 	InstallationName string
 	PluginName       string

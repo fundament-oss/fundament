@@ -15,27 +15,46 @@ import (
 )
 
 func TestPluginConsoleAsset(t *testing.T) {
+	// The namespace suffix is the installation name (metadata.name), which is
+	// "<organizationName>--<pluginName>" — not the bare catalog name.
 	cases := []struct {
-		path      string
-		wantName  string
-		wantAsset string
-		wantOk    bool
+		path                 string
+		wantInstallationName string
+		wantAsset            string
+		wantOk               bool
 	}{
 		{
-			path:      "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/certificates-list.html",
-			wantName:  "cert-manager",
-			wantAsset: "certificates-list.html",
-			wantOk:    true,
+			path:                 "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/console/certificates-list.html",
+			wantInstallationName: "system--cert-manager",
+			wantAsset:            "certificates-list.html",
+			wantOk:               true,
 		},
 		{
-			path:      "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/_shared.js",
-			wantName:  "demo",
-			wantAsset: "_shared.js",
-			wantOk:    true,
+			// Same plugin name, different publisher: a distinct namespace.
+			path:                 "/api/v1/namespaces/plugin-acme-corp--cert-manager/services/http:plugin:8080/proxy/console/certificates-list.html",
+			wantInstallationName: "acme-corp--cert-manager",
+			wantAsset:            "certificates-list.html",
+			wantOk:               true,
+		},
+		{
+			path:                 "/api/v1/namespaces/plugin-system--demo/services/http:plugin:8080/proxy/console/_shared.js",
+			wantInstallationName: "system--demo",
+			wantAsset:            "_shared.js",
+			wantOk:               true,
 		},
 		{
 			// Exact GetDefinition path is not a console asset.
-			path:   "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition",
+			path:   "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition",
+			wantOk: false,
+		},
+		{
+			// The Service is constant-named; the old per-plugin name is not a match.
+			path:   "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin-system--cert-manager:8080/proxy/console/index.html",
+			wantOk: false,
+		},
+		{
+			// The name indexes a directory: traversal must not survive it.
+			path:   "/api/v1/namespaces/plugin-../services/http:plugin:8080/proxy/console/list.html",
 			wantOk: false,
 		},
 		{
@@ -46,9 +65,9 @@ func TestPluginConsoleAsset(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {
-			name, asset, ok := pluginConsoleAsset(tc.path)
+			installationName, asset, ok := pluginConsoleAsset(tc.path)
 			require.Equal(t, tc.wantOk, ok)
-			require.Equal(t, tc.wantName, name)
+			require.Equal(t, tc.wantInstallationName, installationName)
 			require.Equal(t, tc.wantAsset, asset)
 		})
 	}
@@ -178,7 +197,9 @@ func TestServeConsoleAsset(t *testing.T) {
 
 	mc := &MockClient{PluginTemplatesDir: dir}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/list.html", nil)
+	// The URL carries the installation name; the template directory is named
+	// after the plugin, so the organization prefix has to be resolved away.
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/console/list.html", http.NoBody)
 	w := httptest.NewRecorder()
 	mc.ServeHTTP(w, req)
 
@@ -186,17 +207,30 @@ func TestServeConsoleAsset(t *testing.T) {
 	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"), "Content-Type = %q", w.Header().Get("Content-Type"))
 	require.Contains(t, w.Body.String(), "<body>test</body>")
 
+	// A different publisher of the same plugin resolves to the same assets.
+	reqOther := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/namespaces/plugin-acme-corp--cert-manager/services/http:plugin:8080/proxy/console/list.html", http.NoBody)
+	wOther := httptest.NewRecorder()
+	mc.ServeHTTP(wOther, reqOther)
+	require.Equal(t, http.StatusOK, wOther.Code, "body = %s", wOther.Body.String())
+
 	// Path traversal protection.
-	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/../../etc/passwd", nil)
+	req2 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/console/../../etc/passwd", http.NoBody)
 	w2 := httptest.NewRecorder()
 	mc.ServeHTTP(w2, req2)
 	require.Equal(t, http.StatusBadRequest, w2.Code, "expected 400 for traversal")
 
 	// Missing file → 404.
-	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/nope.html", nil)
+	req3 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/console/nope.html", http.NoBody)
 	w3 := httptest.NewRecorder()
 	mc.ServeHTTP(w3, req3)
 	require.Equal(t, http.StatusNotFound, w3.Code, "expected 404 for missing file")
+
+	// No template directory for any suffix → 404, not a path built from the
+	// unresolved installation name.
+	req4 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/namespaces/plugin-system-unknown-plugin/services/http:plugin:8080/proxy/console/list.html", http.NoBody)
+	w4 := httptest.NewRecorder()
+	mc.ServeHTTP(w4, req4)
+	require.Equal(t, http.StatusNotFound, w4.Code, "expected 404 for unknown plugin")
 }
 
 func TestMockFSCInstallations(t *testing.T) {

@@ -47,7 +47,10 @@ When the Console boots for a cluster, `PluginRegistryService.loadPlugins()`:
 3. For each running plugin, calls the plugin's
    `PluginMetadataService.GetDefinition` Connect RPC through the Kubernetes
    apiserver service proxy:
-   `GET /clusters/{clusterId}/api/v1/namespaces/plugin-{name}/services/http:plugin-{name}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`.
+   `GET /clusters/{clusterId}/api/v1/namespaces/plugin-{installationName}/services/http:plugin:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
+   where `{installationName}` is the CR's `metadata.name`
+   (`<organizationName>--<pluginName>`) — not the bare catalog name. The Service
+   is constant-named `plugin`; only the namespace varies.
 4. Stores the parsed definitions in a signal that the sidebar and routes
    subscribe to.
 
@@ -101,10 +104,16 @@ iframe `src`:
 
 ```
 {kubeApiProxyUrl}/clusters/{clusterId}
-  /api/v1/namespaces/plugin-{name}
-  /services/http:plugin-{name}:8080
+  /api/v1/namespaces/plugin-{installationName}
+  /services/http:plugin:8080
   /proxy/console/{file}?host={consoleOrigin}
 ```
+
+`{installationName}` is the PluginInstallation's `metadata.name`
+(`<organizationName>--<pluginName>`). Two organizations may publish a plugin
+with the same name, so the bare plugin name does not identify an installation
+— and for a name too long for a DNS label the namespace is truncated and
+hashed, so read it from `status.namespace` rather than reassembling it.
 
 Two things to note:
 
@@ -289,7 +298,7 @@ Both modes expose the same external surface:
   only path forwarded to the cluster handler. Paths outside that allowlist
   return 404.
 - `/livez`, `/readyz` — health probes.
-- Plugin console asset paths (`/clusters/{id}/api/v1/namespaces/plugin-{name}/services/http:plugin-{name}:8080/proxy/console/...`)
+- Plugin console asset paths (`/clusters/{id}/api/v1/namespaces/plugin-{installationName}/services/http:plugin:8080/proxy/console/...`)
   are treated as **public** static assets: the auth/authz check is skipped
   because the sandboxed iframe runs with an opaque origin and cannot send the
   JWT cookie anyway. The assets themselves carry no secrets — they are
@@ -316,7 +325,9 @@ instead of talking to a cluster:
   definition JSON. The real plugin binary is not running.
 - **Console assets**: served from the local filesystem at
   `${MOCK_PLUGIN_TEMPLATES_DIR}/{pluginName}/console/{asset}` (default
-  `./plugins`). Responses include `Cache-Control: no-store` so iframe
+  `./plugins`). The request URL carries the *installation* name, so the mock
+  strips leading `<organization>-` segments until a directory matches — two
+  organizations publishing the same plugin share these assets. Responses include `Cache-Control: no-store` so iframe
   reloads always pick up edits — refresh the browser and your edits to
   `plugins/cert-manager/console/certificates-list.html` are live. CORS is
   overridden to `Access-Control-Allow-Origin: *` (necessary because the

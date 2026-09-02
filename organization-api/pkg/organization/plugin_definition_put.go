@@ -109,7 +109,7 @@ func (s *Server) PutPluginDefinition(
 	// must never be silently swapped. With replace we soft-delete it below,
 	// inside the same transaction as the insert.
 	if _, err := s.queries.PluginDefinitionGetActive(ctx, db.PluginDefinitionGetActiveParams{
-		Name: catalogRow.Name, PluginVersion: version,
+		OrganizationName: catalogRow.OrganizationName, PluginName: catalogRow.Name, PluginVersion: version,
 	}); err == nil {
 		if !replace {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,

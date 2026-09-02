@@ -1,0 +1,115 @@
+name: Release terraform-provider
+
+on:
+  push:
+    branches: [master]
+
+permissions: {}
+
+concurrency:
+  group: release-terraform-provider
+  cancel-in-progress: false
+
+env:
+  # The version OpenTofu/Terraform select on. It is part of the package
+  # filename, so it must be a plain semver; the rolling build id goes into the
+  # binary instead. Keep in sync with the plugin dir in terraform-provider/mod.just.
+  PROVIDER_VERSION: "0.1.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build provider packages
+        run: |
+          VERSION="${GITHUB_SHA::7}-master-${{ github.run_number }}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+          # Packages follow the provider registry layout so that a zip dropped
+          # unchanged into a local plugin mirror is picked up by `tofu init`:
+          #   terraform-provider-fundament_<semver>_<os>_<arch>.zip
+          # containing a single terraform-provider-fundament_v<semver>[.exe].
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/arm64 windows/amd64; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            OUT_DIR="dist/terraform-provider-fundament_${GOOS}_${GOARCH}"
+            BIN="terraform-provider-fundament_v${PROVIDER_VERSION}"
+            if [ "$GOOS" = "windows" ]; then
+              BIN="${BIN}.exe"
+            fi
+            mkdir -p "$OUT_DIR"
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+              go build -trimpath \
+                -ldflags "-s -w -X main.version=${VERSION}" \
+                -o "$OUT_DIR/$BIN" ./terraform-provider
+            (cd "$OUT_DIR" && zip -q "../terraform-provider-fundament_${PROVIDER_VERSION}_${GOOS}_${GOARCH}.zip" "$BIN")
+          done
+          (cd dist && sha256sum *.zip > "terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS")
+
+      - name: Update rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The package names are fixed, so replacing assets on the live release
+          # (gh release upload --clobber) would expose a mix of old and new
+          # packages while uploading, and a failed upload would leave it that
+          # way. Instead, upload everything to a draft release while the current
+          # one stays live, then swap: move the tag, delete the old release and
+          # publish the draft. The swap itself is two API calls, in which the
+          # download URLs 404; a downloader never sees a mix. Any failure before
+          # the swap leaves the current release untouched.
+          #
+          # While the draft and the published release share the tag, gh's
+          # tag-addressed release commands may resolve to either of them, so the
+          # draft is only ever addressed by id.
+          TAG=terraform-provider-latest
+          NOTES="Rolling build of the Fundament OpenTofu/Terraform provider from the latest push to master.
+
+          - Provider version: \`${PROVIDER_VERSION}\`
+          - Build: \`${VERSION}\`
+          - Commit: ${GITHUB_SHA}
+
+          See terraform-provider/README.md for install instructions."
+
+          OLD_ID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .id 2>/dev/null || true)
+
+          NEW_ID=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" \
+            -f tag_name="$TAG" \
+            -f target_commitish="$GITHUB_SHA" \
+            -f name="terraform-provider (rolling)" \
+            -f body="$NOTES" \
+            -F draft=true \
+            -F prerelease=true \
+            --jq .id)
+          trap 'gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}" || true' ERR
+
+          for f in dist/*.zip "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS"; do
+            gh api -X POST \
+              -H "Content-Type: application/octet-stream" \
+              "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}/assets?name=$(basename "$f")" \
+              --input "$f" > /dev/null
+          done
+          echo "Draft release ${NEW_ID} assets:"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}/assets" --jq '.[] | "  \(.name) \(.size)"'
+
+          # Swap. Publishing does not move an existing tag, so move it here.
+          git tag -f "$TAG"
+          git push -f origin "$TAG"
+          if [ -n "$OLD_ID" ]; then
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${OLD_ID}"
+          fi
+          trap - ERR
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}" \
+            -F draft=false \
+            -F prerelease=true \
+            -f make_latest=false > /dev/null

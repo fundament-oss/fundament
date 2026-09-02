@@ -1,0 +1,24 @@
+# NodePort exposing marketplace-catalog-api's Connect port so the
+# plugin-controller in the network-isolated sandbox cluster
+# (k3d-fundament-plugin) can fetch PluginDefinitions (FUN-19). Applied by
+# `just plugins sandbox-catalog`.
+#
+# Local dev only: production reaches the catalog over its normal external URL. Here the two k3d clusters are isolated, so a relay container bridges the
+# sandbox to this NodePort (see the Justfile recipe).
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketplace-catalog-api-sandbox-np
+  namespace: fundament
+  labels:
+    fundament.io/purpose: sandbox-plugin-controller-egress
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: fundament-marketplace-catalog-api
+    app.kubernetes.io/name: marketplace-catalog-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30080

@@ -25,8 +25,8 @@ console UI, and needs no Fundament account. See
   │                                                                          │
   │  PluginInstallation CRs (cluster-scoped)                                 │
   │  ┌──────────────────────┐                                                │
-  │  │ cert-manager-test    │                                                │
-  │  │ another-plugin       │                                                │
+  │  │ system--cert-manager │                                                │
+  │  │ acme--another-plugin │                                                │
   │  └──────────┬───────────┘                                                │
   │             │                                                            │
   │  fundament namespace                                                     │
@@ -43,12 +43,12 @@ console UI, and needs no Fundament account. See
   │                                           │ creates                      │
   │               ┌───────────────────────────┼─────────────────────┐        │
   │               ▼                           ▼                     ▼        │
-  │   plugin-cert-manager-test    plugin-another-plugin     plugin-...       │
+  │  plugin-system--cert-manager  plugin-acme--another-plugin  plugin-...    │
   │  ┌───────────────────────┐  ┌───────────────────────┐                    │
   │  │ SA + RoleBinding      │  │ SA + RoleBinding      │                    │
   │  │ Deployment + Service  │  │ Deployment + Service  │                    │
-  │  │ (+ ClusterRoleBinding │  │                       │                    │
-  │  │  if requested)        │  │                       │                    │
+  │  │ (+ ClusterRole/CRB    │  │                       │                    │
+  │  │  from the definition) │  │                       │                    │
   │  └───────────────────────┘  └───────────────────────┘                    │
   └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -205,30 +205,40 @@ The controller watches `PluginInstallation` CRs.
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: cert-manager-test
+  name: system--cert-manager
 spec:
-  image: ghcr.io/fundament-oss/fundament/cert-manager-plugin:v1.0.0
-  pluginName: cert-manager-test
-  clusterRoles:          # Optional: bind SA to these ClusterRoles
-    - cluster-admin
+  definitionRef:
+    organizationName: system
+    pluginName: cert-manager
+    pluginVersion: v1.17.2
+    definitionHash: sha256:...
   config:                # Optional: extra env vars (injected with FUNP_ prefix)
     LOG_LEVEL: debug     # → becomes FUNP_LOG_LEVEL in the container
 ```
+
+A plugin's identity is the pair `(organizationName, pluginName)`, and
+`metadata.name` must equal `<organizationName>--<pluginName>` — see
+[FUN-17](/funs/fun-17#plugin-identity-and-naming) for why.
 
 ### What the controller creates
 
 For each `PluginInstallation`, the controller creates:
 
 ```
-  plugin-{pluginName} namespace
-  ├─ ServiceAccount/plugin-{pluginName}
-  ├─ RoleBinding ──► ClusterRole/admin (always, namespace-scoped)
-  ├─ Deployment (runs the plugin image)
-  └─ Service (:8080)
+  plugin-<installationName> namespace   (hashed if the derived name would exceed 63 chars)
+  ├─ ServiceAccount/plugin
+  ├─ RoleBinding ──► ClusterRole/admin (namespace-scoped)
+  ├─ Deployment (runs the plugin's image, container named "plugin")
+  └─ Service/plugin (:8080)
 
-  ClusterRoleBinding (only if spec.clusterRoles is set)
-  └─ Binds SA to requested ClusterRoles at cluster scope
+  ClusterRole "plugin-<installationName>-scope" (cluster-scoped)
+  └─ Materialised from the pinned PluginDefinition's permissions.rbac,
+     bound to the plugin ServiceAccount via a ClusterRoleBinding
 ```
+
+Every namespace-scoped child is named `plugin` — not `plugin-<installationName>`
+— because the namespace already disambiguates installations; see
+[FUN-17](/funs/fun-17#plugin-identity-and-naming).
 
 ### RBAC model
 
@@ -244,10 +254,12 @@ For each `PluginInstallation`, the controller creates:
   └─────────────────────────────────────┘
                   +
   ┌─────────────────────────────────────┐
-  │  OPTIONAL (spec.clusterRoles)       │
+  │  ALWAYS (from the pinned definition)│
   │                                     │
+  │  ClusterRole materialised from      │
+  │  spec.permissions.rbac in the       │
+  │  PluginDefinition, bound via a      │
   │  ClusterRoleBinding                 │
-  │  → ClusterRole/{requested}          │
   │                                     │
   │  For plugins that need cluster-wide │
   │  access (CRDs, webhooks, resources  │
@@ -264,18 +276,18 @@ For each `PluginInstallation`, the controller creates:
   Add finalizer ──► Create Namespace ──► Create SA
            │
            ├──► Create RoleBinding (→ admin)
-           ├──► Create ClusterRoleBindings (if spec.clusterRoles)
+           ├──► Create ClusterRole/ClusterRoleBinding (from the pinned definition)
            ├──► Create Deployment
            ├──► Create Service
            │
            ▼
   Poll plugin metadata API
-  GET http://plugin-{name}.plugin-{name}.svc.cluster.local:8080
+  GET http://plugin.<namespace>.svc.cluster.local:8080
        └─ PluginMetadataService.GetStatus()
            │
            ▼
   Update CR .status
-  (phase, ready, message)
+  (phase, ready, message, namespace)
            │
            ▼
   RequeueAfter (poll interval)
@@ -285,7 +297,7 @@ For each `PluginInstallation`, the controller creates:
 
 ```
   CR deleted ──► Finalizer triggers:
-                 ├─ Delete ClusterRoleBindings (if any)
-                 ├─ Delete Namespace (cascades to all resources)
+                 ├─ Delete ClusterRole/ClusterRoleBinding
+                 ├─ Delete Namespace (cascades to all namespace-scoped resources)
                  └─ Remove finalizer → CR garbage collected
 ```

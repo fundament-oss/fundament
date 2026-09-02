@@ -2,6 +2,7 @@ mod terraform-provider
 mod e2e
 mod cluster-worker
 mod deploy-remote
+mod plugins
 
 _default:
     @just --list
@@ -23,7 +24,12 @@ _ensure-k3d-network:
 
 # Create a local k3d cluster for development with local registry
 cluster-create:
+    #!/usr/bin/env bash
+    set -e
     just _ensure-k3d-network
+    # PowerShell never exports PWD, and Git Bash exports a POSIX path (/c/...) that Docker cannot mount.
+    # To fix this we we pin an absolute forward-slash path `pwd -W` is a Git Bash extension; elsewhere it falls back to plain pwd.
+    export PWD="$(pwd -W 2>/dev/null || pwd)"
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
 
@@ -60,11 +66,14 @@ setup-certs:
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
     echo "Waiting for cert-manager webhook to be ready..."
+    # On Windows the path mkcert returns is mangled and the file cannot be opened. 
+    # Normalise to forward slashes for Windows; a no-op on Linux and macOS.
+    CAROOT="$(mkcert -CAROOT | tr '\\' '/')"
     for i in $(seq 1 12); do
         helm upgrade --install mkcert-setup charts/mkcert-setup \
             --namespace cert-manager \
-            --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
-            --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem" && break
+            --set-file ca.cert="$CAROOT/rootCA.pem" \
+            --set-file ca.key="$CAROOT/rootCA-key.pem" && break
         [ "$i" -eq 12 ] && { echo "cert-manager webhook did not become ready in time"; exit 1; }
         echo "Webhook not ready yet, retrying in 5s... ($i/12)"
         sleep 5

@@ -1,0 +1,69 @@
+:showtitle:
+:sidebar-order: 27
+:state: accepted
+
+= ADR-0027: Native log panels via per-shoot Vali through the Plutono datasource proxy
+
+Status:: accepted
+Date:: 2026-08-05
+Group:: cross-cutting
+Depends-on:: ADR-0025, ADR-0026
+
+== Context
+
+ADR-0025 adopted Gardener's default observability stack per shoot and explicitly deferred log observability: "log retention, and any Vali/Loki/VictoriaLogs decision are explicitly out of scope and require a separate ADR". This is that ADR.
+
+The product requirement (issue #978) is cluster logs in the console for cluster admins: the shoot's own system logs by default, plus logs of installed plugins. User workloads, firewall (suricata) logs, and a tenant-installable logging stack are explicitly out of scope for now.
+
+Gardener ships a per-shoot Vali (a Loki fork) in the shoot's control-plane namespace on the seed, fed by valitail with *system component* logs only. Unlike Prometheus (ADR-0026), Vali has no externally reachable query endpoint:
+
+* The `<shoot-name>.monitoring` secret carries only `plutono-url` and `prometheus-url` annotations — there is no logs URL, verified in the Gardener source (`botanist/secrets.go`).
+* Vali's own ingress exposes only the push endpoint (`/vali/api/v1/push`) behind kube-rbac-proxy; the query API is unreachable from outside the seed.
+
+Verified against a live local Gardener (v1.138, 2026-08-04): although the datasource lookup APIs stay closed to the ingress caller (ADR-0026's anonymous-Viewer finding), the datasource *proxy* by numeric id is allowed: `{plutono-url}/api/datasources/proxy/{id}/vali/api/v1/query_range` with the monitoring secret's credentials returns real shoot system log streams. Two further live findings: the fork's query API prefix is `/vali/api/v1/*` (not Loki's `/loki/api/v1/*`), and stream labels are `namespace_name`/`pod_name`/`container_name` plus `nodename` and `origin`.
+
+Plugin pods are ordinary workloads and never reach Vali, so plugin logs come from the Kubernetes `pods/log` subresource through kube-api-proxy, which already enforces per-user authorization.
+
+== Options
+
+=== Option 1: Server-side per-cluster querying in organization-api, Vali via the Plutono datasource proxy
+
+A `LogsService` in organization-api (mirroring ADR-0026's `MetricsService` shape) queries each shoot's Vali through `{plutono-url}/api/datasources/proxy/{id}/vali/api/v1/*` with the monitoring secret's credentials. Because the datasource list is not readable, the numeric id is *discovered by probing* proxy ids with a cheap labels call, cached per cluster, and re-discovered when it stops answering. Plugin-scoped queries route through kube-api-proxy `pods/log` with the caller's own token.
+
+* Reuses the monitoring-secret plumbing, the per-shoot client cache pattern, and the CA-trust knob that ADR-0026's implementation already ships; credentials never leave organization-api.
+* The only externally reachable route to Vali that exists today — no Gardener-side changes required.
+* The proxy hop and the id discovery are encapsulated behind a `logs.Client` interface; the console only sees typed RPCs and a backend marker.
+
+=== Option 2: Direct Vali exposure
+
+Extend Gardener (or the landscape) so Vali's query API gets its own authenticated ingress and a `vali-url` annotation, then follow ADR-0026's direct-endpoint pattern.
+
+* Cleanest data path, but requires carrying Gardener-side changes fundament does not own.
+* Mooted by Gardener's in-flight migration from Vali to VictoriaLogs (both already run side by side on seeds; VictoriaLogs has a different API and currently no ingress at all).
+
+=== Option 3: Central log aggregation store
+
+Ship every shoot's logs to a fleet-wide Loki/VictoriaLogs and query that.
+
+* Rejected for the same reasons as ADR-0026's central aggregation option — it solves the explicitly deferred cross-shoot and retention problems at a heavy operational cost — and logs would additionally need new shipping infrastructure per shoot.
+
+=== Option 4: Kubernetes `pods/log` only
+
+Skip Vali entirely; serve everything through kube-api-proxy.
+
+* Covers plugin logs well, but cannot serve control-plane/system history, cross-pod search, or label discovery — the primary #978 requirement — and only reaches pods that still exist.
+
+== Decision
+
+Option 1, with Option 4's mechanism retained for the plugin-logs slice: organization-api serves cluster system logs from per-shoot Vali through the Plutono datasource proxy by discovered numeric id, and plugin logs through kube-api-proxy `pods/log` with the caller's token. Selection follows the `PROMETHEUS_URL` convention: `LOGS_URL=mock` (default — synthetic data for local dev and CI), `per-shoot` (explicit sentinel), or a URL as a global Loki-API override.
+
+Datasource discovery probes `/api/datasources/proxy/N/vali/api/v1/labels` for ascending N with the monitoring credentials; the first id that answers is cached (TTL, singleflight) and invalidated on 401 (credential rotation) or 404/meta-data errors (id drift). Per-cluster failures degrade to empty responses with a `LOG_BACKEND_NONE` marker — never a failed RPC or dead stream.
+
+Access requires edit permission on the cluster (`can_edit`), not view: issue #978 restricts logs to cluster admins. A dedicated `can_view_logs` relation in the authorization model is the noted follow-up if log access ever needs its own role.
+
+== Consequences
+
+* Tenants get a native log explorer and analytics in the console with no credentials in the browser; the same seed-ingress transit and in-memory credential handling as ADR-0026.
+* The Vali client has a shelf life: when Gardener flips the logging backend to VictoriaLogs, the probe stops finding a Vali datasource and a new `logs.Client` implementation is required behind the existing interface. The probe exhausting its id range is the detection signal.
+* The numeric-id proxy route is Plutono-version-dependent behavior; the live-verification probe (`tools/cmd/logs-live-probe`) walks the exact production path on demand so drift is caught before rollout, not in CI.
+* Deferred and unchanged: suricata/firewall logs, user-workload logs, log retention, a tenant Logging plugin, cross-shoot log search.

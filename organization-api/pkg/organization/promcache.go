@@ -6,27 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
-)
-
-const (
-	// perShootTTL bounds how long a resolved per-shoot client is reused before
-	// the monitoring secret is re-read. Entries expire at 70% of the TTL so
-	// refreshes happen before staleness bites (same convention as
-	// kube-api-proxy's admin-kubeconfig cache).
-	perShootTTL = 10 * time.Minute
-
-	// resolveTimeout bounds one monitoring-secret read. Resolution runs
-	// detached from the winning caller's context (all concurrent callers join
-	// its flight), so it needs its own deadline.
-	resolveTimeout = 15 * time.Second
 )
 
 // perShootClients resolves and caches one Prometheus client per cluster,
@@ -44,26 +29,33 @@ type perShootClients struct {
 	// prom.NewHTTPClientWithAuth.
 	newClient func(base, username, password string) prom.Client
 
-	mu      sync.Mutex
-	entries map[uuid.UUID]perShootEntry
-	sf      singleflight.Group
-}
-
-type perShootEntry struct {
-	client  prom.Client
-	expires time.Time
+	cache *perShootCache[prom.Client]
 }
 
 func newPerShootClients(g gardener.Client, logger *slog.Logger, opts ...prom.Option) *perShootClients {
-	return &perShootClients{
+	c := &perShootClients{
 		gardener: g,
 		logger:   logger,
 		now:      time.Now,
 		newClient: func(base, username, password string) prom.Client {
 			return prom.NewHTTPClientWithAuth(base, username, password, opts...)
 		},
-		entries: make(map[uuid.UUID]perShootEntry),
 	}
+	// Indirections keep c.now / c.newClient assignable by tests after
+	// construction.
+	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient, defaultResolveTimeout)
+	return c
+}
+
+func (c *perShootClients) resolveClient(ctx context.Context, clusterID uuid.UUID) (prom.Client, error) {
+	info, err := c.gardener.Monitoring(ctx, clusterID)
+	if err != nil {
+		return nil, fmt.Errorf("look up shoot monitoring: %w", err)
+	}
+	if info.PrometheusURL == "" {
+		return nil, fmt.Errorf("monitoring secret has no prometheus-url annotation: %w", gardener.ErrNotFound)
+	}
+	return c.newClient(info.PrometheusURL, info.Username, info.Password), nil
 }
 
 // clientFor returns a client for the cluster's per-shoot Prometheus. It
@@ -80,47 +72,13 @@ func (c *perShootClients) clientFor(ctx context.Context, clusterID uuid.UUID) (p
 }
 
 // resolved returns the cached inner client for clusterID, resolving it when
-// absent or expired. Concurrent resolutions for the same cluster are deduped.
+// absent or expired.
 func (c *perShootClients) resolved(ctx context.Context, clusterID uuid.UUID) (prom.Client, error) {
-	c.mu.Lock()
-	entry, ok := c.entries[clusterID]
-	c.mu.Unlock()
-	if ok && c.now().Before(entry.expires) {
-		return entry.client, nil
-	}
-
-	v, err, _ := c.sf.Do(clusterID.String(), func() (any, error) {
-		// Detach from the winning caller's cancellation: every concurrent
-		// caller for this cluster joins this flight, and one caller aborting
-		// (page refresh) must not fail the others' resolution.
-		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), resolveTimeout)
-		defer cancel()
-		info, err := c.gardener.Monitoring(rctx, clusterID)
-		if err != nil {
-			return nil, err
-		}
-		if info.PrometheusURL == "" {
-			return nil, fmt.Errorf("monitoring secret has no prometheus-url annotation: %w", gardener.ErrNotFound)
-		}
-		client := c.newClient(info.PrometheusURL, info.Username, info.Password)
-		c.mu.Lock()
-		c.entries[clusterID] = perShootEntry{
-			client:  client,
-			expires: c.now().Add(perShootTTL * 7 / 10),
-		}
-		c.mu.Unlock()
-		return client, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return v.(prom.Client), nil
+	return c.cache.get(ctx, clusterID)
 }
 
 func (c *perShootClients) invalidate(clusterID uuid.UUID) {
-	c.mu.Lock()
-	delete(c.entries, clusterID)
-	c.mu.Unlock()
+	c.cache.invalidate(clusterID)
 }
 
 // perShootClient is the stable handle handed to query code. Each call fetches

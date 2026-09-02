@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 cmd = "go build -o tmp/plugin-controller ./plugin-controller/cmd"
 entrypoint = "tmp/plugin-controller"
 include_ext = ["go", "mod", "sum"]
-include_dir = ["plugin-controller", "plugin-sdk", "common", "organization-api"]
+include_dir = ["plugin-controller", "plugin-sdk", "common", "marketplace-api"]
 exclude_dir = ["tmp"]
 delay = 500
 

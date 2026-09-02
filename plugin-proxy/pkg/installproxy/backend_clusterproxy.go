@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 )
 
@@ -34,12 +35,12 @@ func (b *ClusterProxyBackend) Serve(w http.ResponseWriter, r *http.Request, rout
 	var pathDecoded, pathEscaped string
 	switch route.Kind {
 	case RouteRuntime:
-		// plugin-controller names both the namespace and the Service
-		// plugin-<name> (see plugin-controller/pkg/controller/reconciler.go).
-		// The `http:name:port` selector picks the http scheme regardless of
-		// TLS on the API server — same convention as assets.PodFetcher.
-		ns := "plugin-" + route.PluginName
-		svc := "http:" + ns + ":8080"
+		// plugin-controller names the Service "plugin" (constant) inside the
+		// derived namespace; the `http:name:port` selector picks the http
+		// scheme regardless of TLS on the API server — same convention as
+		// assets.PodFetcher.
+		ns := kubename.PluginNamespace(route.InstallationName)
+		svc := "http:" + kubename.PluginChildName + ":8080"
 		pathDecoded = fmt.Sprintf("/api/v1/namespaces/%s/services/%s/proxy/%s", ns, svc, route.RemainingPath)
 		pathEscaped = fmt.Sprintf("/api/v1/namespaces/%s/services/%s/proxy/%s", ns, svc, tailEscaped)
 	case RouteController:
