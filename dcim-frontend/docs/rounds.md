@@ -167,7 +167,6 @@ from a view that does not write.
 Everything in this section waits on two fields. It is the only part of this plan
 that cannot be written in the frontend alone.
 
-
 A past round is the tasks that person completed on that day at that data center.
 
 That needs a field the model does not have. `TaskData` carries `status`, `due`

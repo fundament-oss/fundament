@@ -51,12 +51,7 @@
             <!-- The menu is slotted into the button that opens it, so it
                  anchors and closes itself: no id to keep in step with an anchor,
                  and no handle to reach for when an item is picked. -->
-            <nldd-button
-              variant="secondary"
-              text="Set status"
-              expandable
-              popup-type="menu"
-            >
+            <nldd-button variant="secondary" text="Set status" expandable popup-type="menu">
               <nldd-menu slot="popup" accessible-label="Set status">
                 <ng-container [ngTemplateOutlet]="bulkStatusItems"></ng-container>
               </nldd-menu>
@@ -69,12 +64,7 @@
             </nldd-menu-item>
           </nldd-toolbar-item>
           <nldd-toolbar-item slot="end">
-            <nldd-button
-              variant="secondary"
-              text="Assign"
-              expandable
-              popup-type="menu"
-            >
+            <nldd-button variant="secondary" text="Assign" expandable popup-type="menu">
               <nldd-menu slot="popup" accessible-label="Assign to">
                 <ng-container [ngTemplateOutlet]="bulkAssignItems"></ng-container>
               </nldd-menu>

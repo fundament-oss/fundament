@@ -235,7 +235,8 @@ export default class ShellComponent implements OnInit {
    */
   onPaneBack(event: Event): void {
     const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
-    const up = pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : sectionOf(this.currentUrl());
+    const up =
+      pane?.getAttribute('slot') === 'secondary-sidebar' ? '/' : sectionOf(this.currentUrl());
     this.router.navigateByUrl(up);
   }
 

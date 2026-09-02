@@ -14,7 +14,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { pageTitle } from '../../shell/page-title';
 import { RackSlotType } from '../../../generated/v1/common_pb';
@@ -36,7 +36,7 @@ import OverlayService from '../../shell/overlay.service';
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, InventoryNavComponent],
+  imports: [InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   // No styling of its own: the page inside paints the surface and owns the
   // layout, and styles.css takes this element out of the flow (display:
@@ -76,7 +76,7 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
     }
 
     event.preventDefault();
-    void this.router.navigate(['/catalog', id]);
+    this.router.navigate(['/catalog', id]);
   }
 
   private readonly title = inject(Title);

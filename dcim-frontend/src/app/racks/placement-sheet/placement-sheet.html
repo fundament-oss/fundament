@@ -23,7 +23,10 @@
             >
               <nldd-menu>
                 @for (asset of assetOptions(); track asset.id) {
-                  <nldd-menu-item [attr.value]="asset.id" [attr.text]="asset.label"></nldd-menu-item>
+                  <nldd-menu-item
+                    [attr.value]="asset.id"
+                    [attr.text]="asset.label"
+                  ></nldd-menu-item>
                 }
               </nldd-menu>
             </nldd-combo-box>

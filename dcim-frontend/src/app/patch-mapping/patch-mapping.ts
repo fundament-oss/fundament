@@ -29,7 +29,6 @@ import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import openOnCreateRequest from '../shell/create-request';
 import PatchGraphService from './patch-graph.service';
 import OverlayService from '../shell/overlay.service';
@@ -44,12 +43,7 @@ export interface SiteOption {
 @Component({
   selector: 'app-patch-mapping',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    PatchMappingFlowWrapperComponent,
-    CableListComponent,
-    ShoppingListComponent,
-    DropdownSyncDirective,
-  ],
+  imports: [PatchMappingFlowWrapperComponent, CableListComponent, ShoppingListComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './patch-mapping.html',
 })

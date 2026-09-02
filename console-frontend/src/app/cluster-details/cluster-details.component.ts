@@ -67,8 +67,6 @@ const getUsageColor = (percentage: number): string => {
   return 'success';
 };
 
-const round1 = (n: number): number => Math.round(n * 10) / 10;
-
 interface ResourceMetric {
   label: string;
   color: string;
