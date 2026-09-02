@@ -1,10 +1,13 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
+  ElementRef,
   inject,
+  Injector,
   signal,
   untracked,
   viewChild,
@@ -50,6 +53,8 @@ export default class AssetSheetComponent {
   private readonly stats = inject(InventoryStatsService);
 
   protected readonly overlays = inject(OverlayService);
+
+  private readonly injector = inject(Injector);
 
   protected readonly form = this.overlays.assetSheet;
 
@@ -123,7 +128,8 @@ export default class AssetSheetComponent {
       [],
   );
 
-  private readonly sheetEl = viewChild<NativeElementRef>('assetSheet');
+  private readonly sheetEl =
+    viewChild<ElementRef<HTMLElement & { show?: () => void; hide?: () => void }>>('assetSheet');
 
   private readonly deviceBox = viewChild<{ nativeElement: { value: string } }>('deviceBox');
 
@@ -140,8 +146,10 @@ export default class AssetSheetComponent {
   constructor() {
     effect(() => {
       const el = this.sheetEl()?.nativeElement;
-      if (this.form() !== null) el?.show?.();
-      else el?.hide?.();
+      if (this.form() !== null) {
+        el?.show?.();
+        this.focusMarkedField();
+      } else el?.hide?.();
     });
     // The device box reads its label off the menu, and the menu arrives with
     // the catalog. On an existing asset the value is set before that, so it is
@@ -173,6 +181,31 @@ export default class AssetSheetComponent {
         this.pickedLocation.set('');
       }
     });
+  }
+
+  /**
+   * Focuses the field carrying `autofocus`, for the one open where the mark is
+   * not there yet.
+   *
+   * The sheet reads `[autofocus]` inside `show()`, and which field carries it
+   * depends on whether this is a new asset or an existing one — so it is a
+   * binding, which Angular writes while refreshing the view, after the effect
+   * above has already opened the sheet. Every open after it finds the mark in
+   * place, which is why only the first one after a page load landed on nothing.
+   */
+  private focusMarkedField(): void {
+    afterNextRender(
+      () => {
+        // A task rather than a microtask: the combo box keeps its real input in
+        // shadow DOM, which Lit renders on a microtask. By the time this runs an
+        // open that focused the field itself has nothing left to do.
+        setTimeout(() => {
+          const target = this.sheetEl()?.nativeElement.querySelector<HTMLElement>('[autofocus]');
+          if (target && document.activeElement !== target) target.focus();
+        });
+      },
+      { injector: this.injector },
+    );
   }
 
   protected isFieldInvalid(field: string): boolean {
