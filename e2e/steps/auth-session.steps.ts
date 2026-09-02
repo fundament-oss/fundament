@@ -86,7 +86,7 @@ When('I click the logout button', async function (this: ICustomWorld) {
 
 Then('I should see the dashboard content', async function (this: ICustomWorld) {
   // The clusters page names itself in its own heading.
-  const heading = this.page!.locator('h1:has-text("Clusters")');
+  const heading = this.page!.locator('nldd-title#clusters-title h1');
   await expect(heading).toBeVisible({ timeout: 10000 });
 });
 
@@ -151,7 +151,7 @@ Then(
     expect(this.page!.url()).not.toContain('/login');
 
     // Dashboard content should be visible
-    const heading = this.page!.locator('h1:has-text("Clusters")');
+    const heading = this.page!.locator('nldd-title#clusters-title h1');
     await expect(heading).toBeVisible({ timeout: 10000 });
   },
 );
