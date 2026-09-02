@@ -29,6 +29,8 @@ service CatalogService {
   // Organizations with at least one public listing, so the storefront can
   // resolve organization_id without a credential for organization-api.
   rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+  // Curated plugin sets for the storefront's browse filters.
+  rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
   // Verbatim manifest for one version, plus the hash an install pins against.
   // Any version of a PUBLIC listing is reachable, published or not, so
   // plugin-controller can install what it installs today — it holds no user JWT.
@@ -143,6 +145,12 @@ message ListPublishersRequest {}
 
 message ListPublishersResponse {
   repeated marketplace.v1.Publisher publishers = 10;
+}
+
+message ListPresetsRequest {}
+
+message ListPresetsResponse {
+  repeated marketplace.v1.Preset presets = 10;
 }
 
 message GetPluginDefinitionRequest {

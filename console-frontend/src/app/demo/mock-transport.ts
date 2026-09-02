@@ -51,10 +51,12 @@ import {
   ListCategoriesResponseSchema as CatalogListCategoriesResponseSchema,
   ListPublishersResponseSchema as CatalogListPublishersResponseSchema,
   ListPluginVersionsResponseSchema as CatalogListPluginVersionsResponseSchema,
+  ListPresetsResponseSchema as CatalogListPresetsResponseSchema,
   PublishedVersionSchema,
 } from '../../generated/catalog/v1/catalog_pb';
 import {
   CategorySchema,
+  PresetSchema,
   PublisherSchema,
   DocumentationLinkSchema as MarketplaceDocumentationLinkSchema,
 } from '../../generated/marketplace/v1/common_pb';
@@ -268,9 +270,9 @@ export default function createDemoTransport(): Transport {
       },
     });
 
-    // What organization.v1 still answers. listPlugins stays because the
-    // cluster-side views (cluster-plugins, cluster-details, shared-plugins-form)
-    // have not moved to the catalog; presets have no catalog equivalent at all.
+    // What organization.v1 still answers: the cluster-side views
+    // (cluster-plugins, cluster-details, shared-plugins-form) have not moved to
+    // the catalog, and shared-plugins-form still reads presets from here too.
     router.service(PluginService, {
       listPlugins: async () => {
         await delay();
@@ -304,6 +306,19 @@ export default function createDemoTransport(): Transport {
         await delay(80);
         return create(CatalogListCategoriesResponseSchema, {
           categories: demoCategories().map((c) => create(CategorySchema, c)),
+        });
+      },
+      listPresets: async () => {
+        await delay(80);
+        return create(CatalogListPresetsResponseSchema, {
+          presets: fx.presets.map((p) =>
+            create(PresetSchema, {
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              pluginIds: p.pluginIds,
+            }),
+          ),
         });
       },
       listPublishers: async () => {

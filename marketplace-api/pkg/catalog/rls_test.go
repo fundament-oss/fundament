@@ -171,3 +171,22 @@ func TestRLSHidesSoftDeletedPluginManifest(t *testing.T) {
 
 	assert.ErrorIs(t, err, pgx.ErrNoRows, "a soft-deleted plugin's manifest must never be readable")
 }
+
+// seedPreset adds a preset and its membership rows.
+func seedPreset(t *testing.T, env *testEnv, name string, pluginIDs ...uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	ctx := context.Background()
+	presetID := uuid.New()
+	_, err := env.adminPool.Exec(ctx,
+		`INSERT INTO appstore.presets (id, name, description) VALUES ($1, $2, 'seeded')`, presetID, name)
+	require.NoError(t, err)
+
+	for _, pluginID := range pluginIDs {
+		_, err = env.adminPool.Exec(ctx,
+			`INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES ($1, $2)`, presetID, pluginID)
+		require.NoError(t, err)
+	}
+
+	return presetID
+}

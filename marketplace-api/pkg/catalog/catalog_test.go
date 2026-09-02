@@ -474,3 +474,39 @@ func TestGetPluginDefinitionByNameRejectsUnknownPublisher(t *testing.T) {
 
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
+
+func TestListPresetsReturnsSeededPresets(t *testing.T) {
+	env := newTestEnv(t)
+
+	resp, err := newServer(t, env).ListPresets(context.Background(), &catalogv1.ListPresetsRequest{})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.GetPresets(), "db/seed seeds presets")
+	for _, preset := range resp.GetPresets() {
+		assert.NotEmpty(t, preset.GetId())
+		assert.NotEmpty(t, preset.GetName())
+	}
+}
+
+// A preset names plugins, so it is a second way to learn a listing exists. It
+// must carry only what the caller could have found through ListPlugins.
+func TestListPresetsOmitsHiddenPluginsFromMembership(t *testing.T) {
+	env := newTestEnv(t)
+	visibleID := seedPlugin(t, env, seedOptions{Name: "preset-visible", Visibility: "public", Published: true})
+	restrictedID := seedPlugin(t, env, seedOptions{Name: "preset-restricted", Visibility: "restricted", Published: true})
+	draftID := seedPlugin(t, env, seedOptions{Name: "preset-draft", Visibility: "public", Published: false})
+	presetID := seedPreset(t, env, "starter", visibleID, restrictedID, draftID)
+
+	resp, err := newServer(t, env).ListPresets(context.Background(), &catalogv1.ListPresetsRequest{})
+	require.NoError(t, err)
+
+	var pluginIDs []string
+	for _, preset := range resp.GetPresets() {
+		if preset.GetId() == presetID.String() {
+			pluginIDs = preset.GetPluginIds()
+		}
+	}
+
+	assert.Equal(t, []string{visibleID.String()}, pluginIDs,
+		"a preset must not name a RESTRICTED or unpublished plugin")
+}

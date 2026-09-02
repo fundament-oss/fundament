@@ -17,19 +17,20 @@ import InstallPluginModalComponent, {
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
 import { OrganizationDataService } from '../organization-data.service';
-import { PLUGIN, CLUSTER, CATALOG } from '../../connect/tokens';
+import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
   PRESENTATION_ENABLED,
   PLUGIN_INSTALLS_RESET_EVENT,
 } from '../presentation/presentation.tokens';
-import { ListPresetsRequestSchema, type Category, type Preset } from '../../generated/v1/plugin_pb';
 import {
   ListPluginsRequestSchema,
   ListCategoriesRequestSchema,
   ListPublishersRequestSchema,
+  ListPresetsRequestSchema,
   ListPluginVersionsRequestSchema,
   type PluginSummary,
 } from '../../generated/catalog/v1/catalog_pb';
+import { type Category, type Preset } from '../../generated/marketplace/v1/common_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
@@ -117,9 +118,6 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   protected pageNav = inject(PageNavService);
 
   private titleService = inject(TitleService);
-
-  // organization.v1 for presets, which the catalog does not serve.
-  private pluginClient = inject(PLUGIN);
 
   private catalogClient = inject(CATALOG);
 
@@ -220,7 +218,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     try {
       // The catalog returns organization and category ids; their names come
       // from ListPublishers and ListCategories, fetched alongside rather than
-      // per plugin. Presets are still organization.v1's.
+      // per plugin.
       const [pluginsResponse, categoriesResponse, publishersResponse, presetsResponse] =
         await Promise.all([
           firstValueFrom(this.catalogClient.listPlugins(create(ListPluginsRequestSchema, {}))),
@@ -230,7 +228,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           firstValueFrom(
             this.catalogClient.listPublishers(create(ListPublishersRequestSchema, {})),
           ),
-          firstValueFrom(this.pluginClient.listPresets(create(ListPresetsRequestSchema, {}))),
+          firstValueFrom(this.catalogClient.listPresets(create(ListPresetsRequestSchema, {}))),
         ]);
 
       const categoryNames = new Map(categoriesResponse.categories.map((c) => [c.id, c.name]));

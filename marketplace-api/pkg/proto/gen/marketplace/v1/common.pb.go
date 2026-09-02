@@ -156,6 +156,108 @@ func (b0 Category_builder) Build() *Category {
 	return m0
 }
 
+// A curated set of plugins the storefront offers as a starting point.
+// plugin_ids carries only the listings the caller can see, so an anonymous
+// visitor never learns of a RESTRICTED or unpublished one through a preset.
+type Preset struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Description string                 `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_PluginIds   []string               `protobuf:"bytes,40,rep,name=plugin_ids,json=pluginIds"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Preset) Reset() {
+	*x = Preset{}
+	mi := &file_marketplace_v1_common_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Preset) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Preset) ProtoMessage() {}
+
+func (x *Preset) ProtoReflect() protoreflect.Message {
+	mi := &file_marketplace_v1_common_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *Preset) GetId() string {
+	if x != nil {
+		return x.xxx_hidden_Id
+	}
+	return ""
+}
+
+func (x *Preset) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *Preset) GetDescription() string {
+	if x != nil {
+		return x.xxx_hidden_Description
+	}
+	return ""
+}
+
+func (x *Preset) GetPluginIds() []string {
+	if x != nil {
+		return x.xxx_hidden_PluginIds
+	}
+	return nil
+}
+
+func (x *Preset) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *Preset) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *Preset) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *Preset) SetPluginIds(v []string) {
+	x.xxx_hidden_PluginIds = v
+}
+
+type Preset_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id          string
+	Name        string
+	Description string
+	PluginIds   []string
+}
+
+func (b0 Preset_builder) Build() *Preset {
+	m0 := &Preset{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_PluginIds = b.PluginIds
+	return m0
+}
+
 // A publishing organization, projected from tenant.organizations. Served by
 // each API's own ListPublishers, because organization-api's GetOrganization is
 // scoped to members and neither an anonymous visitor nor a Fundament reviewer
@@ -171,7 +273,7 @@ type Publisher struct {
 
 func (x *Publisher) Reset() {
 	*x = Publisher{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[1]
+	mi := &file_marketplace_v1_common_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -183,7 +285,7 @@ func (x *Publisher) String() string {
 func (*Publisher) ProtoMessage() {}
 
 func (x *Publisher) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[1]
+	mi := &file_marketplace_v1_common_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,7 +361,7 @@ type PluginPermission struct {
 
 func (x *PluginPermission) Reset() {
 	*x = PluginPermission{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[2]
+	mi := &file_marketplace_v1_common_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -271,7 +373,7 @@ func (x *PluginPermission) String() string {
 func (*PluginPermission) ProtoMessage() {}
 
 func (x *PluginPermission) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[2]
+	mi := &file_marketplace_v1_common_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -332,7 +434,7 @@ type FeatureBlock struct {
 
 func (x *FeatureBlock) Reset() {
 	*x = FeatureBlock{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[3]
+	mi := &file_marketplace_v1_common_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -344,7 +446,7 @@ func (x *FeatureBlock) String() string {
 func (*FeatureBlock) ProtoMessage() {}
 
 func (x *FeatureBlock) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[3]
+	mi := &file_marketplace_v1_common_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +509,7 @@ type DocumentationLink struct {
 
 func (x *DocumentationLink) Reset() {
 	*x = DocumentationLink{}
-	mi := &file_marketplace_v1_common_proto_msgTypes[4]
+	mi := &file_marketplace_v1_common_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -419,7 +521,7 @@ func (x *DocumentationLink) String() string {
 func (*DocumentationLink) ProtoMessage() {}
 
 func (x *DocumentationLink) ProtoReflect() protoreflect.Message {
-	mi := &file_marketplace_v1_common_proto_msgTypes[4]
+	mi := &file_marketplace_v1_common_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +604,14 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"R\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"m\n" +
+	"\x06Preset\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x1e \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"plugin_ids\x18( \x03(\tR\tpluginIds\"R\n" +
 	"\tPublisher\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -532,14 +641,15 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\x1bSUBMISSION_STATUS_WITHDRAWN\x10\x06BiZ]github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_marketplace_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_marketplace_v1_common_proto_goTypes = []any{
 	(SubmissionStatus)(0),     // 0: marketplace.v1.SubmissionStatus
 	(*Category)(nil),          // 1: marketplace.v1.Category
-	(*Publisher)(nil),         // 2: marketplace.v1.Publisher
-	(*PluginPermission)(nil),  // 3: marketplace.v1.PluginPermission
-	(*FeatureBlock)(nil),      // 4: marketplace.v1.FeatureBlock
-	(*DocumentationLink)(nil), // 5: marketplace.v1.DocumentationLink
+	(*Preset)(nil),            // 2: marketplace.v1.Preset
+	(*Publisher)(nil),         // 3: marketplace.v1.Publisher
+	(*PluginPermission)(nil),  // 4: marketplace.v1.PluginPermission
+	(*FeatureBlock)(nil),      // 5: marketplace.v1.FeatureBlock
+	(*DocumentationLink)(nil), // 6: marketplace.v1.DocumentationLink
 }
 var file_marketplace_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -560,7 +670,7 @@ func file_marketplace_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_marketplace_v1_common_proto_rawDesc), len(file_marketplace_v1_common_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
