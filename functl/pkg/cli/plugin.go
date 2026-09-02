@@ -113,8 +113,8 @@ func (c *PluginCreateCmd) tidy(opts *scaffold.Options) bool {
 
 	if strings.Contains(string(out), "unknown revision") {
 		fmt.Fprintf(os.Stderr, `
-fundament %s is not published yet. Until it is, point the project at a local
-checkout of the fundament repository:
+fundament %s could not be resolved. Until that version exists, point the
+project at a local checkout of the fundament repository:
 
     cd %s
     go mod edit -replace github.com/fundament-oss/fundament=/path/to/fundament

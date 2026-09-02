@@ -137,7 +137,7 @@ takes the defaults, so it is safe to script.
 | `--crd` | Custom resource as `<plural>.<group>` | `<name>s.example.com` |
 | `--kind` | Kind of that custom resource | UpperCamelCase name |
 | `--dir` | Where to write the project | `./<name>` |
-| `--sdk-version` | fundament version to pin for the plugin SDK | the version functl was built with |
+| `--sdk-version` | fundament version to pin for the plugin SDK | the version baked into functl |
 | `--[no-]git` | Run `git init` | on |
 | `--[no-]tidy` | Run `go mod tidy` | on |
 | `--force` | Write into a non-empty directory | off |
