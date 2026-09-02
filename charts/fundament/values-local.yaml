@@ -209,6 +209,12 @@ dcimAuthnApi:
   # ROPC login against dex static passwords is convenient for local dev only.
   passwordLoginEnabled: true
 
+# Anonymous storefront API: no auth, so no Dex client and no JWT secret.
+marketplaceCatalogApi:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+
 authzWorker:
   enabled: true
   replicas: 1

@@ -1453,11 +1453,11 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugin_definitions_select_catalog" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL AND published IS NOT NULL]]> </expression>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL]]> </expression>
 </policy>
 
 <policy name="plugins_select_catalog" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL AND visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL)]]> </expression>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND visibility = 'public']]> </expression>
 </policy>
 
 <table name="plugin_labels" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
@@ -1811,7 +1811,7 @@ END;]]> </definition>
 </policy>
 
 <policy name="organizations_select_catalog" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL))]]> </expression>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public')]]> </expression>
 </policy>
 
 <policy name="organization_limits_organization_policy" table="tenant.organization_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>

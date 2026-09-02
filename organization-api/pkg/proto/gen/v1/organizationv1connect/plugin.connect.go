@@ -55,14 +55,33 @@ const (
 
 // PluginServiceClient is a client for the organization.v1.PluginService service.
 type PluginServiceClient interface {
-	// List all available plugins
+	// List all available plugins.
+	//
+	// Deprecated: browse now belongs to catalog.v1.CatalogService.ListPlugins in
+	// marketplace-api, which serves it anonymously. Move console callers there;
+	// this copy also returns RESTRICTED and unpublished listings.
+	//
+	// Deprecated: do not use.
 	ListPlugins(context.Context, *v1.ListPluginsRequest) (*v1.ListPluginsResponse, error)
-	// Get detailed information about a specific plugin
+	// Get detailed information about a specific plugin.
+	//
+	// Deprecated: superseded by catalog.v1.CatalogService.GetPlugin in
+	// marketplace-api. Note the replacement derives capabilities and permissions
+	// from the pinned manifest rather than from columns.
+	//
+	// Deprecated: do not use.
 	GetPluginDetail(context.Context, *v1.GetPluginDetailRequest) (*v1.GetPluginDetailResponse, error)
 	// List all available presets
 	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
-	// List the published definitions (version + hash) for a plugin, latest first.
-	// Used by the console to offer a version to pin on install.
+	// List the definitions (version + hash) for a plugin, latest first. Used by
+	// the console to offer a version to pin on install.
+	//
+	// Deprecated: moves to catalog.v1.CatalogService.ListPluginVersions. Note the
+	// rename is not cosmetic — despite the name this returns every non-deleted
+	// definition including unpublished drafts, and the catalog returns only
+	// published ones, which is what an unauthenticated caller must ever see.
+	//
+	// Deprecated: do not use.
 	ListPluginDefinitions(context.Context, *v1.ListPluginDefinitionsRequest) (*v1.ListPluginDefinitionsResponse, error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
@@ -74,6 +93,17 @@ type PluginServiceClient interface {
 	// Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
 	// resolved via the plugin catalog by name. Returns the verbatim manifest
 	// bytes, the sha256 hash, and a parsed PluginDefinition.
+	//
+	// Deprecated: belongs in marketplace-api's catalog, which gates every read
+	// with RLS. This RPC is in isPublicEndpoint, so it is anonymous, and
+	// PluginDefinitionGetActive filters neither plugins.visibility nor
+	// plugin_definitions.published — an anonymous caller who knows
+	// organization/plugin@version gets draft and RESTRICTED manifests. The
+	// replacement must serve published, PUBLIC definitions only; plugin-controller
+	// (pkg/defclient) is the caller to migrate, and it installs unpublished
+	// definitions today, so it needs a credentialed path rather than the catalog.
+	//
+	// Deprecated: do not use.
 	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 
@@ -138,6 +168,8 @@ type pluginServiceClient struct {
 }
 
 // ListPlugins calls organization.v1.PluginService.ListPlugins.
+//
+// Deprecated: do not use.
 func (c *pluginServiceClient) ListPlugins(ctx context.Context, req *v1.ListPluginsRequest) (*v1.ListPluginsResponse, error) {
 	response, err := c.listPlugins.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
@@ -147,6 +179,8 @@ func (c *pluginServiceClient) ListPlugins(ctx context.Context, req *v1.ListPlugi
 }
 
 // GetPluginDetail calls organization.v1.PluginService.GetPluginDetail.
+//
+// Deprecated: do not use.
 func (c *pluginServiceClient) GetPluginDetail(ctx context.Context, req *v1.GetPluginDetailRequest) (*v1.GetPluginDetailResponse, error) {
 	response, err := c.getPluginDetail.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
@@ -165,6 +199,8 @@ func (c *pluginServiceClient) ListPresets(ctx context.Context, req *v1.ListPrese
 }
 
 // ListPluginDefinitions calls organization.v1.PluginService.ListPluginDefinitions.
+//
+// Deprecated: do not use.
 func (c *pluginServiceClient) ListPluginDefinitions(ctx context.Context, req *v1.ListPluginDefinitionsRequest) (*v1.ListPluginDefinitionsResponse, error) {
 	response, err := c.listPluginDefinitions.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
@@ -183,6 +219,8 @@ func (c *pluginServiceClient) PutPluginDefinition(ctx context.Context, req *v1.P
 }
 
 // GetPluginDefinition calls organization.v1.PluginService.GetPluginDefinition.
+//
+// Deprecated: do not use.
 func (c *pluginServiceClient) GetPluginDefinition(ctx context.Context, req *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error) {
 	response, err := c.getPluginDefinition.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
@@ -193,14 +231,33 @@ func (c *pluginServiceClient) GetPluginDefinition(ctx context.Context, req *v1.G
 
 // PluginServiceHandler is an implementation of the organization.v1.PluginService service.
 type PluginServiceHandler interface {
-	// List all available plugins
+	// List all available plugins.
+	//
+	// Deprecated: browse now belongs to catalog.v1.CatalogService.ListPlugins in
+	// marketplace-api, which serves it anonymously. Move console callers there;
+	// this copy also returns RESTRICTED and unpublished listings.
+	//
+	// Deprecated: do not use.
 	ListPlugins(context.Context, *v1.ListPluginsRequest) (*v1.ListPluginsResponse, error)
-	// Get detailed information about a specific plugin
+	// Get detailed information about a specific plugin.
+	//
+	// Deprecated: superseded by catalog.v1.CatalogService.GetPlugin in
+	// marketplace-api. Note the replacement derives capabilities and permissions
+	// from the pinned manifest rather than from columns.
+	//
+	// Deprecated: do not use.
 	GetPluginDetail(context.Context, *v1.GetPluginDetailRequest) (*v1.GetPluginDetailResponse, error)
 	// List all available presets
 	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
-	// List the published definitions (version + hash) for a plugin, latest first.
-	// Used by the console to offer a version to pin on install.
+	// List the definitions (version + hash) for a plugin, latest first. Used by
+	// the console to offer a version to pin on install.
+	//
+	// Deprecated: moves to catalog.v1.CatalogService.ListPluginVersions. Note the
+	// rename is not cosmetic — despite the name this returns every non-deleted
+	// definition including unpublished drafts, and the catalog returns only
+	// published ones, which is what an unauthenticated caller must ever see.
+	//
+	// Deprecated: do not use.
 	ListPluginDefinitions(context.Context, *v1.ListPluginDefinitionsRequest) (*v1.ListPluginDefinitionsResponse, error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
@@ -212,6 +269,17 @@ type PluginServiceHandler interface {
 	// Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
 	// resolved via the plugin catalog by name. Returns the verbatim manifest
 	// bytes, the sha256 hash, and a parsed PluginDefinition.
+	//
+	// Deprecated: belongs in marketplace-api's catalog, which gates every read
+	// with RLS. This RPC is in isPublicEndpoint, so it is anonymous, and
+	// PluginDefinitionGetActive filters neither plugins.visibility nor
+	// plugin_definitions.published — an anonymous caller who knows
+	// organization/plugin@version gets draft and RESTRICTED manifests. The
+	// replacement must serve published, PUBLIC definitions only; plugin-controller
+	// (pkg/defclient) is the caller to migrate, and it installs unpublished
+	// definitions today, so it needs a credentialed path rather than the catalog.
+	//
+	// Deprecated: do not use.
 	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 

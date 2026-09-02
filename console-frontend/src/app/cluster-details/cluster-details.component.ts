@@ -15,6 +15,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
@@ -35,7 +36,12 @@ import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
-import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import {
+  getStatusBadgeColor,
+  getStatusLabel,
+  isKubeconfigAvailable,
+  isTransitionalStatus,
+} from '../utils/cluster-status';
 import pluginIconSrc from '../utils/plugin-icon';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -420,7 +426,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.loadResourceUsage(clusterId),
       ]);
 
-      this.updatePolling();
+      this.startPolling();
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -439,12 +445,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.client.getCluster(request));
 
       if (!response.cluster) {
-        // Cluster has been deleted
-        this.stopPolling();
-        this.notificationService.success(
-          `Cluster '${this.clusterData.basics.name}' has been deleted`,
-        );
-        this.pageNav.goTo('/clusters');
+        this.handleClusterDeleted();
         return;
       }
 
@@ -457,23 +458,27 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.loadResourceUsage(clusterId);
       }
       this.cdr.markForCheck();
-      this.updatePolling();
-    } catch {
-      // If the request fails with a not-found-like error, the cluster was deleted
-      this.stopPolling();
-      this.notificationService.success(
-        `Cluster '${this.clusterData.basics.name}' has been deleted`,
-      );
-      this.pageNav.goTo('/clusters');
+    } catch (error) {
+      // Anything else (network blip, API rollout, expired session) is
+      // transient as far as this page is concerned; the next tick retries.
+      if (error instanceof ConnectError && error.code === Code.NotFound) {
+        this.handleClusterDeleted();
+      }
     }
   }
 
-  private updatePolling() {
-    const needsPolling = isTransitionalStatus(this.clusterData.status);
-    if (needsPolling && !this.pollingTimer) {
+  private handleClusterDeleted() {
+    this.stopPolling();
+    this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+    this.pageNav.goTo('/clusters');
+  }
+
+  // Poll in every status, not only transitional ones: a running cluster can
+  // drop to ERROR or be upgraded, and an errored one recovers on its own.
+  // Actions gated on status (kubeconfig download) rely on this staying fresh.
+  private startPolling() {
+    if (!this.pollingTimer) {
       this.pollingTimer = setInterval(() => this.pollClusterStatus(), 5000);
-    } else if (!needsPolling && this.pollingTimer) {
-      this.stopPolling();
     }
   }
 
@@ -536,8 +541,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   isDownloadingKubeconfig = signal<boolean>(false);
 
+  canDownloadKubeconfig(): boolean {
+    return isKubeconfigAvailable(this.clusterData.status);
+  }
+
   async downloadKubeconfig(): Promise<void> {
-    if (this.isDownloadingKubeconfig()) {
+    if (this.isDownloadingKubeconfig() || !this.canDownloadKubeconfig()) {
       return;
     }
     this.isDownloadingKubeconfig.set(true);
