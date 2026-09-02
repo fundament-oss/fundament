@@ -39,8 +39,6 @@ func (s *Server) UpdateTask(
 		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
 	}
 
-
-
 	// For the nullable columns, an explicitly-set field clears the column when it
 	// carries the "empty" sentinel (empty string / epoch timestamp) and otherwise
 	// overwrites it. Leaving the field unset keeps the current value.
@@ -105,11 +103,13 @@ func (s *Server) UpdateTask(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("task not found"))
 	}
 
-	// Tags are replaced rather than merged: the request says what the task should
-	// carry, so an empty list means it carries none. Leaving the field out
-	// entirely leaves the tags alone, which is why this only runs when it is set.
-	if req.HasTags() || len(req.GetTags()) > 0 {
-		if err := s.queries.TaskTagsClear(ctx, taskID); err != nil {
+	// Tags are replaced rather than merged: a non-empty list says what the task
+	// should carry from now on. A repeated field has no presence, so an empty
+	// list cannot mean "carry none" without also meaning "leave them alone" —
+	// clear_tags is the field that says it, the way clear_blocked_reason does
+	// for the column above.
+	if len(req.GetTags()) > 0 || req.GetClearTags() {
+		if err := s.queries.TaskTagsClear(ctx, db.TaskTagsClearParams{TaskID: taskID}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to clear task tags: %w", err))
 		}
 

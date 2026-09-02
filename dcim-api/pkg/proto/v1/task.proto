@@ -150,8 +150,11 @@ message UpdateTaskRequest {
   string                    description = 30 [features.field_presence = EXPLICIT];
   TaskStatus                status      = 40 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   TaskPriority              priority    = 50 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
-  // Absent leaves the tags alone; an empty list clears them.
+  // A non-empty list replaces every tag the task carries. An empty list leaves
+  // them alone, because a repeated field cannot tell "not sent" from "sent
+  // empty"; clear_tags is how a client says the task should carry none.
   repeated string           tags        = 65;
+  bool                      clear_tags  = 66;
   string                    blocked_reason = 67 [features.field_presence = EXPLICIT];
   bool                      clear_blocked_reason = 68;
   string                    assignee_id = 70 [features.field_presence = EXPLICIT];

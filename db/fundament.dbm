@@ -3304,13 +3304,10 @@ END;]]> </definition>
 	<column name="description">
 		<type name="text" length="0"/>
 	</column>
-	<column name="status" not-null="true" default-value="'ready'">
+	<column name="status" not-null="true" default-value="'todo'">
 		<type name="text" length="0"/>
 	</column>
-	<column name="priority" not-null="true" default-value="'medium'">
-		<type name="text" length="0"/>
-	</column>
-	<column name="category" not-null="true" default-value="'other'">
+	<column name="priority" not-null="true" default-value="'none'">
 		<type name="text" length="0"/>
 	</column>
 	<column name="assignee_id">
@@ -3328,19 +3325,45 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="blocked_reason">
+		<type name="text" length="0"/>
+	</column>
 	<constraint name="tasks_pk" type="pk-constr" table="dcim.tasks">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="tasks_ck_status" type="ck-constr" table="dcim.tasks">
-			<expression> <![CDATA[status IN ('ready','in_progress','review','blocked','done')]]> </expression>
+			<expression> <![CDATA[status IN ('todo','doing','done')]]> </expression>
 	</constraint>
 	<constraint name="tasks_ck_priority" type="ck-constr" table="dcim.tasks">
-			<expression> <![CDATA[priority IN ('low','medium','high','critical')]]> </expression>
-	</constraint>
-	<constraint name="tasks_ck_category" type="ck-constr" table="dcim.tasks">
-			<expression> <![CDATA[category IN ('hardware','network','cooling','power','security','other')]]> </expression>
+			<expression> <![CDATA[priority IN ('none','low','medium','high','urgent')]]> </expression>
 	</constraint>
 </table>
+
+<table name="task_tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+	<schema name="dcim"/>
+	<role name="fun_owner"/>
+	<position x="8240" y="880"/>
+	<column name="task_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="tag" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="task_tags_pk" type="pk-constr" table="dcim.task_tags">
+		<columns names="task_id,tag" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<index name="task_tags_ix_tag" table="dcim.task_tags"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="tag"/>
+		</idxelement>
+</index>
 
 <table name="task_steps" layers="0" collapse-mode="2" max-obj-count="9" z-value="0">
 	<schema name="dcim"/>
@@ -3928,6 +3951,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="task_tags_fk_task" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="CASCADE" ref-table="dcim.tasks" table="dcim.task_tags">
+	<columns names="task_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="dcim_tasks_fk_assignee" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.users" table="dcim.tasks">
 	<columns names="assignee_id" ref-type="src-columns"/>
@@ -4395,6 +4424,12 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="dcim.task_steps"
 	 dst-table="dcim.tasks" reference-fk="dcim_task_steps_fk_task"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_dcim_task_tags_tasks" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="dcim.task_tags"
+	 dst-table="dcim.tasks" reference-fk="task_tags_fk_task"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_tasks_users" type="relfk" layers="0"
@@ -4954,6 +4989,11 @@ END;]]> </definition>
 	<object name="dcim.task_steps" type="table"/>
 	<roles names="fun_dcim_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.task_tags" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true" delete="true" insert="true"/>
 </permission>
 <permission>
 	<object name="dcim.users" type="table"/>

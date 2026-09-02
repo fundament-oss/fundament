@@ -128,3 +128,5 @@ ALTER TABLE "dcim"."physical_connections" DROP CONSTRAINT "physical_connections_
 UPDATE "dcim"."physical_connections" SET "status" = 'to_order' WHERE "status" = 'planned';
 
 ALTER TABLE "dcim"."physical_connections" ADD CONSTRAINT "physical_connections_ck_status" CHECK(((status IS NULL) OR (status = ANY (ARRAY['to_order'::text, 'ordered'::text, 'ready_to_install'::text, 'connected'::text, 'decommissioned'::text]))));
+
+ALTER TABLE dcim.task_tags OWNER TO fun_owner;
