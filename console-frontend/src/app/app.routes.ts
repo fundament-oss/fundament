@@ -356,8 +356,12 @@ const routes: Routes = [
     ],
   },
   {
+    // Anything the organization's own addresses did not match, the bare root
+    // included. Reading any of it takes an account, so the guard stands here as
+    // well: without one you are sent to the login page rather than left on a
+    // page that renders nothing.
     path: '**',
-    canActivate: [intoCurrentOrganization],
+    canActivate: [authGuard, intoCurrentOrganization],
     children: [],
   },
 ];

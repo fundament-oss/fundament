@@ -104,5 +104,13 @@ const routes: Routes = [
     loadComponent: () =>
       import('./task-management-technician/task-management-technician').then((m) => m.default),
   },
+  {
+    // An address none of the routes above claim: a page that has moved, or a
+    // typo in a link. Angular raises on one it cannot match, so it goes to the
+    // sections list instead, which is behind the guard and so sends you to the
+    // login page when nobody is signed in.
+    path: '**',
+    redirectTo: '/',
+  },
 ];
 export default routes;

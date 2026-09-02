@@ -14,6 +14,14 @@ import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
 import '@nldd/design-system/password-field';
 
+/**
+ * Where logging in lands you when nothing else was asked for: the clusters,
+ * which is what the console is mostly read for. An address you were sent to
+ * before the login page wins over it, and the organization is filled in on the
+ * way there.
+ */
+const DEFAULT_ROUTE = '/clusters';
+
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, AutofocusDirective],
@@ -82,8 +90,8 @@ export default class LoginComponent implements OnInit {
   async ngOnInit() {
     // Check if user is already authenticated (check state first to avoid unnecessary API call)
     if (this.apiService.isAuthenticated()) {
-      // User already authenticated, redirect to dashboard
-      this.router.navigate(['/']);
+      // User already authenticated, redirect to the default page
+      this.router.navigateByUrl(DEFAULT_ROUTE);
     }
   }
 
@@ -105,7 +113,7 @@ export default class LoginComponent implements OnInit {
       const { email, password } = this.loginForm.value;
       await this.apiService.login(email, password);
       // Login successful, redirect to the return URL or dashboard
-      const returnUrl = localStorage.getItem('returnUrl') || '/';
+      const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
       localStorage.removeItem('returnUrl');
 
       this.router.navigateByUrl(returnUrl);
