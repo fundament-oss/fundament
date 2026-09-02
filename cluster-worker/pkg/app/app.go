@@ -134,7 +134,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	// Plugin machinery handler (PluginInstallation CRD + plugin-controller on
 	// shoots). Shares the ShootAccess instance; provisions on cluster-ready and
 	// re-asserts via the reconcile loop. No-ops unless PLUGIN_CONTROLLER_IMAGE
-	// and PLUGIN_ORGANIZATION_API_URL are configured.
+	// and PLUGIN_MARKETPLACE_CATALOG_API_URL are configured.
 	pmh := pluginmachinery.New(pool, shootAccess, cfg.Plugin, logger)
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, pmh)
 	registry.RegisterReconcile(pmh)

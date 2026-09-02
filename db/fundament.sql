@@ -1175,7 +1175,7 @@ CREATE POLICY plugin_definitions_select_catalog ON appstore.plugin_definitions
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND published IS NOT NULL);
+	USING (deleted IS NULL);
 -- ddl-end --
 
 -- object: plugins_select_catalog | type: POLICY --
@@ -1184,7 +1184,7 @@ CREATE POLICY plugins_select_catalog ON appstore.plugins
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL));
+	USING (deleted IS NULL AND visibility = 'public');
 -- ddl-end --
 
 -- object: appstore.plugin_labels | type: TABLE --
@@ -1573,7 +1573,7 @@ CREATE POLICY organizations_select_catalog ON tenant.organizations
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL)));
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public'));
 -- ddl-end --
 
 -- object: organization_limits_organization_policy | type: POLICY --

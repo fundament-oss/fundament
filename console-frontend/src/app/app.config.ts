@@ -9,7 +9,11 @@ import {
 import { provideRouter, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
-import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
+import {
+  AUTHN_TRANSPORT,
+  MARKETPLACE_TRANSPORT,
+  ORGANIZATION_TRANSPORT,
+} from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
@@ -50,6 +54,15 @@ export const appConfig: ApplicationConfig = {
               credentials: 'include', // Include the HTTP-only authentication cookie with requests, also below
             }),
         });
+      },
+    },
+    // Provide the Marketplace transport. The catalog is unauthenticated: no
+    // cookie, no Fun-Organization header, no version handshake.
+    {
+      provide: MARKETPLACE_TRANSPORT,
+      useFactory: () => {
+        const configService = inject(ConfigService);
+        return createConnectTransport({ baseUrl: configService.getConfig().marketplaceApiUrl });
       },
     },
     // Provide the Organization transport

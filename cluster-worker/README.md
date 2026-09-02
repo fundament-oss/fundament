@@ -245,15 +245,15 @@ What lands on each shoot:
 | Namespace | `fundament-system` | Shared with usersync |
 | ServiceAccount | `plugin-controller` | In `fundament-system` |
 | ClusterRole + Binding | `fundament:plugin-controller` | Rules mirror the chart's plugin-controller role; a unit test fails on drift |
-| Deployment | `plugin-controller` | Real per-shoot env: `FUNDAMENT_CLUSTER_ID` (cluster UUID, also stands in for `FUNDAMENT_INSTALL_ID`), `FUNDAMENT_ORGANIZATION_ID` (from `tenant.clusters`), `ORGANIZATION_API_URL` (external, FUN-19) |
+| Deployment | `plugin-controller` | Real per-shoot env: `FUNDAMENT_CLUSTER_ID` (cluster UUID, also stands in for `FUNDAMENT_INSTALL_ID`), `FUNDAMENT_ORGANIZATION_ID` (from `tenant.clusters`), `MARKETPLACE_CATALOG_API_URL` (external, FUN-19) |
 
 Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
-`pluginController.shootImage` + `externalUrls.organization`):
+`pluginController.shootImage` + `externalUrls.marketplace`):
 
 | Env | Meaning |
 |-----|---------|
 | `PLUGIN_CONTROLLER_IMAGE` | plugin-controller image, **pullable from shoot nodes** |
-| `PLUGIN_ORGANIZATION_API_URL` | externally routable organization-api base URL |
+| `PLUGIN_MARKETPLACE_CATALOG_API_URL` | externally routable marketplace-catalog-api base URL |
 | `PLUGIN_LOG_LEVEL` | shoot-side controller log level |
 | `PLUGIN_ALLOW_UNPINNED_HASH` | skip the definition-hash gate — local dev only |
 

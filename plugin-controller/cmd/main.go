@@ -82,13 +82,13 @@ func run() error {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 
-	// defclient talks to organization-api, which serves the platform's
-	// source-of-truth PluginDefinition manifests. Its per-request timeout is
+	// defclient talks to marketplace-catalog-api, which serves the platform's
+	// source-of-truth PluginDefinition manifests under RLS. Its per-request timeout is
 	// enforced by the reconciler (see scopeRPCTimeout); the HTTP client's own
 	// timeout is a broad safety net.
 	defHTTP := &http.Client{Timeout: 30 * time.Second}
 	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg,
-		controller.WithDefClient(defclient.New(cfg.OrganizationAPIURL, defHTTP)),
+		controller.WithDefClient(defclient.New(cfg.CatalogAPIURL, defHTTP)),
 	)
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup controller: %w", err)
