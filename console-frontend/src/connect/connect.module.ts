@@ -13,6 +13,7 @@ function createTransportToken(name: string): InjectionToken<Transport> {
 // Named transports for different services
 export const AUTHN_TRANSPORT = createTransportToken('authn');
 export const ORGANIZATION_TRANSPORT = createTransportToken('organization');
+export const MARKETPLACE_TRANSPORT = createTransportToken('marketplace');
 
 export function createClientToken<T extends DescService>(
   service: T,

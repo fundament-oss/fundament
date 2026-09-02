@@ -40,10 +40,24 @@ import {
   PluginService,
   ListPluginsResponseSchema,
   ListPresetsResponseSchema,
-  GetPluginDetailResponseSchema,
-  ListPluginDefinitionsResponseSchema,
 } from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
+import {
+  CatalogService,
+  ListPluginsResponseSchema as CatalogListPluginsResponseSchema,
+  PluginSummarySchema as CatalogPluginSummarySchema,
+  PluginDetailsSchema as CatalogPluginDetailsSchema,
+  GetPluginResponseSchema as CatalogGetPluginResponseSchema,
+  ListCategoriesResponseSchema as CatalogListCategoriesResponseSchema,
+  ListPublishersResponseSchema as CatalogListPublishersResponseSchema,
+  ListPluginVersionsResponseSchema as CatalogListPluginVersionsResponseSchema,
+  PublishedVersionSchema,
+} from '../../generated/catalog/v1/catalog_pb';
+import {
+  CategorySchema,
+  PublisherSchema,
+  DocumentationLinkSchema as MarketplaceDocumentationLinkSchema,
+} from '../../generated/marketplace/v1/common_pb';
 import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
 import {
   MetricsService,
@@ -62,6 +76,20 @@ const delay = (ms = LATENCY_MS) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+// The seeded 'system' organization publishes every demo plugin; catalog.v1
+// returns its id and leaves the name to ListPublishers.
+const DEMO_PUBLISHER_ID = 'org-system';
+
+// The categories the fixtures actually use, deduplicated — the catalog serves
+// the whole list, not one per plugin.
+const demoCategories = () => {
+  const byId = new Map<string, { id: string; name: string }>();
+  fx.plugins.forEach((p) =>
+    p.categories.forEach((c) => byId.set(c.id, { id: c.id, name: c.name })),
+  );
+  return [...byId.values()];
+};
 
 export default function createDemoTransport(): Transport {
   return createRouterTransport((router) => {
@@ -240,6 +268,9 @@ export default function createDemoTransport(): Transport {
       },
     });
 
+    // What organization.v1 still answers. listPlugins stays because the
+    // cluster-side views (cluster-plugins, cluster-details, shared-plugins-form)
+    // have not moved to the catalog; presets have no catalog equivalent at all.
     router.service(PluginService, {
       listPlugins: async () => {
         await delay();
@@ -249,16 +280,88 @@ export default function createDemoTransport(): Transport {
         await delay(80);
         return create(ListPresetsResponseSchema, { presets: fx.presets });
       },
-      getPluginDetail: async (req) => {
+    });
+
+    router.service(CatalogService, {
+      listPlugins: async () => {
         await delay();
-        return create(GetPluginDetailResponseSchema, { plugin: fx.pluginDetail(req.pluginId) });
+        return create(CatalogListPluginsResponseSchema, {
+          plugins: fx.plugins.map((p) =>
+            create(CatalogPluginSummarySchema, {
+              id: p.id,
+              name: p.name,
+              displayName: p.displayName,
+              descriptionShort: p.descriptionShort,
+              organizationId: DEMO_PUBLISHER_ID,
+              image: p.image,
+              categoryIds: p.categories.map((c) => c.id),
+              tags: p.tags.map((t) => t.name),
+            }),
+          ),
+        });
+      },
+      listCategories: async () => {
+        await delay(80);
+        return create(CatalogListCategoriesResponseSchema, {
+          categories: demoCategories().map((c) => create(CategorySchema, c)),
+        });
+      },
+      listPublishers: async () => {
+        await delay(80);
+        return create(CatalogListPublishersResponseSchema, {
+          publishers: [
+            create(PublisherSchema, {
+              id: DEMO_PUBLISHER_ID,
+              name: 'system',
+              displayName: 'System',
+            }),
+          ],
+        });
+      },
+      getPlugin: async (req) => {
+        await delay();
+        const detail = fx.pluginDetail(req.pluginId);
+        if (!detail) {
+          return create(CatalogGetPluginResponseSchema, {});
+        }
+        return create(CatalogGetPluginResponseSchema, {
+          plugin: create(CatalogPluginDetailsSchema, {
+            id: detail.id,
+            name: detail.name,
+            displayName: detail.displayName,
+            description: detail.description,
+            descriptionShort: detail.descriptionShort,
+            organizationId: DEMO_PUBLISHER_ID,
+            categoryIds: detail.categories.map((c) => c.id),
+            tags: detail.tags.map((t) => t.name),
+            authorName: detail.author?.name ?? '',
+            authorUrl: detail.author?.url ?? '',
+            repositoryUrl: detail.repositoryUrl,
+            // Same fields, different package: organization.v1's links cannot be
+            // handed to a marketplace.v1 message as-is.
+            documentationLinks: detail.documentationLinks.map((l) =>
+              create(MarketplaceDocumentationLinkSchema, {
+                id: l.id,
+                title: l.title,
+                urlName: l.urlName,
+                url: l.url,
+              }),
+            ),
+          }),
+        });
       },
       // The install modal's version picker. Left unanswered it errors, and the modal
       // shows "Couldn't load versions" instead of letting the install slide run.
-      listPluginDefinitions: async (req) => {
+      listPluginVersions: async (req) => {
         await delay(80);
-        return create(ListPluginDefinitionsResponseSchema, {
-          definitions: fx.pluginDefinitionVersions(req.pluginId),
+        return create(CatalogListPluginVersionsResponseSchema, {
+          versions: fx.pluginDefinitionVersions(req.pluginId).map((d) =>
+            create(PublishedVersionSchema, {
+              id: `ver-${req.pluginId}-${d.version}`,
+              version: d.version,
+              definitionHash: d.hash,
+            }),
+          ),
         });
       },
     });

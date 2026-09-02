@@ -20,12 +20,14 @@ import InstallPluginModalComponent, {
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
-  GetPluginDetailRequestSchema,
-  ListPluginDefinitionsRequestSchema,
-  type PluginDetail,
-} from '../../generated/v1/plugin_pb';
+  GetPluginRequestSchema,
+  ListCategoriesRequestSchema,
+  ListPublishersRequestSchema,
+  ListPluginVersionsRequestSchema,
+} from '../../generated/catalog/v1/catalog_pb';
+import { type DocumentationLink } from '../../generated/marketplace/v1/common_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
@@ -37,6 +39,22 @@ import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
+
+// The detail page's own shape. catalog.v1 returns ids where organization.v1
+// returned names, and splits the author into two scalars; resolving that here
+// keeps the template as it was.
+interface PluginDetailView {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  organizationName: string;
+  author?: { name: string; url: string };
+  categories: { id: string; name: string }[];
+  tags: string[];
+  documentationLinks: DocumentationLink[];
+  repositoryUrl: string;
+}
 
 // Extended cluster type for UI state. `phase` is null when the plugin is not
 // installed on the cluster, otherwise the PluginInstallation status phase.
@@ -55,8 +73,8 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
 
 /** The "official" marker reads as a property of the name, not as one entry in a
  *  tag row. */
-function isOfficialPlugin(plugin: { tags: { name: string }[] }): boolean {
-  return plugin.tags.some((tag) => tag.name.toLowerCase() === 'official');
+function isOfficialPlugin(plugin: { tags: string[] }): boolean {
+  return plugin.tags.some((tag) => tag.toLowerCase() === 'official');
 }
 
 @Component({
@@ -81,7 +99,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private route = inject(ActivatedRoute);
 
-  private pluginClient = inject(PLUGIN);
+  private catalogClient = inject(CATALOG);
 
   private clusterClient = inject(CLUSTER);
 
@@ -93,7 +111,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   pluginId = signal<string>('');
 
-  plugin = signal<PluginDetail | null>(null);
+  plugin = signal<PluginDetailView | null>(null);
 
   clusters = signal<ClusterWithState[]>([]);
 
@@ -122,12 +140,19 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     this.pluginId.set(id);
 
     try {
-      const [pluginResponse, clustersResponse] = await Promise.all([
-        firstValueFrom(
-          this.pluginClient.getPluginDetail(create(GetPluginDetailRequestSchema, { pluginId: id })),
-        ),
-        firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
-      ]);
+      const [pluginResponse, categoriesResponse, publishersResponse, clustersResponse] =
+        await Promise.all([
+          firstValueFrom(
+            this.catalogClient.getPlugin(create(GetPluginRequestSchema, { pluginId: id })),
+          ),
+          firstValueFrom(
+            this.catalogClient.listCategories(create(ListCategoriesRequestSchema, {})),
+          ),
+          firstValueFrom(
+            this.catalogClient.listPublishers(create(ListPublishersRequestSchema, {})),
+          ),
+          firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
+        ]);
 
       if (!pluginResponse.plugin) {
         this.errorMessage.set('Plugin not found');
@@ -135,15 +160,33 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.plugin.set(pluginResponse.plugin);
-      this.titleService.setTitle(displayNameOf(pluginResponse.plugin));
+      const detail = pluginResponse.plugin;
+      const categoryNames = new Map(categoriesResponse.categories.map((c) => [c.id, c.name]));
+      const publisherNames = new Map(publishersResponse.publishers.map((p) => [p.id, p.name]));
+
+      const plugin: PluginDetailView = {
+        id: detail.id,
+        name: detail.name,
+        displayName: detail.displayName,
+        description: detail.description,
+        // See plugins.component.ts: the id is a traceable stand-in, '' is not.
+        organizationName: publisherNames.get(detail.organizationId) ?? detail.organizationId,
+        author: detail.authorName ? { name: detail.authorName, url: detail.authorUrl } : undefined,
+        categories: detail.categoryIds.map((cid) => ({
+          id: cid,
+          name: categoryNames.get(cid) ?? cid,
+        })),
+        tags: detail.tags,
+        documentationLinks: detail.documentationLinks,
+        repositoryUrl: detail.repositoryUrl,
+      };
+
+      this.plugin.set(plugin);
+      this.titleService.setTitle(displayNameOf(plugin));
 
       // metadata.name is the RFC-1123 slug of (organizationName, pluginName) — the
       // qualified pair is the plugin's identity, so match on that, not pluginName alone.
-      const resourceName = pluginResourceName(
-        pluginResponse.plugin.organizationName,
-        pluginResponse.plugin.name,
-      );
+      const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
 
       const installResults = await Promise.all(
         clustersResponse.clusters.map((cluster) =>
@@ -215,11 +258,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
     const resp = await firstValueFrom(
-      this.pluginClient.listPluginDefinitions(
-        create(ListPluginDefinitionsRequestSchema, { pluginId }),
-      ),
+      this.catalogClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
     );
-    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
+    return resp.versions.map((v) => ({ version: v.version, hash: v.definitionHash }));
   }
 
   closeInstallModal(): void {
