@@ -12,14 +12,15 @@ import (
 
 // Config holds configuration for the OpenFGA client.
 //
-// The store is addressed by name: ids are server-generated and change when the
-// store is reset. No authorization model is pinned, so each request evaluates
+// The store comes from the provisioner's status document: ids are server-generated
+// and change when the store is reset, and the provisioner is what decides which
+// store is current. No authorization model is pinned, so each request evaluates
 // the latest one.
 type Config struct {
-	APIURL    string `env:"OPENFGA_API_URL,required,notEmpty"`
-	StoreName string `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
-	// StatusURL is where the provisioner publishes what it provisioned.
-	StatusURL string `env:"OPENFGA_STATUS_URL"`
+	APIURL string `env:"OPENFGA_API_URL,required,notEmpty"`
+	// StatusURL is where the provisioner publishes the store it put in force.
+	// Consumers read it from there rather than deriving it.
+	StatusURL string `env:"OPENFGA_STATUS_URL,required,notEmpty"`
 	// Generation identifies this release. A consumer that writes through the
 	// outbox waits for the provisioner to report it before draining.
 	Generation string `env:"OPENFGA_GENERATION"`
@@ -29,7 +30,7 @@ type Config struct {
 // See https://openid.github.io/authzen/ for the AuthZEN specification.
 type Client struct {
 	fga   *client.OpenFgaClient
-	store *StoreResolver
+	store *ProvisionedStore
 }
 
 // New creates a new authorization client.
@@ -43,7 +44,7 @@ func New(cfg Config) (*Client, error) {
 
 	return &Client{
 		fga:   fgaClient,
-		store: NewStoreResolver(fgaClient, cfg.StoreName),
+		store: NewProvisionedStore(cfg.StatusURL),
 	}, nil
 }
 
@@ -67,9 +68,9 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 	return dec.Decision, nil
 }
 
-// Healthy checks that the OpenFGA store is reachable.
+// Healthy checks that the provisioner has published a datastore.
 func (c *Client) Healthy(ctx context.Context) error {
-	if _, err := c.store.Resolve(ctx); err != nil {
+	if _, err := c.store.Generation(ctx); err != nil {
 		return fmt.Errorf("openfga: %w", err)
 	}
 	return nil

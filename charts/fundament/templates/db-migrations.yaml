@@ -4,9 +4,6 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  # Prepares the datastores this release needs, in order: the OpenFGA schema and
-  # store, then the fundament database whose seeded rows project into it.
-  #
   # Per-release name: a Job's pod template is immutable.
   name: db-migrations-{{ .Release.Revision }}
   labels:
@@ -20,9 +17,6 @@ spec:
         {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 8 }}
     spec:
       restartPolicy: OnFailure
-      # Init containers, so the kubelet sequences them: the store exists before
-      # the reseed that projects into it. Each step is idempotent; a retry
-      # re-runs them all.
       initContainers:
         - name: wait-for-db
           image: ghcr.io/cloudnative-pg/postgresql:18
@@ -70,6 +64,10 @@ spec:
               value: fundament
             - name: TREK_POSTGRES_SSLMODE
               value: disable
+            # Resets on every run, while the OpenFGA wipe only runs once per
+            # generation. They stay consistent because the generation tracks the
+            # image and the image carries the testdata, so a re-run reseeds the
+            # same rows and the writes are idempotent.
             - name: TREK_RESET_DATABASE
               value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA

@@ -14,12 +14,12 @@ import (
 // Handler contains all entity handlers for the authz worker.
 type Handler struct {
 	fga    *client.OpenFgaClient
-	store  *authz.StoreResolver
+	store  *authz.ProvisionedStore
 	logger *slog.Logger
 }
 
 // New creates a new Handlers instance.
-func New(fga *client.OpenFgaClient, store *authz.StoreResolver, logger *slog.Logger) *Handler {
+func New(fga *client.OpenFgaClient, store *authz.ProvisionedStore, logger *slog.Logger) *Handler {
 	return &Handler{fga: fga, store: store, logger: logger}
 }
 

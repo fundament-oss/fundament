@@ -1,6 +1,6 @@
 // Command fun-openfga-setup provisions the OpenFGA store for a release and
-// publishes the generation it provisioned for, so workloads that seed rows into
-// the store can wait until the store is this release's.
+// publishes what it provisioned, so consumers read the store rather than deriving
+// it and authz-worker can tell this release's datastore from the outgoing one.
 package main
 
 import (
@@ -26,7 +26,7 @@ func run() error {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	if len(os.Args) < 2 {
-		return errors.New("usage: fun-openfga-setup provision|wait")
+		return errors.New("usage: fun-openfga-setup provision")
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -40,13 +40,6 @@ func run() error {
 		}
 
 		return Provision(ctx, cfg)
-	case "wait":
-		cfg, err := parse[WaitConfig]()
-		if err != nil {
-			return err
-		}
-
-		return Wait(ctx, *cfg)
 	default:
 		return fmt.Errorf("unknown command %q", os.Args[1])
 	}

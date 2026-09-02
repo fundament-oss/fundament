@@ -55,8 +55,7 @@ type Worker struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	handler *handler.Handler
-	store   *authz.StoreResolver
-	status  *authz.StatusClient
+	store   *authz.ProvisionedStore
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -73,8 +72,8 @@ type Worker struct {
 
 // New creates a new authz worker with sensible defaults.
 func New(
-	pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.StoreResolver,
-	status *authz.StatusClient, logger *slog.Logger, cfg Config,
+	pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.ProvisionedStore,
+	logger *slog.Logger, cfg Config,
 ) *Worker {
 	cfg = applyDefaults(cfg)
 
@@ -86,7 +85,6 @@ func New(
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, store, logger),
 		store:   store,
-		status:  status,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
@@ -189,31 +187,24 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 }
 
-// verifyStore gates a drain on the store being this release's, and picks up its
-// id if a reset replaced it.
+// verifyStore gates a drain on the datastore being this release's.
 //
-// Existence alone is not enough. During a reset the outgoing store is still there
-// until the wipe runs, and OpenFGA's Write does not check that a store survives,
-// so a drain against it reports success and marks rows completed for tuples that
-// are about to be destroyed. The generation is what tells the two stores apart.
+// A reset leaves the outgoing store in place until the wipe runs, and OpenFGA's
+// Write does not check that a store survives, so a drain against it reports
+// success and marks rows completed for tuples about to be destroyed. The
+// generation is what tells the two apart.
 func (w *Worker) verifyStore(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
 	defer cancel()
 
-	if w.cfg.Generation != "" {
-		reported, err := w.status.Generation(checkCtx)
-		if err != nil {
-			return fmt.Errorf("%w: %w", errStoreUnavailable, err)
-		}
-
-		if reported != w.cfg.Generation {
-			return fmt.Errorf("%w: openfga serves generation %q, this release is %q",
-				errStoreUnavailable, reported, w.cfg.Generation)
-		}
+	reported, err := w.store.Generation(checkCtx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
 	}
 
-	if _, err := w.store.Resolve(checkCtx); err != nil {
-		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	if w.cfg.Generation != "" && reported != w.cfg.Generation {
+		return fmt.Errorf("%w: openfga serves generation %q, this release is %q",
+			errStoreUnavailable, reported, w.cfg.Generation)
 	}
 
 	return nil

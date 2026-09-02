@@ -315,7 +315,7 @@ jobs:
             kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c fundament-migrate
 
             # Every setup step is an init container of that Job, in order:
-            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c wait-for-store
+            kubectl -n $NS logs -l app.kubernetes.io/name=authz-worker --tail=50
             ```
 
             **6. Routes & TLS**

@@ -95,7 +95,7 @@ func run() error {
 
 	logger.Debug("connecting to OpenFGA",
 		"api_url", cfg.OpenFGA.APIURL,
-		"store_name", cfg.OpenFGA.StoreName,
+		"status_url", cfg.OpenFGA.StatusURL,
 	)
 
 	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
@@ -105,13 +105,10 @@ func run() error {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
 
-	// The store may not exist yet (a reset deletes it before the reseed); Run waits for it.
-	store := authz.NewStoreResolver(fgaClient, cfg.OpenFGA.StoreName)
+	// What the provisioner published. Run waits for it to be this release's.
+	store := authz.NewProvisionedStore(cfg.OpenFGA.StatusURL)
 
-	// The gate that keeps seeded rows out of a store this release is replacing.
-	status := authz.NewStatusClient(cfg.OpenFGA.StatusURL)
-
-	w := worker.New(pool, fgaClient, store, status, logger, worker.Config{
+	w := worker.New(pool, fgaClient, store, logger, worker.Config{
 		Generation:   cfg.OpenFGA.Generation,
 		PollInterval: cfg.PollInterval,
 		BatchSize:    cfg.BatchSize,

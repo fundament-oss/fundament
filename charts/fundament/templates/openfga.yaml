@@ -219,7 +219,7 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
         # Sole creator of the store. Publishes the generation the datastore now
-        # belongs to, which is what db-migrations waits for before seeding.
+        # belongs to, which is what authz-worker gates its drain on.
         #
         # A rolling update puts two generations behind the status Service. A
         # waiter accepts only its own release's generation, so only the new pod

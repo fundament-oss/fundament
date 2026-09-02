@@ -132,7 +132,7 @@ func run() error {
 
 	logger.Debug("connecting to OpenFGA",
 		"api_url", cfg.OpenFGA.APIURL,
-		"store_name", cfg.OpenFGA.StoreName,
+		"status_url", cfg.OpenFGA.StatusURL,
 	)
 
 	authzClient, err := authz.New(cfg.OpenFGA)

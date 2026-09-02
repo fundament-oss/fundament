@@ -40,7 +40,7 @@ kubectl ──(JWT)──> kube-api-proxy ──(SA token)──> shoot API serv
 | `LOG_LEVEL` | no | `info` | Log level (debug, info, warn, error) |
 | `CORS_ALLOWED_ORIGINS` | no | | Comma-separated allowed origins |
 | `OPENFGA_API_URL` | yes | | OpenFGA API endpoint |
-| `OPENFGA_STORE_NAME` | no | `fundament` | OpenFGA store name, resolved to an id at runtime |
+| `OPENFGA_STATUS_URL` | yes | | Where the provisioner publishes the store to use |
 
 ## Caching
 

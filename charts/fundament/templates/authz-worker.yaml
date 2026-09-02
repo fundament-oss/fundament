@@ -47,8 +47,6 @@ spec:
               value: {{ $.Values.authzWorker.maxRetries | quote }}
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort }}
-            - name: OPENFGA_STORE_NAME
-              value: {{ include "fundament.openfga.storeName" $ | quote }}
             - name: OPENFGA_STATUS_URL
               value: http://openfga:{{ $.Values.openfga.statusPort }}/status.json
             - name: OPENFGA_GENERATION

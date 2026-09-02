@@ -26,26 +26,9 @@ type StatusClient struct {
 	httpClient *http.Client
 }
 
-// NewStatusClient returns a client for the provisioner at url. A client with no
-// url reports an empty generation, which leaves callers ungated.
+// NewStatusClient returns a client for the provisioner at url.
 func NewStatusClient(url string) *StatusClient {
 	return &StatusClient{url: url, httpClient: &http.Client{Timeout: 5 * time.Second}}
-}
-
-// Generation reports which release the provisioner says the datastore belongs to.
-// It is read fresh every time: a caller asking this is deciding whether the store
-// in front of it is its own, and a cached answer would defeat that.
-func (c *StatusClient) Generation(ctx context.Context) (string, error) {
-	if c == nil || c.url == "" {
-		return "", nil
-	}
-
-	status, err := c.Status(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return status.Generation, nil
 }
 
 // Status fetches the whole document.
