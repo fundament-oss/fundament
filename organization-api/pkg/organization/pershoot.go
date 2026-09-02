@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -38,6 +39,8 @@ const (
 // mechanics shared by the per-shoot Prometheus (metrics) and Vali (logs)
 // resolvers; what "resolving" means is injected by the owner.
 type perShootCache[T any] struct {
+	name   string // for log lines, e.g. "per-shoot prometheus"
+	logger *slog.Logger
 	// now and resolve are indirections so owners can expose their own test
 	// seams; both must be set before use.
 	now     func() time.Time
@@ -47,7 +50,9 @@ type perShootCache[T any] struct {
 
 	mu      sync.Mutex
 	entries map[uuid.UUID]perShootCacheEntry[T]
-	sf      singleflight.Group
+	// lastRetry rate-limits stale-resolution retries (see tryInvalidate).
+	lastRetry map[uuid.UUID]time.Time
+	sf        singleflight.Group
 }
 
 type perShootCacheEntry[T any] struct {
@@ -59,6 +64,8 @@ type perShootCacheEntry[T any] struct {
 }
 
 func newPerShootCache[T any](
+	name string,
+	logger *slog.Logger,
 	now func() time.Time,
 	resolve func(ctx context.Context, clusterID uuid.UUID) (T, error),
 	resolveTimeout time.Duration,
@@ -67,10 +74,13 @@ func newPerShootCache[T any](
 		resolveTimeout = defaultResolveTimeout
 	}
 	return &perShootCache[T]{
+		name:           name,
+		logger:         logger,
 		now:            now,
 		resolve:        resolve,
 		resolveTimeout: resolveTimeout,
 		entries:        make(map[uuid.UUID]perShootCacheEntry[T]),
+		lastRetry:      make(map[uuid.UUID]time.Time),
 	}
 }
 
@@ -123,4 +133,52 @@ func (c *perShootCache[T]) invalidate(clusterID uuid.UUID) {
 	c.mu.Lock()
 	delete(c.entries, clusterID)
 	c.mu.Unlock()
+}
+
+// tryInvalidate drops the entry for a stale-resolution retry, unless one was
+// already attempted within negativeTTL. A stable misconfiguration (a CA that
+// never verifies) then costs one resolution per negativeTTL, not one per
+// query: resolution itself succeeds, so the negative cache never engages.
+func (c *perShootCache[T]) tryInvalidate(clusterID uuid.UUID) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.now()
+	last, ok := c.lastRetry[clusterID]
+	if ok && now.Sub(last) < negativeTTL {
+		return false
+	}
+	c.lastRetry[clusterID] = now
+	delete(c.entries, clusterID)
+	return true
+}
+
+// callWithReResolveOnce runs call against the cached client; when isStale(err)
+// it invalidates, re-resolves, and retries once. The original error is
+// returned if the retry is rate-limited or re-resolution fails.
+func callWithReResolveOnce[T, R any](
+	ctx context.Context,
+	c *perShootCache[T],
+	clusterID uuid.UUID,
+	isStale func(error) bool,
+	call func(T) (R, error),
+) (R, error) {
+	var zero R
+	inner, err := c.get(ctx, clusterID)
+	if err != nil {
+		return zero, err
+	}
+	out, err := call(inner)
+	if !isStale(err) {
+		return out, err
+	}
+	if !c.tryInvalidate(clusterID) {
+		return zero, err
+	}
+	c.logger.InfoContext(ctx, c.name+" answered with a stale-resolution error, re-resolving",
+		"cluster_id", clusterID, "error", err)
+	inner, rerr := c.get(ctx, clusterID)
+	if rerr != nil {
+		return zero, err
+	}
+	return call(inner)
 }

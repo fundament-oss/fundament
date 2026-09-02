@@ -108,7 +108,7 @@ func newLogsCacheUnderTest(t *testing.T, valiID int, opts ...logs.Option) (*perS
 	t.Cleanup(srv.Close)
 
 	g := &fakeGardener{info: &gardener.MonitoringInfo{URL: srv.URL, Username: "u", Password: "p"}}
-	return newPerShootLogs(g, slog.New(slog.DiscardHandler), opts...), plutono, g
+	return newPerShootLogs(g, slog.New(slog.DiscardHandler), nil, opts...), plutono, g
 }
 
 // Spec scenario "Discovery finds Vali behind a non-first id".
@@ -242,7 +242,7 @@ func TestPerShootLogs_NoValiDatasource(t *testing.T) {
 
 func TestPerShootLogs_MonitoringSecretMissing(t *testing.T) {
 	g := &fakeGardener{err: gardener.ErrNotFound}
-	cache := newPerShootLogs(g, slog.New(slog.DiscardHandler))
+	cache := newPerShootLogs(g, slog.New(slog.DiscardHandler), nil)
 
 	_, err := cache.clientFor(context.Background(), uuid.New())
 	require.ErrorIs(t, err, gardener.ErrNotFound)

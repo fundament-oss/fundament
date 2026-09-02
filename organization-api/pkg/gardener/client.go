@@ -7,6 +7,7 @@ package gardener
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -30,6 +31,11 @@ const (
 	// monitoringSecretSuffix is the suffix Gardener uses for the per-shoot
 	// monitoring credentials secret: "<shoot-name>.monitoring".
 	monitoringSecretSuffix = ".monitoring"
+
+	// caClusterSuffix names the shoot's cluster CA bundle in the project
+	// namespace, published as both a ConfigMap and a deprecated Secret.
+	caClusterSuffix = ".ca-cluster"
+	caBundleKey     = "ca.crt"
 
 	// plutonoURLAnnotation is the annotation Gardener sets on the monitoring
 	// secret carrying the Plutono dashboard URL.
@@ -56,6 +62,9 @@ type MonitoringInfo struct {
 	PrometheusURL string
 	Username      string
 	Password      string
+	// CABundle is the shoot's cluster CA, which signs its observability
+	// ingress certificates. Empty when the shoot publishes none.
+	CABundle []byte
 }
 
 // Client looks up Gardener-side artifacts for a given cluster.
@@ -132,12 +141,85 @@ func (c *RealClient) Monitoring(ctx context.Context, clusterID uuid.UUID) (*Moni
 	if url == "" {
 		return nil, ErrNotFound
 	}
+	caBundle, err := c.caBundle(ctx, shoot.Namespace, shoot.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	return &MonitoringInfo{
 		URL:           url,
 		PrometheusURL: secret.Annotations[prometheusURLAnnotation],
 		Username:      string(secret.Data["username"]),
 		Password:      string(secret.Data["password"]),
+		CABundle:      caBundle,
 	}, nil
+}
+
+// caBundle reads <shoot>.ca-cluster: ConfigMap first, Secret on any miss
+// (gardener v1.139.4 still writes both; the Secret has a removal TODO).
+//
+//   - both absent → (nil, nil): provisioning shoot, or a wildcard-cert seed
+//   - forbidden → (nil, nil) + warn: the credential lacks configmaps get;
+//     retrying cannot fix that, the operator bundle may still verify
+//   - any other read error → error: a guessed "no CA" would be cached for
+//     minutes, a failed resolution is retried in seconds
+func (c *RealClient) caBundle(ctx context.Context, namespace, shootName string) ([]byte, error) {
+	key := types.NamespacedName{Namespace: namespace, Name: shootName + caClusterSuffix}
+
+	configMap := &corev1.ConfigMap{}
+	configMapErr := c.client.Get(ctx, key, configMap)
+	if configMapErr == nil {
+		pem, ok := c.usableCA(ctx, []byte(configMap.Data[caBundleKey]), key, "config map")
+		if ok {
+			return pem, nil
+		}
+	}
+
+	secret := &corev1.Secret{}
+	secretErr := c.client.Get(ctx, key, secret)
+	if secretErr == nil {
+		pem, ok := c.usableCA(ctx, secret.Data[caBundleKey], key, "secret")
+		if ok {
+			if configMapErr != nil && !apierrors.IsNotFound(configMapErr) {
+				c.logger.WarnContext(ctx, "shoot cluster CA config map unreadable, using the deprecated secret",
+					"namespace", key.Namespace, "name", key.Name, "error", configMapErr)
+			}
+			return pem, nil
+		}
+	}
+
+	var forbidden error
+	for _, err := range []error{configMapErr, secretErr} {
+		switch {
+		case err == nil || apierrors.IsNotFound(err):
+		case apierrors.IsForbidden(err):
+			forbidden = err
+		default:
+			return nil, fmt.Errorf("read shoot cluster CA %s/%s: %w", key.Namespace, key.Name, err)
+		}
+	}
+	if forbidden != nil {
+		c.logger.WarnContext(ctx, "shoot cluster CA not readable, grant get on configmaps to the Gardener credential",
+			"namespace", key.Namespace, "name", key.Name, "error", forbidden)
+		return nil, nil
+	}
+	c.logger.DebugContext(ctx, "shoot publishes no cluster CA",
+		"namespace", key.Namespace, "name", key.Name)
+	return nil, nil
+}
+
+// usableCA reports whether pem holds a certificate; empty is "not published
+// here", non-empty garbage is warned about.
+func (c *RealClient) usableCA(ctx context.Context, pem []byte, key types.NamespacedName, source string) ([]byte, bool) {
+	if len(pem) == 0 {
+		return nil, false
+	}
+	if !x509.NewCertPool().AppendCertsFromPEM(pem) {
+		c.logger.WarnContext(ctx, "shoot cluster CA holds no certificate",
+			"namespace", key.Namespace, "name", key.Name, "source", source)
+		return nil, false
+	}
+	return pem, true
 }
 
 // NoopClient is the zero-config implementation used when no Gardener

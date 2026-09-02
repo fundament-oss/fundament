@@ -53,7 +53,7 @@ func (f *fakeProm) QueryRange(context.Context, string, time.Time, time.Time, tim
 }
 
 func testCache(g gardener.Client) *perShootClients {
-	return newPerShootClients(g, slog.New(slog.DiscardHandler))
+	return newPerShootClients(g, slog.New(slog.DiscardHandler), nil)
 }
 
 func TestPerShootClients_ResolvesAndCaches(t *testing.T) {
@@ -61,7 +61,7 @@ func TestPerShootClients_ResolvesAndCaches(t *testing.T) {
 	cache := testCache(g)
 
 	var built atomic.Int32
-	cache.newClient = func(base, _, _ string) prom.Client {
+	cache.newClient = func(base, _, _ string, _ http.RoundTripper) prom.Client {
 		built.Add(1)
 		assert.Equal(t, "https://prom", base)
 		return &fakeProm{}
@@ -83,7 +83,7 @@ func TestPerShootClients_ResolvesAndCaches(t *testing.T) {
 func TestPerShootClients_ExpiryReResolves(t *testing.T) {
 	g := &fakeGardener{info: &gardener.MonitoringInfo{URL: "https://plutono", PrometheusURL: "https://prom", Username: "u", Password: "p"}}
 	cache := testCache(g)
-	cache.newClient = func(string, string, string) prom.Client { return &fakeProm{} }
+	cache.newClient = func(string, string, string, http.RoundTripper) prom.Client { return &fakeProm{} }
 
 	current := time.Now()
 	cache.now = func() time.Time { return current }
@@ -114,7 +114,7 @@ func TestPerShootClient_RetriesOnceOn401(t *testing.T) {
 	fresh := &fakeProm{}
 	clients := []prom.Client{stale, fresh}
 	var idx atomic.Int32
-	cache.newClient = func(string, string, string) prom.Client {
+	cache.newClient = func(string, string, string, http.RoundTripper) prom.Client {
 		return clients[idx.Add(1)-1]
 	}
 
@@ -140,7 +140,7 @@ func TestPerShootClient_QueryRangeRetriesOnceOn401(t *testing.T) {
 	fresh := &fakeProm{}
 	clients := []prom.Client{stale, fresh}
 	var idx atomic.Int32
-	cache.newClient = func(string, string, string) prom.Client {
+	cache.newClient = func(string, string, string, http.RoundTripper) prom.Client {
 		return clients[idx.Add(1)-1]
 	}
 
@@ -161,7 +161,7 @@ func TestPerShootClient_Non401NotRetried(t *testing.T) {
 	cache := testCache(g)
 
 	failing := &fakeProm{queryErr: &prom.StatusError{StatusCode: http.StatusBadGateway}}
-	cache.newClient = func(string, string, string) prom.Client { return failing }
+	cache.newClient = func(string, string, string, http.RoundTripper) prom.Client { return failing }
 
 	client, err := cache.clientFor(context.Background(), uuid.New())
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func triStateServer(url string, g gardener.Client) *Server {
 		logger:        logger,
 		prometheusURL: url,
 		gardener:      g,
-		perShoot:      newPerShootClients(g, logger),
+		perShoot:      newPerShootClients(g, logger, nil),
 	}
 }
 
@@ -220,7 +220,7 @@ func TestPromClientFor_PerShootWithoutGardenerIsNotFound(t *testing.T) {
 func TestPromClientFor_PerShootResolves(t *testing.T) {
 	g := &fakeGardener{info: &gardener.MonitoringInfo{URL: "https://plutono", PrometheusURL: "https://prom", Username: "u", Password: "p"}}
 	s := triStateServer("per-shoot", g)
-	s.perShoot.newClient = func(string, string, string) prom.Client { return &fakeProm{} }
+	s.perShoot.newClient = func(string, string, string, http.RoundTripper) prom.Client { return &fakeProm{} }
 
 	client, err := s.promClientFor(context.Background(), uuid.New())
 	require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestPerShootClients_ResolutionDetachedFromCallerCancel(t *testing.T) {
 	// aborting (page refresh) must not fail resolution for the ones that join.
 	g := &ctxGardener{fakeGardener{info: &gardener.MonitoringInfo{URL: "https://plutono", PrometheusURL: "https://prom", Username: "u", Password: "p"}}}
 	cache := testCache(g)
-	cache.newClient = func(string, string, string) prom.Client { return &fakeProm{} }
+	cache.newClient = func(string, string, string, http.RoundTripper) prom.Client { return &fakeProm{} }
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
