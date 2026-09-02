@@ -135,9 +135,6 @@ readinessProbe:
 {{- end }}
 
 {{/*
-Name of the OpenFGA store. Consumers resolve it to an id at runtime, because ids
-are server-generated and change whenever the store is replaced.
-
 Usage: include "fundament.openfga.storeName" $
 */}}
 {{- define "fundament.openfga.storeName" -}}

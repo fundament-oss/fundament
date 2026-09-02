@@ -115,17 +115,20 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 
 	var resp *client.ClientCheckResponse
 
-	err := c.store.Do(ctx, func(storeID string) error {
+	if err := c.store.Do(ctx, func(storeID string) error {
 		var checkErr error
+
 		resp, checkErr = c.fga.Check(ctx).
 			Body(checkReq).
 			Options(client.ClientCheckOptions{StoreId: &storeID}).
 			Execute()
+		if checkErr != nil {
+			return fmt.Errorf("check: %w", checkErr)
+		}
 
-		return checkErr //nolint:wrapcheck // Do inspects the raw SDK error
-	})
-	if err != nil {
-		return Decision{Decision: false}, fmt.Errorf("check: %w", err)
+		return nil
+	}); err != nil {
+		return Decision{Decision: false}, err
 	}
 
 	decision := false
