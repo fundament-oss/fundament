@@ -25,13 +25,16 @@ externalUrls:
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
-  console: "" # e.g., https://app.example.com
+  console: "" # e.g., https://app.example.com (empty makes the marketplace's "Install plugin" button explain the hand-off instead of linking to it)
   consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
-  marketplace: "" # e.g., https://marketplace-api.example.com (catalog; reached from plugin clusters)
+  marketplace: "" # e.g., https://marketplace.example.com (storefront; empty points the console's "View full details" button at its own plugin page)
+  marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
+  marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
+  marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
 # Container images
@@ -51,6 +54,7 @@ images:
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
+  marketplaceFrontend: ghcr.io/fundament-oss/fundament/marketplace-frontend:latest
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
 
 # Database (CloudNativePG)
@@ -192,6 +196,29 @@ docsFrontend:
     hostnames: []
     #  - docs.example.com
 
+# Marketplace frontend (public storefront, publishing and review surfaces).
+# Server-rendered (Node), so it reads its three API base URLs from
+# externalUrls.marketplace*Api at runtime and renders the public storefront
+# itself; the developer and backoffice areas stay client-rendered.
+marketplaceFrontend:
+  enabled: false
+  replicas: 1
+  # Base URLs the server-side renderer uses for its own API calls. In-cluster
+  # addresses (e.g. http://marketplace-catalog-api), so rendering a page does not
+  # leave the cluster and come back in through the gateway. Empty falls back to
+  # the public URL from externalUrls.
+  internalApiUrls:
+    catalog: ""
+    registry: ""
+    admin: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - marketplace.example.com
+
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:
   enabled: false
@@ -223,8 +250,8 @@ pluginController:
   # URL (FUN-19) — see plugins/sandbox/values.yaml.
   catalogApiUrl: ""
   # shootImage: plugin-controller image for shoot clusters, provisioned onto
-  # every ready shoot by cluster-worker (with externalUrls.marketplace as the
-  # catalog URL). Must be pullable from shoot nodes — production registries
+  # every ready shoot by cluster-worker (with externalUrls.marketplaceCatalogApi
+  # as the catalog URL). Must be pullable from shoot nodes — production registries
   # qualify, local dev registries do not. Empty disables shoot provisioning —
   # it does not uninstall machinery already on shoots (see cluster-worker/README.md).
   shootImage: ""

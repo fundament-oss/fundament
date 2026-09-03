@@ -1,0 +1,119 @@
+<a routerLink="/" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+  All plugins
+</a>
+
+<h1 class="text-3xl font-semibold">My plugins</h1>
+<p class="mt-1 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+  Manage the plugins you author, track their review status, and sideload builds for testing
+</p>
+
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="py-8 text-center">
+    <p class="text-gray-600 dark:text-gray-300">Loading plugins...</p>
+  </div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 mt-6 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+} @else {
+  <!-- Status summary -->
+  <div class="mt-6 mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    @for (summary of statusCounts(); track summary.status) {
+      <nldd-card class="block">
+        <div class="flex items-center gap-2.5 p-4">
+          <span
+            class="h-2.5 w-2.5 shrink-0 rounded-full"
+            [style.background]="summary.dotColorVar"
+          ></span>
+          <span class="font-mono text-xl leading-none">{{ summary.count }}</span>
+          <span class="text-gray-600 dark:text-gray-300">{{ summary.label }}</span>
+        </div>
+      </nldd-card>
+    }
+  </div>
+
+  <div class="mb-6 flex">
+    <nldd-button
+      routerLink="/manage/create"
+      text="Add a new plugin"
+      start-icon="plus"
+      variant="primary"
+    ></nldd-button>
+  </div>
+
+  <!-- Plugins Table -->
+  @if (plugins().length === 0) {
+    <nldd-box>
+      <nldd-inline-dialog
+        icon="puzzle-piece"
+        icon-color="secondary"
+        text="No plugins yet"
+        supporting-text="Push a plugin with functl, or sideload a build to get started."
+      >
+        <nldd-button
+          slot="actions"
+          routerLink="/manage/create"
+          text="Create a plugin"
+          start-icon="plus"
+          variant="primary"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    </nldd-box>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Plugin</th>
+            <th scope="col">Version</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (plugin of plugins(); track plugin.id) {
+            <tr
+              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+              (click)="goToManage(plugin.id)"
+            >
+              <td>
+                <div class="flex items-center gap-3">
+                  <app-plugin-icon
+                    [name]="plugin.icon"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                  />
+                  <div class="py-1">
+                    <p class="text-lg font-medium">
+                      {{ plugin.displayName }}
+                    </p>
+                    <p class="max-w-md whitespace-normal text-gray-600 dark:text-gray-400">
+                      {{ plugin.descriptionShort }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
+                {{ plugin.version }}
+              </td>
+              <td>
+                <span class="badge {{ statusBadgeClass(plugin.status) }}">{{
+                  statusLabel(plugin.status)
+                }}</span>
+              </td>
+              <td class="text-right">
+                <nldd-button
+                  [routerLink]="['/manage', plugin.id]"
+                  text="Manage"
+                  variant="secondary"
+                  size="sm"
+                ></nldd-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

@@ -1,0 +1,325 @@
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugin...</div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+  <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Back to my plugins
+  </a>
+} @else if (plugin(); as plugin) {
+  <a routerLink="/manage" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    My plugins
+  </a>
+
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <app-plugin-icon
+        [name]="plugin.icon"
+        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 dark:bg-gray-800"
+      />
+      <div>
+        <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
+          <span class="font-mono">v{{ plugin.version }}</span>
+          · {{ plugin.name }}
+        </p>
+      </div>
+    </div>
+    <nldd-tag
+      [color]="statusTagColor(plugin.status)"
+      [text]="statusLabel(plugin.status)"
+    ></nldd-tag>
+  </div>
+
+  <!-- Publishing status -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-6 text-lg font-semibold">Publishing status</h2>
+      <app-plugin-status-tracker [status]="plugin.status" />
+
+      <!-- Stage-appropriate actions -->
+      <div class="mt-5 flex flex-wrap gap-2">
+        @switch (plugin.status) {
+          @case ('draft') {
+            <nldd-button
+              (click)="submitForReview()"
+              text="Submit for review"
+              start-icon="send"
+              variant="primary"
+              [disabled]="isSubmitting()"
+            ></nldd-button>
+          }
+          @case ('pending') {
+            <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
+          }
+          @case ('changes_requested') {
+            <nldd-button
+              (click)="submitForReview()"
+              text="Resubmit for review"
+              start-icon="send"
+              variant="primary"
+              [disabled]="isSubmitting()"
+            ></nldd-button>
+          }
+          @case ('withdrawn') {
+            <nldd-button
+              (click)="submitForReview()"
+              text="Submit for review"
+              start-icon="send"
+              variant="primary"
+              [disabled]="isSubmitting()"
+            ></nldd-button>
+          }
+          @case ('approved') {
+            <nldd-button
+              [routerLink]="['/plugins', plugin.id]"
+              text="View in catalog"
+              start-icon="eye"
+              variant="secondary"
+            ></nldd-button>
+          }
+        }
+        @if (plugin.status !== 'approved') {
+          <nldd-button
+            (click)="openSideload()"
+            text="Sideload plugin"
+            start-icon="cloud-arrow-up"
+            variant="secondary"
+          ></nldd-button>
+        }
+        @if (plugin.status === 'pending') {
+          <nldd-button
+            (click)="withdraw()"
+            text="Withdraw"
+            start-icon="trash"
+            variant="destructive"
+            [disabled]="isSubmitting()"
+          ></nldd-button>
+        }
+      </div>
+    </div>
+  </nldd-card>
+
+  <!-- Metadata -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-4 text-lg font-semibold">Details</h2>
+      <p class="mb-8 max-w-3xl leading-relaxed text-gray-600 dark:text-gray-300">
+        {{ plugin.description }}
+      </p>
+
+      <dl class="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Author
+          </dt>
+          <dd class="mt-2">
+            <a [href]="plugin.author.url" target="_blank" rel="noopener" class="link">
+              {{ plugin.author.name }}
+            </a>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Repository
+          </dt>
+          <dd class="mt-2">
+            <a [href]="plugin.repositoryUrl" target="_blank" rel="noopener" class="link break-all">
+              {{ plugin.repositoryUrl }}
+            </a>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Category
+          </dt>
+          <dd class="mt-2">{{ plugin.categoryName }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Version
+          </dt>
+          <dd class="mt-2 font-mono text-sm">v{{ plugin.version }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Last updated
+          </dt>
+          <dd class="mt-2 font-mono text-sm">{{ plugin.versions[0]?.pushedAt }}</dd>
+        </div>
+        @if (latestVersion(); as latest) {
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Image
+            </dt>
+            <!-- The image is read out of the version's pinned manifest, so it
+                 belongs to the build rather than to the listing. -->
+            <dd class="mt-2 font-mono text-xs break-all text-gray-600 dark:text-gray-300">
+              {{ latest.image }}
+            </dd>
+          </div>
+        }
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Tags
+          </dt>
+          <dd class="mt-2 flex flex-wrap gap-2">
+            @for (tag of plugin.tags; track tag) {
+              <nldd-tag color="neutral" [text]="tag"></nldd-tag>
+            }
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </nldd-card>
+
+  <!-- Version history -->
+  <nldd-card class="block">
+    <div class="p-6">
+      <h2 class="mb-6 text-lg font-semibold">Version history</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left">
+          <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Version
+              </th>
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Pushed
+              </th>
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                class="pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Notes
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (version of plugin.versions; track version.id) {
+              <tr>
+                <td class="py-4 pr-8 font-mono text-sm whitespace-nowrap">{{ version.version }}</td>
+                <td
+                  class="py-4 pr-8 font-mono text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                >
+                  {{ version.pushedAt }}
+                </td>
+                <td class="py-4 pr-8">
+                  <span class="badge {{ statusBadgeClass(version.status) }}">{{
+                    statusLabel(version.status)
+                  }}</span>
+                </td>
+                <td class="py-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ version.reviewFeedback || '—' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </nldd-card>
+
+  <!-- Sideload sheet -->
+  <nldd-sheet #sideloadSheet accessible-label="Sideload plugin" placement="right" width="460px">
+    <nldd-page sticky-header="" sticky-footer="">
+      <div slot="header" class="flex items-center justify-between px-6 py-4">
+        <h2 class="text-lg font-semibold">Sideload this plugin</h2>
+        <nldd-icon-button
+          icon="dismiss"
+          text="Close"
+          variant="neutral-transparent"
+          size="sm"
+          (click)="closeSideload()"
+        ></nldd-icon-button>
+      </div>
+
+      <nldd-simple-section class="space-y-6" padding-top="0">
+        <div class="space-y-3 text-gray-600 dark:text-gray-300">
+          <p>
+            Sideloading test-installs this plugin build onto a normal cluster you own, straight from
+            the image you already pushed with <span class="font-mono">functl</span>, no catalog
+            listing and no central review required.
+          </p>
+          <p>
+            It's meant for trying a plugin out before you share it: a development cluster is a good
+            place to test. Once you're happy with it, submit the plugin for review from this page.
+            If it's approved it appears in the plugin catalog for other users to install.
+          </p>
+        </div>
+
+        <nldd-form-field label="Version">
+          <nldd-dropdown>
+            <select id="sideload-version" (change)="onVersionChange($event)">
+              @for (version of plugin.versions; track version.id) {
+                <option
+                  [value]="version.version"
+                  [selected]="version.version === selectedVersion()"
+                >
+                  {{ version.version }}
+                  @if (version.version === plugin.version) {
+                    &nbsp;(latest)
+                  }
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+
+        <nldd-form-field label="Target cluster">
+          <nldd-dropdown>
+            <select id="sideload-cluster" (change)="onClusterChange($event)">
+              @for (cluster of clusters(); track cluster.id) {
+                <option [value]="cluster.id" [selected]="cluster.id === selectedClusterId()">
+                  {{ cluster.name }}
+                  @if (cluster.isDevelopment) {
+                    &nbsp;(development)
+                  }
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+          <nldd-form-field-help-text>
+            v{{ selectedVersion() }} will be installed onto this cluster.
+          </nldd-form-field-help-text>
+        </nldd-form-field>
+      </nldd-simple-section>
+
+      <div
+        slot="footer"
+        class="flex items-center gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+      >
+        <nldd-button
+          (click)="closeSideload()"
+          type="button"
+          text="Cancel"
+          variant="secondary"
+        ></nldd-button>
+        <nldd-button
+          (click)="submitSideload()"
+          type="button"
+          text="Sideload plugin"
+          start-icon="cloud-arrow-up"
+          variant="primary"
+        ></nldd-button>
+      </div>
+    </nldd-page>
+  </nldd-sheet>
+}

@@ -18,7 +18,8 @@ import InstallPluginModalComponent, {
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
+import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
+import getPluginIconName from '../utils/plugin-icon-name';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
   GetPluginRequestSchema,
@@ -70,7 +71,7 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent, LoadingIndicatorComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
@@ -93,6 +94,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   private pluginInstallationService = inject(PluginInstallationService);
 
   private idempotency = createIdempotencyRef();
+
+  pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
 

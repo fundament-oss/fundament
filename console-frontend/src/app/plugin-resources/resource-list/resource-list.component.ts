@@ -26,6 +26,7 @@ import {
   resolveJsonPath,
   formatColumnValue,
   getListColumns,
+  crdRefToLabel,
   kindToLabel,
 } from '../crd-schema.utils';
 
@@ -131,7 +132,9 @@ export default class ResourceListComponent implements OnInit {
     const resourceKind = this.resourceKind();
     const allItems = [...(plugin?.menu.project ?? [])];
     const item = allItems.find((i) => i.crd === resourceKind);
-    return item?.label ?? kindToLabel(resourceKind);
+    // The route param is a CRD reference ("certificates.cert-manager.io"), not a
+    // kind, so it must not go through kindToLabel — that would pluralize the group.
+    return item?.label ?? crdRefToLabel(resourceKind);
   });
 
   constructor() {

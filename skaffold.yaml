@@ -85,6 +85,14 @@ build:
       docker:
         dockerfile: plugin-proxy/Dockerfile
 
+    # Keep new artifacts at the end: the hotreload profile below patches
+    # artifacts by positional index, so inserting above repoints another
+    # service's Dockerfile.
+    - image: marketplace-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+
     - image: marketplace-catalog-api
       context: .
       docker:
@@ -116,6 +124,7 @@ deploy:
           images.dcimFrontend: "{{.IMAGE_FULLY_QUALIFIED_dcim_frontend}}"
           images.dcimAuthnApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_authn_api}}"
           images.pluginProxy: "{{.IMAGE_FULLY_QUALIFIED_plugin_proxy}}"
+          images.marketplaceFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_frontend}}"
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
 
 profiles:
@@ -243,9 +252,15 @@ profiles:
         value: {}
       - op: replace
         path: /build/artifacts/14/docker/dockerfile
-        value: marketplace-api/hotreload/Dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/14/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/15/docker/dockerfile
+        value: marketplace-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/15/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

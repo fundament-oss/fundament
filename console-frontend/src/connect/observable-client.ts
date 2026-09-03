@@ -111,7 +111,9 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
         // A for-await loop, not awaited recursion: recursion suspends the caller
         // on every message, so one frame per streamed message — each retaining
         // its message — stays alive until the stream ends. A log tail emits per
-        // line, which turns that into unbounded retention.
+        // line, which turns that into unbounded retention. An async iterable has
+        // no array form to iterate instead, so no-restricted-syntax cannot apply.
+        // eslint-disable-next-line no-restricted-syntax
         for await (const message of streamResponse.message) {
           if (subscriber.closed) return;
           subscriber.next(message);

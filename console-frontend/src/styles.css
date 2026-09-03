@@ -196,6 +196,54 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply border-t border-gray-200 px-6 py-4 dark:border-gray-800;
 }
 
+/* Badge styles */
+
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium;
+}
+
+.badge-sm {
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
+}
+
+.badge-md {
+  @apply inline-flex items-center rounded-full px-2 py-1 text-sm font-medium;
+}
+
+/* Badge color variants */
+
+.badge-green {
+  @apply bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200;
+}
+
+.badge-blue {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200;
+}
+
+.badge-purple {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200;
+}
+
+.badge-rose {
+  @apply bg-danger-100 text-danger-800 dark:bg-danger-950 dark:text-danger-200;
+}
+
+.badge-yellow {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
+}
+
+.badge-orange {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200;
+}
+
+.badge-emerald {
+  @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200;
+}
+
 .live-dot {
   @apply inline-block h-2 w-2 shrink-0 rounded-full bg-current;
   animation: live-pulse 2s ease-in-out infinite;
@@ -214,7 +262,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .link {
-  @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
+  @apply wrap-break-word text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
 }
 
 /* Radio option label styles */
@@ -319,6 +367,12 @@ html.presenting body {
 }
 html.presenting-full body {
   padding-left: 0;
+}
+/* An `embed` slide frames the marketplace demo over the right pane. The console
+   stays mounted underneath, keeping its state for the slide that comes back to
+   it, and is only taken out of view. */
+html.presenting-embed app-root {
+  visibility: hidden;
 }
 /* While presenting, the left 40vw is the narration panel, so app dialogs are
    centered in the right pane. modal-pane.ts fixes the dialog to the viewport and

@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
@@ -92,6 +93,15 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
         useValue: {
           clusterSummaries: () => [cluster],
         } as unknown as OrganizationDataService,
+      },
+      {
+        // The details sheet reads marketplaceUrl to decide between the
+        // marketplace listing and the console's own plugin page. Nothing here
+        // exercises that link, so an unconfigured marketplace is enough.
+        provide: ConfigService,
+        useValue: {
+          getConfig: () => ({ marketplaceUrl: '' }),
+        } as unknown as ConfigService,
       },
       {
         provide: ToastService,

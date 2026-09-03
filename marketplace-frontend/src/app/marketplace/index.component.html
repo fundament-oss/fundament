@@ -1,0 +1,335 @@
+<!-- Hero: a full-bleed band, so it breaks out of the page container and sits
+     flush under the top nav (which cancels the surrounding `main` top padding).
+
+     The bleed is negative margins matching `main`'s own gutters, not a
+     `100vw` breakout: `100vw` counts the scrollbar, so wherever the scrollbar
+     is a classic one (the walkthrough's marketplace iframe, Windows) the band
+     lands half a scrollbar off-centre and the hero stops lining up with the
+     content below it. Below `xl` the page is narrower than `max-w-7xl`, so the
+     gutters alone reach the viewport edge; from `xl` up the container is capped
+     and centred, which is the one case that still needs the viewport. -->
+<section
+  class="border-dividers bg-surface-base relative -mx-4 -mt-8 mb-12 overflow-hidden border-b sm:-mx-6 lg:-mx-8 xl:mx-[calc(50%-50vw)]"
+>
+  <!-- Cluster canvas: faint node grid + soft accent glow -->
+  <div
+    class="pointer-events-none absolute inset-0 text-gray-900/5 dark:text-white/6"
+    style="
+      background-image: radial-gradient(currentColor 1px, transparent 1px);
+      background-size: 22px 22px;
+    "
+    aria-hidden="true"
+  ></div>
+  <div
+    class="bg-accent-300/30 dark:bg-accent-500/20 pointer-events-none absolute -top-24 right-[8%] h-72 w-72 rounded-full blur-3xl"
+    aria-hidden="true"
+  ></div>
+
+  <div
+    class="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20"
+  >
+    <!-- Pitch -->
+    <div class="max-w-xl">
+      <p
+        class="text-accent-700 flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase"
+      >
+        <nldd-icon name="puzzle-piece" class="block! h-4 w-4"></nldd-icon>
+        Fundament Marketplace
+      </p>
+      <h1 class="font-display mt-4 text-4xl font-semibold text-balance sm:text-5xl">
+        Plugins that integrate with your clusters
+      </h1>
+      <p class="mt-4 text-lg text-gray-600 dark:text-gray-300">
+        Add databases, networking, observability and security to any Fundament cluster with a single
+        click — built by the platform team and the community.
+      </p>
+
+      @if (!isLoading()) {
+        <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-4">
+          <div>
+            <dd class="font-display text-3xl font-semibold tabular-nums">{{ plugins().length }}</dd>
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
+              Plugins
+            </dt>
+          </div>
+          <div>
+            <dd class="font-display text-3xl font-semibold tabular-nums">
+              {{ categories().length }}
+            </dd>
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
+              Categories
+            </dt>
+          </div>
+          <div>
+            <dd class="font-display text-3xl font-semibold tabular-nums">{{ coreCount() }}</dd>
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
+              Core
+            </dt>
+          </div>
+        </dl>
+      }
+    </div>
+
+    <!-- Signature: recent plugins floating above the cluster -->
+    <div class="relative hidden lg:block" aria-hidden="true">
+      <div class="relative mx-auto h-85 w-full max-w-md">
+        @for (p of heroPlugins(); track p.name; let i = $index) {
+          <div
+            class="absolute w-72"
+            [style.top.px]="i * 112"
+            [class]="i % 2 === 0 ? (i === 0 ? 'left-0' : 'left-10') : 'right-0'"
+          >
+            <nldd-card class="block shadow">
+              <div class="flex items-start gap-3 p-4">
+                <app-plugin-icon
+                  [name]="p.icon"
+                  [label]="p.displayName"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1.5 dark:bg-gray-800"
+                />
+                <div class="min-w-0">
+                  <div class="truncate text-base font-semibold">{{ p.displayName }}</div>
+                  <div class="truncate text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.tagline }}
+                  </div>
+                </div>
+              </div>
+            </nldd-card>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugins...</div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+} @else {
+  <div class="flex flex-col gap-8 md:flex-row">
+    <!-- Category sidebar. Beside the content from `md` up (this app has no
+         shell nav eating the width, so the split still reads fine at ~800px);
+         stacked below that it is a full-width row of category chips, since a
+         shrink-to-fit column of half-empty rows is neither. -->
+    <aside class="shrink-0 md:sticky md:top-24 md:w-48 md:self-start lg:w-56">
+      <h2
+        class="mb-3 px-3 text-xs font-semibold tracking-[0.14em] text-gray-500 uppercase dark:text-gray-400"
+      >
+        Browse
+      </h2>
+      <nav class="flex flex-wrap gap-1.5 md:block md:space-y-1.5" aria-label="Plugin categories">
+        <button
+          type="button"
+          (click)="selectCategory('all')"
+          [class]="
+            selectedCategory() === 'all'
+              ? 'bg-accent-75 text-accent-800 font-semibold'
+              : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+          "
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors md:w-full"
+        >
+          <span class="flex items-center gap-2.5">
+            <nldd-icon name="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
+            All plugins
+          </span>
+          <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
+            {{ searchMatches().length }}
+          </span>
+        </button>
+        @for (category of categories(); track category.id) {
+          <button
+            type="button"
+            (click)="selectCategory(category.id)"
+            [class]="
+              selectedCategory() === category.id
+                ? 'bg-accent-75 text-accent-800 font-semibold'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            "
+            class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors md:w-full"
+          >
+            <span class="flex items-center gap-2.5">
+              <nldd-icon
+                [name]="categoryIcon(category)"
+                class="block! h-4 w-4 shrink-0"
+              ></nldd-icon>
+              {{ category.name }}
+            </span>
+            <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
+              {{ categoryCount(category.id) }}
+            </span>
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <!-- Main content. Card grids are sized with container queries: with the
+         sidebar alongside, the viewport is a poor proxy for what is left. -->
+    <div class="@container min-w-0 flex-1">
+      @if (isFiltering()) {
+        <!-- Flat results grid when filtering/searching -->
+        <div class="mb-5 flex items-baseline justify-between gap-4">
+          <h2 class="font-display text-2xl font-semibold">
+            @if (searchQuery().trim()) {
+              Results for “{{ searchQuery().trim() }}”
+              @if (selectedCategory() !== 'all') {
+                <span class="font-normal text-gray-500 dark:text-gray-400">
+                  in {{ selectedCategoryName() }}
+                </span>
+              }
+            } @else {
+              {{ selectedCategoryName() }}
+            }
+          </h2>
+          <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
+            {{ filteredPlugins().length }} plugin{{ filteredPlugins().length === 1 ? '' : 's' }}
+          </span>
+        </div>
+
+        @if (filteredPlugins().length === 0) {
+          <nldd-box>
+            <nldd-inline-dialog
+              icon="puzzle-piece"
+              icon-color="secondary"
+              text="No plugins found"
+              [supportingText]="emptyStateMessage()"
+            >
+              @if (widenableMatchCount() > 0) {
+                <nldd-button
+                  slot="actions"
+                  (click)="selectCategory('all')"
+                  [text]="'Search all categories (' + widenableMatchCount() + ')'"
+                  variant="secondary"
+                ></nldd-button>
+              }
+            </nldd-inline-dialog>
+          </nldd-box>
+        } @else {
+          <div class="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">
+            @for (plugin of filteredPlugins(); track plugin.id) {
+              <app-plugin-card [plugin]="plugin" />
+            }
+          </div>
+        }
+      } @else {
+        <!-- Curated home section -->
+        <section>
+          <div class="mb-5">
+            <p class="text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase">
+              Recently added
+            </p>
+            <h2 class="font-display mt-1 text-2xl font-semibold">Fresh from the registry</h2>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">
+              The newest plugins in the marketplace.
+            </p>
+          </div>
+
+          <!-- Spotlight: the most recently published listing -->
+          @if (spotlightPlugin(); as p) {
+            <a [routerLink]="['/plugins', p.name]" class="group mb-5 block">
+              <nldd-card
+                class="hover:ring-accent-200 dark:hover:ring-accent-800 block transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
+              >
+                <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+                  <app-plugin-icon
+                    [name]="p.icon"
+                    [label]="p.displayName"
+                    class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 p-3 dark:bg-gray-800"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span
+                        class="text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase"
+                      >
+                        Just published
+                      </span>
+                      <app-plugin-labels [labels]="p.labels" />
+                    </div>
+                    <h3 class="mt-1 text-xl font-semibold group-hover:underline">
+                      {{ p.displayName }}
+                    </h3>
+                    <p class="mt-1 text-gray-700 dark:text-gray-200">{{ p.tagline }}</p>
+                    <div
+                      class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      <span>By {{ p.vendor }}</span>
+                    </div>
+                  </div>
+                  <span
+                    class="text-accent-700 hidden shrink-0 items-center gap-1 self-end font-medium sm:flex sm:self-center"
+                  >
+                    View plugin
+                    <nldd-icon
+                      name="arrow-right"
+                      class="block! h-4 w-4 transition-transform group-hover:translate-x-px"
+                    ></nldd-icon>
+                  </span>
+                </div>
+              </nldd-card>
+            </a>
+          }
+
+          @if (recentlyAdded().length > 0) {
+            <div class="grid grid-cols-1 gap-5 @xl:grid-cols-2">
+              @for (plugin of recentlyAdded(); track plugin.id) {
+                <app-plugin-card [plugin]="plugin" />
+              }
+            </div>
+          }
+        </section>
+
+        <!-- Build-a-plugin call to action -->
+        <section
+          class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
+        >
+          <div
+            class="pointer-events-none absolute inset-0 text-white/6"
+            style="
+              background-image: radial-gradient(currentColor 1px, transparent 1px);
+              background-size: 22px 22px;
+            "
+            aria-hidden="true"
+          ></div>
+          <div
+            class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="max-w-xl">
+              <!-- This panel stays dark in both themes, so the accent shade has to be
+                   flipped back in dark mode to keep reading as a light-on-dark blue. -->
+              <p
+                class="text-accent-300 dark:text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase"
+              >
+                For platform teams
+              </p>
+              <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
+                Build a plugin for every Fundament cluster
+              </h2>
+              <p class="mt-3 text-gray-300">
+                Package your operator once and publish it to the marketplace, so any team can
+                install it in a single click.
+              </p>
+            </div>
+            <a routerLink="/manage/create" class="shrink-0">
+              <nldd-button
+                text="Build a plugin"
+                end-icon="arrow-right"
+                variant="primary"
+              ></nldd-button>
+            </a>
+          </div>
+        </section>
+      }
+    </div>
+  </div>
+}
