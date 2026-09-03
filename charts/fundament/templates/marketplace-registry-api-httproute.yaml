@@ -1,4 +1,4 @@
-{{- if $.Values.marketplaceRegistryApi.httproute.enabled }}
+{{- if and $.Values.marketplaceRegistryApi.enabled $.Values.marketplaceRegistryApi.httproute.enabled }}
 {{- if not $.Values.marketplaceRegistryApi.httproute.parentRefs }}{{ fail "marketplaceRegistryApi.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
