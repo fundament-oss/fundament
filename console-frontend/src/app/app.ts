@@ -31,6 +31,7 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/tooltip';
 import '@nldd/design-system/pagination';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';

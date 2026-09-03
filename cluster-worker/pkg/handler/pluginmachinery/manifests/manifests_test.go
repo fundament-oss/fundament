@@ -58,10 +58,10 @@ func TestClusterRoleRulesMatchChart(t *testing.T) {
 func TestDeploymentEnv(t *testing.T) {
 	t.Parallel()
 	d := Deployment(&DeploymentParams{
-		Image:              "ghcr.io/fundament-oss/fundament/plugin-controller:v1",
-		ClusterID:          "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
-		OrganizationID:     "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
-		OrganizationAPIURL: "https://api.fundament.example.com",
+		Image:          "ghcr.io/fundament-oss/fundament/plugin-controller:v1",
+		ClusterID:      "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
+		OrganizationID: "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
+		CatalogAPIURL:  "https://api.fundament.example.com",
 	})
 
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
@@ -77,23 +77,23 @@ func TestDeploymentEnv(t *testing.T) {
 		env[e.Name] = e.Value
 	}
 	assert.Equal(t, map[string]string{
-		"NAMESPACE":                 "(fieldRef)",
-		"FUNDAMENT_CLUSTER_ID":      "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
-		"FUNDAMENT_INSTALL_ID":      "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
-		"FUNDAMENT_ORGANIZATION_ID": "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
-		"ORGANIZATION_API_URL":      "https://api.fundament.example.com",
+		"NAMESPACE":                   "(fieldRef)",
+		"FUNDAMENT_CLUSTER_ID":        "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
+		"FUNDAMENT_INSTALL_ID":        "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
+		"FUNDAMENT_ORGANIZATION_ID":   "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
+		"MARKETPLACE_CATALOG_API_URL": "https://api.fundament.example.com",
 	}, env)
 }
 
 func TestDeploymentOptionalEnv(t *testing.T) {
 	t.Parallel()
 	d := Deployment(&DeploymentParams{
-		Image:              "img",
-		ClusterID:          "c",
-		OrganizationID:     "o",
-		OrganizationAPIURL: "u",
-		AllowUnpinnedHash:  true,
-		LogLevel:           "debug",
+		Image:             "img",
+		ClusterID:         "c",
+		OrganizationID:    "o",
+		CatalogAPIURL:     "u",
+		AllowUnpinnedHash: true,
+		LogLevel:          "debug",
 	})
 
 	env := map[string]string{}
@@ -106,7 +106,7 @@ func TestDeploymentOptionalEnv(t *testing.T) {
 
 func TestDeploymentShape(t *testing.T) {
 	t.Parallel()
-	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", OrganizationAPIURL: "u"})
+	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u"})
 
 	assert.Equal(t, DeploymentName, d.Name)
 	assert.Equal(t, Namespace, d.Namespace)
@@ -126,7 +126,7 @@ func TestDeploymentShape(t *testing.T) {
 
 func TestDeploymentParamsValidate(t *testing.T) {
 	t.Parallel()
-	valid := DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", OrganizationAPIURL: "u"}
+	valid := DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u"}
 	require.NoError(t, valid.Validate())
 
 	cases := []struct {
@@ -136,7 +136,7 @@ func TestDeploymentParamsValidate(t *testing.T) {
 		{"missing image", func(p *DeploymentParams) { p.Image = "" }},
 		{"missing cluster id", func(p *DeploymentParams) { p.ClusterID = "" }},
 		{"missing organization id", func(p *DeploymentParams) { p.OrganizationID = "" }},
-		{"missing org-api URL", func(p *DeploymentParams) { p.OrganizationAPIURL = "" }},
+		{"missing catalog URL", func(p *DeploymentParams) { p.CatalogAPIURL = "" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

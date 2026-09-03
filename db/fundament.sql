@@ -1175,7 +1175,7 @@ CREATE POLICY plugin_definitions_select_catalog ON appstore.plugin_definitions
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND published IS NOT NULL);
+	USING (deleted IS NULL);
 -- ddl-end --
 
 -- object: plugins_select_catalog | type: POLICY --
@@ -1184,7 +1184,7 @@ CREATE POLICY plugins_select_catalog ON appstore.plugins
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL));
+	USING (deleted IS NULL AND visibility = 'public');
 -- ddl-end --
 
 -- object: appstore.plugin_labels | type: TABLE --
@@ -1266,6 +1266,8 @@ CREATE TABLE appstore.presets (
 -- ddl-end --
 ALTER TABLE appstore.presets OWNER TO fun_owner;
 -- ddl-end --
+ALTER TABLE appstore.presets ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
 
 -- object: appstore.preset_plugins | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.preset_plugins CASCADE;
@@ -1276,6 +1278,8 @@ CREATE TABLE appstore.preset_plugins (
 );
 -- ddl-end --
 ALTER TABLE appstore.preset_plugins OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.preset_plugins ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
 -- object: appstore.tags | type: TABLE --
@@ -1348,6 +1352,42 @@ CREATE TABLE appstore.categories_plugins (
 ALTER TABLE appstore.categories_plugins OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE appstore.categories_plugins ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: presets_all_api | type: POLICY --
+-- DROP POLICY IF EXISTS presets_all_api ON appstore.presets CASCADE;
+CREATE POLICY presets_all_api ON appstore.presets
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: presets_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS presets_select_catalog ON appstore.presets CASCADE;
+CREATE POLICY presets_select_catalog ON appstore.presets
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (true);
+-- ddl-end --
+
+-- object: preset_plugins_all_api | type: POLICY --
+-- DROP POLICY IF EXISTS preset_plugins_all_api ON appstore.preset_plugins CASCADE;
+CREATE POLICY preset_plugins_all_api ON appstore.preset_plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: preset_plugins_select_catalog | type: POLICY --
+-- DROP POLICY IF EXISTS preset_plugins_select_catalog ON appstore.preset_plugins CASCADE;
+CREATE POLICY preset_plugins_select_catalog ON appstore.preset_plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_catalog_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.preset_plugins.plugin_id));
 -- ddl-end --
 
 -- object: categories_plugins_all_api | type: POLICY --
@@ -1573,7 +1613,7 @@ CREATE POLICY organizations_select_catalog ON tenant.organizations
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public' AND EXISTS (SELECT 1 FROM appstore.plugin_definitions WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.published IS NOT NULL AND appstore.plugin_definitions.deleted IS NULL)));
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public'));
 -- ddl-end --
 
 -- object: organization_limits_organization_policy | type: POLICY --
@@ -4335,6 +4375,22 @@ GRANT SELECT
 -- object: grant_r_88394fcb78 | type: PERMISSION --
 GRANT SELECT
    ON TABLE tenant.organizations
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d7ce9b5417 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.presets
+   TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_63a80eb61f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.preset_plugins
    TO fun_marketplace_catalog_api;
 
 -- ddl-end --

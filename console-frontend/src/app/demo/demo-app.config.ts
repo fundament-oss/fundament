@@ -3,7 +3,11 @@ import { appConfig } from '../app.config';
 import { ConfigService, AppConfiguration } from '../config.service';
 import AuthnApiService from '../authn-api.service';
 import { TitleService } from '../title.service';
-import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../../connect/connect.module';
+import {
+  AUTHN_TRANSPORT,
+  MARKETPLACE_TRANSPORT,
+  ORGANIZATION_TRANSPORT,
+} from '../../connect/connect.module';
 import { PRESENTATION_ENABLED } from '../presentation/presentation.tokens';
 import createDemoTransport from './mock-transport';
 import FakeAuthnApiService from './fake-authn-api.service';
@@ -30,6 +34,7 @@ import FakePluginResourceStoreService from './fake-plugin-resource-store.service
 const demoConfig: AppConfiguration = {
   authnApiUrl: 'demo://authn',
   organizationApiUrl: 'demo://organization',
+  marketplaceApiUrl: 'demo://marketplace',
   kubeApiProxyUrl: 'demo://kube',
   pluginProxyUrl: 'demo://plugin-proxy',
   marketplaceUrl: `${window.location.origin}/marketplace/#`,
@@ -80,6 +85,7 @@ const demoAppConfig: ApplicationConfig = {
     },
     { provide: AUTHN_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },
+    { provide: MARKETPLACE_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: PRESENTATION_ENABLED, useValue: true },
   ],
 };

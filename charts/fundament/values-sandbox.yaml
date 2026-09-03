@@ -14,6 +14,10 @@ externalUrls:
   dcimApi: https://dcim-api.fundament.projects.digilab.network
   dcim: https://dcim.fundament.projects.digilab.network
   dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
+  marketplace: https://marketplace.fundament.projects.digilab.network
+  marketplaceCatalogApi: https://marketplace-api.fundament.projects.digilab.network
+  # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
+  # have no implementation yet (FUN-20 defers them).
   corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
@@ -182,6 +186,13 @@ dcimFrontend:
   replicas: 2
 
 marketplaceFrontend:
+  enabled: true
+  replicas: 2
+  internalApiUrls:
+    catalog: http://marketplace-catalog-api:8080
+
+# Anonymous storefront API: the console's plugins page reads catalog.v1 from it.
+marketplaceCatalogApi:
   enabled: true
   replicas: 2
 

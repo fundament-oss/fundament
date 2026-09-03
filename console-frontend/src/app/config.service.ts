@@ -3,6 +3,8 @@ import { Injectable } from '@angular/core';
 export interface AppConfiguration {
   authnApiUrl: string;
   organizationApiUrl: string;
+  /** Anonymous storefront API (catalog.v1); plugin browsing reads from here. */
+  marketplaceApiUrl: string;
   kubeApiProxyUrl: string;
   pluginProxyUrl: string;
   /**
@@ -44,6 +46,7 @@ export class ConfigService {
       this.config = {
         authnApiUrl: '',
         organizationApiUrl: '',
+        marketplaceApiUrl: '',
         kubeApiProxyUrl: '',
         pluginProxyUrl: '',
       };

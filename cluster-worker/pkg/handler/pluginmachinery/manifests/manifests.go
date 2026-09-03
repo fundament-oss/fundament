@@ -122,9 +122,9 @@ type DeploymentParams struct {
 	ClusterID string
 	// OrganizationID is the owning organization UUID.
 	OrganizationID string
-	// OrganizationAPIURL is the externally routable organization-api base URL
+	// CatalogAPIURL is the externally routable marketplace-catalog-api base URL
 	// (FUN-19: the controller runs outside the management cluster).
-	OrganizationAPIURL string
+	CatalogAPIURL string
 	// AllowUnpinnedHash skips definition-hash verification. Local dev only;
 	// never set for production shoots.
 	AllowUnpinnedHash bool
@@ -150,7 +150,7 @@ func Deployment(params *DeploymentParams) *appsv1.Deployment {
 		// so the cluster UUID stands in until a real concept lands.
 		{Name: "FUNDAMENT_INSTALL_ID", Value: params.ClusterID},
 		{Name: "FUNDAMENT_ORGANIZATION_ID", Value: params.OrganizationID},
-		{Name: "ORGANIZATION_API_URL", Value: params.OrganizationAPIURL},
+		{Name: "MARKETPLACE_CATALOG_API_URL", Value: params.CatalogAPIURL},
 	}
 	if params.LogLevel != "" {
 		env = append(env, corev1.EnvVar{Name: "LOG_LEVEL", Value: params.LogLevel})
@@ -219,8 +219,8 @@ func (p *DeploymentParams) Validate() error {
 	if p.OrganizationID == "" {
 		return fmt.Errorf("organization id is empty")
 	}
-	if p.OrganizationAPIURL == "" {
-		return fmt.Errorf("organization-api URL is empty")
+	if p.CatalogAPIURL == "" {
+		return fmt.Errorf("catalog-api URL is empty")
 	}
 	return nil
 }

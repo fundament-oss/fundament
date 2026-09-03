@@ -1,6 +1,7 @@
 {
   "authnApiUrl": "",
   "organizationApiUrl": "",
+  "marketplaceApiUrl": "",
   "kubeApiProxyUrl": "",
   "pluginProxyUrl": "",
   "consoleDemoUrl": "",

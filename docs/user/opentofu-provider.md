@@ -18,6 +18,27 @@ orientation.
 - OpenTofu >= 1.11
 - A running Fundament instance and an [API key](./api-keys.md)
 
+## Install
+
+The provider is not published to a registry. Prebuilt packages for Linux
+(amd64, arm64), macOS (Apple Silicon) and Windows (amd64) are published to the
+rolling `terraform-provider-latest` release, named so that OpenTofu finds them
+in its local plugin directory without any CLI configuration:
+
+```bash
+# Pick your platform: linux_amd64, linux_arm64 or darwin_arm64
+PLATFORM=linux_amd64
+MIRROR=~/.terraform.d/plugins/registry.opentofu.org/fundament/fundament
+mkdir -p "$MIRROR"
+curl -fsSL -o "$MIRROR/terraform-provider-fundament_0.1.0_${PLATFORM}.zip" \
+  "https://github.com/fundament-oss/fundament/releases/download/terraform-provider-latest/terraform-provider-fundament_0.1.0_${PLATFORM}.zip"
+```
+
+Keep the zip as downloaded: its name is how OpenTofu discovers the version
+and platform. Windows, Terraform instead of OpenTofu, checksums and updating to
+a newer build are covered in the
+[provider README](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/README.md#installation).
+
 ## Configuration
 
 ```hcl

@@ -31,8 +31,8 @@ externalUrls:
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
-  marketplace: "" # e.g., https://marketplace.example.com (empty points the console's "View full details" button at its own plugin page)
-  marketplaceCatalogApi: "" # e.g., https://marketplace-catalog.example.com
+  marketplace: "" # e.g., https://marketplace.example.com (storefront; empty points the console's "View full details" button at its own plugin page)
+  marketplaceCatalogApi: "" # e.g., https://marketplace-catalog.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
@@ -243,15 +243,15 @@ pluginController:
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
   allowUnpinnedHash: false
-  # organizationApiUrl: base URL the management/sandbox-cluster plugin-controller
-  # uses to reach organization-api. Defaults to the in-cluster
-  # http://organization-api:8080 (the Service in organization-api.yaml), which
-  # only works when the controller runs next to organization-api; a controller
-  # in another cluster needs an externally reachable URL (FUN-19).
-  organizationApiUrl: ""
+  # catalogApiUrl: base URL the plugin-controller uses to fetch definitions.
+  # Defaults to the in-cluster http://marketplace-catalog-api:8080 (the Service in
+  # marketplace-catalog-api.yaml), which only works when the controller runs next
+  # to the catalog; a controller in another cluster needs an externally reachable
+  # URL (FUN-19) — see plugins/sandbox/values.yaml.
+  catalogApiUrl: ""
   # shootImage: plugin-controller image for shoot clusters, provisioned onto
-  # every ready shoot by cluster-worker (with externalUrls.organization as the
-  # org-api URL). Must be pullable from shoot nodes — production registries
+  # every ready shoot by cluster-worker (with externalUrls.marketplaceCatalogApi
+  # as the catalog URL). Must be pullable from shoot nodes — production registries
   # qualify, local dev registries do not. Empty disables shoot provisioning —
   # it does not uninstall machinery already on shoots (see cluster-worker/README.md).
   shootImage: ""

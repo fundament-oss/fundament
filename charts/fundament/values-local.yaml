@@ -14,12 +14,9 @@ externalUrls:
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
   marketplace: https://marketplace.fundament.localhost:8443
-  # The three marketplace APIs are not implemented yet (FUN-20 defers the
-  # service implementations), so the frontend deploys with no backend to call.
-  # When they land they take these hosts:
-  #   marketplaceCatalogApi: https://marketplace-catalog.fundament.localhost:8443
-  #   marketplaceRegistryApi: https://marketplace-registry.fundament.localhost:8443
-  #   marketplaceAdminApi: https://marketplace-admin.fundament.localhost:8443
+  marketplaceCatalogApi: https://marketplace-catalog-api.fundament.localhost:8443
+  # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
+  # have no implementation yet (FUN-20 defers them).
   corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
@@ -161,12 +158,12 @@ dcimFrontend:
 marketplaceFrontend:
   enabled: true
   replicas: 1
-  # The renderer would call the three APIs in-cluster. They are not implemented yet
-  # yet (see externalUrls above); when they land they take these addresses:
-  #   internalApiUrls:
-  #     catalog: http://marketplace-catalog-api
-  #     registry: http://marketplace-registry-api
-  #     admin: http://marketplace-admin-api
+  # The renderer calls the catalog in-cluster rather than back in through the
+  # ingress. The registry and admin APIs have no implementation yet (FUN-20
+  # defers them); when they land they take http://marketplace-registry-api and
+  # http://marketplace-admin-api.
+  internalApiUrls:
+    catalog: http://marketplace-catalog-api:8080
 
 dexDcim:
   enabled: true

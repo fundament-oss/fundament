@@ -39,8 +39,8 @@ spec:
             # pullable from shoot nodes, which local dev registries are not.
             - name: PLUGIN_CONTROLLER_IMAGE
               value: {{ $.Values.pluginController.shootImage }}
-            - name: PLUGIN_ORGANIZATION_API_URL
-              value: {{ required "externalUrls.organization must be set when pluginController.shootImage is set" $.Values.externalUrls.organization }}
+            - name: PLUGIN_MARKETPLACE_CATALOG_API_URL
+              value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.shootImage is set" $.Values.externalUrls.marketplaceCatalogApi }}
             - name: PLUGIN_LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             # Always rendered, so the manifest states the shoot fleet's

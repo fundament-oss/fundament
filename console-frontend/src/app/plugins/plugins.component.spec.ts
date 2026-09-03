@@ -3,15 +3,16 @@ import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { ToastService } from '../toast.service';
-import { PLUGIN, CLUSTER } from '../../connect/tokens';
+import { CLUSTER, CATALOG } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
   PluginSummarySchema,
-  PluginService,
+  CatalogService,
   type PluginSummary,
-} from '../../generated/v1/plugin_pb';
+} from '../../generated/catalog/v1/catalog_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterService,
@@ -29,19 +30,26 @@ const cluster: ClusterSummary = create(ListClustersResponse_ClusterSummarySchema
 // Two organizations publishing a plugin under the identical catalog name — the
 // scenario this branch exists to support, and the one unqualified matching would
 // conflate.
+// catalog.v1 carries the publisher as an id; the component resolves the name
+// through ListPublishers, so the stub below answers both.
 const acmeCertManager: PluginSummary = create(PluginSummarySchema, {
   id: 'pl-acme--cert-manager',
-  organizationName: 'acme',
+  organizationId: 'org-acme',
   name: 'cert-manager',
   displayName: 'Acme Cert Manager',
 });
 
 const globexCertManager: PluginSummary = create(PluginSummarySchema, {
   id: 'pl-globex-cert-manager',
-  organizationName: 'globex',
+  organizationId: 'org-globex',
   name: 'cert-manager',
   displayName: 'Globex Cert Manager',
 });
+
+const publishers = [
+  { id: 'org-acme', name: 'acme', displayName: 'Acme' },
+  { id: 'org-globex', name: 'globex', displayName: 'Globex' },
+];
 
 // Only acme's install exists on the cluster.
 const acmeInstall: PluginInstallationItem = {
@@ -61,11 +69,13 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
   TestBed.configureTestingModule({
     providers: [
       {
-        provide: PLUGIN,
+        provide: CATALOG,
         useValue: {
           listPlugins: () => of({ plugins }),
+          listCategories: () => of({ categories: [] }),
+          listPublishers: () => of({ publishers }),
           listPresets: () => of({ presets: [] }),
-        } as unknown as ObservableClient<typeof PluginService>,
+        } as unknown as ObservableClient<typeof CatalogService>,
       },
       {
         provide: CLUSTER,
@@ -83,6 +93,15 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
         useValue: {
           clusterSummaries: () => [cluster],
         } as unknown as OrganizationDataService,
+      },
+      {
+        // The details sheet reads marketplaceUrl to decide between the
+        // marketplace listing and the console's own plugin page. Nothing here
+        // exercises that link, so an unconfigured marketplace is enough.
+        provide: ConfigService,
+        useValue: {
+          getConfig: () => ({ marketplaceUrl: '' }),
+        } as unknown as ConfigService,
       },
       {
         provide: ToastService,

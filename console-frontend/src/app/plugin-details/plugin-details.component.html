@@ -52,18 +52,18 @@
                   </p>
                 }
                 <div class="mt-2 flex flex-wrap gap-2">
-                  @for (tag of plugin()!.tags; track tag.id) {
+                  @for (tag of plugin()!.tags; track tag) {
                     <span
                       [class]="
-                        tag.name.toLowerCase() === 'official'
+                        tag.toLowerCase() === 'official'
                           ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
                           : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                       "
                     >
-                      @if (tag.name.toLowerCase() === 'official') {
+                      @if (tag.toLowerCase() === 'official') {
                         <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
                       }
-                      {{ tag.name }}
+                      {{ tag }}
                     </span>
                   }
                   @if (hasInstalledClusters()) {

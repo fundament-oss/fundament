@@ -22,15 +22,15 @@ func TestConfigEnabled(t *testing.T) {
 	t.Parallel()
 	assert.False(t, Config{}.Enabled())
 	assert.False(t, Config{ControllerImage: "img"}.Enabled())
-	assert.False(t, Config{OrganizationAPIURL: "url"}.Enabled())
-	assert.True(t, Config{ControllerImage: "img", OrganizationAPIURL: "url"}.Enabled())
+	assert.False(t, Config{CatalogAPIURL: "url"}.Enabled())
+	assert.True(t, Config{ControllerImage: "img", CatalogAPIURL: "url"}.Enabled())
 }
 
 func TestSyncRejectsUnexpectedEntity(t *testing.T) {
 	t.Parallel()
 	h := &Handler{
 		shoot:  shoot.NewMockShootAccess(testLogger()),
-		cfg:    Config{ControllerImage: "img", OrganizationAPIURL: "url"},
+		cfg:    Config{ControllerImage: "img", CatalogAPIURL: "url"},
 		logger: testLogger(),
 	}
 

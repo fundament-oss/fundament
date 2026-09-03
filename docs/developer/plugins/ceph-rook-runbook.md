@@ -175,12 +175,11 @@ kubectl config use-context k3d-fundament
 just dev                            # or: just deploy — re-runs db-migrations
 ```
 
-Bridge the sandbox controller to organization-api (re-run after recreating either cluster,
-since it resolves the node IP fresh):
+Bridge the sandbox controller to marketplace-catalog-api (re-run after recreating either
+cluster, since it resolves the node IP fresh):
 
 ```bash
-cd plugins
-just plugin-sandbox-orgapi
+just plugins sandbox-catalog
 ```
 
 Now build, push and publish:

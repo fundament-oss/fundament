@@ -51,12 +51,12 @@
                 @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
                   <nldd-tag size="sm" color="success" icon="check-mark" text="Installed"></nldd-tag>
                 }
-                @for (tag of plugin.tags; track tag.id) {
+                @for (tag of plugin.tags; track tag) {
                   <nldd-tag
                     size="sm"
-                    [attr.color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
-                    [attr.icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : null"
-                    [attr.text]="tag.name"
+                    [attr.color]="tag.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                    [attr.icon]="tag.toLowerCase() === 'official' ? 'check-mark' : null"
+                    [attr.text]="tag"
                   ></nldd-tag>
                 }
               </p>
@@ -242,12 +242,12 @@
         <!-- Tags -->
         @if (plugin.tags && plugin.tags.length > 0) {
           <div class="flex flex-wrap gap-1">
-            @for (tag of plugin.tags; track tag.id) {
+            @for (tag of plugin.tags; track tag) {
               <nldd-tag
                 size="sm"
-                [attr.color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
-                [attr.icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : null"
-                [attr.text]="tag.name"
+                [attr.color]="tag.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                [attr.icon]="tag.toLowerCase() === 'official' ? 'check-mark' : null"
+                [attr.text]="tag"
               ></nldd-tag>
             }
           </div>

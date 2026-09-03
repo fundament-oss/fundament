@@ -11,6 +11,6 @@ RUN go mod download
 COPY plugin-controller/ ./plugin-controller/
 COPY plugin-sdk/pluginruntime/ ./plugin-sdk/pluginruntime/
 COPY common/ ./common/
-COPY organization-api/pkg/proto/ ./organization-api/pkg/proto/
+COPY marketplace-api/pkg/proto/ ./marketplace-api/pkg/proto/
 
 CMD ["air", "-c", "plugin-controller/hotreload/.air.toml"]
