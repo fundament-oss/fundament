@@ -15,10 +15,10 @@ externalUrls:
   dcim: https://dcim.fundament.projects.digilab.network
   dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
   marketplace: https://marketplace.fundament.projects.digilab.network
-  marketplaceCatalogApi: https://marketplace-api.fundament.projects.digilab.network
+  marketplaceCatalogApi: https://marketplace-catalog-api.fundament.projects.digilab.network
   # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
   # have no implementation yet (FUN-20 defers them).
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
+  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
   enabled: true

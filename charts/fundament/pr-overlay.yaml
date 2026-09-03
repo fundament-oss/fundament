@@ -86,10 +86,10 @@ spec:
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       marketplace: https://marketplace.pr${PR_NUM}.${DOMAIN}
-      marketplaceCatalogApi: https://marketplace-api.pr${PR_NUM}.${DOMAIN}
+      marketplaceCatalogApi: https://marketplace-catalog-api.pr${PR_NUM}.${DOMAIN}
       # marketplace{Registry,Admin}Api are left unset: those two marketplace
       # APIs have no implementation yet (FUN-20 defers them).
-      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
+      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://marketplace.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}
 
@@ -344,7 +344,7 @@ spec:
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
-          - marketplace-api.pr${PR_NUM}.${DOMAIN}
+          - marketplace-catalog-api.pr${PR_NUM}.${DOMAIN}
 
     ingress:
       enabled: false

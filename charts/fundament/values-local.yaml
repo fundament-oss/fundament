@@ -17,7 +17,7 @@ externalUrls:
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.localhost:8443
   # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
   # have no implementation yet (FUN-20 defers them).
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true

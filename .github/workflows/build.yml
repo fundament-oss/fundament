@@ -237,7 +237,7 @@ jobs:
             | DCIM API | https://dcim-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM Auth | https://dcim-authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace | https://marketplace.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Marketplace Catalog API | https://marketplace-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
