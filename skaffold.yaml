@@ -5,6 +5,12 @@ metadata:
 
 # Build configuration for all images
 build:
+  # Tag by short commit sha. Skaffold defaults to `git describe --tags`, which
+  # anchors on rolling release tags like terraform-provider-latest.
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+
   # Local build settings - load directly into k3d (no registry needed)
   local:
     useBuildkit: true
