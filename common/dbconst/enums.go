@@ -305,6 +305,18 @@ const (
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
 
+// SubmissionRejectionReason represents valid values for appstore.submissions.rejection_reason.
+type SubmissionRejectionReason string
+
+const (
+	SubmissionRejectionReason_IncompleteMetadata SubmissionRejectionReason = "incomplete_metadata"
+	SubmissionRejectionReason_Duplicate          SubmissionRejectionReason = "duplicate"
+	SubmissionRejectionReason_SecurityConcerns   SubmissionRejectionReason = "security_concerns"
+	SubmissionRejectionReason_NamingGuidelines   SubmissionRejectionReason = "naming_guidelines"
+	SubmissionRejectionReason_OutOfScope         SubmissionRejectionReason = "out_of_scope"
+	SubmissionRejectionReason_Other              SubmissionRejectionReason = "other"
+)
+
 // TaskCategory represents valid values for dcim.tasks.category.
 type TaskCategory string
 

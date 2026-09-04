@@ -52,6 +52,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_marketplace_registry_api"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -1359,7 +1363,11 @@ END;]]> </definition>
 	</column>
 	<column name="visibility" not-null="true" default-value="'public'">
 		<type name="text" length="0"/>
-		<comment> <![CDATA[RESTRICTED listings are hidden from the public catalog entirely. Nothing writes this until the registry API lands.]]> </comment>
+		<comment> <![CDATA[RESTRICTED listings are hidden from the public catalog entirely. Written by the registry API's UpdatePlugin.]]> </comment>
+	</column>
+	<column name="updated" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[Set by the application on every UpdatePlugin; there is no trigger.]]> </comment>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
@@ -1390,6 +1398,11 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugins_update_owner" table="appstore.plugins" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="plugins_all_registry" table="appstore.plugins" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
@@ -1539,6 +1552,94 @@ END;]]> </definition>
 			<column name="published"/>
 		</idxelement>
 	<predicate> <![CDATA[published IS NOT NULL AND deleted IS NULL]]> </predicate>
+</index>
+
+<table name="submissions" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="10" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<comment> <![CDATA[One review round for one plugin version. The version's own status column stays authoritative; this table records who submitted, who decided, when and why.]]> </comment>
+	<position x="1560" y="2200"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_definition_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="submitter_user_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="reviewer_user_id">
+		<type name="uuid" length="0"/>
+		<comment> <![CDATA[Which store reviewers authenticate against is undecided, so this carries no foreign key.]]> </comment>
+	</column>
+	<column name="rejection_reason">
+		<type name="text" length="0"/>
+	</column>
+	<column name="feedback" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+	</column>
+	<column name="submitted" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[A submission is created by being submitted, so this is also its creation timestamp and there is no separate created column.]]> </comment>
+	</column>
+	<column name="reviewed">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="closed">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[Set by any terminal outcome. A withdrawal closes a round without a reviewer, which is why this is separate from reviewed.]]> </comment>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="submissions_pk" type="pk-constr" table="appstore.submissions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="submissions_ck_rejection_reason" type="ck-constr" table="appstore.submissions">
+			<expression> <![CDATA[rejection_reason IS NULL OR rejection_reason IN ('incomplete_metadata', 'duplicate', 'security_concerns', 'naming_guidelines', 'out_of_scope', 'other')]]> </expression>
+	</constraint>
+	<constraint name="submissions_ck_reviewed" type="ck-constr" table="appstore.submissions">
+			<expression> <![CDATA[(reviewed IS NULL) = (reviewer_user_id IS NULL)]]> </expression>
+	</constraint>
+	<constraint name="submissions_ck_closed" type="ck-constr" table="appstore.submissions">
+			<expression> <![CDATA[reviewed IS NULL OR closed IS NOT NULL]]> </expression>
+	</constraint>
+</table>
+
+<index name="submissions_uq_open" table="appstore.submissions"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="plugin_definition_id"/>
+		</idxelement>
+	<predicate> <![CDATA[closed IS NULL AND deleted IS NULL]]> </predicate>
+</index>
+
+<table name="plugin_allowed_organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<comment> <![CDATA[Organizations permitted to install a RESTRICTED listing. A pure association table, replaced wholesale by UpdatePlugin, so it carries no deleted column.]]> </comment>
+	<position x="1560" y="2480"/>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="plugin_allowed_organizations_pk" type="pk-constr" table="appstore.plugin_allowed_organizations">
+		<columns names="plugin_id,organization_id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<index name="plugin_allowed_organizations_idx_organization_id" table="appstore.plugin_allowed_organizations"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="organization_id"/>
+		</idxelement>
 </index>
 
 <table name="presets" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
@@ -1705,6 +1806,14 @@ END;]]> </definition>
 	<column name="url" not-null="true">
 		<type name="text" length="0"/>
 	</column>
+	<column name="position" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+		<comment> <![CDATA[Render order within a listing, matching appstore.plugin_features.position.]]> </comment>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[UpdatePlugin replaces links wholesale; a dropped link is soft-deleted rather than removed, per the project-wide rule.]]> </comment>
+	</column>
 	<constraint name="plugin_documentation_links_pk" type="pk-constr" table="appstore.plugin_documentation_links">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -1716,6 +1825,45 @@ END;]]> </definition>
 
 <policy name="plugin_documentation_links_select_catalog" table="appstore.plugin_documentation_links" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id)]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_all_registry" table="appstore.plugin_definitions" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="submissions_all_registry" table="appstore.submissions" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_features_all_registry" table="appstore.plugin_features" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_documentation_links_all_registry" table="appstore.plugin_documentation_links" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugins_tags_all_registry" table="appstore.plugins_tags" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="categories_plugins_all_registry" table="appstore.categories_plugins" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_allowed_organizations_all_registry" table="appstore.plugin_allowed_organizations" command="ALL" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_allowed_organizations_select_api" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
 <trigger name="require_admin" firing-type="AFTER" per-line="true" constraint="true"
@@ -3554,6 +3702,24 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="submissions_fk_plugin_definition" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugin_definitions" table="appstore.submissions">
+	<columns names="plugin_definition_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugin_allowed_organizations_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugin_allowed_organizations">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="plugin_allowed_organizations_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="appstore.plugin_allowed_organizations">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="project_members_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_members">
 	<columns names="project_id" ref-type="src-columns"/>
@@ -4053,6 +4219,24 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="appstore.plugin_features"
 	 dst-table="appstore.plugins" reference-fk="plugin_features_fk_plugin"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_submissions_plugin_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="appstore.submissions"
+	 dst-table="appstore.plugin_definitions" reference-fk="submissions_fk_plugin_definition"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugin_allowed_organizations_plugins" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="appstore.plugin_allowed_organizations"
+	 dst-table="appstore.plugins" reference-fk="plugin_allowed_organizations_fk_plugin"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugin_allowed_organizations_organizations" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="appstore.plugin_allowed_organizations"
+	 dst-table="tenant.organizations" reference-fk="plugin_allowed_organizations_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_organizations" type="relfk" layers="0"
@@ -4622,6 +4806,11 @@ END;]]> </definition>
 	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
+	<object name="appstore.plugin_allowed_organizations" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
 	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
@@ -5044,6 +5233,86 @@ END;]]> </definition>
 <permission>
 	<object name="appstore.preset_plugins" type="table"/>
 	<roles names="fun_marketplace_catalog_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore" type="schema"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authn" type="schema"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz" type="schema"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="authz.outbox" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_definitions" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.submissions" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="closed" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="deleted" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_features" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_documentation_links" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins_tags" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" delete="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories_plugins" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" delete="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_allowed_organizations" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true" delete="true"/>
+</permission>
+<permission>
+	<object name="appstore.tags" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>
