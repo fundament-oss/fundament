@@ -55,10 +55,10 @@ build:
       docker:
         dockerfile: kube-api-proxy/Dockerfile
 
-    - image: openfga-setup
-      context: openfga/setup
+    - image: openfga-bootstrap
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: openfga/bootstrap/Dockerfile
 
     - image: plugin-controller
       context: .
@@ -115,7 +115,7 @@ deploy:
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
           images.authzWorker: "{{.IMAGE_FULLY_QUALIFIED_authz_worker}}"
           images.kubeApiProxy: "{{.IMAGE_FULLY_QUALIFIED_kube_api_proxy}}"
-          images.openfgaSetup: "{{.IMAGE_FULLY_QUALIFIED_openfga_setup}}"
+          images.openfgaBootstrap: "{{.IMAGE_FULLY_QUALIFIED_openfga_bootstrap}}"
           images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
           images.dcimApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_api}}"
           images.dcimFrontend: "{{.IMAGE_FULLY_QUALIFIED_dcim_frontend}}"

@@ -45,7 +45,7 @@ images:
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
   kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
-  openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
+  openfgaBootstrap: ghcr.io/fundament-oss/fundament/openfga-bootstrap:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
   pluginProxy: ghcr.io/fundament-oss/fundament/plugin-proxy:latest
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
