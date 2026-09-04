@@ -62,6 +62,16 @@ db-migrations-{{ .Release.Revision }}
 {{- end }}
 
 {{/*
+The OpenFGA store's name. Services resolve the id from it, because the id is
+generated when the store is created.
+
+Usage: include "fundament.openfga.storeName" $
+*/}}
+{{- define "fundament.openfga.storeName" -}}
+fundament
+{{- end }}
+
+{{/*
 JWT Secret environment variable - supports both direct value and secretRef
 */}}
 {{- define "fundament.jwtSecretEnv" -}}
