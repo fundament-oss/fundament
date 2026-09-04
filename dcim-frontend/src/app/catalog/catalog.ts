@@ -7,24 +7,27 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import InventoryApiService from '../inventory/inventory-api.service';
 import connectErrorMessage from '../../connect/error';
-import parseValidationError from '../../connect/validation';
 import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
-
-interface NativeElementRef {
-  nativeElement: { value: string; show?: () => void; hide?: () => void };
-}
+import SecondaryNavService from '../shell/secondary-nav.service';
+import categoryIcon, { CATEGORIES } from '../shared/asset-category';
+import { viewSlug } from '../shared/section-views';
+import { CATALOG_PATH } from './catalog-views';
+import CatalogNavComponent from './catalog-nav';
+import OverlayService from '../shell/overlay.service';
 
 interface CatalogRow {
   entry: CatalogEntry;
@@ -34,18 +37,34 @@ interface CatalogRow {
   issues: number;
 }
 
-type InvalidFields = Record<string, string>;
-
 @Component({
   selector: 'app-catalog',
   templateUrl: './catalog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
+  // No styling of its own: the page inside paints the surface and owns the
+  // layout, and styles.css takes this element out of the flow (display:
+  // contents) so it cannot come between the pane and the page.
 })
-export default class CatalogComponent implements OnInit {
+export default class CatalogComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly catalogApi = inject(CatalogApiService);
+
+  /** The product form is the shell's, so this page only asks it to open. */
+  readonly overlays = inject(OverlayService);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -54,51 +73,52 @@ export default class CatalogComponent implements OnInit {
 
   searchQuery = signal('');
 
-  categoryFilter = signal<AssetCategory | 'all'>('all');
+  private readonly route = inject(ActivatedRoute);
 
-  readonly categories: AssetCategory[] = [
-    'Server',
-    'Switch',
-    'Storage',
-    'Power',
-    'Firewall',
-    'Cooling',
-    'KVM',
-    'Memory',
-    'Disk',
-    'NIC',
-    'PSU',
-    'CPU',
-    'GPU',
-    'Transceiver',
-    'Other',
-  ];
+  private readonly router = inject(Router);
+
+  private readonly viewParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
+
+  /**
+   * Whether the address names a view. The section's own path (/catalog) means you
+   * have opened the section and picked nothing yet, and then the pane beside
+   * the menu says so rather than showing a list you did not ask for.
+   */
+  readonly hasSelection = computed(() => this.viewParams().get('view') !== null);
+
+  /**
+   * Which category the list is showing, read from the address. The menu is
+   * navigation, so a category can be linked to, opened in a second tab and
+   * reached with the browser's back button.
+   */
+  readonly categoryFilter = computed<AssetCategory | 'all'>(() => {
+    const params = this.viewParams();
+    if (params.get('view') !== 'category') return 'all';
+    const value = params.get('value') ?? '';
+    return this.categories.find((c) => viewSlug(c) === value) ?? 'all';
+  });
+
+  /**
+   * The title of the page is the row you picked in the menu. The section name
+   * is already in the menu's own heading and in the way back, so repeating it
+   * above the list would say "Catalog" three times and never say which products
+   * you are looking at.
+   */
+  readonly viewTitle = computed(() => {
+    const cat = this.categoryFilter();
+    return cat === 'all' ? 'All products' : cat;
+  });
+
+  /** The address of a view, so every row in the menu is a real link. */
+  readonly viewPath = (category: AssetCategory | 'all'): string =>
+    category === 'all' ? `${CATALOG_PATH}/all` : `${CATALOG_PATH}/category/${viewSlug(category)}`;
+
+  readonly categories = CATEGORIES;
 
   // ── Mutable catalog list ───────────────────────────────────────────────────
   readonly mutableCatalog = signal<CatalogEntry[]>([]);
-
-  // ── CRUD state ─────────────────────────────────────────────────────────────
-  editEntry = signal<Partial<CatalogEntry> | null>(null);
-
-  entryCategory = signal<AssetCategory>('Server');
-
-  entryErrorMessage = signal<string | null>(null);
-
-  invalidFields = signal<InvalidFields>({});
-
-  deleteEntry = signal<CatalogEntry | null>(null);
-
-  specRows = signal<{ key: string; value: string }[]>([]);
-
-  private readonly entrySheetEl = viewChild<NativeElementRef>('entrySheet');
-
-  private readonly entryModalEl = viewChild<NativeElementRef>('entryModal');
-
-  private readonly fEntryModel = viewChild<NativeElementRef>('fEntryModel');
-
-  private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
-
-  private readonly fEntryPart = viewChild<NativeElementRef>('fEntryPart');
 
   constructor() {
     toObservable(this.searchQuery)
@@ -110,20 +130,15 @@ export default class CatalogComponent implements OnInit {
       )
       .subscribe((search) => this.loadCatalog(search));
 
+    // The product form lives in the shell, so this page only has to notice that
+    // something was written and read the list again.
     effect(() => {
-      const el = this.entrySheetEl()?.nativeElement;
-      if (this.editEntry() !== null) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.entryModalEl()?.nativeElement;
-      if (this.deleteEntry() !== null) el?.show?.();
-      else el?.hide?.();
+      this.catalogApi.revision();
+      untracked(() => this.loadCatalog(this.searchQuery().trim() || undefined));
     });
   }
 
   ngOnInit(): void {
-    this.loadCatalog();
     this.loadAssets();
   }
 
@@ -171,13 +186,30 @@ export default class CatalogComponent implements OnInit {
     return this.allRows().filter((row) => row.entry.category === cat);
   });
 
-  readonly totalProducts = computed(() => this.allRows().length);
+  /**
+   * What an empty view says. Not "0 of 10": a category is not a filter over
+   * everything, it is a list of its own, and a search that finds nothing is a
+   * different sentence from a category nobody has put anything in yet.
+   */
+  readonly emptyText = computed(() => {
+    const query = this.searchQuery().trim();
+    if (query) return `No results for "${query}"`;
+    const category = this.categoryFilter();
+    return category === 'all' ? 'No products' : `No ${category} products`;
+  });
 
-  readonly totalAssets = computed(() => this.allRows().reduce((s, r) => s + r.total, 0));
-
-  readonly totalAvailable = computed(() => this.allRows().reduce((s, r) => s + r.available, 0));
-
-  readonly totalIssues = computed(() => this.allRows().reduce((s, r) => s + r.issues, 0));
+  /**
+   * How many rows this view holds. Not "2 of 10": a category is a list of its
+   * own, not a slice of everything, and the only place a denominator means
+   * something is a search, which narrows the view you are in.
+   */
+  readonly listSummary = computed(() => {
+    const shown = this.rows().length;
+    const noun = shown === 1 ? 'product' : 'products';
+    return this.searchQuery().trim()
+      ? `${shown} ${shown === 1 ? 'result' : 'results'}`
+      : `${shown} ${noun}`;
+  });
 
   readonly categoryCounts = computed(() => {
     const counts: Record<string, number> = {};
@@ -187,182 +219,41 @@ export default class CatalogComponent implements OnInit {
     return counts;
   });
 
-  selectCategory(cat: AssetCategory | 'all'): void {
-    this.categoryFilter.set(cat);
-  }
-
-  // ── CRUD actions ───────────────────────────────────────────────────────────
-
-  openCreateEntry(): void {
-    this.clearEntryErrors();
-    this.editEntry.set({
-      id: '',
-      model: '',
-      manufacturer: '',
-      partNumber: '',
-      category: 'Server',
-      specs: {},
-    });
-    this.entryCategory.set('Server');
-    this.specRows.set([{ key: '', value: '' }]);
-  }
-
-  openEditEntry(entry: CatalogEntry, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.clearEntryErrors();
-    this.editEntry.set({ ...entry });
-    this.entryCategory.set(entry.category);
-    this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
-  }
-
-  closeEntryForm(): void {
-    this.editEntry.set(null);
-  }
-
-  addSpecRow(): void {
-    this.specRows.update((rows) => [...rows, { key: '', value: '' }]);
-  }
-
-  removeSpecRow(index: number): void {
-    this.specRows.update((rows) => rows.filter((_, i) => i !== index));
-  }
-
-  updateSpecKey(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, key: val } : r)));
-  }
-
-  updateSpecVal(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, value: val } : r)));
-  }
-
-  saveEntry(): void {
-    const form = this.editEntry();
-    if (!form) return;
-
-    this.clearEntryErrors();
-
-    const model = this.fEntryModel()?.nativeElement.value ?? '';
-    const manufacturer = this.fEntryMfr()?.nativeElement.value ?? '';
-    const partNumber = this.fEntryPart()?.nativeElement.value ?? form.partNumber ?? '';
-    const category = this.entryCategory();
-    const specs: Record<string, string> = {};
-
-    this.specRows().forEach((row) => {
-      if (row.key.trim()) specs[row.key.trim()] = row.value;
-    });
-
-    const entry: CatalogEntry = {
-      id: form.id || '',
-      model,
-      manufacturer,
-      partNumber,
-      category,
-      specs,
-    };
-
-    if (form.id) {
-      firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
-        .then(() => {
-          this.mutableCatalog.update((list) => list.map((e) => (e.id === form.id ? entry : e)));
-          this.editEntry.set(null);
-        })
-        .catch((err) => this.handleEntryError(err));
-    } else {
-      firstValueFrom(this.catalogApi.createCatalogEntry(entry))
-        .then((res) => {
-          this.mutableCatalog.update((list) => [...list, { ...entry, id: res.catalogEntryId }]);
-          this.editEntry.set(null);
-        })
-        .catch((err) => this.handleEntryError(err));
+  /**
+   * Routes a click in-app while the row stays a real `<a href>`, so middle-click
+   * and "open in new tab" keep working. Anything with a modifier is left to the
+   * browser.
+   */
+  selectCategory(event: Event, category: AssetCategory | 'all'): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
     }
-  }
 
-  /** Returns true when the given proto field name has a validation error. */
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  /** Returns the validation message for a proto field, or '' when valid. */
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearEntryErrors(): void {
-    this.invalidFields.set({});
-    this.entryErrorMessage.set(null);
-  }
-
-  private handleEntryError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.entryErrorMessage.set(message);
-  }
-
-  openDeleteEntry(entry: CatalogEntry, event: Event): void {
     event.preventDefault();
-    event.stopPropagation();
-    this.deleteEntry.set(entry);
+    this.router.navigateByUrl(this.viewPath(category));
   }
 
-  cancelDeleteEntry(): void {
-    this.deleteEntry.set(null);
+  /** Back from the list is back to the menu, so the address says so too. */
+  goToMenu(): void {
+    this.router.navigateByUrl(CATALOG_PATH);
   }
 
-  confirmDeleteEntry(): void {
-    const target = this.deleteEntry();
-    if (!target) return;
-    firstValueFrom(this.catalogApi.deleteCatalogEntry(target.id))
-      .then(() => {
-        this.mutableCatalog.update((list) => list.filter((e) => e.id !== target.id));
-        this.deleteEntry.set(null);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+  /** The address of one product, so a row is a real link. */
+  readonly entryPath = (id: string): string => `${CATALOG_PATH}/${id}`;
+
+  /** Same trade as the menu rows: a real link, routed in-app without modifiers. */
+  openEntry(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(this.entryPath(id));
   }
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
-
-  /** `color` for an `nldd-tag` per asset category, drawn from the Rijkskleuren palette. */
-  readonly categoryTagColor = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'donkerblauw',
-      Switch: 'violet',
-      Storage: 'lintblauw',
-      Power: 'donkergeel',
-      Firewall: 'rood',
-      Cooling: 'lichtblauw',
-      KVM: 'neutral',
-      Memory: 'donkergroen',
-      Disk: 'oranje',
-      NIC: 'mintgroen',
-      PSU: 'geel',
-      CPU: 'paars',
-      GPU: 'roze',
-      Transceiver: 'hemelblauw',
-      Other: 'neutral',
-    };
-    return map[category] ?? 'neutral';
-  };
+  readonly categoryIcon = categoryIcon;
 }

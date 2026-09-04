@@ -22,8 +22,10 @@ import { LogsApiService, type ClusterOption } from '../logs.service';
 import { ShootPodsService, type ShootPod } from '../shoot-pods.service';
 import { LogBackend, LogSource } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
-import { ToastService } from '../../toast.service';
+import { NotificationService } from '../../notification.service';
 import PluginInstallationService from '../../plugin-installation/plugin-installation.service';
+import '@nldd/design-system/search-field';
+import '@nldd/design-system/pagination';
 
 Chart.register(...registerables);
 
@@ -116,7 +118,7 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
 export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
 
-  private readonly toastService = inject(ToastService);
+  private readonly notificationService = inject(NotificationService);
 
   private readonly logsApi = inject(LogsApiService);
 
@@ -702,14 +704,14 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
           this.allLogs.update((logs) => [entry, ...logs].slice(0, this.LOG_LIMIT));
         },
         error: () => {
-          this.toastService.error('Live tail disconnected');
+          this.notificationService.error('Live tail disconnected');
           this.stopLiveTail();
         },
         // A server-side stream that ends normally (pod gone, backend closed the
         // follow) would otherwise leave the UI claiming it is still streaming.
         complete: () => {
           if (this.liveTailEnabled()) {
-            this.toastService.info('Live tail ended');
+            this.notificationService.info('Live tail ended');
             this.stopLiveTail();
           }
         },
@@ -907,7 +909,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   copyToClipboard(text: string): void {
     copyToClipboard(text);
-    this.toastService.success('Copied to clipboard');
+    this.notificationService.success('Copied to clipboard');
   }
 
   readonly formattedJson = formattedJson;

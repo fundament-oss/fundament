@@ -1,0 +1,83 @@
+<nldd-page sticky-header>
+  <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title size="3">
+      <h1>Inventory</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- Everything, above both headings. It is not a status and not a category,
+         so it does not belong at the head of either list: the menu navigates,
+         and "all" is where you land when you have not chosen. -->
+    <nldd-list type="navigation" dividers="on-touch" accessible-label="All assets">
+      <nldd-list-item
+        [attr.href]="viewPath('all')"
+        [attr.current]="isCurrent('all') ? '' : null"
+        (click)="goToView($event, 'all')"
+      >
+        <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
+        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+        <nldd-text-cell text="All assets"></nldd-text-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-text-cell
+          width="fit-content"
+          horizontal-alignment="right"
+          color="secondary"
+          [attr.text]="statusCounts()['all']"
+        ></nldd-text-cell>
+      </nldd-list-item>
+    </nldd-list>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-title size="5">
+      <h2>Status</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <!-- In the order the list is in: what needs you first, what is written off
+         last. -->
+    <nldd-list type="navigation" dividers="on-touch" accessible-label="Status">
+      @for (s of statuses; track s.value) {
+        <nldd-list-item
+          [attr.href]="viewPath('status', s.value)"
+          [attr.current]="isCurrent('status', s.value) ? '' : null"
+          (click)="goToView($event, 'status', s.value)"
+        >
+          <!-- The dot sits where an icon sits in the category rows: a spacer
+               either side makes the badge take up the width of a 20px icon, so
+               both lists start their text on the same line. -->
+          <nldd-spacer-cell size="4"></nldd-spacer-cell>
+          <nldd-cell width="fit-content">
+            <nldd-badge decorative [attr.color]="statusTagColor(s.value)"></nldd-badge>
+          </nldd-cell>
+          <nldd-spacer-cell size="4"></nldd-spacer-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell [attr.text]="s.label"></nldd-text-cell>
+          @if (statusCounts()[s.value]) {
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="statusCounts()[s.value]"
+            ></nldd-text-cell>
+          }
+        </nldd-list-item>
+      }
+    </nldd-list>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-title size="5">
+      <h2>Category</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <nldd-list type="navigation" dividers="on-touch" accessible-label="Category">
+      @for (cat of categories; track cat) {
+        <nldd-list-item
+          [attr.href]="viewPath('category', cat)"
+          [attr.current]="isCurrent('category', cat) ? '' : null"
+          (click)="goToView($event, 'category', cat)"
+        >
+          <nldd-icon-cell [attr.icon]="categoryIcon(cat)" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell [attr.text]="cat"></nldd-text-cell>
+        </nldd-list-item>
+      }
+    </nldd-list>
+  </nldd-simple-section>
+</nldd-page>

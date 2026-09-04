@@ -13,10 +13,23 @@
         <div class="plugin-error" id="error" hidden></div>
 
         <nldd-form-field label="Name">
-          <nldd-text-field id="name" name="name" required maxlength="63"
-            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="tcp" error-message="name-error"></nldd-text-field>
-          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
-          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+          <nldd-text-field
+            id="name"
+            name="name"
+            required
+            maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+            placeholder="tcp"
+            unmet="name-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text
+            >Lowercase letters, digits and dashes.</nldd-form-field-help-text
+          >
+          <nldd-validation-list>
+            <nldd-validation-item id="name-error"
+              >Enter a valid name.</nldd-validation-item
+            >
+          </nldd-validation-list>
         </nldd-form-field>
 
         <div id="namespace-field"></div>
@@ -24,13 +37,33 @@
         <fieldset class="plugin-fieldset">
           <legend class="plugin-legend">Gateway</legend>
           <nldd-form-field label="Gateway name">
-            <nldd-text-field id="parent-name" name="parent-name" required placeholder="demo" error-message="parent-name-error"></nldd-text-field>
-            <nldd-form-field-help-text>The Gateway this route attaches to (parentRef).</nldd-form-field-help-text>
-            <nldd-form-field-error-text id="parent-name-error">This field is required.</nldd-form-field-error-text>
+            <nldd-text-field
+              id="parent-name"
+              name="parent-name"
+              required
+              placeholder="demo"
+              unmet="parent-name-error"
+            ></nldd-text-field>
+            <nldd-form-field-help-text
+              >The Gateway this route attaches to
+              (parentRef).</nldd-form-field-help-text
+            >
+            <nldd-validation-list>
+              <nldd-validation-item id="parent-name-error"
+                >This field is required.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
           <nldd-form-field label="Listener (recommended)">
-            <nldd-text-field id="parent-section" name="parent-section" placeholder="postgres"></nldd-text-field>
-            <nldd-form-field-help-text>TCP listener name (sectionName) to attach to.</nldd-form-field-help-text>
+            <nldd-text-field
+              id="parent-section"
+              name="parent-section"
+              placeholder="postgres"
+            ></nldd-text-field>
+            <nldd-form-field-help-text
+              >TCP listener name (sectionName) to attach
+              to.</nldd-form-field-help-text
+            >
           </nldd-form-field>
         </fieldset>
 
@@ -38,19 +71,52 @@
           <legend class="plugin-legend">Backend</legend>
           <div class="plugin-row">
             <nldd-form-field label="Service" style="flex: 1 1 16rem">
-              <nldd-text-field id="backend-name" name="backend-name" required placeholder="db" error-message="backend-name-error"></nldd-text-field>
-              <nldd-form-field-error-text id="backend-name-error">This field is required.</nldd-form-field-error-text>
+              <nldd-text-field
+                id="backend-name"
+                name="backend-name"
+                required
+                placeholder="db"
+                unmet="backend-name-error"
+              ></nldd-text-field>
+              <nldd-validation-list>
+                <nldd-validation-item id="backend-name-error"
+                  >This field is required.</nldd-validation-item
+                >
+              </nldd-validation-list>
             </nldd-form-field>
             <nldd-form-field label="Port" style="flex: 0 0 8rem">
-              <nldd-text-field id="backend-port" name="backend-port" required type="number" min="1" max="65535" value="5432" error-message="backend-port-error"></nldd-text-field>
-              <nldd-form-field-error-text id="backend-port-error">Enter a valid port.</nldd-form-field-error-text>
+              <nldd-text-field
+                id="backend-port"
+                name="backend-port"
+                required
+                type="number"
+                min="1"
+                max="65535"
+                value="5432"
+                unmet="backend-port-error"
+              ></nldd-text-field>
+              <nldd-validation-list>
+                <nldd-validation-item id="backend-port-error"
+                  >Enter a valid port.</nldd-validation-item
+                >
+              </nldd-validation-list>
             </nldd-form-field>
           </div>
         </fieldset>
 
         <div class="plugin-actions">
-          <nldd-button id="submit" type="button" variant="primary" text="Create TCPRoute"></nldd-button>
-          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+          <nldd-button
+            id="submit"
+            type="button"
+            variant="primary"
+            text="Create TCPRoute"
+          ></nldd-button>
+          <nldd-button
+            id="back"
+            type="button"
+            variant="secondary"
+            text="Back"
+          ></nldd-button>
         </div>
       </form>
     </div>

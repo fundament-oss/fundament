@@ -47,7 +47,13 @@ describe('demo plugin sidebar', () => {
     const registry = TestBed.inject(PluginRegistryService);
     const nav = TestBed.inject(PluginNavService);
 
-    await installs.installPlugin('cl-production', 'system', 'cert-manager', 'v1.17.2', 'sha256:demo');
+    await installs.installPlugin(
+      'cl-production',
+      'system',
+      'cert-manager',
+      'v1.17.2',
+      'sha256:demo',
+    );
     await registry.loadPlugins('cl-production');
 
     // Still Pending right after the install: not in the menu yet.
@@ -81,14 +87,18 @@ describe('demo plugin sidebar', () => {
     await Promise.resolve();
 
     // The route segment is the installation name, not the plugin name.
-    expect(nav.projectNav().map((group) => group.installationName)).toEqual(['system--cert-manager']);
+    expect(nav.projectNav().map((group) => group.installationName)).toEqual([
+      'system--cert-manager',
+    ]);
   });
 
   it('resolves the CRD behind a menu entry by reference, plural or kind', () => {
     const registry = TestBed.inject(PluginRegistryService);
 
     ['certificates.cert-manager.io', 'certificates', 'Certificate'].forEach((key) => {
-      expect(registry.getCrd('system--cert-manager', key, 'cl-production')?.kind).toBe('Certificate');
+      expect(registry.getCrd('system--cert-manager', key, 'cl-production')?.kind).toBe(
+        'Certificate',
+      );
     });
     expect(registry.getCrd('cert-manager', 'issuers', 'cl-production')).toBeUndefined();
   });

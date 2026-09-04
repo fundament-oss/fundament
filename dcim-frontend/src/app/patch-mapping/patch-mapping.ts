@@ -13,66 +13,49 @@ import {
 import { firstValueFrom } from 'rxjs';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
-import CableFormComponent from './cable-form/cable-form';
 import ShoppingListComponent from './shopping-list/shopping-list';
-import { Cable, CABLE_TYPE_LABEL, CableSide, CableStatus, CableType, Port } from './cable.model';
-import { PortDefinition } from '../inventory/inventory';
+import {
+  Cable,
+  CABLE_STATUSES,
+  cableStatusLabel,
+  CABLE_TYPE_LABEL,
+  CableSide,
+  CableStatus,
+  CableType,
+} from './cable.model';
 import PatchMappingApiService from './patch-mapping-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
-import parseValidationError from '../../connect/validation';
-import { cablePortFromDefinition, cablePortTypeToDefinition } from '../racks/catalog-helpers';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import openOnCreateRequest from '../shell/create-request';
+import PatchGraphService from './patch-graph.service';
+import OverlayService from '../shell/overlay.service';
 
 /** A selectable device (placement) in the active datacenter. */
-interface DeviceOption {
-  id: string;
-  name: string;
-}
-
 /** A selectable datacenter (site). */
-interface SiteOption {
+export interface SiteOption {
   id: string;
   name: string;
-}
-
-/** Maps a cabling UI port onto the catalog port-definition shape for writes. */
-function toPortDefinition(port: Port, catalogId: string, ordinal?: number): PortDefinition {
-  const { portType, direction } = cablePortTypeToDefinition(port.type);
-  return {
-    id: port.id,
-    catalogEntryId: catalogId,
-    name: port.name,
-    portType,
-    direction,
-    ...(ordinal != null ? { ordinal } : {}),
-  };
 }
 
 @Component({
   selector: 'app-patch-mapping',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    PatchMappingFlowWrapperComponent,
-    CableListComponent,
-    CableFormComponent,
-    ShoppingListComponent,
-    DropdownSyncDirective,
-  ],
+  imports: [PatchMappingFlowWrapperComponent, CableListComponent, ShoppingListComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: {
-    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
-    '[class.min-h-screen]': "activeView() === 'list'",
-    '[class.overflow-hidden]': "activeView() === 'topology'",
-    '[style.height]': "activeView() === 'topology' ? 'calc(100dvh - 4.25rem)' : null",
-  },
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent implements OnInit {
   private readonly patchApi = inject(PatchMappingApiService);
+
+  /** The devices, ports and cables of one data center, shared with the cable
+   *  form the shell holds. */
+  private readonly graph = inject(PatchGraphService);
+
+  /** The cable form lives in the shell, so it opens from anywhere. */
+  private readonly overlays = inject(OverlayService);
 
   private readonly datacenterApi = inject(DatacenterApiService);
 
@@ -86,10 +69,23 @@ export default class PatchMappingComponent implements OnInit {
 
   readonly selectedDcId = signal('');
 
-  readonly activeView = signal<'list' | 'topology'>('list');
+  readonly topologyOpen = signal(false);
 
-  // ── Cable state (cables of the selected datacenter) ─────────────────────────
-  readonly mutableCables = signal<Cable[]>([]);
+  // ── Cable state ────────────────────────────────────────────────────────────
+  /**
+   * The list spans every location unless you narrow it to one.
+   *
+   * A cable is a thing in a building, but the questions you ask a list of them
+   * are not: what still has to be bought, what is waiting to be fitted. Those
+   * are estate-wide, and the badge on this section in the menu counts them that
+   * way. Opening in one building would have that badge and this page disagree
+   * from the first second.
+   */
+  private readonly siteGraph = computed(() =>
+    this.selectedDcId() ? this.graph.graphFor(this.selectedDcId()) : null,
+  );
+
+  readonly mutableCables = computed(() => this.siteGraph()?.cables ?? this.graph.allCables());
 
   readonly dcCables = computed(() => this.mutableCables());
 
@@ -103,9 +99,28 @@ export default class PatchMappingComponent implements OnInit {
   // ── Shopping list state ────────────────────────────────────────────────────
   readonly shoppingListOpen = signal(false);
 
-  readonly plannedCables = computed(() => this.dcCables().filter((c) => c.status === 'planned'));
+  /**
+   * Every planned cable, wherever it lies.
+   *
+   * The shopping list is one order for the estate, not per building: you can
+   * switch between all of them and one location inside the sheet, so it needs
+   * them all. The views on this page stay per data center.
+   */
+  readonly orderCables = computed(() =>
+    this.graph.allCables().filter((c) => c.status === 'to-order'),
+  );
 
-  readonly plannedCount = computed(() => this.plannedCables().length);
+  private readonly shoppingList = viewChild(ShoppingListComponent);
+
+  /**
+   * Opens the list on where you were standing, so it continues the view behind
+   * it rather than jumping. You widen it to the whole estate with the toggle in
+   * the sheet, because an order is not a building.
+   */
+  openShoppingList(): void {
+    this.shoppingList()?.openAt(this.selectedDcId());
+    this.shoppingListOpen.set(true);
+  }
 
   readonly selectedDcLabel = computed(
     () => this.sites().find((s) => s.id === this.selectedDcId())?.name ?? this.selectedDcId(),
@@ -114,16 +129,60 @@ export default class PatchMappingComponent implements OnInit {
   // ── Topology filters ───────────────────────────────────────────────────────
   readonly topologyStatusFilter = signal<CableStatus | ''>('');
 
+  /** What the two filter buttons say: the pick, or that there is none. */
+  readonly topologyStatusLabel = computed(() => {
+    const status = this.topologyStatusFilter();
+    return status ? cableStatusLabel(status) : 'All states';
+  });
+
+  readonly topologyTypeLabel = computed(() => {
+    const type = this.topologyTypeFilter();
+    return type ? CABLE_TYPE_LABEL[type] : 'All types';
+  });
+
   readonly topologyTypeFilter = signal<CableType | ''>('');
 
   // Devices (placements) and their ports in the active datacenter.
-  readonly dcDevices = signal<DeviceOption[]>([]);
+  /**
+   * The drawing is of one hall, so it has a location of its own.
+   *
+   * Two data centers on one canvas is not a drawing but two islands side by
+   * side, so All is a list idea and the topology picks a building itself. Same
+   * control, in the same place, as the shopping list.
+   */
+  readonly topologyDcId = signal('');
 
-  readonly localDevicePorts = signal<Record<string, Port[]>>({});
+  private readonly topologyGraph = computed(() => this.graph.graphFor(this.topologyDcId()));
+
+  readonly topologyCables = computed(() => this.topologyGraph().cables);
+
+  readonly dcDevices = computed(() => this.topologyGraph().devices);
+
+  readonly localDevicePorts = computed(() => this.topologyGraph().devicePorts);
+
+  /**
+   * Opens on the building you were looking at, every time and not just the
+   * first: the guard that used to stand here only filled an empty id, so
+   * switching the list to another building and opening the topology again kept
+   * showing the one from before.
+   *
+   * With the list on every building there is nothing to follow, so it stays
+   * where you last left it, and falls back to the first building on a first
+   * open.
+   */
+  openTopology(): void {
+    this.topologyDcId.set(this.selectedDcId() || this.topologyDcId() || this.sites()[0]?.id || '');
+    this.topologyOpen.set(true);
+  }
+
+  onTopologyDcToggle(id: string, selected: boolean): void {
+    if (selected) {
+      this.topologyDcId.set(id);
+      this.graph.load(id).catch(() => undefined);
+    }
+  }
 
   /** Catalog entry id per placement (device); ports are catalog port definitions. */
-  private catalogByPlacement = new Map<string, string>();
-
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
   readonly CABLE_TYPES: CableType[] = [
@@ -142,11 +201,7 @@ export default class PatchMappingComponent implements OnInit {
     'other',
   ];
 
-  readonly CABLE_STATUSES: { value: CableStatus; label: string }[] = [
-    { value: 'planned', label: 'Planned' },
-    { value: 'connected', label: 'Connected' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly CABLE_STATUSES = CABLE_STATUSES;
 
   private readonly cableSheetEl = viewChild<ElementRef>('cableSheet');
 
@@ -154,7 +209,14 @@ export default class PatchMappingComponent implements OnInit {
 
   private readonly shoppingSheetEl = viewChild<ElementRef>('shoppingSheet');
 
+  private readonly topologySheetEl = viewChild<ElementRef>('topologySheet');
+
   constructor() {
+    // The add menu in the bar asks for this form through the address.
+    openOnCreateRequest(
+      () => this.openAddCable(),
+      () => !!this.selectedDcId(),
+    );
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editCable() !== null) el?.show?.();
@@ -170,6 +232,11 @@ export default class PatchMappingComponent implements OnInit {
       if (this.shoppingListOpen()) el?.show?.();
       else el?.hide?.();
     });
+    effect(() => {
+      const el = this.topologySheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.topologyOpen()) el?.show?.();
+      else el?.hide?.();
+    });
   }
 
   ngOnInit(): void {
@@ -177,153 +244,42 @@ export default class PatchMappingComponent implements OnInit {
       .then((res) => {
         const sites = res.sites.map((s) => ({ id: s.id, name: s.name }));
         this.sites.set(sites);
-        if (sites.length > 0 && !this.selectedDcId()) {
-          this.selectDc(sites[0].id);
-        }
+        // No data center is picked: the list opens on all of them, so there is
+        // nothing to choose before you have said you want one building.
+        this.loadEverySite();
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
+  /** Reads every site once, so the shopping list can count across them before
+   *  you have visited each one. */
+  private loadEverySite(): void {
+    this.sites().forEach((site) => {
+      this.graph.load(site.id).catch(() => undefined);
+    });
+  }
+
+  /** An empty id is every location, which is where the list starts. */
   selectDc(siteId: string): void {
     this.selectedDcId.set(siteId);
-    // loadSiteGraph handles its own errors; the no-op catch just marks the
+    if (!siteId) return;
+    // The service handles its own errors; the no-op catch just marks the
     // promise as handled for the floating-promise lint.
-    this.loadSiteGraph(siteId).catch(() => undefined);
-  }
-
-  /**
-   * Loads every device (placement) in the site, its ports (from the catalog
-   * port definitions), and the physical connections between them.
-   */
-  private async loadSiteGraph(siteId: string): Promise<void> {
-    try {
-      const racksRes = await firstValueFrom(this.datacenterApi.listRacksBySite(siteId));
-      const rackIds = racksRes.racks
-        .map((s) => s.rack?.id)
-        .filter((id): id is string => id != null);
-
-      const [placementArrays, assetsRes] = await Promise.all([
-        Promise.all(
-          rackIds.map((id) => firstValueFrom(this.placementApi.listPlacementsByRack(id))),
-        ),
-        firstValueFrom(this.assetClient.listAssets({})),
-      ]);
-      const placements = placementArrays
-        .flatMap((r) => r.placements)
-        .filter((p) => p.location.case === 'rack');
-      const assetById = new Map(assetsRes.assets.map((a) => [a.id, a]));
-
-      const devices: DeviceOption[] = [];
-      const catalogByPlacement = new Map<string, string>();
-      placements.forEach((p) => {
-        const asset = assetById.get(p.assetId);
-        devices.push({ id: p.id, name: asset?.assetTag || p.assetId });
-        if (asset?.deviceCatalogId) catalogByPlacement.set(p.id, asset.deviceCatalogId);
-      });
-      devices.sort((a, b) => a.name.localeCompare(b.name));
-
-      // Port definitions per unique catalog entry.
-      const uniqueCatalogIds = [...new Set(catalogByPlacement.values())];
-      const portDefArrays = await Promise.all(
-        uniqueCatalogIds.map((id) => firstValueFrom(this.catalogApi.listPortDefinitions(id))),
-      );
-      const portDefsByCatalog = new Map(
-        uniqueCatalogIds.map((id, i) => [id, portDefArrays[i].portDefinitions]),
-      );
-
-      const devicePorts: Record<string, Port[]> = {};
-      const portById = new Map<string, Port>();
-      placements.forEach((p) => {
-        const catalogId = catalogByPlacement.get(p.id);
-        const defs = catalogId ? (portDefsByCatalog.get(catalogId) ?? []) : [];
-        const ports = defs
-          .map((pd) => cablePortFromDefinition(pd, p.id))
-          .filter((port): port is Port => port !== null);
-        devicePorts[p.id] = ports;
-        ports.forEach((port) => portById.set(port.id, port));
-      });
-
-      // Every connection in the site, fetched in a single call.
-      const connRes = await firstValueFrom(this.patchApi.listConnectionsBySite(siteId));
-      const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
-      const cables = connRes.connections.map((c) =>
-        PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }),
-      );
-
-      this.dcDevices.set(devices);
-      this.localDevicePorts.set(devicePorts);
-      this.catalogByPlacement = catalogByPlacement;
-      this.mutableCables.set(cables);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(connectErrorMessage(err));
-    }
-  }
-
-  /**
-   * Persists port edits made from the cable form. Ports are catalog port
-   * definitions, so a change to one device also affects every device sharing
-   * its catalog entry; the site graph is reloaded afterwards to reconcile
-   * synthetic ids with the server-assigned ones.
-   */
-  async onPortsUpdated(event: { deviceId: string; ports: Port[] }): Promise<void> {
-    const catalogId = this.catalogByPlacement.get(event.deviceId);
-    if (!catalogId) return;
-
-    const oldPorts = this.localDevicePorts()[event.deviceId] ?? [];
-    const newPorts = event.ports;
-    const oldById = new Map(oldPorts.map((p) => [p.id, p]));
-    const newById = new Map(newPorts.map((p) => [p.id, p]));
-
-    const deletions = oldPorts.filter((p) => !newById.has(p.id));
-    const creations = newPorts.filter((p) => !oldById.has(p.id));
-    const updates = newPorts.filter((p) => {
-      const prev = oldById.get(p.id);
-      return prev != null && (prev.name !== p.name || prev.type !== p.type);
-    });
-
-    if (deletions.length === 0 && creations.length === 0 && updates.length === 0) return;
-
-    // Optimistic update so the form reflects the change before the round-trip.
-    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: newPorts }));
-
-    try {
-      await Promise.all([
-        ...deletions.map((p) => firstValueFrom(this.catalogApi.deletePortDefinition(p.id))),
-        ...updates.map((p) =>
-          firstValueFrom(this.catalogApi.updatePortDefinition(toPortDefinition(p, catalogId))),
-        ),
-      ]);
-      // New definitions take ordinals after the existing ports.
-      const baseOrdinal = oldPorts.length;
-      await Promise.all(
-        creations.map((p, i) =>
-          firstValueFrom(
-            this.catalogApi.createPortDefinition(toPortDefinition(p, catalogId, baseOrdinal + i)),
-          ),
-        ),
-      );
-      this.cableFormError.set(null);
-    } catch (err) {
-      const { fields, message } = parseValidationError(err);
-      const all = [message, ...Object.values(fields)].filter(Boolean);
-      this.cableFormError.set(all.join('\n') || 'Failed to save port changes.');
-    } finally {
-      await this.loadSiteGraph(this.selectedDcId());
-    }
+    this.graph.load(siteId).catch(() => undefined);
   }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
-  openAddCable(): void {
-    this.cableFormError.set(null);
-    this.editCable.set({ dcId: this.selectedDcId(), status: 'connected' });
+  /** Both routes into the form open the one the shell holds: it outlives this
+   *  page, and the add button in the bar opens the same one. The data center on
+   *  screen comes along as the form's first answer. */
+  openAddCable(prefill: Partial<Cable> = {}): void {
+    this.overlays.newCable({ dcId: this.selectedDcId(), ...prefill });
   }
 
   openEditCable(cable: Cable): void {
-    this.cableFormError.set(null);
-    this.editCable.set({ ...cable });
+    this.overlays.editCable(cable);
   }
 
   openEditCableById(id: string): void {
@@ -368,28 +324,6 @@ export default class PatchMappingComponent implements OnInit {
     this.editCable.set({ dcId: this.selectedDcId(), status: 'connected', aSide, bSide });
   }
 
-  saveFromForm(cable: Cable): void {
-    this.cableFormError.set(null);
-    const request = cable.id
-      ? firstValueFrom(this.patchApi.updateCable(cable))
-      : firstValueFrom(this.patchApi.createCable(cable));
-    request
-      .then(() => {
-        this.editCable.set(null);
-        return this.loadSiteGraph(this.selectedDcId());
-      })
-      .catch((err) => {
-        const { fields, message } = parseValidationError(err);
-        const all = [message, ...Object.values(fields)].filter(Boolean);
-        this.cableFormError.set(all.join('\n') || 'Failed to save cable.');
-      });
-  }
-
-  closeForm(): void {
-    this.cableFormError.set(null);
-    this.editCable.set(null);
-  }
-
   openDeleteCable(cable: Cable): void {
     this.deleteCable.set(cable);
     this.editCable.set(null);
@@ -405,17 +339,40 @@ export default class PatchMappingComponent implements OnInit {
     firstValueFrom(this.patchApi.deletePhysicalConnection(target.id))
       .then(() => {
         this.deleteCable.set(null);
-        return this.loadSiteGraph(this.selectedDcId());
+        return this.graph.load(this.selectedDcId());
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  updateCableStatus(event: { cableId: string; status: CableStatus }): void {
-    const cable = this.mutableCables().find((c) => c.id === event.cableId);
-    if (!cable) return;
-    firstValueFrom(this.patchApi.updateCable({ ...cable, status: event.status }))
-      .then(() => this.loadSiteGraph(this.selectedDcId()))
+  updateCableStatus(event: { cableId: string; status: CableStatus | undefined }): void {
+    this.updateCableStatuses({ cableIds: [event.cableId], status: event.status });
+  }
+
+  /**
+   * Moves a whole order line at once: several cables, possibly in more than one
+   * building, in one go.
+   *
+   * Looked up across every loaded site rather than in the one on screen,
+   * because the shopping list spans them all and a tick there is about cables
+   * you are not looking at. Only the sites it touched are read back.
+   */
+  updateCableStatuses(event: { cableIds: string[]; status: CableStatus | undefined }): void {
+    const byId = new Map(this.graph.allCables().map((cable) => [cable.id, cable]));
+    const targets = event.cableIds
+      .map((id) => byId.get(id))
+      .filter((cable): cable is Cable => !!cable);
+    if (targets.length === 0) return;
+
+    Promise.all(
+      targets.map((cable) =>
+        firstValueFrom(this.patchApi.updateCable({ ...cable, status: event.status })),
+      ),
+    )
+      .then(() =>
+        Promise.all([...new Set(targets.map((c) => c.dcId))].map((id) => this.graph.load(id))),
+      )
+      .then(() => undefined)
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }

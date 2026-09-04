@@ -10,7 +10,7 @@ export interface MachineTypeOption {
 }
 
 // Loads the region catalog (regions with their offered kubernetes versions and
-// machine types) once and shares it between the add-cluster wizard and the
+// machine types) once and shares it between the new-cluster form and the
 // cluster nodes page. The catalog is text-only: names are what the create
 // endpoints accept.
 @Injectable({ providedIn: 'root' })

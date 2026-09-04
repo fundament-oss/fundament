@@ -15,7 +15,11 @@ export interface Listener {
 export interface GatewayBody {
   apiVersion: 'gateway.networking.k8s.io/v1';
   kind: 'Gateway';
-  metadata: { name: string; namespace: string; annotations?: Record<string, string> };
+  metadata: {
+    name: string;
+    namespace: string;
+    annotations?: Record<string, string>;
+  };
   spec: { gatewayClassName: 'eg'; listeners: Listener[] };
 }
 
@@ -33,7 +37,8 @@ function httpListener(): Listener {
 // convention cert-manager provisions from the Gateway annotation).
 function httpsListener(root: ParentNode, name: string): Listener {
   const mode = trimmedValue(root, 'tls-mode');
-  const secret = mode === 'certManager' ? `${name}-tls` : trimmedValue(root, 'tls-secret');
+  const secret =
+    mode === 'certManager' ? `${name}-tls` : trimmedValue(root, 'tls-secret');
   return {
     name: 'https',
     protocol: 'HTTPS',
@@ -43,7 +48,10 @@ function httpsListener(root: ParentNode, name: string): Listener {
   };
 }
 
-export function buildGatewayBody(root: ParentNode, namespace: string): GatewayBody {
+export function buildGatewayBody(
+  root: ParentNode,
+  namespace: string,
+): GatewayBody {
   const name = trimmedValue(root, 'name');
   const listeners: Listener[] = [httpListener()];
 
@@ -52,7 +60,9 @@ export function buildGatewayBody(root: ParentNode, namespace: string): GatewayBo
   if (isChecked(root, 'https-enabled')) {
     listeners.push(httpsListener(root, name));
     if (trimmedValue(root, 'tls-mode') === 'certManager') {
-      metadata.annotations = { 'cert-manager.io/cluster-issuer': trimmedValue(root, 'cluster-issuer') };
+      metadata.annotations = {
+        'cert-manager.io/cluster-issuer': trimmedValue(root, 'cluster-issuer'),
+      };
     }
   }
 
@@ -71,17 +81,20 @@ export function buildGatewayBody(root: ParentNode, namespace: string): GatewayBo
 // (lowercase alphanumeric, '-', '.'), so they carry no HTML-special characters.
 export function clusterIssuerControlHtml(issuers: string[]): string {
   if (issuers.length > 0) {
-    const options = issuers.map((n) => `<option value="${n}">${n}</option>`).join('');
-    return `<nldd-dropdown><select id="cluster-issuer" name="cluster-issuer" aria-label="Cluster issuer">${options}</select></nldd-dropdown>`;
+    const options = issuers
+      .map((n) => `<option value="${n}">${n}</option>`)
+      .join('');
+    return `<nldd-dropdown unmet="cluster-issuer-error"><select id="cluster-issuer" name="cluster-issuer" aria-label="Cluster issuer">${options}</select></nldd-dropdown>`;
   }
-  return `<nldd-text-field id="cluster-issuer" name="cluster-issuer" placeholder="letsencrypt"></nldd-text-field>`;
+  return `<nldd-text-field id="cluster-issuer" name="cluster-issuer" unmet="cluster-issuer-error" placeholder="letsencrypt"></nldd-text-field>`;
 }
 
 export function validateForm(root: ParentNode): boolean {
   if (!trimmedValue(root, 'name')) return false;
   if (isChecked(root, 'https-enabled')) {
     const mode = trimmedValue(root, 'tls-mode');
-    if (mode === 'certManager') return Boolean(trimmedValue(root, 'cluster-issuer'));
+    if (mode === 'certManager')
+      return Boolean(trimmedValue(root, 'cluster-issuer'));
     return Boolean(trimmedValue(root, 'tls-secret'));
   }
   return true;

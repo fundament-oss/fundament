@@ -1,0 +1,117 @@
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="show"
+  placement="right"
+  accessible-label="New project"
+  (close)="onCancel()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="New project"
+      collapse-anchor="new-project-title"
+      dismiss-text="Cancel"
+      (dismiss)="onCancel()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title
+        id="new-project-title"
+        size="3"
+      >
+        <h1>New project</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (errorMessage()) {
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-rich-text>
+        <p>Create a new project to organize your namespaces and resources.</p>
+      </nldd-rich-text>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-form
+        [formGroup]="projectForm"
+        (submit)="onSubmit($event)"
+        (keydown.enter)="onSubmit($event)"
+      >
+        <nldd-form-field label="Project name">
+          <nldd-text-field
+            id="name"
+            appAutofocus
+            [value]="projectForm.get('name')?.value ?? ''"
+            [invalid]="!!(projectForm.get('name')?.invalid && formSubmitted())"
+            unmet="new-project-name-error"
+            (input)="onNameInput($event)"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="new-project-name-error">{{
+              getNameError()
+            }}</nldd-validation-item>
+          </nldd-validation-list>
+          <nldd-form-field-help-text>
+            Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
+          </nldd-form-field-help-text>
+        </nldd-form-field>
+        <nldd-form-field
+          label="Cluster"
+          supporting-label="Select the cluster this project will belong to"
+        >
+          @if (isLoadingClusters()) {
+            <nldd-activity-indicator
+              show-text
+              text="Loading clusters..."
+            ></nldd-activity-indicator>
+          } @else if (clusters().length === 0) {
+            <nldd-rich-text>
+              <p>
+                No clusters available.
+                <nldd-link
+                  [attr.href]="pageNav.path('/clusters/new')"
+                  text="Add a cluster first"
+                ></nldd-link
+                >.
+              </p>
+            </nldd-rich-text>
+          } @else {
+            <nldd-toggle-button-group
+              type="radio"
+              name="clusterId"
+              accessible-label="Cluster"
+              [attr.invalid]="projectForm.get('clusterId')?.invalid && formSubmitted() ? '' : null"
+              unmet="new-project-cluster-error"
+              (change)="onClusterChange($event)"
+            >
+              @for (cluster of clusters(); track cluster.id) {
+                <nldd-toggle-button
+                  type="radio"
+                  [value]="cluster.id"
+                  [text]="cluster.name + ' (' + cluster.region + ')'"
+                  [selected]="projectForm.get('clusterId')?.value === cluster.id"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+            <nldd-validation-list>
+              <nldd-validation-item id="new-project-cluster-error">{{
+                getClusterError()
+              }}</nldd-validation-item>
+            </nldd-validation-list>
+          }
+        </nldd-form-field>
+        <!-- No cancel button: the title bar's dismiss already covers leaving. -->
+        <nldd-form-actions>
+          <nldd-button
+            type="submit"
+            text="Create project"
+            [loading]="isSubmitting()"
+            width="full"
+            variant="primary"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

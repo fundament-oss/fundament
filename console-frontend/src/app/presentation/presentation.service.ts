@@ -9,12 +9,14 @@ import {
   Locale,
   Localized,
   LOCALE_STORAGE_KEY,
+  PRESENT_STORAGE_KEY,
   UI,
 } from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import runDrive from './drive-runner';
-import { closeOpenAppDialogs } from './app-dialogs';
-import { ToastService } from '../toast.service';
+import { closeModalOverlays } from './modal-overlays';
+import { NotificationService } from '../notification.service';
+import PageNavService from '../page-nav.service';
 
 /** `?lang` wins (shareable deep links), then the last choice, then Dutch. */
 function resolveLocale(fromUrl: string | null): Locale {
@@ -30,11 +32,13 @@ function resolveLocale(fromUrl: string | null): Locale {
  */
 @Injectable({ providedIn: 'root' })
 export default class PresentationService {
+  private pageNav = inject(PageNavService);
+
   private readonly router = inject(Router);
 
   private readonly title = inject(Title);
 
-  private readonly toasts = inject(ToastService);
+  private readonly notifications = inject(NotificationService);
 
   readonly active = signal(false);
 
@@ -107,7 +111,16 @@ export default class PresentationService {
     // Resolve the locale before the present=0 bail-out, so the signal is correct
     // even when the walkthrough is switched off.
     this.locale.set(resolveLocale(params.get('lang')));
-    if (params.get('present') === '0') return;
+
+    // `?present=0` is remembered, like the locale is: the router drops query
+    // params on its first navigation, so the flag would not survive a refresh.
+    // Any other value clears it, so `?present=1` switches the walkthrough back on.
+    const present = params.get('present');
+    if (present === '0') localStorage.setItem(PRESENT_STORAGE_KEY, '1');
+    else if (present !== null) localStorage.removeItem(PRESENT_STORAGE_KEY);
+
+    if (localStorage.getItem(PRESENT_STORAGE_KEY) === '1') return;
+
     const tourId = params.get('tour');
     if (!tourId) {
       this.startTour(DEFAULT_TOUR_ID);
@@ -167,8 +180,8 @@ export default class PresentationService {
   }
 
   private showChooser(): void {
-    closeOpenAppDialogs();
-    this.toasts.dismiss();
+    closeModalOverlays();
+    this.notifications.dismissAll();
     this.active.set(true);
     this.mode.set('chooser');
     this.applyClasses();
@@ -182,11 +195,10 @@ export default class PresentationService {
   goto(index: number): void {
     // An open app modal (native <dialog>) traps focus and makes the deck inert, so
     // close it before moving on — otherwise the presenter is stuck on the slide.
-    closeOpenAppDialogs();
-    // A toast raised by the previous slide's drive script belongs to that slide.
-    // ToastService only clears on navigation, and its set-then-navigate grace
-    // period is spent by the slide's own navigation, so drop it explicitly.
-    this.toasts.dismiss();
+    closeModalOverlays();
+    // A notification raised by the previous slide's drive script belongs to that
+    // slide, and a critical one waits to be dismissed by hand, so drop it here.
+    this.notifications.dismissAll();
     const clamped = Math.min(Math.max(0, index), this.total() - 1);
     this.index.set(clamped);
     this.applyClasses();
@@ -210,12 +222,13 @@ export default class PresentationService {
 
   /**
    * Slide titles are suffixed with the demo name, except on the opening slide of
-   * the intro tour, whose title is the product name itself — "Fundament —
-   * Fundament demo" would read as a mistake.
+   * the intro tour, whose title is the product name itself — "Fundament ·
+   * Fundament demo" would read as a mistake. The middot is the separator the
+   * design guidelines ask for, the same one the console's own titles use.
    */
   private documentTitle(slideTitle: string): string {
     const demo = this.ui().demoTitle;
-    return slideTitle === DECK_NAME ? demo : `${slideTitle} — ${demo}`;
+    return slideTitle === DECK_NAME ? demo : `${slideTitle} · ${demo}`;
   }
 
   next(): void {
@@ -281,8 +294,8 @@ export default class PresentationService {
   stop(): void {
     this.cancelDrive();
     this.stopAutoplay();
-    closeOpenAppDialogs();
-    this.toasts.dismiss();
+    closeModalOverlays();
+    this.notifications.dismissAll();
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
     this.mode.set('chooser');
@@ -316,7 +329,9 @@ export default class PresentationService {
       slide: this.index() + 1,
       lang: this.locale(),
     };
-    const path = slide?.route ?? this.currentPath();
+    // A slide names the page and not the organization, so it plays in
+    // whichever one you are signed in to.
+    const path = this.pageNav.path(slide?.route ?? this.currentPath());
     this.router.navigate([path], { queryParams }).then(() => {
       // A navigation that a later goto() superseded still resolves (with false),
       // so without this guard holding down → would let the abandoned slide's

@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -9,13 +10,15 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  effect,
 } from '@angular/core';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
-import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import PageNavService from '../page-nav.service';
+import { NotificationService } from '../notification.service';
 import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
@@ -33,17 +36,24 @@ import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
-import { LoadingIndicatorComponent } from '../icons';
 import {
-  getStatusTagColor,
+  getStatusBadgeColor,
   getStatusLabel,
   isKubeconfigAvailable,
   isTransitionalStatus,
 } from '../utils/cluster-status';
+import pluginIconSrc from '../utils/plugin-icon';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
-import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
-import { getUsagePercentage, getUsageColor } from '../utils/usage';
+import {
+  formatDate as formatDateUtil,
+  formatDateTime as formatDateTimeUtil,
+  formatShortDateTime as formatShortDateTimeUtil,
+  formatTime as formatTimeUtil,
+} from '../utils/date-format';
+import { getUsagePercentage } from '../utils/usage';
+import '@nldd/design-system/multi-line-text-field';
 
 interface ClusterResourceUsage {
   cpu: { used: number; total: number; unit: string };
@@ -51,7 +61,24 @@ interface ClusterResourceUsage {
   pods: { used: number; total: number; unit: string };
 }
 
-const round1 = (n: number): number => Math.round(n * 10) / 10;
+const getUsageColor = (percentage: number): string => {
+  if (percentage >= 90) return 'critical';
+  if (percentage >= 75) return 'warning';
+  return 'success';
+};
+
+interface ResourceMetric {
+  label: string;
+  color: string;
+  used: number;
+  limit: number;
+  valueText: string;
+  accessibleLabel: string;
+}
+
+/** `plugin.name` is the install identifier (e.g. "openfsc") that names the
+ *  PluginInstallation resource, so it is never what a user should read. */
+const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
 
 const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   const labels: Record<NodePoolStatus, string> = {
@@ -63,7 +90,12 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   return labels[status];
 };
 
-const getSyncStatusTagColor = (status: string | undefined): string => {
+/** Takes the whole syncState, not just the shoot status: "Unknown" means we have
+ *  no sync record at all, and not knowing whether a cluster is reconciling is a
+ *  warning rather than a neutral fact. */
+const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
+  if (!syncState) return 'warning';
+
   const colors: Record<string, string> = {
     ready: 'success',
     progressing: 'mintgroen',
@@ -71,12 +103,28 @@ const getSyncStatusTagColor = (status: string | undefined): string => {
     error: 'critical',
     deleting: 'oranje',
   };
-  return colors[status ?? ''] || 'neutral';
+  return colors[syncState.shootStatus ?? ''] || 'neutral';
 };
+
+/** Shoot states in which something is moving without anyone doing anything.
+ *  The badge pulses for those, the same rule the cluster status above it
+ *  follows: a ring for what is happening now, a still dot for what simply is.
+ *  `pending` counts, because the work is queued and will start on its own;
+ *  `error` does not, because nothing is going to move until someone acts. */
+const MOVING_SHOOT_STATUSES: ReadonlySet<string> = new Set(['progressing', 'pending', 'deleting']);
+
+const isSyncStatusMoving = (syncState: SyncState | null): boolean =>
+  MOVING_SHOOT_STATUSES.has(syncState?.shootStatus ?? '');
 
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (!syncState) return 'Unknown';
-  if (syncState.shootStatus) return syncState.shootStatus;
+  // Every other branch here hands back a label that reads as one; the shoot
+  // status comes straight from Gardener in lowercase. Capitalized here rather
+  // than in CSS, so the value is the label wherever it ends up: a tooltip, a
+  // screen reader, a copied line of text.
+  if (syncState.shootStatus) {
+    return syncState.shootStatus.charAt(0).toUpperCase() + syncState.shootStatus.slice(1);
+  }
   if (syncState.outboxError) return 'Error';
   if (syncState.outboxStatus === 'completed') return 'Synced';
   if (syncState.outboxStatus === 'failed') return 'Failed';
@@ -98,19 +146,11 @@ const getEventTypeLabel = (eventType: string): string => {
   return labels[eventType] || eventType;
 };
 
-const getEventTypeColor = (eventType: string): string => {
-  const colors: Record<string, string> = {
-    sync_requested: 'bg-blue-500',
-    sync_claimed: 'bg-blue-500',
-    sync_succeeded: 'bg-green-500',
-    sync_failed: 'bg-danger-500',
-    status_progressing: 'bg-blue-500',
-    status_ready: 'bg-green-500',
-    status_error: 'bg-danger-500',
-    status_deleted: 'bg-gray-500',
-  };
-  return colors[eventType] || 'bg-gray-500';
-};
+/** Only failures get tinted. On a timeline every dot is the same neutral track
+ *  color, so the row itself has to carry the one distinction that matters — and
+ *  the event label names it too, so color is never the sole signal. */
+const getEventTypeColor = (eventType: string): string =>
+  eventType === 'sync_failed' || eventType === 'status_error' ? 'critical' : 'default';
 
 const getEventDetails = (event: ClusterEvent): string => {
   if (event.message) {
@@ -125,15 +165,45 @@ const getEventDetails = (event: ClusterEvent): string => {
   return '';
 };
 
+/** Label and detail on one line: "Sync completed: Shoot spec applied." The
+ *  detail is the part you actually read, and as supporting text under a bold
+ *  label it got the quieter of the two. Without a detail the label stands
+ *  alone, so no line ends on a dangling colon. */
+const getEventLine = (event: ClusterEvent): string => {
+  const detail = getEventDetails(event);
+  const label = getEventTypeLabel(event.eventType);
+  return detail ? `${label}: ${detail}` : label;
+};
+
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, LoadingIndicatorComponent, DialogSyncDirective],
+  imports: [RouterOutlet, NgTemplateOutlet, DialogSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ClusterDetailsComponent implements OnInit, OnDestroy {
-  private titleService = inject(TitleService);
+  protected pageNav = inject(PageNavService);
+
+  /**
+   * nldd-top-title-bar resolves `collapse-anchor` once, when the attribute
+   * changes, and never retries. The heading it points at only renders once the
+   * cluster has loaded, so at that moment there is nothing to find and the bar
+   * never wires up its scroll listener. Re-set the attribute when the content
+   * appears, so it resolves against a DOM that now has the heading.
+   */
+  private rearmCollapseAnchor = effect(() => {
+    if (this.isLoading()) return;
+    queueMicrotask(() => {
+      const bar = document.querySelector('nldd-page > nldd-top-title-bar');
+      const anchor = bar?.getAttribute('collapse-anchor');
+      if (!bar || !anchor) return;
+      bar.removeAttribute('collapse-anchor');
+      (bar as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete?.then(() => {
+        bar.setAttribute('collapse-anchor', anchor);
+      });
+    });
+  });
 
   private route = inject(ActivatedRoute);
 
@@ -149,7 +219,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pluginClient = inject(PLUGIN);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -165,15 +235,64 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
-  getStatusTagColor = getStatusTagColor;
+  getStatusBadgeColor = getStatusBadgeColor;
+
+  isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;
 
   errorMessage = signal<string | null>(null);
 
+  /** Pools the form asked for and did not get. Handed over as navigation state
+   *  by the summary, which cannot show it itself: it closes on the way here. */
+  nodePoolsNotCreated = signal<string[]>(
+    (window.history.state as { nodePoolsNotCreated?: string[] } | null)?.nodePoolsNotCreated ?? [],
+  );
+
+  /** The cluster is there, so this is not a failure of the page you are on: it
+   *  is one thing you asked for that is missing from it. */
+  nodePoolsNotCreatedText = computed(() => {
+    const names = this.nodePoolsNotCreated();
+    if (names.length === 0) return null;
+    if (names.length === 1) return `Node pool '${names[0]}' was not created`;
+    return `${names.length} node pools were not created`;
+  });
+
   isLoading = signal<boolean>(true);
 
   showDeleteModal = signal<boolean>(false);
+
+  showDeleteBlockedModal = signal<boolean>(false);
+
+  /** Why deletion is blocked, or null when it is not. */
+  deleteBlockedReason = computed(() => {
+    const count = this.namespaces().length;
+    if (count > 0) {
+      return `This cluster still has ${count} namespace${count === 1 ? '' : 's'}. Kubernetes will not release a cluster while namespaces are running on it, so remove them first and then delete the cluster.`;
+    }
+    if (this.namespacesLoadError()) {
+      return "We couldn't load this cluster's namespaces, so there is no way to confirm it is empty. Reload the page and try again.";
+    }
+    return null;
+  });
+
+  /** The button stays enabled either way: blocked means "explain", not "ignore". */
+  onDeleteClusterClick(): void {
+    if (this.deleteBlockedReason()) {
+      this.showDeleteBlockedModal.set(true);
+      return;
+    }
+    this.showDeleteModal.set(true);
+  }
+
+  goToNamespaces(): void {
+    this.showDeleteBlockedModal.set(false);
+    this.pageNav.goTo(`/clusters/${this.clusterData.basics.id}/namespaces`);
+  }
+
+  /** A download that produced no file leaves nothing on screen to show for it,
+   *  so this says so where it cannot be missed. */
+  kubeconfigError = signal<string | null>(null);
 
   // Namespace management
   namespaces = signal<Namespace[]>([]);
@@ -194,6 +313,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   resourceUsage = signal<ClusterResourceUsage | null>(null);
 
   clusterEvents = signal<ClusterEvent[]>([]);
+
+  /** How many fit on the page before the history starts to dominate it. The
+   *  rest live one click away, in a sheet, rather than in a scroll region
+   *  nested inside a page that already scrolls. */
+  private static readonly EVENTS_ON_PAGE = 6;
+
+  eventsOnPage = computed(() =>
+    this.clusterEvents().slice(0, ClusterDetailsComponent.EVENTS_ON_PAGE),
+  );
+
+  hasMoreEvents = computed(
+    () => this.clusterEvents().length > ClusterDetailsComponent.EVENTS_ON_PAGE,
+  );
+
+  showAllEventsSheet = signal(false);
 
   isLoadingEvents = signal<boolean>(true);
 
@@ -282,8 +416,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.clusterData.syncState = response.cluster.syncState ?? null;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      this.titleService.setTitle(response.cluster.name);
-
       // Fetch namespaces, plugins, and events in parallel
       await Promise.all([
         this.loadNamespaces(clusterId),
@@ -335,8 +467,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private handleClusterDeleted() {
     this.stopPolling();
-    this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
-    this.router.navigate(['/']);
+    this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+    this.pageNav.goTo('/clusters');
   }
 
   // Poll in every status, not only transitional ones: a running cluster can
@@ -357,11 +489,47 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   readonly formatDate = formatDateTimeUtil;
 
-  getUsagePercentage = getUsagePercentage;
+  /** The timeline splits them: the day in its own column, the clock beneath it. */
+  readonly formatDay = formatDateUtil;
 
-  round1 = round1;
+  readonly formatTimestamp = formatShortDateTimeUtil;
 
-  getUsageColor = getUsageColor;
+  readonly formatTime = formatTimeUtil;
+
+  /** The same bars, in twos, so the grid can put a pair in each column. */
+  get resourceMetricPairs(): ResourceMetric[][] {
+    const metrics = this.resourceMetrics;
+    return metrics.reduce<ResourceMetric[][]>((pairs, metric, index) => {
+      if (index % 2 === 0) pairs.push([metric]);
+      else pairs[pairs.length - 1].push(metric);
+      return pairs;
+    }, []);
+  }
+
+  /** A usage bar per measured resource, each carrying its own display and ARIA
+   *  text. Empty until the cluster's own metrics backend answers, which it does
+   *  not before the cluster is ready. */
+  get resourceMetrics(): ResourceMetric[] {
+    const usage = this.resourceUsage();
+    if (!usage) return [];
+
+    return [
+      { label: 'CPU', ...usage.cpu },
+      { label: 'Memory', ...usage.memory },
+      { label: 'Pods', ...usage.pods },
+    ].map(({ label, used, total, unit }) => {
+      const percentage = getUsagePercentage(used, total);
+
+      return {
+        label,
+        used,
+        limit: total,
+        color: getUsageColor(percentage),
+        valueText: `${used} / ${total} ${unit} (${percentage}%)`,
+        accessibleLabel: `${used} of ${total} ${unit} used, ${percentage}%`,
+      };
+    });
+  }
 
   openTerminal(): void {
     // Mock implementation - would open terminal in real app
@@ -396,11 +564,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to download kubeconfig: ${error.message}`
-          : 'Failed to download kubeconfig',
-      );
+      this.kubeconfigError.set(error instanceof Error ? error.message : 'The request failed.');
     } finally {
       this.isDownloadingKubeconfig.set(false);
     }
@@ -409,6 +573,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getNodePoolStatusLabel = getNodePoolStatusLabel;
 
   deleteConfirmationInput = signal<string>('');
+
+  /**
+   * Set by the delete button. The field is not wrong until you have asked for
+   * the deletion: before that it is simply not filled in yet, and a button that
+   * sits there dead says nothing about what is missing.
+   */
+  deleteAttempted = signal(false);
+
+  deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
 
   /**
    * The full slug ("orgname/clustername") the user must type to confirm deletion.
@@ -431,6 +604,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async deleteCluster(): Promise<void> {
+    this.deleteAttempted.set(true);
     if (!this.isDeleteConfirmed()) {
       return;
     }
@@ -443,8 +617,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
-      this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
-      this.router.navigate(['/']);
+      this.notificationService.info(
+        `The cluster '${this.clusterData.basics.name}' is being deleted`,
+      );
+      this.pageNav.goTo('/clusters');
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -463,7 +639,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.namespacesLoadError.set(false);
     } catch (error) {
       this.namespacesLoadError.set(true);
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -486,7 +662,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       );
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load installed plugins: ${error.message}`
           : 'Failed to load installed plugins',
@@ -497,9 +673,19 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Sync status methods
-  getSyncStatusTagColor = getSyncStatusTagColor;
+  getSyncStatusBadgeColor = getSyncStatusBadgeColor;
 
   getSyncStatusLabel = getSyncStatusLabel;
+
+  isSyncStatusMoving = isSyncStatusMoving;
+
+  /** Named like the other overlay that belongs to one cluster, "Plugins for X":
+   *  both sheets can sit open beside another window, so they say which cluster
+   *  they are about. Falls back to the bare noun while it is still loading. */
+  eventHistoryTitle = (): string =>
+    this.clusterData.basics.name
+      ? `Event history for ${this.clusterData.basics.name}`
+      : 'Event history';
 
   // Load cluster activity/events
   async loadResourceUsage(clusterId: string): Promise<void> {
@@ -563,7 +749,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load cluster events:', error);
-      // Don't show toast for events - it's not critical
+      // No notification for events - it's not critical
     } finally {
       this.isLoadingEvents.set(false);
     }
@@ -571,7 +757,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   getEventTypeLabel = getEventTypeLabel;
 
+  getEventLine = getEventLine;
+
   getEventTypeColor = getEventTypeColor;
+
+  pluginDisplayName = pluginDisplayName;
+
+  pluginIconSrc = pluginIconSrc;
 
   getEventDetails = getEventDetails;
 
@@ -580,7 +772,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   onDeleteModalOpen(): void {
     this.errorMessage.set(null);
     this.deleteConfirmationInput.set('');
+    this.deleteAttempted.set(false);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
+  }
+
+  closeKubeconfigError(): void {
+    this.kubeconfigError.set(null);
   }
 }

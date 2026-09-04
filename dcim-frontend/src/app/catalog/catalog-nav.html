@@ -1,0 +1,55 @@
+<nldd-page sticky-header>
+  <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title size="3">
+      <h1>Catalog</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- Everything, above the heading. It is not a category with an "all" in it,
+         so it does not belong at the head of that list. -->
+    <nldd-list type="navigation" dividers="on-touch" accessible-label="All products">
+      <nldd-list-item
+        [attr.href]="viewPath('all')"
+        [attr.current]="isCurrent('all') ? '' : null"
+        (click)="goToView($event, 'all')"
+      >
+        <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
+        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+        <nldd-text-cell text="All products"></nldd-text-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-text-cell
+          width="fit-content"
+          horizontal-alignment="right"
+          color="secondary"
+          [attr.text]="totalProducts()"
+        ></nldd-text-cell>
+      </nldd-list-item>
+    </nldd-list>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-title size="5">
+      <h2>Categories</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <nldd-list type="navigation" dividers="on-touch" accessible-label="Categories">
+      @for (cat of categories; track cat) {
+        <nldd-list-item
+          [attr.href]="viewPath(cat)"
+          [attr.current]="isCurrent(cat) ? '' : null"
+          (click)="goToView($event, cat)"
+        >
+          <nldd-icon-cell [attr.icon]="categoryIcon(cat)" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell [attr.text]="cat"></nldd-text-cell>
+          @if (categoryCounts()[cat]) {
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="categoryCounts()[cat]"
+            ></nldd-text-cell>
+          }
+        </nldd-list-item>
+      }
+    </nldd-list>
+  </nldd-simple-section>
+</nldd-page>

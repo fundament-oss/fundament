@@ -1,9 +1,17 @@
 import { Routes } from '@angular/router';
 import authGuard from './auth.guard';
+import { tasksMatcher } from './tasks/task-views';
+import { roundsMatcher } from './rounds/round-views';
+import { catalogMatcher } from './catalog/catalog-views';
+import { inventoryMatcher } from './inventory/inventory-views';
+import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
+import { dataCentersMatcher } from './datacenters/datacenter-views';
+import { racksMatcher } from './racks/rack-views';
 
 const routes: Routes = [
   {
     path: 'login',
+    title: 'Log in',
     loadComponent: () => import('./login/login').then((m) => m.default),
   },
   {
@@ -12,64 +20,97 @@ const routes: Routes = [
     loadComponent: () => import('./shell/shell').then((m) => m.default),
     children: [
       {
+        // The sections list with nothing chosen, which is where back from a
+        // section's menu lands once the columns no longer fit side by side.
+        // A redirect here would leave that step without an address.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'datacenters',
+        title: 'DCIM',
+        loadComponent: () => import('./shell/no-section').then((m) => m.default),
+      },
+      {
+        // Before the detail route, not after: /catalog/all is one segment and
+        // would otherwise be read as a product id. The matcher claims only the
+        // shapes the menu makes, so an id still falls through to the page below.
+        matcher: catalogMatcher,
+        title: 'Catalog',
+        loadComponent: () => import('./catalog/catalog').then((m) => m.default),
       },
       {
         path: 'catalog/:id',
+        title: 'Product',
         loadComponent: () =>
           import('./catalog/catalog-detail/catalog-detail').then((m) => m.default),
       },
       {
-        path: 'catalog',
-        loadComponent: () => import('./catalog/catalog').then((m) => m.default),
-      },
-      {
-        path: 'inventory/:id',
-        loadComponent: () => import('./inventory/asset-detail/asset-detail').then((m) => m.default),
-      },
-      {
-        path: 'inventory',
+        // Before the detail route, for the same reason as the catalog above.
+        matcher: inventoryMatcher,
+        title: 'Inventory',
         loadComponent: () => import('./inventory/inventory').then((m) => m.default),
       },
       {
-        path: 'datacenters/:id',
-        loadComponent: () =>
-          import('./datacenters/datacenter-detail/datacenter-detail').then((m) => m.default),
+        path: 'inventory/:id',
+        title: 'Asset',
+        loadComponent: () => import('./inventory/asset-detail/asset-detail').then((m) => m.default),
       },
       {
-        path: 'datacenters',
+        // The list, one data center on it, and the layout editor over that one,
+        // are all the same page: see the matcher. A data center is a place with
+        // an address of its own, and its short name is the slug, because that is
+        // what everybody calls it.
+        matcher: dataCentersMatcher,
+        title: 'Data centers',
         loadComponent: () => import('./datacenters/datacenters').then((m) => m.default),
       },
       {
         path: 'racks/device/:id',
+        title: 'Device',
         loadComponent: () => import('./racks/device-detail/device-detail').then((m) => m.default),
       },
       {
-        path: 'racks/:rackId',
+        // The list and one rack on it are the same page, so they share one
+        // route config: see the matcher.
+        matcher: racksMatcher,
+        title: 'Racks',
         loadComponent: () => import('./racks/racks').then((m) => m.default),
       },
       {
-        path: 'racks',
-        loadComponent: () => import('./racks/racks').then((m) => m.default),
-      },
-      {
-        path: 'patch-mapping',
+        // A matcher instead of a path, like the sections above: every cable view
+        // is one route, see patch-mapping-views.ts.
+        matcher: patchMappingMatcher,
+        title: 'Patch mapping',
         loadComponent: () => import('./patch-mapping/patch-mapping').then((m) => m.default),
       },
       {
-        path: 'task-management-admin',
-        loadComponent: () =>
-          import('./task-management-admin/task-management-admin').then((m) => m.default),
+        // A matcher instead of a path: every task view is one route, see
+        // task-views.ts.
+        matcher: tasksMatcher,
+        title: 'Tasks',
+        loadComponent: () => import('./tasks/tasks').then((m) => m.default),
+      },
+      {
+        // The list of rounds and one round on it are the same page, so they
+        // share one route config: see round-views.ts.
+        matcher: roundsMatcher,
+        title: 'Rounds',
+        loadComponent: () => import('./rounds/rounds').then((m) => m.default),
       },
     ],
   },
   {
     path: 'task-management-technician',
+    title: 'My rounds',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./task-management-technician/task-management-technician').then((m) => m.default),
+  },
+  {
+    // An address none of the routes above claim: a page that has moved, or a
+    // typo in a link. Angular raises on one it cannot match, so it goes to the
+    // sections list instead, which is behind the guard and so sends you to the
+    // login page when nobody is signed in.
+    path: '**',
+    redirectTo: '/',
   },
 ];
 export default routes;

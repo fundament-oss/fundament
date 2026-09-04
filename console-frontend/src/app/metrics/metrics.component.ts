@@ -19,10 +19,11 @@ import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
-import { getUsagePercentage, getUsageColor } from '../utils/usage';
-import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
+import { getUsagePercentage } from '../utils/usage';
 import { CLUSTER, METRICS } from '../../connect/tokens';
-import DropdownSyncDirective from '../dropdown-sync.directive';
+import MetricsHealthService from '../metrics-health.service';
+import PageNavService from '../page-nav.service';
+import datePickerTranslations from '../utils/nldd-translations';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary,
@@ -34,6 +35,10 @@ import {
   type StreamWorkloadMetricsResponse,
   type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
+import '@nldd/design-system/table';
+import '@nldd/design-system/segmented-control';
+import '@nldd/design-system/date-picker';
+import '@nldd/design-system/popover';
 
 Chart.register(...registerables, ZoomPlugin);
 
@@ -87,7 +92,9 @@ export const TIME_RANGE_PRESETS: { value: TimeRangePreset; label: string }[] = [
   { value: '24h', label: '24h' },
   { value: '7d', label: '7d' },
   { value: '30d', label: '30d' },
-  { value: 'custom', label: 'Custom' },
+  // The ellipsis promises a next step: this one opens a calendar rather than
+  // switching the range on the spot, like every other segment does.
+  { value: 'custom', label: 'Custom…' },
 ];
 
 const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> = {
@@ -99,6 +106,35 @@ const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> 
 };
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
+
+/** The DS progress bar takes a colour name, not a utility class. */
+function usageColor(used: number, total: number): string {
+  const percentage = getUsagePercentage(used, total);
+  if (percentage >= 90) return 'critical';
+  if (percentage >= 75) return 'warning';
+  return 'success';
+}
+
+/** "2.4 / 8 cores (30%)": the numbers and what they add up to, in one line. */
+function usageText(used: number, total: number, unit: string): string {
+  const round = (value: number) => (Number.isInteger(value) ? value : Number(value.toFixed(1)));
+  const suffix = unit ? ` ${unit}` : '';
+  return `${round(used)} / ${round(total)}${suffix} (${getUsagePercentage(used, total)}%)`;
+}
+
+/** The same three bars as the totals, for one cluster or one node. */
+const usageBars = (entry: ClusterSummaryData | NodeUsageData) =>
+  [
+    { label: 'CPU', usage: entry.cpu, unit: 'cores' },
+    { label: 'Memory', usage: entry.memory, unit: 'GiB' },
+    { label: 'Pods', usage: entry.pods, unit: '' },
+  ].map(({ label, usage, unit }) => ({
+    label,
+    used: usage.used,
+    total: usage.total,
+    color: usageColor(usage.used, usage.total),
+    valueText: usageText(usage.used, usage.total, unit),
+  }));
 
 function formatTimestamp(ts: Timestamp | undefined, includeTime: boolean): string {
   if (!ts) return '';
@@ -168,9 +204,35 @@ function lineDataset(
   };
 }
 
+function formatRange(start: string, end: string): string {
+  const from = new Date(`${start}T00:00:00`);
+  const to = new Date(`${end}T00:00:00`);
+  const sameYear = from.getFullYear() === to.getFullYear();
+  const short: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const long: Intl.DateTimeFormatOptions = { ...short, year: 'numeric' };
+  return `${from.toLocaleDateString('en-US', sameYear ? short : long)} – ${to.toLocaleDateString('en-US', long)}`;
+}
+
+type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
+
+/** Both live outside this component's template (the sheet is teleported to the
+ *  body), so there is no ViewChild to hold them. */
+function customRangePopover(): Overlay {
+  return document.getElementById('metrics-custom-range') as Overlay;
+}
+
+function customRangeSheet(): Overlay {
+  return document.getElementById('metrics-custom-range-sheet') as Overlay;
+}
+
+function closeCustomRange(): void {
+  customRangePopover()?.hide();
+  customRangeSheet()?.hide();
+}
+
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DateRangePickerComponent, DecimalPipe, DropdownSyncDirective],
+  imports: [FormsModule, DecimalPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
@@ -183,6 +245,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private clusterClient = inject(CLUSTER);
 
   private metricsClient = inject(METRICS);
+
+  private metricsHealth = inject(MetricsHealthService);
+
+  protected pageNav = inject(PageNavService);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -232,17 +298,47 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   showCustomRange = computed(() => this.selectedPreset() === 'custom');
 
+  /** What you are looking at, and how fresh it is, in that order: the period is
+   *  the subject, the refresh time is a footnote to it. */
+  rangeSummary = computed(() => {
+    const parts: string[] = [];
+    const range = this.customRange();
+    if (range) parts.push(`Showing ${formatRange(range.start, range.end)}.`);
+    const refreshedAt = this.lastRefreshedAt();
+    if (refreshedAt) {
+      const time = refreshedAt.toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      parts.push(`Last update ${time}.`);
+    }
+    return parts.join(' ');
+  });
+
   readonly presets = TIME_RANGE_PRESETS;
+
+  readonly datePickerTranslations = datePickerTranslations;
 
   clusters = signal<ClusterOption[]>([]);
 
   isLoading = signal(false);
+
+  /** Loading that has lasted long enough to be worth a spinner. Under a second
+   *  the data is simply there, and an indicator that flashes by is noise. */
+  showBusy = signal(false);
+
+  private busyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   isLive = signal(false);
 
   connectionError = signal(false);
 
   lastRefreshedAt = signal<Date | null>(null);
+
+  /** Only set when you picked a period yourself; a preset reads off its own
+   *  button, so repeating it under the toolbar would say the same thing twice. */
+  customRange = signal<{ start: string; end: string } | null>(null);
 
   errorMessage = signal<string | null>(null);
 
@@ -326,7 +422,70 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   getUsagePercentage = getUsagePercentage;
 
-  getUsageColor = getUsageColor;
+  usageColor = usageColor;
+
+  usageText = usageText;
+
+  usageBars = usageBars;
+
+  /** The four charts, so the template does not repeat a box four times. */
+  readonly charts = [
+    { key: 'cpu', title: 'CPU usage over time' },
+    { key: 'memory', title: 'Memory usage over time' },
+    { key: 'pods', title: 'Pod count over time' },
+    { key: 'network', title: 'Network I/O over time' },
+  ];
+
+  hasChartData(key: string): boolean {
+    if (key === 'cpu') return this.hasCpuData;
+    if (key === 'memory') return this.hasMemoryData;
+    if (key === 'pods') return this.hasPodData;
+    return this.hasNetworkData;
+  }
+
+  /** The totals as progress bars: same shape as the cluster page uses. */
+  totalBars = computed(() => {
+    const totals = this.currentTotals();
+    // Loading keeps the same three bars, drained: no jump in height, and the
+    // refill is the arrival. An empty bar says "measuring" better than a
+    // spinner in the place where the measurement belongs.
+    if (!totals) {
+      return ['CPU', 'Memory', 'Pods'].map((label) => ({
+        label,
+        used: 0,
+        total: 100,
+        color: 'neutral',
+        valueText: '',
+        accessibleLabel: `${label} used`,
+      }));
+    }
+    return [
+      { label: 'CPU', ...totals.cpu },
+      { label: 'Memory', ...totals.memory },
+      { label: 'Pods', ...totals.pods },
+    ].map((metric) => ({
+      label: metric.label,
+      used: metric.used,
+      total: metric.total,
+      color: usageColor(metric.used, metric.total),
+      valueText: usageText(metric.used, metric.total, metric.unit),
+      accessibleLabel: `${metric.label} used`,
+    }));
+  });
+
+  /** What the filter buttons say while their menu is closed. */
+  clusterLabel = computed(() => {
+    const id = this.selectedClusterId();
+    return this.clusters().find((cluster) => cluster.id === id)?.name ?? 'All clusters';
+  });
+
+  namespaceLabel = computed(() => this.selectedNamespace() || 'All namespaces');
+
+  /** Picking from the menu goes through the same path the select used. */
+  selectCluster(id: string): void {
+    this.selectedClusterId.set(id);
+    this.onClusterChange();
+  }
 
   private onChartZoom(source: Chart): void {
     const { min, max } = source.scales['x'];
@@ -361,12 +520,31 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.onPresetChange((event as CustomEvent<{ value: TimeRangePreset }>).detail.value);
   }
 
+  /** Same choice from the overflow menu. There the Custom segment is off screen,
+   *  so the calendar arrives as a sheet instead of a popover with no anchor. */
+  onPresetChangeFromMenu(preset: TimeRangePreset): void {
+    this.selectedPreset.set(preset);
+    if (preset === 'custom') {
+      this.cancelStream();
+      this.isLive.set(false);
+      queueMicrotask(() => customRangeSheet()?.show());
+      return;
+    }
+    this.customRange.set(null);
+    this.applyPreset(preset);
+    this.startStream();
+  }
+
   onPresetChange(preset: TimeRangePreset): void {
     this.selectedPreset.set(preset);
     if (preset === 'custom') {
       this.cancelStream();
       this.isLive.set(false);
+      // After the click has settled, so the popover positions against a segment
+      // that has finished moving its selection.
+      queueMicrotask(() => customRangePopover()?.show());
     } else {
+      this.customRange.set(null);
       this.applyPreset(preset);
       this.startStream();
     }
@@ -380,6 +558,18 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.startStream();
   }
 
+  onRangeChange(event: Event): void {
+    const { start, end } = (event as CustomEvent<{ start?: string; end?: string }>).detail ?? {};
+    // The picker also fires halfway through a range, with only a start. Wait for
+    // both ends before reloading, otherwise the charts flash a one-day window.
+    if (!start || !end) return;
+    this.dateFrom = start;
+    this.dateTo = end;
+    this.customRange.set({ start, end });
+    closeCustomRange();
+    this.onDateChange();
+  }
+
   onDateChange(): void {
     this.startStream();
   }
@@ -388,6 +578,15 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     const { from, to } = presetToDateRange(preset);
     this.dateFrom = from;
     this.dateTo = to;
+  }
+
+  private clearData(): void {
+    this.orgTotals.set(null);
+    this.projectTotals.set(null);
+    this.clusterTotals.set(null);
+    this.clusterSummaries.set([]);
+    this.nodeUsage.set([]);
+    this.namespaceUsage.set([]);
   }
 
   private cancelStream(): void {
@@ -403,11 +602,35 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Flips the busy flag a second late, so a quick reload never blinks. */
+  private setLoading(loading: boolean): void {
+    this.isLoading.set(loading);
+    if (this.busyTimeoutId !== null) {
+      clearTimeout(this.busyTimeoutId);
+      this.busyTimeoutId = null;
+    }
+    if (!loading) {
+      this.showBusy.set(false);
+      return;
+    }
+    this.busyTimeoutId = setTimeout(() => {
+      this.busyTimeoutId = null;
+      if (this.isLoading()) this.showBusy.set(true);
+    }, 1000);
+  }
+
   private startStream(fromReconnect = false): void {
     if (!fromReconnect) this.reconnectAttempt = 0;
     this.cancelStream();
-    this.isLoading.set(true);
-    this.isLive.set(false);
+    this.setLoading(true);
+    // Drop the old numbers on a real switch, not on a reconnect. Keeping them
+    // would put 7d figures under a 30d button for as long as the load takes;
+    // empty bars and an empty frame say "not measured yet", which is true.
+    if (!fromReconnect) this.clearData();
+    // The Live badge stays put across a switch. It says the data updates by
+    // itself, and that does not stop being true because you picked another
+    // period; blinking it off and on again only draws the eye to the switch.
+    // Custom, an error and teardown each turn it off where they happen.
     this.connectionError.set(false);
     this.errorMessage.set(null);
 
@@ -419,7 +642,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     try {
       obs = this.buildStreamObservable();
     } catch (err) {
-      this.isLoading.set(false);
+      this.setLoading(false);
       this.errorMessage.set(err instanceof Error ? err.message : 'Failed to start stream');
       return;
     }
@@ -427,8 +650,12 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.streamSub = obs.subscribe({
       next: (response) => {
         this.applyStreamResponse(response);
-        this.isLoading.set(false);
+        this.setLoading(false);
         this.isLive.set(true);
+        // The badge follows an answer, not an attempt: reporting healthy when
+        // the stream is opened puts the menu on OK while the backend is down,
+        // for as long as it takes the stream to fail.
+        this.metricsHealth.report(true);
         this.reconnectAttempt = 0;
         if (response.refreshedAt) {
           this.lastRefreshedAt.set(timestampDate(response.refreshedAt));
@@ -445,9 +672,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         }
       },
       error: () => {
-        this.isLoading.set(false);
+        this.setLoading(false);
         this.isLive.set(false);
         this.connectionError.set(true);
+        this.metricsHealth.report(false);
         const delay = Math.min(5_000 * 2 ** this.reconnectAttempt, MAX_RECONNECT_DELAY_MS);
         this.reconnectAttempt += 1;
         this.reconnectTimeoutId = setTimeout(() => {
@@ -758,3 +986,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     );
   }
 }
+
+/** "Aug 1 – Aug 8, 2026", with the year once at the end when both ends share it.
+ *  An en dash between two dates reads as inclusive, which is what the picker
+ *  means; "until" would leave you guessing about the last day. */

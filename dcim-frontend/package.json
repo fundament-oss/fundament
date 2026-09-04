@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:demo": "ng serve --configuration demo",
     "prebuild": "node generate-proto-version.js",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
@@ -37,7 +38,7 @@
     "@connectrpc/connect": "2.1.2",
     "@connectrpc/connect-web": "2.1.2",
     "@dotglitch/ngx-common": "3.0.0-beta.2",
-    "@nldd/design-system": "0.8.83",
+    "@nldd/design-system": "^0.8.84",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "react": "19.2.8",

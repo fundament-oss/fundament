@@ -13,20 +13,20 @@ import (
 )
 
 const taskCreate = `-- name: TaskCreate :one
-INSERT INTO dcim.tasks (title, description, status, priority, category, assignee_id, due_date, location)
+INSERT INTO dcim.tasks (title, description, status, priority, blocked_reason, assignee_id, due_date, location)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
 `
 
 type TaskCreateParams struct {
-	Title       string
-	Description pgtype.Text
-	Status      string
-	Priority    string
-	Category    string
-	AssigneeID  pgtype.UUID
-	DueDate     pgtype.Timestamptz
-	Location    pgtype.Text
+	Title         string
+	Description   pgtype.Text
+	Status        string
+	Priority      string
+	BlockedReason pgtype.Text
+	AssigneeID    pgtype.UUID
+	DueDate       pgtype.Timestamptz
+	Location      pgtype.Text
 }
 
 func (q *Queries) TaskCreate(ctx context.Context, arg TaskCreateParams) (uuid.UUID, error) {
@@ -35,7 +35,7 @@ func (q *Queries) TaskCreate(ctx context.Context, arg TaskCreateParams) (uuid.UU
 		arg.Description,
 		arg.Status,
 		arg.Priority,
-		arg.Category,
+		arg.BlockedReason,
 		arg.AssigneeID,
 		arg.DueDate,
 		arg.Location,
@@ -64,9 +64,15 @@ func (q *Queries) TaskDelete(ctx context.Context, arg TaskDeleteParams) (int64, 
 }
 
 const taskGetByID = `-- name: TaskGetByID :one
-SELECT id, title, description, status, priority, category, assignee_id, due_date, location, created
-FROM dcim.tasks
-WHERE id = $1 AND deleted IS NULL
+SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+       COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
+FROM dcim.tasks t
+LEFT JOIN LATERAL (
+  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
+  FROM dcim.task_tags tt
+  WHERE tt.task_id = t.id
+) tags ON TRUE
+WHERE t.id = $1 AND t.deleted IS NULL
 `
 
 type TaskGetByIDParams struct {
@@ -74,16 +80,17 @@ type TaskGetByIDParams struct {
 }
 
 type TaskGetByIDRow struct {
-	ID          uuid.UUID
-	Title       string
-	Description pgtype.Text
-	Status      string
-	Priority    string
-	Category    string
-	AssigneeID  pgtype.UUID
-	DueDate     pgtype.Timestamptz
-	Location    pgtype.Text
-	Created     pgtype.Timestamptz
+	ID            uuid.UUID
+	Title         string
+	Description   pgtype.Text
+	Status        string
+	Priority      string
+	BlockedReason pgtype.Text
+	AssigneeID    pgtype.UUID
+	DueDate       pgtype.Timestamptz
+	Location      pgtype.Text
+	Created       pgtype.Timestamptz
+	Tags          []string
 }
 
 func (q *Queries) TaskGetByID(ctx context.Context, arg TaskGetByIDParams) (TaskGetByIDRow, error) {
@@ -95,51 +102,62 @@ func (q *Queries) TaskGetByID(ctx context.Context, arg TaskGetByIDParams) (TaskG
 		&i.Description,
 		&i.Status,
 		&i.Priority,
-		&i.Category,
+		&i.BlockedReason,
 		&i.AssigneeID,
 		&i.DueDate,
 		&i.Location,
 		&i.Created,
+		&i.Tags,
 	)
 	return i, err
 }
 
 const taskList = `-- name: TaskList :many
-SELECT id, title, description, status, priority, category, assignee_id, due_date, location, created
-FROM dcim.tasks
-WHERE deleted IS NULL
-  AND ($1::text IS NULL OR status = $1::text)
-  AND ($2::text IS NULL OR priority = $2::text)
-  AND ($3::text IS NULL OR category = $3::text)
-  AND ($4::uuid IS NULL OR assignee_id = $4::uuid)
-ORDER BY created DESC
+SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+       COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
+FROM dcim.tasks t
+LEFT JOIN LATERAL (
+  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
+  FROM dcim.task_tags tt
+  WHERE tt.task_id = t.id
+) tags ON TRUE
+WHERE t.deleted IS NULL
+  AND ($1::text IS NULL OR t.status = $1::text)
+  AND ($2::text IS NULL OR t.priority = $2::text)
+  AND ($3::text IS NULL OR EXISTS (
+        SELECT 1 FROM dcim.task_tags f WHERE f.task_id = t.id AND f.tag = $3::text))
+  AND ($4::uuid IS NULL OR t.assignee_id = $4::uuid)
+ORDER BY t.created DESC
 `
 
 type TaskListParams struct {
 	Status     pgtype.Text
 	Priority   pgtype.Text
-	Category   pgtype.Text
+	Tag        pgtype.Text
 	AssigneeID pgtype.UUID
 }
 
 type TaskListRow struct {
-	ID          uuid.UUID
-	Title       string
-	Description pgtype.Text
-	Status      string
-	Priority    string
-	Category    string
-	AssigneeID  pgtype.UUID
-	DueDate     pgtype.Timestamptz
-	Location    pgtype.Text
-	Created     pgtype.Timestamptz
+	ID            uuid.UUID
+	Title         string
+	Description   pgtype.Text
+	Status        string
+	Priority      string
+	BlockedReason pgtype.Text
+	AssigneeID    pgtype.UUID
+	DueDate       pgtype.Timestamptz
+	Location      pgtype.Text
+	Created       pgtype.Timestamptz
+	Tags          []string
 }
 
+// Tags come along as an array so a list of tasks stays one round trip; a task
+// without tags gets an empty array rather than a row full of NULLs.
 func (q *Queries) TaskList(ctx context.Context, arg TaskListParams) ([]TaskListRow, error) {
 	rows, err := q.db.Query(ctx, taskList,
 		arg.Status,
 		arg.Priority,
-		arg.Category,
+		arg.Tag,
 		arg.AssigneeID,
 	)
 	if err != nil {
@@ -155,11 +173,12 @@ func (q *Queries) TaskList(ctx context.Context, arg TaskListParams) ([]TaskListR
 			&i.Description,
 			&i.Status,
 			&i.Priority,
-			&i.Category,
+			&i.BlockedReason,
 			&i.AssigneeID,
 			&i.DueDate,
 			&i.Location,
 			&i.Created,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -171,6 +190,37 @@ func (q *Queries) TaskList(ctx context.Context, arg TaskListParams) ([]TaskListR
 	return items, nil
 }
 
+const taskTagsAdd = `-- name: TaskTagsAdd :exec
+INSERT INTO dcim.task_tags (task_id, tag)
+SELECT $1, unnest($2::text[])
+ON CONFLICT (task_id, tag) DO NOTHING
+`
+
+type TaskTagsAddParams struct {
+	TaskID uuid.UUID
+	Tags   []string
+}
+
+// One statement for the whole set, and the same tag twice is not an error: the
+// caller sends what the task should carry, not what changed.
+func (q *Queries) TaskTagsAdd(ctx context.Context, arg TaskTagsAddParams) error {
+	_, err := q.db.Exec(ctx, taskTagsAdd, arg.TaskID, arg.Tags)
+	return err
+}
+
+const taskTagsClear = `-- name: TaskTagsClear :exec
+DELETE FROM dcim.task_tags WHERE task_id = $1
+`
+
+type TaskTagsClearParams struct {
+	TaskID uuid.UUID
+}
+
+func (q *Queries) TaskTagsClear(ctx context.Context, arg TaskTagsClearParams) error {
+	_, err := q.db.Exec(ctx, taskTagsClear, arg.TaskID)
+	return err
+}
+
 const taskUpdate = `-- name: TaskUpdate :execrows
 UPDATE dcim.tasks
 SET title       = COALESCE($2, title),
@@ -180,36 +230,40 @@ SET title       = COALESCE($2, title),
                   END,
     status      = COALESCE($5, status),
     priority    = COALESCE($6, priority),
-    category    = COALESCE($7, category),
+    blocked_reason = CASE
+                    WHEN $7::bool THEN NULL
+                    ELSE COALESCE($8, blocked_reason)
+                  END,
     assignee_id = CASE
-                    WHEN $8::bool THEN NULL
-                    ELSE COALESCE($9, assignee_id)
+                    WHEN $9::bool THEN NULL
+                    ELSE COALESCE($10, assignee_id)
                   END,
     due_date    = CASE
-                    WHEN $10::bool THEN NULL
-                    ELSE COALESCE($11, due_date)
+                    WHEN $11::bool THEN NULL
+                    ELSE COALESCE($12, due_date)
                   END,
     location    = CASE
-                    WHEN $12::bool THEN NULL
-                    ELSE COALESCE($13, location)
+                    WHEN $13::bool THEN NULL
+                    ELSE COALESCE($14, location)
                   END
 WHERE id = $1 AND deleted IS NULL
 `
 
 type TaskUpdateParams struct {
-	ID               uuid.UUID
-	Title            pgtype.Text
-	ClearDescription bool
-	Description      pgtype.Text
-	Status           pgtype.Text
-	Priority         pgtype.Text
-	Category         pgtype.Text
-	ClearAssignee    bool
-	AssigneeID       pgtype.UUID
-	ClearDueDate     bool
-	DueDate          pgtype.Timestamptz
-	ClearLocation    bool
-	Location         pgtype.Text
+	ID                 uuid.UUID
+	Title              pgtype.Text
+	ClearDescription   bool
+	Description        pgtype.Text
+	Status             pgtype.Text
+	Priority           pgtype.Text
+	ClearBlockedReason bool
+	BlockedReason      pgtype.Text
+	ClearAssignee      bool
+	AssigneeID         pgtype.UUID
+	ClearDueDate       bool
+	DueDate            pgtype.Timestamptz
+	ClearLocation      bool
+	Location           pgtype.Text
 }
 
 func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, error) {
@@ -220,7 +274,8 @@ func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, 
 		arg.Description,
 		arg.Status,
 		arg.Priority,
-		arg.Category,
+		arg.ClearBlockedReason,
+		arg.BlockedReason,
 		arg.ClearAssignee,
 		arg.AssigneeID,
 		arg.ClearDueDate,

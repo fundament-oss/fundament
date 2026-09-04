@@ -1,52 +1,56 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Cluster node pools</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">
-      Configure node pools for cluster 'cluster-1'.
-    </p>
-  </div>
-
-  <!-- Form -->
-  <div class="px-6 py-6">
-    @if (errorMessage()) {
-      <div
-        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="true"
+  placement="right"
+  accessible-label="Edit node pools"
+  (close)="onCancel()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Node pools"
+      collapse-anchor="node-pools-title"
+      dismiss-text="Cancel"
+      (dismiss)="onCancel()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title
+        id="node-pools-title"
+        size="3"
       >
-        <nldd-icon
-          name="dismiss-circle"
-          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-        ></nldd-icon>
-        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-      </div>
-    }
-    @if (isLoading()) {
-      <div class="flex items-center justify-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">Loading node pools...</p>
-      </div>
-    } @else {
-      <app-shared-node-pools-form
-        [initialData]="initialNodePools()"
-        [machineTypeOptions]="machineTypeOptions()"
-        (formSubmit)="onFormSubmit($event)"
-      >
-        <div class="flex space-x-3">
-          <nldd-button
-            type="button"
-            (click)="onCancel()"
-            [disabled]="isSubmitting()"
-            text="Cancel"
-            variant="secondary"
-          ></nldd-button>
+        <h1>Node pools</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (errorMessage()) {
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (isLoading()) {
+        <nldd-activity-indicator
+          show-text
+          text="Loading node pools..."
+        ></nldd-activity-indicator>
+      } @else {
+        <app-shared-node-pools-form
+          [initialData]="initialNodePools()"
+          [machineTypeOptions]="machineTypeOptions()"
+          (formSubmit)="onFormSubmit($event)"
+        >
+          <!-- No cancel button: the title bar's dismiss already covers leaving. -->
           <nldd-button
             type="button"
             (click)="nodePoolsForm.submit()"
-            [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-            [disabled]="isSubmitting()"
+            text="Save changes"
+            [loading]="isSubmitting()"
+            width="full"
             variant="primary"
           ></nldd-button>
-        </div>
-      </app-shared-node-pools-form>
-    }
-  </div>
-</div>
+        </app-shared-node-pools-form>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

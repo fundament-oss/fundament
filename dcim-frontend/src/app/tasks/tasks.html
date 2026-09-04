@@ -1,0 +1,884 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-page sticky-header [attr.sticky-footer]="selectionMode() ? '' : null">
+  <!-- The bar carries the way back to the task menu once the panes collapse to
+       one column, which the old header could not do. Back also takes the address
+       back to the section, so the URL and the pane on screen agree. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="viewTitle()"
+    back-text="Tasks"
+    collapse-anchor="tasks-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  <!-- What you do with a selection, docked. Up in the list toolbar it went off
+       screen the moment you scrolled, so picking a row at the bottom of a long
+       list meant scrolling back up to act on it.
+       It arrives with the mode rather than with the first tick, with its buttons
+       disabled: that way the bar does not jump in and out of the layout, and it
+       says up front what the mode is for. -->
+  @if (selectionMode()) {
+    <nldd-simple-section slot="footer" padding-top="0" padding-bottom="12">
+      <!-- Above the row rather than in it, the way the count above the list
+           reads. Beside the button it was a second thing changing width from the
+           same left edge: ticking one row shrank the text by 50 and the button
+           moved 50 with it. On its own line nothing stands beside it, so nothing
+           moves, and it no longer has to line up against a control that is
+           taller than a line of text. -->
+      <nldd-text>{{ selectionSummary() }}</nldd-text>
+      <nldd-spacer size="4"></nldd-spacer>
+      <nldd-toolbar label="Bulk actions">
+        <!-- First in the row, so its left edge is fixed and the label may say
+             what a press will do rather than hold one width. -->
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            [attr.text]="allFilteredSelected() ? 'Deselect all' : 'Select all'"
+            (click)="toggleSelectAll(!allFilteredSelected())"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            [attr.text]="allFilteredSelected() ? 'Deselect all' : 'Select all'"
+            (select)="toggleSelectAll(!allFilteredSelected())"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <!-- Not disabled but absent until there is something to act on. A
+             control you cannot press does not say why; one that is not there
+             yet arrives the moment it has work to do. -->
+        @if (selectedTasks().size > 0) {
+          <nldd-toolbar-item slot="end">
+            <!-- The menu is slotted into the button that opens it, so it
+                 anchors and closes itself: no id to keep in step with an anchor,
+                 and no handle to reach for when an item is picked. -->
+            <nldd-button variant="secondary" text="Set status" expandable popup-type="menu">
+              <nldd-menu slot="popup" accessible-label="Set status">
+                <ng-container [ngTemplateOutlet]="bulkStatusItems"></ng-container>
+              </nldd-menu>
+            </nldd-button>
+            <!-- The same choices as a submenu, for when the bar runs out of room. -->
+            <nldd-menu-item slot="overflow" text="Set status">
+              <nldd-menu>
+                <ng-container [ngTemplateOutlet]="bulkStatusItems"></ng-container>
+              </nldd-menu>
+            </nldd-menu-item>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
+            <nldd-button variant="secondary" text="Assign" expandable popup-type="menu">
+              <nldd-menu slot="popup" accessible-label="Assign to">
+                <ng-container [ngTemplateOutlet]="bulkAssignItems"></ng-container>
+              </nldd-menu>
+            </nldd-button>
+            <nldd-menu-item slot="overflow" text="Assign">
+              <nldd-menu>
+                <ng-container [ngTemplateOutlet]="bulkAssignItems"></ng-container>
+              </nldd-menu>
+            </nldd-menu-item>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              variant="destructive"
+              text="Delete"
+              start-icon="trash"
+              (click)="openBulkDeleteDialog()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              destructive
+              icon="trash"
+              text="Delete"
+              (select)="openBulkDeleteDialog()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        }
+      </nldd-toolbar>
+    </nldd-simple-section>
+  }
+  @if (hasSelection()) {
+    <nldd-simple-section>
+      <nldd-title id="tasks-title" size="2">
+        <h1>{{ viewTitle() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- The page actions in a toolbar rather than beside the title: a toolbar
+           takes a second and a third action without the title growing a row of
+           controls, and it moves what does not fit into its overflow menu. -->
+      <nldd-toolbar label="Task actions">
+        <!-- Both gone while you are picking rows: making a task and opening the
+             board are ways out of the mode you did not ask for, and the bar
+             should hold what the mode is for. -->
+        @if (!selectionMode()) {
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              variant="primary"
+              text="New task…"
+              start-icon="plus-small"
+              (click)="openNewTask()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="plus-small"
+              text="New task…"
+              (select)="openNewTask()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        }
+        <!-- Picking tasks is a mode, not a column of checkboxes standing by. -->
+        <!-- The board is a way of working on the tasks, not a second version of
+             this page: it opens over the list and hands it back on close, so the
+             view you left is the view you return to. -->
+        @if (!selectionMode()) {
+          <nldd-toolbar-item slot="end">
+            <nldd-button
+              variant="secondary"
+              text="Kanban"
+              start-icon="kanban"
+              (click)="openKanban()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="kanban"
+              text="Kanban"
+              (select)="openKanban()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        }
+        <!-- One button in two states: it turns the mode on, and once you are in
+             it, it is the way out. Done rather than a pressed Select, because
+             leaving is what you want from it by then. -->
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            [attr.variant]="selectionMode() ? 'primary' : 'secondary'"
+            [attr.text]="selectionMode() ? 'Done' : 'Select'"
+            (click)="setSelectionMode(!selectionMode())"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            [attr.text]="selectionMode() ? 'Done' : 'Select'"
+            (select)="setSelectionMode(!selectionMode())"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (loadError()) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Could not load tasks"
+          [attr.supporting-text]="loadError()"
+        >
+          <nldd-button
+            slot="actions"
+            variant="primary"
+            text="Try again"
+            (click)="retryLoad()"
+          ></nldd-button>
+        </nldd-inline-dialog>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      <!-- ── LIST VIEW ── -->
+      <div [hidden]="filteredTasks().length === 0">
+        <!-- A list, not a table: every row says what its parts are (a status tag,
+             a priority, an avatar), so the column headers the old markup carried
+             had nothing left to explain. Which columns are on screen follows the
+             width of this list through hide-below, so the widest ones drop out in
+             a narrow pane instead of squeezing the title to nothing. -->
+        <!-- How many rows, the way the other lists say it. A toolbar would be a
+             row of controls around one sentence. -->
+        <nldd-text color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list accessible-label="Tasks">
+          <!-- Outside selection mode the row is cut into two: the icon sets the
+               state, the rest opens the task. Inside it the row itself is the
+               checkbox and the icon goes back to being a picture, because a
+               control inside a control is invalid and a mode that changes what a
+               click does should say so.
+               Either way the state icon is on the left. It is what you pick rows
+               by: everything that waits, everything that is done. -->
+          @for (task of filteredTasks(); track task.id) {
+            @if (selectionMode()) {
+              <nldd-list-item
+                checkbox
+                [attr.checked]="isSelected(task.id) ? '' : null"
+                (change)="toggleSelection(task.id, $any($event).detail.checked)"
+              >
+                <!-- The row carries the role and the state, so the box beside the
+                     text is a picture of it and nothing more. -->
+                <!-- The measurements of the state icon it stands in for: a cell
+                     of 32 against the row's own padding, then 16 to the title.
+                     Centred in that cell, so the box lands on the middle of the
+                     icon it replaces and neither the row nor the title moves
+                     when the mode goes on. -->
+                <nldd-cell width="32px" horizontal-alignment="center" vertical-alignment="top">
+                  <nldd-checkbox
+                    decorative
+                    [attr.checked]="isSelected(task.id) ? '' : null"
+                  ></nldd-checkbox>
+                </nldd-cell>
+                <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                <!-- No state icon here. Outside this mode it opens a menu, and an
+                     icon that looks like a control but has stopped being one
+                     teaches people not to trust it. Picking rows by state is what
+                     the views in the menu are for: go to Done, then select all. -->
+                <ng-container
+                  [ngTemplateOutlet]="taskCells"
+                  [ngTemplateOutletContext]="{ $implicit: task }"
+                ></ng-container>
+              </nldd-list-item>
+            } @else {
+              <nldd-list-item>
+                <!-- The same menu the sheet opens, off the same icon. It used
+                     to cycle on one click, which was quick but could only walk
+                     the three it knew: a waiting task shows a clock and the
+                     cycle had nowhere to put it. One vocabulary is worth the
+                     second click. The menu hangs off this segment by id and
+                     drives its expanded state, so the row stays lit while it is
+                     open. -->
+                <nldd-list-item-segment
+                  button
+                  [attr.id]="'task-status-' + task.id"
+                  [attr.accessible-label]="holdReason(task) ?? 'Status: ' + task.status"
+                >
+                  <!-- Top-aligned: a row runs to two or three lines and the state
+                       belongs beside the title, not beside whatever happens to be
+                       halfway down. -->
+                  <nldd-icon-cell
+                    size="32"
+                    vertical-alignment="top"
+                    [attr.icon]="taskStateIcon(task)"
+                  ></nldd-icon-cell>
+                </nldd-list-item-segment>
+                <!-- No spacer between the two: a segmented action carries its own
+                     inline padding, so one here would set the gap twice. -->
+                <nldd-list-item-segment
+                  button
+                  width="full"
+                  [attr.accessible-label]="'Open ' + task.title"
+                  (click)="openDetail(task.id)"
+                >
+                  <ng-container
+                    [ngTemplateOutlet]="taskCells"
+                    [ngTemplateOutletContext]="{ $implicit: task }"
+                  ></ng-container>
+                </nldd-list-item-segment>
+              </nldd-list-item>
+            }
+          }
+        </nldd-list>
+        <!-- One per row, anchored by id. They live outside the list because a
+             menu is not a row; open, each one is in the top layer anyway. -->
+        @for (task of filteredTasks(); track task.id) {
+          <nldd-menu placement="bottom-start" [attr.anchor]="'task-status-' + task.id">
+            <ng-container
+              [ngTemplateOutlet]="statusItems"
+              [ngTemplateOutletContext]="{ $implicit: task }"
+            ></ng-container>
+          </nldd-menu>
+        }
+      </div>
+      <!-- The page's own empty state, and a section of its own: a list that draws
+           its message where the rows would have been puts it under the toolbar and
+           against the top of the page. Nothing to show is a fact about the whole
+           view, so it stands in the middle of it. -->
+      @if (filteredTasks().length === 0) {
+        <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+          <nldd-inline-dialog
+            text="No tasks found"
+            supporting-text="Try adjusting your search or filter criteria."
+          ></nldd-inline-dialog>
+        </nldd-simple-section>
+      }
+
+      <!-- The cells of a task row, shared by both shapes of row above. -->
+      <ng-template #taskCells let-task>
+        <!-- Under the title first whose turn it is and how far the work has got,
+             then the tags with the place among them: where the work is, is as much
+             a property of it as what kind of work it is. Both belong to the task,
+             so both read after it.
+             Tags in inline flow rather than a flex container, so a second line does
+             not open a gap between the lines, and &ngsp; is Angular's own
+             keep-this-space entity. -->
+        <nldd-text-cell width="full" min-width="160px" [attr.text]="task.title">
+          @if (rowStateLine(task) || tagCloud(task).length) {
+            <span slot="supporting-text">
+              <!-- One step up from what the cell gives its supporting region, which
+                   is drawn for a caption and reads small under a title of this
+                   size. The color is set to match the region it sits in, so this
+                   changes the size and nothing else. -->
+              @if (rowStateLine(task); as state) {
+                <nldd-text size="sm" color="secondary">{{ state }}</nldd-text>
+              }
+              @if (tagCloud(task).length) {
+                <div>
+                  @for (tag of tagCloud(task); track tag) {
+                    <nldd-tag size="sm" color="neutral" [attr.text]="tag"></nldd-tag>&ngsp;
+                  }
+                </div>
+              }
+            </span>
+          }
+        </nldd-text-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-text-cell
+          width="110px"
+          horizontal-alignment="right"
+          hide-below="480px"
+          [attr.text]="task.due ? formatDate(task.due) : ''"
+        ></nldd-text-cell>
+        <!-- Priority last, on the edge, and only when there is one: the cell is
+             left out rather than left empty, so a task without a priority ends on
+             its date instead of on a gap. It survives every width, unlike the
+             date: 24 pixels is cheap and this is the mark you least want to lose.
+             The tooltip is for the eye. It never fires on touch and an icon takes
+             no focus, so the word is given to assistive software separately. -->
+        @if (task.priority !== 'None') {
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-icon-cell size="24">
+            <nldd-tooltip [attr.text]="'Priority: ' + task.priority">
+              <nldd-icon
+                aria-hidden="false"
+                [attr.name]="priorityIcon(task.priority)"
+                [attr.aria-label]="'Priority: ' + task.priority"
+              ></nldd-icon>
+            </nldd-tooltip>
+          </nldd-icon-cell>
+        }
+      </ng-template>
+    </nldd-simple-section>
+  } @else {
+    <!-- The section is open and nothing is picked. The console says the same
+         thing in the same place: the menu beside this pane is the next move. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  }
+</nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     KANBAN SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<!-- Over the page rather than beside it in a toggle: the board and the list are
+     not two halves of one choice you keep making, and a sheet says what a
+     segment could not — that you are somewhere else for a moment and the list
+     is waiting behind it. -->
+<nldd-sheet #kanbanSheetEl accessible-label="Kanban board" placement="bottom">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Kanban"
+      dismiss-text="Close"
+      (dismiss)="closeKanban()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="h-full">
+      <div
+        class="flex h-full items-stretch gap-3 overflow-x-auto pb-2 snap-x snap-mandatory sm:snap-none"
+        cdkDropListGroup
+      >
+        @for (col of kanbanColumns; track col) {
+          <div class="shrink-0 w-72 snap-center flex flex-col min-h-0">
+            <div class="mb-3 flex items-center gap-2">
+              <span
+                class="h-2 w-2 rounded-full"
+                [class]="statusStyles[col].dot"
+                aria-hidden="true"
+              ></span>
+              <h3 class="text-sm font-semibold text-slate-700 dark:text-gray-300">{{ col }}</h3>
+              <nldd-tag
+                class="ml-auto"
+                color="neutral"
+                size="sm"
+                [attr.text]="tasksForColumn(col).length"
+              ></nldd-tag>
+            </div>
+            <!-- Whole lane (including empty space below the last card) is a drop
+                 target. Sorting is disabled: columns have no persisted order, so
+                 dropping only changes status, never position. -->
+            <div
+              class="flex-1 min-h-0 space-y-2 rounded-xl bg-slate-50/60 dark:bg-gray-900/40 p-2"
+              cdkDropList
+              cdkDropListSortingDisabled
+              [id]="'kanban-col-' + col"
+              [cdkDropListData]="tasksForColumn(col)"
+              (cdkDropListDropped)="onKanbanDrop($event, col)"
+            >
+              @for (task of tasksForColumn(col); track task.id) {
+                <div
+                  [class]="kanbanCardClass(task.status)"
+                  cdkDrag
+                  [cdkDragData]="task"
+                  tabindex="0"
+                  (click)="openDetail(task.id)"
+                  (keydown.enter)="openDetail(task.id)"
+                  (keydown.space)="openDetail(task.id)"
+                >
+                  <!-- Ghost slot shown where the card will land while it is
+                       being dragged (the card itself follows the cursor). -->
+                  <div
+                    *cdkDragPlaceholder
+                    class="rounded-xl border-2 border-dashed border-accent-400 dark:border-accent-600 bg-accent-50/50 dark:bg-accent-950/30 min-h-[96px]"
+                  ></div>
+                  <h4 class="text-sm font-medium text-slate-900 dark:text-white leading-snug">
+                    {{ task.title }}
+                  </h4>
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    @if (task.priority !== 'None') {
+                      <nldd-tag
+                        size="sm"
+                        [attr.color]="priorityTagColor(task.priority)"
+                        [attr.text]="task.priority"
+                      ></nldd-tag>
+                    }
+                    @for (tag of taskTagList(task); track tag) {
+                      <nldd-tag size="sm" color="neutral" [attr.text]="tag"></nldd-tag>
+                    }
+                  </div>
+                  <div class="mt-3 flex items-center justify-between">
+                    @if (placeLabel(task); as place) {
+                      <span
+                        class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 truncate max-w-[60%]"
+                      >
+                        <nldd-icon
+                          name="apartment-building"
+                          style="width: 11px; height: 11px"
+                          aria-hidden="true"
+                        ></nldd-icon
+                        >{{ place }}
+                      </span>
+                    } @else {
+                      <span></span>
+                    }
+                    <div class="flex items-center gap-2">
+                      @if (task.due) {
+                        <span class="text-xs text-slate-400 dark:text-gray-500">{{
+                          shortDate(task.due)
+                        }}</span>
+                      }
+                      @if (getTech(task.assignee); as tech) {
+                        <span
+                          [class]="techInitialsClass(tech, 'h-6 w-6 text-[10px]')"
+                          [title]="tech.name"
+                          aria-hidden="true"
+                          >{{ tech.initials }}</span
+                        >
+                      } @else if (assigneeUnresolved(task)) {
+                        <span
+                          [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
+                          title="Assigned, but the directory could not be loaded"
+                          aria-hidden="true"
+                          >?</span
+                        >
+                      } @else if (assigneeMissing(task)) {
+                        <span
+                          [class]="unknownAvatarClass('h-6 w-6 text-[10px]')"
+                          title="Assigned to someone who is no longer in the directory"
+                          aria-hidden="true"
+                          >?</span
+                        >
+                      } @else {
+                        <span
+                          [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
+                          aria-hidden="true"
+                        >
+                          <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                  <!-- No note count here: ListTasks does not carry one, and notes
+                       are only fetched when a task's detail sheet is opened, so a
+                       badge would appear on the handful of cards that happen to
+                       have been opened and read as "no notes" on all the rest.
+                       Restore it once the task list carries a note count. -->
+                </div>
+              }
+              @if (tasksForColumn(col).length === 0) {
+                <div class="p-6 text-center text-xs text-slate-400 dark:text-gray-500">
+                  No tasks
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TASK DETAIL SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<!-- (close) rather than a document-wide Escape key: the sheet already says when
+     it goes away, whichever route closed it, and a handler on the document
+     cannot see what is on top of it. With a confirmation open over this sheet,
+     Escape belongs to that dialog. -->
+<nldd-sheet
+  #detailSheetEl
+  accessible-label="Task details"
+  placement="right"
+  (close)="onDetailSheetClosed()"
+>
+  <!-- The round is the page's to open, not the sheet's: the sheet holds one
+       task and the round is a view over all of them. -->
+  <app-task-detail
+    [taskId]="detailTaskId()"
+    (closed)="closeDetail()"
+    (openRound)="openTechnicianView()"
+  ></app-task-detail>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TECHNICIAN VIEW SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<!-- The round this task is walked in, over the page you were on rather than in
+     a section of its own: a planner peeking from their list should keep their
+     place in it. Read-only, like every round outside the walkthrough itself.
+     Deferred, because it is a page in its own right and nobody pays for it
+     until they ask for it. -->
+<nldd-sheet #technicianSheetEl accessible-label="Round" placement="bottom">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Round"
+      dismiss-text="Close"
+      (dismiss)="closeTechnicianView()"
+    ></nldd-top-title-bar>
+    @defer (when technicianOpen()) {
+      @if (detailTask(); as task) {
+        <app-task-management-technician
+          embedded
+          [readOnly]="true"
+          [round]="roundOf(task)"
+        ></app-task-management-technician>
+      }
+    }
+  </nldd-page>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     STATUS ITEMS
+     ══════════════════════════════════════════════════════════════ -->
+<!-- Four, and exactly one of them is on: this says what the task is for you.
+     Somebody else's work is Waiting however far they have got with it, which is
+     the same thing the icon in the list says. To do and Doing are theirs to be
+     in, so choosing one on their task asks whether you are taking it over;
+     Waiting opens the window where you can say where they stand instead.
+     One template for the items, so the row and the sheet cannot drift
+     apart; each site brings its own menu around them, because one hangs off
+     a button and the other off a row. -->
+<ng-template #statusItems let-task>
+  @for (option of kanbanColumns; track option) {
+    <nldd-menu-item
+      type="radio"
+      [attr.text]="option"
+      [attr.icon]="statusIcon(option)"
+      [attr.selected]="holdReason(task) === null && task.status === option ? '' : null"
+      (select)="ui.setStatus(task, option, $event)"
+    ></nldd-menu-item>
+    @if (option === 'To do') {
+      <nldd-menu-item
+        type="radio"
+        icon="clock"
+        text="Waiting…"
+        [attr.selected]="holdReason(task) !== null ? '' : null"
+        (select)="ui.openWaitingDialog(task, $event)"
+      ></nldd-menu-item>
+    }
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BULK DELETE CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #bulkDeleteDialogEl
+  variant="alert"
+  icon="trash"
+  [attr.text]="
+    'Delete ' + selectedTasks().size + (selectedTasks().size === 1 ? ' task?' : ' tasks?')
+  "
+  supporting-text="The selected tasks and their notes are removed for everyone. This cannot be undone."
+  accessible-label="Delete selected tasks confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="primary"
+    [text]="selectedTasks().size === 1 ? 'Keep task' : 'Keep tasks'"
+    size="sm"
+    (click)="closeBulkDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    [text]="selectedTasks().size === 1 ? 'Delete task' : 'Delete tasks'"
+    size="sm"
+    (click)="confirmBulkDelete()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD / EDIT TASK SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<!-- The filters are the menu of this section: what state a task is in, how urgent
+     it is and what kind of work it is. Declared here because the counts are this
+     page's data. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Tasks</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- No heading over the first list: it sits right under "Tasks" and the
+           states name themselves. The order is the order you work in: what has
+           not been decided, what has to happen today, then the states, and All
+           at the bottom as the place to fall back to rather than the place to
+           start. -->
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Status">
+        <!-- Views, not statuses: these cut across the states below. A task can
+             be a to-do and sit in Waiting at the same time, because the state
+             says how far the work is and the view says whose move it is. -->
+        <nldd-list-item
+          [attr.href]="viewPath('inbox')"
+          [attr.current]="isMenuSelection('inbox') ? '' : null"
+          (click)="goToView($event, 'inbox')"
+        >
+          <nldd-icon-cell icon="inbox" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Inbox"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="inboxCount()"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="viewPath('today')"
+          [attr.current]="isMenuSelection('today') ? '' : null"
+          (click)="goToView($event, 'today')"
+        >
+          <nldd-icon-cell icon="calendar-event" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Today"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="todayCount()"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (status of kanbanColumns; track status) {
+          <nldd-list-item
+            [attr.href]="viewPath('status', status)"
+            [attr.current]="isMenuSelection('status', status) ? '' : null"
+            (click)="goToView($event, 'status', status)"
+          >
+            <nldd-icon-cell [attr.icon]="statusIcon(status)" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="status"></nldd-text-cell>
+            @if (statusCounts()[status]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="statusCounts()[status]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+          <!-- Waiting directly under To do, because that is what it is: a to-do
+               that is somebody else's. To do holds the ones you can start now,
+               Waiting the ones you cannot. -->
+          @if (status === 'To do') {
+            <nldd-list-item
+              [attr.href]="viewPath('waiting')"
+              [attr.current]="isMenuSelection('waiting') ? '' : null"
+              (click)="goToView($event, 'waiting')"
+            >
+              <nldd-icon-cell icon="clock" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell text="Waiting"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="waitingCount()"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        }
+        <nldd-list-item
+          [attr.href]="viewPath('all')"
+          [attr.current]="isMenuSelection('all') ? '' : null"
+          (click)="goToView($event, 'all')"
+        >
+          <nldd-icon-cell icon="all-tasks" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="tasks().length"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Priority</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Priority">
+        <!-- Without None: the menu navigates to a priority, and "no priority" is
+             not one. Those tasks live under All, and the picker in the form is
+             where you take a priority off again. -->
+        @for (priority of menuPriorities; track priority) {
+          <nldd-list-item
+            [attr.href]="viewPath('priority', priority)"
+            [attr.current]="isMenuSelection('priority', priority) ? '' : null"
+            (click)="goToView($event, 'priority', priority)"
+          >
+            <nldd-icon-cell [attr.icon]="priorityIcon(priority)" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="priority"></nldd-text-cell>
+            @if (priorityCounts()[priority]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="priorityCounts()[priority]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Tags</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- A tree, because a tag can be a path: a rack hangs under the data
+           center it stands in. A branch is cut in two, a chevron that folds and
+           a label that filters, because it has two things to do. A row with
+           nothing to fold is the control itself, so arrowing to it and pressing
+           Enter opens it without a detour through a segment. -->
+      <nldd-list type="tree" dividers="on-touch" accessible-label="Tags">
+        @for (node of tagTree(); track node.path) {
+          @if (node.children.length) {
+            <!-- No `current` on the row: the label segment below carries it, and
+                 the row paints itself from that. -->
+            <nldd-list-item [attr.expanded]="isTagExpanded(node.path) ? '' : null">
+              <nldd-list-item-segment
+                button
+                disclosure
+                [attr.accessible-label]="'Fold ' + node.name + ' open or shut'"
+                (click)="toggleTag($event, node.path)"
+              >
+                <nldd-icon-cell icon="chevron-right" size="20"></nldd-icon-cell>
+              </nldd-list-item-segment>
+              <nldd-list-item-segment
+                width="full"
+                [attr.href]="viewPath('tag', node.path)"
+                [attr.current]="isMenuSelection('tag', node.path) ? '' : null"
+                (click)="goToView($event, 'tag', node.path)"
+              >
+                <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  [attr.text]="node.count"
+                ></nldd-text-cell>
+              </nldd-list-item-segment>
+              @for (child of node.children; track child.path) {
+                <!-- The indent marks the level: one spacer for the chevron this
+                     row does not have, one for the step in. -->
+                <nldd-list-item
+                  slot="children"
+                  [attr.href]="viewPath('tag', child.path)"
+                  [attr.current]="isMenuSelection('tag', child.path) ? '' : null"
+                  (click)="goToView($event, 'tag', child.path)"
+                >
+                  <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                  <nldd-spacer-cell size="44"></nldd-spacer-cell>
+                  <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-text-cell width="full" [attr.text]="child.name"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    color="secondary"
+                    [attr.text]="child.count"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list-item>
+          } @else {
+            <nldd-list-item
+              [attr.href]="viewPath('tag', node.path)"
+              [attr.current]="isMenuSelection('tag', node.path) ? '' : null"
+              (click)="goToView($event, 'tag', node.path)"
+            >
+              <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="node.count"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     THE QUESTIONS A STATUS MENU CAN LAND ON
+     ══════════════════════════════════════════════════════════════ -->
+<!-- Rendered here and in the task sheet, one component either way, so the two
+     places a status menu opens from cannot ask it differently. -->
+<app-task-status-dialogs></app-task-status-dialogs>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BULK MENU ITEMS
+     ══════════════════════════════════════════════════════════════ -->
+<!-- One copy each, because every button in the bar has a twin in the overflow
+     and two hand-written lists drift apart the first time one of them changes. -->
+<ng-template #bulkStatusItems>
+  @for (s of kanbanColumns; track s) {
+    <nldd-menu-item
+      [attr.text]="s"
+      [attr.icon]="statusIcon(s)"
+      (select)="bulkSetStatus(s)"
+    ></nldd-menu-item>
+    <!-- Under To do, where the row menu keeps it. It opens the same window on
+         the whole selection: with more than one task there is nobody the first
+         two options could already be about, so it asks who, and answering hands
+         them all over. -->
+    @if (s === 'To do') {
+      <nldd-menu-item icon="clock" text="Waiting…" (select)="bulkWaiting($event)"></nldd-menu-item>
+    }
+  }
+</ng-template>
+<!-- Names without their avatars: a face helps you scan a board, a menu you
+     read. -->
+<ng-template #bulkAssignItems>
+  <nldd-menu-item text="Unassigned" (select)="bulkAssign(null)"></nldd-menu-item>
+  <nldd-menu-divider></nldd-menu-divider>
+  @for (tech of technicians(); track tech.id) {
+    <nldd-menu-item [attr.text]="tech.name" (select)="bulkAssign(tech.id)"></nldd-menu-item>
+  }
+</ng-template>

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
@@ -37,10 +38,6 @@ func (s *Server) UpdateTask(
 
 	if req.HasPriority() {
 		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
-	}
-
-	if req.HasCategory() {
-		params.Category = pgtype.Text{String: taskCategoryFromProto(req.GetCategory()), Valid: true}
 	}
 
 	// For the nullable columns, an explicitly-set field clears the column when it
@@ -88,7 +85,24 @@ func (s *Server) UpdateTask(
 		}
 	}
 
-	rowsAffected, err := s.queries.TaskUpdate(ctx, params)
+	if req.HasBlockedReason() {
+		params.BlockedReason = pgtype.Text{String: req.GetBlockedReason(), Valid: true}
+	}
+
+	params.ClearBlockedReason = req.GetClearBlockedReason()
+
+	// The row and its tags are separate writes, and replacing tags is itself a
+	// clear followed by an add. One transaction, so a failure halfway cannot
+	// leave the task updated with its tags gone.
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	rowsAffected, err := qtx.TaskUpdate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == dbconst.ConstraintDcimTasksFkAssignee {
@@ -99,6 +113,30 @@ func (s *Server) UpdateTask(
 
 	if rowsAffected != 1 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("task not found"))
+	}
+
+	// Tags are replaced rather than merged: a non-empty list says what the task
+	// should carry from now on. A repeated field has no presence, so an empty
+	// list cannot mean "carry none" without also meaning "leave them alone" —
+	// clear_tags is the field that says it, the way clear_blocked_reason does
+	// for the column above.
+	if len(req.GetTags()) > 0 || req.GetClearTags() {
+		if err := qtx.TaskTagsClear(ctx, db.TaskTagsClearParams{TaskID: taskID}); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to clear task tags: %w", err))
+		}
+
+		if tags := req.GetTags(); len(tags) > 0 {
+			if err := qtx.TaskTagsAdd(ctx, db.TaskTagsAddParams{
+				TaskID: taskID,
+				Tags:   tags,
+			}); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to tag task: %w", err))
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "task updated", "task_id", taskID)

@@ -1,0 +1,84 @@
+<nldd-title
+  id="new-cluster-form-step-title"
+  size="3"
+>
+  <h1>Name your cluster and pick a region</h1>
+</nldd-title>
+<nldd-spacer size="16"></nldd-spacer>
+<nldd-form
+  [formGroup]="clusterForm"
+  (submit)="onSubmit($event)"
+  (keydown.enter)="onSubmit($event)"
+>
+  <nldd-form-field label="Cluster name">
+    <nldd-text-field
+      id="clusterName"
+      appAutofocus
+      [value]="clusterName?.value"
+      (blur)="onClusterNameBlur()"
+      (input)="onClusterNameInput($event)"
+      [invalid]="(clusterName?.invalid && formSubmitted()) || clusterNameExists()"
+      unmet="new-cluster-name-error"
+    ></nldd-text-field>
+    <nldd-form-field-help-text>E.g. my-production-cluster</nldd-form-field-help-text>
+    <nldd-validation-list>
+      <nldd-validation-item id="new-cluster-name-error">
+        @if (clusterName?.invalid && (clusterName.dirty || formSubmitted())) {
+          {{ getClusterNameError() }}
+        }
+        @if (clusterNameExists()) {
+          A cluster with this name already exists.
+        }
+      </nldd-validation-item>
+    </nldd-validation-list>
+  </nldd-form-field>
+  @if (catalogError()) {
+    <nldd-banner
+      variant="critical"
+      [attr.text]="catalogError()"
+    ></nldd-banner>
+  }
+  <nldd-form-field label="Region">
+    <nldd-toggle-button-group
+      type="radio"
+      name="region"
+      accessible-label="Region"
+      (change)="onRadioChange('region', $event)"
+    >
+      @for (r of regions(); track r.value) {
+        <nldd-toggle-button
+          type="radio"
+          [value]="r.value"
+          [text]="r.label"
+          [selected]="clusterForm.get('region')?.value === r.value"
+        ></nldd-toggle-button>
+      }
+    </nldd-toggle-button-group>
+  </nldd-form-field>
+  <nldd-form-field label="Kubernetes version">
+    <nldd-toggle-button-group
+      type="radio"
+      name="kubernetesVersion"
+      accessible-label="Kubernetes version"
+      (change)="onRadioChange('kubernetesVersion', $event)"
+    >
+      @for (kv of kubernetesVersions(); track kv) {
+        <nldd-toggle-button
+          type="radio"
+          [value]="kv"
+          [text]="kv"
+          [selected]="clusterForm.get('kubernetesVersion')?.value === kv"
+        ></nldd-toggle-button>
+      }
+    </nldd-toggle-button-group>
+  </nldd-form-field>
+  <nldd-form-actions>
+    <nldd-button
+      type="submit"
+      text="Continue to Node pools"
+      end-icon="chevron-right"
+      width="full"
+      variant="primary"
+    ></nldd-button>
+  </nldd-form-actions>
+</nldd-form>

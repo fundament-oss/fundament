@@ -4,7 +4,7 @@ import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
@@ -94,8 +94,8 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
         } as unknown as OrganizationDataService,
       },
       {
-        provide: ToastService,
-        useValue: { success: () => {}, error: () => {} } as unknown as ToastService,
+        provide: NotificationService,
+        useValue: { success: () => {}, error: () => {} } as unknown as NotificationService,
       },
     ],
   });

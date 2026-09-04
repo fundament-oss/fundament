@@ -14,55 +14,6 @@
    work, and at specificity (0,2,0) they outrank anything we could hang off
    html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
-:root {
-  --primitives-font-size-100: theme('fontSize.base');
-
-  /* Custom focus ring, since the NLDD default is very dark */
-  --semantics-focus-ring-outline: none;
-  --semantics-focus-ring-box-shadow:
-    var(--semantics-surfaces-base-background-color) 0 0 0 2px,
-    var(--primitives-color-accent-200) 0 0 0 4px;
-}
-
-/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
-::view-transition-group(root) {
-  @apply animate-[700ms_ease-out];
-}
-
-::view-transition-new(root) {
-  animation-name: reveal-light;
-  animation-fill-mode: both;
-}
-
-::view-transition-old(root),
-.dark::view-transition-old(root) {
-  @apply -z-10 animate-none;
-  animation-fill-mode: both;
-}
-
-.dark::view-transition-new(root) {
-  animation-name: reveal-dark;
-  animation-fill-mode: both;
-}
-
-@keyframes reveal-light {
-  from {
-    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
-  }
-  to {
-    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
-  }
-}
-
-@keyframes reveal-dark {
-  from {
-    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
-  }
-  to {
-    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
-  }
-}
-
 @theme {
   /* The colour ramps are copied as literal values out of the design system
      (dist/css/palettes.generated.css: accent = lintblauw, neutral = coolgray,
@@ -192,8 +143,45 @@
   --font-mono: var(--primitives-font-family-monospace);
 }
 
+/* Angular puts two elements in the main pane that are pure plumbing: the
+   router-outlet anchor, and the routed component wrapping its nldd-page. The
+   pane flex-grows every slotted child, so both claim a share of the height and
+   a page shorter than the pane starts halfway down. `display: contents` takes
+   them out of the layout and leaves the nldd-page as the pane's own child. No
+   visual styling involved, and nothing for a page to have to undo.
+
+   Everything but the page itself: a view that slots its nldd-page straight into
+   the pane has nothing to flatten, and flattening the page takes away the box
+   its own `height: 100%` and `overflow-y: auto` need. It then grows past the
+   pane instead of scrolling inside it, and the app view clips what does not
+   fit. */
+nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > *:not(nldd-page) {
+  display: contents;
+}
+
+/* Same story one level down: a component that wraps an nldd-page and is slotted
+   into a sheet stands between the two, and the page then has no height to
+   scroll within.
+
+   Written the same way as the rule above rather than as a list of component
+   names. A list is a promise to remember, and it was already broken: the task
+   detail was missing from it and its sheet would not scroll. A sheet has one
+   slot and takes one page, so anything else between the two is a wrapper and
+   has no business in the layout. */
+nldd-sheet > *:not(nldd-page) {
+  display: contents;
+}
+
+/* No dark:text-white here. The design system's content color is deliberately a
+   notch softer than pure white, and text-content already carries it in both
+   schemes; the override only made light-DOM text brighter than every component
+   that colors itself, which showed up as icons glowing beside their neighbours. */
+/* The ground behind the app is the design system's base surface, not a pinned
+   Tailwind step: it is the same colour nldd-app-view paints, so the first paint
+   before Angular boots already shows the right one, in both schemes. */
 body {
-  @apply text-content font-body bg-neutral-25 dark:bg-gray-900 dark:text-white;
+  @apply text-content font-body;
+  background-color: var(--semantics-surfaces-base-background-color);
 }
 
 button {
@@ -238,31 +226,4 @@ input[type='radio']:checked {
 }
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 150ms ease;
-}
-
-/* Rack diagram: free slot diagonal stripe */
-.rack-slot-free {
-  background-color: #f8fafc;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    #e2e8f0 4px,
-    #e2e8f0 5px
-  );
-  border: 1px dashed #94a3b8;
-  color: #94a3b8;
-}
-
-.dark .rack-slot-free {
-  background-color: #111827;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    #374151 4px,
-    #374151 5px
-  );
-  border-color: #475569;
-  color: #64748b;
 }

@@ -112,6 +112,7 @@ export function createServerStreamingFn<I extends DescMessage, O extends DescMes
         // on every message, so one frame per streamed message — each retaining
         // its message — stays alive until the stream ends. A log tail emits per
         // line, which turns that into unbounded retention.
+        // eslint-disable-next-line no-restricted-syntax -- an async iterable has no array form to iterate.
         for await (const message of streamResponse.message) {
           if (subscriber.closed) return;
           subscriber.next(message);

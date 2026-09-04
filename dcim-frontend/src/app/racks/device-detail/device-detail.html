@@ -1,773 +1,508 @@
-@if (device(); as dev) {
-  <div class="flex items-start">
-    <!-- ══════════════════════════════════════════════════════════════
-         LEFT SIDEBAR: Rack mini view
-         ══════════════════════════════════════════════════════════════ -->
-    @if (rack(); as r) {
-      <aside
-        class="w-80 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-hidden sticky top-17 h-[calc(100vh-4.25rem)]"
-        aria-label="Rack position"
-      >
-        <!-- Rack header -->
-        <div class="shrink-0 px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800">
-          <p
-            class="text-[10px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wider"
-          >
-            {{ dcLabel() }}
-          </p>
-          <p class="text-sm font-semibold text-gray-900 dark:text-white font-mono mt-0.5">
-            {{ r.name }}
-          </p>
-          <p class="mt-1.5 text-[10px] text-slate-400 dark:text-gray-500">
-            <span class="text-slate-600 dark:text-gray-300 font-medium">{{ uRange(dev) }}</span>
-            · {{ r.devices.length }} device{{ r.devices.length === 1 ? '' : 's' }}
-          </p>
-        </div>
-
-        <!-- Rack diagram -->
-        <div class="flex-1 overflow-y-auto px-2 py-3">
-          <app-rack-diagram
-            [rack]="r"
-            [activeDeviceId]="deviceId()"
-            (deviceSelect)="navigateToDevice($event)"
-          />
-        </div>
-      </aside>
-    }
-
-    <!-- ══════════════════════════════════════════════════════════════
-         MAIN: Device detail
-         ══════════════════════════════════════════════════════════════ -->
-    <div class="flex-1 min-w-0 pb-6">
-      <!-- Header -->
-      <div class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shrink-0">
-        <div class="max-w-4xl py-4 flex items-center gap-4 px-4 sm:px-6">
-          <a
-            routerLink="//racks"
-            class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-            aria-label="Back to Racks"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Racks
-          </a>
-          <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
-          @if (rack(); as r) {
-            <a
-              [routerLink]="['/racks', r.id]"
-              class="text-xs font-mono text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-            >
-              {{ r.name }}
-            </a>
-            <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
-          }
-          <h1 class="text-sm font-semibold text-gray-900 dark:text-white font-mono">
-            {{ dev.name }}
-          </h1>
-          <nldd-tag
-            class="ml-1 capitalize"
+<!-- One machine, in one column: the same shape as the pages it hangs under.
+     The drawing of the rack that used to stand beside it is gone: the page you
+     came from is that drawing, and it said the same thing twice. -->
+<nldd-page sticky-header style="--context-back-button-display: flex">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="device()?.name ?? 'Device'"
+    [attr.back-text]="rack()?.name ?? 'Racks'"
+    collapse-anchor="device-title"
+    (back)="backToRack($event)"
+  ></nldd-top-title-bar>
+  @if (device(); as dev) {
+    <nldd-simple-section>
+      <nldd-title id="device-title" size="2">
+        <h1>
+          {{ dev.name }}&ngsp;<nldd-tag
             size="sm"
-            [attr.color]="stateTagColor(dev.state)"
-            [attr.text]="dev.state"
+            color="neutral"
+            [attr.text]="deviceTypeLabel(dev.type)"
           ></nldd-tag>
-          <span class="ml-auto text-sm text-gray-400 dark:text-gray-500">{{
-            deviceTypeLabel(dev.type)
-          }}</span>
-        </div>
-      </div>
-
-      <!-- Chassis panels: front + rear side by side -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 pb-2 max-w-4xl px-4 sm:px-6 w-full">
-        <!-- Front panel -->
-        <section aria-labelledby="front-heading">
-          <h2
-            id="front-heading"
-            class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
-          >
-            Front
-          </h2>
-          <div
-            class="rounded-md border px-3 py-2 flex items-center gap-3 select-none"
-            [class]="chassisFrontClass(dev)"
-            [style.min-height.px]="chassisHeight(dev)"
-            role="img"
-            [attr.aria-label]="dev.name + ' front panel'"
-          >
-            <!-- Liveliness LED -->
-            <span
-              class="shrink-0 w-2.5 h-2.5 rounded-full ring-1 ring-black/20"
-              [class]="livelinessClass(dev.liveliness)"
-              aria-hidden="true"
-            >
-            </span>
-            <!-- Drive bays (decorative) -->
-            <div class="flex gap-0.5" aria-hidden="true">
-              @for (_ of driveBays(dev); track $index) {
-                <span class="w-3 h-6 rounded-sm bg-white/20 border border-white/30"></span>
-              }
-            </div>
-            <!-- Name -->
-            <span class="font-mono text-xs text-gray-900 dark:text-white truncate flex-1">{{
-              dev.name
-            }}</span>
-            <!-- Power button -->
-            <span
-              class="shrink-0 w-5 h-5 rounded-full border flex items-center justify-center"
-              [class]="
-                dev.ipmi?.powerstate === 'ON'
-                  ? 'border-teal-700 text-teal-700 dark:text-teal-300'
-                  : 'border-gray-700 text-gray-700 dark:text-gray-300'
-              "
-              aria-hidden="true"
-            >
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M10 2a1 1 0 011 1v4a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 2.22a1 1 0 011.415 0 8 8 0 11-11.314 0A1 1 0 015.735 5.64 6 6 0 1010 4a1 1 0 011-1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </div>
-        </section>
-
-        <!-- Rear panel -->
-        <section aria-labelledby="rear-heading">
-          <h2
-            id="rear-heading"
-            class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
-          >
-            Rear
-          </h2>
-          <div
-            class="rounded-md border border-gray-600 bg-gray-500 px-3 py-2 flex items-center gap-3 select-none"
-            [style.min-height.px]="chassisHeight(dev)"
-            role="img"
-            [attr.aria-label]="dev.name + ' rear panel'"
-          >
-            <!-- NIC ports (decorative) -->
-            <div class="flex gap-1 flex-wrap" aria-hidden="true">
-              @for (_ of nicPorts(dev); track $index) {
-                <span
-                  class="w-5 h-4 rounded-sm bg-white/20 border border-white/30 flex items-center justify-center"
-                >
-                  <span class="w-3 h-2 rounded-sm bg-white/10"></span>
-                </span>
-              }
-            </div>
-            <!-- IPMI port label -->
-            @if (dev.ipmi) {
-              <span class="font-mono text-xs text-gray-900 dark:text-white truncate flex-1">{{
-                dev.ipmi.address
-              }}</span>
-            }
-            <!-- Power connectors (decorative) -->
-            <div class="flex gap-1 shrink-0" aria-hidden="true">
-              <span class="w-5 h-8 rounded-sm bg-white/20 border border-white/30"></span>
-              <span class="w-5 h-8 rounded-sm bg-white/20 border border-white/30"></span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- Info sections -->
-      <div class="grid grid-cols-1 pt-2 max-w-4xl px-4 sm:px-6 w-full">
-        <div class="flex flex-col gap-4">
-          <!-- Identity -->
-          <section
-            class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-            aria-labelledby="identity-heading"
-          >
-            <h2
-              id="identity-heading"
-              class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800"
-            >
-              Identity
-            </h2>
-            <dl class="divide-y divide-gray-50">
-              @if (dev.model) {
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Model</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ dev.model }}</dd>
-                </div>
-              }
-              <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                <dt class="text-sm text-gray-500 dark:text-gray-400">Name</dt>
-                <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ dev.name }}</dd>
-              </div>
-              @if (dev.assetTag) {
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Asset Tag</dt>
-                  <dd class="text-xs font-mono">
-                    <a
-                      [routerLink]="['/inventory', dev.assetTag]"
-                      class="text-blue-600 dark:text-blue-300 underline hover:text-blue-700 dark:hover:text-blue-300 hover:no-underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                    >
-                      {{ dev.assetTag }}
-                    </a>
-                  </dd>
-                </div>
-              }
-              <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                <dt class="text-sm text-gray-500 dark:text-gray-400">State</dt>
-                <dd>
-                  <nldd-tag
-                    class="capitalize"
-                    size="sm"
-                    [attr.color]="stateTagColor(dev.state)"
-                    [attr.text]="dev.state"
-                  ></nldd-tag>
-                </dd>
-              </div>
-              <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                <dt class="text-sm text-gray-500 dark:text-gray-400">U Position</dt>
-                <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ uRange(dev) }}</dd>
-              </div>
-              @if (rack(); as r) {
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Rack</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ r.name }}</dd>
-                </div>
-              }
-              @if (dev.warrantyExpiry) {
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Warranty Expiry</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ dev.warrantyExpiry }}
-                  </dd>
-                </div>
-              }
-              @if (dev.lastMaintenance) {
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Last Maintenance</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ dev.lastMaintenance }}
-                  </dd>
-                </div>
-              }
-            </dl>
-          </section>
-
-          <!-- Hardware -->
-          @if (dev.hardware; as hw) {
-            <section
-              class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-              aria-labelledby="hardware-heading"
-            >
-              <h2
-                id="hardware-heading"
-                class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800"
-              >
-                Hardware
-              </h2>
-              <div
-                class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100 dark:divide-gray-800"
-              >
-                <div class="px-4 py-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ hw.cpu_cores }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">CPU cores</p>
-                </div>
-                <div class="px-4 py-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {{ formatMemory(hw.memory) }}
-                  </p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Memory</p>
-                </div>
-                <div class="px-4 py-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ hw.disks }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Disks</p>
-                </div>
-                <div class="px-4 py-4 text-center">
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ hw.nics }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">NICs</p>
-                </div>
-              </div>
-            </section>
+        </h1>
+        <span slot="subtitle">
+          {{ uRange(dev) }}
+          @if (rack(); as r) {
+            in {{ r.name }}
           }
-
-          <!-- IPMI / Power -->
-          @if (dev.ipmi; as ipmi) {
-            <section
-              class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-              aria-labelledby="ipmi-heading"
-            >
-              <h2
-                id="ipmi-heading"
-                class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800"
-              >
-                IPMI / Power
-              </h2>
-              <dl class="divide-y divide-gray-50">
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">IPMI Address</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ ipmi.address }}
-                  </dd>
-                </div>
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Power State</dt>
-                  <dd>
-                    <nldd-tag
-                      size="sm"
-                      [attr.color]="powerTagColor(ipmi.powerstate)"
-                      [attr.text]="ipmi.powerstate"
-                    ></nldd-tag>
-                  </dd>
-                </div>
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Avg. Draw</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ ipmi.averageW }} W
-                  </dd>
-                </div>
-              </dl>
-            </section>
+          @if (dcLabel()) {
+            · {{ dcLabel() }}
           }
+        </span>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
 
-          <!-- Allocation / Workload -->
-          @if (dev.allocation; as alloc) {
-            <section
-              class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-              aria-labelledby="alloc-heading"
-            >
-              <h2
-                id="alloc-heading"
-                class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800"
-              >
-                Allocation
-              </h2>
-              <dl class="divide-y divide-gray-50">
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Project</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ alloc.project }}
-                  </dd>
-                </div>
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Role</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ alloc.role }}</dd>
-                </div>
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">Hostname</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">
-                    {{ alloc.hostname }}
-                  </dd>
-                </div>
-                <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
-                  <dt class="text-sm text-gray-500 dark:text-gray-400">OS Image</dt>
-                  <dd class="text-xs font-mono text-gray-900 dark:text-white">{{ alloc.image }}</dd>
-                </div>
-              </dl>
-            </section>
+      <!-- Identity: label left, value right, no icons. The same list a data
+           center uses for its properties. -->
+      <nldd-title size="4">
+        <h2>Identity</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list variant="box-tinted" accessible-label="Device identity">
+        @if (dev.model) {
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Model"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell horizontal-alignment="right" [attr.text]="dev.model"></nldd-text-cell>
+          </nldd-list-item>
+        }
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Name"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="dev.name"></nldd-text-cell>
+        </nldd-list-item>
+        @if (dev.assetTag) {
+          <nldd-list-item [attr.href]="'/inventory/' + dev.assetTag">
+            <nldd-text-cell width="180px" text="Asset tag"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="dev.assetTag"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="State"></nldd-text-cell>
+          <nldd-cell width="full" horizontal-alignment="right">
+            <nldd-text>
+              <nldd-badge decorative [attr.color]="stateTagColor(dev.state)"></nldd-badge>&ngsp;{{
+                stateLabel(dev.state)
+              }}
+            </nldd-text>
+          </nldd-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="U position"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="uRange(dev)"></nldd-text-cell>
+        </nldd-list-item>
+        @if (rack(); as r) {
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Rack"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell horizontal-alignment="right" [attr.text]="r.name"></nldd-text-cell>
+          </nldd-list-item>
+        }
+        @if (dev.warrantyExpiry) {
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Warranty expiry"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="dev.warrantyExpiry"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+        @if (dev.lastMaintenance) {
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Last maintenance"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="dev.lastMaintenance"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+
+      <!-- What is in it, as the four numbers a data center shows for its
+           halls: cards in a row that keep their size in a narrow pane. -->
+      @if (dev.hardware; as hw) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>Hardware</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-collection
+          layout="horizontal-scroll"
+          item-width="160px"
+          gap="16px"
+          accessible-label="Hardware figures"
+        >
+          <nldd-card background="tinted">
+            <nldd-container padding="16">
+              <nldd-text size="sm" color="secondary">CPU cores</nldd-text>
+              <nldd-title size="3">
+                <h3>{{ hw.cpu_cores }}</h3>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+          <nldd-card background="tinted">
+            <nldd-container padding="16">
+              <nldd-text size="sm" color="secondary">Memory</nldd-text>
+              <nldd-title size="3">
+                <h3>{{ formatMemory(hw.memory) }}</h3>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+          <nldd-card background="tinted">
+            <nldd-container padding="16">
+              <nldd-text size="sm" color="secondary">Disks</nldd-text>
+              <nldd-title size="3">
+                <h3>{{ hw.disks }}</h3>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+          <nldd-card background="tinted">
+            <nldd-container padding="16">
+              <nldd-text size="sm" color="secondary">NICs</nldd-text>
+              <nldd-title size="3">
+                <h3>{{ hw.nics }}</h3>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+        </nldd-collection>
+      }
+
+      @if (dev.ipmi; as ipmi) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>IPMI and power</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list variant="box-tinted" accessible-label="IPMI and power">
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="IPMI address"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="ipmi.address"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Power state"></nldd-text-cell>
+            <nldd-cell width="full" horizontal-alignment="right">
+              <nldd-text>
+                <nldd-badge decorative [attr.color]="powerTagColor(ipmi.powerstate)"></nldd-badge
+                >&ngsp;{{ ipmi.powerstate === 'ON' ? 'On' : 'Off' }}
+              </nldd-text>
+            </nldd-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Average draw"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="ipmi.averageW + ' W'"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+      }
+
+      @if (dev.allocation; as alloc) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>Allocation</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list variant="box-tinted" accessible-label="Allocation">
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Project"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="alloc.project"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Role"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell horizontal-alignment="right" [attr.text]="alloc.role"></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Hostname"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="alloc.hostname"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="OS image"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell horizontal-alignment="right" [attr.text]="alloc.image"></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+      }
+
+      <!-- Where its cables run. The state of a connection is a dot with the
+           word beside it, the same as a state anywhere else. -->
+      @if (deviceConnections().length > 0) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>Connections</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list variant="box-tinted" accessible-label="Device connections">
+          @for (conn of deviceConnections(); track conn.id) {
+            <nldd-list-item [attr.href]="'/racks/device/' + conn.remoteDeviceId">
+              <nldd-text-cell
+                width="full"
+                [attr.text]="conn.localPort + ' → ' + conn.remoteDeviceName + ' ' + conn.remotePort"
+                [attr.supporting-text]="conn.remoteRackName"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-text>
+                  <nldd-badge
+                    decorative
+                    [attr.color]="connectionStatusColor(conn.status)"
+                  ></nldd-badge
+                  >&ngsp;{{ connectionStatusLabel(conn.status) }}
+                </nldd-text>
+              </nldd-cell>
+            </nldd-list-item>
           }
+        </nldd-list>
+      }
 
-          <!-- Connections -->
-          @if (deviceConnections().length > 0) {
-            <section
-              class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-              aria-labelledby="connections-heading"
-            >
-              <div
-                class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between"
-              >
-                <h2 id="connections-heading" class="font-semibold text-gray-700 dark:text-gray-300">
-                  Connections
-                  <span
-                    class="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
-                    >{{ deviceConnections().length }}</span
-                  >
-                </h2>
-              </div>
-              <ul class="divide-y divide-gray-50" aria-label="Device connections">
-                @for (conn of deviceConnections(); track conn.id) {
-                  <li class="flex items-center gap-3 px-4 py-3">
-                    <!-- Type icon -->
-                    <span
-                      class="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-sm"
-                      [class]="connectionTypeColor(conn.type)"
-                      aria-hidden="true"
-                    >
-                      <i class="ti" [class]="connectionTypeIcon(conn.type)"></i>
-                    </span>
-                    <!-- Port info -->
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-100"
-                          >{{ conn.localPort }}</span
-                        >
-                        <svg
-                          class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M17 8l4 4m0 0l-4 4m4-4H3"
-                          />
-                        </svg>
-                        <a
-                          [routerLink]="['/racks/device', conn.remoteDeviceId]"
-                          class="font-mono text-xs font-medium text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded truncate max-w-40"
-                        >
-                          {{ conn.remoteDeviceName }}
-                        </a>
-                        <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{
-                          conn.remotePort
-                        }}</span>
-                      </div>
-                      @if (conn.remoteRackName) {
-                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-mono">
-                          {{ conn.remoteRackName }}
-                        </p>
-                      }
-                    </div>
-                    <!-- Status -->
-                    <div
-                      class="shrink-0 flex items-center gap-1.5"
-                      [attr.aria-label]="connectionStatusLabel(conn.status)"
-                    >
-                      <span
-                        class="w-2 h-2 rounded-full ring-1 ring-black/10"
-                        [class]="connectionStatusDot(conn.status)"
-                        aria-hidden="true"
-                      >
-                      </span>
-                      <span class="text-[10px] text-gray-500 dark:text-gray-400">{{
-                        connectionStatusLabel(conn.status)
-                      }}</span>
-                    </div>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
-
-          <!-- Ports -->
-          <section
-            class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-            aria-labelledby="ports-heading"
-          >
-            <!-- Card header -->
-            <div
-              class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between"
-            >
-              <h2 id="ports-heading" class="font-semibold text-gray-700 dark:text-gray-300">
-                Ports
-                <span
-                  class="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
-                >
-                  {{ devicePorts().length }}
-                </span>
-              </h2>
-              <nldd-button
-                variant="secondary"
+      <!-- The ports, one kind at a time. What a port is plugged into is the
+           row's supporting line, and connecting or disconnecting it is the one
+           thing you can do to it. -->
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Ports</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-toolbar label="Port actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Add port…"
+            start-icon="plus-small"
+            (click)="showAddPortForm.set(true)"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-list variant="box-tinted" accessible-label="Ports" empty-text="No ports on this device">
+        @for (port of devicePorts(); track port.id) {
+          @let cable = portCableMap().get(port.id);
+          @let peer =
+            cable ? (cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide) : null;
+          <nldd-list-item>
+            <!-- The kind behind the name, in the same neutral tag a product's
+                 ports wear. -->
+            <nldd-text-cell
+              width="full"
+              min-width="140px"
+              [attr.supporting-text]="peer ? peer.deviceName + ' › ' + peer.portName : null"
+              >{{ port.name }}&ngsp;<nldd-tag
                 size="sm"
-                text="Add port"
-                start-icon="plus-small"
-                (click)="showAddPortForm.set(!showAddPortForm())"
-                [attr.aria-expanded]="showAddPortForm()"
-              ></nldd-button>
-            </div>
-
-            <!-- Tab bar -->
-            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
-              <nldd-segmented-control
-                [value]="activePortTab()"
-                size="sm"
-                type="radio"
-                variant="text"
-                (change)="activePortTab.set($any($event).detail.value)"
-                aria-label="Port type tabs"
-              >
-                @for (tab of PORT_TABS; track tab) {
-                  <nldd-segmented-control-item
-                    [attr.value]="tab"
-                    [attr.text]="PORT_TYPE_LABEL[tab]"
-                  ></nldd-segmented-control-item>
-                }
-              </nldd-segmented-control>
-            </div>
-
-            <!-- Add port inline form -->
-            @if (showAddPortForm()) {
-              <div
-                class="px-4 py-3 bg-slate-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-2"
-              >
-                <nldd-text-field
-                  #portNameInput
-                  [value]="newPortName()"
-                  (input)="newPortName.set($any($event.target).value)"
-                  (keydown.enter)="addPort()"
-                  placeholder="Port name (e.g. eth4)"
-                  accessible-label="New port name"
-                  size="sm"
-                ></nldd-text-field>
-                <nldd-button
-                  variant="primary"
-                  size="sm"
-                  text="Add"
-                  (click)="addPort()"
-                ></nldd-button>
+                color="neutral"
+                [attr.text]="portTypeLabel(port.type)"
+              ></nldd-tag
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <!-- Whether it is in use, as a state anywhere else in this app: a
+                 dot with the word beside it, and the action to its right. -->
+            <nldd-cell width="fit-content">
+              <nldd-text>
+                <nldd-badge decorative [attr.color]="cable ? 'success' : 'neutral'"></nldd-badge
+                >&ngsp;{{ cable ? 'Connected' : 'Not connected' }}
+              </nldd-text>
+            </nldd-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              @if (cable) {
                 <nldd-button
                   variant="secondary"
                   size="sm"
-                  text="Cancel"
-                  (click)="showAddPortForm.set(false)"
+                  text="Disconnect"
+                  (click)="disconnectCable(port.id)"
+                  [attr.accessible-label]="'Disconnect ' + port.name"
                 ></nldd-button>
-              </div>
-            }
-
-            <!-- Port table -->
-            <div
-              role="tabpanel"
-              [attr.id]="'port-panel-' + activePortTab()"
-              [attr.aria-labelledby]="'port-tab-' + activePortTab()"
-            >
-              @if (devicePorts().length > 0) {
-                <nldd-table
-                  [attr.accessible-label]="PORT_TYPE_LABEL[activePortTab()] + ' table'"
-                  columns="minmax(120px, 1fr) minmax(120px, 1fr) minmax(160px, 1.5fr) 120px"
-                >
-                  <nldd-table-row slot="header">
-                    <nldd-text-cell text="**Name**" size="sm"></nldd-text-cell>
-                    <nldd-text-cell text="**Cable**" size="sm"></nldd-text-cell>
-                    <nldd-text-cell text="**Peer**" size="sm"></nldd-text-cell>
-                    <nldd-text-cell
-                      text="**Actions**"
-                      size="sm"
-                      horizontal-alignment="right"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-
-                  @for (port of devicePorts(); track port.id) {
-                    @let cable = portCableMap().get(port.id);
-                    <nldd-table-row>
-                      <nldd-text-cell class="font-mono" [attr.text]="port.name"></nldd-text-cell>
-                      <nldd-cell width="full">
-                        @if (cable) {
-                          <a
-                            routerLink="/patch-mapping"
-                            class="font-mono text-accent-600 dark:text-accent-300 underline hover:text-accent-800 dark:hover:text-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded text-xs"
-                            [title]="cable.id"
-                            >{{ cable.label ?? cable.id }}</a
-                          >
-                        } @else {
-                          <span class="text-gray-300 dark:text-gray-600">—</span>
-                        }
-                      </nldd-cell>
-                      <nldd-cell width="full">
-                        @if (cable) {
-                          @let peer =
-                            cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide;
-                          <span class="font-mono text-xs">
-                            <a
-                              [routerLink]="['/racks/device', peer.deviceId]"
-                              class="text-accent-600 dark:text-accent-300 hover:underline focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
-                              >{{ peer.deviceName }}</a
-                            >
-                            <span class="text-gray-400 dark:text-gray-500 ml-1"
-                              >› {{ peer.portName }}</span
-                            >
-                          </span>
-                        } @else {
-                          <span class="text-gray-300 dark:text-gray-600">—</span>
-                        }
-                      </nldd-cell>
-                      <nldd-cell horizontal-alignment="right">
-                        @if (cable) {
-                          <nldd-button
-                            variant="secondary"
-                            size="xs"
-                            text="Disconnect"
-                            (click)="disconnectCable(port.id)"
-                            [attr.aria-label]="'Disconnect ' + port.name"
-                          ></nldd-button>
-                        } @else {
-                          <nldd-button
-                            variant="secondary"
-                            size="xs"
-                            text="Connect"
-                            (click)="openConnectForm(port)"
-                            [attr.aria-label]="'Connect ' + port.name"
-                          ></nldd-button>
-                        }
-                      </nldd-cell>
-                    </nldd-table-row>
-                  }
-                </nldd-table>
               } @else {
-                <div
-                  class="py-8 flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 text-xs"
-                >
-                  No {{ PORT_TYPE_LABEL[activePortTab()] | lowercase }} on this device.
-                  <nldd-button
-                    variant="secondary"
-                    size="sm"
-                    text="Add one"
-                    (click)="showAddPortForm.set(true)"
-                  ></nldd-button>
-                </div>
+                <nldd-button
+                  variant="secondary"
+                  size="sm"
+                  text="Connect"
+                  (click)="openConnectForm(port)"
+                  [attr.accessible-label]="'Connect ' + port.name"
+                ></nldd-button>
               }
-            </div>
-          </section>
+            </nldd-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
 
-          <!-- Notes -->
-          <section
-            class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-            aria-labelledby="notes-heading"
-          >
-            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <h2 id="notes-heading" class="font-semibold text-gray-700 dark:text-gray-300">
-                Notes
-                @if (notes().length > 0) {
-                  <span
-                    class="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
-                    >{{ notes().length }}</span
-                  >
-                }
-              </h2>
-            </div>
-            @if (notesDescription()) {
-              <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {{ notesDescription() }}
-                </p>
-              </div>
-            }
-            <div class="px-4 py-4 space-y-3">
-              @if (notes().length === 0) {
-                <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
-                  No notes yet
-                </p>
-              }
-              @for (comment of notes(); track comment.id) {
-                <div class="flex gap-3">
-                  <div class="shrink-0 pt-0.5">
-                    <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-xs font-semibold text-indigo-700 dark:text-indigo-300 shrink-0 select-none"
-                      aria-hidden="true"
-                    >
-                      {{ comment.initials }}
-                    </span>
-                  </div>
-                  <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3.5 py-3">
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{
-                        comment.author
-                      }}</span>
-                      <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
-                        formatDaysAgo(comment.daysAgo)
-                      }}</span>
-                    </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {{ comment.content }}
-                    </p>
-                  </div>
-                </div>
-              }
-              <!-- Add note input -->
-              <div class="flex gap-2.5 pt-1">
-                <div
-                  class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
-                  aria-hidden="true"
-                >
-                  Y
-                </div>
-                <div class="flex-1 relative">
-                  <nldd-text-field
-                    #noteInput
-                    (keydown.enter)="addNote()"
-                    placeholder="Add a note…"
-                    accessible-label="Add a note"
-                    size="sm"
-                    class="w-full"
-                  ></nldd-text-field>
-                  <button
-                    class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-                    aria-label="Send note"
-                    (click)="addNote()"
-                  >
-                    <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
+      <!-- Notes stay inline: writing one is the point of the section, not a
+           trip to a sheet. The field is the last row of the same box, so a new
+           note appears right above where you typed it. -->
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Notes</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      @if (notesDescription()) {
+        <nldd-text color="secondary">{{ notesDescription() }}</nldd-text>
+        <nldd-spacer size="12"></nldd-spacer>
+      }
+      <nldd-list variant="box-tinted" accessible-label="Notes">
+        @for (comment of notes(); track comment.id) {
+          <nldd-list-item>
+            <nldd-cell width="fit-content" vertical-alignment="top">
+              <nldd-avatar size="28" [attr.name]="comment.author"></nldd-avatar>
+            </nldd-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="full"
+              [attr.text]="comment.content"
+              [attr.supporting-text]="comment.author + ' · ' + formatDaysAgo(comment.daysAgo)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+        <nldd-list-item>
+          <nldd-cell width="full">
+            <nldd-multi-line-text-field
+              #noteInput
+              rows="1"
+              placeholder="Write a note about this device"
+              accessible-label="Add a note"
+            ></nldd-multi-line-text-field>
+          </nldd-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-cell width="fit-content" vertical-alignment="bottom">
+            <nldd-button variant="secondary" text="Send" (click)="addNote()"></nldd-button>
+          </nldd-cell>
+        </nldd-list-item>
+      </nldd-list>
 
-          <!-- History -->
-          @if (deviceHistory().length > 0) {
-            <section
-              class="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-              aria-labelledby="history-heading"
-            >
-              <h2
-                id="history-heading"
-                class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800"
-              >
-                History
-              </h2>
-              <ol class="px-4 py-3 flex flex-col gap-0" aria-label="Device history">
-                @for (
-                  entry of deviceHistory();
-                  track entry.daysAgo + entry.description;
-                  let last = $last
-                ) {
-                  <li class="flex items-start gap-3">
-                    <!-- Icon + vertical line -->
-                    <div class="flex flex-col items-center shrink-0">
-                      <div
-                        class="flex h-7 w-7 items-center justify-center rounded-full"
-                        [class]="historyIconBg(entry.action)"
-                        aria-hidden="true"
-                      >
-                        <i class="ti text-sm" [class]="historyIcon(entry.action)"></i>
-                      </div>
-                      @if (!last) {
-                        <div
-                          class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-4"
-                          aria-hidden="true"
-                        ></div>
-                      }
-                    </div>
-                    <!-- Content -->
-                    <div class="pb-4 min-w-0 flex-1">
-                      <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
-                        {{ entry.description }}
-                      </p>
-                      <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">
-                        {{ entry.user }} · {{ formatDaysAgo(entry.daysAgo) }}
-                      </p>
-                    </div>
-                  </li>
-                }
-              </ol>
-            </section>
+      <!-- History like an asset's: the track carries the line between the
+           events, so the rows need no dividers of their own. -->
+      @if (deviceHistory().length > 0) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>History</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list variant="box-tinted" dividers="never" accessible-label="Device history">
+          @for (entry of deviceHistory(); track entry.daysAgo + entry.description; let i = $index) {
+            <nldd-list-item>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-timeline-track-cell
+                [attr.position]="historyPosition(i)"
+              ></nldd-timeline-track-cell>
+              <nldd-spacer-cell size="16"></nldd-spacer-cell>
+              <nldd-text-cell
+                [attr.text]="entry.description"
+                [attr.supporting-text]="entry.user + ' · ' + formatDaysAgo(entry.daysAgo)"
+              ></nldd-text-cell>
+            </nldd-list-item>
           }
-        </div>
-      </div>
-    </div>
-  </div>
-} @else {
-  <div class="flex flex-col items-center justify-center h-64 gap-4 text-center px-6">
-    <p class="text-gray-500 dark:text-gray-400 text-sm">Device not found.</p>
-    <a
-      routerLink="//racks"
-      class="text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-    >
-      Back to Racks
-    </a>
-  </div>
-}
+        </nldd-list>
+      }
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Out of the rack is not out of the system: the asset stays in the
+           inventory, only its place in this rack goes. Deleting the asset
+           itself is done where the asset lives. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Remove {{ dev.name }} from rack</h2>
+          </nldd-title>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Taking this device out frees the units it fills. The asset itself stays in the
+              inventory.
+            </p>
+          </nldd-rich-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Remove from rack"
+            start-icon="delete"
+            (click)="removeFromRack()"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    </nldd-simple-section>
+  } @else if (deviceLoaded()) {
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="Device not found"></nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing found" until the answer is in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
+    </nldd-simple-section>
+  }
+</nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD PORT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #portSheet accessible-label="Port details" placement="right">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Add port"
+      dismiss-text="Cancel"
+      (dismiss)="showAddPortForm.set(false)"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-form>
+        <nldd-form-field label="Port name">
+          <nldd-text-field
+            #portNameInput
+            autofocus
+            [value]="newPortName()"
+            (input)="newPortName.set($any($event.target).value)"
+            (keydown.enter)="addPort()"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <!-- The kind used to come from the tab you were on; the form asks it
+             now. Five buttons wrap to two rows in a sheet, which beats hiding
+             the choice behind a dropdown. -->
+        <nldd-form-field label="Port type">
+          <nldd-toggle-button-group type="radio" accessible-label="Port type">
+            @for (type of PORT_TABS; track type) {
+              <nldd-toggle-button
+                [attr.value]="type"
+                [attr.text]="portTypeLabel(type)"
+                [attr.selected]="newPortType() === type ? '' : null"
+                (change)="onPortTypeToggle(type, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Add" (click)="addPort()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- The same menu as the rack page: this is a view of one device in that rack,
+     not a page of its own. -->
+<ng-template #secondaryNav>
+  <app-rack-nav></app-rack-nav>
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REMOVE FROM RACK CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #removeModal
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Remove ' + (device()?.name ?? '') + ' from this rack?'"
+  supporting-text="The units it fills become free again. The asset stays in the inventory."
+  accessible-label="Confirm removal from the rack"
+  (close)="cancelRemove()"
+>
+  <nldd-button
+    slot="actions"
+    variant="primary"
+    text="Keep in rack"
+    (click)="cancelRemove()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Remove from rack"
+    (click)="confirmRemoveFromRack()"
+  ></nldd-button>
+</nldd-modal-dialog>

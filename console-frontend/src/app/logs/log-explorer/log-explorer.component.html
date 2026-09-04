@@ -66,8 +66,7 @@
           </div>
           <pre
             class="overflow-x-auto rounded-md bg-gray-50 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-            >{{ log.message }}</pre
-          >
+            >{{ log.message }}</pre>
         </div>
 
         <!-- Fields -->
@@ -109,8 +108,7 @@
           @if (showRawJson()) {
             <pre
               class="overflow-x-auto rounded-md bg-gray-50 p-3 font-mono text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300"
-              >{{ formattedJson(log) }}</pre
-            >
+              >{{ formattedJson(log) }}</pre>
           } @else {
             <div
               class="divide-y divide-gray-100 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800"
@@ -329,7 +327,12 @@
             @if (isLiveMode()) {
               <option value="">Select a plugin…</option>
               @if (namespaces().length === 0) {
-                <option value="" disabled>No plugins installed</option>
+                <option
+                  value=""
+                  disabled
+                >
+                  No plugins installed
+                </option>
               }
             } @else {
               <option value="">All namespaces</option>
@@ -342,7 +345,11 @@
 
         <label class="flex flex-col gap-1">
           <span class="text-xs text-gray-500 dark:text-gray-400">Pod</span>
-          <select [ngModel]="selectedPod()" (ngModelChange)="onPodChange($event)" class="text-sm">
+          <select
+            [ngModel]="selectedPod()"
+            (ngModelChange)="onPodChange($event)"
+            class="text-sm"
+          >
             @if (isLiveMode()) {
               <option value="">Select a pod…</option>
             } @else {
@@ -443,9 +450,19 @@
 
       <!-- Severity chips -->
       <div class="flex flex-wrap items-center gap-2">
-        <button (click)="toggleAllLevels()" type="button" [class]="allChipClass()">All</button>
+        <button
+          (click)="toggleAllLevels()"
+          type="button"
+          [class]="allChipClass()"
+        >
+          All
+        </button>
         @for (level of ALL_LEVELS; track level) {
-          <button (click)="toggleLevel(level)" type="button" [class]="levelChipClass(level)">
+          <button
+            (click)="toggleLevel(level)"
+            type="button"
+            [class]="levelChipClass(level)"
+          >
             <span [class]="levelDotClass(level)"></span>
             {{ level }}
             <span class="font-mono text-xs opacity-70">{{ levelCountLabel(level) }}</span>
@@ -472,7 +489,10 @@
           >
         </div>
       </div>
-      <div class="pb-3" style="height: 100px">
+      <div
+        class="pb-3"
+        style="height: 100px"
+      >
         <canvas #histogramChart></canvas>
       </div>
     </div>
@@ -500,7 +520,10 @@
       </div>
 
       <div class="table-container mb-6 rounded-none border-0 shadow-none! ring-0">
-        <table class="table" aria-label="Log entries">
+        <table
+          class="table"
+          aria-label="Log entries"
+        >
           <thead>
             <tr>
               <th class="w-44">Timestamp</th>
@@ -513,7 +536,10 @@
           <tbody>
             @if (filteredLogs().length === 0) {
               <tr>
-                <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                <td
+                  colspan="5"
+                  class="py-12 text-center text-gray-400 dark:text-gray-500"
+                >
                   @if (isLoading()) {
                     Loading logs…
                   } @else {

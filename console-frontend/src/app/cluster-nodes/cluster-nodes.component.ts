@@ -17,6 +17,7 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
+import SheetSyncDirective from '../sheet-sync.directive';
 import {
   ListNodePoolsRequestSchema,
   CreateNodePoolRequestSchema,
@@ -27,15 +28,18 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 import { fetchClusterName } from '../utils/cluster-status';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [SharedNodePoolsFormComponent],
+  imports: [SharedNodePoolsFormComponent, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-nodes.component.html',
 })
 export default class ClusterNodesComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
   private titleService = inject(TitleService);
@@ -69,7 +73,7 @@ export default class ClusterNodesComponent implements OnInit {
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Cluster nodes');
+    this.titleService.setTitle('Node pools');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 
@@ -191,7 +195,7 @@ export default class ClusterNodesComponent implements OnInit {
       );
 
       // Navigate back to cluster overview on success
-      this.router.navigate(['/clusters', this.clusterId]);
+      this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -204,6 +208,6 @@ export default class ClusterNodesComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 }

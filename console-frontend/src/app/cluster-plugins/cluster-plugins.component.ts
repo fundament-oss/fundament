@@ -19,15 +19,19 @@ import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
+import SheetSyncDirective from '../sheet-sync.directive';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [SharedPluginsFormComponent],
+  imports: [SharedPluginsFormComponent, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
 
   private titleService = inject(TitleService);
@@ -52,38 +56,68 @@ export default class ClusterPluginsComponent implements OnInit {
 
   isSubmitting = signal(false);
 
+  isLoading = signal(true);
+
+  loadFailed = signal(false);
+
   currentPluginIds = signal<string[]>([]);
 
   clusterName = signal<string | null>(null);
+
+  /** Falls back to the bare noun while the cluster name is still loading, so the
+   *  title bar never shows a dangling "Plugins for". */
+  protected pageTitle = computed(() => {
+    const name = this.clusterName();
+    return name ? `Plugins for ${name}` : 'Plugins';
+  });
 
   protected clusterStatus = signal<ClusterStatus>(ClusterStatus.UNSPECIFIED);
 
   protected isClusterRunning = computed(() => this.clusterStatus() === ClusterStatus.RUNNING);
 
+  /** The state where this sheet has nothing to offer: the status is in, and it
+   *  is not running. Not while loading, when the status is still UNSPECIFIED. */
+  protected notRunning = computed(() => !this.isLoading() && !this.isClusterRunning());
+
   protected readonly getStatusLabel = getStatusLabel;
 
   constructor() {
-    this.titleService.setTitle('Cluster plugins');
+    this.titleService.setTitle('Plugins');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 
-  async ngOnInit() {
-    const [, pluginsResponse, installations] = await Promise.all([
-      fetchClusterDetails(this.client, this.clusterId).then(({ name, status }) => {
-        this.clusterName.set(name);
-        this.clusterStatus.set(status);
-      }),
-      firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
-      this.pluginInstallationService.listInstallations(this.clusterId).catch(() => []),
-    ]);
+  ngOnInit() {
+    this.load();
+  }
 
-    this.allPlugins = pluginsResponse.plugins;
-    this.currentInstallations = installations;
+  /** Nothing here renders before this resolves. The status arrives with it, and
+   *  a status-dependent warning drawn on the default of UNSPECIFIED flashes a
+   *  banner on open that is gone before it can be read. */
+  async load() {
+    this.isLoading.set(true);
+    this.loadFailed.set(false);
+    try {
+      const [, pluginsResponse, installations] = await Promise.all([
+        fetchClusterDetails(this.client, this.clusterId).then(({ name, status }) => {
+          this.clusterName.set(name);
+          this.clusterStatus.set(status);
+        }),
+        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+        this.pluginInstallationService.listInstallations(this.clusterId).catch(() => []),
+      ]);
 
-    const installedNames = new Set(installations.map((i) => i.spec.definitionRef.pluginName));
-    this.currentPluginIds.set(
-      this.allPlugins.filter((p) => installedNames.has(p.name)).map((p) => p.id),
-    );
+      this.allPlugins = pluginsResponse.plugins;
+      this.currentInstallations = installations;
+
+      const installedNames = new Set(installations.map((i) => i.spec.definitionRef.pluginName));
+      this.currentPluginIds.set(
+        this.allPlugins.filter((p) => installedNames.has(p.name)).map((p) => p.id),
+      );
+    } catch {
+      this.loadFailed.set(true);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   async onFormSubmit(data: { preset: string; plugins: string[] }) {
@@ -121,7 +155,7 @@ export default class ClusterPluginsComponent implements OnInit {
         ),
       ]);
 
-      this.router.navigate(['/clusters', this.clusterId]);
+      this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
     } finally {
@@ -130,6 +164,6 @@ export default class ClusterPluginsComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 }

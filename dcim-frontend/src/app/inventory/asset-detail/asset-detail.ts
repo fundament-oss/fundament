@@ -9,40 +9,77 @@ import {
   OnInit,
   signal,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import { RackSlotType } from '../../../generated/v1/common_pb';
-import {
-  Asset,
-  AssetCategory,
-  AssetStatus,
-  CatalogEntry,
-  HistoryEntry,
-  NoteComment,
-} from '../inventory';
-import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
+import { Asset, AssetStatus, CatalogEntry, HistoryEntry, NoteComment } from '../inventory';
+import { ASSET_STATUSES, ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
-import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
+import categoryIcon from '../../shared/asset-category';
+import { INVENTORY_PATH, inventoryViewTitle, isInventoryView } from '../inventory-views';
+import InventoryNavComponent from '../inventory-nav';
+import SecondaryNavService from '../../shell/secondary-nav.service';
+import OverlayService from '../../shell/overlay.service';
 
 @Component({
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
+  // No styling of its own: the page inside paints the surface and owns the
+  // layout, and styles.css takes this element out of the flow (display:
+  // contents) so it cannot come between the pane and the page.
 })
-export default class AssetDetailComponent implements OnInit {
+export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** The asset form lives in the shell: one form, opened from three places. */
+  private readonly overlays = inject(OverlayService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  /**
+   * Follows the catalog link inside the app while leaving the element a real
+   * `<a href>`, so middle-click and "open in new tab" keep working. Only a plain
+   * left click is intercepted; the modifiers mean "open this somewhere else".
+   */
+  protected openCatalogEntry(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigate(['/catalog', id]);
+  }
+
+  private readonly title = inject(Title);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -78,20 +115,17 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly assetRackId = signal<string>('');
 
-  readonly assetSlotType = signal<string>('');
+  /** The slot type as the enum the API takes; empty until one is picked. */
+  readonly assetSlotType = signal<RackSlotType | ''>('');
+
+  /** The place you picked for the rack list, empty until you touch it. */
+  readonly pickedLocation = signal<string>('');
 
   readonly invalidFields = signal<Record<string, string>>({});
 
   readonly formErrorMessage = signal<string | null>(null);
 
-  readonly statuses: { value: AssetStatus; label: string }[] = [
-    { value: 'deployed', label: 'Deployed' },
-    { value: 'available', label: 'Available' },
-    { value: 'on-order', label: 'On Order' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'needs-repair', label: 'Needs Repair' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly statuses = ASSET_STATUSES;
 
   /** Rack placement of the asset being edited; null while loading or when unplaced. */
   readonly editPlacement = signal<{
@@ -117,6 +151,23 @@ export default class AssetDetailComponent implements OnInit {
       .sort((a, b) => a.datacenter.localeCompare(b.datacenter));
   });
 
+  /** The places that have racks, in the order the groups come out. */
+  readonly locations = computed(() => this.racksByDatacenter().map((group) => group.datacenter));
+
+  /**
+   * The place the rack list is limited to. Falls back to the first one, so the
+   * rack picker always has something to show: a control you cannot use until
+   * you have used another one first reads as broken.
+   */
+  readonly rackLocation = computed(() => this.pickedLocation() || this.locations()[0] || '');
+
+  /** Only the racks that stand at the place you picked. */
+  readonly racksAtLocation = computed(
+    () =>
+      this.racksByDatacenter().find((group) => group.datacenter === this.rackLocation())?.racks ??
+      [],
+  );
+
   readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
     { value: RackSlotType.POWER, label: 'Power' },
@@ -128,6 +179,16 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
 
+  /** Set while the delete confirmation is open. */
+  readonly confirmingDelete = signal(false);
+
+  /** Set while the decommission confirmation is open. */
+  readonly confirmingDecommission = signal(false);
+
+  private readonly deleteModalEl = viewChild<ElementRef>('deleteModal');
+
+  private readonly decommissionModalEl = viewChild<ElementRef>('decommissionModal');
+
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
   private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
@@ -138,12 +199,111 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
+  /**
+   * The list this page was opened from, so the way back leads to it and says its
+   * name. Read once, while the navigation that brought us here is still in
+   * flight; a deep link has no previous page and falls back to everything.
+   */
+  private readonly cameFrom = ((): string => {
+    const previous = this.router.getCurrentNavigation()?.previousNavigation?.finalUrl?.toString();
+    return previous && isInventoryView(previous) ? previous : `${INVENTORY_PATH}/all`;
+  })();
+
+  readonly backText = inventoryViewTitle(this.cameFrom);
+
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.asset()?.assetTag;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
       else el?.hide?.();
     });
+    effect(() => {
+      const el = this.deleteModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.confirmingDelete()) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.decommissionModalEl()?.nativeElement as {
+        show?: () => void;
+        hide?: () => void;
+      };
+      if (this.confirmingDecommission()) el?.show?.();
+      else el?.hide?.();
+    });
+  }
+
+  /** Back from this page is back to the list it was opened from. */
+  goToInventory(event: Event): void {
+    // The back event bubbles and composes, so the shell's split view hears it
+    // too and would navigate to the section on its own, a step short of where
+    // this button says it goes.
+    event.stopPropagation();
+    this.router.navigateByUrl(this.cameFrom);
+  }
+
+  /** Where a row sits in the track, so the line starts and stops in the right place. */
+  historyPosition(index: number): 'first' | 'between' | 'last' | 'only' {
+    const last = this.assetHistory().length - 1;
+    if (last === 0) return 'only';
+    if (index === 0) return 'first';
+    return index === last ? 'last' : 'between';
+  }
+
+  openDecommissionAsset(): void {
+    this.confirmingDecommission.set(true);
+  }
+
+  cancelDecommissionAsset(): void {
+    this.confirmingDecommission.set(false);
+  }
+
+  /**
+   * Out of service, not gone: the asset keeps its history and its place in the
+   * lists, and setting the status back undoes it. It asks first anyway, because
+   * it says a machine in a rack is done — but the question is a plain one, and
+   * the dialog does not look like the delete dialog, where the way out is the
+   * primary button.
+   */
+  confirmDecommissionAsset(): void {
+    const asset = this.asset();
+    if (!asset || asset.status === 'decommissioned') {
+      this.confirmingDecommission.set(false);
+      return;
+    }
+    const updated: Asset = { ...asset, status: 'decommissioned' };
+    firstValueFrom(this.inventoryApi.updateAsset(updated))
+      .then(() => {
+        this.asset.set(updated);
+        this.confirmingDecommission.set(false);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  openDeleteAsset(): void {
+    this.confirmingDelete.set(true);
+  }
+
+  cancelDeleteAsset(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  /** The asset is gone, so the page that showed it is too: back to the list. */
+  confirmDeleteAsset(): void {
+    const id = this.assetId();
+    if (!id) return;
+    firstValueFrom(this.inventoryApi.deleteAsset(id))
+      .then(() => {
+        this.confirmingDelete.set(false);
+        this.router.navigateByUrl(INVENTORY_PATH);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   ngOnInit(): void {
@@ -193,7 +353,13 @@ export default class AssetDetailComponent implements OnInit {
 
   private loadHistory(): void {
     firstValueFrom(this.inventoryApi.getAssetEvents(this.assetId()))
-      .then((res) => this.assetHistory.set(res.events.map(InventoryApiService.mapAssetEvent)))
+      // Newest first: what happened to this asset last is what you came to read,
+      // and it saves scrolling to the bottom of a long life.
+      .then((res) =>
+        this.assetHistory.set(
+          res.events.map(InventoryApiService.mapAssetEvent).sort((a, b) => a.daysAgo - b.daysAgo),
+        ),
+      )
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }
@@ -243,105 +409,11 @@ export default class AssetDetailComponent implements OnInit {
     this.formErrorMessage.set(message);
   }
 
+  /** The form is the one the shell holds, so it is the same one the inventory
+   *  list and the add button in the bar open. */
   openEditAsset(): void {
     const current = this.asset();
-    if (!current) return;
-    this.clearErrors();
-    // Resolve the existing placement before opening, so the location picker
-    // renders with the right rack pre-selected.
-    firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
-      .then((res) => {
-        const p = res.placement;
-        const placement =
-          p && p.location.case === 'rack'
-            ? {
-                id: p.id,
-                rackId: p.location.value.rackId,
-                unit: p.location.value.rackUnitStart,
-                slotType: p.location.value.rackSlotType,
-              }
-            : null;
-        this.editPlacement.set(placement);
-        this.assetRackId.set(placement?.rackId ?? '');
-        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
-      })
-      .catch((err) => {
-        this.editPlacement.set(null);
-        this.assetRackId.set('');
-        this.assetSlotType.set('');
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-      })
-      .finally(() => {
-        this.assetStatus.set(current.status);
-        this.editAsset.set({ ...current });
-      });
-  }
-
-  closeAssetForm(): void {
-    this.clearErrors();
-    this.editAsset.set(null);
-  }
-
-  saveAsset(): void {
-    const current = this.asset();
-    if (!current) return;
-    this.clearErrors();
-    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const updated: Asset = {
-      ...current,
-      assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
-      status: this.assetStatus(),
-      serialNumber:
-        (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
-        current.serialNumber ??
-        '',
-      warrantyExpiry: warranty || undefined,
-      notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
-    };
-    // Validate the placement input before any write so a missing/zero unit
-    // can't be saved as an off-grid (U0) placement.
-    const placement = this.readPlacementInput();
-    if (placement === 'invalid') return;
-
-    firstValueFrom(this.inventoryApi.updateAsset(updated))
-      .then(() => this.placementApi.reconcilePlacement({ ...placement, assetId: updated.id }))
-      .then(() => {
-        this.asset.set(updated);
-        this.editAsset.set(null);
-        this.loadLocation();
-      })
-      .catch((err) => this.handleError(err));
-  }
-
-  /**
-   * Reads the rack/unit/slot inputs and validates them. Returns `'invalid'`
-   * (after surfacing an inline error) when a rack is selected but the unit is
-   * missing or below 1; the rack diagram only draws units 1…totalU, so a U0
-   * placement would be invisible.
-   */
-  private readPlacementInput():
-    | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
-    | 'invalid' {
-    const rackId = this.assetRackId();
-    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
-    const existingPlacementId = this.editPlacement()?.id ?? null;
-
-    if (!rackId) {
-      // No rack selected: clears any existing placement, unit is irrelevant.
-      return { rackId: '', unit: 0, slotType, existingPlacementId };
-    }
-
-    const unit = parseInt(
-      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
-      10,
-    );
-    if (!Number.isInteger(unit) || unit < 1) {
-      this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
-      return 'invalid';
-    }
-
-    return { rackId, unit, slotType, existingPlacementId };
+    if (current) this.overlays.editAsset(current);
   }
 
   readonly notes = signal<NoteComment[]>([]);
@@ -424,24 +496,5 @@ export default class AssetDetailComponent implements OnInit {
     return classes[action];
   };
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder-on-folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 }

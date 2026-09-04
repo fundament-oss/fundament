@@ -2,7 +2,8 @@ import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
-const entry = (name: string) => fileURLToPath(new URL(`${name}.html`, import.meta.url));
+const entry = (name: string) =>
+  fileURLToPath(new URL(`${name}.html`, import.meta.url));
 
 // The plugin serves this app same-origin under /console/, and console.go's
 // go:embed console/* compiles the build output into the plugin binary. The NLDD

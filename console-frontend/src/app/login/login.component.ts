@@ -1,3 +1,4 @@
+import '@nldd/design-system/top-navigation-bar';
 import {
   Component,
   inject,
@@ -11,6 +12,15 @@ import { Router } from '@angular/router';
 import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
+import '@nldd/design-system/password-field';
+
+/**
+ * Where logging in lands you when nothing else was asked for: the clusters,
+ * which is what the console is mostly read for. An address you were sent to
+ * before the login page wins over it, and the organization is filled in on the
+ * way there.
+ */
+const DEFAULT_ROUTE = '/clusters';
 
 @Component({
   selector: 'app-login',
@@ -18,6 +28,9 @@ import AuthnApiService from '../authn-api.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  // The host is a flex item of nldd-app-view, so it needs a display and a share
+  // of the height, or the page inside it collapses to its content.
+  styles: ':host { display: block; flex: 1; min-height: 0; }',
 })
 export default class LoginComponent implements OnInit {
   private titleService = inject(TitleService);
@@ -29,6 +42,10 @@ export default class LoginComponent implements OnInit {
   private fb = inject(FormBuilder);
 
   loginForm!: FormGroup;
+
+  /** Whether the form has been submitted at least once. Before that, a field
+   * that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
 
   error = signal<string | null>(null);
 
@@ -73,14 +90,15 @@ export default class LoginComponent implements OnInit {
   async ngOnInit() {
     // Check if user is already authenticated (check state first to avoid unnecessary API call)
     if (this.apiService.isAuthenticated()) {
-      // User already authenticated, redirect to dashboard
-      this.router.navigate(['/']);
+      // User already authenticated, redirect to the default page
+      this.router.navigateByUrl(DEFAULT_ROUTE);
     }
   }
 
   async onSubmit(event?: Event) {
     // Prevent the native form submission triggered by the submit button.
     event?.preventDefault();
+    this.formSubmitted.set(true);
 
     if (this.isLoading()) return;
     if (this.loginForm.invalid) {
@@ -95,7 +113,7 @@ export default class LoginComponent implements OnInit {
       const { email, password } = this.loginForm.value;
       await this.apiService.login(email, password);
       // Login successful, redirect to the return URL or dashboard
-      const returnUrl = localStorage.getItem('returnUrl') || '/';
+      const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
       localStorage.removeItem('returnUrl');
 
       this.router.navigateByUrl(returnUrl);

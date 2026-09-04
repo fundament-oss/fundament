@@ -37,7 +37,7 @@
     "@astrojs/mdx": "7.0.7",
     "@astrojs/starlight": "0.41.7",
     "@fortawesome/fontawesome-free": "7.3.1",
-    "@nldd/design-system": "0.8.83",
+    "@nldd/design-system": "^0.8.85",
     "@tailwindcss/vite": "4.3.3",
     "astro": "7.2.4",
     "astro-asciidoc": "0.1.1",

@@ -1,104 +1,139 @@
 <nldd-page sticky-header sticky-footer>
   <nldd-top-title-bar
     slot="header"
-    [attr.text]="'Shopping list — ' + dcLabel()"
+    text="Shopping list"
     dismiss-text="Close"
     (dismiss)="($event)"
   ></nldd-top-title-bar>
 
   <nldd-simple-section>
-    <!-- Summary -->
-    <div class="mb-4">
-      <p class="text-sm text-slate-600 dark:text-gray-300">
-        The shopping list consists of the cables that are
-        <strong class="font-semibold">planned</strong>.
-      </p>
-      <p class="text-xs text-slate-400 dark:text-gray-500 mt-1">
-        {{ totalCount() }} {{ totalCount() === 1 ? 'cable' : 'cables' }} to order
-      </p>
-    </div>
-
-    <!-- Groups -->
-    <div class="flex flex-col gap-2" role="list" aria-label="Cables to order">
-      @for (group of groups(); track groupKey(group)) {
-        <div
-          class="rounded-lg border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden"
-          role="listitem"
+    <!-- Everything, or one building. An order is not a building, so the scope is
+         a control in here rather than something the page behind this decided:
+         you can see which it is and change it in the same place. A location with
+         nothing planned stays reachable and says so, because "no button" and
+         "nothing to order" are not the same answer. -->
+    @if (asCombo()) {
+      <nldd-form-field label="Location">
+        <nldd-combo-box
+          [attr.value]="scope()"
+          [attr.text]="scopeLabel()"
+          (change)="onScope($any($event).detail.value, true)"
         >
-          <!-- Group header -->
-          <div class="flex items-center gap-3 px-4 py-3">
-            <!-- Color swatch -->
-            @if (group.color) {
-              <span
-                class="h-4 w-4 rounded-full shrink-0 border border-slate-200 dark:border-gray-800"
-                [style.background]="CABLE_COLOR_HEX[group.color]"
-                [attr.aria-label]="group.color"
-              ></span>
-            } @else {
-              <span
-                class="h-4 w-4 rounded-full shrink-0 border-2 border-dashed border-slate-300 dark:border-gray-700"
-                aria-label="No color"
-              ></span>
+          <nldd-menu>
+            <nldd-menu-item
+              [attr.value]="ALL"
+              [attr.text]="scopeOption(ALL, 'All locations')"
+            ></nldd-menu-item>
+            @for (site of sites(); track site.id) {
+              <nldd-menu-item
+                [attr.value]="site.id"
+                [attr.text]="scopeOption(site.id, site.name)"
+              ></nldd-menu-item>
             }
+          </nldd-menu>
+        </nldd-combo-box>
+      </nldd-form-field>
+    } @else {
+      <nldd-toggle-button-group type="radio" accessible-label="Location">
+        <nldd-toggle-button
+          [attr.value]="ALL"
+          [attr.text]="scopeOption(ALL, 'All')"
+          [attr.selected]="scope() === ALL ? '' : null"
+          (change)="onScope(ALL, $any($event).detail.selected)"
+        ></nldd-toggle-button>
+        @for (site of sites(); track site.id) {
+          <nldd-toggle-button
+            [attr.value]="site.id"
+            [attr.text]="scopeOption(site.id, site.name)"
+            [attr.selected]="scope() === site.id ? '' : null"
+            (change)="onScope(site.id, $any($event).detail.selected)"
+          ></nldd-toggle-button>
+        }
+      </nldd-toggle-button-group>
+    }
+    <nldd-spacer size="16"></nldd-spacer>
 
-            <!-- Type + length -->
-            <span class="flex-1 min-w-0">
-              <span class="text-sm font-semibold text-slate-900 dark:text-white">{{
-                cableTypeLabel(group.type)
-              }}</span>
-              @if (group.color) {
-                <span class="text-xs text-slate-500 dark:text-gray-400 ml-1.5 capitalize">{{
-                  group.color.replace('-', ' ')
-                }}</span>
-              }
-              @if (group.length !== undefined) {
-                <span class="text-xs text-slate-400 dark:text-gray-500 ml-1.5"
-                  >{{ group.length }} m</span
-                >
-              } @else {
-                <span class="text-xs text-slate-300 dark:text-gray-600 ml-1.5">length unknown</span>
-              }
-            </span>
-
-            <!-- Count badge -->
-            <span
-              class="inline-flex items-center justify-center min-w-[2rem] h-6 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 text-xs font-bold px-2 shrink-0"
-              aria-label="{{ group.count }} cables"
-            >
-              × {{ group.count }}
-            </span>
-          </div>
-
-          <!-- Cable list -->
-          <ul class="border-t border-slate-100 dark:border-gray-800 pl-7 pr-4 py-1.5 flex flex-col">
-            @for (cable of group.cables; track cable.id) {
-              <li
-                class="relative flex items-baseline gap-2 py-1 pl-4 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-slate-200 dark:before:bg-gray-800 after:absolute after:left-0 after:top-[0.65rem] after:w-3 after:h-px after:bg-slate-200 dark:after:bg-gray-800"
-              >
-                <span class="text-xs font-mono text-slate-700 dark:text-gray-300 truncate">{{
-                  cableLabel(cable)
-                }}</span>
-                @if (cable.label) {
-                  <span class="text-[11px] text-slate-400 dark:text-gray-500 truncate shrink-0">
-                    {{ cable.aSide.deviceName }} → {{ cable.bSide.deviceName }}
-                  </span>
+    @if (totalCount() === 0) {
+      <!-- Its own place in the middle of what is left, not a message where the
+           rows would have been. -->
+      <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+        <nldd-inline-dialog
+          text="Nothing to order"
+          [attr.supporting-text]="emptyLine()"
+        ></nldd-inline-dialog>
+      </nldd-simple-section>
+    } @else {
+      <!-- One block per kind of cable: what you order on top, and under it the
+           runs it is made of, indented rather than folded away. There is nothing
+           to open, so nothing offers to. -->
+      <nldd-collection layout="stack" gap="16px">
+        @for (group of groups(); track groupKey(group)) {
+          <nldd-list variant="box-tinted" [attr.accessible-label]="cableTypeLabel(group.type)">
+            <nldd-list-item>
+              <!-- The jacket colour of a real cable, so it is the cable's own and
+                   not one of the system's. Same mark as in the cable list. -->
+              <nldd-cell width="fit-content" min-width="24px">
+                @if (group.color) {
+                  <nldd-icon
+                    name="circle-filled"
+                    size="24"
+                    [attr.custom-color]="CABLE_COLOR_HEX[group.color]"
+                  ></nldd-icon>
+                } @else {
+                  <nldd-icon name="circle-dashed" size="24" color="secondary-content"></nldd-icon>
                 }
-              </li>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-title-cell
+                width="full"
+                [attr.text]="cableTypeLabel(group.type)"
+                [attr.underline]="groupDetail(group)"
+              ></nldd-title-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <!-- The same colour the status carries everywhere else, because
+                     that is what every line here is: a cable still to order. -->
+                <nldd-badge color="critical" [attr.number]="group.count"></nldd-badge>
+              </nldd-cell>
+            </nldd-list-item>
+            @for (cable of group.cables; track cable.id) {
+              <nldd-list-item>
+                <!-- The same two cells the kind above them starts with, so the
+                     text lines up with the text and not with the mark. Level
+                     rather than stepped in again: the kind is set in bold and
+                     the runs are not, which already says which belongs to which.
+                     Written out rather than as one spacer, because the sum is
+                     not on the spacer scale and a single one would silently fall
+                     back to a size that does not line up. -->
+                <nldd-cell width="fit-content" min-width="24px"></nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  size="sm"
+                  [attr.text]="runLabel(cable)"
+                ></nldd-text-cell>
+              </nldd-list-item>
             }
-          </ul>
-        </div>
-      }
-    </div>
+          </nldd-list>
+        }
+      </nldd-collection>
+    }
   </nldd-simple-section>
 
-  <div slot="footer" class="border-t border-slate-100 dark:border-gray-800 px-6 py-4">
-    <nldd-button
-      variant="primary"
-      text="Download CSV"
-      start-icon="arrow-down-in-bucket"
-      width="full"
-      (click)="exportCsv()"
-      aria-label="Download shopping list as CSV"
-    ></nldd-button>
-  </div>
+  <!-- Gone rather than switched off when there is nothing to export: a button
+       you cannot press is a promise the screen is not keeping, and here there is
+       nothing to correct — the list above already says why.
+       No padding on top: the section above brings its own bottom spacing, and a
+       second one stacks into a gap that reads as a mistake. -->
+  @if (totalCount() > 0) {
+    <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
+      <nldd-button
+        variant="primary"
+        [attr.text]="exportLabel()"
+        start-icon="arrow-down-in-bucket"
+        width="full"
+        (click)="exportCsv()"
+      ></nldd-button>
+    </nldd-container>
+  }
 </nldd-page>

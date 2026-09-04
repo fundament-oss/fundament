@@ -50,7 +50,9 @@ export const demoUser = create(UserSchema, {
 
 export const organization = create(OrganizationSchema, {
   id: ORG_ID,
-  name: 'Gemeente Fundament',
+  // The name is the machine-readable one the address goes by; the alias is the
+  // label people read.
+  name: 'gemeente-fundament',
   alias: 'fundament',
   created: daysAgo(420),
 });
@@ -67,7 +69,7 @@ export const organizationLimits = create(OrganizationLimitsSchema, {
 
 // --- Clusters -------------------------------------------------------------
 
-// Mutable so the add-cluster wizard's createCluster can append a new one.
+// Mutable so the new-cluster form's createCluster can append a new one.
 export const clusterSummaries = [
   create(ListClustersResponse_ClusterSummarySchema, {
     id: 'cl-production',
@@ -153,11 +155,11 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
 
 // --- Region catalog -------------------------------------------------------
 
-// Backs ClusterService.ListRegions, which the add-cluster wizard loads before it
+// Backs ClusterService.ListRegions, which the new-cluster form loads before it
 // renders (it shows an error instead of the form when the call fails) and which the
 // node pool pages use to fill the machine type dropdown.
 //
-// `local` must stay first: the wizard defaults to the first region, and it is the
+// `local` must stay first: the form defaults to the first region, and it is the
 // region the cluster fixtures above already use. Every machineType referenced by
 // nodePoolsByCluster must appear here, otherwise the node pool forms offer a list
 // that cannot reproduce the pools shown next to them.
@@ -293,6 +295,50 @@ export const projectMembersByProject = new Map([
       }),
     ],
   ],
+  // The count on a project comes from its own memberCount, so a project with a
+  // count and no members shows "2 members" over an empty list.
+  [
+    'pr-belastingen',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-4',
+        projectId: 'pr-belastingen',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(140),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-5',
+        projectId: 'pr-belastingen',
+        userId: 'user-omar',
+        userName: 'Omar El Amrani',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(20),
+      }),
+    ],
+  ],
+  [
+    'pr-burgerzaken-staging',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-6',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(60),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-7',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-sanne',
+        userName: 'Sanne Bakker',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(45),
+      }),
+    ],
+  ],
 ]);
 
 export const projectLimits = create(ProjectLimitsSchema, {
@@ -301,6 +347,122 @@ export const projectLimits = create(ProjectLimitsSchema, {
   defaultCpuRequestM: 250,
   defaultCpuLimitM: 500,
 });
+
+// The platform's starting values, hardcoded in organization-api's
+// limit_defaults.go. Handing back the saved limits instead would make every
+// project look like it is still on the platform's numbers.
+export const platformProjectLimits = create(ProjectLimitsSchema, {
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
+  defaultCpuLimitM: 500,
+});
+
+export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
+  maxNodesPerCluster: 10,
+  maxNodePoolsPerCluster: 5,
+  maxNodesPerNodePool: 5,
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
+  defaultCpuLimitM: 500,
+});
+
+// --- Metrics --------------------------------------------------------------
+
+// A demo needs charts with something in them, so the series are generated: a
+// smooth base with a daily rhythm and a little noise, deterministic per metric
+// so a reload shows the same picture.
+const sample = (index: number, base: number, swing: number, seed: number): number => {
+  const wave = Math.sin((index / 12 + seed) * Math.PI * 2) * swing;
+  const jitter = Math.sin(index * (1.7 + seed)) * swing * 0.25;
+  return Math.max(0, Number((base + wave + jitter).toFixed(2)));
+};
+
+/** `count` samples ending now, `stepSeconds` apart. */
+export const metricSeries = (
+  count: number,
+  stepSeconds: number,
+  base: number,
+  swing: number,
+  seed: number,
+  now: number,
+) =>
+  Array.from({ length: count }, (_, index) => ({
+    timestamp: new Date(now - (count - 1 - index) * stepSeconds * 1000),
+    value: sample(index, base, swing, seed),
+  }));
+
+export const namespaceMetrics = [
+  {
+    namespace: 'burgerzaken-prod',
+    cpuCores: 1.42,
+    memoryGib: 6.1,
+    pods: 14,
+    cpuRequests: 2,
+    cpuLimits: 4,
+    memoryRequestsGib: 8,
+    memoryLimitsGib: 16,
+    networkReceiveMbS: 1.8,
+    networkTransmitMbS: 0.9,
+  },
+  {
+    namespace: 'belastingen-prod',
+    cpuCores: 0.72,
+    memoryGib: 3.4,
+    pods: 8,
+    cpuRequests: 1,
+    cpuLimits: 2,
+    memoryRequestsGib: 4,
+    memoryLimitsGib: 8,
+    networkReceiveMbS: 0.6,
+    networkTransmitMbS: 0.4,
+  },
+  {
+    namespace: 'burgerzaken-staging',
+    cpuCores: 0.26,
+    memoryGib: 1.2,
+    pods: 6,
+    cpuRequests: 0.5,
+    cpuLimits: 1,
+    memoryRequestsGib: 2,
+    memoryLimitsGib: 4,
+    networkReceiveMbS: 0.2,
+    networkTransmitMbS: 0.1,
+  },
+];
+
+export const clusterUsage = [
+  {
+    clusterId: 'cl-production',
+    clusterName: 'production',
+    cpu: { used: 2.4, total: 8, unit: 'cores' },
+    memory: { used: 12.8, total: 32, unit: 'GiB' },
+    pods: { used: 28, total: 110, unit: 'pods' },
+  },
+  {
+    clusterId: 'cl-staging',
+    clusterName: 'staging',
+    cpu: { used: 0.9, total: 4, unit: 'cores' },
+    memory: { used: 3.6, total: 16, unit: 'GiB' },
+    pods: { used: 9, total: 55, unit: 'pods' },
+  },
+];
+
+export const nodeUsage = [
+  {
+    node: 'general-0',
+    cpu: { used: 1.1, total: 4, unit: 'cores' },
+    memory: { used: 6.2, total: 16, unit: 'GiB' },
+    pods: { used: 14, total: 55, unit: 'pods' },
+  },
+  {
+    node: 'general-1',
+    cpu: { used: 0.8, total: 4, unit: 'cores' },
+    memory: { used: 4.4, total: 16, unit: 'GiB' },
+    pods: { used: 9, total: 55, unit: 'pods' },
+  },
+];
 
 // --- Plugins --------------------------------------------------------------
 

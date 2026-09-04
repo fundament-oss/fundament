@@ -7,27 +7,30 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
+  imports: [RouterOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
 })
 export default class DashboardComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -40,12 +43,14 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   errorMessage = signal<string>('');
 
   // Expose utility functions for template
-  getStatusTagColor = getStatusTagColor;
+  getStatusBadgeColor = getStatusBadgeColor;
+
+  isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;
 
   constructor() {
-    this.titleService.setTitle('Dashboard');
+    this.titleService.setTitle('Clusters');
   }
 
   ngOnDestroy() {
@@ -80,7 +85,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
             !response.clusters.some((c) => c.id === prev.id),
         )
         .forEach((prev) => {
-          this.toastService.success(`Cluster '${prev.name}' has been deleted`);
+          this.notificationService.success(`Cluster '${prev.name}' has been deleted`);
         });
 
       const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));

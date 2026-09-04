@@ -7,14 +7,18 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import {
   Asset,
-  AssetCategory,
   AssetStatus,
   CatalogEntry,
   PortDefinition,
@@ -26,7 +30,11 @@ import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
-import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
+import categoryIcon from '../../shared/asset-category';
+import CatalogNavComponent from '../catalog-nav';
+import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
+import SecondaryNavService from '../../shell/secondary-nav.service';
+import OverlayService from '../../shell/overlay.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -36,14 +44,33 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
-export default class CatalogDetailComponent implements OnInit {
+export default class CatalogDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly route = inject(ActivatedRoute);
 
+  private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
+
   private readonly catalogApi = inject(CatalogApiService);
+
+  /** The product form is the shell's, so this page only asks it to open. */
+  private readonly overlays = inject(OverlayService);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -140,18 +167,6 @@ export default class CatalogDetailComponent implements OnInit {
 
   private readonly fPortPower = viewChild<NativeElementRef>('fPortPower');
 
-  // ── Port compatibility CRUD state ─────────────────────────────────────────
-  addCompatPortDefId = signal<string | null>(null);
-
-  /** Catalog entry selected in the "Add compatibility" sheet (empty = none). */
-  readonly compatEntryId = signal('');
-
-  deleteCompat = signal<PortCompatibility | null>(null);
-
-  private readonly compatSheetEl = viewChild<NativeElementRef>('compatSheet');
-
-  private readonly compatDeleteModalEl = viewChild<NativeElementRef>('compatDeleteModal');
-
   // ── Catalog list for compatibility dropdown ────────────────────────────────
   readonly allCatalogEntries = signal<CatalogEntry[]>([]);
 
@@ -160,7 +175,7 @@ export default class CatalogDetailComponent implements OnInit {
    * itself and the ones already marked compatible with the active port.
    */
   readonly availableCompatEntries = computed<CatalogEntry[]>(() => {
-    const pdId = this.addCompatPortDefId();
+    const pdId = this.editPortDef()?.id ?? '';
     const taken = new Set(
       this.mutableCompatibilities()
         .filter((c) => c.portDefinitionId === pdId)
@@ -170,6 +185,22 @@ export default class CatalogDetailComponent implements OnInit {
   });
 
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.entry()?.model;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
+    // The product form is the shell's now, so this page watches for a write
+    // and reads its product again rather than patching it in place.
+    effect(() => {
+      this.catalogApi.revision();
+      untracked(() => this.loadEntry());
+    });
+    effect(() => {
+      const el = this.entryModalEl()?.nativeElement;
+      if (this.deleteEntry() !== null) el?.show?.();
+      else el?.hide?.();
+    });
     effect(() => {
       const el = this.portSheetEl()?.nativeElement;
       if (this.editPortDef() !== null) el?.show?.();
@@ -180,19 +211,108 @@ export default class CatalogDetailComponent implements OnInit {
       if (this.deletePortDef() !== null) el?.show?.();
       else el?.hide?.();
     });
-    effect(() => {
-      const el = this.compatSheetEl()?.nativeElement;
-      if (this.addCompatPortDefId() !== null) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.compatDeleteModalEl()?.nativeElement;
-      if (this.deleteCompat() !== null) el?.show?.();
-      else el?.hide?.();
-    });
   }
 
-  ngOnInit(): void {
+  /**
+   * The list this page was opened from, so the way back leads to it and says its
+   * name. Read once, while the navigation that brought us here is still in
+   * flight; a deep link has no previous page and falls back to everything.
+   */
+  private readonly cameFrom = ((): string => {
+    const previous = this.router.getCurrentNavigation()?.previousNavigation?.finalUrl?.toString();
+    return previous && isCatalogView(previous) ? previous : `${CATALOG_PATH}/all`;
+  })();
+
+  readonly backText = catalogViewTitle(this.cameFrom);
+
+  /**
+   * The back event bubbles out of the shadow root and composes, so the shell's
+   * split view hears it too and would navigate to the section on its own. That
+   * is a step short of where this button says it goes: the shell knows the
+   * section, this page knows which list of it you left.
+   */
+  goToCatalog(event: Event): void {
+    event.stopPropagation();
+    this.router.navigateByUrl(this.cameFrom);
+  }
+
+  /** Same trade as the list rows: a real link, routed in-app without modifiers. */
+  openAsset(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(`/inventory/${id}`);
+  }
+
+  /** Where an asset of this product stands, or nothing when it is unplaced. */
+  readonly assetLocationLine = (asset: Asset): string | null =>
+    asset.datacenter || asset.rack
+      ? [asset.datacenter, asset.rack].filter(Boolean).join(' · ')
+      : null;
+
+  /** The four figures the summary card carried, in one line above the rows. */
+  readonly assetSummary = computed(() => {
+    const total = this.assets().length;
+    if (total === 0) return 'No assets of this product yet';
+    const parts = [
+      `${total} ${total === 1 ? 'asset' : 'assets'}`,
+      `${this.deployedCount()} deployed`,
+      `${this.availableCount()} available`,
+    ];
+    if (this.issuesCount() > 0) parts.push(`${this.issuesCount()} with issues`);
+    return parts.join(' · ');
+  });
+
+  // ── Edit and delete this product ───────────────────────────────────────────
+
+  readonly deleteEntry = signal<CatalogEntry | null>(null);
+
+  private readonly entryModalEl = viewChild<NativeElementRef>('entryModal');
+
+  /** Editing opens the shell's product form on this product. */
+  openEditEntry(): void {
+    const entry = this.entry();
+    if (entry) this.overlays.editProduct(entry);
+  }
+
+  /** One value at a time: unpicking the current one leaves it as it was. */
+  onPortTypeToggle(value: string, selected: boolean): void {
+    if (selected) this.portType.set(value);
+  }
+
+  onPortDirectionToggle(value: string, selected: boolean): void {
+    if (selected) this.portDirection.set(value);
+  }
+
+  openDeleteEntry(): void {
+    const entry = this.entry();
+    if (entry) this.deleteEntry.set(entry);
+  }
+
+  cancelDeleteEntry(): void {
+    this.deleteEntry.set(null);
+  }
+
+  /** The product is gone, so the page that showed it is too: back to the list. */
+  confirmDeleteEntry(): void {
+    const target = this.deleteEntry();
+    if (!target) return;
+    firstValueFrom(this.catalogApi.deleteCatalogEntry(target.id))
+      .then(() => {
+        this.deleteEntry.set(null);
+        this.router.navigateByUrl(this.cameFrom);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  /** Reads this product from the API. Called on open and after every write,
+   *  wherever that write came from. */
+  private loadEntry(): void {
     firstValueFrom(this.catalogApi.getCatalogEntry(this.catalogId()))
       .then((res) => {
         if (res.entry) this.entry.set(CatalogApiService.mapCatalogEntry(res.entry));
@@ -200,7 +320,9 @@ export default class CatalogDetailComponent implements OnInit {
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => this.entryLoaded.set(true));
+  }
 
+  ngOnInit(): void {
     firstValueFrom(this.catalogApi.listPortDefinitions(this.catalogId()))
       .then((res) => {
         const portDefs = res.portDefinitions.map((p) => CatalogApiService.mapPortDefinition(p));
@@ -269,6 +391,7 @@ export default class CatalogDetailComponent implements OnInit {
     });
     this.portType.set('');
     this.portDirection.set('bidir');
+    this.portCompatIds.set([]);
   }
 
   openEditPortDef(pd: PortDefinition): void {
@@ -276,6 +399,12 @@ export default class CatalogDetailComponent implements OnInit {
     this.editPortDef.set({ ...pd });
     this.portType.set(pd.portType);
     this.portDirection.set(pd.direction ?? 'bidir');
+    this.portCompatIds.set(
+      this.mutableCompatibilities()
+        .filter((c) => c.portDefinitionId === pd.id)
+        .map((c) => c.compatibleCatalogEntryId)
+        .filter((id) => !!id),
+    );
   }
 
   closePortDefForm(): void {
@@ -308,6 +437,7 @@ export default class CatalogDetailComponent implements OnInit {
     };
     if (form.id) {
       firstValueFrom(this.catalogApi.updatePortDefinition(pd))
+        .then(() => this.saveCompatibilities(pd.id))
         .then(() => {
           this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? pd : p)));
           this.editPortDef.set(null);
@@ -315,10 +445,12 @@ export default class CatalogDetailComponent implements OnInit {
         .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.catalogApi.createPortDefinition(pd))
-        .then((res) => {
-          this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
-          this.editPortDef.set(null);
-        })
+        .then((res) =>
+          this.saveCompatibilities(res.portDefinitionId).then(() => {
+            this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
+            this.editPortDef.set(null);
+          }),
+        )
         .catch((err) => this.handleError(err));
     }
   }
@@ -348,63 +480,83 @@ export default class CatalogDetailComponent implements OnInit {
 
   // ── Port compatibility actions ─────────────────────────────────────────────
 
-  openAddCompatibility(portDefId: string): void {
-    this.clearErrors();
-    this.compatEntryId.set('');
-    this.addCompatPortDefId.set(portDefId);
+  /** What the port being edited already accepts, as it stands on the server. */
+  readonly editPortCompatibilities = computed<PortCompatibility[]>(() => {
+    const pdId = this.editPortDef()?.id;
+    if (!pdId) return [];
+    return this.mutableCompatibilities().filter((c) => c.portDefinitionId === pdId);
+  });
+
+  /**
+   * The products picked in the open form. Seeded when the form opens and only
+   * written on save, like every other field: a form you can still cancel should
+   * not have changed anything yet. A new port has none, and the compatibilities
+   * are created right after the port itself exists.
+   */
+  readonly portCompatIds = signal<string[]>([]);
+
+  /** Everything the port could accept: the whole catalog except the product the
+   *  port belongs to. The token field takes the chosen ones out of the menu by
+   *  itself. */
+  readonly compatOptions = computed<CatalogEntry[]>(() =>
+    this.allCatalogEntries().filter((e) => e.id !== this.catalogId()),
+  );
+
+  /** The token field hands back the whole set; the form keeps it until save. */
+  onCompatibilitiesChange(values: string[]): void {
+    this.portCompatIds.set(values);
   }
 
-  cancelAddCompatibility(): void {
-    this.clearErrors();
-    this.compatEntryId.set('');
-    this.addCompatPortDefId.set(null);
-  }
+  /**
+   * Writes the difference between what the form shows and what the server has:
+   * a product added is a compatibility created, one taken away is one deleted.
+   * Runs after the port is saved, so a new port has an id to point at.
+   */
+  private saveCompatibilities(pdId: string): Promise<unknown> {
+    const before = this.mutableCompatibilities()
+      .filter((c) => c.portDefinitionId === pdId)
+      .map((c) => c.compatibleCatalogEntryId);
+    const after = this.portCompatIds();
+    const added = after.filter((id) => id && !before.includes(id));
+    const removed = before.filter((id) => id && !after.includes(id));
+    if (added.length === 0 && removed.length === 0) return Promise.resolve();
 
-  confirmAddCompatibility(): void {
-    const pdId = this.addCompatPortDefId();
-    const entryId = this.compatEntryId();
-    if (!pdId || !entryId) return;
-    this.clearErrors();
-    const entry = this.allCatalogEntries().find((e) => e.id === entryId);
-    firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
-      .then(() => {
-        const created: PortCompatibility = {
+    const writes = [
+      ...added.map((entryId) =>
+        firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId)),
+      ),
+      ...removed.map((entryId) =>
+        firstValueFrom(this.catalogApi.deletePortCompatibility(pdId, entryId)),
+      ),
+    ];
+    return Promise.all(writes).then(() => {
+      this.mutableCompatibilities.update((list) => [
+        ...list.filter((c) => c.portDefinitionId !== pdId),
+        ...after.map((entryId) => ({
           id: `${pdId}:${entryId}`,
           portDefinitionId: pdId,
-          compatibleCategory: entry?.category ?? 'Other',
+          compatibleCategory:
+            this.allCatalogEntries().find((e) => e.id === entryId)?.category ?? 'Other',
           compatibleCatalogEntryId: entryId,
-        };
-        this.mutableCompatibilities.update((list) => [...list, created]);
-        this.compatEntryId.set('');
-        this.addCompatPortDefId.set(null);
-      })
-      .catch((err) => this.handleError(err));
+        })),
+      ]);
+    });
   }
 
-  openDeleteCompat(compat: PortCompatibility): void {
-    this.deleteCompat.set(compat);
+  /** What a row says under the port name: nothing when the port accepts
+   *  anything, otherwise the models it was narrowed to. */
+  compatSummary(pdId: string): string {
+    const names = this.compatibilitiesForPortDef(pdId).map((c) => this.compatLabel(c));
+    return names.length > 0 ? `Compatible with ${names.join(', ')}` : '';
   }
 
-  cancelDeleteCompat(): void {
-    this.deleteCompat.set(null);
-  }
-
-  confirmDeleteCompat(): void {
-    const target = this.deleteCompat();
-    if (!target) return;
-    firstValueFrom(
-      this.catalogApi.deletePortCompatibility(
-        target.portDefinitionId,
-        target.compatibleCatalogEntryId,
-      ),
-    )
-      .then(() => {
-        this.mutableCompatibilities.update((list) => list.filter((c) => c.id !== target.id));
-        this.deleteCompat.set(null);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
-  }
+  /** The numbers behind a port, as one line: 25 Gbps · 15 W. */
+  readonly portRating = (pd: PortDefinition): string => {
+    const parts: string[] = [];
+    if (pd.speedGbps !== null && pd.speedGbps !== undefined) parts.push(`${pd.speedGbps} Gbps`);
+    if (pd.powerWatts !== null && pd.powerWatts !== undefined) parts.push(`${pd.powerWatts} W`);
+    return parts.join(' · ');
+  };
 
   readonly compatibleEntryName = (entryId: string): string =>
     this.allCatalogEntries().find((e) => e.id === entryId)?.model ?? entryId;
@@ -418,10 +570,6 @@ export default class CatalogDetailComponent implements OnInit {
       ? this.compatibleEntryName(compat.compatibleCatalogEntryId)
       : `Any ${compat.compatibleCategory}`;
 
-  portDefName(pdId: string): string {
-    return this.mutablePortDefs().find((p) => p.id === pdId)?.name ?? pdId;
-  }
-
   compatibilitiesForPortDef(pdId: string): PortCompatibility[] {
     return this.mutableCompatibilities().filter((c) => c.portDefinitionId === pdId);
   }
@@ -429,26 +577,7 @@ export default class CatalogDetailComponent implements OnInit {
   readonly specEntries = (specs: Record<string, string>): { key: string; value: string }[] =>
     Object.entries(specs).map(([key, value]) => ({ key, value }));
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 
   readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 

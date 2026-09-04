@@ -9,12 +9,11 @@ import {
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import AuthService from '../auth.service';
-import ThemeToggleComponent from '../shared/theme-toggle';
 import AutofocusDirective from '../autofocus.directive';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, ThemeToggleComponent, AutofocusDirective],
+  imports: [ReactiveFormsModule, AutofocusDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './login.html',
@@ -30,6 +29,10 @@ export default class LoginComponent implements OnInit {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
   });
+
+  /** Whether the form has been submitted at least once. Before that, a field
+   * that is not finished yet is not a mistake, only unfinished. */
+  formSubmitted = signal(false);
 
   error = signal<string | null>(null);
 
@@ -61,6 +64,7 @@ export default class LoginComponent implements OnInit {
   }
 
   async onSubmit() {
+    this.formSubmitted.set(true);
     if (this.isLoading()) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();

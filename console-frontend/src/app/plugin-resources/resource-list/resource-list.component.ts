@@ -12,12 +12,11 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
-import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
-import { deleteErrorMessage } from '../kube-api-error';
 import { TitleService } from '../../title.service';
+import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
@@ -49,12 +48,14 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent, ResourceDeleteModalComponent],
+  imports: [RouterLink, PluginIframeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ResourceListComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -108,6 +109,13 @@ export default class ResourceListComponent implements OnInit {
   });
 
   readonly createLink = ['create'];
+
+  /** Where the back button leads: the project these resources belong to, or the
+   *  organization when the plugin is installed there rather than in a project. */
+  backPath = computed(() => {
+    const projectId = this.route.snapshot.parent?.parent?.params['id'];
+    return projectId ? `/projects/${projectId}` : '/';
+  });
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();
@@ -223,48 +231,30 @@ export default class ResourceListComponent implements OnInit {
 
   formatCell = buildCellValue;
 
-  // --- Per-row delete ---
+  /** The first column that reads as a condition carries the card's badge, the
+   *  way a cluster's status does; the rest become rows in the card's list. */
+  conditionColumn = computed(() =>
+    this.columns().find((col) =>
+      this.resources().some((resource) =>
+        this.conditionBadge(col.name, buildCellValue(resource, col)),
+      ),
+    ),
+  );
 
-  pendingDelete = signal<KubeResource | null>(null);
+  detailColumns = computed(() => this.columns().filter((col) => col !== this.conditionColumn()));
 
-  deleting = signal(false);
-
-  deleteError = signal<string | null>(null);
-
-  openDelete(resource: KubeResource): void {
-    this.deleteError.set(null);
-    this.pendingDelete.set(resource);
-  }
-
-  closeDelete(): void {
-    if (!this.deleting()) this.pendingDelete.set(null);
-  }
-
-  async confirmDelete(): Promise<void> {
-    const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
-    const target = this.pendingDelete();
-    if (!crd || !clusterId || !target) return;
-
-    this.deleting.set(true);
-    this.deleteError.set(null);
-    try {
-      await this.loader.deleteResource(
-        this.pluginName(),
-        crd,
-        clusterId,
-        target.metadata.name,
-        target.metadata.namespace,
-      );
-      this.pendingDelete.set(null);
-      await this.reloadResources(crd, clusterId);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[ResourceList] Failed to delete resource:', err);
-      this.deleteError.set(deleteErrorMessage(err));
-    } finally {
-      this.deleting.set(false);
+  /** A printer column that says True or False is a condition the platform keeps,
+   *  not a word: it gets a badge, the same as a cluster's status. The column
+   *  names it, so "Ready" reads as Ready and Not ready rather than as True and
+   *  False, and a column called something else follows along. Anything that is
+   *  not exactly True or False stays text, whatever the plugin puts there. */
+  // eslint-disable-next-line class-methods-use-this
+  conditionBadge(column: string, value: string): { text: string; color: string } | null {
+    if (value === 'True') return { text: column, color: 'success' };
+    if (value === 'False') {
+      return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
     }
+    return null;
   }
 
   // Refreshes the list after a delete. The CRD schema and plugin registry are

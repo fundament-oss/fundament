@@ -1,4 +1,9 @@
-import { loadSdk, loadNlddDesignSystem, navigateToDetail, navigateBack } from './shared.ts';
+import {
+  loadSdk,
+  loadNlddDesignSystem,
+  navigateToDetail,
+  navigateBack,
+} from './shared.ts';
 import {
   applyMode,
   buildBody,
@@ -16,7 +21,9 @@ const form = document.getElementById('form') as HTMLFormElement;
 const errorBox = document.getElementById('error') as HTMLElement;
 const submitButton = document.getElementById('submit') as NlddButton;
 
-document.getElementById('back')!.addEventListener('click', () => navigateBack());
+document
+  .getElementById('back')!
+  .addEventListener('click', () => navigateBack());
 
 let ctx: InitContext | null;
 try {
@@ -28,7 +35,8 @@ try {
 }
 
 if (ctx) {
-  intro.textContent = 'Declare an FSCInstallation to run an OpenFSC peer in a namespace.';
+  intro.textContent =
+    'Declare an FSCInstallation to run an OpenFSC peer in a namespace.';
   renderNamespaceControl(ctx.namespaces);
   applyMode(form);
   form.hidden = false;
@@ -39,10 +47,12 @@ if (ctx) {
 // component has rendered (mirrors console-frontend's dropdown-sync.directive.ts).
 function resyncDropdown(dropdown: HTMLElement | null): void {
   const apply = () =>
-    dropdown?.shadowRoot?.querySelector('slot')?.dispatchEvent(new Event('slotchange'));
-  (dropdown as (HTMLElement & { updateComplete?: Promise<unknown> }) | null)?.updateComplete?.then?.(
-    apply,
-  );
+    dropdown?.shadowRoot
+      ?.querySelector('slot')
+      ?.dispatchEvent(new Event('slotchange'));
+  (
+    dropdown as (HTMLElement & { updateComplete?: Promise<unknown> }) | null
+  )?.updateComplete?.then?.(apply);
   requestAnimationFrame(apply);
 }
 
@@ -58,14 +68,24 @@ function addGateway(kind: GatewayKind): void {
   const row = document.createElement('div');
   row.className = 'plugin-row gateway-row';
   row.innerHTML = gatewayRowHtml(kind, gatewaySeq++);
-  (row.querySelector('.gw-remove') as HTMLElement).addEventListener('click', () => row.remove());
+  (row.querySelector('.gw-remove') as HTMLElement).addEventListener(
+    'click',
+    () => row.remove(),
+  );
   document.getElementById(`${kind}s`)!.appendChild(row);
   applyMode(form);
 }
 
-(form.querySelector('#mode') as HTMLSelectElement).addEventListener('change', () => applyMode(form));
-document.getElementById('add-inway')!.addEventListener('click', () => addGateway('inway'));
-document.getElementById('add-outway')!.addEventListener('click', () => addGateway('outway'));
+(form.querySelector('#mode') as HTMLSelectElement).addEventListener(
+  'change',
+  () => applyMode(form),
+);
+document
+  .getElementById('add-inway')!
+  .addEventListener('click', () => addGateway('inway'));
+document
+  .getElementById('add-outway')!
+  .addEventListener('click', () => addGateway('outway'));
 
 // nldd-text-field's inner <input> is in shadow DOM and can't reach the light-DOM
 // form, so route Enter to the submit button to restore native Enter-to-submit.
@@ -90,8 +110,15 @@ submitButton.addEventListener('click', async () => {
   try {
     const namespace = trimmedValue(form, 'namespace');
     const body = buildBody(form, namespace);
-    const created = await window.fundament.k8s.create<{ metadata?: { name?: string } }>(
-      { group: 'openfsc.fundament.io', version: 'v1', resource: 'fscinstallations', namespace },
+    const created = await window.fundament.k8s.create<{
+      metadata?: { name?: string };
+    }>(
+      {
+        group: 'openfsc.fundament.io',
+        version: 'v1',
+        resource: 'fscinstallations',
+        namespace,
+      },
       body,
     );
     navigateToDetail(created?.metadata?.name ?? body.metadata.name, namespace);

@@ -1,638 +1,491 @@
-<!-- Top Navigation -->
-<nav
-  class="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3"
->
-  <a
-    href="#"
-    class="flex items-center gap-1.5 text-sm font-medium text-neutral-500 dark:text-gray-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-    aria-label="Back to my tasks"
-  >
-    <nldd-icon name="arrow-left" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
-    <span class="hidden sm:inline">My Tasks</span>
-  </a>
+<!-- Inside a page there is a shell around this already, and its own page
+     brings the landmark. Standing on its own it has to bring the lot: a bar, a
+     menu of the tasks in the round, and a page to hold the walkthrough. -->
+@if (embedded()) {
+  <ng-container [ngTemplateOutlet]="body"></ng-container>
+} @else {
+  <nldd-app-view>
+    <nldd-bar-split-view>
+      <!-- Only what is true on every screen: the product and how it looks. No
+           way back to a task list, because a technician has no list to go back
+           to; the round is where they are. -->
+      <nldd-split-view-pane slot="header" sm-order="1" md-order="1" lg-order="1" background="base">
+        <nldd-container padding-left="16" padding-right="8" padding-block="8">
+          <nldd-toolbar label="Application">
+            <!-- Home is the round, not the section list of an application this
+                 technician has no business in. -->
+            <nldd-toolbar-title slot="start" text="Fundament" href="/task-management-technician">
+              <img slot="media" src="/img/fundament-logo.svg" alt="" height="32" />
+            </nldd-toolbar-title>
+            <nldd-toolbar-item slot="end">
+              <!-- No icon attribute: the avatar in the icon slot is the button's
+                   face, and an icon set beside it would win and put a generic
+                   person back where the initials belong. -->
+              <nldd-icon-button
+                [attr.accessible-label]="userName() || 'Account'"
+                variant="secondary"
+                expandable
+                popup-type="menu"
+              >
+                <nldd-avatar
+                  slot="icon"
+                  [attr.name]="userName() || 'Unknown'"
+                  color="inherit"
+                  icon-aligned
+                  decorative
+                ></nldd-avatar>
+                <nldd-menu slot="popup" placement="bottom-end">
+                  <nldd-container slot="header" padding-inline="16" padding-block="12">
+                    <nldd-identity [attr.text]="userName() || 'Unknown'"></nldd-identity>
+                  </nldd-container>
+                  <nldd-menu-item text="Appearance" icon="appearance">
+                    <nldd-menu>
+                      <nldd-menu-item
+                        text="System"
+                        icon="display"
+                        type="radio"
+                        [attr.selected]="theme.themePreference() === 'system' ? '' : null"
+                        (select)="theme.setTheme('system')"
+                      ></nldd-menu-item>
+                      <nldd-menu-item
+                        text="Light"
+                        icon="light-mode"
+                        type="radio"
+                        [attr.selected]="theme.themePreference() === 'light' ? '' : null"
+                        (select)="theme.setTheme('light')"
+                      ></nldd-menu-item>
+                      <nldd-menu-item
+                        text="Dark"
+                        icon="dark-mode"
+                        type="radio"
+                        [attr.selected]="theme.themePreference() === 'dark' ? '' : null"
+                        (select)="theme.setTheme('dark')"
+                      ></nldd-menu-item>
+                    </nldd-menu>
+                  </nldd-menu-item>
+                  <nldd-menu-divider></nldd-menu-divider>
+                  <nldd-menu-item
+                    text="Log out"
+                    icon="logout"
+                    (select)="handleLogout()"
+                  ></nldd-menu-item>
+                </nldd-menu>
+              </nldd-icon-button>
+            </nldd-toolbar-item>
+          </nldd-toolbar>
+        </nldd-container>
+      </nldd-split-view-pane>
+      <nldd-split-view-pane slot="main" sm-order="2" md-order="2" lg-order="2">
+        <nldd-navigation-split-view sidebar-accessible-label="This round">
+          <!-- The round as a menu: where you are, and what is still to come
+               under it. It replaces a dropdown in the bar that listed three
+               hardcoded tasks. -->
+          <nldd-split-view-pane slot="sidebar" background="base" has-content>
+            <!-- The page owns the scroll region: a pane clips what does not fit. -->
+            <nldd-page>
+              <nldd-simple-section>
+                <nldd-title size="3">
+                  <h1>My rounds</h1>
+                </nldd-title>
+                <nldd-spacer size="12"></nldd-spacer>
+                @if (myRounds().length) {
+                  <nldd-list type="navigation" dividers="on-touch" accessible-label="My rounds">
+                    @for (round of myRounds(); track round.key) {
+                      <!-- A button even when it is the one you are on: a menu
+                           row stays a target, which is what lets it take focus
+                           and paint as current. Only in the track does the row
+                           you are on stop being one, because there it has
+                           nowhere to take you. -->
+                      <nldd-list-item
+                        button
+                        [attr.current]="isActiveRound(round) ? '' : null"
+                        (click)="chooseRound(round)"
+                      >
+                        <nldd-text-cell [attr.text]="roundLabel(round)"></nldd-text-cell>
+                        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                        <nldd-text-cell
+                          width="fit-content"
+                          horizontal-alignment="right"
+                          color="secondary"
+                          [attr.text]="roundProgress(round)"
+                        ></nldd-text-cell>
+                      </nldd-list-item>
+                    }
+                  </nldd-list>
+                } @else {
+                  <nldd-text size="sm" color="secondary">
+                    {{ roundsLoaded() ? 'Nothing planned for you.' : 'Loading…' }}
+                  </nldd-text>
+                }
+              </nldd-simple-section>
+            </nldd-page>
+          </nldd-split-view-pane>
+          <nldd-split-view-pane slot="main" has-content>
+            <nldd-page>
+              <ng-container [ngTemplateOutlet]="body"></ng-container>
+            </nldd-page>
+          </nldd-split-view-pane>
+        </nldd-navigation-split-view>
+      </nldd-split-view-pane>
+    </nldd-bar-split-view>
+  </nldd-app-view>
+}
 
-  <!-- Logo -->
-  <a routerLink="/" class="flex items-center leading-tight gap-2">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
-      viewBox="0 0 24 24"
-    >
-      <path
-        fill="currentColor"
-        d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-      />
-    </svg>
-    <span class="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
-      >Fundament</span
-    >
-  </a>
-
-  <div class="flex items-center gap-2">
-    <app-theme-toggle />
-
-    <div class="relative">
-      <button
-        class="rounded-lg p-1.5 text-neutral-500 dark:text-gray-400 hover:bg-neutral-25 dark:hover:bg-gray-900 hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
-        aria-label="Task menu"
-        (click)="toggleMenu($event)"
-      >
-        <nldd-icon name="list" class="w-5 h-5 block" aria-hidden="true"></nldd-icon>
-      </button>
-      <div
-        class="absolute right-0 top-full mt-1 w-64 rounded-xl border border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-1 shadow-lg shadow-neutral-900/10"
-        [class.hidden]="!menuOpen()"
-      >
-        <div
-          class="border-b border-neutral-100 dark:border-gray-800 px-3 py-2 text-xs font-semibold tracking-wide text-neutral-400 dark:text-gray-500 uppercase"
-        >
-          Other Tasks
-        </div>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="rectangle-stack"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Replace network switch — Rack 87
-        </a>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="slash-circle"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Inspect PDU — Hall A
-        </a>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="exclamation-circle"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Check cooling unit — Row 5
-        </a>
-      </div>
+<ng-template #body>
+  <!-- Reading width, padding and centring are the section's, not ours. -->
+  <nldd-simple-section>
+    <!-- Whose round this is, where, and when. Not the current task: the track
+       below names every task already, and the header is the one place that can
+       say which round you are reading. -->
+    <div [class.hidden]="showCompleteScreen()">
+      <nldd-title id="round-title" size="2">
+        <h1>{{ roundTitle() }}</h1>
+        <span slot="subtitle">{{ roundSubtitle() }}</span>
+      </nldd-title>
+      <nldd-spacer size="24"></nldd-spacer>
     </div>
-  </div>
-</nav>
 
-<!-- Main Content -->
-<main class="mx-auto max-w-2xl px-4 pb-36 pt-6">
-  <!-- Task Header -->
-  <div class="mb-6" [class.hidden]="showCompleteScreen()">
-    @if (phase() === 'gather') {
-      <h1 class="text-xl font-semibold text-slate-900 dark:text-white">{{ dcName }}</h1>
-      <p class="mt-1.5 text-sm text-slate-400 dark:text-gray-500">
-        {{ tasks().length }} tasks &middot; Work order WO-2241
-      </p>
-    } @else {
-      <h1 class="text-xl font-semibold text-slate-900 dark:text-white">
-        {{ currentTask().title }}
-      </h1>
-      <div class="mt-2 flex flex-wrap items-center gap-2">
-        @if (currentTask().priority === 'critical') {
-          <nldd-tag
-            color="critical"
-            size="sm"
-            text="Critical"
-            accessible-label="Priority: Critical"
-          ></nldd-tag>
-        }
-        @if (currentTask().priority === 'high') {
-          <nldd-tag
-            color="oranje"
-            size="sm"
-            text="High"
-            accessible-label="Priority: High"
-          ></nldd-tag>
-        }
-        <nldd-tag
-          color="donkerblauw"
-          size="sm"
-          text="In Progress"
-          accessible-label="Status: In progress"
-        ></nldd-tag>
-      </div>
-      <p class="mt-1.5 text-sm text-slate-400 dark:text-gray-500">{{ currentTask().location }}</p>
+    @if (loadError()) {
+      <!-- The twelfth of these, and the only one with a way out of it: the retry
+         goes in the banner's own actions slot. -->
+      <nldd-banner
+        variant="critical"
+        text="Could not load your tasks"
+        [attr.supporting-text]="loadError()"
+      >
+        <nldd-button
+          slot="actions"
+          variant="secondary"
+          text="Try again"
+          (click)="retryLoad()"
+        ></nldd-button>
+      </nldd-banner>
+      <nldd-spacer size="16"></nldd-spacer>
     }
-  </div>
 
-  @if (loadError()) {
-    <div
-      class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950"
-      role="alert"
-    >
-      <p class="text-sm font-semibold text-red-800 dark:text-red-200">Could not load your tasks</p>
-      <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ loadError() }}</p>
-      <button
-        type="button"
-        class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
-        (click)="retryLoad()"
-      >
-        Try again
-      </button>
-    </div>
-  }
-
-  <!-- Step Wizard Timeline -->
-  <div class="relative ml-4" [class.hidden]="showCompleteScreen()">
-    <!-- ── Gather row ── -->
-    <div
-      class="relative flex gap-4 transition-opacity"
-      [class.opacity-100]="phase() === 'gather'"
-      [class.opacity-50]="phase() !== 'gather'"
-      [attr.aria-current]="phase() === 'gather' ? 'step' : null"
-    >
-      <div class="flex flex-col items-center">
-        <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-          [class]="
-            gatherCompleted()
-              ? 'bg-accent-600 text-white'
-              : phase() === 'gather'
-                ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
-                : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
-          "
-          aria-hidden="true"
+    <!-- Step Wizard Timeline
+       One list, one track: gathering, then every task, and under the task you
+       are on its own steps as minor rows in the same lane. A step is a row with
+       a dot and a name; what that step holds is the row below it, which carries
+       the line on but no dot of its own. So every dot sits beside a name, and
+       the track says where you are without the rows having to dim. -->
+    <div [class.hidden]="showCompleteScreen()">
+      <nldd-list dividers="never" accessible-label="Work order">
+        <!-- ── Gather row ── -->
+        <!-- Ticked off and left behind takes you back to the list; the phase you
+           are in has nowhere to take you. -->
+        <nldd-list-item
+          [attr.button]="canOpenGather() ? '' : null"
+          [attr.aria-current]="phase() === 'gather' ? 'step' : null"
+          (click)="canOpenGather() ? goToGather() : null"
         >
-          @if (gatherCompleted()) {
-            <nldd-icon name="check-mark" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
-          } @else {
-            1
-          }
-        </div>
-        <div
-          class="my-1 w-0.5 flex-1"
-          [class]="gatherCompleted() ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
-        ></div>
-      </div>
-
-      <div
-        class="flex-1 pb-8"
-        [class]="
-          phase() === 'gather'
-            ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0'
-            : 'py-2'
-        "
-      >
-        <div class="flex items-center gap-2">
-          <nldd-icon
-            name="tray"
-            style="width: 20px; height: 20px"
-            [class]="
-              phase() === 'gather'
-                ? 'text-accent-600 dark:text-accent-300'
-                : gatherCompleted()
-                  ? 'text-accent-400 dark:text-accent-300'
-                  : 'text-slate-400 dark:text-gray-500'
-            "
-            aria-hidden="true"
-          ></nldd-icon>
-          <h3
-            class="text-sm font-semibold"
-            [class]="
-              phase() === 'gather'
-                ? 'text-slate-900 dark:text-white'
-                : 'text-slate-700 dark:text-gray-300'
-            "
-          >
-            Gather tools &amp; parts
-          </h3>
-        </div>
+          <nldd-timeline-track-cell
+            size="md"
+            position="first"
+            [attr.status]="gatherStatus()"
+            [attr.icon]="gatherCompleted() ? 'check-mark' : null"
+            [attr.text]="gatherCompleted() ? null : '1'"
+          ></nldd-timeline-track-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-cell width="full">
+            <nldd-title size="5">
+              <!-- The count runs on in the heading line, the way a task's tag
+                 does. Only while walking: what was ticked lives in the
+                 technician's own browser, so a round read from elsewhere would
+                 always say nought. -->
+              <!-- The count runs on in the heading line and reads as heading, not
+                 as a footnote under it. Only while walking: what was ticked
+                 lives in the technician's own browser, so a round read from
+                 elsewhere would always say nought. -->
+              <h2>
+                Gather tools &amp; parts
+                @if (!readOnly()) {
+                  {{ checkedItems().size }}/{{ gatherItems().length }}
+                }
+              </h2>
+            </nldd-title>
+          </nldd-cell>
+        </nldd-list-item>
 
         @if (phase() === 'gather') {
-          <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
-            Collect all items from the supply room before heading to the floor.
-          </p>
-          <div class="mt-3 space-y-1" role="list" aria-label="Items to gather">
-            @for (item of gatherItems(); track item.key) {
-              <div
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-slate-50 dark:hover:bg-gray-900"
-                role="listitem"
-                (click)="toggleGatherItem(item.key)"
-                (keydown.enter)="toggleGatherItem(item.key)"
-                (keydown.space)="toggleGatherItem(item.key)"
-              >
-                <nldd-checkbox
-                  [attr.accessible-label]="item.label"
-                  [attr.checked]="checkedItems().has(item.key) ? '' : null"
-                  (click)="$event.stopPropagation()"
-                  (change)="onGatherCheckbox(item.key, $any($event).detail.checked)"
-                ></nldd-checkbox>
-                <div class="select-none" aria-hidden="true">
-                  <span
-                    class="text-sm"
-                    [class]="
-                      checkedItems().has(item.key)
-                        ? 'text-slate-400 dark:text-gray-500 line-through'
-                        : 'text-slate-700 dark:text-gray-300'
-                    "
-                    >{{ item.label }}</span
-                  >
-                  @if (item.taskFor) {
-                    <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
-                      for: {{ item.taskFor }}
-                    </p>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-          @if (checkedItems().size > 0) {
-            <p class="mt-2 text-xs text-slate-400 dark:text-gray-500">
-              {{ checkedItems().size }} of {{ gatherItems().length }} collected
-            </p>
-          }
+          <nldd-list-item>
+            <!-- Content, not a step: no dot, and the line runs on as covered or
+               still ahead depending on what waits below. -->
+            <nldd-timeline-track-cell
+              size="md"
+              variant="none"
+              [attr.status]="gatherContentStatus()"
+            ></nldd-timeline-track-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-cell width="full">
+              <nldd-container horizontal-alignment="left">
+                <nldd-box>
+                  <nldd-container padding="16">
+                    <nldd-text>{{
+                      readOnly()
+                        ? 'What this round needs from the supply room.'
+                        : 'Collect all items from the supply room before heading to the floor.'
+                    }}</nldd-text>
+                    <nldd-spacer size="4"></nldd-spacer>
+                    <!-- Every row is the checkbox, so the whole row is the hit area
+                       and the tick beside the label is what it looks like. -->
+                    <nldd-list dividers="never" accessible-label="Items to gather">
+                      @for (item of gatherItems(); track item.key) {
+                        <nldd-list-item
+                          [attr.checkbox]="readOnly() ? null : ''"
+                          [attr.checked]="!readOnly() && checkedItems().has(item.key) ? '' : null"
+                          (change)="onGatherCheckbox(item.key, $any($event).detail.checked)"
+                        >
+                          @if (!readOnly()) {
+                            <nldd-cell width="fit-content">
+                              <nldd-checkbox
+                                aria-hidden="true"
+                                tabindex="-1"
+                                [attr.checked]="checkedItems().has(item.key) ? '' : null"
+                              ></nldd-checkbox>
+                            </nldd-cell>
+                            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                          }
+                          <nldd-text-cell
+                            [attr.text]="item.label"
+                            [attr.supporting-text]="item.taskFor ? 'for: ' + item.taskFor : null"
+                          ></nldd-text-cell>
+                        </nldd-list-item>
+                      }
+                    </nldd-list>
+                  </nldd-container>
+                </nldd-box>
+                <nldd-spacer size="12"></nldd-spacer>
+                <ng-container [ngTemplateOutlet]="onwards"></ng-container>
+              </nldd-container>
+            </nldd-cell>
+          </nldd-list-item>
         }
-      </div>
-    </div>
 
-    <!-- ── Task rows ── -->
-    @for (task of tasks(); track task.id; let taskIdx = $index) {
-      <div
-        class="relative flex gap-4 transition-opacity"
-        [class.opacity-100]="isTaskActive(taskIdx)"
-        [class.opacity-60]="!isTaskActive(taskIdx) && isTaskDone(taskIdx)"
-        [class.opacity-40]="!isTaskActive(taskIdx) && !isTaskDone(taskIdx)"
-      >
-        <div class="flex flex-col items-center">
-          <div
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            [class]="
-              isTaskDone(taskIdx)
-                ? 'bg-accent-600 text-white'
-                : isTaskActive(taskIdx)
-                  ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
-                  : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
-            "
-            aria-hidden="true"
+        <!-- ── Task rows ── -->
+        @for (task of tasks(); track task.id; let taskIdx = $index) {
+          <!-- A task you have been in takes you back to where you left it; the one
+             you are in has nowhere to take you. -->
+          <nldd-list-item
+            [attr.data-row]="'task-' + taskIdx"
+            [attr.button]="taskStarted(taskIdx) && !isTaskActive(taskIdx) ? '' : null"
+            (click)="taskStarted(taskIdx) && !isTaskActive(taskIdx) ? openTask(taskIdx) : null"
           >
-            @if (isTaskDone(taskIdx)) {
-              <nldd-icon name="check-mark" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
-            } @else {
-              {{ taskIdx + 2 }}
-            }
-          </div>
-          @if (taskIdx < tasks().length - 1) {
-            <div
-              class="my-1 w-0.5 flex-1"
-              [class]="isTaskDone(taskIdx) ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
-            ></div>
-          }
-        </div>
+            <!-- A task with its steps open is not the end of the going: the step
+               you are on sits below it, so the track carries on. -->
+            <nldd-timeline-track-cell
+              size="md"
+              [attr.position]="trackPosition('task', taskIdx)"
+              [attr.status]="taskStatus(taskIdx)"
+              [attr.line]="taskLine(taskIdx)"
+              [attr.icon]="isTaskDone(taskIdx) ? 'check-mark' : null"
+              [attr.text]="isTaskDone(taskIdx) ? null : taskIdx + 2"
+            ></nldd-timeline-track-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-cell width="full">
+              <nldd-title size="5">
+                <!-- The tag runs on in the heading line: it says something about
+                   this task, not about the block it stands beside. -->
+                <h2>
+                  {{ task.title }}
+                  @if (task.priority === 'urgent' || task.priority === 'high') {
+                    <nldd-tag
+                      size="sm"
+                      [attr.color]="task.priority === 'urgent' ? 'critical' : 'oranje'"
+                      [attr.text]="task.priority === 'urgent' ? 'Urgent' : 'High'"
+                      [attr.accessible-label]="
+                        'Priority: ' + (task.priority === 'urgent' ? 'Urgent' : 'High')
+                      "
+                    ></nldd-tag>
+                  }
+                </h2>
+                <nldd-text slot="subtitle">{{ taskPlace(task) }}</nldd-text>
+              </nldd-title>
+            </nldd-cell>
+          </nldd-list-item>
 
-        <div class="flex-1 pb-2">
-          <div class="py-2">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span
-                class="text-sm font-semibold"
-                [class]="
-                  isTaskActive(taskIdx)
-                    ? 'text-slate-900 dark:text-white'
-                    : isTaskDone(taskIdx)
-                      ? 'text-slate-500 dark:text-gray-400'
-                      : 'text-slate-600 dark:text-gray-300'
-                "
-                >{{ task.title }}</span
-              >
-              @if (task.priority === 'critical') {
-                <nldd-tag
-                  color="critical"
-                  size="sm"
-                  text="Critical"
-                  accessible-label="Priority: Critical"
-                ></nldd-tag>
-              }
-              @if (task.priority === 'high') {
-                <nldd-tag
-                  color="oranje"
-                  size="sm"
-                  text="High"
-                  accessible-label="Priority: High"
-                ></nldd-tag>
-              }
-            </div>
-            <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">{{ task.location }}</p>
-          </div>
+          <!-- What has been said about this task and how to say something, in one
+             row: the notes, and the button that writes the next one right under
+             them. Under the task's own header rather than per step, because
+             that is what a note hangs off. -->
+          @if (isTaskActive(taskIdx)) {
+            <nldd-list-item>
+              <!-- Above the first step, so it reads as step -1 of this task: the
+                 stretch is covered once you have entered the task, and still
+                 ahead while you are only reading forward into it. -->
+              <nldd-timeline-track-cell
+                size="md"
+                variant="none"
+                [attr.status]="contentStatus(taskIdx, -1)"
+              ></nldd-timeline-track-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="full">
+                <nldd-list variant="box-tinted" accessible-label="Notes on this task">
+                  @for (note of taskNotes(); track note.id) {
+                    <nldd-list-item>
+                      <!-- Top-aligned: a note runs to several lines and its author
+                         belongs beside the first one. -->
+                      <nldd-cell width="fit-content" vertical-alignment="top">
+                        <nldd-avatar decorative size="28" [attr.name]="note.author"></nldd-avatar>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-text-cell
+                        width="full"
+                        vertical-alignment="top"
+                        [attr.text]="note.content"
+                        [attr.supporting-text]="note.author + ' · ' + noteWhen(note)"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
+                  <!-- The field is the last row of the same box, so a new note
+                     appears right above where you typed it. The same shape as
+                     the task's own detail, and it takes no more room than a
+                     button that had to open something first. -->
+                  <nldd-list-item>
+                    <nldd-cell width="full">
+                      <nldd-multi-line-text-field
+                        rows="1"
+                        placeholder="New note"
+                        accessible-label="Add a note"
+                        [value]="noteText()"
+                        (input)="noteText.set($any($event.target).value ?? '')"
+                      ></nldd-multi-line-text-field>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-cell width="fit-content" vertical-alignment="bottom">
+                      <nldd-button
+                        variant="secondary"
+                        text="Add"
+                        (click)="saveNote()"
+                      ></nldd-button>
+                    </nldd-cell>
+                  </nldd-list-item>
+                </nldd-list>
+              </nldd-cell>
+            </nldd-list-item>
+          }
 
           <!-- Sub-steps (visible when this task is active) -->
           @if (isTaskActive(taskIdx)) {
-            <div class="mt-1">
-              @for (step of task.steps; track $index; let si = $index) {
-                <div
-                  class="relative flex gap-3 transition-opacity"
-                  [class.opacity-100]="isStepActive(taskIdx, si)"
-                  [class.opacity-50]="!isStepActive(taskIdx, si)"
-                  [class.cursor-pointer]="isStepDone(taskIdx, si)"
-                  [class.hover:opacity-70]="isStepDone(taskIdx, si)"
-                  [attr.role]="isStepDone(taskIdx, si) ? 'button' : null"
-                  [attr.tabindex]="isStepDone(taskIdx, si) ? '0' : null"
-                  [attr.aria-label]="
-                    isStepDone(taskIdx, si)
-                      ? 'Step ' + (si + 1) + ': ' + step.title + ' — Completed. Tap to revisit'
-                      : null
-                  "
-                  [attr.aria-current]="isStepActive(taskIdx, si) ? 'step' : null"
-                  (click)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                  (keydown.enter)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                  (keydown.space)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                >
-                  <div class="flex flex-col items-center">
-                    <div
-                      class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                      [class]="
-                        isStepDone(taskIdx, si)
-                          ? 'bg-accent-600 text-white'
-                          : isStepActive(taskIdx, si)
-                            ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-xs'
-                            : 'border-2 border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-medium text-slate-400 dark:text-gray-500'
-                      "
-                      aria-hidden="true"
-                    >
-                      @if (isStepDone(taskIdx, si)) {
-                        <nldd-icon
-                          name="check-mark"
-                          style="width: 10px; height: 10px"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      } @else {
-                        {{ si + 1 }}
-                      }
-                    </div>
-                    @if (si < task.steps.length - 1) {
-                      <div
-                        class="my-1 w-0.5 flex-1"
-                        [class]="
-                          isStepDone(taskIdx, si)
-                            ? 'bg-accent-300'
-                            : 'bg-slate-200 dark:bg-gray-800'
-                        "
-                      ></div>
-                    }
-                  </div>
+            @for (step of task.steps; track $index; let si = $index) {
+              <!-- A step you finished takes you back to it; the one you are on
+                 has nowhere to take you, so it is not a button. -->
+              <nldd-list-item
+                [attr.button]="stepReachable(taskIdx, si) && !isStepActive(taskIdx, si) ? '' : null"
+                [attr.aria-current]="isStepActive(taskIdx, si) ? 'step' : null"
+                [attr.data-row]="'step-' + taskIdx + '-' + si"
+                (click)="
+                  stepReachable(taskIdx, si) && !isStepActive(taskIdx, si)
+                    ? jumpToStep(taskIdx, si)
+                    : null
+                "
+              >
+                <nldd-timeline-track-cell
+                  size="md"
+                  variant="minor"
+                  [attr.position]="trackPosition('step', taskIdx, si)"
+                  [attr.status]="stepStatus(taskIdx, si)"
+                ></nldd-timeline-track-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="full">
+                  <nldd-title size="6">
+                    <h3>{{ step.title }}</h3>
+                  </nldd-title>
+                </nldd-cell>
+              </nldd-list-item>
 
-                  <div
-                    class="flex-1 pb-4"
-                    [class]="
-                      isStepActive(taskIdx, si)
-                        ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0 mb-4'
-                        : 'py-1.5'
-                    "
-                  >
-                    <div class="flex items-center gap-2">
-                      <nldd-icon
-                        [attr.name]="step.icon"
-                        style="width: 18px; height: 18px"
-                        [class]="
-                          isStepActive(taskIdx, si)
-                            ? 'text-accent-600 dark:text-accent-300'
-                            : isStepDone(taskIdx, si)
-                              ? 'text-accent-400 dark:text-accent-300'
-                              : 'text-slate-400 dark:text-gray-500'
-                        "
-                        aria-hidden="true"
-                      ></nldd-icon>
-                      <h3
-                        class="text-sm font-medium"
-                        [class]="
-                          isStepActive(taskIdx, si)
-                            ? 'text-slate-900 dark:text-white'
-                            : 'text-slate-600 dark:text-gray-300'
-                        "
-                      >
-                        {{ step.title }}
-                      </h3>
-                    </div>
-                    @if (isStepActive(taskIdx, si)) {
-                      <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
-                        {{ step.description }}
-                      </p>
-                      <div class="mt-3" [innerHTML]="safeSvg(step.svg, theme.isDarkMode())"></div>
-                    }
-                  </div>
-                </div>
+              @if (isStepActive(taskIdx, si)) {
+                <nldd-list-item>
+                  <!-- See the gather row: content carries the line, not a dot. -->
+                  <nldd-timeline-track-cell
+                    size="md"
+                    variant="none"
+                    [attr.position]="contentPosition(taskIdx, si)"
+                    [attr.status]="contentStatus(taskIdx, si)"
+                  ></nldd-timeline-track-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-cell width="full">
+                    <nldd-container horizontal-alignment="left">
+                      <nldd-box>
+                        <nldd-container padding="16">
+                          @if (step.description) {
+                            <nldd-text>{{ step.description }}</nldd-text>
+                            <nldd-spacer size="12"></nldd-spacer>
+                          }
+                          <!-- The drawing is slotted straight in, so it keeps its
+                           own colors and the box around it reserves its space.
+                           At its own size, not the card's: a drawing that fills
+                           the width pushes the next step off the screen. -->
+                          <nldd-container horizontal-alignment="center">
+                            <nldd-image
+                              decorative
+                              width="240"
+                              aspect-ratio="6/5"
+                              [innerHTML]="safeSvg(step.svg, theme.isDarkMode())"
+                            ></nldd-image>
+                          </nldd-container>
+                        </nldd-container>
+                      </nldd-box>
+                      <nldd-spacer size="12"></nldd-spacer>
+                      <ng-container [ngTemplateOutlet]="onwards"></ng-container>
+                    </nldd-container>
+                  </nldd-cell>
+                </nldd-list-item>
               }
-            </div>
+            }
           }
-        </div>
-      </div>
-    }
-  </div>
+        }
+      </nldd-list>
+    </div>
 
-  <!-- Task Complete Screen -->
-  <div [class.hidden]="!showCompleteScreen()" class="py-16 text-center">
-    <div
-      class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950 ring-1 ring-emerald-200/60 dark:ring-emerald-800/60"
-    >
-      <nldd-icon
-        name="check-mark-circle"
-        style="width: 32px; height: 32px; color: #059669"
-        aria-hidden="true"
-      ></nldd-icon>
-    </div>
-    <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">Work order complete!</h2>
-    <p class="mt-2 text-sm text-neutral-500 dark:text-gray-400">
-      All tasks for {{ dcName }} have been finished.
-    </p>
-    <a href="#">
-      <nldd-button
-        variant="neutral-filled"
-        text="Back to My Tasks"
-        start-icon="arrow-left"
-        class="mt-6 inline-flex"
-      ></nldd-button>
-    </a>
-  </div>
-</main>
-
-<!-- Sticky Bottom Bar -->
-<div
-  class="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
-  [class.hidden]="showCompleteScreen()"
->
-  <div class="mx-auto max-w-2xl">
-    <!-- Progress Bar -->
-    <div class="flex items-center gap-3 px-4 pt-3">
-      <div
-        class="h-1 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-gray-800"
-        role="progressbar"
-        [attr.aria-valuemin]="0"
-        [attr.aria-valuemax]="totalSteps()"
-        [attr.aria-valuenow]="completedCount()"
-        [attr.aria-label]="
-          'Task progress: ' + completedCount() + ' of ' + totalSteps() + ' steps completed'
-        "
-      >
-        <div
-          class="h-full rounded-full bg-accent-500 transition-all duration-300"
-          [style.width.%]="progressPct()"
-        ></div>
-      </div>
-      <span class="text-xs font-medium tabular-nums text-neutral-400 dark:text-gray-500"
-        >{{ completedCount() }}/{{ totalSteps() }}</span
-      >
-    </div>
-    <!-- Action Row -->
-    <div class="flex items-center justify-between px-3 pb-3 pt-2">
-      <nldd-button
-        variant="secondary"
-        size="sm"
-        text="Previous"
-        start-icon="chevron-left"
-        aria-label="Previous step"
-        [attr.disabled]="phase() === 'gather' ? '' : null"
-        (click)="pressPrev()"
-      ></nldd-button>
-      <div class="flex items-center gap-1">
-        <nldd-button
-          variant="secondary"
-          size="sm"
-          text="Photo"
-          start-icon="square-arrow-up"
-          aria-label="Take photo for current step"
-          (click)="openPhotoModal()"
-        ></nldd-button>
-        <nldd-button
-          variant="secondary"
-          size="sm"
-          text="Note"
-          start-icon="pencil-on-square"
-          aria-label="Add note for current step"
-          (click)="openNoteModal()"
-        ></nldd-button>
-      </div>
-      <!-- Disabled while the step write is in flight: pressDone() ignores the
-           second press either way, but without this the button looks like it
-           did nothing. -->
-      <nldd-button
-        variant="primary"
-        size="sm"
-        [attr.text]="savingStep() ? 'Saving…' : showCompleteBtn() ? 'Complete' : 'Done'"
-        [attr.end-icon]="showCompleteBtn() ? 'check-mark-circle' : 'check-mark-small'"
-        [attr.disabled]="savingStep() ? '' : null"
-        [attr.aria-busy]="savingStep() ? 'true' : null"
-        [attr.aria-label]="showCompleteBtn() ? 'Complete all tasks' : 'Mark step as done'"
-        (click)="pressDone()"
-      ></nldd-button>
-    </div>
-  </div>
-</div>
-
-<!-- Photo Modal -->
-<div
-  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
-  [class.hidden]="!showPhotoModal()"
-  [class.flex]="showPhotoModal()"
-  role="dialog"
-  aria-modal="true"
-  aria-label="Take photo"
-  (click)="onModalBackdropClick($event, 'photo')"
-  (keydown.escape)="onModalBackdropClick($event, 'photo')"
->
-  <div
-    class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80 dark:ring-gray-700/80"
-  >
-    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
-      <nldd-icon
-        name="square-arrow-up"
-        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
-        aria-hidden="true"
-      ></nldd-icon>
-      Take Photo
-    </div>
-    <p class="mt-1 text-sm text-neutral-400 dark:text-gray-500">{{ currentStepLabel() }}</p>
-    <div class="mt-4">
-      <label
-        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 dark:border-gray-800 bg-neutral-50 dark:bg-gray-900 px-4 py-8 transition hover:border-accent-400 hover:bg-accent-50/30 dark:hover:bg-accent-950/30"
-      >
-        <nldd-icon
-          name="square-plus-on-square"
-          class="w-8 h-8 text-neutral-400 dark:text-gray-500 mb-2"
-          aria-hidden="true"
-        ></nldd-icon>
-        <span class="text-sm font-medium text-neutral-500 dark:text-gray-400"
-          >Tap to take photo</span
+    <!-- The end of the round. An inline dialog with variant="success": the ring,
+       the circle and the green were a check mark drawn by hand, down to a hex
+       colour that no theme can reach. -->
+    @if (showCompleteScreen()) {
+      <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+        <nldd-inline-dialog
+          variant="success"
+          heading-level="2"
+          text="Work order complete!"
+          supporting-text="Everything in this round is done."
         >
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          class="hidden"
-          (change)="onPhotoSelected($event)"
-        />
-      </label>
-      @if (photoPreviewUrl()) {
-        <div class="mt-3">
-          <img
-            [src]="photoPreviewUrl()!"
-            class="h-32 w-full rounded-xl object-cover"
-            alt="Captured photo preview"
-          />
-        </div>
-      }
-    </div>
-    <p class="mt-3 text-xs text-neutral-400 dark:text-gray-500" role="note">
-      Photo upload is not available yet — the preview is local to this device and is not stored with
-      the task.
-    </p>
-    <div class="mt-5 flex justify-end gap-2">
-      <nldd-button
-        variant="secondary"
-        text="Close"
-        size="sm"
-        (click)="closePhotoModal()"
-      ></nldd-button>
-    </div>
-  </div>
-</div>
+          <nldd-button
+            slot="actions"
+            variant="neutral-filled"
+            text="Back to My Tasks"
+            start-icon="arrow-left"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-simple-section>
+    }
+  </nldd-simple-section>
+</ng-template>
 
-<!-- Notes Modal -->
-<div
-  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
-  [class.hidden]="!showNoteModal()"
-  [class.flex]="showNoteModal()"
-  role="dialog"
-  aria-modal="true"
-  aria-label="Add note"
-  (click)="onModalBackdropClick($event, 'note')"
-  (keydown.escape)="onModalBackdropClick($event, 'note')"
->
-  <div
-    class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80 dark:ring-gray-700/80"
-  >
-    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
-      <nldd-icon
-        name="pencil-on-square"
-        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
-        aria-hidden="true"
-      ></nldd-icon>
-      Add Note
-    </div>
-    <p class="mt-1 text-sm text-neutral-400 dark:text-gray-500">{{ currentStepLabel() }}</p>
-    <nldd-multi-line-text-field
-      rows="4"
-      placeholder="Add your observations…"
-      [value]="noteText()"
-      (change)="noteText.set($any($event).detail?.value ?? '')"
-    ></nldd-multi-line-text-field>
-    <div class="mt-5 flex justify-end gap-2">
-      <nldd-button
-        variant="secondary"
-        text="Cancel"
-        size="sm"
-        (click)="closeNoteModal()"
-      ></nldd-button>
-      <nldd-button variant="primary" text="Save" size="sm" (click)="saveNote()"></nldd-button>
-    </div>
-  </div>
-</div>
+<!-- The way on, under the card of whatever step you are on. Reading, it moves
+     what you are looking at and writes nothing; walking, it records the step and
+     carries you to the next. -->
+<ng-template #onwards>
+  @if (readOnly()) {
+    @if (!atEnd()) {
+      <!-- Show, not continue: continuing is what somebody walking the round
+           does, and nobody walks here. Reading is looking, and this button puts
+           the next step in front of you and changes nothing else. -->
+      <nldd-button variant="primary" text="Show next step" (click)="pressNext()"></nldd-button>
+    }
+  } @else {
+    <!-- Disabled while the step write is in flight: pressDone() ignores the
+         second press either way, but without this the button looks like it did
+         nothing. -->
+    <!-- What pressing it does, not what it leaves behind: it records this step.
+         That it carries you to the next one is what happens in a walkthrough,
+         not a second thing you choose. No aria-label over it any more, now that
+         the visible words say it. -->
+    <nldd-button
+      variant="primary"
+      [attr.text]="savingStep() ? 'Saving…' : showCompleteBtn() ? 'Complete round' : 'Mark as done'"
+      [attr.disabled]="savingStep() ? '' : null"
+      [attr.aria-busy]="savingStep() ? 'true' : null"
+      (click)="pressDone()"
+    ></nldd-button>
+  }
+</ng-template>

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/task.proto.
  */
 export const file_v1_task: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS90YXNrLnByb3RvEgdkY2ltLnYxIvECCgRUYXNrEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEiMKBnN0YXR1cxgoIAEoDjITLmRjaW0udjEuVGFza1N0YXR1cxInCghwcmlvcml0eRgyIAEoDjIVLmRjaW0udjEuVGFza1ByaW9yaXR5EicKCGNhdGVnb3J5GDwgASgOMhUuZGNpbS52MS5UYXNrQ2F0ZWdvcnkSGgoLYXNzaWduZWVfaWQYRiABKAlCBaoBAggBEjMKCGR1ZV9kYXRlGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESEAoIbG9jYXRpb24YWiABKAkSKwoHY3JlYXRlZBhkIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhuIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBItABCghUYXNrU3RlcBIKCgJpZBgKIAEoCRIPCgd0YXNrX2lkGBQgASgJEg0KBXRpdGxlGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEg8KB29yZGluYWwYMiABKAUSEQoJY29tcGxldGVkGDwgASgIEisKB2NyZWF0ZWQYRiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASLYAQoQTGlzdFRhc2tzUmVxdWVzdBI0CgZzdGF0dXMYCiABKA4yEy5kY2ltLnYxLlRhc2tTdGF0dXNCD6oBAggBukgHggEEEAEgABI4Cghwcmlvcml0eRgUIAEoDjIVLmRjaW0udjEuVGFza1ByaW9yaXR5Qg+qAQIIAbpIB4IBBBABIAASOAoIY2F0ZWdvcnkYHiABKA4yFS5kY2ltLnYxLlRhc2tDYXRlZ29yeUIPqgECCAG6SAeCAQQQASAAEhoKC2Fzc2lnbmVlX2lkGCggASgJQgWqAQIIASIxChFMaXN0VGFza3NSZXNwb25zZRIcCgV0YXNrcxgKIAMoCzINLmRjaW0udjEuVGFzayImCg5HZXRUYXNrUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiLgoPR2V0VGFza1Jlc3BvbnNlEhsKBHRhc2sYCiABKAsyDS5kY2ltLnYxLlRhc2sizAIKEUNyZWF0ZVRhc2tSZXF1ZXN0EhYKBXRpdGxlGAogASgJQge6SARyAhABEhoKC2Rlc2NyaXB0aW9uGBQgASgJQgWqAQIIARIvCgZzdGF0dXMYHiABKA4yEy5kY2ltLnYxLlRhc2tTdGF0dXNCCrpIB4IBBBABIAASMwoIcHJpb3JpdHkYKCABKA4yFS5kY2ltLnYxLlRhc2tQcmlvcml0eUIKukgHggEEEAEgABIzCghjYXRlZ29yeRgyIAEoDjIVLmRjaW0udjEuVGFza0NhdGVnb3J5Qgq6SAeCAQQQASAAEhoKC2Fzc2lnbmVlX2lkGDwgASgJQgWqAQIIARIzCghkdWVfZGF0ZRhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhcKCGxvY2F0aW9uGFAgASgJQgWqAQIIASIlChJDcmVhdGVUYXNrUmVzcG9uc2USDwoHdGFza19pZBgKIAEoCSLvAgoRVXBkYXRlVGFza1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhQKBXRpdGxlGBQgASgJQgWqAQIIARIaCgtkZXNjcmlwdGlvbhgeIAEoCUIFqgECCAESNAoGc3RhdHVzGCggASgOMhMuZGNpbS52MS5UYXNrU3RhdHVzQg+qAQIIAbpIB4IBBBABIAASOAoIcHJpb3JpdHkYMiABKA4yFS5kY2ltLnYxLlRhc2tQcmlvcml0eUIPqgECCAG6SAeCAQQQASAAEjgKCGNhdGVnb3J5GDwgASgOMhUuZGNpbS52MS5UYXNrQ2F0ZWdvcnlCD6oBAggBukgHggEEEAEgABIaCgthc3NpZ25lZV9pZBhGIAEoCUIFqgECCAESMwoIZHVlX2RhdGUYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIXCghsb2NhdGlvbhhaIAEoCUIFqgECCAEiKQoRRGVsZXRlVGFza1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIjEKFExpc3RUYXNrU3RlcHNSZXF1ZXN0EhkKB3Rhc2tfaWQYCiABKAlCCLpIBXIDsAEBIjkKFUxpc3RUYXNrU3RlcHNSZXNwb25zZRIgCgVzdGVwcxgKIAMoCzIRLmRjaW0udjEuVGFza1N0ZXAidwoVQ3JlYXRlVGFza1N0ZXBSZXF1ZXN0EhkKB3Rhc2tfaWQYCiABKAlCCLpIBXIDsAEBEhYKBXRpdGxlGBQgASgJQge6SARyAhABEhoKC2Rlc2NyaXB0aW9uGB4gASgJQgWqAQIIARIPCgdvcmRpbmFsGCggASgFIi4KFkNyZWF0ZVRhc2tTdGVwUmVzcG9uc2USFAoMdGFza19zdGVwX2lkGAogASgJIpEBChVVcGRhdGVUYXNrU3RlcFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhQKBXRpdGxlGBQgASgJQgWqAQIIARIaCgtkZXNjcmlwdGlvbhgeIAEoCUIFqgECCAESFgoHb3JkaW5hbBgoIAEoBUIFqgECCAESGAoJY29tcGxldGVkGDIgASgIQgWqAQIIASItChVEZWxldGVUYXNrU3RlcFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBKqQBCgpUYXNrU3RhdHVzEhsKF1RBU0tfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFQoRVEFTS19TVEFUVVNfUkVBRFkQChIbChdUQVNLX1NUQVRVU19JTl9QUk9HUkVTUxAUEhYKElRBU0tfU1RBVFVTX1JFVklFVxAeEhcKE1RBU0tfU1RBVFVTX0JMT0NLRUQQKBIUChBUQVNLX1NUQVRVU19ET05FEDIqkgEKDFRhc2tQcmlvcml0eRIdChlUQVNLX1BSSU9SSVRZX1VOU1BFQ0lGSUVEEAASFQoRVEFTS19QUklPUklUWV9MT1cQChIYChRUQVNLX1BSSU9SSVRZX01FRElVTRAUEhYKElRBU0tfUFJJT1JJVFlfSElHSBAeEhoKFlRBU0tfUFJJT1JJVFlfQ1JJVElDQUwQKCrNAQoMVGFza0NhdGVnb3J5Eh0KGVRBU0tfQ0FURUdPUllfVU5TUEVDSUZJRUQQABIaChZUQVNLX0NBVEVHT1JZX0hBUkRXQVJFEAoSGQoVVEFTS19DQVRFR09SWV9ORVRXT1JLEBQSGQoVVEFTS19DQVRFR09SWV9DT09MSU5HEB4SFwoTVEFTS19DQVRFR09SWV9QT1dFUhAoEhoKFlRBU0tfQ0FURUdPUllfU0VDVVJJVFkQMhIXChNUQVNLX0NBVEVHT1JZX09USEVSEDwy2gIKC1Rhc2tTZXJ2aWNlEkIKCUxpc3RUYXNrcxIZLmRjaW0udjEuTGlzdFRhc2tzUmVxdWVzdBoaLmRjaW0udjEuTGlzdFRhc2tzUmVzcG9uc2USPAoHR2V0VGFzaxIXLmRjaW0udjEuR2V0VGFza1JlcXVlc3QaGC5kY2ltLnYxLkdldFRhc2tSZXNwb25zZRJFCgpDcmVhdGVUYXNrEhouZGNpbS52MS5DcmVhdGVUYXNrUmVxdWVzdBobLmRjaW0udjEuQ3JlYXRlVGFza1Jlc3BvbnNlEkAKClVwZGF0ZVRhc2sSGi5kY2ltLnYxLlVwZGF0ZVRhc2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EkAKCkRlbGV0ZVRhc2sSGi5kY2ltLnYxLkRlbGV0ZVRhc2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5MsgCCg9UYXNrU3RlcFNlcnZpY2USTgoNTGlzdFRhc2tTdGVwcxIdLmRjaW0udjEuTGlzdFRhc2tTdGVwc1JlcXVlc3QaHi5kY2ltLnYxLkxpc3RUYXNrU3RlcHNSZXNwb25zZRJRCg5DcmVhdGVUYXNrU3RlcBIeLmRjaW0udjEuQ3JlYXRlVGFza1N0ZXBSZXF1ZXN0Gh8uZGNpbS52MS5DcmVhdGVUYXNrU3RlcFJlc3BvbnNlEkgKDlVwZGF0ZVRhc2tTdGVwEh4uZGNpbS52MS5VcGRhdGVUYXNrU3RlcFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSSAoORGVsZXRlVGFza1N0ZXASHi5kY2ltLnYxLkRlbGV0ZVRhc2tTdGVwUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS90YXNrLnByb3RvEgdkY2ltLnYxIoUDCgRUYXNrEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEiMKBnN0YXR1cxgoIAEoDjITLmRjaW0udjEuVGFza1N0YXR1cxInCghwcmlvcml0eRgyIAEoDjIVLmRjaW0udjEuVGFza1ByaW9yaXR5EgwKBHRhZ3MYQSADKAkSHQoOYmxvY2tlZF9yZWFzb24YQyABKAlCBaoBAggBEhoKC2Fzc2lnbmVlX2lkGEYgASgJQgWqAQIIARIzCghkdWVfZGF0ZRhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhAKCGxvY2F0aW9uGFogASgJEisKB2NyZWF0ZWQYZCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIAUoECDwQPVIIY2F0ZWdvcnki0AEKCFRhc2tTdGVwEgoKAmlkGAogASgJEg8KB3Rhc2tfaWQYFCABKAkSDQoFdGl0bGUYHiABKAkSEwoLZGVzY3JpcHRpb24YKCABKAkSDwoHb3JkaW5hbBgyIAEoBRIRCgljb21wbGV0ZWQYPCABKAgSKwoHY3JlYXRlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIsIBChBMaXN0VGFza3NSZXF1ZXN0EjQKBnN0YXR1cxgKIAEoDjITLmRjaW0udjEuVGFza1N0YXR1c0IPqgECCAG6SAeCAQQQASAAEjgKCHByaW9yaXR5GBQgASgOMhUuZGNpbS52MS5UYXNrUHJpb3JpdHlCD6oBAggBukgHggEEEAEgABISCgN0YWcYIyABKAlCBaoBAggBEhoKC2Fzc2lnbmVlX2lkGCggASgJQgWqAQIIAUoECB4QH1IIY2F0ZWdvcnkiMQoRTGlzdFRhc2tzUmVzcG9uc2USHAoFdGFza3MYCiADKAsyDS5kY2ltLnYxLlRhc2siJgoOR2V0VGFza1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIi4KD0dldFRhc2tSZXNwb25zZRIbCgR0YXNrGAogASgLMg0uZGNpbS52MS5UYXNrItICChFDcmVhdGVUYXNrUmVxdWVzdBIWCgV0aXRsZRgKIAEoCUIHukgEcgIQARIaCgtkZXNjcmlwdGlvbhgUIAEoCUIFqgECCAESLwoGc3RhdHVzGB4gASgOMhMuZGNpbS52MS5UYXNrU3RhdHVzQgq6SAeCAQQQASAAEjEKCHByaW9yaXR5GCggASgOMhUuZGNpbS52MS5UYXNrUHJpb3JpdHlCCLpIBYIBAhABEgwKBHRhZ3MYNyADKAkSHQoOYmxvY2tlZF9yZWFzb24YOSABKAlCBaoBAggBEhoKC2Fzc2lnbmVlX2lkGDwgASgJQgWqAQIIARIzCghkdWVfZGF0ZRhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhcKCGxvY2F0aW9uGFAgASgJQgWqAQIIAUoECDIQM1IIY2F0ZWdvcnkiJQoSQ3JlYXRlVGFza1Jlc3BvbnNlEg8KB3Rhc2tfaWQYCiABKAkiogMKEVVwZGF0ZVRhc2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIUCgV0aXRsZRgUIAEoCUIFqgECCAESGgoLZGVzY3JpcHRpb24YHiABKAlCBaoBAggBEjQKBnN0YXR1cxgoIAEoDjITLmRjaW0udjEuVGFza1N0YXR1c0IPqgECCAG6SAeCAQQQASAAEjYKCHByaW9yaXR5GDIgASgOMhUuZGNpbS52MS5UYXNrUHJpb3JpdHlCDaoBAggBukgFggECEAESDAoEdGFncxhBIAMoCRISCgpjbGVhcl90YWdzGEIgASgIEh0KDmJsb2NrZWRfcmVhc29uGEMgASgJQgWqAQIIARIcChRjbGVhcl9ibG9ja2VkX3JlYXNvbhhEIAEoCBIaCgthc3NpZ25lZV9pZBhGIAEoCUIFqgECCAESMwoIZHVlX2RhdGUYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIXCghsb2NhdGlvbhhaIAEoCUIFqgECCAFKBAg8ED1SCGNhdGVnb3J5IikKEURlbGV0ZVRhc2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIxChRMaXN0VGFza1N0ZXBzUmVxdWVzdBIZCgd0YXNrX2lkGAogASgJQgi6SAVyA7ABASI5ChVMaXN0VGFza1N0ZXBzUmVzcG9uc2USIAoFc3RlcHMYCiADKAsyES5kY2ltLnYxLlRhc2tTdGVwIncKFUNyZWF0ZVRhc2tTdGVwUmVxdWVzdBIZCgd0YXNrX2lkGAogASgJQgi6SAVyA7ABARIWCgV0aXRsZRgUIAEoCUIHukgEcgIQARIaCgtkZXNjcmlwdGlvbhgeIAEoCUIFqgECCAESDwoHb3JkaW5hbBgoIAEoBSIuChZDcmVhdGVUYXNrU3RlcFJlc3BvbnNlEhQKDHRhc2tfc3RlcF9pZBgKIAEoCSKRAQoVVXBkYXRlVGFza1N0ZXBSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIUCgV0aXRsZRgUIAEoCUIFqgECCAESGgoLZGVzY3JpcHRpb24YHiABKAlCBaoBAggBEhYKB29yZGluYWwYKCABKAVCBaoBAggBEhgKCWNvbXBsZXRlZBgyIAEoCEIFqgECCAEiLQoVRGVsZXRlVGFza1N0ZXBSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASqhAQoKVGFza1N0YXR1cxIbChdUQVNLX1NUQVRVU19VTlNQRUNJRklFRBAAEhQKEFRBU0tfU1RBVFVTX1RPRE8QChIVChFUQVNLX1NUQVRVU19ET0lORxAUEhQKEFRBU0tfU1RBVFVTX0RPTkUQMiIECB4QHiIECCgQKCoSVEFTS19TVEFUVVNfUkVWSUVXKhNUQVNLX1NUQVRVU19CTE9DS0VEKpABCgxUYXNrUHJpb3JpdHkSHQoZVEFTS19QUklPUklUWV9VTlNQRUNJRklFRBAAEhUKEVRBU0tfUFJJT1JJVFlfTE9XEAoSGAoUVEFTS19QUklPUklUWV9NRURJVU0QFBIWChJUQVNLX1BSSU9SSVRZX0hJR0gQHhIYChRUQVNLX1BSSU9SSVRZX1VSR0VOVBAoMtoCCgtUYXNrU2VydmljZRJCCglMaXN0VGFza3MSGS5kY2ltLnYxLkxpc3RUYXNrc1JlcXVlc3QaGi5kY2ltLnYxLkxpc3RUYXNrc1Jlc3BvbnNlEjwKB0dldFRhc2sSFy5kY2ltLnYxLkdldFRhc2tSZXF1ZXN0GhguZGNpbS52MS5HZXRUYXNrUmVzcG9uc2USRQoKQ3JlYXRlVGFzaxIaLmRjaW0udjEuQ3JlYXRlVGFza1JlcXVlc3QaGy5kY2ltLnYxLkNyZWF0ZVRhc2tSZXNwb25zZRJACgpVcGRhdGVUYXNrEhouZGNpbS52MS5VcGRhdGVUYXNrUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJACgpEZWxldGVUYXNrEhouZGNpbS52MS5EZWxldGVUYXNrUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eTLIAgoPVGFza1N0ZXBTZXJ2aWNlEk4KDUxpc3RUYXNrU3RlcHMSHS5kY2ltLnYxLkxpc3RUYXNrU3RlcHNSZXF1ZXN0Gh4uZGNpbS52MS5MaXN0VGFza1N0ZXBzUmVzcG9uc2USUQoOQ3JlYXRlVGFza1N0ZXASHi5kY2ltLnYxLkNyZWF0ZVRhc2tTdGVwUmVxdWVzdBofLmRjaW0udjEuQ3JlYXRlVGFza1N0ZXBSZXNwb25zZRJICg5VcGRhdGVUYXNrU3RlcBIeLmRjaW0udjEuVXBkYXRlVGFza1N0ZXBSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EkgKDkRlbGV0ZVRhc2tTdGVwEh4uZGNpbS52MS5EZWxldGVUYXNrU3RlcFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Task is a standalone datacenter work order.
@@ -48,9 +48,21 @@ export type Task = Message<"dcim.v1.Task"> & {
   priority: TaskPriority;
 
   /**
-   * @generated from field: dcim.v1.TaskCategory category = 60;
+   * Free text, and more than one: work on a switch is network work and hardware
+   * work at the same time, and a single category made you drop half of that.
+   *
+   * @generated from field: repeated string tags = 65;
    */
-  category: TaskCategory;
+  tags: string[];
+
+  /**
+   * Stuck on something that is not a person: a part on order, access to a room,
+   * a supplier. Waiting for a colleague needs no field — that is the assignee.
+   * Absent means the work can move.
+   *
+   * @generated from field: string blocked_reason = 67 [features.field_presence = EXPLICIT];
+   */
+  blockedReason: string;
 
   /**
    * @generated from field: string assignee_id = 70 [features.field_presence = EXPLICIT];
@@ -154,9 +166,12 @@ export type ListTasksRequest = Message<"dcim.v1.ListTasksRequest"> & {
   priority: TaskPriority;
 
   /**
-   * @generated from field: dcim.v1.TaskCategory category = 30 [features.field_presence = EXPLICIT];
+   * One tag at a time here: the menu navigates. Combining them is a filter and
+   * that lives above the list.
+   *
+   * @generated from field: string tag = 35 [features.field_presence = EXPLICIT];
    */
-  category: TaskCategory;
+  tag: string;
 
   /**
    * @generated from field: string assignee_id = 40 [features.field_presence = EXPLICIT];
@@ -242,14 +257,21 @@ export type CreateTaskRequest = Message<"dcim.v1.CreateTaskRequest"> & {
   status: TaskStatus;
 
   /**
+   * No not_in: [0] — a task without a priority is a task nobody got to yet.
+   *
    * @generated from field: dcim.v1.TaskPriority priority = 40;
    */
   priority: TaskPriority;
 
   /**
-   * @generated from field: dcim.v1.TaskCategory category = 50;
+   * @generated from field: repeated string tags = 55;
    */
-  category: TaskCategory;
+  tags: string[];
+
+  /**
+   * @generated from field: string blocked_reason = 57 [features.field_presence = EXPLICIT];
+   */
+  blockedReason: string;
 
   /**
    * @generated from field: string assignee_id = 60 [features.field_presence = EXPLICIT];
@@ -327,9 +349,28 @@ export type UpdateTaskRequest = Message<"dcim.v1.UpdateTaskRequest"> & {
   priority: TaskPriority;
 
   /**
-   * @generated from field: dcim.v1.TaskCategory category = 60 [features.field_presence = EXPLICIT];
+   * A non-empty list replaces every tag the task carries. An empty list leaves
+   * them alone, because a repeated field cannot tell "not sent" from "sent
+   * empty"; clear_tags is how a client says the task should carry none.
+   *
+   * @generated from field: repeated string tags = 65;
    */
-  category: TaskCategory;
+  tags: string[];
+
+  /**
+   * @generated from field: bool clear_tags = 66;
+   */
+  clearTags: boolean;
+
+  /**
+   * @generated from field: string blocked_reason = 67 [features.field_presence = EXPLICIT];
+   */
+  blockedReason: string;
+
+  /**
+   * @generated from field: bool clear_blocked_reason = 68;
+   */
+  clearBlockedReason: boolean;
 
   /**
    * @generated from field: string assignee_id = 70 [features.field_presence = EXPLICIT];
@@ -509,6 +550,14 @@ export const DeleteTaskStepRequestSchema: GenMessage<DeleteTaskStepRequest> = /*
   messageDesc(file_v1_task, 15);
 
 /**
+ * How far the work has got, and nothing else. Two of the old values said
+ * something different: "review" and "blocked" were about whose turn it is, not
+ * about progress, and a task can be halfway and blocked at the same time.
+ *
+ * Whose turn it is now follows from the assignee — a task assigned to you is
+ * yours to do, one assigned to somebody else is one you are waiting for — and
+ * being stuck on something that is not a person is the blocked field below.
+ *
  * @generated from enum dcim.v1.TaskStatus
  */
 export enum TaskStatus {
@@ -518,24 +567,14 @@ export enum TaskStatus {
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: TASK_STATUS_READY = 10;
+   * @generated from enum value: TASK_STATUS_TODO = 10;
    */
-  READY = 10,
+  TODO = 10,
 
   /**
-   * @generated from enum value: TASK_STATUS_IN_PROGRESS = 20;
+   * @generated from enum value: TASK_STATUS_DOING = 20;
    */
-  IN_PROGRESS = 20,
-
-  /**
-   * @generated from enum value: TASK_STATUS_REVIEW = 30;
-   */
-  REVIEW = 30,
-
-  /**
-   * @generated from enum value: TASK_STATUS_BLOCKED = 40;
-   */
-  BLOCKED = 40,
+  DOING = 20,
 
   /**
    * @generated from enum value: TASK_STATUS_DONE = 50;
@@ -550,6 +589,10 @@ export const TaskStatusSchema: GenEnum<TaskStatus> = /*@__PURE__*/
   enumDesc(file_v1_task, 0);
 
 /**
+ * Unspecified is the empty state you see on a task nobody has prioritized yet,
+ * and it is a value you can store: the interface shows it as an empty circle in
+ * the picker and as nothing at all on the task itself.
+ *
  * @generated from enum dcim.v1.TaskPriority
  */
 export enum TaskPriority {
@@ -574,9 +617,12 @@ export enum TaskPriority {
   HIGH = 30,
 
   /**
-   * @generated from enum value: TASK_PRIORITY_CRITICAL = 40;
+   * Urgent rather than critical: a priority says when to act, while critical
+   * describes the state of a thing — which a data center has plenty of.
+   *
+   * @generated from enum value: TASK_PRIORITY_URGENT = 40;
    */
-  CRITICAL = 40,
+  URGENT = 40,
 }
 
 /**
@@ -584,52 +630,6 @@ export enum TaskPriority {
  */
 export const TaskPrioritySchema: GenEnum<TaskPriority> = /*@__PURE__*/
   enumDesc(file_v1_task, 1);
-
-/**
- * @generated from enum dcim.v1.TaskCategory
- */
-export enum TaskCategory {
-  /**
-   * @generated from enum value: TASK_CATEGORY_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_HARDWARE = 10;
-   */
-  HARDWARE = 10,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_NETWORK = 20;
-   */
-  NETWORK = 20,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_COOLING = 30;
-   */
-  COOLING = 30,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_POWER = 40;
-   */
-  POWER = 40,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_SECURITY = 50;
-   */
-  SECURITY = 50,
-
-  /**
-   * @generated from enum value: TASK_CATEGORY_OTHER = 60;
-   */
-  OTHER = 60,
-}
-
-/**
- * Describes the enum dcim.v1.TaskCategory.
- */
-export const TaskCategorySchema: GenEnum<TaskCategory> = /*@__PURE__*/
-  enumDesc(file_v1_task, 2);
 
 /**
  * @generated from service dcim.v1.TaskService

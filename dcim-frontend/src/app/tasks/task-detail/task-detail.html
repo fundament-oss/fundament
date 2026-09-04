@@ -1,0 +1,352 @@
+<nldd-page sticky-header>
+  <!-- Reading the task and changing it are two views of one sheet, so the
+         form does not take the task off the screen it came from. The bar says
+         which one you are on: reading, it carries the title once the heading
+         below has scrolled under it, and editing it says so and offers the way
+         back. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="detailTitleDraft() ?? detailTask()?.title ?? ''"
+    dismiss-text="Done"
+    collapse-anchor="task-detail-title"
+    (dismiss)="closed.emit()"
+  ></nldd-top-title-bar>
+
+  <!-- Sheet body -->
+  <nldd-simple-section>
+    @if (detailTask(); as task) {
+      <!-- The first row is the task: what state it is in, and what it is
+             called. Both are the control itself rather than a reading of one,
+             so there is nothing to open and nothing to submit. -->
+      <nldd-container layout="row" gap="8" vertical-alignment="top">
+        <nldd-icon-button
+          expandable
+          popup-type="menu"
+          [attr.icon]="store.holdReason(task) !== null ? 'clock' : store.statusIcon(task.status)"
+          [attr.accessible-label]="store.holdReason(task) ?? 'Status: ' + task.status"
+        >
+          <nldd-menu slot="popup" placement="bottom-start">
+            <ng-container
+              [ngTemplateOutlet]="statusItems"
+              [ngTemplateOutletContext]="{ $implicit: task }"
+            ></ng-container>
+          </nldd-menu>
+        </nldd-icon-button>
+        <nldd-container width="full">
+          <!-- One row until the name needs two. The bar above the sheet
+                 collapses onto this field, so its id travels with it. -->
+          <nldd-multi-line-text-field
+            id="task-detail-title"
+            rows="1"
+            placeholder="Task title"
+            accessible-label="Task title"
+            [value]="task.title"
+            (input)="detailTitleDraft.set($any($event.target).value ?? '')"
+            (change)="commitTitle(task, $event)"
+          ></nldd-multi-line-text-field>
+        </nldd-container>
+      </nldd-container>
+      @if (store.holdReason(task) !== null) {
+        <!-- Under the name, because it says something about this task rather
+               than about the screen. A line of text and not a banner: waiting is
+               an ordinary state a task can be in, not something gone wrong, and
+               the clock on the status button beside it already carries the
+               signal. No button on it either: waiting is set and unset with the
+               status, and one place to change a thing is enough. Written out
+               for every kind of waiting, not just the typed one: waiting on a
+               person is as much a reason as waiting on a part. -->
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-text color="secondary">{{ store.holdReason(task) ?? 'Waiting' }}</nldd-text>
+      }
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- The description sits under the name, as the field it is. No
+             heading over it: a placeholder says what it is while it is empty,
+             and once it is filled the words say it themselves. -->
+      <nldd-multi-line-text-field
+        rows="1"
+        placeholder="Description"
+        accessible-label="Task description"
+        [value]="task.description"
+        (change)="commitDescription(task, $event)"
+      ></nldd-multi-line-text-field>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- What the task is, and what has been said about it. Two tabs rather
+             than one long sheet: the properties are what you come to change,
+             the notes are what you come to read, and they are rarely both. -->
+      <nldd-tab-bar
+        accessible-label="Task"
+        (tabchange)="detailTab.set($any($event).detail.item.getAttribute('data-tab'))"
+      >
+        <nldd-tab-bar-item
+          data-tab="info"
+          text="Info"
+          [attr.current]="detailTab() === 'info' ? '' : null"
+        ></nldd-tab-bar-item>
+        <nldd-tab-bar-item
+          data-tab="notes"
+          [attr.text]="'Notes (' + task.notes.length + ')'"
+          [attr.current]="detailTab() === 'notes' ? '' : null"
+        ></nldd-tab-bar-item>
+      </nldd-tab-bar>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (detailTab() === 'info') {
+        <!-- Properties, and each value is the control that sets it. No second
+             screen and no submit: every one of these is a fact that is true the
+             moment you set it, so the field you touch is the whole change. -->
+        <nldd-list type="form" variant="box-tinted" accessible-label="Task properties">
+          <nldd-list-item>
+            <nldd-text-cell width="full" text="Due date"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <!-- Nothing validates this field, so the room it holds for a
+                   validation icon is a gap between the date and the button. -->
+              <nldd-date-field
+                width="fit-content"
+                [attr.value]="task.due"
+                (change)="commitDue(task, $event)"
+              ></nldd-date-field>
+            </nldd-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="full" text="Priority"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-button
+                variant="secondary"
+                expandable
+                popup-type="menu"
+                [attr.text]="task.priority"
+                [attr.start-icon]="
+                  task.priority === 'None' ? null : store.priorityIcon(task.priority)
+                "
+              >
+                <nldd-menu slot="popup" placement="bottom-end">
+                  @for (option of priorities; track option) {
+                    <nldd-menu-item
+                      type="radio"
+                      [attr.text]="option"
+                      [attr.icon]="option === 'None' ? null : store.priorityIcon(option)"
+                      [attr.selected]="task.priority === option ? '' : null"
+                      (select)="setPriority(task, option)"
+                    ></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-button>
+            </nldd-cell>
+          </nldd-list-item>
+          <!-- The two that need the whole width take their label from
+               nldd-form-field, which ties it to the field for a screen reader.
+               The rows above put the label in a cell beside the control, which
+               reads the same and names nothing. -->
+          <nldd-list-item>
+            <nldd-cell width="full">
+              <nldd-form-field label="Assigned to">
+                <nldd-combo-box
+                  placeholder="Unassigned"
+                  [attr.value]="task.assignee ?? ''"
+                  [attr.text]="store.assigneeName(task)"
+                  (change)="setAssignee(task, $any($event).detail.value || null)"
+                >
+                  <!-- No "Unassigned" among the names: it would read as a
+                       person, and take the first highlight when the menu opens.
+                       The clear button beside the field is the way back to
+                       nobody, and it is only there when there is somebody. -->
+                  <nldd-menu>
+                    @for (tech of store.technicians(); track tech.id) {
+                      <nldd-menu-item
+                        [attr.value]="tech.id"
+                        [attr.text]="tech.name"
+                      ></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-combo-box>
+              </nldd-form-field>
+            </nldd-cell>
+          </nldd-list-item>
+          <!-- A place is a tag like any other: a data center and a rack are
+               offered from their own lists, anything else you type. -->
+          <nldd-list-item>
+            <nldd-cell width="full">
+              <nldd-form-field label="Tags">
+                <nldd-token-field
+                  allow-custom
+                  [attr.values]="store.taskTagList(task).join(',')"
+                  (change)="commitTags(task, $any($event).detail.values ?? [])"
+                >
+                  <nldd-menu>
+                    @for (tag of store.knownTags(); track tag) {
+                      <nldd-menu-item [attr.value]="tag" [attr.text]="tag"></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-token-field>
+              </nldd-form-field>
+            </nldd-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="fit-content" text="Created"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="full"
+              horizontal-alignment="right"
+              [attr.text]="store.formatDate(task.created)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell width="fit-content" text="ID"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="full"
+              horizontal-alignment="right"
+              [attr.text]="store.taskDisplayId(task)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+        <!-- The section is here either way. Being in nobody's round is a fact
+             about the round and belongs where the round is read, not in a
+             warning over the whole tab: the fields that fix it are the rows
+             right above this. -->
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Round</h2>
+            </nldd-title>
+            <nldd-spacer size="8"></nldd-spacer>
+            @if (roundOf(task); as round) {
+              <nldd-text>{{ roundSentence(round, task) }}</nldd-text>
+              <nldd-spacer size="12"></nldd-spacer>
+              <nldd-button
+                variant="secondary"
+                text="Open the round"
+                (click)="openTechnicianView()"
+              ></nldd-button>
+            } @else {
+              <nldd-text color="secondary">In nobody&rsquo;s round. {{ roundGap(task) }}</nldd-text>
+            }
+          </nldd-container>
+        </nldd-box>
+        <!-- On a task that does not exist yet this closes the sheet without asking:
+               there is nothing written to lose, since the first field you set
+               would have made it real. -->
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-button
+          variant="destructive"
+          width="full"
+          text="Delete task"
+          start-icon="trash"
+          (click)="openDeleteDialog()"
+        ></nldd-button>
+      } @else {
+        @if (notesError()) {
+          <nldd-inline-dialog
+            variant="alert"
+            text="Could not load notes"
+            [attr.supporting-text]="notesError()"
+          >
+            <nldd-button
+              slot="actions"
+              variant="primary"
+              text="Try again"
+              (click)="retryLoadNotes()"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        } @else {
+          <!-- The field is the last row of the same box, so a new note appears
+               right above where you typed it. Whose note it is stands beside
+               it; whose the new one will be is not a question you have. -->
+          <nldd-list variant="box-tinted" accessible-label="Notes">
+            @for (note of task.notes; track $index) {
+              @let author = noteAuthor(note);
+              <nldd-list-item>
+                <!-- Top-aligned: a note runs to several lines and its author
+                     belongs beside the first one, not beside the middle. -->
+                <nldd-cell width="fit-content" vertical-alignment="top">
+                  <!-- Without a roster entry the avatar falls back to its person
+                       icon: either the note predates the directory or its author
+                       has left it. -->
+                  <nldd-avatar decorative size="28" [attr.name]="author.tech?.name"></nldd-avatar>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  vertical-alignment="top"
+                  [attr.text]="note.text"
+                  [attr.supporting-text]="author.name + ' · ' + note.time"
+                ></nldd-text-cell>
+              </nldd-list-item>
+            }
+            <nldd-list-item>
+              <nldd-cell width="full">
+                <nldd-multi-line-text-field
+                  rows="1"
+                  placeholder="New note"
+                  accessible-label="Add a note"
+                  [value]="newNoteText()"
+                  (input)="newNoteText.set($any($event.target).value ?? '')"
+                ></nldd-multi-line-text-field>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content" vertical-alignment="bottom">
+                <nldd-button variant="secondary" text="Add" (click)="addNote()"></nldd-button>
+              </nldd-cell>
+            </nldd-list-item>
+          </nldd-list>
+        }
+      }
+    }
+  </nldd-simple-section>
+</nldd-page>
+
+<!-- Four, and exactly one of them is on: this says what the task is for you.
+     A copy of what the rows use, because nldd-menu wants its items as direct
+     children and they cannot travel inside a component of their own. What they
+     do is not copied: that is TaskStatusUi, once. -->
+<ng-template #statusItems let-task>
+  @for (option of store.statuses; track option) {
+    <nldd-menu-item
+      type="radio"
+      [attr.text]="option"
+      [attr.icon]="store.statusIcon(option)"
+      [attr.selected]="store.holdReason(task) === null && task.status === option ? '' : null"
+      (select)="setStatus(task, option, $event)"
+    ></nldd-menu-item>
+    @if (option === 'To do') {
+      <nldd-menu-item
+        type="radio"
+        icon="clock"
+        text="Waiting…"
+        [attr.selected]="store.holdReason(task) !== null ? '' : null"
+        (select)="ui.openWaitingDialog(task, $event, writeField)"
+      ></nldd-menu-item>
+    }
+  }
+</ng-template>
+
+<app-task-status-dialogs></app-task-status-dialogs>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DELETE TASK CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deleteDialogEl
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Delete task ' + (detailTask()?.title ?? '') + '?'"
+  supporting-text="The task and its notes are removed for everyone. This cannot be undone."
+  accessible-label="Delete task confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="primary"
+    text="Keep task"
+    size="sm"
+    (click)="closeDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete task"
+    size="sm"
+    (click)="confirmDeleteTask()"
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -213,7 +213,9 @@ const (
 type PhysicalConnectionStatus string
 
 const (
-	PhysicalConnectionStatus_Planned        PhysicalConnectionStatus = "planned"
+	PhysicalConnectionStatus_ToOrder        PhysicalConnectionStatus = "to_order"
+	PhysicalConnectionStatus_Ordered        PhysicalConnectionStatus = "ordered"
+	PhysicalConnectionStatus_ReadyToInstall PhysicalConnectionStatus = "ready_to_install"
 	PhysicalConnectionStatus_Connected      PhysicalConnectionStatus = "connected"
 	PhysicalConnectionStatus_Decommissioned PhysicalConnectionStatus = "decommissioned"
 )
@@ -305,35 +307,22 @@ const (
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
 
-// TaskCategory represents valid values for dcim.tasks.category.
-type TaskCategory string
-
-const (
-	TaskCategory_Hardware TaskCategory = "hardware"
-	TaskCategory_Network  TaskCategory = "network"
-	TaskCategory_Cooling  TaskCategory = "cooling"
-	TaskCategory_Power    TaskCategory = "power"
-	TaskCategory_Security TaskCategory = "security"
-	TaskCategory_Other    TaskCategory = "other"
-)
-
 // TaskPriority represents valid values for dcim.tasks.priority.
 type TaskPriority string
 
 const (
-	TaskPriority_Low      TaskPriority = "low"
-	TaskPriority_Medium   TaskPriority = "medium"
-	TaskPriority_High     TaskPriority = "high"
-	TaskPriority_Critical TaskPriority = "critical"
+	TaskPriority_None   TaskPriority = "none"
+	TaskPriority_Low    TaskPriority = "low"
+	TaskPriority_Medium TaskPriority = "medium"
+	TaskPriority_High   TaskPriority = "high"
+	TaskPriority_Urgent TaskPriority = "urgent"
 )
 
 // TaskStatus represents valid values for dcim.tasks.status.
 type TaskStatus string
 
 const (
-	TaskStatus_Ready      TaskStatus = "ready"
-	TaskStatus_InProgress TaskStatus = "in_progress"
-	TaskStatus_Review     TaskStatus = "review"
-	TaskStatus_Blocked    TaskStatus = "blocked"
-	TaskStatus_Done       TaskStatus = "done"
+	TaskStatus_Todo  TaskStatus = "todo"
+	TaskStatus_Doing TaskStatus = "doing"
+	TaskStatus_Done  TaskStatus = "done"
 )

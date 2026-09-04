@@ -8,18 +8,17 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, NAMESPACE, PROJECT } from '../../connect/tokens';
 import {
   ListClusterNamespacesRequestSchema,
-  CreateNamespaceRequestSchema,
   DeleteNamespaceRequestSchema,
   Namespace,
 } from '../../generated/v1/namespace_pb';
@@ -27,29 +26,21 @@ import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_p
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
-import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [
-    ReactiveFormsModule,
-    DialogSyncDirective,
-    SheetSyncDirective,
-    DropdownSyncDirective,
-    RouterLink,
-    LoadingIndicatorComponent,
-    AutofocusDirective,
-  ],
+  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',
 })
 export default class ClusterNamespacesComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -64,7 +55,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   private projectClient = inject(PROJECT);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -75,7 +66,6 @@ export default class ClusterNamespacesComponent implements OnInit {
   errorMessage = signal<string | null>(null);
 
   /** Kept apart from errorMessage: a failed create belongs in the sheet the user is still in. */
-  createErrorMessage = signal<string | null>(null);
 
   isLoading = signal(true);
 
@@ -89,11 +79,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   projects = signal<Project[]>([]);
 
-  showAddNamespaceModal = signal<boolean>(false);
-
   isLoadingProjects = signal<boolean>(false);
-
-  isCreatingNamespace = signal<boolean>(false);
 
   showDeleteNamespaceModal = signal<boolean>(false);
 
@@ -103,21 +89,8 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   clusterName = signal<string | null>(null);
 
-  namespaceForm = this.fb.group({
-    projectId: ['', Validators.required],
-    name: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(1),
-        Validators.maxLength(63),
-        Validators.pattern(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
-      ],
-    ],
-  });
-
   constructor() {
-    this.titleService.setTitle('Cluster namespaces');
+    this.titleService.setTitle('Namespaces');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 
@@ -139,7 +112,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.namespaces.set(response.namespaces);
       this.selection.retainVisible();
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -153,11 +126,8 @@ export default class ClusterNamespacesComponent implements OnInit {
       const request = create(ListProjectsRequestSchema, { clusterId: this.clusterId });
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
-      if (response.projects.length > 0) {
-        this.namespaceForm.patchValue({ projectId: response.projects[0].id });
-      }
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load projects: ${error.message}`
           : 'Failed to load projects',
@@ -170,53 +140,6 @@ export default class ClusterNamespacesComponent implements OnInit {
   getProjectName(projectId: string): string {
     const project = this.projects().find((p) => p.id === projectId);
     return project?.alias || projectId;
-  }
-
-  openAddNamespaceModal(): void {
-    this.namespaceForm.reset();
-    this.createErrorMessage.set(null);
-    this.showAddNamespaceModal.set(true);
-    this.loadProjects();
-  }
-
-  async createNamespace(event?: Event): Promise<void> {
-    event?.preventDefault();
-    this.createErrorMessage.set(null);
-
-    if (this.namespaceForm.invalid) {
-      this.namespaceForm.markAllAsTouched();
-      return;
-    }
-
-    try {
-      this.isCreatingNamespace.set(true);
-
-      const request = create(CreateNamespaceRequestSchema, {
-        projectId: this.namespaceForm.value.projectId!,
-        name: this.namespaceForm.value.name!,
-      });
-
-      await withIdempotency((opts) => this.namespaceClient.createNamespace(request, opts), {
-        signal: this.idempotency.reset(),
-      });
-
-      this.showAddNamespaceModal.set(false);
-      this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
-
-      // Reload namespaces and organization data
-      await Promise.all([
-        this.loadNamespaces(),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } catch (error) {
-      this.createErrorMessage.set(
-        error instanceof Error
-          ? `Failed to create namespace: ${error.message}`
-          : 'Failed to create namespace',
-      );
-    } finally {
-      this.isCreatingNamespace.set(false);
-    }
   }
 
   openDeleteNamespaceModal(namespaceId: string, namespaceName: string): void {
@@ -237,7 +160,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
       await firstValueFrom(this.namespaceClient.deleteNamespace(request));
 
-      this.toastService.success(`Namespace '${namespaceName}' deleted`);
+      this.notificationService.success(`Namespace '${namespaceName}' deleted`);
 
       // Reload namespaces and organization data
       await Promise.all([
@@ -281,7 +204,9 @@ export default class ClusterNamespacesComponent implements OnInit {
       const succeeded = ids.length - failed;
 
       if (succeeded > 0) {
-        this.toastService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
+        this.notificationService.success(
+          `${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`,
+        );
       }
       if (failed > 0) {
         this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
@@ -304,34 +229,8 @@ export default class ClusterNamespacesComponent implements OnInit {
     if (el) focusFirstModalInput(el);
   }
 
-  onNamespaceNameInput(event: Event) {
-    const value = (event as CustomEvent<{ value: string }>).detail.value;
-    this.namespaceForm.get('name')?.setValue(value);
-    this.namespaceForm.get('name')?.markAsDirty();
-  }
-
-  /** Also covers `touched`, so submitting an untouched empty field shows the error. */
-  isNamespaceNameInvalid(): boolean {
-    const nameControl = this.namespaceForm.get('name');
-    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
-  }
-
-  getNamespaceNameError(): string {
-    const nameControl = this.namespaceForm.get('name');
-    if (nameControl?.hasError('required')) {
-      return 'Namespace name is required.';
-    }
-    if (nameControl?.hasError('maxlength')) {
-      return 'Namespace name must not exceed 63 characters.';
-    }
-    if (nameControl?.hasError('pattern')) {
-      return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
-    }
-    return '';
-  }
-
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

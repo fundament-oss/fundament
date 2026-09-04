@@ -1,0 +1,70 @@
+<nldd-page sticky-header>
+  <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title size="3">
+      <h1>Data centers</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- Making one is an action on this list, not on the data center you have
+         open, so it stands where the list does. -->
+    <nldd-toolbar label="Data center actions">
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          variant="secondary"
+          text="Add data center…"
+          start-icon="plus-small"
+          (click)="add.emit()"
+        ></nldd-button>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- A read that failed says so, rather than leaving the estate looking
+         empty on every page that shows this menu. -->
+    @if (loadError(); as error) {
+      <nldd-banner variant="critical" [attr.text]="error"></nldd-banner>
+      <nldd-spacer size="12"></nldd-spacer>
+    }
+    <!-- The indicator stays mounted and only flips to complete, so its own
+         1000ms delay does the work: a quick answer shows nothing at all. -->
+    <nldd-activity-indicator [attr.complete]="loading() ? null : ''">
+      <!-- With a failed read and nothing held from an earlier one there is no
+           list to show: the banner above already says why, and "No data
+           centers yet" underneath it would contradict it. A list held from
+           before stays up. -->
+      @if (!loading() && (!loadError() || datacenters().length)) {
+        <nldd-list
+          type="navigation"
+          dividers="on-touch"
+          accessible-label="Data centers"
+          empty-text="No data centers yet"
+        >
+          @for (dc of datacenters(); track dc.id) {
+            <nldd-list-item
+              button
+              [attr.current]="selectedId() === dc.id ? '' : null"
+              (click)="dcSelected.emit(dc.id)"
+            >
+              <!-- One building per row, where the section in the sidebar carries
+                   the plural. -->
+              <nldd-icon-cell icon="building" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="dc.name"
+                [attr.supporting-text]="dc.city"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-badge decorative [attr.color]="statusTagColor(dc.status)"></nldd-badge>
+              </nldd-cell>
+              <!-- Same 4 as in the section menu: a dot is 12 wide where a badge
+                   with a number is 20, so right-aligned its middle sits further
+                   right than the one above it. -->
+              <nldd-spacer-cell size="4"></nldd-spacer-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    </nldd-activity-indicator>
+  </nldd-simple-section>
+</nldd-page>

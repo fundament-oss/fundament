@@ -7,16 +7,15 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
@@ -36,7 +35,7 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
@@ -73,6 +72,8 @@ interface ClusterModalRow {
   // null when the plugin is not installed on this cluster; otherwise the
   // PluginInstallation status phase.
   phase: string | null;
+  // The version pinned on this cluster; empty when not installed.
+  version: string;
   running: boolean;
 }
 
@@ -85,6 +86,9 @@ interface InstallWithCluster {
   pluginName: string;
   phase: string;
   ready: boolean;
+  // The version pinned on this cluster. A plugin is installed per cluster, so
+  // two clusters can run different versions of the same plugin.
+  version: string;
 }
 
 // Extended category type with count for filtering
@@ -97,14 +101,22 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   count: number;
 }
 
+/** The "official" marker is a tag on the plugin; on a card it reads better as a
+ *  property of the name than as one entry in a tag row. */
+function isOfficialPlugin(plugin: { tags: string[] }): boolean {
+  return plugin.tags.some((tag) => tag.toLowerCase() === 'official');
+}
+
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
 export default class PluginsComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private catalogClient = inject(CATALOG);
@@ -117,7 +129,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private organizationDataService = inject(OrganizationDataService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -337,6 +349,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               pluginName: item.spec.definitionRef.pluginName,
               phase: item.status?.phase ?? 'Pending',
               ready: item.status?.ready ?? false,
+              version: item.spec?.definitionRef?.pluginVersion ?? '',
             })),
           )
           .catch((): InstallWithCluster[] | null => null),
@@ -394,11 +407,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
-        this.toastService.success(
+        this.notificationService.success(
           `Plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
-        this.toastService.error(
+        this.notificationService.error(
           `Failed to install plugin ${this.pluginDisplayName(next.organizationName, next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
@@ -422,7 +435,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         preserved.push(prev);
         return;
       }
-      this.toastService.success(
+      this.notificationService.success(
         `Plugin ${this.pluginDisplayName(prev.organizationName, prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
       );
     });
@@ -514,9 +527,22 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.selectedPreset = presetId;
   }
 
+  isOfficial = isOfficialPlugin;
+
   getSelectedCategoryName(): string {
     const category = this.categories.find((c) => c.id === this.selectedCategory);
     return category?.name || '';
+  }
+
+  /** Labels for the filter buttons, so the active filter is readable without
+   *  opening the menu. */
+  getSelectedPresetLabel(): string {
+    const preset = this.presets.find((p) => p.id === this.selectedPreset);
+    return preset && preset.id !== 'all' ? preset.name : 'All presets';
+  }
+
+  getSelectedCategoryLabel(): string {
+    return this.getSelectedCategoryName() || 'All categories';
   }
 
   // Get clusters with install state for the selected plugin
@@ -537,6 +563,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         id: cluster.id,
         name: cluster.name,
         phase: install?.phase ?? null,
+        version: install?.version ?? '',
         running: cluster.status === ClusterStatus.RUNNING,
       };
     });
@@ -662,6 +689,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         pluginName: plugin.name,
         phase: 'Pending',
         ready: false,
+        version: selection.version,
       })),
     ]);
 
@@ -691,7 +719,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ),
       );
       const names = failed.map((id) => this.clusterName(id)).join(', ');
-      this.toastService.error(`Failed to install ${displayNameOf(plugin)} on ${names}`);
+      this.notificationService.error(`Failed to install ${displayNameOf(plugin)} on ${names}`);
     }
 
     this.startInstallPollingIfNeeded();
@@ -701,16 +729,26 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     const plugin = this.selectedPlugin;
     if (!plugin) return;
 
+    // Marked before the request, like installing: the row's button carries the
+    // progress, and waiting for the round trip would leave the press unanswered.
+    const previous = this.installs().find(
+      (install) =>
+        install.clusterId === clusterId &&
+        install.organizationName === plugin.organizationName &&
+        install.pluginName === plugin.name,
+    )?.phase;
+    this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Terminating');
+
     try {
       await this.pluginInstallationService.uninstallPlugin(
         clusterId,
         pluginResourceName(plugin.organizationName, plugin.name),
       );
-      // Optimistically mark as terminating; the poll removes it once gone.
-      this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      // Roll back to the phase it had, so the row stops claiming it is going away.
+      if (previous) this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, previous);
+      this.notificationService.error(
         `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
@@ -737,7 +775,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }

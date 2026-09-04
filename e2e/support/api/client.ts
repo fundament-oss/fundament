@@ -3,7 +3,13 @@
  * Uses @connectrpc/connect-node for proper serialization.
  */
 
-import { createClient, type Client, type DescService, ConnectError, Code } from '@connectrpc/connect';
+import {
+  createClient,
+  type Client,
+  type DescService,
+  ConnectError,
+  Code,
+} from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-node';
 
 export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
@@ -23,7 +29,9 @@ const IDEMPOTENCY_TOTAL_BUDGET_MS = 30000;
  * Any error thrown by `caller` (e.g. a ConnectError) propagates as-is.
  */
 export async function createWithIdempotency<Resp>(
-  caller: (idempotencyKey: string) => Promise<{ response: Resp; status: string }>
+  caller: (
+    idempotencyKey: string,
+  ) => Promise<{ response: Resp; status: string }>,
 ): Promise<Resp> {
   const key = crypto.randomUUID();
   const deadline = Date.now() + IDEMPOTENCY_TOTAL_BUDGET_MS;
@@ -44,7 +52,9 @@ export async function createWithIdempotency<Resp>(
       throw new Error('Idempotency polling timed out after 30s');
     }
 
-    await new Promise((resolve) => setTimeout(resolve, Math.min(backoff, remaining)));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(backoff, remaining)),
+    );
     backoff = Math.min(backoff * 2, IDEMPOTENCY_MAX_BACKOFF_MS);
   }
 }
@@ -58,7 +68,7 @@ export function createServiceClient<T extends DescService>(
   service: T,
   baseUrl: string,
   authToken?: string,
-  organizationId?: string
+  organizationId?: string,
 ): Client<T> {
   const transport = createConnectTransport({
     baseUrl,
@@ -85,7 +95,7 @@ export function createServiceClient<T extends DescService>(
 export class ConnectRpcError extends Error {
   constructor(
     public readonly code: string,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = 'ConnectRpcError';

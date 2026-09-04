@@ -6,7 +6,6 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  type WritableSignal,
 } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -16,33 +15,89 @@ import {
   UpdateOrganizationLimitsRequestSchema,
 } from '../../generated/v1/organization_pb';
 import { ORGANIZATION } from '../../connect/tokens';
+import PageNavService from '../page-nav.service';
+import SheetSyncDirective from '../sheet-sync.directive';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
-import { pairLimited, positive, toInt } from '../utils/limits';
-import NamespaceResourceDefaultsComponent, {
-  type NamespaceDefaults,
-} from '../namespace-resource-defaults/namespace-resource-defaults.component';
+import { NotificationService } from '../notification.service';
+import { positive, toInt } from '../utils/limits';
+import ResourceLimitSectionComponent, {
+  modeFor,
+  MEMORY_SECTION,
+  CPU_SECTION,
+  type ResourceMode,
+} from '../resource-limit-section/resource-limit-section.component';
 
-// Off stores undefined, which is how the API encodes "no limit"; on seeds an
-// empty field with the platform default and leaves a saved value alone.
-function toggleClusterLimit(
-  limited: boolean,
-  toggle: WritableSignal<boolean>,
-  value: WritableSignal<number | undefined>,
-  seed: number | undefined,
-): void {
-  toggle.set(limited);
-  if (!limited) {
-    value.set(undefined);
-  } else if (value() === undefined) {
-    value.set(seed);
-  }
+/** Platform defaults for a namespace LimitRange, as returned by the API. */
+interface NamespaceDefaults {
+  defaultMemoryRequestMi: number | undefined;
+  defaultMemoryLimitMi: number | undefined;
+  defaultCpuRequestM: number | undefined;
+  defaultCpuLimitM: number | undefined;
 }
+
+/** The three caps, and the words that go with them. */
+type ClusterKey = 'maxNodesPerCluster' | 'maxNodePools' | 'maxNodesPerNodePool';
+
+interface ClusterLimits {
+  maxNodesPerCluster: number | null;
+  maxNodePools: number | null;
+  maxNodesPerNodePool: number | null;
+}
+
+const CLUSTER_FIELDS: {
+  key: ClusterKey;
+  name: string;
+  title: string;
+  description: string;
+  label: string;
+}[] = [
+  {
+    key: 'maxNodesPerCluster',
+    name: 'maxNodesPerClusterLimited',
+    title: 'Nodes per cluster',
+    description: 'Caps the total number of nodes across all node pools in a shoot cluster.',
+    label: 'Max nodes per cluster',
+  },
+  {
+    key: 'maxNodePools',
+    name: 'maxNodePoolsLimited',
+    title: 'Node pools per cluster',
+    description: 'Caps how many node pools can be configured per shoot cluster.',
+    label: 'Max node pools per cluster',
+  },
+  {
+    key: 'maxNodesPerNodePool',
+    name: 'maxNodesPerNodePoolLimited',
+    title: 'Nodes per node pool',
+    description:
+      'Caps how many nodes a single node pool may hold, including the autoscaler maximum.',
+    label: 'Max nodes per node pool',
+  },
+];
+
+/**
+ * The same three states as a namespace section, for a single number: no cap, the
+ * platform's number, or one of this organization's own. Derived rather than
+ * stored, so typing the platform's number back lands on "defaults" by itself.
+ */
+const modeForValue = (value: number | null, seed: number | undefined): ResourceMode => {
+  if (value === null) return 'unlimited';
+  return value === seed ? 'defaults' : 'custom';
+};
+
+/** Where a section's values come from, for the page that only shows them. */
+const stateText = (mode: ResourceMode): string =>
+  mode === 'defaults' ? "The platform's defaults." : "This organization's own values.";
+
+/** An unlimited pair has no number, and the row says that where the number
+ *  would have been. */
+const valueText = (value: number | null, unit: string): string =>
+  value === null ? 'Unlimited' : `${value} ${unit}`;
 
 @Component({
   selector: 'app-organization-limits',
-  imports: [NamespaceResourceDefaultsComponent],
+  imports: [ResourceLimitSectionComponent, SheetSyncDirective],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -50,7 +105,7 @@ function toggleClusterLimit(
 export default class OrganizationLimitsComponent implements OnInit {
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -65,15 +120,67 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   maxNodesPerNodePool = signal<number | undefined>(undefined);
 
-  // A limit that is switched off is stored as undefined, which is how the API
-  // encodes "no limit".
-  maxNodesPerClusterLimited = signal(false);
-
-  maxNodePoolsLimited = signal(false);
-
-  maxNodesPerNodePoolLimited = signal(false);
-
   clusterSaving = signal(false);
+
+  showClusterEdit = signal(false);
+
+  showNamespaceEdit = signal(false);
+
+  /** A failed save, kept in view in the sheet the changes are in. */
+  clusterError = signal<string | null>(null);
+
+  namespaceError = signal<string | null>(null);
+
+  /** The sheets edit a copy: closing one must leave the page showing what is
+   *  stored, not what somebody typed and abandoned. Null is "no limit", which is
+   *  how the API encodes it. */
+  draftCluster = signal<ClusterLimits>({
+    maxNodesPerCluster: null,
+    maxNodePools: null,
+    maxNodesPerNodePool: null,
+  });
+
+  draftMemoryMode = signal<ResourceMode>('unlimited');
+
+  draftMemoryRequestMi = signal<number | undefined>(undefined);
+
+  draftMemoryLimitMi = signal<number | undefined>(undefined);
+
+  draftCpuMode = signal<ResourceMode>('unlimited');
+
+  draftCpuRequestM = signal<number | undefined>(undefined);
+
+  draftCpuLimitM = signal<number | undefined>(undefined);
+
+  readonly clusterFields = CLUSTER_FIELDS;
+
+  stateText = stateText;
+
+  valueText = valueText;
+
+  /** What the page shows for the caps. */
+  clusterRows = computed(() =>
+    CLUSTER_FIELDS.map((field) => ({
+      label: field.title,
+      value: this.savedCluster()[field.key] ?? null,
+    })),
+  );
+
+  /** What the page shows for the namespace defaults, per section. */
+  summaries = computed(() => [
+    {
+      copy: MEMORY_SECTION,
+      mode: this.memoryMode(),
+      request: this.defaultMemoryRequestMi() ?? null,
+      limit: this.defaultMemoryLimitMi() ?? null,
+    },
+    {
+      copy: CPU_SECTION,
+      mode: this.cpuMode(),
+      request: this.defaultCpuRequestM() ?? null,
+      limit: this.defaultCpuLimitM() ?? null,
+    },
+  ]);
 
   private savedCluster = signal<{
     maxNodesPerCluster: number | undefined;
@@ -99,9 +206,9 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   // Owned here rather than in the fields component so a load or a reset can put
   // the switches back on what is actually stored.
-  memoryLimited = signal(false);
+  memoryMode = signal<ResourceMode>('unlimited');
 
-  cpuLimited = signal(false);
+  cpuMode = signal<ResourceMode>('unlimited');
 
   namespaceSaving = signal(false);
 
@@ -129,6 +236,53 @@ export default class OrganizationLimitsComponent implements OnInit {
   protected saving = computed(() => this.clusterSaving() || this.namespaceSaving());
 
   protected readonly toInt = toInt;
+
+  protected pageNav = inject(PageNavService);
+
+  openClusterEdit(): void {
+    this.clusterError.set(null);
+    const saved = this.savedCluster();
+    this.draftCluster.set({
+      maxNodesPerCluster: saved.maxNodesPerCluster ?? null,
+      maxNodePools: saved.maxNodePools ?? null,
+      maxNodesPerNodePool: saved.maxNodesPerNodePool ?? null,
+    });
+    this.showClusterEdit.set(true);
+  }
+
+  openNamespaceEdit(): void {
+    this.namespaceError.set(null);
+    this.draftMemoryMode.set(this.memoryMode());
+    this.draftMemoryRequestMi.set(this.defaultMemoryRequestMi());
+    this.draftMemoryLimitMi.set(this.defaultMemoryLimitMi());
+    this.draftCpuMode.set(this.cpuMode());
+    this.draftCpuRequestM.set(this.defaultCpuRequestM());
+    this.draftCpuLimitM.set(this.defaultCpuLimitM());
+    this.showNamespaceEdit.set(true);
+  }
+
+  /** What a cap is on, read from what it holds. */
+  clusterMode(key: ClusterKey): ResourceMode {
+    return modeForValue(this.draftCluster()[key], this.clusterDefaults()[key]);
+  }
+
+  /**
+   * Unlimited clears the cap, which is how the API reads "no limit"; defaults
+   * writes the platform's number; custom keeps what is there and only fills an
+   * empty field.
+   */
+  setClusterMode(key: ClusterKey, mode: ResourceMode): void {
+    const seed = this.clusterDefaults()[key] ?? null;
+    this.draftCluster.update((draft) => {
+      if (mode === 'unlimited') return { ...draft, [key]: null };
+      if (mode === 'defaults') return { ...draft, [key]: seed };
+      return { ...draft, [key]: draft[key] ?? seed };
+    });
+  }
+
+  setClusterValue(key: ClusterKey, value: number | undefined): void {
+    this.draftCluster.update((draft) => ({ ...draft, [key]: value ?? null }));
+  }
 
   constructor() {
     this.titleService.setTitle('Limits');
@@ -186,10 +340,9 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.defaultMemoryLimitMi.set(savedNamespace.defaultMemoryLimitMi);
       this.defaultCpuRequestM.set(savedNamespace.defaultCpuRequestM);
       this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM);
-      this.syncClusterToggles();
       this.syncNamespaceToggles();
     } catch {
-      this.toastService.error('Failed to load organization limits');
+      this.notificationService.error('Failed to load organization limits');
     } finally {
       this.initialLoading.set(false);
     }
@@ -202,11 +355,13 @@ export default class OrganizationLimitsComponent implements OnInit {
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 
-    const maxNodesPerCluster = this.maxNodesPerCluster();
-    const maxNodePools = this.maxNodePools();
-    const maxNodesPerNodePool = this.maxNodesPerNodePool();
+    const draft = this.draftCluster();
+    const maxNodesPerCluster = draft.maxNodesPerCluster ?? undefined;
+    const maxNodePools = draft.maxNodePools ?? undefined;
+    const maxNodesPerNodePool = draft.maxNodesPerNodePool ?? undefined;
 
     this.clusterSaving.set(true);
+    this.clusterError.set(null);
     try {
       await firstValueFrom(
         this.organizationClient.updateOrganizationLimits(
@@ -219,73 +374,42 @@ export default class OrganizationLimitsComponent implements OnInit {
           }),
         ),
       );
+      // Only now: what the page shows has to be what the API accepted.
       this.savedCluster.set({ maxNodesPerCluster, maxNodePools, maxNodesPerNodePool });
-      this.toastService.success('Cluster limits saved');
-    } catch {
-      this.toastService.error('Failed to save cluster limits');
+      this.maxNodesPerCluster.set(maxNodesPerCluster);
+      this.maxNodePools.set(maxNodePools);
+      this.maxNodesPerNodePool.set(maxNodesPerNodePool);
+      this.showClusterEdit.set(false);
+      this.notificationService.success('Cluster limits saved');
+    } catch (err) {
+      this.clusterError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.clusterSaving.set(false);
     }
   }
 
-  // Reset only repopulates the form with the platform defaults; the user still
-  // has to click Save to persist them, so a misclick can't silently overwrite
-  // the organization's saved overrides.
-  resetClusterLimits(): void {
-    const defaults = this.clusterDefaults();
-    this.maxNodesPerCluster.set(defaults.maxNodesPerCluster);
-    this.maxNodePools.set(defaults.maxNodePools);
-    this.maxNodesPerNodePool.set(defaults.maxNodesPerNodePool);
-    this.syncClusterToggles();
-  }
+  readonly MEMORY_SECTION = MEMORY_SECTION;
 
-  resetNamespaceLimits(): void {
-    const defaults = this.namespaceDefaults();
-    this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
-    this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
-    this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
-    this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
-    this.syncNamespaceToggles();
-  }
+  readonly CPU_SECTION = CPU_SECTION;
 
-  // A switch is on exactly when a value is set, so the form always opens on
-  // what is actually stored.
-  private syncClusterToggles(): void {
-    this.maxNodesPerClusterLimited.set(this.maxNodesPerCluster() !== undefined);
-    this.maxNodePoolsLimited.set(this.maxNodePools() !== undefined);
-    this.maxNodesPerNodePoolLimited.set(this.maxNodesPerNodePool() !== undefined);
-  }
+  /** The platform pair each section falls back on, split the way a section
+   *  wants it. */
+  memorySeed = computed(() => ({
+    request: this.namespaceDefaults().defaultMemoryRequestMi,
+    limit: this.namespaceDefaults().defaultMemoryLimitMi,
+  }));
 
+  cpuSeed = computed(() => ({
+    request: this.namespaceDefaults().defaultCpuRequestM,
+    limit: this.namespaceDefaults().defaultCpuLimitM,
+  }));
+
+  /** Picking a mode changes the values, so the values decide the mode on load. */
   private syncNamespaceToggles(): void {
-    this.memoryLimited.set(pairLimited(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi()));
-    this.cpuLimited.set(pairLimited(this.defaultCpuRequestM(), this.defaultCpuLimitM()));
-  }
-
-  toggleMaxNodesPerCluster(limited: boolean): void {
-    toggleClusterLimit(
-      limited,
-      this.maxNodesPerClusterLimited,
-      this.maxNodesPerCluster,
-      this.clusterDefaults().maxNodesPerCluster,
+    this.memoryMode.set(
+      modeFor(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi(), this.memorySeed()),
     );
-  }
-
-  toggleMaxNodePools(limited: boolean): void {
-    toggleClusterLimit(
-      limited,
-      this.maxNodePoolsLimited,
-      this.maxNodePools,
-      this.clusterDefaults().maxNodePools,
-    );
-  }
-
-  toggleMaxNodesPerNodePool(limited: boolean): void {
-    toggleClusterLimit(
-      limited,
-      this.maxNodesPerNodePoolLimited,
-      this.maxNodesPerNodePool,
-      this.clusterDefaults().maxNodesPerNodePool,
-    );
+    this.cpuMode.set(modeFor(this.defaultCpuRequestM(), this.defaultCpuLimitM(), this.cpuSeed()));
   }
 
   async saveNamespaceLimits(event?: Event) {
@@ -295,12 +419,13 @@ export default class OrganizationLimitsComponent implements OnInit {
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 
-    const defaultMemoryRequestMi = this.defaultMemoryRequestMi();
-    const defaultMemoryLimitMi = this.defaultMemoryLimitMi();
-    const defaultCpuRequestM = this.defaultCpuRequestM();
-    const defaultCpuLimitM = this.defaultCpuLimitM();
+    const defaultMemoryRequestMi = this.draftMemoryRequestMi();
+    const defaultMemoryLimitMi = this.draftMemoryLimitMi();
+    const defaultCpuRequestM = this.draftCpuRequestM();
+    const defaultCpuLimitM = this.draftCpuLimitM();
 
     this.namespaceSaving.set(true);
+    this.namespaceError.set(null);
     try {
       const cluster = this.savedCluster();
       await firstValueFrom(
@@ -323,9 +448,17 @@ export default class OrganizationLimitsComponent implements OnInit {
         defaultCpuRequestM,
         defaultCpuLimitM,
       });
-      this.toastService.success('Namespace defaults saved');
-    } catch {
-      this.toastService.error('Failed to save namespace defaults');
+      // Only now: what the page shows has to be what the API accepted.
+      this.defaultMemoryRequestMi.set(defaultMemoryRequestMi);
+      this.defaultMemoryLimitMi.set(defaultMemoryLimitMi);
+      this.defaultCpuRequestM.set(defaultCpuRequestM);
+      this.defaultCpuLimitM.set(defaultCpuLimitM);
+      this.memoryMode.set(this.draftMemoryMode());
+      this.cpuMode.set(this.draftCpuMode());
+      this.showNamespaceEdit.set(false);
+      this.notificationService.success('Namespace defaults saved');
+    } catch (err) {
+      this.namespaceError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
       this.namespaceSaving.set(false);
     }

@@ -363,8 +363,8 @@ const (
 	ConstraintTagsUqName = "tags_uq_name"
 	// ConstraintTaskStepsUqTaskOrdinal is defined on dcim.task_steps.
 	ConstraintTaskStepsUqTaskOrdinal = "task_steps_uq_task_ordinal"
-	// ConstraintTasksCkCategory is defined on dcim.tasks.
-	ConstraintTasksCkCategory = "tasks_ck_category"
+	// ConstraintTaskTagsFkTask is defined on dcim.task_tags.
+	ConstraintTaskTagsFkTask = "task_tags_fk_task"
 	// ConstraintTasksCkPriority is defined on dcim.tasks.
 	ConstraintTasksCkPriority = "tasks_ck_priority"
 	// ConstraintTasksCkStatus is defined on dcim.tasks.

@@ -1,103 +1,104 @@
-<div class="flex min-h-screen flex-col bg-neutral-25 dark:bg-gray-900">
-  <!-- Identity strip (lintblauw) + simplified header: just brand and theme switcher -->
-  <div class="sticky top-0 z-40">
-    <div class="h-1 bg-accent-750" aria-hidden="true"></div>
-    <header
-      class="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 dark:border-gray-800 dark:bg-gray-950"
-      role="banner"
-    >
-      <div class="flex items-center gap-2 leading-tight">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            fill="currentColor"
-            d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-          />
-        </svg>
-        <span class="font-semibold tracking-tight text-slate-900 dark:text-gray-100">
-          Fundament <span class="ml-0.5 font-normal text-slate-400">DCIM</span>
-        </span>
-      </div>
-      <app-theme-toggle />
-    </header>
-  </div>
+<!-- The required root of an application, and this page skips the shell that
+     normally provides it. Without it the page has no height to center in,
+     so the panel sat at the top and the ribbon right under it. -->
+<nldd-app-view>
+  <nldd-page>
+    <!-- Only the ribbon: this page carries no navigation, and the bar is what
+         makes it a Rijksoverheid page rather than a bare form. -->
+    <nldd-top-navigation-bar slot="header"></nldd-top-navigation-bar>
 
-  <div class="flex flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <h2 class="mb-6 text-center text-3xl font-bold">Log in to DCIM</h2>
-      <p class="mb-8 text-center text-gray-600 dark:text-gray-300">
-        Please enter your credentials to continue.
-      </p>
-    </div>
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-      <div
-        class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
-      >
-        <nldd-form
-          [formGroup]="loginForm"
-          class="space-y-6"
-          (ngSubmit)="onSubmit()"
-          (keydown.enter)="onSubmit()"
-        >
-          <nldd-form-field label="Email address">
-            <nldd-text-field
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email address"
-              autocomplete="email"
-              appAutofocus
-              [value]="email?.value ?? ''"
-              (input)="loginForm.get('email')!.setValue($any($event.target).value)"
-              (blur)="loginForm.get('email')!.markAsTouched()"
-              [invalid]="!!(email?.invalid && email.touched)"
-              error-message="login-email-error"
-            ></nldd-text-field>
-            <nldd-form-field-error-text id="login-email-error">
-              {{ getEmailError() }}
-            </nldd-form-field-error-text>
-          </nldd-form-field>
-
-          <nldd-form-field label="Password">
-            <nldd-password-field
-              id="password"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              [value]="password?.value ?? ''"
-              (input)="loginForm.get('password')!.setValue($any($event.target).value)"
-              (blur)="loginForm.get('password')!.markAsTouched()"
-              show-text="Show"
-              show-accessible-label="Show password"
-              hide-text="Hide"
-              hide-accessible-label="Hide password"
-              [invalid]="!!(password?.invalid && password.dirty)"
-              error-message="login-password-error"
-            ></nldd-password-field>
-            <nldd-form-field-error-text id="login-password-error">
-              {{ getPasswordError() }}
-            </nldd-form-field-error-text>
-          </nldd-form-field>
-
-          @if (error()) {
-            <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-              <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
-            </div>
-          }
-
-          <nldd-button
-            variant="primary"
-            full-width
-            [attr.disabled]="isLoading() ? '' : null"
-            [text]="isLoading() ? 'Signing in...' : 'Sign in'"
-            type="submit"
-            (click)="onSubmit()"
-          ></nldd-button>
-        </nldd-form>
-      </div>
-    </div>
-  </div>
-</div>
+    <!-- Centered rather than top-aligned: the page holds one thing, and a form of
+         two fields hanging under the header reads as an afterthought. -->
+    <nldd-simple-section horizontal-alignment="center" vertical-alignment="center">
+      <!-- The panel carries its own width; the section only says where it sits. -->
+      <nldd-container max-width="480px">
+        <!-- Everything in one box: the heading says what you are logging in to,
+             so it belongs to the form rather than floating above it. -->
+        <nldd-box>
+          <!-- The inset grows with the box: 16 on a phone, 32 once there is room
+               for it. The breakpoints resolve against this container's own width,
+               not the page's. -->
+          <nldd-container padding="16" md-padding="24" lg-padding="32">
+            <nldd-title size="3">
+              <h1>Log in to DCIM</h1>
+            </nldd-title>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-rich-text spacing="flat">
+              <p>Where your team keeps its racks, its cables and the work on them.</p>
+            </nldd-rich-text>
+            <nldd-spacer size="24"></nldd-spacer>
+            @if (error(); as message) {
+              <nldd-banner
+                variant="critical"
+                text="Signing in failed"
+                [attr.supporting-text]="message"
+              ></nldd-banner>
+              <nldd-spacer size="16"></nldd-spacer>
+            }
+            <nldd-form [formGroup]="loginForm" (ngSubmit)="onSubmit()" (keydown.enter)="onSubmit()">
+              <!-- No placeholders: the label already says which field this is, and
+                   a hint that disappears the moment you type is a label you can
+                   lose. -->
+              <nldd-form-field label="Email address">
+                <nldd-text-field
+                  type="email"
+                  id="email"
+                  name="email"
+                  autocomplete="email"
+                  appAutofocus
+                  [value]="email?.value ?? ''"
+                  (input)="loginForm.get('email')!.setValue($any($event.target).value)"
+                  (blur)="loginForm.get('email')!.markAsTouched()"
+                  [invalid]="!!(email?.invalid && formSubmitted())"
+                  unmet="login-email-error"
+                ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="login-email-error">{{
+                    getEmailError()
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-form-field label="Password">
+                <nldd-password-field
+                  id="password"
+                  autocomplete="current-password"
+                  [value]="password?.value ?? ''"
+                  (input)="loginForm.get('password')!.setValue($any($event.target).value)"
+                  (blur)="loginForm.get('password')!.markAsTouched()"
+                  show-text="Show"
+                  show-accessible-label="Show password"
+                  hide-text="Hide"
+                  hide-accessible-label="Hide password"
+                  [invalid]="!!(password?.invalid && formSubmitted())"
+                  unmet="login-password-error"
+                ></nldd-password-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="login-password-error">{{
+                    getPasswordError()
+                  }}</nldd-validation-item>
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-form-actions>
+                <!-- Never switched off: a button you cannot press says nothing
+                     about what is missing, and the loading state already says it
+                     is busy. -->
+                <nldd-button
+                  type="submit"
+                  text="Sign in"
+                  variant="primary"
+                  width="full"
+                  [attr.loading]="isLoading() ? '' : null"
+                  (click)="onSubmit()"
+                ></nldd-button>
+              </nldd-form-actions>
+            </nldd-form>
+          </nldd-container>
+        </nldd-box>
+      </nldd-container>
+    </nldd-simple-section>
+    <!-- Only the ribbon: nothing belongs at the foot of a login page, and an
+         empty footer drops the grey band and leaves the Rijksoverheid ribbon,
+         which is what closes off the page. -->
+    <nldd-page-footer slot="footer"></nldd-page-footer>
+  </nldd-page>
+</nldd-app-view>

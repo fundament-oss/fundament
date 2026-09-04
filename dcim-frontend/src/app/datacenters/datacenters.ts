@@ -6,23 +6,33 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
   CUSTOM_ELEMENTS_SCHEMA,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import DcSelectorComponent from '../shared/dc-selector';
+import { Title } from '@angular/platform-browser';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, map } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { pageTitle } from '../shell/page-title';
 import DatacenterApiService from './datacenter-api.service';
+import DatacenterListService from './datacenter-list.service';
+import DatacenterNavComponent from './datacenter-nav';
+import DatacenterDetailComponent from './datacenter-detail/datacenter-detail';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
-import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import SecondaryNavService from '../shell/secondary-nav.service';
+import { viewSlug } from '../shared/section-views';
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -43,16 +53,31 @@ interface DcStats {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
-    FormsModule,
-    DcSelectorComponent,
     IsometricCanvasComponent,
-    DropdownSyncDirective,
+    DatacenterNavComponent,
+    DatacenterDetailComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
-export default class DatacentersComponent implements OnInit {
+export default class DatacentersComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
+
+  private readonly route = inject(ActivatedRoute);
 
   private readonly dcApi = inject(DatacenterApiService);
 
@@ -62,10 +87,69 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly assetClient = inject(ASSET_CLIENT);
 
-  // ── DC list (loaded from the API) ──────────────────────────────────────────
-  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+  private readonly list = inject(DatacenterListService);
 
-  selectedDcId = signal('');
+  /** The forms that make or change a data center live in the shell. */
+  private readonly overlays = inject(OverlayService);
+
+  /** The list this section shares, so a step to another page does not lose it.
+   *  Writable: creating, renaming and deleting one all write straight into it. */
+  readonly mutableDcs = this.list.datacenters;
+
+  readonly dcsLoaded = this.list.loaded;
+
+  /** Which data center the address names, by its short name: /datacenters/ams1.
+   *  A data center is a place, so it deserves a link of its own. */
+  readonly slug = toSignal(
+    this.route.paramMap.pipe(map((params: ParamMap) => params.get('slug') ?? '')),
+    { initialValue: '' },
+  );
+
+  /**
+   * Whether the layout editor is open, which the address says: see the matcher.
+   * A sheet with an address rather than a page, so it can be linked to and the
+   * back button closes it, without the editor becoming somewhere you navigate
+   * to and have to find your way back from.
+   */
+  private readonly layoutSheetEl = viewChild<NativeElementRef>('layoutSheet');
+
+  readonly layoutOpen = toSignal(
+    this.route.paramMap.pipe(map((params: ParamMap) => params.get('overlay') === 'layout')),
+    { initialValue: false },
+  );
+
+  /** The floor one level down: the rooms and the rack rows inside them, where
+   *  they are made and renamed. */
+  openLayout(dc: DatacenterInfo): void {
+    this.router.navigate(['/data-centers', viewSlug(dc.name), 'layout']);
+  }
+
+  /**
+   * A sheet closing inside this one is not this one closing.
+   *
+   * `close` is composed and bubbling, so the room, row and rack forms the
+   * editor opens all reach this handler on their way up. The sheet itself knows
+   * better and stays open; it is this binding that would take the address away
+   * from under it and shut it after all.
+   */
+  onLayoutClose(event: Event): void {
+    const sheet = this.layoutSheetEl()?.nativeElement as unknown as EventTarget | undefined;
+    if (event.target !== sheet) return;
+    this.closeLayout();
+  }
+
+  /** Back to the data center underneath, which is the address without the
+   *  editor on top. */
+  closeLayout(): void {
+    const dc = this.currentDc();
+    if (dc) this.router.navigate(['/data-centers', viewSlug(dc.name)]);
+  }
+
+  /** Nothing is picked without a slug: /datacenters is the list, not the first
+   *  data center in it. Opening the section should not open a place as well. */
+  readonly selectedDcId = computed(
+    () => this.mutableDcs().find((dc) => viewSlug(dc.name) === this.slug())?.id ?? '',
+  );
 
   viewMode = signal<'map' | 'isometric'>('map');
 
@@ -74,8 +158,6 @@ export default class DatacentersComponent implements OnInit {
   tooltipX = signal(0);
 
   tooltipY = signal(0);
-
-  showRackTemplateModal = signal(false);
 
   // ── Floor layout (loaded per datacenter from the API) ────────────────────────
   readonly rackCells = signal<RackCell[]>([]);
@@ -88,47 +170,46 @@ export default class DatacentersComponent implements OnInit {
   });
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  editForm = signal<Partial<DatacenterInfo> | null>(null);
-
-  dcTier = signal<string>('3');
-
-  dcStatus = signal<DatacenterStatus>('operational');
-
   deleteTarget = signal<DatacenterInfo | null>(null);
-
-  // ── Validation feedback ──────────────────────────────────────────────────────
-  readonly invalidFields = signal<Record<string, string>>({});
-
-  readonly formErrorMessage = signal<string | null>(null);
-
-  private readonly editSheetEl = viewChild<NativeElementRef>('editSheet');
 
   private readonly deleteModalEl = viewChild<NativeElementRef>('deleteModal');
 
   constructor() {
+    // The address decides whether the editor is open, so the sheet follows it
+    // rather than the other way round: a link that carries it opens it, and the
+    // back button closes it without the page having to know it was pressed.
     effect(() => {
-      const el = this.editSheetEl()?.nativeElement;
-      if (this.editForm() !== null) el?.show?.();
+      const el = this.layoutSheetEl()?.nativeElement;
+      if (this.layoutOpen()) el?.show?.();
       else el?.hide?.();
+    });
+    // The add button in the bar opens this form itself, so the page only has
+    // to honour a link that asks for it.
+    openOnCreateRequest(() => this.openCreateDc());
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.currentDc()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
     });
     effect(() => {
       const el = this.deleteModalEl()?.nativeElement;
       if (this.deleteTarget() !== null) el?.show?.();
       else el?.hide?.();
     });
+    // The address says which data center is on screen, so the floor is read
+    // again whenever it moves — including the first time, once the list of data
+    // centers has landed.
+    effect(() => {
+      const id = this.selectedDcId();
+      untracked(() => {
+        this.hoveredRackId.set(null);
+        if (id) this.loadFloor(id).catch(() => undefined);
+      });
+    });
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.dcApi.listSites())
-      .then((res) => {
-        this.mutableDcs.set(res.sites.map((s) => DatacenterApiService.mapSite(s)));
-        if (!this.selectedDcId()) {
-          const first = this.mutableDcs()[0]?.id ?? '';
-          if (first) this.selectDc(first);
-        }
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.list.load();
   }
 
   readonly currentDc = computed(() =>
@@ -270,109 +351,16 @@ export default class DatacentersComponent implements OnInit {
     }
   };
 
-  // ── CRUD form field refs ───────────────────────────────────────────────────
-  private readonly fName = viewChild<NativeElementRef>('fName');
-
-  private readonly fFullName = viewChild<NativeElementRef>('fFullName');
-
-  private readonly fCity = viewChild<NativeElementRef>('fCity');
-
-  private readonly fCountry = viewChild<NativeElementRef>('fCountry');
-
-  private readonly fAddress = viewChild<NativeElementRef>('fAddress');
-
-  private readonly fEstablished = viewChild<NativeElementRef>('fEstablished');
-
-  private readonly fFloorSqm = viewChild<NativeElementRef>('fFloorSqm');
-
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearErrors(): void {
-    this.invalidFields.set({});
-    this.formErrorMessage.set(null);
-  }
-
-  private handleError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.formErrorMessage.set(message);
-  }
-
+  /** Both routes into the form open the one the shell holds: it has to survive
+   *  the page, and the add button in the bar opens the same one. */
   openCreateDc(): void {
-    this.clearErrors();
-    this.editForm.set({
-      id: '',
-      name: '',
-      fullName: '',
-      city: '',
-      country: '',
-      address: '',
-      tier: 3,
-      established: new Date().getFullYear(),
-      status: 'operational',
-      floorSqm: 0,
-    });
-    this.dcTier.set('3');
-    this.dcStatus.set('operational');
+    this.overlays.newDatacenter();
   }
 
   openEditDc(dc: DatacenterInfo): void {
-    this.clearErrors();
-    this.editForm.set({ ...dc });
-    this.dcTier.set(String(dc.tier));
-    this.dcStatus.set(dc.status);
-  }
-
-  closeEditForm(): void {
-    this.clearErrors();
-    this.editForm.set(null);
-  }
-
-  saveDc(): void {
-    const form = this.editForm();
-    if (!form) return;
-    this.clearErrors();
-    const updated: DatacenterInfo = {
-      id: form.id || `dc-${Date.now()}`,
-      name: this.fName()?.nativeElement.value ?? '',
-      fullName: this.fFullName()?.nativeElement.value ?? '',
-      city: this.fCity()?.nativeElement.value ?? '',
-      country: this.fCountry()?.nativeElement.value ?? '',
-      address: this.fAddress()?.nativeElement.value ?? '',
-      tier: (parseInt(this.dcTier(), 10) || 3) as 1 | 2 | 3 | 4,
-      status: this.dcStatus(),
-      established: parseFloat(this.fEstablished()?.nativeElement.value ?? '0') || 0,
-      floorSqm: parseFloat(this.fFloorSqm()?.nativeElement.value ?? '0') || 0,
-      // Not modelled by the API.
-      powerCapacityKw: 0,
-      coolingCapacityKw: 0,
-      pue: 0,
-    };
-    if (form.id) {
-      firstValueFrom(this.dcApi.updateSite(updated))
-        .then(() => {
-          this.mutableDcs.update((list) => list.map((dc) => (dc.id === form.id ? updated : dc)));
-          this.editForm.set(null);
-        })
-        .catch((err) => this.handleError(err));
-    } else {
-      firstValueFrom(this.dcApi.createSite(updated))
-        .then((res) => {
-          const created = { ...updated, id: res.siteId || updated.id };
-          this.mutableDcs.update((list) => [...list, created]);
-          this.selectDc(created.id);
-          this.editForm.set(null);
-        })
-        .catch((err) => this.handleError(err));
-    }
+    this.overlays.editDatacenter(dc);
   }
 
   openDeleteDc(dc: DatacenterInfo): void {
@@ -391,7 +379,7 @@ export default class DatacentersComponent implements OnInit {
         this.mutableDcs.update((list) => list.filter((dc) => dc.id !== target.id));
         if (this.selectedDcId() === target.id) {
           const remaining = this.mutableDcs();
-          this.selectDc(remaining[0]?.id ?? '');
+          if (remaining[0]) this.selectDc(remaining[0].id);
         }
         this.deleteTarget.set(null);
       })
@@ -401,10 +389,10 @@ export default class DatacentersComponent implements OnInit {
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
+  /** Picking one puts it in the address; the floor follows from there. */
   selectDc(id: string): void {
-    this.selectedDcId.set(id);
-    this.hoveredRackId.set(null);
-    this.loadFloor(id).catch(() => undefined);
+    const dc = this.mutableDcs().find((d) => d.id === id);
+    this.router.navigate(['/data-centers', dc ? viewSlug(dc.name) : '']);
   }
 
   onMapMouseMove(event: MouseEvent): void {
@@ -415,6 +403,22 @@ export default class DatacentersComponent implements OnInit {
   navigateToRack(rackId: string): void {
     this.router.navigate(['/racks', rackId]);
   }
+
+  /** Opens the rack section on the first rack of this data center. */
+  openRackView(): void {
+    this.router.navigate(this.firstRackRoute());
+  }
+
+  /** The tasks of this data center: its name is a tag on every task that
+   *  happens here, so the tag view is the list. */
+  openTaskManagement(dc: DatacenterInfo): void {
+    this.router.navigate(['/tasks', 'tag', dc.name]);
+  }
+
+  /** Street, city and country on one line: an address is the whole thing, and
+   *  the city already stands in the menu row beside it. */
+  readonly fullAddress = (dc: DatacenterInfo): string =>
+    [dc.address, dc.city, dc.country].filter((part) => !!part).join(', ');
 
   readonly formatPowerKw = (kw: number): string => `${kw.toFixed(1)} kW`;
 }

@@ -1,0 +1,76 @@
+<nldd-page sticky-header>
+  <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title size="3">
+      <h1>Racks</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- Making a rack is an action on this list, not on the rack you have
+         open, so it stands where the list does. -->
+    <nldd-toolbar label="Rack actions">
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          variant="secondary"
+          text="Add rack…"
+          start-icon="plus-small"
+          (click)="addRack()"
+        ></nldd-button>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- The data center rides in the list's own toolbar rather than above it:
+         it is what this list shows, and the slot keeps it in place when the
+         list runs empty, so you can always pick another one. -->
+    <nldd-list
+      type="navigation"
+      dividers="on-touch"
+      [attr.accessible-label]="'Racks in ' + currentDcName()"
+      empty-text="No racks found"
+    >
+      <nldd-toggle-button-group slot="toolbar" type="radio" accessible-label="Data center">
+        <!-- Every location, and where the menu starts. Which hall a rack is in
+             is a thing you pick, not something the order of the list decides
+             for you, and free space is a question about the whole estate. -->
+        <nldd-toggle-button
+          value=""
+          text="All"
+          [attr.selected]="!selectedDcId() ? '' : null"
+          (change)="onDcToggle('', $any($event).detail.selected)"
+        ></nldd-toggle-button>
+        @for (dc of datacenters(); track dc.id) {
+          <nldd-toggle-button
+            [attr.value]="dc.id"
+            [attr.text]="dc.name"
+            [attr.selected]="selectedDcId() === dc.id ? '' : null"
+            (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+          ></nldd-toggle-button>
+        }
+      </nldd-toggle-button-group>
+      @for (rack of racks(); track rack.id) {
+        <nldd-list-item
+          button
+          [attr.current]="currentRackId() === rack.id ? '' : null"
+          (click)="selectRack(rack.id)"
+        >
+          <nldd-icon-cell icon="rack-servers" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <!-- The building under the name, because rack names start again at
+               R01 in every hall: over all locations the name alone does not
+               tell two of them apart. Left off inside one building, where it
+               would be the same answer on every row. -->
+          <nldd-text-cell
+            width="full"
+            [attr.text]="rack.name"
+            [attr.supporting-text]="selectedDcId() ? null : dcName(rack.dcId)"
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="rackUsedU(rack) + '/' + rack.totalU + 'U'"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      }
+    </nldd-list>
+  </nldd-simple-section>
+</nldd-page>

@@ -12,7 +12,9 @@ import {
 import type { FSCInstallation } from './types.ts';
 
 const tbody = document.getElementById('rows') as HTMLElement;
-document.getElementById('add')!.addEventListener('click', () => navigateToCreate());
+document
+  .getElementById('add')!
+  .addEventListener('click', () => navigateToCreate());
 
 // Only the <nldd-button> needs the heavy NLDD Design System bundle (the rows are
 // plain .plugin-* markup), so start it but don't block the data fetch on it — and
@@ -20,7 +22,10 @@ document.getElementById('add')!.addEventListener('click', () => navigateToCreate
 // "Add installation" button degrades to an unstyled unknown element, which beats
 // replacing a good table with an error row.
 loadNlddDesignSystem().catch((err) => {
-  console.error('NLDD Design System failed to load; <nldd-*> components will not render.', err);
+  console.error(
+    'NLDD Design System failed to load; <nldd-*> components will not render.',
+    err,
+  );
 });
 
 try {

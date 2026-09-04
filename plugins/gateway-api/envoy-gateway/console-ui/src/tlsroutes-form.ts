@@ -21,7 +21,10 @@ export interface TLSRouteBody {
   };
 }
 
-export function buildTLSRouteBody(root: ParentNode, namespace: string): TLSRouteBody {
+export function buildTLSRouteBody(
+  root: ParentNode,
+  namespace: string,
+): TLSRouteBody {
   const spec: TLSRouteBody['spec'] = {
     parentRefs: buildParentRefs(root),
     rules: [{ backendRefs: buildBackendRefs(root) }],

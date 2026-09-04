@@ -3,14 +3,16 @@ import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
   TaskStatus as ProtoStatus,
   TaskPriority as ProtoPriority,
-  TaskCategory as ProtoCategory,
 } from '../../generated/v1/task_pb';
 import type { Task as ProtoTask } from '../../generated/v1/task_pb';
 import { TASK_CLIENT } from '../../connect/tokens';
 
-export type TaskStatusLabel = 'Ready' | 'In Progress' | 'Review' | 'Blocked' | 'Done';
-export type TaskPriorityLabel = 'Critical' | 'High' | 'Medium' | 'Low';
-export type TaskCategoryLabel = 'Hardware' | 'Network' | 'Cooling' | 'Power' | 'Security' | 'Other';
+// How far the work has got. Whose turn it is follows from the assignee, and
+// being stuck on something that is not a person is blockedReason.
+export type TaskStatusLabel = 'To do' | 'Doing' | 'Done';
+// 'None' is what a task carries until somebody prioritizes it, and it reads as
+// an empty circle in a picker and as nothing at all on the task itself.
+export type TaskPriorityLabel = 'Urgent' | 'High' | 'Medium' | 'Low' | 'None';
 
 /** The admin/board view-model of a task (display strings, no proto enums). */
 export interface TaskData {
@@ -19,7 +21,9 @@ export interface TaskData {
   description: string;
   status: TaskStatusLabel;
   priority: TaskPriorityLabel;
-  category: TaskCategoryLabel;
+  tags: string[];
+  /** Stuck on something that is not a person; null when the work can move. */
+  blockedReason: string | null;
   location: string;
   assignee: string | null;
   due: string;
@@ -32,10 +36,13 @@ export interface TaskInput {
   description: string;
   status: TaskStatusLabel;
   priority: TaskPriorityLabel;
-  category: TaskCategoryLabel;
+  tags: string[];
   location: string;
   assignee: string | null;
   due: string;
+  /** What the work is stuck on, when it is not a person. `null` means it is
+   *  not stuck; an empty string means stuck without saying on what. */
+  blockedReason: string | null;
 }
 
 /**
@@ -59,6 +66,22 @@ const dueToDate = (due: string): Date => new Date(`${due}T00:00:00Z`);
 const CLEAR_DUE_DATE = new Date(0);
 
 /**
+ * Whether a field is unchanged. Every TaskInput field is a string or null bar
+ * `tags`, which is a fresh array on every load and so is never `===` the one it
+ * was mapped from; compared by reference it would report as edited on every
+ * save. Order does not count either: the server holds tags as a set, so the
+ * same words in another order are the same tags.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    const [left, right] = [[...a].sort(), [...b].sort()];
+    return left.every((value, i) => value === right[i]);
+  }
+  return a === b;
+}
+
+/**
  * Reached only when the server sends an enum value this build has no label for
  * — a schema that moved ahead of the frontend. The display falls back so the
  * board still renders, but the mismatch is logged rather than passed off as a
@@ -77,14 +100,14 @@ export default class TaskApiService {
   /**
    * The keys of `input` whose value differs from the task as the board last
    * loaded it. Every TaskInput field is also a TaskData field, and both use the
-   * same "empty" spellings ('' / null), so a plain !== comparison is enough —
-   * an untouched field never lands in the patch, and so is never written back
+   * same "empty" spellings ('' / null), so the comparison below is all it takes
+   * — an untouched field never lands in the patch, and so is never written back
    * over an edit someone else made in the meantime.
    */
   static changedFields(current: TaskData, input: TaskInput): TaskPatch {
     const patch: TaskPatch = {};
     (Object.keys(input) as (keyof TaskInput)[])
-      .filter((key) => input[key] !== current[key])
+      .filter((key) => !sameValue(input[key], current[key]))
       .forEach((key) => Object.assign(patch, { [key]: input[key] }));
     return patch;
   }
@@ -97,7 +120,8 @@ export default class TaskApiService {
       description: t.description,
       status: TaskApiService.fromProtoStatus(t.status),
       priority: TaskApiService.fromProtoPriority(t.priority),
-      category: TaskApiService.fromProtoCategory(t.category),
+      tags: [...t.tags],
+      blockedReason: t.blockedReason || null,
       location: t.location,
       assignee: t.assigneeId ? t.assigneeId : null,
       due: t.dueDate ? timestampDate(t.dueDate).toISOString().slice(0, 10) : '',
@@ -107,29 +131,23 @@ export default class TaskApiService {
 
   static fromProtoStatus(s: ProtoStatus): TaskStatusLabel {
     switch (s) {
-      case ProtoStatus.READY:
-        return 'Ready';
-      case ProtoStatus.IN_PROGRESS:
-        return 'In Progress';
-      case ProtoStatus.REVIEW:
-        return 'Review';
-      case ProtoStatus.BLOCKED:
-        return 'Blocked';
+      case ProtoStatus.TODO:
+        return 'To do';
+      case ProtoStatus.DOING:
+        return 'Doing';
       case ProtoStatus.DONE:
         return 'Done';
       case ProtoStatus.UNSPECIFIED:
-        return 'Ready';
+        return 'To do';
       default:
-        return unknownEnum('Status', s, 'Ready');
+        return unknownEnum('Status', s, 'To do');
     }
   }
 
   private static toProtoStatus(s: TaskStatusLabel): ProtoStatus {
     const map: Record<TaskStatusLabel, ProtoStatus> = {
-      Ready: ProtoStatus.READY,
-      'In Progress': ProtoStatus.IN_PROGRESS,
-      Review: ProtoStatus.REVIEW,
-      Blocked: ProtoStatus.BLOCKED,
+      'To do': ProtoStatus.TODO,
+      Doing: ProtoStatus.DOING,
       Done: ProtoStatus.DONE,
     };
     return map[s];
@@ -143,56 +161,24 @@ export default class TaskApiService {
         return 'Medium';
       case ProtoPriority.HIGH:
         return 'High';
-      case ProtoPriority.CRITICAL:
-        return 'Critical';
+      case ProtoPriority.URGENT:
+        return 'Urgent';
       case ProtoPriority.UNSPECIFIED:
-        return 'Medium';
+        return 'None';
       default:
-        return unknownEnum('Priority', p, 'Medium');
+        return unknownEnum('Priority', p, 'None');
     }
   }
 
   private static toProtoPriority(p: TaskPriorityLabel): ProtoPriority {
     const map: Record<TaskPriorityLabel, ProtoPriority> = {
+      None: ProtoPriority.UNSPECIFIED,
       Low: ProtoPriority.LOW,
       Medium: ProtoPriority.MEDIUM,
       High: ProtoPriority.HIGH,
-      Critical: ProtoPriority.CRITICAL,
+      Urgent: ProtoPriority.URGENT,
     };
     return map[p];
-  }
-
-  static fromProtoCategory(c: ProtoCategory): TaskCategoryLabel {
-    switch (c) {
-      case ProtoCategory.HARDWARE:
-        return 'Hardware';
-      case ProtoCategory.NETWORK:
-        return 'Network';
-      case ProtoCategory.COOLING:
-        return 'Cooling';
-      case ProtoCategory.POWER:
-        return 'Power';
-      case ProtoCategory.SECURITY:
-        return 'Security';
-      case ProtoCategory.OTHER:
-        return 'Other';
-      case ProtoCategory.UNSPECIFIED:
-        return 'Other';
-      default:
-        return unknownEnum('Category', c, 'Other');
-    }
-  }
-
-  private static toProtoCategory(c: TaskCategoryLabel): ProtoCategory {
-    const map: Record<TaskCategoryLabel, ProtoCategory> = {
-      Hardware: ProtoCategory.HARDWARE,
-      Network: ProtoCategory.NETWORK,
-      Cooling: ProtoCategory.COOLING,
-      Power: ProtoCategory.POWER,
-      Security: ProtoCategory.SECURITY,
-      Other: ProtoCategory.OTHER,
-    };
-    return map[c];
   }
 
   listTasks(assigneeId?: string) {
@@ -214,8 +200,9 @@ export default class TaskApiService {
       title: input.title,
       status: TaskApiService.toProtoStatus(input.status),
       priority: TaskApiService.toProtoPriority(input.priority),
-      category: TaskApiService.toProtoCategory(input.category),
+      tags: input.tags,
       ...(input.description ? { description: input.description } : {}),
+      ...(input.blockedReason !== null ? { blockedReason: input.blockedReason } : {}),
       ...(input.location ? { location: input.location } : {}),
       ...(input.assignee ? { assigneeId: input.assignee } : {}),
       ...(input.due ? { dueDate: timestampFromDate(dueToDate(input.due)) } : {}),
@@ -233,12 +220,21 @@ export default class TaskApiService {
       ...('title' in patch ? { title: patch.title } : {}),
       ...('status' in patch ? { status: TaskApiService.toProtoStatus(patch.status!) } : {}),
       ...('priority' in patch ? { priority: TaskApiService.toProtoPriority(patch.priority!) } : {}),
-      ...('category' in patch ? { category: TaskApiService.toProtoCategory(patch.category!) } : {}),
+      // A repeated field has no presence, so an empty list cannot say "carry no
+      // tags" on its own — unset and "clear them" look the same on the wire.
+      // clear_tags is the field that says it, the way clearBlockedReason does
+      // for the column below.
+      ...('tags' in patch ? { tags: patch.tags!, clearTags: patch.tags!.length === 0 } : {}),
       // The empty value of a present field clears the column: the backend maps
       // an empty string / the epoch onto a NULL write.
       ...('description' in patch ? { description: patch.description ?? '' } : {}),
       ...('assignee' in patch ? { assigneeId: patch.assignee ?? '' } : {}),
       ...('location' in patch ? { location: patch.location ?? '' } : {}),
+      // Blocked is the one field an empty value cannot clear: "" is a task that
+      // is stuck without saying on what, which is not the same as one that is
+      // not stuck. Hence the flag the API carries beside it.
+      ...(patch.blockedReason === null ? { clearBlockedReason: true } : {}),
+      ...(typeof patch.blockedReason === 'string' ? { blockedReason: patch.blockedReason } : {}),
       ...('due' in patch
         ? { dueDate: timestampFromDate(patch.due ? dueToDate(patch.due) : CLEAR_DUE_DATE) }
         : {}),

@@ -1,104 +1,139 @@
-<nldd-form (submit)="onSubmit($event)" class="space-y-6">
-  <!-- Loading/Error State -->
+<nldd-form (submit)="onSubmit($event)">
   @if (isLoading()) {
-    <div class="text-center text-gray-600 dark:text-gray-300">Loading plugins and presets...</div>
+    <nldd-activity-indicator
+      show-text
+      text="Loading plugins and presets..."
+    ></nldd-activity-indicator>
   } @else if (errorMessage()) {
-    <div
-      class="bg-danger-50 text-danger-800 dark:bg-danger-900 dark:text-danger-200 rounded-md p-4"
+    <!-- A dialog rather than a banner: a banner announces something about the
+         form below it, and a form that never loaded has nothing below it. -->
+    <nldd-inline-dialog
+      variant="alert"
+      text="Plugins could not be loaded"
+      supporting-text="The list of plugins and presets comes from the server, and the server did not answer."
     >
-      {{ errorMessage() }}
-    </div>
+      <nldd-button
+        slot="actions"
+        type="button"
+        text="Try again"
+        (click)="load()"
+      ></nldd-button>
+    </nldd-inline-dialog>
   } @else {
-    <!-- Plugin Preset Selection -->
-    <div class="space-y-4">
-      <nldd-form-field label="Plugin preset">
-        <nldd-radio-button-group name="preset" (change)="onPresetRadioChange($event)">
-          @for (preset of presets; track preset.id) {
-            <nldd-radio-button-field
-              [value]="preset.id"
-              [label]="preset.name"
-              [checked]="selectedPreset === preset.id"
-            ></nldd-radio-button-field>
-          }
-          <nldd-radio-button-field
-            value="custom"
-            label="Custom plugin selection"
-            [checked]="selectedPreset === 'custom'"
-          ></nldd-radio-button-field>
-        </nldd-radio-button-group>
-      </nldd-form-field>
-    </div>
-
-    <!-- Plugin Selection -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-medium">Plugins</h3>
-      <div class="space-y-4">
-        @if (plugins.length === 0) {
-          <nldd-box>
-            <nldd-inline-dialog
-              class="card-body"
-              icon="puzzle-piece"
-              icon-color="secondary"
-              text="No plugins found"
-            >
-            </nldd-inline-dialog>
-          </nldd-box>
-        } @else {
-          @for (plugin of plugins; track plugin.id) {
-            <div>
-              <nldd-switch-field
-                [label]="plugin.name"
-                [checked]="plugin.selected"
-                [disabled]="selectedPreset !== 'custom'"
-                [name]="plugin.id"
-                (change)="plugin.selected = $any($event).detail.checked"
-              ></nldd-switch-field>
-              <p class="-mt-0.5 ml-16 text-gray-500 dark:text-gray-400">
-                {{ plugin.descriptionShort }}
-              </p>
-            </div>
-          }
+    <nldd-form-field label="Plugins">
+      <!-- The preset lives inside this field, above the list: it is a control
+           for that list, not a question of its own. -->
+      <nldd-toggle-button-group
+        type="radio"
+        name="preset"
+        accessible-label="Plugin preset"
+        (change)="onPresetRadioChange($event)"
+      >
+        @for (preset of presets; track preset.id) {
+          <nldd-toggle-button
+            [value]="preset.id"
+            [attr.text]="preset.name"
+            [selected]="selectedPreset === preset.id"
+          ></nldd-toggle-button>
         }
-      </div>
-    </div>
-
-    <!-- Custom Plugin Upload Section -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-medium">Custom plugins</h3>
-      <p class="text-gray-600 dark:text-gray-300">
-        Upload a custom plugin as a ZIP file. Custom plugins can extend the functionality of your
-        cluster.
-      </p>
-
-      <div class="space-y-4">
-        <!-- Warning switch -->
-        <nldd-switch-field
-          label="Enable uploading custom plugins (warranty on cluster void)"
+        <nldd-toggle-button
+          value="custom"
+          text="Custom selection"
+          [selected]="selectedPreset === 'custom'"
+        ></nldd-toggle-button>
+      </nldd-toggle-button-group>
+      <nldd-spacer size="12"></nldd-spacer>
+      @if (plugins.length === 0) {
+        <nldd-inline-dialog
+          icon="plugin"
+          icon-color="secondary"
+          text="No plugins found"
+        ></nldd-inline-dialog>
+      } @else {
+        <!-- The row itself is the control (role="checkbox"), so the whole line
+             toggles the plugin instead of only the box. That makes the
+             description part of the hit area, which is where the reason to
+             toggle actually is.
+             A checkbox and not a switch: nothing happens until Save changes, and
+             a switch promises an effect the moment you flip it.
+             The box is decoration: `inert` keeps it out of the tab order and out
+             of the accessibility tree, which the row already covers. A second
+             focusable control would double the tab stops and announce the state
+             twice. -->
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Plugins"
+        >
+          @for (plugin of plugins; track plugin.id) {
+            <nldd-list-item
+              checkbox
+              [checked]="plugin.selected"
+              (change)="onPluginToggle(plugin, $any($event).detail.checked)"
+            >
+              <nldd-cell inert>
+                <nldd-checkbox [checked]="plugin.selected"></nldd-checkbox>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The same logo the catalogue and the cluster page show, so a
+                   plugin stays recognizable by sight while you pick it. Decorative:
+                   the name is right beside it. -->
+              <nldd-cell>
+                <nldd-image
+                  [attr.src]="pluginIconSrc(plugin)"
+                  width="24"
+                  height="24"
+                  object-fit="contain"
+                  decorative
+                ></nldd-image>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                [attr.text]="plugin.displayName"
+                [attr.supporting-text]="plugin.descriptionShort"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    </nldd-form-field>
+    <!-- Switch and upload in one box: the upload only exists because the switch
+         is on, and loose in the form they read as two unrelated questions. -->
+    <nldd-box>
+      <!-- Tight around the switch on its own, roomier once the upload is under
+           it: a field needs air below it, a lone checkbox row does not. -->
+      <nldd-container
+        padding-inline="16"
+        padding-top="6"
+        [attr.padding-bottom]="customPluginUploadEnabled ? '16' : '6'"
+      >
+        <!-- No field label above this one: the checkbox says what it turns on, and
+             a label repeating that would be the third "plugin" heading in a row. -->
+        <nldd-checkbox-field
+          label="Custom plugins (warning: warranty on cluster void)"
           [checked]="customPluginUploadEnabled"
           name="customPluginUploadEnabled"
-          (change)="customPluginUploadEnabled = $any($event).detail.checked"
-        ></nldd-switch-field>
-
-        <!-- File upload input -->
-        <nldd-form-field
-          label="Upload plugin ZIP file"
-          supporting-label="Only ZIP files are accepted"
-        >
-          <input
-            id="customPluginFile"
-            type="file"
-            accept=".zip"
-            [disabled]="!customPluginUploadEnabled"
-            (change)="onCustomPluginFileChange($event)"
-            class="ring-accent-500 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
-          />
-        </nldd-form-field>
-      </div>
-    </div>
-
-    <!-- Form Actions slot -->
-    <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
+          (change)="onCustomPluginUploadToggle($any($event).detail.checked)"
+        ></nldd-checkbox-field>
+        <!-- The upload only appears once it is turned on. A disabled file field
+             asks to be read and then refuses to do anything; an absent one asks
+             nothing. -->
+        @if (customPluginUploadEnabled) {
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-form-field label="Plugin ZIP file">
+            <nldd-form-field-help-text>
+              A custom plugin goes up as a ZIP file. Other file types are rejected.
+            </nldd-form-field-help-text>
+            <nldd-file-field
+              accept=".zip"
+              [translations]="fileFieldTranslations"
+              (change)="onCustomPluginFileChange($event)"
+            ></nldd-file-field>
+          </nldd-form-field>
+        }
+      </nldd-container>
+    </nldd-box>
+    <nldd-form-actions>
       <ng-content></ng-content>
-    </div>
+    </nldd-form-actions>
   }
 </nldd-form>

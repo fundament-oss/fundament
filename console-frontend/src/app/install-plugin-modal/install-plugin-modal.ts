@@ -1,20 +1,18 @@
 import {
   Component,
+  computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  computed,
   input,
   output,
-  signal,
 } from '@angular/core';
 import SheetSyncDirective from '../sheet-sync.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
-import { LoadingIndicatorComponent } from '../icons';
 import {
   getInstallStatusDisplay,
   isInstallInProgress,
   isInstallFailed,
+  isInstallRunning,
+  isInstallTerminating,
 } from '../utils/plugin-install-status';
 
 interface Cluster {
@@ -23,6 +21,9 @@ interface Cluster {
   // null when the plugin is not installed on this cluster; otherwise the
   // PluginInstallation status phase (Pending, Deploying, Running, …).
   phase: string | null;
+  // The version pinned on this cluster; empty when not installed. A plugin is
+  // installed per cluster, so two clusters can run different versions.
+  version: string;
   running: boolean;
 }
 
@@ -47,14 +48,17 @@ export interface RetrySelection {
   hash: string;
 }
 
+/** The version shows from the moment a cluster has one until the removal is
+ *  through: while it is being torn down the plugin is still installed at that
+ *  version. Only a new install has nothing to report yet. */
+function showsInstalledVersion(cluster: Cluster): boolean {
+  if (!cluster.version || cluster.phase === null) return false;
+  return !isInstallInProgress(cluster.phase) || isInstallTerminating(cluster.phase);
+}
+
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [
-    SheetSyncDirective,
-    DropdownSyncDirective,
-    LoadingIndicatorComponent,
-    AutofocusDirective,
-  ],
+  imports: [SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,33 +92,16 @@ export default class InstallPluginModalComponent {
   // Emits a cluster to retry a failed installation on, with the current pin.
   retry = output<RetrySelection>();
 
-  // Cluster IDs currently selected for batch install.
-  selected = signal<Set<string>>(new Set());
+  /** Everything but the newest published version; the newest sits on its own at
+   *  the top of the menu. */
+  earlierVersions = computed(() => this.versions().slice(1));
 
-  // The version the user picked, or null to fall back to the latest. Reset on
-  // every open so re-opening defaults to the newest published version.
-  private pickedVersion = signal<string | null>(null);
-
-  // Effective selection: the user's pick when still valid, else the latest
-  // (first) published version. Empty when nothing is published.
-  selectedVersion = computed(() => {
-    const versions = this.versions();
-    const picked = this.pickedVersion();
-    if (picked && versions.some((v) => v.version === picked)) return picked;
-    return versions[0]?.version ?? '';
-  });
-
-  // Clusters eligible for selection: running and not yet installed.
-  eligibleClusters = computed(() =>
-    this.clusters().filter((cluster) => cluster.running && cluster.phase === null),
+  /** The published versions as a sentence fragment, newest first. */
+  versionList = computed(() =>
+    this.versions()
+      .map((v) => v.version)
+      .join(', '),
   );
-
-  selectedCount = computed(() => this.selected().size);
-
-  allSelected = computed(() => {
-    const eligible = this.eligibleClusters();
-    return eligible.length > 0 && eligible.every((cluster) => this.selected().has(cluster.id));
-  });
 
   statusFor = getInstallStatusDisplay;
 
@@ -122,54 +109,31 @@ export default class InstallPluginModalComponent {
 
   isFailed = isInstallFailed;
 
-  isSelected(clusterId: string): boolean {
-    return this.selected().has(clusterId);
-  }
+  isRunning = isInstallRunning;
 
-  setSelected(clusterId: string, checked: boolean): void {
-    this.selected.update((current) => {
-      const next = new Set(current);
-      if (checked) {
-        next.add(clusterId);
-      } else {
-        next.delete(clusterId);
-      }
-      return next;
-    });
-  }
+  isRemoving = isInstallTerminating;
 
-  setAllSelected(checked: boolean): void {
-    const eligible = this.eligibleClusters();
-    this.selected.set(checked ? new Set(eligible.map((cluster) => cluster.id)) : new Set());
-  }
-
-  onOpen(): void {
-    this.selected.set(new Set());
-    this.pickedVersion.set(null);
-  }
-
-  onVersionChange(version: string): void {
-    this.pickedVersion.set(version);
-  }
+  showsVersion = showsInstalledVersion;
 
   onClose(): void {
     this.closeModal.emit();
   }
 
-  onInstallSelected(): void {
-    const ids = [...this.selected()];
-    const option = this.versions().find((v) => v.version === this.selectedVersion());
-    if (ids.length === 0 || !option) return;
-    this.install.emit({ clusterIds: ids, version: option.version, hash: option.hash });
-    this.selected.set(new Set());
+  /** One row, one install, at the version picked from that row's own menu. A
+   *  plugin is pinned per cluster, so the version belongs to the row and not to
+   *  the sheet. */
+  onInstallOne(clusterId: string, option: PluginVersionOption): void {
+    this.install.emit({ clusterIds: [clusterId], version: option.version, hash: option.hash });
   }
 
   onUninstall(clusterId: string): void {
     this.uninstall.emit(clusterId);
   }
 
-  onRetry(clusterId: string): void {
-    const option = this.versions().find((v) => v.version === this.selectedVersion());
+  /** Retries at the version already pinned on that cluster, falling back to the
+   *  latest published one when the failed install never recorded a version. */
+  onRetry(clusterId: string, pinned: string): void {
+    const option = this.versions().find((v) => v.version === pinned) ?? this.versions()[0];
     if (!option) return;
     this.retry.emit({ clusterId, version: option.version, hash: option.hash });
   }

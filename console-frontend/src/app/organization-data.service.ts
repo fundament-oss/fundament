@@ -3,6 +3,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
+import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
@@ -38,6 +39,20 @@ export interface OrganizationData {
   providedIn: 'root',
 })
 export class OrganizationDataService {
+  /** Bumped when a namespace is created somewhere other than the list that
+   *  shows them: that sheet belongs to the shell now, not to the page. */
+  readonly namespacesChanged = signal(0);
+
+  /** The same, for members: inviting someone and adding someone to a project
+   *  both happen in a sheet the shell owns. */
+  readonly membersChanged = signal(0);
+
+  /** TEMPORARY, dev only: roles have no API, so a fresh grant waits here for the
+   *  member id the list assigns. The sheet that hands it out belongs to the
+   *  shell, so it cannot park it on the list itself. Delete with the mock
+   *  bindings. */
+  readonly pendingProjectGrant = signal<{ userId: string; bindings: RoleBinding[] } | null>(null);
+
   private organizationClient = inject(ORGANIZATION);
 
   private clusterClient = inject(CLUSTER);
@@ -88,6 +103,10 @@ export class OrganizationDataService {
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
   projectsLoaded = signal(false);
 
+  /** True once the cluster list has come back for the current org. Anything that
+   *  reads "no clusters" as a state rather than as "not fetched yet" waits on this. */
+  clustersLoaded = signal(false);
+
   async loadOrganizationData(organizationId?: string) {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
@@ -96,6 +115,7 @@ export class OrganizationDataService {
     // Reset project cache so the next loadProjectsAndNamespaces() fetches fresh data.
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
+    this.clustersLoaded.set(false);
 
     this.loading.set(true);
     try {
@@ -111,6 +131,7 @@ export class OrganizationDataService {
       }
 
       this.clusterSummaries.set(clustersResponse.clusters);
+      this.clustersLoaded.set(true);
 
       const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
         id: cluster.id,
@@ -298,6 +319,7 @@ export class OrganizationDataService {
     this.organizations.set([]);
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);
+    this.clustersLoaded.set(false);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
   }
