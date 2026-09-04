@@ -2,11 +2,9 @@ package prometheus
 
 import (
 	"context"
-	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -117,39 +115,6 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
-}
-
-func TestTransportWithCA(t *testing.T) {
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte(vectorBody))
-	}))
-	defer srv.Close()
-
-	caPath := t.TempDir() + "/ca.crt"
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
-	require.NoError(t, os.WriteFile(caPath, certPEM, 0o600))
-
-	transport, err := TransportWithCA(caPath)
-	require.NoError(t, err)
-
-	// Without the CA the request must fail; with it, succeed.
-	_, err = NewHTTPClientWithAuth(srv.URL, "u", "p").Query(context.Background(), "up", time.Now())
-	require.Error(t, err)
-
-	c := NewHTTPClientWithAuth(srv.URL, "u", "p", WithTransport(transport))
-	samples, err := c.Query(context.Background(), "up", time.Now())
-	require.NoError(t, err)
-	assert.Len(t, samples, 1)
-}
-
-func TestTransportWithCA_Errors(t *testing.T) {
-	_, err := TransportWithCA("/nonexistent/ca.crt")
-	require.Error(t, err)
-
-	empty := t.TempDir() + "/empty.crt"
-	require.NoError(t, os.WriteFile(empty, []byte("not a cert"), 0o600))
-	_, err = TransportWithCA(empty)
-	require.Error(t, err)
 }
 
 func TestHTTPClient_RetriesOnceOnConnectionReset(t *testing.T) {
