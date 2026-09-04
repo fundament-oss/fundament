@@ -1,0 +1,22 @@
+package main
+
+import (
+	"embed"
+	"net/http"
+
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/console"
+)
+
+//go:embed console/*
+var consoleFiles embed.FS
+
+// ConsoleAssets serves the plugin's console UI, which the runtime mounts at
+// /console/.
+//
+// console/ is a build artifact: it is gitignored and seeded with only a .gitkeep
+// so `go:embed console/*` still compiles on a fresh checkout. RequireHTML turns
+// "the UI was never built" into a startup failure instead of a blank iframe with
+// nothing in the logs.
+func (p *DemoPlugin) ConsoleAssets() http.FileSystem {
+	return console.NewFileSystem(consoleFiles, "console", console.RequireHTML())
+}

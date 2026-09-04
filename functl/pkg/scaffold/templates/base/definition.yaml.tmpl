@@ -1,0 +1,188 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: {{.Name}}
+  displayName: {{.DisplayName}}
+  version: v0.1.0
+  description: {{.Description}}
+  author: {{.Author}}
+  license: {{.License}}
+  icon: puzzle-piece
+  urls:
+    homepage: https://example.com
+    repository: https://{{.Module}}
+    documentation: https://example.com/docs
+  tags:
+    - example
+# There is deliberately no spec.image here. Publishing builds the image, resolves
+# the pushed manifest digest and injects it, so the stored definition always pins
+# immutable code. Never add a mutable tag by hand: it will be rejected.
+spec:
+  permissions:
+{{- if .IsHelm}}
+    capabilities:
+      # The plugin pulls its chart from a public Helm repository at install time.
+      - internet_access
+    rbac:
+      # --- Runtime resources the plugin reconciles / surfaces in the UI ---
+      # TODO: replace with the API groups your chart's CRDs actually use.
+      - apiGroups:
+          - {{.Group}}
+        resources:
+          - {{.ResourcePlural}}
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install ... --create-namespace --wait`
+      # with Helm's default "secret" storage driver. These rules grant what Helm
+      # itself needs to create and wait on a release. Rules are cluster-wide
+      # (PolicyRule carries no namespace). Trim anything your chart does not use.
+      - apiGroups:
+          - ""
+        resources:
+          - namespaces # helm --create-namespace
+        verbs:
+          - get
+          - list
+          - create
+      - apiGroups:
+          - ""
+        resources:
+          - secrets # Helm release storage
+          - serviceaccounts
+          - services
+          - configmaps
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - ""
+        resources:
+          - pods # helm --wait readiness polling
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - apps
+        resources:
+          - replicasets # helm --wait polls the Deployment rollout via ReplicaSets
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - apiextensions.k8s.io
+        resources:
+          - customresourcedefinitions
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - rbac.authorization.k8s.io
+        resources:
+          - clusterroles
+          - roles
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+          - bind # create (Cluster)RoleBindings that reference these
+          - escalate # write the chart's rules without holding every one of them
+      - apiGroups:
+          - rbac.authorization.k8s.io
+        resources:
+          - clusterrolebindings
+          - rolebindings
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+{{- else}}
+    # capabilities gate what the plugin may reach outside the cluster. Add
+    # `internet_access` if the plugin talks to anything off-cluster.
+    capabilities: []
+    # rbac becomes a ClusterRole bound to the plugin's ServiceAccount, verbatim.
+    # Grant only what the plugin actually uses.
+    rbac:
+      - apiGroups:
+          - {{.Group}}
+        resources:
+          - {{.ResourcePlural}}
+        verbs:
+          - get
+          - list
+          - watch
+{{- end}}
+{{- if .HasConsole}}
+  # The four blocks below are one contract with nothing to enforce it at build
+  # time except definition_test.go: the menu entry names the CRD, customComponents
+  # maps the Kind to files that must exist under console/, and allowedResources
+  # is what the console is permitted to read through the API proxy. Change one,
+  # change all four.
+  menu:
+    project:
+      - crd: {{.CRD}}
+        list: true
+        detail: true
+        icon: puzzle-piece
+        label: {{.Kind}}s
+  crds:
+    - {{.CRD}}
+  uiHints:
+    {{.CRD}}:
+      statusMapping:
+        jsonPath: ".status.conditions[?(@.type==\"Ready\")].status"
+        values:
+          "True":
+            badge: success
+            label: Ready
+          "False":
+            badge: danger
+            label: Not Ready
+  customComponents:
+    {{.Kind}}:
+      list: {{.ResourcePlural}}-list.html
+      detail: {{.ResourcePlural}}-detail.html
+  allowedResources:
+    - group: {{.Group}}
+      version: v1
+      resource: {{.ResourcePlural}}
+      verbs: [list, get]
+{{- end}}

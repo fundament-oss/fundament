@@ -9,6 +9,7 @@ import (
 
 	"github.com/fundament-oss/fundament/functl/pkg/cli"
 	"github.com/fundament-oss/fundament/functl/pkg/config"
+	"github.com/fundament-oss/fundament/functl/pkg/scaffold"
 )
 
 func main() {
@@ -20,6 +21,7 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			NoExpandSubcommands: true,
 		}),
+		kong.Vars{"sdk_version": scaffold.DefaultSDKVersion},
 	)
 
 	logLevel := slog.LevelInfo

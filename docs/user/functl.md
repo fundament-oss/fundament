@@ -62,9 +62,26 @@ functl org unset
 | `functl cluster` | `list`, `get`, `kubeconfig`, `token` |
 | `functl apikey` | `list`, `create`, `revoke`, `delete` |
 | `functl config` | `dir`, `path` |
+| `functl plugin` | `create` |
 | `functl version` | none |
 
 Run `functl <group> --help` for the flags of any individual command.
+
+### Plugin development
+
+`functl plugin create <name>` scaffolds a new Fundament plugin project: a
+buildable Go project with its manifest, Dockerfile and optionally a console UI.
+It runs entirely locally, so unlike every other command it needs no API key and
+no organization.
+
+```shell
+functl plugin create my-plugin
+```
+
+It prompts for the details it needs; pass `--yes` to accept the defaults, or set
+each one with a flag (`--template=minimal|helm`, `--console=none|vanilla|vite`,
+`--module`, `--crd`, `--kind`, ...) for unattended use. See
+[Writing a plugin](../developer/plugins/writing-a-plugin.md).
 
 ### Cluster credentials
 

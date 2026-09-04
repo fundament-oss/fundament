@@ -1,0 +1,8 @@
+.git
+.gitignore
+Justfile
+README.md
+*_test.go
+# console/ is a build artifact: the Dockerfile's console-ui stage produces it.
+console/
+console-ui/node_modules/
