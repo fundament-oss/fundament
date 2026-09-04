@@ -64,24 +64,24 @@ func run() error {
 		}
 	}
 
+	// OpenFGA backs the asset handler's can_view gate in every mode and, in
+	// real mode, doubles as the installation proxy's cluster authorizer.
+	openfga, err := openfgaauthz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("openfga client: %w", err)
+	}
+
 	publicMux := http.NewServeMux()
-	registerHealth(publicMux)
+	registerHealth(publicMux, openfga, logger)
 
 	internalMux := http.NewServeMux()
-	registerHealth(internalMux)
+	registerHealth(internalMux, openfga, logger)
 
 	// Static assets + strict CSP.
 	cfgCsp := &assets.CSPConfig{
 		ConnectSrc:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
 		FormAction:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
 		FrameAncestors: []string{cfg.ConsoleOrigin},
-	}
-
-	// OpenFGA backs the asset handler's can_view gate in every mode and, in
-	// real mode, doubles as the installation proxy's cluster authorizer.
-	openfga, err := openfgaauthz.New(cfg.OpenFGA)
-	if err != nil {
-		return fmt.Errorf("openfga client: %w", err)
 	}
 
 	var (
@@ -251,12 +251,26 @@ func run() error {
 	return runErr
 }
 
-func registerHealth(mux *http.ServeMux) {
+func registerHealth(mux *http.ServeMux, authzClient *openfgaauthz.Client, logger *slog.Logger) {
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		// The can_view gate runs in every mode, so an unresolved store means
+		// this pod cannot authorize any request. This mux is also served
+		// publicly, so the reason is logged rather than returned.
+		if err := authzClient.Healthy(ctx); err != nil {
+			logger.Error("readiness: openfga unavailable", "err", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("not ready"))
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
