@@ -1,0 +1,222 @@
+# Permissions the services call through common/authz. A relation removed or
+# widened fails here.
+#
+# Run by TestModelSatisfiesStoreFile against an in-process OpenFGA, so no server
+# and no CLI are needed:
+#
+#   go test ./common/authz/
+name: fundament authorization model
+
+model_file: ./model.fga
+
+tuples:
+  - user: user:alice
+    relation: admin
+    object: organization:acme
+
+  - user: user:bart
+    relation: viewer
+    object: organization:acme
+
+  - user: organization:acme
+    relation: owner
+    object: cluster:c1
+
+  - user: cluster:c1
+    relation: parent
+    object: project:p1
+
+  - user: user:carol
+    relation: project_viewer
+    object: project:p1
+
+  - user: project:p1
+    relation: parent
+    object: namespace:ns1
+
+  - user: project:p1
+    relation: parent
+    object: project_member:pm1
+
+  - user: cluster:c1
+    relation: parent
+    object: node_pool:np1
+
+  - user: organization:acme
+    relation: owner
+    object: api_key:k1
+
+  - user: user:bart
+    relation: creator
+    object: api_key:k1
+
+  - user: user:bart
+    relation: usable_by
+    object: api_key:k1
+
+  - user: organization:acme
+    relation: owner
+    object: plugin:pl1
+
+tests:
+  - name: an organization admin holds every organization permission
+    check:
+      - user: user:alice
+        object: organization:acme
+        assertions:
+          can_view: true
+          can_edit: true
+          can_create_apikey: true
+          can_list_apikeys: true
+          can_create_cluster: true
+          can_list_clusters: true
+          can_invite_member: true
+          can_edit_member: true
+          can_delete_member: true
+          can_list_members: true
+
+  - name: an organization viewer reads but does not administer
+    check:
+      - user: user:bart
+        object: organization:acme
+        assertions:
+          can_view: true
+          can_list_clusters: true
+          can_list_members: true
+          can_list_apikeys: true
+          can_create_apikey: true
+          can_edit: false
+          can_create_cluster: false
+          can_invite_member: false
+          can_edit_member: false
+          can_delete_member: false
+
+  - name: a stranger holds nothing on the organization
+    check:
+      - user: user:mallory
+        object: organization:acme
+        assertions:
+          can_view: false
+          can_edit: false
+          can_list_clusters: false
+          can_list_members: false
+          can_list_apikeys: false
+          can_create_apikey: false
+          can_create_cluster: false
+          can_invite_member: false
+          can_edit_member: false
+          can_delete_member: false
+
+  - name: cluster permissions follow the owning organization
+    check:
+      - user: user:alice
+        object: cluster:c1
+        assertions:
+          can_view: true
+          can_edit: true
+          can_delete: true
+          can_create_node_pool: true
+          can_list_node_pools: true
+          can_list_namespaces: true
+          can_create_project: true
+          can_list_projects: true
+      - user: user:bart
+        object: cluster:c1
+        assertions:
+          can_view: true
+          can_list_node_pools: true
+          can_list_namespaces: true
+          can_list_projects: true
+          can_edit: false
+          can_delete: false
+          can_create_node_pool: false
+          can_create_project: false
+      - user: user:mallory
+        object: cluster:c1
+        assertions:
+          can_view: false
+          can_edit: false
+          can_delete: false
+          can_list_projects: false
+
+  - name: a project inherits its admin from the owning cluster
+    check:
+      - user: user:alice
+        object: project:p1
+        assertions:
+          can_view: true
+          can_edit: true
+          can_delete: true
+          can_manage_members: true
+          can_list_members: true
+          can_create_namespace: true
+          can_list_namespaces: true
+      - user: user:carol
+        object: project:p1
+        assertions:
+          can_view: true
+          can_list_members: true
+          can_list_namespaces: true
+          can_edit: false
+          can_delete: false
+          can_manage_members: false
+          can_create_namespace: false
+      - user: user:mallory
+        object: project:p1
+        assertions:
+          can_view: false
+          can_edit: false
+
+  - name: namespaces and project members follow their project
+    check:
+      - user: user:alice
+        object: namespace:ns1
+        assertions: { can_view: true, can_edit: true, can_delete: true }
+      - user: user:carol
+        object: namespace:ns1
+        assertions: { can_view: true, can_edit: false, can_delete: false }
+      - user: user:alice
+        object: project_member:pm1
+        assertions: { can_view: true, can_edit: true, can_delete: true }
+      - user: user:carol
+        object: project_member:pm1
+        assertions: { can_view: true, can_edit: false, can_delete: false }
+      - user: user:mallory
+        object: namespace:ns1
+        assertions: { can_view: false, can_edit: false, can_delete: false }
+
+  - name: node pools follow their cluster
+    check:
+      - user: user:alice
+        object: node_pool:np1
+        assertions: { can_view: true, can_edit: true, can_delete: true }
+      - user: user:bart
+        object: node_pool:np1
+        assertions: { can_view: true, can_edit: false, can_delete: false }
+      - user: user:mallory
+        object: node_pool:np1
+        assertions: { can_view: false, can_edit: false, can_delete: false }
+
+  - name: an api key is reachable by its creator and by an organization admin
+    check:
+      - user: user:alice
+        object: api_key:k1
+        assertions: { can_view: true, can_edit: true, can_delete: true }
+      - user: user:bart
+        object: api_key:k1
+        assertions: { can_view: true, can_edit: true, can_delete: true }
+      - user: user:mallory
+        object: api_key:k1
+        assertions: { can_view: false, can_edit: false, can_delete: false, can_use: false }
+
+  - name: plugins are editable only by an organization admin
+    check:
+      - user: user:alice
+        object: plugin:pl1
+        assertions: { can_edit: true, can_delete: true }
+      - user: user:bart
+        object: plugin:pl1
+        assertions: { can_edit: false, can_delete: false }
+      - user: user:mallory
+        object: plugin:pl1
+        assertions: { can_edit: false, can_delete: false }
