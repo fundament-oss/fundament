@@ -50,15 +50,28 @@ Database superuser secret name
 {{/*
 Name of the db-migrations Job for THIS release.
 
-The revision suffix lets openfga's wait-for-reset block on this upgrade's run
-rather than the previous deploy's completed one. It also lands in that init
-container's command, so a new Job always rolls the openfga pod — without that,
-a reset can drop the schema under a server that never restarts.
+A Job's pod template is immutable, so the name carries the revision.
 
 Usage: include "fundament.dbMigrationsJobName" $
 */}}
 {{- define "fundament.dbMigrationsJobName" -}}
 db-migrations-{{ .Release.Revision }}
+{{- end }}
+
+{{/*
+Whether this release may destroy data: development.resetDatabasesInNamespace
+must name the namespace being deployed to. A value naming a different namespace
+is a values file that has travelled, so rendering fails rather than resetting
+the wrong environment.
+
+Usage: include "fundament.development.reset" $
+*/}}
+{{- define "fundament.development.reset" -}}
+{{- $want := .Values.development.resetDatabasesInNamespace | default "" -}}
+{{- if and $want (ne $want .Release.Namespace) -}}
+{{- fail (printf "development.resetDatabasesInNamespace is %q but this release targets namespace %q. Destructive settings are bound to one namespace; remove the setting or correct it." $want .Release.Namespace) -}}
+{{- end -}}
+{{- if $want }}true{{ end }}
 {{- end }}
 
 {{/*

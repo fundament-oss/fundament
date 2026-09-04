@@ -23,9 +23,7 @@ externalUrls:
 db:
   enabled: true
   instances: 1
-  reset: false
   storageSize: 5Gi
-  insertTestData: true
 
 authnApi:
   enabled: true
