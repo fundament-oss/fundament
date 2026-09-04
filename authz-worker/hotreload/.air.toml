@@ -8,6 +8,9 @@ include_ext = ["go", "mod", "sum"]
 include_dir = ["authz-worker"]
 exclude_dir = ["tmp"]
 delay = 500
+# Services exit when the database schema is not yet migrated; this brings them back.
+rerun = true
+rerun_delay = 2000
 
 [log]
 time = false
