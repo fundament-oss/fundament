@@ -179,15 +179,30 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 }
 
-// verifyStore gates a drain on the store existing: OpenFGA's Write does not
-// check store existence, so writes to a wiped store falsely succeed. GetStore
-// bypasses the typesystem cache and sees the wipe.
+// verifyStore gates a drain on the store existing and holding a model.
+//
+// Write does not check store existence, so writes to a wiped store falsely
+// succeed; GetStore bypasses the typesystem cache and sees the wipe. Between
+// the provisioner's create and its model write, every write fails with
+// latest_authorization_model_not_found and burns retries until the rows are
+// marked failed for good, which nothing replays.
 func (w *Worker) verifyStore(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
 	defer cancel()
 
 	if _, err := w.fga.GetStore(checkCtx).Execute(); err != nil {
 		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	// The SDK asks for one page of models, so a store with no model yields a
+	// nil model and no error.
+	model, err := w.fga.ReadLatestAuthorizationModel(checkCtx).Execute()
+	if err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	if model == nil || model.AuthorizationModel == nil {
+		return fmt.Errorf("%w: store has no authorization model yet", errStoreUnavailable)
 	}
 
 	return nil

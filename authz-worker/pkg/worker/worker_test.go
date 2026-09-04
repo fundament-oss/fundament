@@ -5,6 +5,9 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/openfga/go-sdk/client"
 
 	db "github.com/fundament-oss/fundament/authz-worker/pkg/db/gen"
 )
@@ -196,4 +201,67 @@ func TestHoldsOutboxWhenStoreUnavailable(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "pending", status, "row must be held, not consumed")
 	assert.Nil(t, processed, "row must not be marked processed")
+}
+
+// fgaStub serves GetStore and ReadLatestAuthorizationModel.
+func fgaStub(t *testing.T, hasStore, hasModel bool) *client.OpenFgaClient {
+	t.Helper()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/authorization-models"):
+			// A real OpenFGA answers 200 with an empty list, never a 404.
+			if !hasModel {
+				_, _ = w.Write([]byte(`{"authorization_models":[],"continuation_token":""}`))
+
+				return
+			}
+
+			_, _ = w.Write([]byte(`{"authorization_models":[{"id":"01M1MFXG0127P6B9CZD539BKY9","schema_version":"1.1"}]}`))
+		default:
+			if !hasStore {
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte(`{"code":"store_id_not_found"}`))
+
+				return
+			}
+
+			_, _ = w.Write([]byte(`{"id":"01M1MFR1941JZK7V5T9SNV92AG","name":"fundament"}`))
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	fga, err := client.NewSdkClient(&client.ClientConfiguration{ApiUrl: srv.URL, StoreId: "01M1MFR1941JZK7V5T9SNV92AG"})
+	require.NoError(t, err)
+
+	return fga
+}
+
+// A drain landing between the provisioner's create and its model write must
+// hold: those writes fail permanently and nothing replays them.
+func TestVerifyStoreHoldsBetweenStoreAndModel(t *testing.T) {
+	cases := []struct {
+		name               string
+		hasStore, hasModel bool
+		wantErr            bool
+	}{
+		{"store and model present", true, true, false},
+		{"store created, model not yet written", true, false, true},
+		{"store gone", false, false, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := &Worker{fga: fgaStub(t, tc.hasStore, tc.hasModel)}
+
+			err := w.verifyStore(context.Background())
+			if tc.wantErr {
+				require.ErrorIs(t, err, errStoreUnavailable)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

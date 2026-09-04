@@ -95,34 +95,19 @@ func run() error {
 
 	logger.Debug("connecting to OpenFGA",
 		"api_url", cfg.OpenFGA.APIURL,
-		"store_id", cfg.OpenFGA.StoreID,
-		"authorization_model_id", cfg.OpenFGA.AuthorizationModelID,
+		"store_name", cfg.OpenFGA.StoreName,
 	)
 
-	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
-		ApiUrl:               cfg.OpenFGA.APIURL,
-		StoreId:              cfg.OpenFGA.StoreID,
-		AuthorizationModelId: cfg.OpenFGA.AuthorizationModelID,
-	})
+	// The store id is generated at creation, so services resolve it by name.
+	resolver, err := authz.New(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
 
-	// Validate the store and authorization model exist - this ensures we have valid config
-	store, err := fgaClient.GetStore(ctx).Execute()
+	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{ApiUrl: cfg.OpenFGA.APIURL})
 	if err != nil {
-		return fmt.Errorf("failed to validate OpenFGA store: %w", err)
+		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
-
-	model, err := fgaClient.ReadAuthorizationModel(ctx).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to validate OpenFGA authorization model: %w", err)
-	}
-
-	logger.Debug("OpenFGA client connected",
-		"store_name", store.GetName(),
-		"model_id", model.AuthorizationModel.GetId(),
-	)
 
 	w := worker.New(pool, fgaClient, logger, worker.Config{
 		PollInterval: cfg.PollInterval,
@@ -133,7 +118,26 @@ func run() error {
 		BackoffDelay: cfg.BackoffDelay,
 	})
 
+	// Serve health before waiting for the store, so the wait reports as not ready.
 	healthServer := startHealthServer(&cfg, logger, w)
+
+	// On a first install the bootstrap Job has usually not run yet.
+	storeID, err := awaitStore(ctx, logger, resolver, cfg.OpenFGA.StoreName)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			logger.Info("stopped while waiting for the OpenFGA store")
+
+			return nil
+		}
+
+		return err
+	}
+
+	if err := fgaClient.SetStoreId(storeID); err != nil {
+		return fmt.Errorf("failed to set store id: %w", err)
+	}
+
+	logger.Info("OpenFGA store resolved", "store_name", cfg.OpenFGA.StoreName, "store_id", storeID)
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -156,6 +160,28 @@ func run() error {
 
 	logger.Info("authz-worker stopped")
 	return nil
+}
+
+// awaitStore blocks until the store named in the configuration exists.
+func awaitStore(
+	ctx context.Context, logger *slog.Logger, resolver *authz.Client, name string,
+) (string, error) {
+	const retry = 5 * time.Second
+
+	for {
+		id, err := resolver.StoreIDFor(ctx)
+		if err == nil {
+			return id, nil
+		}
+
+		logger.Warn("waiting for the OpenFGA store", "store_name", name, "error", err)
+
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("waiting for store %q: %w", name, ctx.Err())
+		case <-time.After(retry):
+		}
+	}
 }
 
 func startHealthServer(cfg *config, logger *slog.Logger, checkers ...ReadyChecker) *http.Server {
