@@ -55,12 +55,17 @@ images:
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
 
 # Database (CloudNativePG)
+# Destroys data on every deploy. Refused unless resetDatabasesInNamespace names
+# the namespace this release targets, so a values file carried into another
+# environment fails to render.
+development:
+  resetDatabasesInNamespace: ""
+  insertTestData: false
+
 db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: false
-  insertTestData: false
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API

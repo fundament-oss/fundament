@@ -1,3 +1,7 @@
+development:
+  resetDatabasesInNamespace: fundament
+  insertTestData: true
+
 # Local development environment values
 
 jwtSecret: "local-dev-jwt-secret"
@@ -20,8 +24,6 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: true
-  insertTestData: true
   exposePort: 54328
   postgresql:
     parameters:
