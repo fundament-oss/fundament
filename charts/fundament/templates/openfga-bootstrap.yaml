@@ -1,0 +1,75 @@
+{{- if $.Values.openfga.enabled }}
+{{- $openfgaSecretName := "db-fun-openfga" }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Per-release name: a Job's pod template is immutable.
+  name: openfga-bootstrap-{{ .Release.Revision }}
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "openfga-bootstrap" "component" "backend") | nindent 4 }}
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "openfga-bootstrap" "component" "backend") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-db
+          image: ghcr.io/cloudnative-pg/postgresql:18
+          command:
+            - sh
+            - -c
+            - |
+              echo "waiting until database openfga accepts connections as fun_openfga"
+              i=0
+              until psql "$OPENFGA_DATASTORE_URI" -c "SELECT 1" > /dev/null 2>&1; do
+                i=$((i + 1))
+                if [ "$i" -ge 200 ]; then
+                  echo "database openfga did not accept connections within 600s;" \
+                       "CNPG creates it from the Database resource once the cluster is up" >&2
+                  exit 1
+                fi
+                [ $((i % 10)) -eq 0 ] && echo "still waiting for database openfga after $((i * 3))s"
+                sleep 3
+              done
+              echo "database openfga accepts connections"
+          env:
+            - name: PGCONNECT_TIMEOUT
+              value: "5"
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+
+        # The only migration in the release. openfga's /healthz reports not ready
+        # until the schema matches the revision its binary expects, so server
+        # pods gate themselves on it.
+        - name: migrate
+          image: {{ $.Values.openfga.image }}
+          args:
+            - migrate
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $openfgaSecretName }}
+                  key: uri
+      containers:
+        # Sole creator of the store, and the only writer of the model. The
+        # model is embedded in this image, so what it writes and the types the
+        # services compile against come from one file.
+        - name: bootstrap
+          image: {{ $.Values.images.openfgaBootstrap }}
+          env:
+            - name: OPENFGA_API_URL
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_NAME
+              value: {{ include "fundament.openfga.storeName" $ | quote }}
+{{- end }}

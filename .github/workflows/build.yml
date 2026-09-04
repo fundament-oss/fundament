@@ -99,9 +99,9 @@ jobs:
           - image-name: plugin-proxy
             dockerfile: plugin-proxy/Dockerfile
             context: "."
-          - image-name: openfga-setup
-            dockerfile: openfga/setup/Dockerfile
-            context: openfga/setup
+          - image-name: openfga-bootstrap
+            dockerfile: openfga/bootstrap/Dockerfile
+            context: "."
           - image-name: docs-frontend
             dockerfile: docs-frontend/Dockerfile
             context: "."
@@ -298,13 +298,10 @@ jobs:
             **4. OpenFGA / authorization config**
 
             ```bash
-            # organization-api and kube-api-proxy readiness depend on OpenFGA.
-            kubectl -n $NS get configmap openfga-config -o yaml
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c setup
+            # The store and model are created by a Job. Consumers resolve the
+            # store by name and report themselves unready until they can.
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga-bootstrap -c bootstrap
             kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
-
-            # If consumers are still using an old store/model ID after setup patched openfga-config:
-            kubectl -n $NS rollout restart deployment/organization-api deployment/kube-api-proxy
             ```
 
             **5. DB & migrations**
@@ -319,9 +316,9 @@ jobs:
             kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
             kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
 
-            # OpenFGA blocks on that Job before migrating its schema. If openfga
-            # is stuck in Init, this is why:
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c wait-for-reset
+            # Under db.reset this Job also clears the OpenFGA tuples, before
+            # reseeding, so the two datastores are reset together:
+            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c reset-openfga-tuples
             ```
 
             **6. Routes & TLS**

@@ -101,7 +101,7 @@ spec:
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
       kubeApiProxy: ${IMAGE_PREFIX}/kube-api-proxy:${IMAGE_TAG}
       pluginProxy: ${IMAGE_PREFIX}/plugin-proxy:${IMAGE_TAG}
-      openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
+      openfgaBootstrap: ${IMAGE_PREFIX}/openfga-bootstrap:${IMAGE_TAG}
       dcimApi: ${IMAGE_PREFIX}/dcim-api:${IMAGE_TAG}
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
       dcimAuthnApi: ${IMAGE_PREFIX}/dcim-authn-api:${IMAGE_TAG}
@@ -175,10 +175,14 @@ spec:
         hostnames:
           - docs.pr${PR_NUM}.${DOMAIN}
 
+    # Previews are rebuilt per push.
+    development:
+      resetDatabasesInNamespace: tn-fundament-pr-${PR_NUM}
+      insertTestData: true
+
     db:
       instances: 1
       storageSize: 1Gi
-      reset: true
 
     kubeApiProxy:
       enabled: true
