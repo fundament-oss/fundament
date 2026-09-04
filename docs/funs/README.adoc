@@ -66,4 +66,7 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-19[FUN-19 Plugin Definition Storage]
 | prediscussion
+
+| link:/funs/fun-20[FUN-20 Marketplace APIs]
+| prediscussion
 |===
