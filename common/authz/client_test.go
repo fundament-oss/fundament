@@ -223,8 +223,8 @@ func TestEvaluations_ValidSemantics(t *testing.T) {
 func TestNew_InvalidConfig(t *testing.T) {
 	// Test that New returns an error for invalid configuration
 	cfg := Config{
-		APIURL:  "", // Empty URL should cause an error
-		StoreID: "",
+		APIURL:    "", // Empty URL should cause an error
+		StoreName: "fundament",
 	}
 
 	_, err := New(cfg)
