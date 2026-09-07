@@ -137,7 +137,7 @@ jobs:
       context: ${{ matrix.context }}
       build-args: ${{ matrix.build-args }}
 
-  # Packages the chart with every image tag stamped into values.yaml, so one
+  # Packages the chart with every image digest stamped into values.yaml, so one
   # version string names the chart and the exact images it deploys.
   #
   # This lives in build.yml rather than its own workflow because
@@ -168,8 +168,6 @@ jobs:
       - name: Compute chart version
         id: version
         run: |
-          REF_NAME=$(echo '${{ github.ref_name }}' | tr '/' '-')
-          IMAGE_TAG="${{ github.sha }}-${REF_NAME}-${{ github.run_number }}"
           if [ "${{ github.event_name }}" = "push" ]; then
             CHART_VERSION="0.1.0-master.${{ github.run_number }}"
             CHART_REPO="${IMAGE_PREFIX}/charts"
@@ -178,7 +176,6 @@ jobs:
             CHART_REPO="${IMAGE_PREFIX}/charts-pr"
           fi
           {
-            echo "IMAGE_TAG=${IMAGE_TAG}"
             echo "CHART_VERSION=${CHART_VERSION}"
             echo "CHART_REPO=${CHART_REPO}"
           } >> "$GITHUB_ENV"
@@ -194,6 +191,13 @@ jobs:
       # The revision annotation is what makes a version resolvable back to a
       # commit (`helm show chart`); without it 0.1.0-master.2366 names a build
       # nobody can diff.
+      - name: Collect image digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+
       - name: Stamp the chart
         run: |
           V="$CHART_VERSION" SHA="${{ github.sha }}" mise exec -- yq -i '
@@ -202,10 +206,24 @@ jobs:
             .annotations."org.opencontainers.image.revision" = strenv(SHA) |
             .annotations."org.opencontainers.image.source" = "https://github.com/fundament-oss/fundament"
           ' charts/fundament/Chart.yaml
-          TAG="$IMAGE_TAG" V="$CHART_VERSION" mise exec -- yq -i '
-            .images |= map_values(sub(":latest$"; ":" + strenv(TAG))) |
-            .deploymentVersion = strenv(V)
-          ' charts/fundament/values.yaml
+          V="$CHART_VERSION" mise exec -- yq -i '.deploymentVersion = strenv(V)' charts/fundament/values.yaml
+
+          # By digest, not tag: a tag can be repointed after review, a digest
+          # cannot. The image name is the last path segment of the ref, which is
+          # what build-image.yml named the artifact after. A missing digest fails
+          # the build - every image in `images:` must have a build in the matrix.
+          for key in $(mise exec -- yq -r '.images | keys | .[]' charts/fundament/values.yaml); do
+            ref=$(mise exec -- yq -r ".images.\"$key\"" charts/fundament/values.yaml)
+            repo=${ref%:*}
+            file="digests/${repo##*/}"
+            if [ ! -s "$file" ]; then
+              echo "no digest for images.$key ($ref)" >&2
+              exit 1
+            fi
+            KEY="$key" VAL="${repo}@$(cat "$file")" mise exec -- \
+              yq -i '.images[strenv(KEY)] = strenv(VAL)' charts/fundament/values.yaml
+          done
+          mise exec -- yq '.images' charts/fundament/values.yaml
 
       - name: Lint and package
         run: |
@@ -215,10 +233,11 @@ jobs:
       - name: Verify the package
         run: |
           TGZ="dist/fundament-${CHART_VERSION}.tgz"
-          # An unstamped image would deploy whatever :latest points at, which on
-          # this registry is regularly an open PR build.
-          if mise exec -- helm show values "$TGZ" | grep ':latest'; then
-            echo "ERROR: the packaged chart still references :latest" >&2
+          # Every image must be digest-pinned. A tag survives review and can be
+          # repointed afterwards; on this registry :latest is rewritten by every
+          # pull_request build.
+          if mise exec -- helm show values "$TGZ" | mise exec -- yq -r '.images[]' | grep -v '@sha256:'; then
+            echo "ERROR: the packaged chart has image references that are not digests" >&2
             exit 1
           fi
           mise exec -- helm show chart "$TGZ"
