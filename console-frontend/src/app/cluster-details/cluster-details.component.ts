@@ -52,7 +52,7 @@ import {
   formatShortDateTime as formatShortDateTimeUtil,
   formatTime as formatTimeUtil,
 } from '../utils/date-format';
-import { getUsagePercentage } from '../utils/usage';
+import { formatUsageValue, getUsagePercentage } from '../utils/usage';
 import '@nldd/design-system/multi-line-text-field';
 
 interface ClusterResourceUsage {
@@ -525,8 +525,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         used,
         limit: total,
         color: getUsageColor(percentage),
-        valueText: `${used} / ${total} ${unit} (${percentage}%)`,
-        accessibleLabel: `${used} of ${total} ${unit} used, ${percentage}%`,
+        // Rounded for reading; `used`/`limit` above stay raw, because those
+        // only set the bar's geometry.
+        valueText: `${formatUsageValue(used)} / ${formatUsageValue(total)} ${unit} (${percentage}%)`,
+        accessibleLabel: `${formatUsageValue(used)} of ${formatUsageValue(total)} ${unit} used, ${percentage}%`,
       };
     });
   }

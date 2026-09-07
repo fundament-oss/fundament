@@ -297,9 +297,11 @@ const intro: Tour = {
           'The plugin brings its own menu along; the team has nothing to set up.',
         ),
       ],
-      // The project with no page beside it: this slide is about the sidebar, and
-      // a project page next to it pulls the eye away from the menu.
-      route: '/projects/pr-burgerzaken',
+      // The slide is about the sidebar, but the project's own address carries no
+      // page, so the pane beside it would read "No selection" — an empty box on
+      // screen while the menu is being talked about. The project overview is the
+      // quietest real page there is, so it sits there instead.
+      route: '/projects/pr-burgerzaken/general',
       drive: installedPluginDrive,
     },
     {
@@ -319,8 +321,11 @@ const intro: Tour = {
           'Your team manages its certificates without kubectl or a separate dashboard.',
         ),
       ],
-      // The menu links to the CRD by `plural.group`, so the route carries that too.
-      route: '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io',
+      // `:pluginName` is the installation name — "<organization>--<plugin>", what
+      // the sidebar links to — not the catalog name, and the CRD is addressed by
+      // `plural.group`, so the route carries both exactly as the menu builds them.
+      route:
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io',
       drive: installedPluginDrive,
     },
     {
@@ -344,7 +349,7 @@ const intro: Tour = {
       // it the console falls back to matching the object by name, which is what the
       // list links to here anyway.
       route:
-        '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
       drive: installedPluginDrive,
     },
     closing(

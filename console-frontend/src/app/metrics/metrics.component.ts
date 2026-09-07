@@ -19,7 +19,7 @@ import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
-import { getUsagePercentage } from '../utils/usage';
+import { formatUsageValue, getUsagePercentage } from '../utils/usage';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
@@ -117,9 +117,8 @@ function usageColor(used: number, total: number): string {
 
 /** "2.4 / 8 cores (30%)": the numbers and what they add up to, in one line. */
 function usageText(used: number, total: number, unit: string): string {
-  const round = (value: number) => (Number.isInteger(value) ? value : Number(value.toFixed(1)));
   const suffix = unit ? ` ${unit}` : '';
-  return `${round(used)} / ${round(total)}${suffix} (${getUsagePercentage(used, total)}%)`;
+  return `${formatUsageValue(used)} / ${formatUsageValue(total)}${suffix} (${getUsagePercentage(used, total)}%)`;
 }
 
 /** The same three bars as the totals, for one cluster or one node. */

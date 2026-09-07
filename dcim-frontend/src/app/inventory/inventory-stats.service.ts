@@ -25,7 +25,8 @@ export default class InventoryStatsService {
 
   private pending = false;
 
-  /** Loads once and keeps the last answer visible while a new one is on its way. */
+  private queued = false;
+
   /** Bumped when an asset is made or changed somewhere else than the page
    *  showing the list, so that page can read it again. */
   readonly changed = signal(0);
@@ -36,8 +37,15 @@ export default class InventoryStatsService {
     this.refresh();
   }
 
+  /** Loads once and keeps the last answer visible while a new one is on its way. */
   refresh(): void {
-    if (this.pending) return;
+    if (this.pending) {
+      // A refresh asked for while one is in flight cannot be dropped: the
+      // answer on the wire was sent before whatever prompted this one, so it
+      // does not contain it. Remember it and count once more when this lands.
+      this.queued = true;
+      return;
+    }
     this.pending = true;
     firstValueFrom(this.inventoryApi.getAssetStats())
       .then((res) => this.value.set(res.stats ?? null))
@@ -45,6 +53,10 @@ export default class InventoryStatsService {
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => {
         this.pending = false;
+        if (this.queued) {
+          this.queued = false;
+          this.refresh();
+        }
       });
   }
 }

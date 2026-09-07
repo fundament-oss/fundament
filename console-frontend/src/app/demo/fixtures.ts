@@ -772,6 +772,18 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
   },
 };
 
+/**
+ * The catalog name behind an installation name ("system--cert-manager" becomes
+ * "cert-manager"), or undefined when no definition claims it.
+ *
+ * Routes, the sidebar and the console's plugin services all address a plugin by
+ * its installation name; the fixtures here are keyed by catalog name, the way
+ * the real registry keys its definitions. Everything reading a fixture off a
+ * route parameter goes through this.
+ */
+export const catalogPluginName = (installationName: string): string | undefined =>
+  Object.values(pluginDefinitions).find((def) => def.installationName === installationName)?.name;
+
 const certificate = (
   name: string,
   namespace: string,

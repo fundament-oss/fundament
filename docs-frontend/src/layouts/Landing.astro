@@ -33,73 +33,90 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   </head>
   <body>
     <nldd-app-view>
-    <nldd-page>
-    <nldd-skip-link slot="header" text="Skip navigation">
-      <nldd-top-navigation-bar
-        logo-href="/"
-        website-title="Fundament"
-        website-href="/"
-        width="1280px"
-      >
-        <nldd-menu-bar slot="global">
-          <nldd-menu-bar-item text="Home" href="/" current={isActive('/') ? '' : undefined} />
-          <nldd-menu-bar-item text="About" href="/about" current={isActive('/about') ? '' : undefined} />
-          <nldd-menu-bar-item text="Docs" href="/docs" current={isActive('/docs') ? '' : undefined} />
-        </nldd-menu-bar>
-        <nldd-menu-bar slot="utility">
-          {/* The three appearance choices as radio items, the way the console
-              account menu offers them. The script below marks the current one and
-              writes it to the same key Starlight reads, so the docs follow. */}
-          <nldd-menu-bar-item
-            id="appearance-menu"
-            text="Appearance"
-            expandable
+      <nldd-page>
+        <nldd-skip-link slot="header" text="Skip navigation">
+          <nldd-top-navigation-bar
+            logo-href="/"
+            website-title="Fundament"
+            website-href="/"
+            width="1280px"
           >
-            <nldd-menu>
-              <nldd-menu-item data-scheme="auto" text="System" icon="display" type="radio" />
-              <nldd-menu-item data-scheme="light" text="Light" icon="light-mode" type="radio" />
-              <nldd-menu-item data-scheme="dark" text="Dark" icon="dark-mode" type="radio" />
-            </nldd-menu>
-          </nldd-menu-bar-item>
-          <nldd-menu-bar-item
-            text="GitHub"
-            href="https://github.com/fundament-oss/fundament"
-            target="_blank"
-            rel="nofollow noopener noreferrer"
-          />
-        </nldd-menu-bar>
-      </nldd-top-navigation-bar>
-    </nldd-skip-link>
+            <nldd-menu-bar slot="global">
+              <nldd-menu-bar-item text="Home" href="/" current={isActive('/') ? '' : undefined}
+              ></nldd-menu-bar-item>
+              <nldd-menu-bar-item
+                text="About"
+                href="/about"
+                current={isActive('/about') ? '' : undefined}></nldd-menu-bar-item>
+              <nldd-menu-bar-item
+                text="Docs"
+                href="/docs"
+                current={isActive('/docs') ? '' : undefined}></nldd-menu-bar-item>
+            </nldd-menu-bar>
+            <nldd-menu-bar slot="utility">
+              {
+                /* The three appearance choices as radio items, the way the console
+              account menu offers them. The script below marks the current one and
+              writes it to the same key Starlight reads, so the docs follow. */
+              }
+              <nldd-menu-bar-item id="appearance-menu" text="Appearance" expandable>
+                <nldd-menu>
+                  <nldd-menu-item data-scheme="auto" text="System" icon="display" type="radio"
+                  ></nldd-menu-item>
+                  <nldd-menu-item data-scheme="light" text="Light" icon="light-mode" type="radio"
+                  ></nldd-menu-item>
+                  <nldd-menu-item data-scheme="dark" text="Dark" icon="dark-mode" type="radio"
+                  ></nldd-menu-item>
+                </nldd-menu>
+              </nldd-menu-bar-item>
+              <nldd-menu-bar-item
+                text="GitHub"
+                href="https://github.com/fundament-oss/fundament"
+                target="_blank"
+                rel="nofollow noopener noreferrer"></nldd-menu-bar-item>
+            </nldd-menu-bar>
+          </nldd-top-navigation-bar>
+        </nldd-skip-link>
 
-    <slot />
+        <slot />
 
-    {/* Only a legal bar: the whole footer is one line, and that is the row the
-        design system reserves for it. The lintje comes with it. */}
-    <nldd-page-footer slot="footer" width="1280px">
-      <nldd-page-footer-legal-bar slot="legal-bar">
-        <nldd-page-footer-legal-bar-item slot="start" text="Fundament · Open source · AGPL" />
-        <nldd-page-footer-legal-bar-item
-          slot="end"
-          text="Digilab"
-          href="https://digilab.overheid.nl/"
-          target="_blank"
-          rel="noopener noreferrer"
-        />
-        <nldd-page-footer-legal-bar-item
-          slot="end"
-          text="GitHub"
-          href="https://github.com/fundament-oss/fundament"
-          target="_blank"
-          rel="nofollow noopener noreferrer"
-        />
-      </nldd-page-footer-legal-bar>
-    </nldd-page-footer>
-    </nldd-page>
+        {
+          /* Only a legal bar: the whole footer is one line, and that is the row the
+        design system reserves for it. The lintje comes with it. */
+        }
+        <nldd-page-footer slot="footer" width="1280px">
+          <nldd-page-footer-legal-bar slot="legal-bar">
+            <nldd-page-footer-legal-bar-item slot="start" text="Fundament · Open source · AGPL"
+            ></nldd-page-footer-legal-bar-item>
+            <nldd-page-footer-legal-bar-item
+              slot="end"
+              text="Digilab"
+              href="https://digilab.overheid.nl/"
+              target="_blank"
+              rel="noopener noreferrer"></nldd-page-footer-legal-bar-item>
+            <nldd-page-footer-legal-bar-item
+              slot="end"
+              text="GitHub"
+              href="https://github.com/fundament-oss/fundament"
+              target="_blank"
+              rel="nofollow noopener noreferrer"></nldd-page-footer-legal-bar-item>
+          </nldd-page-footer-legal-bar>
+        </nldd-page-footer>
+      </nldd-page>
     </nldd-app-view>
   </body>
 </html>
 
 <script>
+  /* app-view before page, and both before the rest: nldd-page looks for its
+     scroll-mode provider (the nearest upgraded nldd-app-view) the moment it
+     upgrades. Define page first and that lookup finds a not-yet-upgraded
+     element, so the page falls back to the stand-alone path, misses the `root`
+     mode the app-view derives, and stays an inner scroll container with
+     `overscroll-behavior: contain` — which swallows the wheel instead of
+     scrolling the document, until the first window resize re-reads the mode. */
+  import '@nldd/design-system/app-view';
+  import '@nldd/design-system/page';
   import '@nldd/design-system/button';
   import '@nldd/design-system/icon';
   import '@nldd/design-system/icon-button';
@@ -109,8 +126,6 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   import '@nldd/design-system/menu-bar-item';
   import '@nldd/design-system/menu';
   import '@nldd/design-system/page-footer';
-  import '@nldd/design-system/page';
-  import '@nldd/design-system/app-view';
 </script>
 
 <script is:inline>

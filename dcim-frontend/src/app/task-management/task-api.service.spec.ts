@@ -147,6 +147,25 @@ describe('TaskApiService.mapTask', () => {
     expect(task.due).toBe('');
   });
 
+  it('tells a task waiting with nothing typed apart from one that can move', () => {
+    // The column is NULL for work that can move and '' for work that is stuck
+    // with no reason given yet — migration 038 backfills exactly that for every
+    // row that used to be 'blocked'. The proto carries the difference as field
+    // presence, and it reads as '' either way, so neither `||` nor `??` can
+    // tell them apart: `||` un-blocks the waiting task, `??` blocks them all.
+    const waiting = TaskApiService.mapTask(
+      create(TaskSchema, { id: baseTask.id, blockedReason: '' }),
+    );
+    const moving = TaskApiService.mapTask(create(TaskSchema, { id: baseTask.id }));
+    const stated = TaskApiService.mapTask(
+      create(TaskSchema, { id: baseTask.id, blockedReason: 'part on order' }),
+    );
+
+    expect(waiting.blockedReason).toBe('');
+    expect(moving.blockedReason).toBeNull();
+    expect(stated.blockedReason).toBe('part on order');
+  });
+
   it('keeps a due date on its calendar day regardless of the local timezone', () => {
     // The column is timestamptz but a due date is a calendar date. Parsing at
     // local midnight would move the stored instant a day back for every UTC+

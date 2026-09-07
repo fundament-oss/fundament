@@ -34,7 +34,9 @@ export default class RackListService {
    *  of a device names the placement, not the rack it stands in. */
   readonly openRackId = signal('');
 
-  /** False until the first answer, so an empty list is only empty once known. */
+  /** False until the first answer that arrives, so an empty list is only
+   *  reported as empty once it is known to be one. A failed read leaves it
+   *  false: the racks are unknown, not absent. */
   readonly loaded = signal(false);
 
   /** Per building, not one flag for the service: reading every location at
@@ -51,7 +53,7 @@ export default class RackListService {
     if (!dcId || this.pending.has(dcId)) return;
     this.pending.add(dcId);
     firstValueFrom(this.rackApi.listRacksBySite(dcId))
-      .then((res) =>
+      .then((res) => {
         this.mergeSite(
           dcId,
           res.racks.flatMap((summary): RackListItem[] => {
@@ -72,13 +74,16 @@ export default class RackListService {
               },
             ];
           }),
-        ),
-      )
+        );
+        // Only an answer says the racks are known. Setting this in `finally`
+        // marked a failed read as loaded too, which is how a hall the API
+        // could not reach came out as one holding no racks.
+        this.loaded.set(true);
+      })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => {
         this.pending.delete(dcId);
-        this.loaded.set(true);
       });
   }
 

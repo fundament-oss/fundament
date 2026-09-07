@@ -28,15 +28,22 @@ const opensSheet =
   ): CanActivateFn =>
   (route) => {
     const overlays = inject(OverlayService);
-    const target = inOrganization(organizationNameOf(route), to(route));
+    const router = inject(Router);
+    const target = router.parseUrl(inOrganization(organizationNameOf(route), to(route)));
+    // The query string belongs to the visit rather than to the address, so it
+    // survives the redirect. The walkthrough keeps its deck state there
+    // (`present`, `tour`, `slide`, `lang`), and dropping it on the way to a
+    // sheet left the address bar with no way back into the slide it was on.
+    target.queryParams = { ...route.queryParams };
     open(overlays, route);
     // The shell closes its sheets on arrival somewhere else, so it has to know
     // that this one arrival belongs to the sheet. Waiting for the navigation
     // instead would leave the sheet shut whenever the redirect lands on the
     // page you are already on: Angular skips that navigation, so the event
     // never comes and the sheet would open on whatever page you went to next.
-    overlays.openedFor.set(target);
-    return inject(Router).parseUrl(target);
+    // Serialized, because that is the shape the arrival is compared against.
+    overlays.openedFor.set(router.serializeUrl(target));
+    return target;
   };
 
 /** The three that belong to no page at all: they open over the home pane. */

@@ -4,7 +4,7 @@
 //
 // The fixtures are copied into a store here rather than read straight through,
 // so what you create or change during a session stays changed until you reload.
-import { create, isFieldSet } from '@bufbuild/protobuf';
+import { clearField, create, isFieldSet } from '@bufbuild/protobuf';
 import { EmptySchema, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import {
@@ -884,30 +884,40 @@ export default function createDemoTransport(): Transport {
           const field = UpdateTaskRequestSchema.fields.find((f) => f.localName === name);
           return !!field && isFieldSet(request, field);
         };
-        // The one field presence cannot carry: an empty reason is a real value —
-        // waiting, with nothing typed — so clearing it needs a flag of its own.
-        const blockedReasonFor = (task: (typeof store.tasks)[number]) => {
-          if (request.clearBlockedReason) return '';
-          return sent('blockedReason') ? request.blockedReason : task.blockedReason;
+        // A repeated field carries no presence, so an empty list cannot say
+        // whether it means "no tags" or "not sent". clear_tags is what says it,
+        // the same flag the API contract names and the server reads.
+        const tagsFor = (task: (typeof store.tasks)[number]) => {
+          if (request.clearTags) return [];
+          return request.tags.length > 0 ? request.tags : task.tags;
         };
-        store.tasks = store.tasks.map((task) =>
-          task.id === request.id
-            ? create(TaskSchema, {
-                ...task,
-                title: sent('title') ? request.title : task.title,
-                description: sent('description') ? request.description : task.description,
-                status: sent('status') ? request.status : task.status,
-                priority: sent('priority') ? request.priority : task.priority,
-                // Replaced, not merged: the request says what the task should
-                // carry, so an empty list clears the tags.
-                tags: request.tags.length > 0 ? request.tags : task.tags,
-                assigneeId: sent('assigneeId') ? request.assigneeId : task.assigneeId,
-                blockedReason: blockedReasonFor(task),
-                dueDate: sent('dueDate') ? request.dueDate : task.dueDate,
-                location: sent('location') ? request.location : task.location,
-              })
-            : task,
-        );
+        store.tasks = store.tasks.map((task) => {
+          if (task.id !== request.id) return task;
+          const updated = create(TaskSchema, {
+            ...task,
+            title: sent('title') ? request.title : task.title,
+            description: sent('description') ? request.description : task.description,
+            status: sent('status') ? request.status : task.status,
+            priority: sent('priority') ? request.priority : task.priority,
+            // Replaced, not merged: a non-empty list says what the task
+            // should carry, and clear_tags takes the last one off.
+            tags: tagsFor(task),
+            assigneeId: sent('assigneeId') ? request.assigneeId : task.assigneeId,
+            // Spread through rather than read off the task: an unset field reads
+            // as '', and handing that back to create() would set it — turning a
+            // task that can move into one that is waiting with nothing typed.
+            ...(sent('blockedReason') ? { blockedReason: request.blockedReason } : {}),
+            dueDate: sent('dueDate') ? request.dueDate : task.dueDate,
+            location: sent('location') ? request.location : task.location,
+          });
+          // The one field presence cannot carry on its own: an empty reason is a
+          // real value — waiting, with nothing typed — so the clear has to take
+          // the field away rather than write '' into it.
+          if (request.clearBlockedReason) {
+            clearField(updated, TaskSchema.field.blockedReason);
+          }
+          return updated;
+        });
         return create(EmptySchema, {});
       },
       deleteTask: async (request) => {

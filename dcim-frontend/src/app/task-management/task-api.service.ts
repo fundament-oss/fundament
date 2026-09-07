@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
+import { isFieldSet } from '@bufbuild/protobuf';
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
+  TaskSchema,
   TaskStatus as ProtoStatus,
   TaskPriority as ProtoPriority,
 } from '../../generated/v1/task_pb';
@@ -121,7 +123,14 @@ export default class TaskApiService {
       status: TaskApiService.fromProtoStatus(t.status),
       priority: TaskApiService.fromProtoPriority(t.priority),
       tags: [...t.tags],
-      blockedReason: t.blockedReason || null,
+      // Presence, not truthiness: '' is a task that is stuck with nothing typed
+      // in the box yet, and the column is NULL only when it can move. Reading
+      // `|| null` instead collapsed the two, so clearing the text un-blocked the
+      // task and migration 038's `blocked_reason = ''` backfill read as free.
+      // The field is a plain string at runtime whatever its presence, so `??`
+      // cannot tell them apart either — protobuf-es tracks this one as an own
+      // property, which is what isFieldSet reads.
+      blockedReason: isFieldSet(t, TaskSchema.field.blockedReason) ? t.blockedReason : null,
       location: t.location,
       assignee: t.assigneeId ? t.assigneeId : null,
       due: t.dueDate ? timestampDate(t.dueDate).toISOString().slice(0, 10) : '',

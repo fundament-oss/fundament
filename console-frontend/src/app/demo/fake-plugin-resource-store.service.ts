@@ -7,7 +7,17 @@ import type PluginResourceStoreService from '../plugin-resources/plugin-resource
 import type { KubeResource, ParsedCrd } from '../plugin-resources/types';
 import * as fx from './fixtures';
 
-function resourcesFor(pluginName: string, kind: string): KubeResource[] {
+/**
+ * Objects of a kind, for the plugin a route names.
+ *
+ * Callers address an installation ("system--cert-manager"), as the real store's
+ * callers do; the fixtures are keyed by catalog name, so resolve one to the
+ * other first. An installation no definition claims has no objects here — the
+ * same empty answer a cluster gives for a CRD it does not serve.
+ */
+function resourcesFor(installationName: string, kind: string): KubeResource[] {
+  const pluginName = fx.catalogPluginName(installationName);
+  if (!pluginName) return [];
   return fx.pluginResources[`${pluginName}/${kind}`] ?? [];
 }
 
