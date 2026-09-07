@@ -1092,15 +1092,6 @@ ALTER TABLE appstore.plugins OWNER TO fun_owner;
 ALTER TABLE appstore.plugins ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
--- object: plugins_select_all | type: POLICY --
--- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
-CREATE POLICY plugins_select_all ON appstore.plugins
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_fundament_api
-	USING (true);
--- ddl-end --
-
 -- object: plugins_insert_owner | type: POLICY --
 -- DROP POLICY IF EXISTS plugins_insert_owner ON appstore.plugins CASCADE;
 CREATE POLICY plugins_insert_owner ON appstore.plugins
@@ -1307,6 +1298,15 @@ USING btree
 	plugin_definition_id
 )
 WHERE (closed IS NULL AND deleted IS NULL);
+-- ddl-end --
+
+-- object: submissions_idx_plugin_definition_id | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.submissions_idx_plugin_definition_id CASCADE;
+CREATE INDEX submissions_idx_plugin_definition_id ON appstore.submissions
+USING btree
+(
+	plugin_definition_id
+);
 -- ddl-end --
 
 -- object: appstore.plugin_allowed_organizations | type: TABLE --
@@ -1605,6 +1605,15 @@ CREATE POLICY plugin_allowed_organizations_select_api ON appstore.plugin_allowed
 	FOR SELECT
 	TO fun_fundament_api
 	USING (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: plugins_select_all | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_all ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (visibility = 'public' OR organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()));
 -- ddl-end --
 
 -- object: require_admin | type: TRIGGER --
@@ -3122,6 +3131,13 @@ REFERENCES appstore.plugins (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: submissions_fk_submitter_user | type: CONSTRAINT --
+-- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_submitter_user CASCADE;
+ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_submitter_user FOREIGN KEY (submitter_user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: submissions_fk_plugin_definition | type: CONSTRAINT --
 -- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_plugin_definition CASCADE;
 ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_plugin_definition FOREIGN KEY (plugin_definition_id)
@@ -4630,16 +4646,48 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: grant_raw_9d426cee08 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
+-- object: grant_ra_9d426cee08 | type: PERMISSION --
+GRANT SELECT,INSERT
    ON TABLE appstore.plugin_definitions
    TO fun_marketplace_registry_api;
 
 -- ddl-end --
 
 
--- object: grant_ra_3148141987 | type: PERMISSION --
-GRANT SELECT,INSERT
+-- object: grant_w_88f4e8e148 | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_fc29c55d90 | type: PERMISSION --
+GRANT UPDATE(deleted)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_3148141987 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_2ea3dd2a4e | type: PERMISSION --
+GRANT INSERT(plugin_definition_id)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_31b595f1a1 | type: PERMISSION --
+GRANT INSERT(submitter_user_id)
    ON TABLE appstore.submissions
    TO fun_marketplace_registry_api;
 

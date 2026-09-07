@@ -1,10 +1,10 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
--- Hand-added statements. trek's diff emits table grants but not schema-level or
--- column-level permissions, even when they are modelled in the .dbm, so
--- everything in this block must be re-added whenever this migration is
--- regenerated.
+-- Hand-added statements. trek's diff emits table-wide grants but not
+-- schema-level or column-level ones, even when they are modelled in the .dbm,
+-- so every statement marked "hand-added" in this file must be re-added whenever
+-- the migration is regenerated.
 --
 -- Schema USAGE for the registry role:
 --   appstore: without it every table grant below is unusable.
@@ -115,10 +115,12 @@ GRANT INSERT ON "appstore"."plugin_definitions" TO "fun_marketplace_registry_api
 */
 GRANT SELECT ON "appstore"."plugin_definitions" TO "fun_marketplace_registry_api";
 
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
-GRANT UPDATE ON "appstore"."plugin_definitions" TO "fun_marketplace_registry_api";
+-- Hand-added, column-scoped. registry.v1 only ever moves a version's status
+-- (DRAFT/CHANGES_REQUESTED/WITHDRAWN -> PENDING -> WITHDRAWN) and soft-deletes
+-- it. published, hash and manifest are the consent record FUN-20 makes
+-- immutable once approved, so the grant, not just stack 3's Go, refuses them.
+GRANT UPDATE ("status") ON "appstore"."plugin_definitions" TO "fun_marketplace_registry_api";
+GRANT UPDATE ("deleted") ON "appstore"."plugin_definitions" TO "fun_marketplace_registry_api";
 
 ALTER TABLE "appstore"."plugin_documentation_links" ADD COLUMN "deleted" timestamp with time zone;
 
@@ -187,8 +189,16 @@ ALTER TABLE "appstore"."plugins" ADD COLUMN "updated" timestamp with time zone D
 -- Hand-added: the column default stamps every pre-existing row with the
 -- migration timestamp, so registry.v1.Plugin.updated would report the whole
 -- catalog as just-updated at deploy. Nothing has been updated since it was
--- created, so say that. Re-add whenever this migration is regenerated.
+-- created, so say that.
+--
+-- plugins_outbox is AFTER INSERT OR UPDATE FOR EACH ROW, so an unguarded
+-- backfill queues one authz.outbox row and one pg_notify per plugin: a burst of
+-- sync events for a change nobody made, in one statement under the
+-- statement_timeout set at the top of this file. Correcting stored data is not
+-- a change OpenFGA needs to hear about, so the trigger stays off across it.
+ALTER TABLE appstore.plugins DISABLE TRIGGER plugins_outbox;
 UPDATE appstore.plugins SET updated = created;
+ALTER TABLE appstore.plugins ENABLE TRIGGER plugins_outbox;
 
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
@@ -199,6 +209,14 @@ CREATE POLICY "plugins_all_registry" ON "appstore"."plugins"
 	TO fun_marketplace_registry_api
 	USING ((organization_id = authn.current_organization_id()))
 	WITH CHECK ((organization_id = authn.current_organization_id()));
+
+/* Hazards:
+ - AUTHZ_UPDATE: Altering a policy could cause queries to fail if not correctly configured or allow unauthorized access to data.
+*/
+ALTER POLICY "plugins_select_all" ON "appstore"."plugins"
+	USING (((visibility = 'public'::text) OR (organization_id = authn.current_organization_id()) OR (EXISTS ( SELECT 1
+   FROM appstore.plugin_allowed_organizations
+  WHERE ((plugin_allowed_organizations.plugin_id = plugins.id) AND (plugin_allowed_organizations.organization_id = authn.current_organization_id()))))));
 
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
@@ -282,13 +300,15 @@ CREATE POLICY "submissions_all_registry" ON "appstore"."submissions"
 
 ALTER TABLE "appstore"."submissions" ENABLE ROW LEVEL SECURITY;
 
-GRANT INSERT ON "appstore"."submissions" TO "fun_marketplace_registry_api";
-
 GRANT SELECT ON "appstore"."submissions" TO "fun_marketplace_registry_api";
 
--- Column-scoped so WithdrawPluginVersion can close a round and a plugin delete
--- can soft-delete one, while reviewed, reviewer_user_id, rejection_reason and
--- feedback stay out of the publisher's reach.
+-- Hand-added, column-scoped on both paths. A round is opened with nothing but
+-- the version it reviews and who submitted it, and afterwards the publisher may
+-- only close or soft-delete it. reviewed, reviewer_user_id, rejection_reason and
+-- feedback are the reviewer's alone, so a round cannot be inserted pre-approved
+-- any more than it can be updated into that state.
+GRANT INSERT ("plugin_definition_id") ON "appstore"."submissions" TO "fun_marketplace_registry_api";
+GRANT INSERT ("submitter_user_id") ON "appstore"."submissions" TO "fun_marketplace_registry_api";
 GRANT UPDATE ("closed") ON "appstore"."submissions" TO "fun_marketplace_registry_api";
 GRANT UPDATE ("deleted") ON "appstore"."submissions" TO "fun_marketplace_registry_api";
 
@@ -299,6 +319,8 @@ ALTER TABLE "appstore"."submissions" VALIDATE CONSTRAINT "submissions_fk_plugin_
 CREATE UNIQUE INDEX submissions_pk ON appstore.submissions USING btree (id);
 
 ALTER TABLE "appstore"."submissions" ADD CONSTRAINT "submissions_pk" PRIMARY KEY USING INDEX "submissions_pk";
+
+CREATE INDEX submissions_idx_plugin_definition_id ON appstore.submissions USING btree (plugin_definition_id);
 
 CREATE UNIQUE INDEX submissions_uq_open ON appstore.submissions USING btree (plugin_definition_id) WHERE ((closed IS NULL) AND (deleted IS NULL));
 
@@ -320,6 +342,10 @@ GRANT INSERT ON "authz"."outbox" TO "fun_marketplace_registry_api";
 ALTER TABLE "appstore"."plugin_allowed_organizations" ADD CONSTRAINT "plugin_allowed_organizations_fk_organization" FOREIGN KEY (organization_id) REFERENCES tenant.organizations(id) NOT VALID;
 
 ALTER TABLE "appstore"."plugin_allowed_organizations" VALIDATE CONSTRAINT "plugin_allowed_organizations_fk_organization";
+
+ALTER TABLE "appstore"."submissions" ADD CONSTRAINT "submissions_fk_submitter_user" FOREIGN KEY (submitter_user_id) REFERENCES tenant.users(id) NOT VALID;
+
+ALTER TABLE "appstore"."submissions" VALIDATE CONSTRAINT "submissions_fk_submitter_user";
 
 
 -- Statements generated automatically, please review:

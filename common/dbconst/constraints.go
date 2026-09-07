@@ -371,6 +371,8 @@ const (
 	ConstraintSubmissionsCkReviewed = "submissions_ck_reviewed"
 	// ConstraintSubmissionsFkPluginDefinition is defined on appstore.submissions.
 	ConstraintSubmissionsFkPluginDefinition = "submissions_fk_plugin_definition"
+	// ConstraintSubmissionsFkSubmitterUser is defined on appstore.submissions.
+	ConstraintSubmissionsFkSubmitterUser = "submissions_fk_submitter_user"
 	// ConstraintSubmissionsUqOpen is defined on appstore.submissions.
 	ConstraintSubmissionsUqOpen = "submissions_uq_open"
 	// ConstraintTagsUqName is defined on appstore.tags.

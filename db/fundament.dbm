@@ -1389,10 +1389,6 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<policy name="plugins_select_all" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[true]]> </expression>
-</policy>
-
 <policy name="plugins_insert_owner" table="appstore.plugins" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
@@ -1613,6 +1609,14 @@ END;]]> </definition>
 			<column name="plugin_definition_id"/>
 		</idxelement>
 	<predicate> <![CDATA[closed IS NULL AND deleted IS NULL]]> </predicate>
+</index>
+
+<index name="submissions_idx_plugin_definition_id" table="appstore.submissions"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="plugin_definition_id"/>
+		</idxelement>
 </index>
 
 <table name="plugin_allowed_organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="3" z-value="0">
@@ -1864,6 +1868,10 @@ END;]]> </definition>
 
 <policy name="plugin_allowed_organizations_select_api" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="plugins_select_all" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[visibility = 'public' OR organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
 <trigger name="require_admin" firing-type="AFTER" per-line="true" constraint="true"
@@ -3702,6 +3710,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="submissions_fk_submitter_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="appstore.submissions">
+	<columns names="submitter_user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="submissions_fk_plugin_definition" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugin_definitions" table="appstore.submissions">
 	<columns names="plugin_definition_id" ref-type="src-columns"/>
@@ -4225,6 +4239,12 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="appstore.submissions"
 	 dst-table="appstore.plugin_definitions" reference-fk="submissions_fk_plugin_definition"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_submissions_users" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="appstore.submissions"
+	 dst-table="tenant.users" reference-fk="submissions_fk_submitter_user"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugin_allowed_organizations_plugins" type="relfk" layers="0"
@@ -5263,12 +5283,32 @@ END;]]> </definition>
 <permission>
 	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
-	<privileges select="true" insert="true" update="true"/>
+	<privileges select="true" insert="true"/>
+</permission>
+<permission>
+	<object name="status" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="deleted" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges update="true"/>
 </permission>
 <permission>
 	<object name="appstore.submissions" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
-	<privileges select="true" insert="true"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="plugin_definition_id" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="submitter_user_id" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges insert="true"/>
 </permission>
 <permission>
 	<object name="closed" parent="appstore.submissions" type="column"/>
