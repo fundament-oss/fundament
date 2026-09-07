@@ -60,6 +60,16 @@ import {
   PublisherSchema,
   DocumentationLinkSchema as MarketplaceDocumentationLinkSchema,
 } from '../../generated/marketplace/v1/common_pb';
+import {
+  LogsService,
+  QueryLogsResponseSchema,
+  GetLogLabelsResponseSchema,
+  LogEntrySchema,
+  LogBackend,
+  type QueryLogsRequest,
+  type TailLogsRequest,
+  type GetLogLabelsRequest,
+} from '../../generated/v1/logs_pb';
 import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
 import {
   MetricsService,
@@ -74,6 +84,39 @@ import * as fx from './fixtures';
 
 // Artificial latency so the app's loading/skeleton states are visible while presenting.
 const LATENCY_MS = 260;
+/**
+ * The log fixtures are templates without a time of their own, so an entry is
+ * stamped as it is handed out: the demo then always has lines inside whatever
+ * range the page asks for, however long the tab has been open.
+ */
+function logEntry(line: fx.DemoLogLine, clusterId: string, at: Date) {
+  return create(LogEntrySchema, {
+    timestamp: timestampFromDate(at),
+    level: line.level,
+    cluster: clusterId,
+    namespace: line.namespace,
+    pod: line.pod,
+    container: line.container,
+    message: line.message,
+    fields: line.fields ?? {},
+  });
+}
+
+/** The same narrowing the backend would do, so the filter menus do something. */
+function logMatches(
+  line: fx.DemoLogLine,
+  filter: { namespace: string; pod: string; container: string; search: string; levels: string[] },
+): boolean {
+  if (filter.namespace && line.namespace !== filter.namespace) return false;
+  if (filter.pod && line.pod !== filter.pod) return false;
+  if (filter.container && line.container !== filter.container) return false;
+  if (filter.levels.length > 0 && !filter.levels.includes(line.level)) return false;
+  if (filter.search && !line.message.toLowerCase().includes(filter.search.toLowerCase())) {
+    return false;
+  }
+  return true;
+}
+
 const delay = (ms = LATENCY_MS) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -467,6 +510,45 @@ export default function createDemoTransport(): Transport {
       async *streamProjectWorkloadMetrics(req) {
         await delay();
         yield snapshot('project', req.windowSeconds, req.stepSeconds);
+      },
+    });
+
+    router.service(LogsService, {
+      queryLogs: async (req: QueryLogsRequest) => {
+        await delay();
+        const now = Date.now();
+        const start = req.start ? Number(req.start.seconds) * 1000 : 0;
+        const end = req.end ? Number(req.end.seconds) * 1000 : now;
+        const entries = fx.logLines
+          .filter((line) => logMatches(line, req))
+          .map((line) => ({ line, at: now - line.ago * 1000 }))
+          .filter(({ at }) => at >= start && at <= end)
+          .sort((a, b) => b.at - a.at)
+          .slice(0, req.limit > 0 ? req.limit : fx.logLines.length)
+          .map(({ line, at }) => logEntry(line, req.clusterId, new Date(at)));
+        return create(QueryLogsResponseSchema, { entries, backend: LogBackend.LOKI });
+      },
+      getLogLabels: async (req: GetLogLabelsRequest) => {
+        await delay(60);
+        const inScope = fx.logLines.filter(
+          (line) => !req.namespace || line.namespace === req.namespace,
+        );
+        const unique = (values: string[]) => [...new Set(values)].sort();
+        return create(GetLogLabelsResponseSchema, {
+          namespaces: unique(fx.logLines.map((line) => line.namespace)),
+          pods: unique(inScope.map((line) => line.pod)),
+          containers: unique(inScope.map((line) => line.container)),
+          backend: LogBackend.LOKI,
+        });
+      },
+      // Live tail: a line every second or so, off the same set, so the stream
+      // button has something to stream. It stops when the page unsubscribes.
+      tailLogs: async function* (req: TailLogsRequest) {
+        const matching = fx.logLines.filter((line) => logMatches(line, req));
+        for (let i = 0; i < 500 && matching.length > 0; i += 1) {
+          await delay(900);
+          yield logEntry(matching[i % matching.length], req.clusterId, new Date());
+        }
       },
     });
 

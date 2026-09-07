@@ -50,7 +50,7 @@
 @if (state().nodePools && state().nodePools!.length > 0) {
   <nldd-collection
     layout="stack"
-    gap="16px"
+    gap="16"
   >
     @for (nodePool of state().nodePools; track nodePool.name) {
       <nldd-list

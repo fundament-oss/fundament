@@ -331,7 +331,7 @@
               <nldd-collection
                 layout="grid"
                 item-width="320px"
-                gap="16px"
+                gap="16"
               >
                 @for (pool of clusterData.nodePools; track pool.name) {
                   <nldd-card>
@@ -442,7 +442,7 @@
               <nldd-collection
                 layout="grid"
                 item-width="320px"
-                gap="16px"
+                gap="16"
               >
                 @for (plugin of installedPlugins(); track plugin.id) {
                   <nldd-card>

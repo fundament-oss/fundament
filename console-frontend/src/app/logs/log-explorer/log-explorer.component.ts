@@ -1,6 +1,7 @@
 import {
   Component,
   ViewChild,
+  AfterViewInit,
   ElementRef,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -10,7 +11,6 @@ import {
   effect,
   OnInit,
   OnDestroy,
-  AfterViewInit,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,8 +23,15 @@ import { ShootPodsService, type ShootPod } from '../shoot-pods.service';
 import { LogBackend, LogSource } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { NotificationService } from '../../notification.service';
+import PageNavService from '../../page-nav.service';
 import PluginInstallationService from '../../plugin-installation/plugin-installation.service';
 import '@nldd/design-system/search-field';
+import '@nldd/design-system/tab-bar';
+import '@nldd/design-system/sidebar-section';
+import '@nldd/design-system/combo-box';
+import '@nldd/design-system/radio-button';
+import '@nldd/design-system/code-viewer';
+import '@nldd/design-system/token';
 import '@nldd/design-system/pagination';
 
 Chart.register(...registerables);
@@ -40,11 +47,20 @@ const TIME_PRESETS: { label: string; value: string; minutes: number }[] = [
   { label: 'Last 7 days', value: '7d', minutes: 10080 },
 ];
 
-const LEVEL_BADGE: Record<LogLevel, string> = {
-  ERROR: 'badge badge-sm badge-rose',
-  WARN: 'badge badge-sm badge-yellow',
-  INFO: 'badge badge-sm badge-blue',
-  DEBUG: 'badge badge-sm badge-gray',
+/** ERROR is a failure, WARN is worth a look, INFO is the ordinary case and
+ *  DEBUG is noise you asked for yourself. */
+const LEVEL_LABEL: Record<LogLevel, string> = {
+  ERROR: 'Error',
+  WARN: 'Warning',
+  INFO: 'Info',
+  DEBUG: 'Debug',
+};
+
+const LEVEL_TAG_COLOR: Record<LogLevel, string> = {
+  ERROR: 'critical',
+  WARN: 'warning',
+  INFO: 'accent',
+  DEBUG: 'neutral',
 };
 
 const LEVEL_CHIP_ACTIVE: Record<LogLevel, string> = {
@@ -54,13 +70,6 @@ const LEVEL_CHIP_ACTIVE: Record<LogLevel, string> = {
   INFO: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300',
   DEBUG:
     'border-neutral-300 bg-neutral-50 text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-400',
-};
-
-const LEVEL_DOT: Record<LogLevel, string> = {
-  ERROR: 'bg-danger-500',
-  WARN: 'bg-yellow-500',
-  INFO: 'bg-blue-500',
-  DEBUG: 'bg-neutral-400',
 };
 
 const HISTOGRAM_COLORS: Record<string, string> = {
@@ -76,14 +85,6 @@ function copyToClipboard(text: string): void {
 
 function formattedJson(log: LogEntry): string {
   return JSON.stringify({ message: log.message, ...log.fields }, null, 2);
-}
-
-function levelBadgeClass(level: LogLevel): string {
-  return LEVEL_BADGE[level];
-}
-
-function levelDotClass(level: LogLevel): string {
-  return `inline-block h-2 w-2 rounded-full ${LEVEL_DOT[level]}`;
 }
 
 function formatTimestamp(date: Date): string {
@@ -114,6 +115,15 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './log-explorer.component.html',
+  styles: `
+    #filter-trigger {
+      display: none;
+    }
+
+    nldd-sidebar-section[collapsed] #filter-trigger:not([hidden]) {
+      display: inline-flex;
+    }
+  `,
 })
 export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
@@ -126,9 +136,25 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly shootPods = inject(ShootPodsService);
 
-  @ViewChild('histogramChart') private histogramCanvas!: ElementRef<HTMLCanvasElement>;
+  /* The chart block is only rendered while there are entries, so the canvas is
+     created and destroyed as you filter. A setter rather than a plain @ViewChild:
+     it is the moment the element appears, which is the only moment Chart.js can
+     be pointed at it. */
+  @ViewChild('histogramChart')
+  private set histogramCanvasRef(ref: ElementRef<HTMLCanvasElement> | undefined) {
+    this.histogramCanvas = ref;
+    if (ref) this.createHistogram();
+    else {
+      this.histogram?.destroy();
+      this.histogram = null;
+    }
+  }
+
+  private histogramCanvas?: ElementRef<HTMLCanvasElement>;
 
   @ViewChild('detailSheet') private detailSheetRef?: ElementRef<HTMLElement>;
+
+  @ViewChild('filterSection') private filterSectionRef?: ElementRef<HTMLElement>;
 
   private histogram: Chart | null = null;
 
@@ -211,6 +237,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   // ── all log data (loaded from the backend for the selected cluster)
   private readonly allLogs = signal<LogEntry[]>([]);
 
+  /** Nothing came back at all, which is a different nothing from a search that
+   *  matched none of what did: only the second one is about the filters. */
+  readonly hasNoLogs = computed(() => this.allLogs().length === 0);
+
   // ── request state
   readonly isLoading = signal(false);
 
@@ -223,6 +253,61 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   readonly isNoBackend = computed(() => this.backend() === LogBackend.NONE);
 
   // ── filter options (sourced from the backend label values, not the loaded logs)
+  protected pageNav = inject(PageNavService);
+
+  /* True while the filter column is a sheet. The required choices then ride
+     along as tokens above the list, because a sheet you have to open first is a
+     poor place for the one field that decides whether there is anything to
+     read at all. The section announces the flip; the first state is read off it
+     once the view is up, since a section that starts wide never flips. */
+  readonly filtersCollapsed = signal(false);
+
+  /* The wire says ERROR and WARN, the screen does not shout. */
+  readonly levelLabel = (level: LogLevel): string => LEVEL_LABEL[level];
+
+  readonly levelTagColor = (level: LogLevel): string => LEVEL_TAG_COLOR[level];
+
+  /* A filter menu is shut most of the time, so each button says what it is
+     filtering on. Without that the toolbar is five words that never change and
+     you have to open all five to see where you are. */
+  readonly clusterLabel = computed(
+    () => this.clusters().find((c) => c.id === this.selectedCluster())?.name ?? 'Cluster',
+  );
+
+  readonly scopeLabel = computed(
+    () => this.selectedNamespace() || (this.isLiveMode() ? 'Select a plugin' : 'All namespaces'),
+  );
+
+  readonly podLabel = computed(
+    () => this.selectedPod() || (this.isLiveMode() ? 'Select a pod' : 'All pods'),
+  );
+
+  readonly containerLabel = computed(() => this.selectedContainer() || 'All containers');
+
+  /**
+   * The total beside "All levels", and only while the query asked for every
+   * level: with a subset selected the other levels are absent from the result
+   * set entirely, so a sum over what came back would count a part and call it
+   * the whole. Same reason a single level's count goes blank.
+   */
+  readonly allLevelsCountLabel = computed(() => {
+    if (this.selectedLevels().size !== ALL_LEVELS.length) return '';
+    const counts = this.levelCounts();
+    return ALL_LEVELS.reduce((total, level) => total + counts[level], 0).toLocaleString();
+  });
+
+  readonly levelsLabel = computed(() => {
+    const chosen = ALL_LEVELS.filter((level) => this.selectedLevels().has(level));
+    if (chosen.length === ALL_LEVELS.length) return 'All levels';
+    if (chosen.length === 0) return 'No levels';
+    if (chosen.length <= 2) return chosen.map((level) => LEVEL_LABEL[level]).join(', ');
+    return `${chosen.length} levels`;
+  });
+
+  readonly timeLabel = computed(
+    () => TIME_PRESETS.find((p) => p.value === this.timePreset())?.label ?? 'Time range',
+  );
+
   readonly clusters = signal<ClusterOption[]>([]);
 
   readonly namespaces = signal<string[]>([]);
@@ -376,21 +461,26 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   });
 
   // ── selected log index for prev/next navigation
-  readonly selectedLogIndex = computed(() => {
-    const log = this.selectedLog();
-    if (!log) return -1;
-    return this.pagedLogs().findIndex((l) => l.id === log.id);
-  });
 
   // ── all active filter chips (for display). Cluster is always selected, so it
   // is shown in the dropdown rather than as a removable chip.
   readonly activeFilterChips = computed(() => {
     const chips: { label: string; key: string }[] = [];
     if (this.selectedNamespace())
-      chips.push({ label: `namespace: ${this.selectedNamespace()}`, key: 'namespace' });
-    if (this.selectedPod()) chips.push({ label: `pod: ${this.selectedPod()}`, key: 'pod' });
+      chips.push({ label: `Namespace: ${this.selectedNamespace()}`, key: 'namespace' });
+    if (this.selectedPod()) chips.push({ label: `Pod: ${this.selectedPod()}`, key: 'pod' });
     if (this.selectedContainer())
-      chips.push({ label: `container: ${this.selectedContainer()}`, key: 'container' });
+      chips.push({ label: `Container: ${this.selectedContainer()}`, key: 'container' });
+    // A level narrows the query as much as a namespace does, so it belongs in
+    // the same row. All levels is the absence of a filter rather than one, and
+    // each chosen level gets its own token: you drop them one at a time.
+    if (this.selectedLevels().size !== ALL_LEVELS.length) {
+      for (const level of ALL_LEVELS) {
+        if (this.selectedLevels().has(level)) {
+          chips.push({ label: `Level: ${LEVEL_LABEL[level]}`, key: `level:${level}` });
+        }
+      }
+    }
     return chips;
   });
 
@@ -412,6 +502,17 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     });
   }
 
+  async ngAfterViewInit(): Promise<void> {
+    // The section seeds its collapsed state on its own first render, which is
+    // after ours, and it stays quiet about that first value: the event only
+    // carries later flips. So wait for the element to render, then read it once.
+    await customElements.whenDefined('nldd-sidebar-section');
+    const section = this.filterSectionRef?.nativeElement as
+      (HTMLElement & { updateComplete?: Promise<unknown> }) | undefined;
+    await section?.updateComplete;
+    this.filtersCollapsed.set(section?.hasAttribute('collapsed') ?? false);
+  }
+
   async ngOnInit(): Promise<void> {
     try {
       const clusters = await this.logsApi.listClusters();
@@ -423,10 +524,6 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     } catch {
       this.loadError.set(true);
     }
-  }
-
-  ngAfterViewInit(): void {
-    this.createHistogram();
   }
 
   ngOnDestroy(): void {
@@ -650,10 +747,37 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         },
       },
     };
-    this.histogram = new Chart(this.histogramCanvas.nativeElement, config);
+    const canvas = this.histogramCanvas?.nativeElement;
+    if (!canvas) return;
+    this.histogram?.destroy();
+    this.histogram = new Chart(canvas, config);
   }
 
   // ── live tail
+  /* The stream is one control with three states, so the menu sets a state
+     instead of firing three unrelated verbs at it, and the button label reports
+     which one you are in. */
+  readonly streamState = computed<'off' | 'streaming' | 'paused'>(() => {
+    if (!this.liveTailEnabled()) return 'off';
+    return this.liveTailPaused() ? 'paused' : 'streaming';
+  });
+
+  readonly streamLabel = computed(() => {
+    const state = this.streamState();
+    if (state === 'off') return 'Not streaming';
+    if (state === 'paused') return 'Stream paused';
+    return `Streaming ${this.liveTailRate()}/s`;
+  });
+
+  setStreamState(state: 'off' | 'streaming' | 'paused'): void {
+    if (state === 'off') {
+      if (this.liveTailEnabled()) this.stopLiveTail();
+      return;
+    }
+    if (!this.liveTailEnabled()) this.startLiveTail();
+    this.liveTailPaused.set(state === 'paused');
+  }
+
   toggleLiveTail(): void {
     if (this.liveTailEnabled()) {
       this.stopLiveTail();
@@ -845,6 +969,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.selectedContainer.set('');
     } else if (key === 'container') {
       this.selectedContainer.set('');
+    } else if (key.startsWith('level:')) {
+      const next = new Set(this.selectedLevels());
+      next.delete(key.slice('level:'.length) as LogLevel);
+      // Nothing left selected is a question with no possible answer, so dropping
+      // the last level asks for all of them again.
+      this.selectedLevels.set(next.size === 0 ? new Set(ALL_LEVELS) : next);
     }
     this.currentPage.set(0);
     this.reloadForFilterChange();
@@ -859,6 +989,23 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     // and selecting ERROR emptied the table while the backend held matches it
     // was never asked for.
     this.reloadForFilterChange();
+  }
+
+  /** The menu is a choice, so a click replaces the selection instead of adding
+   *  to it. Same reload as the other level moves: the backend applies the
+   *  filter, before the entry limit. */
+  selectLevel(level: LogLevel): void {
+    this.selectedLevels.set(new Set([level]));
+    this.currentPage.set(0);
+    this.reloadForFilterChange();
+  }
+
+  onLevelChoice(value: string): void {
+    if (value === 'all') {
+      this.toggleAllLevels();
+      return;
+    }
+    this.selectLevel(value as LogLevel);
   }
 
   toggleLevel(level: LogLevel): void {
@@ -897,16 +1044,6 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedLog.set(null);
   }
 
-  navigateDetail(direction: -1 | 1): void {
-    const idx = this.selectedLogIndex();
-    const logs = this.pagedLogs();
-    const next = logs[idx + direction];
-    if (next) {
-      this.selectedLog.set(next);
-      this.showRawJson.set(false);
-    }
-  }
-
   copyToClipboard(text: string): void {
     copyToClipboard(text);
     this.notificationService.success('Copied to clipboard');
@@ -924,7 +1061,6 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   }
 
   // ── style helpers
-  readonly levelBadgeClass = levelBadgeClass;
 
   levelChipClass(level: LogLevel): string {
     const base =
@@ -932,8 +1068,6 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     if (this.isLevelSelected(level)) return `${base} ${LEVEL_CHIP_ACTIVE[level]}`;
     return `${base} border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-500`;
   }
-
-  readonly levelDotClass = levelDotClass;
 
   allChipClass(): string {
     const base =

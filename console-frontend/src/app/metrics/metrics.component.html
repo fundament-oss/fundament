@@ -384,7 +384,7 @@
             <nldd-collection
               layout="grid"
               item-width="280px"
-              gap="16px"
+              gap="16"
             >
               @for (c of clusterSummaries(); track c.id) {
                 <nldd-card background="base">
@@ -435,7 +435,7 @@
               <nldd-collection
                 layout="grid"
                 item-width="280px"
-                gap="16px"
+                gap="16"
               >
                 @for (node of nodeUsage(); track node.name) {
                   <nldd-card background="base">
