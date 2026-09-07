@@ -1,0 +1,18 @@
+{{- if $.Values.marketplaceFrontend.httproute.enabled }}
+{{- if not $.Values.marketplaceFrontend.httproute.parentRefs }}{{ fail "marketplaceFrontend.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-marketplace-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.marketplaceFrontend.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.marketplaceFrontend.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: marketplace-frontend
+          port: 80
+{{- end }}

@@ -2,6 +2,9 @@ import {
   Component,
   inject,
   signal,
+  effect,
+  viewChild,
+  ElementRef,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -10,12 +13,14 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
+import { ConfigService } from '../config.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
+import { PluginIconComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
@@ -35,13 +40,14 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
 
-const getPluginIconName = (pluginName: string): string =>
-  pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
+const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
+  plugin.categories.map((category) => category.name).join(', ') || '—';
 
 // The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install identifier
 // (e.g. "openfsc") — it names the PluginInstallation resource in the cluster — so it
@@ -109,7 +115,7 @@ function isOfficialPlugin(plugin: { tags: string[] }): boolean {
 
 @Component({
   selector: 'app-plugins',
-  imports: [InstallPluginModalComponent],
+  imports: [InstallPluginModalComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
@@ -145,9 +151,20 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   selectedPreset = 'all';
 
+  searchQuery = '';
+
   showInstallModal = signal(false);
 
   selectedPlugin: PluginWithPresets | null = null;
+
+  // Plugin currently shown in the details sheet (right-hand side panel opened
+  // from a card's "Details" button); null while the sheet is closed.
+  sheetPlugin = signal<PluginWithPresets | null>(null);
+
+  // Base URL of the marketplace, or '' when it is not deployed here.
+  private readonly marketplaceUrl = inject(ConfigService).getConfig().marketplaceUrl ?? '';
+
+  private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
 
   // Published versions of the selected plugin, offered in the install modal.
   installVersions = signal<PluginVersionOption[]>([]);
@@ -203,6 +220,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     return presets;
   }
+
+  // Placeholder text for card fields not yet returned by the backend
+  // (PluginSummary has no vendor/version), purely for visual mockup fidelity.
+  readonly mockPluginVendor = 'Community';
+
+  readonly mockPluginVersion = 'v1.0.0';
 
   plugins: PluginWithPresets[] = [];
 
@@ -501,9 +524,17 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   constructor() {
     this.titleService.setTitle('Plugins');
+
+    effect(() => {
+      const el = this.pluginSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.sheetPlugin() !== null) el?.show?.();
+      else el?.hide?.();
+    });
   }
 
   get filteredPlugins(): PluginWithPresets[] {
+    const query = this.searchQuery.trim().toLowerCase();
+
     return this.plugins.filter((plugin) => {
       // Filter by preset
       const matchesPreset =
@@ -515,8 +546,20 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         this.selectedCategory === 'all' ||
         plugin.categories.some((cat) => cat.id === this.selectedCategory);
 
-      return matchesPreset && matchesCategory;
+      // Filter by search query across name, display name, description and tags
+      const matchesQuery =
+        !query ||
+        [plugin.name, displayNameOf(plugin), plugin.descriptionShort, ...plugin.tags]
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+
+      return matchesPreset && matchesCategory && matchesQuery;
     });
+  }
+
+  get summaryText(): string {
+    return `${this.filteredPlugins.length} of ${this.plugins.length} plugins`;
   }
 
   selectCategory(categoryId: string) {
@@ -528,6 +571,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   isOfficial = isOfficialPlugin;
+
+  onSearchInput(event: Event) {
+    // nldd-search-field's internal native <input> 'input' event also bubbles
+    // out through the shadow boundary after the component's own synthetic
+    // 'input' CustomEvent, so `event.detail` isn't reliable here (it can be
+    // the native event's numeric UIEvent.detail). Read the authoritative
+    // value straight off the element instead.
+    this.searchQuery = (event.target as unknown as { value: string }).value;
+  }
 
   getSelectedCategoryName(): string {
     const category = this.categories.find((c) => c.id === this.selectedCategory);
@@ -606,6 +658,30 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.installVersions.set(versions);
     this.installVersionsError.set(errored);
     this.showInstallModal.set(true);
+  }
+
+  // The marketplace listing for a plugin, or '' when no marketplace is
+  // configured and the sheet has to fall back to the console's own plugin page.
+  // Both apps list the same appstore.plugins rows, so the id in the URL is the
+  // same key on the other side.
+  marketplacePluginUrl(plugin: PluginWithPresets): string {
+    if (!this.marketplaceUrl) return '';
+    return `${this.marketplaceUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
+  }
+
+  openPluginDetails(plugin: PluginWithPresets): void {
+    this.sheetPlugin.set(plugin);
+  }
+
+  closePluginDetails(): void {
+    this.sheetPlugin.set(null);
+  }
+
+  pluginCategoryLabel = pluginCategoryLabel;
+
+  pluginStatusLabel(organizationName: string, pluginName: string): string {
+    const count = this.runningInstallCount(organizationName, pluginName);
+    return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
   }
 
   // Fetches the plugin's published versions (latest first) for the install

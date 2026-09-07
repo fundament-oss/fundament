@@ -96,6 +96,9 @@ jobs:
           - image-name: kube-api-proxy
             dockerfile: kube-api-proxy/Dockerfile
             context: "."
+          - image-name: plugin-controller
+            dockerfile: plugin-controller/Dockerfile
+            context: "."
           - image-name: plugin-proxy
             dockerfile: plugin-proxy/Dockerfile
             context: "."
@@ -110,6 +113,9 @@ jobs:
             context: "."
           - image-name: dcim-frontend
             dockerfile: dcim-frontend/Dockerfile
+            context: "."
+          - image-name: marketplace-frontend
+            dockerfile: marketplace-frontend/Dockerfile
             context: "."
           - image-name: dcim-authn-api
             dockerfile: dcim-authn-api/Dockerfile
@@ -236,7 +242,8 @@ jobs:
             | DCIM | https://dcim.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM API | https://dcim-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM Auth | https://dcim-authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Marketplace Catalog API | https://marketplace-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace | https://marketplace.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Registry API | https://marketplace-registry-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`

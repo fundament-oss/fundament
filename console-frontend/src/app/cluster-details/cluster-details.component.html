@@ -447,13 +447,10 @@
                 @for (plugin of installedPlugins(); track plugin.id) {
                   <nldd-card>
                     <nldd-container padding="16">
-                      <nldd-image
-                        [attr.src]="pluginIconSrc(plugin)"
-                        width="40"
-                        height="40"
-                        object-fit="contain"
-                        decorative
-                      ></nldd-image>
+                      <app-plugin-icon
+                        [name]="pluginIconName(plugin.name)"
+                        class="block h-10 w-10"
+                      />
                       <nldd-spacer size="12"></nldd-spacer>
                       <nldd-title size="6">
                         <h4>{{ pluginDisplayName(plugin) }}</h4>

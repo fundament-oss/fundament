@@ -42,7 +42,8 @@ import {
   isKubeconfigAvailable,
   isTransitionalStatus,
 } from '../utils/cluster-status';
-import pluginIconSrc from '../utils/plugin-icon';
+import getPluginIconName from '../utils/plugin-icon-name';
+import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
@@ -177,7 +178,13 @@ const getEventLine = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterOutlet, NgTemplateOutlet, DialogSyncDirective, SheetSyncDirective],
+  imports: [
+    RouterOutlet,
+    NgTemplateOutlet,
+    DialogSyncDirective,
+    SheetSyncDirective,
+    PluginIconComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -765,7 +772,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   pluginDisplayName = pluginDisplayName;
 
-  pluginIconSrc = pluginIconSrc;
+  pluginIconName = getPluginIconName;
 
   getEventDetails = getEventDetails;
 

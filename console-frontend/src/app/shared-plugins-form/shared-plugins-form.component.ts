@@ -14,7 +14,8 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { PLUGIN } from '../../connect/tokens';
-import pluginIconSrc from '../utils/plugin-icon';
+import getPluginIconName from '../utils/plugin-icon-name';
+import { PluginIconComponent } from '../icons';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
@@ -36,6 +37,7 @@ export interface Plugin {
 
 @Component({
   selector: 'app-shared-plugins-form',
+  imports: [PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
@@ -47,7 +49,7 @@ export class SharedPluginsFormComponent implements OnInit, OnChanges {
 
   @Input() initialPluginIds?: string[];
 
-  protected readonly pluginIconSrc = pluginIconSrc;
+  protected readonly pluginIconName = getPluginIconName;
 
   selectedPreset = 'custom';
 

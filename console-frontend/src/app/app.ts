@@ -26,6 +26,7 @@ import '@nldd/design-system/rich-text';
 import '@nldd/design-system/image';
 import '@nldd/design-system/button';
 import '@nldd/design-system/button-bar';
+import '@nldd/design-system/card';
 import '@nldd/design-system/checkbox';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
@@ -180,14 +181,6 @@ export default class App implements OnInit {
   private clusterClient = inject(CLUSTER);
 
   private inviteClient = inject(INVITE);
-
-  @ViewChild('splitView') private splitViewRef?: ElementRef<
-    HTMLElement & {
-      showSidebarSheet(): Promise<void>;
-      hideSidebarSheet(): void;
-      isSingleColumn: boolean;
-    }
-  >;
 
   /** Whether the split view has collapsed to one visible pane. The split view
    *  measures itself, so this is not a viewport width: a narrow window can
@@ -698,14 +691,6 @@ export default class App implements OnInit {
       // eslint-disable-next-line no-console
       console.error('Logout failed:', error);
     }
-  }
-
-  toggleSidebar() {
-    this.splitViewRef?.nativeElement.showSidebarSheet();
-  }
-
-  closeSidebar() {
-    this.splitViewRef?.nativeElement.hideSidebarSheet();
   }
 
   async selectOrganization(orgId: string) {

@@ -12,7 +12,6 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
-import pluginIconSrc from '../utils/plugin-icon';
 import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
@@ -20,6 +19,8 @@ import InstallPluginModalComponent, {
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
+import { PluginIconComponent } from '../icons';
+import getPluginIconName from '../utils/plugin-icon-name';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
   GetPluginRequestSchema,
@@ -79,7 +80,7 @@ function isOfficialPlugin(plugin: { tags: string[] }): boolean {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent],
+  imports: [InstallPluginModalComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
@@ -88,8 +89,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   protected pageNav = inject(PageNavService);
 
   private titleService = inject(TitleService);
-
-  pluginIconSrc = pluginIconSrc;
 
   isOfficial = isOfficialPlugin;
 
@@ -108,6 +107,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   private pluginInstallationService = inject(PluginInstallationService);
 
   private idempotency = createIdempotencyRef();
+
+  pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
 

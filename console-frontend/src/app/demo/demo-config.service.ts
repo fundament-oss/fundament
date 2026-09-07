@@ -1,6 +1,7 @@
-// Demo-only stand-in for ConfigService: returns fixed dummy URLs without fetching.
-// The demo transports are in-memory (createRouterTransport ignores baseUrl), so these
-// values are never used for real network calls.
+// Demo-only stand-in for ConfigService: returns a fixed configuration without fetching.
+// The demo transports are in-memory (createRouterTransport ignores baseUrl), so the API
+// URLs are never used for real network calls. The link-valued entries are real, though —
+// see demo-app.config.ts.
 import { AppConfiguration, ConfigService } from '../config.service';
 
 export default class DemoConfigService implements Pick<ConfigService, 'loadConfig' | 'getConfig'> {

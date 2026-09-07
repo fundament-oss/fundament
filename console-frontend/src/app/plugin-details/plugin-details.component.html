@@ -27,14 +27,10 @@
       ></nldd-activity-indicator>
     }
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
-      <nldd-image
-        [attr.src]="pluginIconSrc(p)"
-        width="56"
-        height="56"
-        object-fit="contain"
-        loading="eager"
-        decorative
-      ></nldd-image>
+      <app-plugin-icon
+        [name]="pluginIconName(p.name)"
+        class="block h-14 w-14"
+      />
       <nldd-spacer size="12"></nldd-spacer>
       <!-- Official and the install state sit with the name: they say what this
            plugin is and where it runs, unlike the keyword tags below. -->

@@ -41,6 +41,8 @@ export const DECK_NAME = 'Fundament';
 interface UiStrings {
   /** Accessible name of the narration panel; it carries `lang`, so translate it. */
   deckLabel: string;
+  /** Accessible name of the framed marketplace demo in the app pane. */
+  embedLabel: string;
   tooSmall: string;
   close: string;
   chooserLead: string;
@@ -66,6 +68,7 @@ interface UiStrings {
 export const UI: Record<Locale, UiStrings> = {
   nl: {
     deckLabel: 'Presentatietoelichting',
+    embedLabel: 'Plugin Marktplaats',
     tooSmall: 'De presentatiemodus werkt het beste op een groot scherm of projector.',
     close: 'Sluiten',
     chooserLead: 'Kies een rondleiding, of bekijk het platform door de ogen van een rol.',
@@ -88,6 +91,7 @@ export const UI: Record<Locale, UiStrings> = {
   },
   en: {
     deckLabel: 'Presentation narration',
+    embedLabel: 'Plugin Marketplace',
     tooSmall: 'Presentation mode works best on a large screen or a projector.',
     close: 'Close',
     chooserLead: 'Pick a tour, or see the platform through the eyes of a role.',

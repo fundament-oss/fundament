@@ -72,5 +72,5 @@ ORDER BY c.name;
 -- name: PluginDocumentationLinksList :many
 SELECT id, plugin_id, title, url_name, url
 FROM appstore.plugin_documentation_links
-WHERE plugin_id = $1
-ORDER BY title;
+WHERE plugin_id = $1 AND deleted IS NULL
+ORDER BY position, title;
