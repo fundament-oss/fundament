@@ -66,7 +66,7 @@ setup-certs:
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
     echo "Waiting for cert-manager webhook to be ready..."
-    # On Windows the path mkcert returns is mangled and the file cannot be opened. 
+    # On Windows the path mkcert returns is mangled and the file cannot be opened.
     # Normalise to forward slashes for Windows; a no-op on Linux and macOS.
     CAROOT="$(mkcert -CAROOT | tr '\\' '/')"
     for i in $(seq 1 12); do
@@ -232,8 +232,8 @@ logs:
 db-shell:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
+    PASSWORD=$(kubectl get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
 
 generate:
     cd db && trek generate --stdout

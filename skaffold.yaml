@@ -5,6 +5,12 @@ metadata:
 
 # Build configuration for all images
 build:
+  # Tag by short commit sha. Skaffold defaults to `git describe --tags`, which
+  # anchors on rolling release tags like terraform-provider-latest.
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+
   # Local build settings - load directly into k3d (no registry needed)
   local:
     useBuildkit: true
@@ -98,6 +104,11 @@ build:
       docker:
         dockerfile: marketplace-api/Dockerfile
 
+    - image: marketplace-registry-api
+      context: .
+      docker:
+        dockerfile: marketplace-api/Dockerfile.registry
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -126,6 +137,7 @@ deploy:
           images.pluginProxy: "{{.IMAGE_FULLY_QUALIFIED_plugin_proxy}}"
           images.marketplaceFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_frontend}}"
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
+          images.marketplaceRegistryApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_api}}"
 
 profiles:
   - name: env-local
@@ -261,6 +273,12 @@ profiles:
         value: marketplace-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/15/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/16/docker/dockerfile
+        value: marketplace-api/hotreload/Dockerfile.registry
+      - op: add
+        path: /build/artifacts/16/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)
