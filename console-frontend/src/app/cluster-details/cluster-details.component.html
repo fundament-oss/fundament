@@ -551,16 +551,19 @@
   appDialogSync
   [show]="showDeleteModal()"
   [attr.text]="'Delete cluster ' + clusterData.basics.name + '?'"
-  [attr.supporting-text]="
-    'This permanently removes the cluster and every workload running on it. This cannot be undone. To confirm, type ' +
-    deleteConfirmationSlug() +
-    ' below.'
-  "
+  supporting-text="This permanently removes the cluster and every workload running on it. This cannot be undone."
   accessible-label="Confirm cluster deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
+  <nldd-text
+    size="sm"
+    line-height="tight"
+    horizontal-alignment="center"
+  >
+    To confirm, type <strong>{{ deleteConfirmationSlug() }}</strong> below.
+  </nldd-text>
   <nldd-spacer size="4"></nldd-spacer>
   <nldd-form-field>
     <nldd-text-field

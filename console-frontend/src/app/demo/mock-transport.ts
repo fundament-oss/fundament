@@ -543,9 +543,12 @@ export default function createDemoTransport(): Transport {
       },
       // Live tail: a line every second or so, off the same set, so the stream
       // button has something to stream. It stops when the page unsubscribes.
-      tailLogs: async function* (req: TailLogsRequest) {
+      async *tailLogs(req: TailLogsRequest) {
         const matching = fx.logLines.filter((line) => logMatches(line, req));
         for (let i = 0; i < 500 && matching.length > 0; i += 1) {
+          // The wait is the pacing: each line is meant to land a second after
+          // the last one, so the awaits have to run in series.
+          // eslint-disable-next-line no-await-in-loop
           await delay(900);
           yield logEntry(matching[i % matching.length], req.clusterId, new Date());
         }

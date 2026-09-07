@@ -63,6 +63,11 @@ const LEVEL_TAG_COLOR: Record<LogLevel, string> = {
   DEBUG: 'neutral',
 };
 
+/* The wire says ERROR and WARN, the screen does not shout. */
+const levelLabel = (level: LogLevel): string => LEVEL_LABEL[level];
+
+const levelTagColor = (level: LogLevel): string => LEVEL_TAG_COLOR[level];
+
 const LEVEL_CHIP_ACTIVE: Record<LogLevel, string> = {
   ERROR:
     'border-danger-300 bg-danger-50 text-danger-700 dark:border-danger-700 dark:bg-danger-950 dark:text-danger-300',
@@ -262,10 +267,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
      once the view is up, since a section that starts wide never flips. */
   readonly filtersCollapsed = signal(false);
 
-  /* The wire says ERROR and WARN, the screen does not shout. */
-  readonly levelLabel = (level: LogLevel): string => LEVEL_LABEL[level];
+  readonly levelLabel = levelLabel;
 
-  readonly levelTagColor = (level: LogLevel): string => LEVEL_TAG_COLOR[level];
+  readonly levelTagColor = levelTagColor;
 
   /* A filter menu is shut most of the time, so each button says what it is
      filtering on. Without that the toolbar is five words that never change and
@@ -475,11 +479,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     // the same row. All levels is the absence of a filter rather than one, and
     // each chosen level gets its own token: you drop them one at a time.
     if (this.selectedLevels().size !== ALL_LEVELS.length) {
-      for (const level of ALL_LEVELS) {
-        if (this.selectedLevels().has(level)) {
-          chips.push({ label: `Level: ${LEVEL_LABEL[level]}`, key: `level:${level}` });
-        }
-      }
+      chips.push(
+        ...ALL_LEVELS.filter((level) => this.selectedLevels().has(level)).map((level) => ({
+          label: `Level: ${LEVEL_LABEL[level]}`,
+          key: `level:${level}`,
+        })),
+      );
     }
     return chips;
   });

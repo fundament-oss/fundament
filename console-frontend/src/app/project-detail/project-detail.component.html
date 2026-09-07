@@ -186,16 +186,19 @@
   appDialogSync
   [show]="showDeleteModal()"
   [attr.text]="'Delete project ' + projectLabel() + '?'"
-  [attr.supporting-text]="
-    'This permanently removes the project and everything in it. This cannot be undone. To confirm, type ' +
-    deleteConfirmationSlug() +
-    ' below.'
-  "
+  supporting-text="This permanently removes the project and everything in it. This cannot be undone."
   accessible-label="Confirm project deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
+  <nldd-text
+    size="sm"
+    line-height="tight"
+    horizontal-alignment="center"
+  >
+    To confirm, type <strong>{{ deleteConfirmationSlug() }}</strong> below.
+  </nldd-text>
   <nldd-spacer size="4"></nldd-spacer>
   <nldd-form-field>
     <nldd-text-field
