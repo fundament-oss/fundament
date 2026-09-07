@@ -111,29 +111,46 @@ func TestBuildClaimIndexAgreesWithClaimOwner(t *testing.T) {
 	}
 }
 
-func TestOwnedByPool(t *testing.T) {
+func TestOwnedBy(t *testing.T) {
 	t.Parallel()
 	pool := poolAt("mine", time.Now())
 	yes, no := true, false
 
-	assert.False(t, ownedByPool(nil, &pool), "no owner refs means not ours")
-	assert.True(t, ownedByPool([]metav1.OwnerReference{{
+	assert.False(t, ownedBy(nil, "StoragePool", &pool), "no owner refs means not ours")
+	assert.True(t, ownedBy([]metav1.OwnerReference{{
 		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &yes,
-	}}, &pool))
+	}}, "StoragePool", &pool))
 
 	// A recreated pool has a new UID; the old refs are not ours.
-	assert.False(t, ownedByPool([]metav1.OwnerReference{{
+	assert.False(t, ownedBy([]metav1.OwnerReference{{
 		Kind: "StoragePool", Name: "mine", UID: "stale-uid", Controller: &yes,
-	}}, &pool))
+	}}, "StoragePool", &pool))
 
-	assert.False(t, ownedByPool([]metav1.OwnerReference{{
+	assert.False(t, ownedBy([]metav1.OwnerReference{{
 		Kind: "StoragePool", Name: "other", UID: "uid-other", Controller: &yes,
-	}}, &pool))
+	}}, "StoragePool", &pool))
 
 	// A non-controller reference is not ownership.
-	assert.False(t, ownedByPool([]metav1.OwnerReference{{
+	assert.False(t, ownedBy([]metav1.OwnerReference{{
 		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &no,
-	}}, &pool))
+	}}, "StoragePool", &pool))
+}
+
+func TestFilesystemDerivedNameIsPrefixed(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "cephfs-shared", FilesystemDerivedName("shared"))
+}
+
+func TestOwnedByChecksKind(t *testing.T) {
+	t.Parallel()
+	pool := poolAt("mine", time.Now())
+	pool.UID = "uid-1"
+	isController := true
+	refs := []metav1.OwnerReference{{
+		Kind: "StoragePool", Name: "mine", UID: "uid-1", Controller: &isController,
+	}}
+	assert.True(t, ownedBy(refs, "StoragePool", &pool))
+	assert.False(t, ownedBy(refs, "BlockStorage", &pool), "same name+UID under another kind is not ours")
 }
 
 func ptr[T any](v T) *T { return &v }

@@ -39,6 +39,8 @@ const (
 var fundamentCRDNames = []string{
 	"disks.storage.fundament.io",
 	"storagepools.storage.fundament.io",
+	"blockstorages.storage.fundament.io",
+	"filestorages.storage.fundament.io",
 }
 
 // rookCRDNames are the Rook kinds the manager starts informers for. The
@@ -48,6 +50,7 @@ var fundamentCRDNames = []string{
 var rookCRDNames = []string{
 	"cephclusters.ceph.rook.io",
 	"cephblockpools.ceph.rook.io",
+	"cephfilesystems.ceph.rook.io",
 }
 
 // install runs the full install lifecycle: the rook-ceph chart, this plugin's

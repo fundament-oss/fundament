@@ -48,3 +48,42 @@ func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace str
 		VolumeBindingMode:    &[]storagev1.VolumeBindingMode{storagev1.VolumeBindingImmediate}[0],
 	}
 }
+
+// CephFSProvisioner is the CephFS CSI driver name for a Rook operator in
+// rookNamespace; same registration rule as RBDProvisioner.
+func CephFSProvisioner(rookNamespace string) string {
+	return rookNamespace + ".cephfs.csi.ceph.com"
+}
+
+// RenderCephFSStorageClass builds the CephFS StorageClass. fsName is the
+// CephFilesystem's name; the pool parameter must name Rook's derived data pool
+// <fsName>-data0 or provisioning fails.
+func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace string) *storagev1.StorageClass {
+	reclaim := corev1.PersistentVolumeReclaimDelete
+	allowExpansion := true
+
+	return &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Provisioner:   CephFSProvisioner(rookNamespace),
+		ReclaimPolicy: &reclaim,
+		// The csi.storage.k8s.io/*-secret-name keys name the Rook-managed Secrets
+		// the CSI driver looks up; no credential is in this file.
+		Parameters: map[string]string{ //nolint:gosec // G101: CSI parameter names, not credentials
+			"clusterID": clusterNamespace,
+			"fsName":    fsName,
+			"pool":      fsName + "-data0",
+			"csi.storage.k8s.io/provisioner-secret-name":            "rook-csi-cephfs-provisioner",
+			"csi.storage.k8s.io/provisioner-secret-namespace":       clusterNamespace,
+			"csi.storage.k8s.io/node-stage-secret-name":             "rook-csi-cephfs-node",
+			"csi.storage.k8s.io/node-stage-secret-namespace":        clusterNamespace,
+			"csi.storage.k8s.io/node-publish-secret-name":           "rook-csi-cephfs-node",
+			"csi.storage.k8s.io/node-publish-secret-namespace":      clusterNamespace,
+			"csi.storage.k8s.io/controller-expand-secret-name":      "rook-csi-cephfs-provisioner",
+			"csi.storage.k8s.io/controller-expand-secret-namespace": clusterNamespace,
+		},
+		AllowVolumeExpansion: &allowExpansion,
+		VolumeBindingMode:    &[]storagev1.VolumeBindingMode{storagev1.VolumeBindingImmediate}[0],
+	}
+}
