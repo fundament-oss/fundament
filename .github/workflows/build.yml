@@ -96,6 +96,9 @@ jobs:
           - image-name: kube-api-proxy
             dockerfile: kube-api-proxy/Dockerfile
             context: "."
+          - image-name: plugin-controller
+            dockerfile: plugin-controller/Dockerfile
+            context: "."
           - image-name: plugin-proxy
             dockerfile: plugin-proxy/Dockerfile
             context: "."
