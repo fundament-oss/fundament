@@ -187,11 +187,15 @@
   </nldd-card>
 
   <!-- Decision sheet: rejecting, or sending the version back for changes -->
+  <!-- (close) keeps `showDecisionSheet` in step with the dismissals the sheet makes on
+       its own (Escape, backdrop click). Without it the signal stays true, so reject and
+       request-changes silently stop opening the sheet. -->
   <nldd-sheet
     #decisionSheet
     [attr.accessible-label]="decisionMode() === 'changes' ? 'Request changes' : 'Reject submission'"
     placement="right"
     width="460px"
+    (close)="closeDecision()"
   >
     <nldd-page sticky-header="" sticky-footer="">
       <div slot="header" class="flex items-center justify-between p-4">
@@ -221,10 +225,18 @@
 
           <nldd-form-field label="Reason for rejection">
             <nldd-dropdown>
+              <!-- The options bind their selected state rather than carrying it in the
+                   markup: reopening the sheet in the same mode reuses this <select>, so a
+                   static `selected` would leave the previous reason on screen while
+                   openDecision() has already cleared the signal behind it. -->
               <select id="reject-reason" (change)="onReasonChange($event)">
-                <option value="" disabled selected>Select a reason…</option>
+                <option value="" disabled [selected]="selectedReason() === ''">
+                  Select a reason…
+                </option>
                 @for (reason of rejectionReasons; track reason.value) {
-                  <option [value]="reason.value">{{ reason.label }}</option>
+                  <option [value]="reason.value" [selected]="reason.value === selectedReason()">
+                    {{ reason.label }}
+                  </option>
                 }
               </select>
             </nldd-dropdown>

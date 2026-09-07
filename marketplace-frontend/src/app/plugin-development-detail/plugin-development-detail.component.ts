@@ -191,7 +191,7 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
 
     const cluster = this.clusters().find((c) => c.id === clusterId);
     this.toastService.success(
-      `Sideloading ${plugin.displayName} v${version} onto ${cluster?.name ?? 'the selected cluster'}`,
+      `Sideloading ${plugin.displayName} ${version} onto ${cluster?.name ?? 'the selected cluster'}`,
     );
     this.closeSideload();
   }

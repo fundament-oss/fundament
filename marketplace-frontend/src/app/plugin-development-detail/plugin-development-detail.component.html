@@ -23,7 +23,7 @@
       <div>
         <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
         <p class="mt-1 text-gray-600 dark:text-gray-300">
-          <span class="font-mono">v{{ plugin.version }}</span>
+          <span class="font-mono">{{ plugin.version }}</span>
           · {{ plugin.name }}
         </p>
       </div>
@@ -142,7 +142,7 @@
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
             Version
           </dt>
-          <dd class="mt-2 font-mono text-sm">v{{ plugin.version }}</dd>
+          <dd class="mt-2 font-mono text-sm">{{ plugin.version }}</dd>
         </div>
         <div>
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
@@ -238,7 +238,16 @@
   </nldd-card>
 
   <!-- Sideload sheet -->
-  <nldd-sheet #sideloadSheet accessible-label="Sideload plugin" placement="right" width="460px">
+  <!-- (close) keeps `showSideloadSheet` in step with the dismissals the sheet makes on
+       its own (Escape, backdrop click). Without it the signal stays true, so opening
+       the sheet again is a no-op and the sideload action is lost for good. -->
+  <nldd-sheet
+    #sideloadSheet
+    accessible-label="Sideload plugin"
+    placement="right"
+    width="460px"
+    (close)="closeSideload()"
+  >
     <nldd-page sticky-header="" sticky-footer="">
       <div slot="header" class="flex items-center justify-between px-6 py-4">
         <h2 class="text-lg font-semibold">Sideload this plugin</h2>
@@ -297,7 +306,7 @@
             </select>
           </nldd-dropdown>
           <nldd-form-field-help-text>
-            v{{ selectedVersion() }} will be installed onto this cluster.
+            {{ selectedVersion() }} will be installed onto this cluster.
           </nldd-form-field-help-text>
         </nldd-form-field>
       </nldd-simple-section>

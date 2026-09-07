@@ -28,3 +28,6 @@ charts/fundament/values-gardener-local.yaml
 
 # Sandbox plugin config recorded by recipes like `just openfsc::operator-push`
 plugins/*/.sandbox-config
+
+# Angular CLI cache, when a build is run from the repo root
+/.angular/cache

@@ -233,7 +233,7 @@
 
           <!-- Spotlight: the most recently published listing -->
           @if (spotlightPlugin(); as p) {
-            <a [routerLink]="['/plugins', p.name]" class="group mb-5 block">
+            <a [routerLink]="['/plugins', p.id]" class="group mb-5 block">
               <nldd-card
                 class="hover:ring-accent-200 dark:hover:ring-accent-800 block transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
               >

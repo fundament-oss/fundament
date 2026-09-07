@@ -14,6 +14,7 @@ import {
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import {
   EMBED_NAVIGATE_MESSAGE,
+  EMBED_NAVIGATED_MESSAGE,
   EMBED_READY_MESSAGE,
   MARKETPLACE_EMBED_BASE,
 } from './presentation.tokens';
@@ -395,11 +396,49 @@ export default class PresentationService {
     // that could not hear it, so the deck moved on while the frame still
     // showed the previous slide's screen and the drive script ran against it.
     await this.embedReady;
+    // Listening starts before the message goes out: the frame can route and
+    // report back within the same task, and an acknowledgement posted before
+    // this listener exists would be missed and cost the full timeout.
+    const navigated = PresentationService.waitForEmbedNavigation(path);
     frame.contentWindow?.postMessage(
       { type: EMBED_NAVIGATE_MESSAGE, path },
       window.location.origin,
     );
+    // Routing inside the frame is asynchronous, so returning here would hand the
+    // drive script a document still showing the previous slide's screen.
+    await navigated;
     return frame.contentDocument;
+  }
+
+  /**
+   * Resolves once the framed app reports it has routed to `path` and rendered it.
+   *
+   * Times out the way loadEmbed does, and for the same reason: a slide driven
+   * against a screen that never arrived beats a deck that stops advancing.
+   */
+  private static waitForEmbedNavigation(path: string): Promise<void> {
+    return new Promise((resolve) => {
+      // One exit: abort. It unregisters the listener, stops the timer and
+      // resolves, whether the frame reported in or the timeout ran out.
+      const listening = new AbortController();
+      const timer = setTimeout(() => listening.abort(), PresentationService.EMBED_TIMEOUT_MS);
+      listening.signal.addEventListener('abort', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      window.addEventListener(
+        'message',
+        (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          const data = event.data as { type?: string; path?: string } | null;
+          // The path is checked too: a slide the deck already left behind can
+          // still have an acknowledgement in flight.
+          if (data?.type !== EMBED_NAVIGATED_MESSAGE || data.path !== path) return;
+          listening.abort();
+        },
+        { signal: listening.signal },
+      );
+    });
   }
 
   /**

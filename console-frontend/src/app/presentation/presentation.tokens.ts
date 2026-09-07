@@ -41,9 +41,13 @@ export const MARKETPLACE_EMBED_BASE = '/marketplace/';
  * so keep the strings in step.
  *
  * `navigate` moves the frame to another marketplace route without reloading it;
- * `ready` is the frame telling the deck that Angular has bootstrapped, which
- * happens well after the iframe's own `load` event.
+ * `navigated` is the frame reporting that it has routed there and rendered, so
+ * the deck knows when a drive script may start querying its document; `ready` is
+ * the frame telling the deck that Angular has bootstrapped, which happens well
+ * after the iframe's own `load` event.
  */
 export const EMBED_NAVIGATE_MESSAGE = 'fundament-demo:navigate';
+
+export const EMBED_NAVIGATED_MESSAGE = 'fundament-demo:navigated';
 
 export const EMBED_READY_MESSAGE = 'fundament-demo:ready';

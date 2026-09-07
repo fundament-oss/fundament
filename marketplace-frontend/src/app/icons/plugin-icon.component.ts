@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { PlatformLocation } from '@angular/common';
 
 /**
- * Renders a plugin's SVG logo (from /img/plugins/<name>.svg) as a CSS mask so it
- * can be tinted with `text-*`/`bg-current`, since a plain `<img>` can't inherit
- * page color the way an inline `fill="currentColor"` SVG can.
+ * Renders a plugin's SVG logo (from <base href>img/plugins/<name>.svg) as a CSS
+ * mask so it can be tinted with `text-*`/`bg-current`, since a plain `<img>`
+ * can't inherit page color the way an inline `fill="currentColor"` SVG can.
  */
 @Component({
   selector: 'app-plugin-icon',
@@ -35,8 +36,16 @@ export default class PluginIconComponent {
 
   protected innerClass = computed(() => `${this.iconColor()} block h-full w-full bg-current`);
 
+  // Assets live under the app's base href, which the demo build moves to
+  // /marketplace/ so the bundle can be served from inside the console demo. A
+  // root-absolute /img/plugins/... would leave that subtree and silently pick up
+  // whatever the host app happens to serve there. Read from the DOM rather than
+  // through Location.prepareExternalUrl(), which the demo's hash routing would
+  // turn into a fragment.
+  private readonly baseHref = inject(PlatformLocation).getBaseHrefFromDOM().replace(/\/+$/, '');
+
   protected maskStyle = computed(() => {
-    const url = `url(/img/plugins/${this.name()}.svg)`;
+    const url = `url(${this.baseHref}/img/plugins/${this.name()}.svg)`;
     return {
       'mask-image': url,
       '-webkit-mask-image': url,
