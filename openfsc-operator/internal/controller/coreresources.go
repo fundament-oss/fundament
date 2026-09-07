@@ -45,9 +45,15 @@ func groupCAResources(inst *openfscv1.FSCInstallation) []*unstructured.Unstructu
 		// CA signs, so it must match the leaf subject organization.
 		"subject":     map[string]any{"organizations": []any{peerOrganization(inst)}},
 		"secretName":  groupCASecret,
+		// RSA-4096 is Shor-vulnerable regardless of key size; cert-manager has no
+		// ML-DSA support (its PrivateKeyAlgorithm enum is RSA/ECDSA/Ed25519 only,
+		// and its signing code can't use a non-RSA/ECDSA/Ed25519 CA key even if
+		// supplied out-of-band), so we can't change the algorithm today. Keeping
+		// the lifetime short bounds how long anything this CA signs stays on RSA
+		// and forces a checkpoint to reassess before committing again. See FUN-21.
 		"privateKey":  map[string]any{"algorithm": "RSA", "size": int64(4096)},
-		"duration":    "87600h", // 10 years
-		"renewBefore": "8760h",  // 1 year
+		"duration":    "26280h", // 3 years
+		"renewBefore": "2160h",  // 90 days
 		"issuerRef":   map[string]any{"name": groupSelfSignedIssuer, "kind": "Issuer"},
 	})
 
