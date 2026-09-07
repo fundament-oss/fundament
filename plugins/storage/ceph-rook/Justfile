@@ -31,7 +31,27 @@ test:
         exit 1
     fi
 
+    # A BlockStorage with no OSD capacity goes Degraded, not Ready: report why.
+    echo "Waiting for BlockStorage to become Ready..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Ready blockstorage/test-block --timeout=300s; then
+        echo >&2
+        echo "BlockStorage did not become Ready. Status:" >&2
+        kubectl get blockstorage test-block -o jsonpath='{.status.phase}: {.status.message}{"\n"}' >&2
+        exit 1
+    fi
+
+    # A FileStorage with no OSD capacity goes Degraded, not Ready: report why.
+    echo "Waiting for FileStorage to become Ready..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Ready filestorage/test-file --timeout=300s; then
+        echo >&2
+        echo "FileStorage did not become Ready. Status:" >&2
+        kubectl get filestorage test-file -o jsonpath='{.status.phase}: {.status.message}{"\n"}' >&2
+        exit 1
+    fi
+
     kubectl get storagepool test-pool
+    kubectl get blockstorage test-block
+    kubectl get filestorage test-file
     kubectl get storageclass
 
 # Remove sample StoragePool

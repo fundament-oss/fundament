@@ -119,10 +119,27 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	if err := (&StoragePoolReconciler{
 		Client:           mgr.GetClient(),
 		ClusterNamespace: p.cfg.ClusterNamespace,
-		RookNamespace:    p.cfg.RookNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup storagepool reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	if err := (&BlockStorageReconciler{
+		Client:           mgr.GetClient(),
+		ClusterNamespace: p.cfg.ClusterNamespace,
+		RookNamespace:    p.cfg.RookNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup blockstorage reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	if err := (&FileStorageReconciler{
+		Client:           mgr.GetClient(),
+		ClusterNamespace: p.cfg.ClusterNamespace,
+		RookNamespace:    p.cfg.RookNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup filestorage reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
 	host.ReportReady()

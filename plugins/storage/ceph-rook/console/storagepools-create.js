@@ -59,7 +59,7 @@ if (loadError) {
         <input id="pool-name" name="name" type="text" class="plugin-input"
                placeholder="default" required
                pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="63" />
-        <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass.</span>
+        <span class="plugin-hint">Lowercase letters, digits and dashes.</span>
       </div>
 
       <div class="plugin-field">
@@ -71,17 +71,6 @@ if (loadError) {
           unclaimed, not that it is empty — a disk marked as carrying a filesystem holds data,
           and one marked with nothing may still hold data the last node probe missed.
         </span>
-      </div>
-
-      <div class="plugin-field">
-        <label class="plugin-label" for="replication">Replication</label>
-        <select id="replication" name="replication" class="plugin-select">
-          <option value="auto" selected>auto (recommended)</option>
-          <option value="1">1 — no replication</option>
-          <option value="2">2 — two replicas</option>
-          <option value="3">3 — three replicas</option>
-        </select>
-        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
       </div>
 
       <div class="plugin-actions">
@@ -125,8 +114,6 @@ if (loadError) {
       return;
     }
 
-    const replication = form.querySelector('[name="replication"]').value;
-
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating…';
 
@@ -137,7 +124,7 @@ if (loadError) {
           apiVersion: 'storage.fundament.io/v1alpha1',
           kind: 'StoragePool',
           metadata: { name },
-          spec: { disks: checkedDisks, replication },
+          spec: { disks: checkedDisks },
         },
       );
       navigateToDetail(name);

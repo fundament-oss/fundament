@@ -5,7 +5,6 @@ import {
   errorRow,
   wireRowLinks,
   navigateToCreate,
-  humanizeBytes,
 } from './_shared.js';
 
 await loadSdk();
@@ -19,11 +18,11 @@ try {
   const { items } = await fundament.k8s.list({
     group: 'storage.fundament.io',
     version: 'v1alpha1',
-    resource: 'storagepools',
+    resource: 'filestorages',
   });
 
   if (!items || items.length === 0) {
-    tbody.innerHTML = emptyRow(5, 'No storage pools.');
+    tbody.innerHTML = emptyRow(7, 'No file storage.');
   } else {
     tbody.innerHTML = items
       .map((item) => {
@@ -33,8 +32,10 @@ try {
           <tr data-name="${escapeHtml(name)}">
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
             <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
-            <td>${escapeHtml(String(status.selectedDiskCount ?? '—'))}</td>
-            <td>${escapeHtml(humanizeBytes(status.rawCapacityBytes ?? 0))}</td>
+            <td>${escapeHtml(status.storageClassName ?? '—')}</td>
+            <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
+            <td>${escapeHtml(String(item.spec?.metadataServers ?? 1))}</td>
+            <td>${escapeHtml(status.failureDomain ?? '—')}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
       })
@@ -42,5 +43,5 @@ try {
     wireRowLinks(tbody);
   }
 } catch (err) {
-  tbody.innerHTML = errorRow(5, err);
+  tbody.innerHTML = errorRow(7, err);
 }
