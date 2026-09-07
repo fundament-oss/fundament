@@ -81,12 +81,6 @@ setup-certs:
 
 # --- Deployment commands ---
 
-# Update helm dependencies
-helm-deps:
-    helm dependency update deploy/charts/ingress-nginx
-    helm dependency update deploy/charts/db
-    helm dependency update deploy/charts/fundament
-
 # Deploy to local k3d cluster (development mode, keeps resources on exit)
 dev *flags:
     SKAFFOLD_DEFAULT_REPO="localhost:5111" \
