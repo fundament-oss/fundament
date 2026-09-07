@@ -15,6 +15,7 @@ import connectErrorMessage from '../../connect/error';
 import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
 import { viewSlug } from '../shared/section-views';
 import { CATALOG_PATH } from './catalog-views';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 /**
  * The menu of the catalog section, in a component of its own because two pages
@@ -91,11 +92,7 @@ export default class CatalogNavComponent implements OnInit {
 
   /** A real link, routed in-app unless the click asks for a new tab or window. */
   goToView(event: Event, category: AssetCategory | 'all'): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.viewPath(category));

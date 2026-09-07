@@ -67,8 +67,10 @@ export default class ApiKeysComponent implements OnInit {
     const wasOpen = this.isOpen;
     this.isOpen = open;
     // The sheet stays mounted between visits, so a reopen has to fetch: a key
-    // made or revoked elsewhere would otherwise be missing from the list.
-    if (open && !wasOpen && this.apiKeys().length > 0) this.loadApiKeys();
+    // made or revoked elsewhere would otherwise be missing from the list. An
+    // empty cache is the case that needs it most — no keys yet, or a first load
+    // that failed — so the reopen refetches whatever the list currently holds.
+    if (open && !wasOpen) this.loadApiKeys();
   }
 
   get show(): boolean {

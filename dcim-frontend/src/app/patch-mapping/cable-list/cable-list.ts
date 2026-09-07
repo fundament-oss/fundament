@@ -28,6 +28,7 @@ import {
 } from '../cable.model';
 import { PATCH_MAPPING_PATH } from '../patch-mapping-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
+import opensElsewhere from '../../shared/opens-elsewhere';
 
 interface DeviceOption {
   id: string;
@@ -202,11 +203,7 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   /** A real link, routed in-app unless the click asks for a new tab or window. */
   selectView(event: Event, path: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(path);
@@ -390,8 +387,8 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
       c.bSide.deviceName,
       c.bSide.portName,
       c.bSide.portType,
-      c.status,
-      c.type,
+      c.status ?? '',
+      c.type ?? '',
       c.color ?? '',
       c.length != null ? String(c.length) : '',
       c.description ?? '',

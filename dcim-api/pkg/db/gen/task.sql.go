@@ -64,15 +64,17 @@ func (q *Queries) TaskDelete(ctx context.Context, arg TaskDeleteParams) (int64, 
 }
 
 const taskGetByID = `-- name: TaskGetByID :one
-SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+SELECT dcim.tasks.id, dcim.tasks.title, dcim.tasks.description, dcim.tasks.status,
+       dcim.tasks.priority, dcim.tasks.blocked_reason, dcim.tasks.assignee_id,
+       dcim.tasks.due_date, dcim.tasks.location, dcim.tasks.created,
        COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
-FROM dcim.tasks t
+FROM dcim.tasks
 LEFT JOIN LATERAL (
-  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
-  FROM dcim.task_tags tt
-  WHERE tt.task_id = t.id
+  SELECT array_agg(dcim.task_tags.tag ORDER BY dcim.task_tags.tag) AS list
+  FROM dcim.task_tags
+  WHERE dcim.task_tags.task_id = dcim.tasks.id
 ) tags ON TRUE
-WHERE t.id = $1 AND t.deleted IS NULL
+WHERE dcim.tasks.id = $1 AND dcim.tasks.deleted IS NULL
 `
 
 type TaskGetByIDParams struct {
@@ -113,21 +115,25 @@ func (q *Queries) TaskGetByID(ctx context.Context, arg TaskGetByIDParams) (TaskG
 }
 
 const taskList = `-- name: TaskList :many
-SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+SELECT dcim.tasks.id, dcim.tasks.title, dcim.tasks.description, dcim.tasks.status,
+       dcim.tasks.priority, dcim.tasks.blocked_reason, dcim.tasks.assignee_id,
+       dcim.tasks.due_date, dcim.tasks.location, dcim.tasks.created,
        COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
-FROM dcim.tasks t
+FROM dcim.tasks
 LEFT JOIN LATERAL (
-  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
-  FROM dcim.task_tags tt
-  WHERE tt.task_id = t.id
+  SELECT array_agg(dcim.task_tags.tag ORDER BY dcim.task_tags.tag) AS list
+  FROM dcim.task_tags
+  WHERE dcim.task_tags.task_id = dcim.tasks.id
 ) tags ON TRUE
-WHERE t.deleted IS NULL
-  AND ($1::text IS NULL OR t.status = $1::text)
-  AND ($2::text IS NULL OR t.priority = $2::text)
+WHERE dcim.tasks.deleted IS NULL
+  AND ($1::text IS NULL OR dcim.tasks.status = $1::text)
+  AND ($2::text IS NULL OR dcim.tasks.priority = $2::text)
   AND ($3::text IS NULL OR EXISTS (
-        SELECT 1 FROM dcim.task_tags f WHERE f.task_id = t.id AND f.tag = $3::text))
-  AND ($4::uuid IS NULL OR t.assignee_id = $4::uuid)
-ORDER BY t.created DESC
+        SELECT 1 FROM dcim.task_tags
+        WHERE dcim.task_tags.task_id = dcim.tasks.id
+          AND dcim.task_tags.tag = $3::text))
+  AND ($4::uuid IS NULL OR dcim.tasks.assignee_id = $4::uuid)
+ORDER BY created DESC
 `
 
 type TaskListParams struct {

@@ -746,12 +746,20 @@ export default function createDemoTransport(): Transport {
     router.service(PhysicalConnectionService, {
       createPhysicalConnection: async (request) => {
         await delay();
+        // Everything the client sends, not just the endpoints: a cable created
+        // here with a type, a status, a colour or a label came back stripped of
+        // all four, so it never showed up in the shopping list or the badge.
+        // The update handler below already keeps them.
         const connection = create(PhysicalConnectionSchema, {
           id: nextId(),
           sourcePlacementId: request.sourcePlacementId,
           sourcePortDefinitionId: request.sourcePortDefinitionId,
           targetPlacementId: request.targetPlacementId,
           targetPortDefinitionId: request.targetPortDefinitionId,
+          cableType: request.cableType,
+          status: request.status,
+          color: request.color,
+          label: request.label,
           notes: request.notes,
           created: now(),
         });

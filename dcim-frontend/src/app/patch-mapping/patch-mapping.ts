@@ -31,6 +31,7 @@ import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
 import openOnCreateRequest from '../shell/create-request';
 import PatchGraphService from './patch-graph.service';
+import CableAttentionService from './cable-attention.service';
 import OverlayService from '../shell/overlay.service';
 
 /** A selectable device (placement) in the active datacenter. */
@@ -49,6 +50,10 @@ export interface SiteOption {
 })
 export default class PatchMappingComponent implements OnInit {
   private readonly patchApi = inject(PatchMappingApiService);
+
+  /** The section-list badge counts cable states, so a cable written here is news
+   *  to it. Nothing else watches the cables on its behalf. */
+  private readonly cableAttention = inject(CableAttentionService);
 
   /** The devices, ports and cables of one data center, shared with the cable
    *  form the shell holds. */
@@ -339,7 +344,11 @@ export default class PatchMappingComponent implements OnInit {
     firstValueFrom(this.patchApi.deletePhysicalConnection(target.id))
       .then(() => {
         this.deleteCable.set(null);
-        return this.graph.load(this.selectedDcId());
+        this.cableAttention.refresh();
+        // The cable's own site, not the one selected: in the All-locations view
+        // selectedDcId() is '', so reloading that read nothing back and the
+        // deleted row stayed on screen. Same rule updateCableStatuses follows.
+        return this.graph.load(target.dcId);
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
@@ -369,9 +378,12 @@ export default class PatchMappingComponent implements OnInit {
         firstValueFrom(this.patchApi.updateCable({ ...cable, status: event.status })),
       ),
     )
-      .then(() =>
-        Promise.all([...new Set(targets.map((c) => c.dcId))].map((id) => this.graph.load(id))),
-      )
+      .then(() => {
+        this.cableAttention.refresh();
+        return Promise.all(
+          [...new Set(targets.map((c) => c.dcId))].map((id) => this.graph.load(id)),
+        );
+      })
       .then(() => undefined)
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));

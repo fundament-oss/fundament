@@ -24,6 +24,7 @@ import { ConfigService } from '../../config.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
+import opensElsewhere from '../../opens-elsewhere';
 
 function checkIsConditionsField(key: string, value: unknown): boolean {
   return key === 'conditions' && Array.isArray(value);
@@ -197,7 +198,7 @@ export default class ResourceDetailComponent implements OnInit {
    *  to, or the organization when the plugin is installed there. The way back to
    *  the list is a link in the page itself. */
   backPath = computed(() => {
-    const projectId = this.route.snapshot.parent?.parent?.parent?.params['id'];
+    const projectId = this.route.snapshot.parent?.params['id'];
     return projectId ? `/projects/${projectId}` : '/';
   });
 
@@ -209,9 +210,7 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   onBackClick(event: Event) {
-    // Let the browser handle the modified clicks that mean "open elsewhere".
-    const e = event as MouseEvent;
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.router.navigate(this.listLink, { relativeTo: this.route });
   }

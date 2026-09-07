@@ -9,7 +9,6 @@ import {
   EventEmitter,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  isDevMode,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
@@ -34,13 +33,6 @@ import '@nldd/design-system/combo-box';
 
 const stringToRole = (value: string): ProjectMemberRole =>
   value === 'admin' ? ProjectMemberRole.ADMIN : ProjectMemberRole.VIEWER;
-
-/** TEMPORARY, dev only: this environment has nobody left to add, so the add form
- *  could never be seen. Delete before merging. */
-const SAMPLE_USERS = [
-  { id: 'sample-user-1', name: 'Sanne Bakker' },
-  { id: 'sample-user-2', name: 'Omar Aydin' },
-];
 
 /**
  * Adding someone to a project, from wherever you were. The shell owns this sheet
@@ -184,7 +176,7 @@ export default class AddProjectMemberSheetComponent {
     const available = (organization?.members ?? [])
       .filter((member) => member.externalRef && !inProject.has(member.userId))
       .map((member) => ({ id: member.userId, name: member.name }));
-    this.availableUsers.set(available.length === 0 && isDevMode() ? SAMPLE_USERS : available);
+    this.availableUsers.set(available);
     this.projectNamespaces.set((namespaces?.namespaces ?? []).map((namespace) => namespace.name));
   }
 

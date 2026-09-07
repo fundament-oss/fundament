@@ -4,8 +4,8 @@ import {
   OnInit,
   signal,
   computed,
+  effect,
   ChangeDetectionStrategy,
-  isDevMode,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
@@ -26,6 +26,7 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatTimeAgo } from '../utils/date-format';
 import '@nldd/design-system/search-field';
+import opensElsewhere from '../opens-elsewhere';
 
 interface OrganizationMember {
   id: string;
@@ -41,73 +42,6 @@ interface OrganizationMember {
 /** 'admin' reads as a value, 'Admin' as a label. The tag shows the label. */
 const permissionLabel = (permission: string): string =>
   permission ? permission[0].toUpperCase() + permission.slice(1) : permission;
-
-/** TEMPORARY, dev only. Delete together with the branch in loadMembers(). */
-const sampleMembers = (currentUserId?: string): OrganizationMember[] => {
-  const daysAgo = (days: number) => new Date(Date.now() - days * 86400000);
-  return [
-    {
-      id: 'sample-1',
-      name: '',
-      email: 'nieuw.medewerker@example.com',
-      externalRef: '',
-      permission: 'viewer',
-      status: 'pending',
-      isCurrentUser: false,
-      created: daysAgo(0.2),
-    },
-    {
-      id: 'sample-2',
-      name: '',
-      email: 'a.de.jong@example.com',
-      externalRef: '',
-      permission: 'admin',
-      status: 'pending',
-      isCurrentUser: false,
-      created: daysAgo(4),
-    },
-    {
-      id: 'sample-3',
-      name: 'Bart van de Biezen',
-      email: 'bart@example.com',
-      externalRef: 'sso|bart',
-      permission: 'admin',
-      status: 'accepted',
-      isCurrentUser: true,
-      created: daysAgo(420),
-    },
-    {
-      id: 'sample-4',
-      name: 'Nadia el Amrani',
-      email: 'nadia.el.amrani@example.com',
-      externalRef: 'sso|nadia',
-      permission: 'viewer',
-      status: 'accepted',
-      isCurrentUser: false,
-      created: daysAgo(3),
-    },
-    {
-      id: 'sample-5',
-      name: 'Jean-Pierre van der Meer-Bakhuizen',
-      email: 'jp.vandermeer.bakhuizen@een-hele-lange-domeinnaam.example.com',
-      externalRef: 'sso|jp',
-      permission: 'admin',
-      status: 'accepted',
-      isCurrentUser: false,
-      created: daysAgo(96),
-    },
-    {
-      id: 'sample-6',
-      name: 'Li Wei',
-      email: 'li.wei@example.com',
-      externalRef: 'sso|liwei',
-      permission: 'viewer',
-      status: 'accepted',
-      isCurrentUser: false,
-      created: daysAgo(1),
-    },
-  ].map((m) => ({ ...m, isCurrentUser: m.isCurrentUser && !!currentUserId }));
-};
 
 /** Name or email; a member without a name is only findable by their address. */
 const filterByQuery = (members: OrganizationMember[], query: string): OrganizationMember[] => {
@@ -309,6 +243,19 @@ export default class OrganizationMembersComponent implements OnInit {
     this.loadMembers();
   }
 
+  /** What membersChanged stood at when this list was built. An effect runs once
+   *  on creation, and ngOnInit already loads, so only a later bump is news. */
+  private seenMembersChanged = this.organizationDataService.membersChanged();
+
+  /** The sheet that invites one lives in the shell and may well be standing over
+   *  this very list, so the list hears about the invitation from there. */
+  private readonly reloadOnInvite = effect(() => {
+    const changed = this.organizationDataService.membersChanged();
+    if (changed === this.seenMembersChanged) return;
+    this.seenMembersChanged = changed;
+    this.loadMembers();
+  });
+
   async loadMembers() {
     this.isLoading.set(true);
     this.error.set(null);
@@ -328,13 +275,7 @@ export default class OrganizationMembersComponent implements OnInit {
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 
-      // TEMPORARY, dev only: this environment returns members, but none with a
-      // status the page shows, so the list layout can never be seen. Delete
-      // before merging.
-      const shown = members.filter((m) => m.status === 'accepted' || m.status === 'pending');
-      this.allMembers.set(
-        shown.length === 0 && isDevMode() ? sampleMembers(currentUser?.id) : members,
-      );
+      this.allMembers.set(members);
     } catch (err) {
       this.error.set(
         err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
@@ -455,11 +396,7 @@ export default class OrganizationMembersComponent implements OnInit {
   /** Routes client-side while leaving the control a real link, so middle-click
    *  and "open in new tab" keep working. */
   openPermissions(event: Event): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo('/members/permissions');
   }

@@ -35,6 +35,7 @@ import CatalogNavComponent from '../catalog-nav';
 import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
 import OverlayService from '../../shell/overlay.service';
+import opensElsewhere from '../../shared/opens-elsewhere';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -238,11 +239,7 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
 
   /** Same trade as the list rows: a real link, routed in-app without modifiers. */
   openAsset(event: Event, id: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(`/inventory/${id}`);

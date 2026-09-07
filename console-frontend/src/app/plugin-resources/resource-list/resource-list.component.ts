@@ -28,6 +28,7 @@ import {
   crdRefToLabel,
   kindToLabel,
 } from '../crd-schema.utils';
+import opensElsewhere from '../../opens-elsewhere';
 
 function buildDetailLink(resource: KubeResource): string[] {
   return ['.', resource.metadata.name];
@@ -114,7 +115,7 @@ export default class ResourceListComponent implements OnInit {
   /** Where the back button leads: the project these resources belong to, or the
    *  organization when the plugin is installed there rather than in a project. */
   backPath = computed(() => {
-    const projectId = this.route.snapshot.parent?.parent?.params['id'];
+    const projectId = this.route.snapshot.parent?.params['id'];
     return projectId ? `/projects/${projectId}` : '/';
   });
 
@@ -222,9 +223,7 @@ export default class ResourceListComponent implements OnInit {
    * do a full page load. Anything with a modifier is left to the browser.
    */
   protected onDetailClick(event: MouseEvent, resource: KubeResource): void {
-    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
-      return;
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.router.navigate(buildDetailLink(resource), {
       relativeTo: this.route,

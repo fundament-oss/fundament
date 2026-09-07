@@ -29,6 +29,7 @@ import {
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
+import opensElsewhere from '../opens-elsewhere';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -387,21 +388,13 @@ export default class ProjectMemberSheetComponent implements OnInit {
   }
 
   openNamespaces(event: Event): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo(`/projects/${this.projectId()}/namespaces`);
   }
 
   openOrganizationMembers(event: Event): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo('/members');
   }

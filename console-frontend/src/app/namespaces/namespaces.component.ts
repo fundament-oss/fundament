@@ -25,6 +25,7 @@ import { mockBindingsFor } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
+import opensElsewhere from '../opens-elsewhere';
 
 @Component({
   selector: 'app-namespaces',
@@ -123,11 +124,7 @@ export default class NamespacesComponent implements OnInit {
   /** Routes client-side while leaving the row a real link, so middle-click and
    *  "open in new tab" keep working. */
   openNamespace(event: Event, name: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo(`/projects/${this.projectId()}/namespaces/${name}`);
   }

@@ -25,5 +25,6 @@ export function roundsMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 }
 
 /** A person in an address: their name, lowercase, spaces closed up. Readable
- *  beats unique here, and the id is accepted just as well. */
-export const personSlug = (name: string): string => name.toLowerCase().replace(/\s+/g, '-');
+ *  beats unique here, and the id is accepted just as well. Same rule a view
+ *  label follows, so it is the same function. */
+export { viewSlug as personSlug } from '../shared/section-views';

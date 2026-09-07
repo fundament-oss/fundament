@@ -48,6 +48,7 @@ import RackApiService from '../rack-api.service';
 import { ASSET_CLIENT } from '../../../connect/tokens';
 import connectErrorMessage from '../../../connect/error';
 import { categoryToDeviceType, cablePortFromDefinition, parseRackHeight } from '../catalog-helpers';
+import CableAttentionService from '../../patch-mapping/cable-attention.service';
 
 /** A physical connection of this device, rendered in the Connections panel. */
 interface NativeElementRef {
@@ -372,11 +373,18 @@ export default class DeviceDetailComponent implements AfterViewInit, OnDestroy {
     this.showAddPortForm.set(false);
   }
 
+  private readonly cableAttention = inject(CableAttentionService);
+
   disconnectCable(portId: string): void {
     const cable = this.portCableMap().get(portId);
     if (!cable) return;
     firstValueFrom(this.patchApi.deletePhysicalConnection(cable.id))
-      .then(() => this.loadDevice(this.deviceId()))
+      .then(() => {
+        // Disconnecting is a cable write like any other, and the section-list
+        // badge counts cable states.
+        this.cableAttention.refresh();
+        return this.loadDevice(this.deviceId());
+      })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }

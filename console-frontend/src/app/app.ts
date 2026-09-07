@@ -8,8 +8,6 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  ViewChild,
-  ElementRef,
 } from '@angular/core';
 import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
@@ -26,7 +24,6 @@ import '@nldd/design-system/rich-text';
 import '@nldd/design-system/image';
 import '@nldd/design-system/button';
 import '@nldd/design-system/button-bar';
-import '@nldd/design-system/card';
 import '@nldd/design-system/checkbox';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
@@ -102,6 +99,7 @@ import PluginNavService from './plugin-resources/plugin-nav.service';
 import MetricsHealthService from './metrics-health.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
+import opensElsewhere from './opens-elsewhere';
 
 const reloadApp = () => {
   window.location.reload();
@@ -197,8 +195,6 @@ export default class App implements OnInit {
   /** The walkthrough build narrates its own path through the console, so a
    *  coach-mark pointing at the create button only competes with it. */
   private presentationEnabled = inject(PRESENTATION_ENABLED);
-
-  private clusterNameCache = new Map<string, string>();
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
@@ -305,6 +301,10 @@ export default class App implements OnInit {
       this.currentUser.set(user);
       if (user) {
         this.loadUserOrganizations();
+        // Signing in during the session is the other way to become authenticated;
+        // without this the badge stays "unknown" until the next full load.
+        // start() is idempotent, so an already-running poller is left alone.
+        this.metricsHealth.start();
       }
     });
 
@@ -547,11 +547,7 @@ export default class App implements OnInit {
   /** Keeps `/projects/new` a real address for middle-click and "open in new
    *  tab", while a plain click opens the sheet over the page you are on. */
   openNewProject(event: Event): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.overlays.newProject.set(true);
@@ -567,11 +563,7 @@ export default class App implements OnInit {
   }
 
   navigateFromSidebar(event: Event, path: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.path(path));

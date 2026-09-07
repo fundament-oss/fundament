@@ -16,6 +16,7 @@ import PatchMappingApiService from '../patch-mapping-api.service';
 import DatacenterListService from '../../datacenters/datacenter-list.service';
 import OverlayService from '../../shell/overlay.service';
 import parseValidationError from '../../../connect/validation';
+import CableAttentionService from '../cable-attention.service';
 
 interface NativeElementRef {
   nativeElement: { show?: () => void; hide?: () => void };
@@ -93,6 +94,8 @@ export default class CableSheetComponent {
     this.graph.applyPortsUpdate(this.dcId(), event).catch(() => undefined);
   }
 
+  private readonly cableAttention = inject(CableAttentionService);
+
   protected close(): void {
     this.overlays.closeCable();
   }
@@ -105,6 +108,9 @@ export default class CableSheetComponent {
     request
       .then(() => {
         this.overlays.closeCable();
+        // A cable created or restatused here changes what the section-list badge
+        // counts, and nothing else watches the cables on its behalf.
+        this.cableAttention.refresh();
         return this.graph.load(this.dcId());
       })
       .catch((err) => {

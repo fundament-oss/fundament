@@ -747,7 +747,10 @@ func (x *ListTasksRequest) ClearAssigneeId() {
 type ListTasksRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Status   *TaskStatus
+	Status *TaskStatus
+	// No not_in: [0] — "no priority yet" is a real, storable state (it is the
+	// column default), so it has to be filterable like any other. Presence is
+	// explicit, so an unset field is still "do not filter on priority".
 	Priority *TaskPriority
 	// One tag at a time here: the menu navigates. Combining them is a filter and
 	// that lives above the list.
@@ -2262,12 +2265,12 @@ const file_v1_task_proto_rawDesc = "" +
 	"\aordinal\x182 \x01(\x05R\aordinal\x12\x1c\n" +
 	"\tcompleted\x18< \x01(\bR\tcompleted\x124\n" +
 	"\acreated\x18F \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xe5\x01\n" +
+	"\adeleted\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xec\x01\n" +
 	"\x10ListTasksRequest\x12<\n" +
 	"\x06status\x18\n" +
-	" \x01(\x0e2\x13.dcim.v1.TaskStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12B\n" +
-	"\bpriority\x18\x14 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\bpriority\x12\x17\n" +
-	"\x03tag\x18# \x01(\tB\x05\xaa\x01\x02\b\x01R\x03tag\x12&\n" +
+	" \x01(\x0e2\x13.dcim.v1.TaskStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12@\n" +
+	"\bpriority\x18\x14 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\bpriority\x12 \n" +
+	"\x03tag\x18# \x01(\tB\x0e\xbaH\x06r\x04\x10\x01\x182\xaa\x01\x02\b\x01R\x03tag\x12&\n" +
 	"\vassignee_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeIdJ\x04\b\x1e\x10\x1fR\bcategory\"8\n" +
 	"\x11ListTasksResponse\x12#\n" +
@@ -2278,15 +2281,16 @@ const file_v1_task_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
 	"\x0fGetTaskResponse\x12!\n" +
 	"\x04task\x18\n" +
-	" \x01(\v2\r.dcim.v1.TaskR\x04task\"\xac\x03\n" +
+	" \x01(\v2\r.dcim.v1.TaskR\x04task\"\xbe\x03\n" +
 	"\x11CreateTaskRequest\x12\x1d\n" +
 	"\x05title\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12'\n" +
 	"\vdescription\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x127\n" +
 	"\x06status\x18\x1e \x01(\x0e2\x13.dcim.v1.TaskStatusB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12;\n" +
-	"\bpriority\x18( \x01(\x0e2\x15.dcim.v1.TaskPriorityB\b\xbaH\x05\x82\x01\x02\x10\x01R\bpriority\x12\x12\n" +
-	"\x04tags\x187 \x03(\tR\x04tags\x12,\n" +
+	"\bpriority\x18( \x01(\x0e2\x15.dcim.v1.TaskPriorityB\b\xbaH\x05\x82\x01\x02\x10\x01R\bpriority\x12$\n" +
+	"\x04tags\x187 \x03(\tB\x10\xbaH\r\x92\x01\n" +
+	"\x10\x14\"\x06r\x04\x10\x01\x182R\x04tags\x12,\n" +
 	"\x0eblocked_reason\x189 \x01(\tB\x05\xaa\x01\x02\b\x01R\rblockedReason\x12&\n" +
 	"\vassignee_id\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\x12<\n" +
@@ -2294,15 +2298,16 @@ const file_v1_task_proto_rawDesc = "" +
 	"\blocation\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\blocationJ\x04\b2\x103R\bcategory\"-\n" +
 	"\x12CreateTaskResponse\x12\x17\n" +
 	"\atask_id\x18\n" +
-	" \x01(\tR\x06taskId\"\x9f\x04\n" +
+	" \x01(\tR\x06taskId\"\xb1\x04\n" +
 	"\x11UpdateTaskRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
 	"\x05title\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05title\x12'\n" +
 	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12<\n" +
 	"\x06status\x18( \x01(\x0e2\x13.dcim.v1.TaskStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12@\n" +
-	"\bpriority\x182 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\bpriority\x12\x12\n" +
-	"\x04tags\x18A \x03(\tR\x04tags\x12\x1d\n" +
+	"\bpriority\x182 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\bpriority\x12$\n" +
+	"\x04tags\x18A \x03(\tB\x10\xbaH\r\x92\x01\n" +
+	"\x10\x14\"\x06r\x04\x10\x01\x182R\x04tags\x12\x1d\n" +
 	"\n" +
 	"clear_tags\x18B \x01(\bR\tclearTags\x12,\n" +
 	"\x0eblocked_reason\x18C \x01(\tB\x05\xaa\x01\x02\b\x01R\rblockedReason\x120\n" +

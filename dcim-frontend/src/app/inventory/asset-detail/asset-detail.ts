@@ -31,6 +31,7 @@ import { INVENTORY_PATH, inventoryViewTitle, isInventoryView } from '../inventor
 import InventoryNavComponent from '../inventory-nav';
 import SecondaryNavService from '../../shell/secondary-nav.service';
 import OverlayService from '../../shell/overlay.service';
+import opensElsewhere from '../../shared/opens-elsewhere';
 
 @Component({
   selector: 'app-asset-detail',
@@ -69,11 +70,7 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
    * left click is intercepted; the modifiers mean "open this somewhere else".
    */
   protected openCatalogEntry(event: Event, id: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigate(['/catalog', id]);

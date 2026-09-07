@@ -37,6 +37,7 @@ import InventoryNavComponent from './inventory-nav';
 import openOnCreateRequest from '../shell/create-request';
 import OverlayService from '../shell/overlay.service';
 import InventoryStatsService from './inventory-stats.service';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 export type { AssetCategory };
 
@@ -261,11 +262,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
    * browser.
    */
   goToView(event: Event, kind: MenuKind, value = ''): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.viewPath(kind, value));
@@ -281,11 +278,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   /** Same trade as the menu rows: a real link, routed in-app without modifiers. */
   openAsset(event: Event, id: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.assetPath(id));

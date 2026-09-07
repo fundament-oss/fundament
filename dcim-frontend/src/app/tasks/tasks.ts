@@ -51,22 +51,16 @@ import { buildTagTree, tagMatches, taskTags } from './task-tags';
 import { Round, taskDatacenter } from '../rounds/round';
 import RoundsService from '../rounds/rounds.service';
 import TaskManagementTechnicianComponent from '../task-management-technician/task-management-technician';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 interface StatusStyle {
-  bg: string;
-  text: string;
+  /** The dot beside a column heading. */
   dot: string;
-  kanbanAccent: string;
+  /** The border of a card in that column. */
   kanbanBorder: string;
-  /** `color` for an `nldd-tag`. */
-  tagColor: string;
 }
 
 interface PriorityStyle {
-  bg: string;
-  text: string;
-  dot: string;
-  ring: string;
   /** `color` for an `nldd-tag`. */
   tagColor: string;
 }
@@ -224,7 +218,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadUsers();
-    this.loadTasks();
+    // No loadTasks() here: the attention.changed() effect in the constructor
+    // runs once on creation, which is the first load. Calling it again raced
+    // two ListTasks on every entry to this page.
   }
 
   ngOnDestroy(): void {
@@ -279,58 +275,30 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   readonly statusStyles: Record<string, StatusStyle> = {
     'To do': {
-      bg: 'bg-slate-100 dark:bg-gray-800',
-      text: 'text-slate-600 dark:text-gray-300',
       dot: 'bg-slate-400',
-      kanbanAccent: 'bg-slate-400',
       kanbanBorder: 'border-slate-200 dark:border-gray-800',
-      tagColor: 'neutral',
     },
     Doing: {
-      bg: 'bg-indigo-50 dark:bg-indigo-950',
-      text: 'text-indigo-700 dark:text-indigo-300',
       dot: 'bg-indigo-500',
-      kanbanAccent: 'bg-indigo-500',
       kanbanBorder: 'border-indigo-200 dark:border-indigo-800',
-      tagColor: 'donkerblauw',
     },
     Done: {
-      bg: 'bg-emerald-50 dark:bg-emerald-950',
-      text: 'text-emerald-700 dark:text-emerald-300',
       dot: 'bg-emerald-500',
-      kanbanAccent: 'bg-emerald-500',
       kanbanBorder: 'border-emerald-200 dark:border-emerald-800',
-      tagColor: 'success',
     },
   };
 
   readonly priorityStyles: Record<string, PriorityStyle> = {
     Urgent: {
-      bg: 'bg-red-50 dark:bg-red-950',
-      text: 'text-red-700 dark:text-red-300',
-      dot: 'bg-red-500',
-      ring: 'ring-red-200/80 dark:ring-red-800/80',
       tagColor: 'critical',
     },
     High: {
-      bg: 'bg-orange-50 dark:bg-orange-950',
-      text: 'text-orange-700 dark:text-orange-300',
-      dot: 'bg-orange-500',
-      ring: 'ring-orange-200/80 dark:ring-orange-800/80',
       tagColor: 'oranje',
     },
     Medium: {
-      bg: 'bg-yellow-50 dark:bg-yellow-950',
-      text: 'text-yellow-700 dark:text-yellow-300',
-      dot: 'bg-yellow-400',
-      ring: 'ring-yellow-200/80 dark:ring-yellow-800/80',
       tagColor: 'geel',
     },
     Low: {
-      bg: 'bg-slate-100 dark:bg-gray-800',
-      text: 'text-slate-500 dark:text-gray-400',
-      dot: 'bg-slate-400',
-      ring: 'ring-slate-200/80 dark:ring-gray-700/80',
       tagColor: 'neutral',
     },
   };
@@ -664,11 +632,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * browser. The same trade the shell makes for the sections.
    */
   goToView(event: Event, kind: MenuKind, value = ''): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.viewPath(kind, value));
@@ -841,18 +805,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return this.store.formatDate(str);
   }
 
-  // Uses the trailing (random) hex of the uuid rather than the leading bytes,
-  // which in uuidv7 are a millisecond timestamp and collide across tasks
-  // created close together.
-  readonly taskDisplayId = (task: Task): string =>
-    `T-${task.id.replace(/-/g, '').slice(-8).toUpperCase()}`;
-
   isSelected(id: string): boolean {
     return this.selectedTasks().has(id);
   }
 
   statusStyle(status: string): StatusStyle {
-    return this.statusStyles[status] ?? this.statusStyles['Ready'];
+    return this.statusStyles[status] ?? this.statusStyles['To do'];
   }
 
   priorityStyle(priority: string): PriorityStyle {
@@ -1130,14 +1088,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    */
   onDetailSheetClosed(): void {
     this.detailTaskId.set(null);
-  }
-
-  statusTagColor(status: string): string {
-    return this.statusStyle(status).tagColor;
-  }
-
-  statusDotClass(status: string): string {
-    return `h-1.5 w-1.5 rounded-full ${this.statusStyle(status).dot} shrink-0`;
   }
 
   priorityTagColor(priority: string): string {

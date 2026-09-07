@@ -7,7 +7,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
-  isDevMode,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
@@ -26,6 +25,7 @@ import { mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
+import opensElsewhere from '../opens-elsewhere';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -61,15 +61,6 @@ const roleLabel = (role: ProjectMemberRole): string => {
   const value = roleToString(role);
   return value ? value[0].toUpperCase() + value.slice(1) : value;
 };
-
-/** TEMPORARY, dev only. Delete together with the branch in loadMembers(). */
-const SAMPLE_USERS = [
-  { id: 'sample-user-1', name: 'Nadia el Amrani' },
-  { id: 'sample-user-2', name: 'Li Wei' },
-  { id: 'sample-user-3', name: 'Jean-Pierre van der Meer-Bakhuizen' },
-  { id: 'sample-user-4', name: 'Tom Jansen' },
-  { id: 'sample-user-5', name: 'Fatima Ouali' },
-];
 
 /** Which namespaces this member has a role in. One of them is worth naming: the
  *  name says more than the number does. Beyond that it is a count, and the sheet
@@ -195,10 +186,17 @@ export default class ProjectMembersComponent implements OnInit {
     this.loadNamespaces();
   }
 
+  /** What membersChanged stood at when this list was built. An effect runs once
+   *  on creation, and again for the projectId ngOnInit sets, so without this the
+   *  list would load twice on every entry. Only a later bump is news. */
+  private seenMembersChanged = this.organizationData.membersChanged();
+
   /** The sheet that adds one lives in the shell and may well be standing over
    *  this very list, so the list hears about a new member from there. */
   private readonly reloadOnAdd = effect(() => {
-    this.organizationData.membersChanged();
+    const changed = this.organizationData.membersChanged();
+    if (changed === this.seenMembersChanged) return;
+    this.seenMembersChanged = changed;
     if (this.projectId()) this.loadMembers();
   });
 
@@ -259,9 +257,7 @@ export default class ProjectMembersComponent implements OnInit {
         .filter((m) => m.externalRef && !projectUserIds.has(m.userId))
         .map((m) => ({ id: m.userId, name: m.name }));
 
-      // TEMPORARY, dev only: this environment has nobody left to add, so the
-      // add form can never be seen. Delete before merging.
-      this.availableUsers.set(available.length === 0 && isDevMode() ? SAMPLE_USERS : available);
+      this.availableUsers.set(available);
     } catch (err) {
       this.error.set(
         err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
@@ -310,22 +306,14 @@ export default class ProjectMembersComponent implements OnInit {
   /** Routes client-side while leaving the row a real link, so middle-click and
    *  "open in new tab" keep working. */
   openMember(event: Event, memberId: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo(`/projects/${this.projectId()}/members/${memberId}`);
   }
 
   /** Routes client-side while leaving the control a real link. */
   openPermissions(event: Event): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.pageNav.goTo(`/projects/${this.projectId()}/members/permissions`);
   }

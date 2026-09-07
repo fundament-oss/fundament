@@ -1,5 +1,9 @@
 import { UrlSegment, type UrlMatchResult } from '@angular/router';
 
+// The one implementation lives in shared/section-views; re-exported so this
+// module stays the single place the tasks section imports its routing bits from.
+export { viewSlug } from '../shared/section-views';
+
 /** The section's own address. Every view lives under it. */
 export const TASKS_PATH = '/tasks';
 
@@ -23,9 +27,4 @@ export function tasksMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (rest[0]) posParams['view'] = rest[0];
   if (rest[1]) posParams['value'] = rest[1];
   return { consumed: segments, posParams };
-}
-
-/** A label as it reads in an address: lowercase, spaces closed up. */
-export function viewSlug(label: string): string {
-  return label.toLowerCase().replace(/\s+/g, '-');
 }

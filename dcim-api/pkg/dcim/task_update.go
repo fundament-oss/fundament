@@ -86,10 +86,19 @@ func (s *Server) UpdateTask(
 	}
 
 	if req.HasBlockedReason() {
-		params.BlockedReason = pgtype.Text{String: req.GetBlockedReason(), Valid: true}
+		// Empty clears, as it does for description/assignee_id/location above.
+		// Stored as '' the task would still read as blocked, on a reason that
+		// says nothing.
+		if v := req.GetBlockedReason(); v == "" {
+			params.ClearBlockedReason = true
+		} else {
+			params.BlockedReason = pgtype.Text{String: v, Valid: true}
+		}
 	}
 
-	params.ClearBlockedReason = req.GetClearBlockedReason()
+	if req.GetClearBlockedReason() {
+		params.ClearBlockedReason = true
+	}
 
 	// The row and its tags are separate writes, and replacing tags is itself a
 	// clear followed by an add. One transaction, so a failure halfway cannot

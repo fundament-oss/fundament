@@ -15,6 +15,7 @@ import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-categor
 import { viewSlug } from '../shared/section-views';
 import { INVENTORY_PATH } from './inventory-views';
 import type { AssetStatus } from './inventory';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 /**
  * The menu of the inventory section, in a component of its own because two
@@ -89,11 +90,7 @@ export default class InventoryNavComponent implements OnInit {
 
   /** A real link, routed in-app unless the click asks for a new tab or window. */
   goToView(event: Event, kind: 'all' | 'status' | 'category', value = ''): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.viewPath(kind, value));

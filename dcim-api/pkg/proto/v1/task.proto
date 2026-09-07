@@ -97,10 +97,13 @@ message ListTasksRequest {
   reserved category;
 
   TaskStatus   status      = 10 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskPriority priority    = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  // No not_in: [0] — "no priority yet" is a real, storable state (it is the
+  // column default), so it has to be filterable like any other. Presence is
+  // explicit, so an unset field is still "do not filter on priority".
+  TaskPriority priority    = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
   // One tag at a time here: the menu navigates. Combining them is a filter and
   // that lives above the list.
-  string       tag         = 35 [features.field_presence = EXPLICIT];
+  string       tag         = 35 [features.field_presence = EXPLICIT, (buf.validate.field).string = {min_len: 1, max_len: 50}];
   string       assignee_id = 40 [features.field_presence = EXPLICIT];
 }
 
@@ -125,7 +128,7 @@ message CreateTaskRequest {
   TaskStatus                status      = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   // No not_in: [0] — a task without a priority is a task nobody got to yet.
   TaskPriority              priority    = 40 [(buf.validate.field).enum = {defined_only: true}];
-  repeated string           tags        = 55;
+  repeated string           tags        = 55 [(buf.validate.field).repeated = {max_items: 20, items: {string: {min_len: 1, max_len: 50}}}];
   string                    blocked_reason = 57 [features.field_presence = EXPLICIT];
   string                    assignee_id = 60 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 70 [features.field_presence = EXPLICIT];
@@ -153,7 +156,7 @@ message UpdateTaskRequest {
   // A non-empty list replaces every tag the task carries. An empty list leaves
   // them alone, because a repeated field cannot tell "not sent" from "sent
   // empty"; clear_tags is how a client says the task should carry none.
-  repeated string           tags        = 65;
+  repeated string           tags        = 65 [(buf.validate.field).repeated = {max_items: 20, items: {string: {min_len: 1, max_len: 50}}}];
   bool                      clear_tags  = 66;
   string                    blocked_reason = 67 [features.field_presence = EXPLICIT];
   bool                      clear_blocked_reason = 68;

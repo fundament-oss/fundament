@@ -25,6 +25,7 @@ import InventoryStatsService from '../inventory/inventory-stats.service';
 import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 /**
  * The sections, in the order the sidebar shows them.
@@ -209,11 +210,7 @@ export default class ShellComponent implements OnInit {
    * browser.
    */
   navigate(event: Event, path: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(path);

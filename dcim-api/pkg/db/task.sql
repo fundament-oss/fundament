@@ -1,32 +1,38 @@
 -- name: TaskList :many
 -- Tags come along as an array so a list of tasks stays one round trip; a task
 -- without tags gets an empty array rather than a row full of NULLs.
-SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+SELECT dcim.tasks.id, dcim.tasks.title, dcim.tasks.description, dcim.tasks.status,
+       dcim.tasks.priority, dcim.tasks.blocked_reason, dcim.tasks.assignee_id,
+       dcim.tasks.due_date, dcim.tasks.location, dcim.tasks.created,
        COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
-FROM dcim.tasks t
+FROM dcim.tasks
 LEFT JOIN LATERAL (
-  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
-  FROM dcim.task_tags tt
-  WHERE tt.task_id = t.id
+  SELECT array_agg(dcim.task_tags.tag ORDER BY dcim.task_tags.tag) AS list
+  FROM dcim.task_tags
+  WHERE dcim.task_tags.task_id = dcim.tasks.id
 ) tags ON TRUE
-WHERE t.deleted IS NULL
-  AND (sqlc.narg('status')::text IS NULL OR t.status = sqlc.narg('status')::text)
-  AND (sqlc.narg('priority')::text IS NULL OR t.priority = sqlc.narg('priority')::text)
+WHERE dcim.tasks.deleted IS NULL
+  AND (sqlc.narg('status')::text IS NULL OR dcim.tasks.status = sqlc.narg('status')::text)
+  AND (sqlc.narg('priority')::text IS NULL OR dcim.tasks.priority = sqlc.narg('priority')::text)
   AND (sqlc.narg('tag')::text IS NULL OR EXISTS (
-        SELECT 1 FROM dcim.task_tags f WHERE f.task_id = t.id AND f.tag = sqlc.narg('tag')::text))
-  AND (sqlc.narg('assignee_id')::uuid IS NULL OR t.assignee_id = sqlc.narg('assignee_id')::uuid)
-ORDER BY t.created DESC;
+        SELECT 1 FROM dcim.task_tags
+        WHERE dcim.task_tags.task_id = dcim.tasks.id
+          AND dcim.task_tags.tag = sqlc.narg('tag')::text))
+  AND (sqlc.narg('assignee_id')::uuid IS NULL OR dcim.tasks.assignee_id = sqlc.narg('assignee_id')::uuid)
+ORDER BY created DESC;
 
 -- name: TaskGetByID :one
-SELECT t.id, t.title, t.description, t.status, t.priority, t.blocked_reason, t.assignee_id, t.due_date, t.location, t.created,
+SELECT dcim.tasks.id, dcim.tasks.title, dcim.tasks.description, dcim.tasks.status,
+       dcim.tasks.priority, dcim.tasks.blocked_reason, dcim.tasks.assignee_id,
+       dcim.tasks.due_date, dcim.tasks.location, dcim.tasks.created,
        COALESCE(tags.list, ARRAY[]::text[])::text[] AS tags
-FROM dcim.tasks t
+FROM dcim.tasks
 LEFT JOIN LATERAL (
-  SELECT array_agg(tt.tag ORDER BY tt.tag) AS list
-  FROM dcim.task_tags tt
-  WHERE tt.task_id = t.id
+  SELECT array_agg(dcim.task_tags.tag ORDER BY dcim.task_tags.tag) AS list
+  FROM dcim.task_tags
+  WHERE dcim.task_tags.task_id = dcim.tasks.id
 ) tags ON TRUE
-WHERE t.id = $1 AND t.deleted IS NULL;
+WHERE dcim.tasks.id = $1 AND dcim.tasks.deleted IS NULL;
 
 -- name: TaskCreate :one
 INSERT INTO dcim.tasks (title, description, status, priority, blocked_reason, assignee_id, due_date, location)

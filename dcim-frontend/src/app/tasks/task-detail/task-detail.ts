@@ -188,14 +188,46 @@ export default class TaskDetailComponent {
     }
     const next = { ...task, ...patch };
     this.draft.set(next);
-    this.store
-      .createTask({ ...next, title: next.title || UNTITLED })
-      .then((id) => this.ownId.set(id))
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.toast.error(`Could not save ${what} — the task has not been created`);
-      });
+    // Read before idFor(), which sets it: a create already in flight carries the
+    // draft as it stood when it started, so this field was not in that payload
+    // and has to follow as an ordinary patch once the id lands.
+    const wasCreating = this.creating !== null;
+    this.idFor(next, what).then((id) => {
+      if (id && wasCreating) this.store.patchTask({ ...next, id }, patch, what);
+    });
+  }
+
+  /** The create started for the draft, while it is in flight. */
+  private creating: Promise<string | null> | null = null;
+
+  /**
+   * The task's id, creating it from the draft first when it has none yet.
+   *
+   * One create per draft: a second field edited while the first create is still
+   * on its way must wait for that id rather than start a create of its own,
+   * which made two tasks out of one. Resolves with null when the create failed —
+   * the failure has been reported by then, so callers have nothing left to do.
+   */
+  private idFor(task: Task, what: string): Promise<string | null> {
+    if (task.id) return Promise.resolve(task.id);
+    if (!this.creating) {
+      this.creating = this.store
+        .createTask({ ...task, title: task.title || UNTITLED })
+        .then((id) => {
+          this.ownId.set(id);
+          return id;
+        })
+        .catch((err) => {
+          // Cleared so a later edit starts a fresh attempt rather than inheriting
+          // this failure for the life of the sheet.
+          this.creating = null;
+          // eslint-disable-next-line no-console
+          console.error(connectErrorMessage(err));
+          this.toast.error(`Could not save ${what} — the task has not been created`);
+          return null;
+        });
+    }
+    return this.creating;
   }
 
   readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
@@ -373,21 +405,11 @@ export default class TaskDetailComponent {
     if (!text) return;
     const task = this.detailTask();
     if (!task) return;
-    if (task.id) {
-      this.postNote(task.id, text);
-      return;
-    }
-    this.store
-      .createTask({ ...task, title: task.title || UNTITLED })
-      .then((id) => {
-        this.ownId.set(id);
-        this.postNote(id, text);
-      })
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.toast.error('Could not add note — the task has not been created');
-      });
+    // Through idFor() like every field edit, so a note added while the draft's
+    // create is still in flight lands on that task instead of making a second.
+    this.idFor(task, 'the note').then((id) => {
+      if (id) this.postNote(id, text);
+    });
   }
 
   private postNote(id: string, text: string): void {

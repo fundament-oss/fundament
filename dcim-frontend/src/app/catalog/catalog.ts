@@ -28,6 +28,7 @@ import { viewSlug } from '../shared/section-views';
 import { CATALOG_PATH } from './catalog-views';
 import CatalogNavComponent from './catalog-nav';
 import OverlayService from '../shell/overlay.service';
+import opensElsewhere from '../shared/opens-elsewhere';
 
 interface CatalogRow {
   entry: CatalogEntry;
@@ -225,11 +226,7 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
    * browser.
    */
   selectCategory(event: Event, category: AssetCategory | 'all'): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.viewPath(category));
@@ -245,11 +242,7 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
 
   /** Same trade as the menu rows: a real link, routed in-app without modifiers. */
   openEntry(event: Event, id: string): void {
-    if (event instanceof MouseEvent) {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-        return;
-      }
-    }
+    if (opensElsewhere(event)) return;
 
     event.preventDefault();
     this.router.navigateByUrl(this.entryPath(id));

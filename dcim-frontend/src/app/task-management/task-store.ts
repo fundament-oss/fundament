@@ -13,7 +13,7 @@ import TaskApiService, {
   TaskPriorityLabel,
   TaskStatusLabel,
 } from './task-api.service';
-import UserApiService, { RosterUser } from './user-api.service';
+import { RosterUser } from './user-api.service';
 
 export type Technician = RosterUser;
 
@@ -49,7 +49,6 @@ export interface Task extends TaskData {
 export default class TaskStore {
   private readonly taskApi = inject(TaskApiService);
 
-  private readonly userApi = inject(UserApiService);
 
   private readonly placementApi = inject(PlacementApiService);
 
@@ -203,34 +202,12 @@ export default class TaskStore {
 
   // — Loading ———————————————————————————————————————————————————————————————
 
+  /** The list, read for its own sake. Says so when it cannot be had, which is
+   *  the only thing this adds over reloadTasks(). */
   loadTasks(): void {
-    firstValueFrom(this.taskApi.listTasks())
-      .then((res) => {
-        this.tasks.update((previous) => {
-          const notesById = new Map(previous.map((t) => [t.id, t.notes]));
-          return res.tasks.map((t) => ({
-            ...TaskApiService.mapTask(t),
-            notes: notesById.get(t.id) ?? [],
-          }));
-        });
-        this.loadError.set(null);
-      })
-      .catch((err) => {
-        const message = connectErrorMessage(err);
-        // eslint-disable-next-line no-console
-        console.error(message);
-        this.loadError.set(message);
-        this.toast.error('Could not load tasks');
-      });
-  }
-
-  loadRoster(): void {
-    firstValueFrom(this.userApi.listUsers())
-      .then((res) => {
-        this.technicians.set(res.users.map((u) => UserApiService.mapUser(u)));
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.reloadTasks().then((ok) => {
+      if (!ok) this.toast.error('Could not load tasks');
+    });
   }
 
   loadRacks(): void {
@@ -264,8 +241,11 @@ export default class TaskStore {
     });
     this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, ...patch } : t)));
 
+    // No read back: the row already carries the new value, and the catch below
+    // puts the old one back when the write does not land. Re-reading the whole
+    // list for one field was a round trip that could only tell us what we just
+    // wrote.
     firstValueFrom(this.taskApi.updateTask(task.id, patch))
-      .then(() => this.loadTasks())
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
@@ -291,7 +271,16 @@ export default class TaskStore {
     return res.taskId;
   }
 
-  private async reloadTasks(): Promise<void> {
+  /**
+   * Reads the list back. Notes live on the client, so they are carried across
+   * rather than lost to a read that does not fetch them.
+   *
+   * Answers whether it worked instead of rejecting: createTask() awaits this
+   * only to have the new task in the list before it resolves, and a reload that
+   * failed must not turn a task that was created into an error. The failure is
+   * logged and left on loadError either way.
+   */
+  private async reloadTasks(): Promise<boolean> {
     try {
       const res = await firstValueFrom(this.taskApi.listTasks());
       this.tasks.update((previous) => {
@@ -302,11 +291,13 @@ export default class TaskStore {
         }));
       });
       this.loadError.set(null);
+      return true;
     } catch (err) {
       const message = connectErrorMessage(err);
       // eslint-disable-next-line no-console
       console.error(message);
       this.loadError.set(message);
+      return false;
     }
   }
 }
