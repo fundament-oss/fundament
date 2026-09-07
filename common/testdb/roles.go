@@ -29,6 +29,7 @@ var Roles = []Role{
 	{Name: "fun_authz_worker", BypassRLS: true},
 	{Name: "fun_dcim_api"},
 	{Name: "fun_marketplace_catalog_api"},
+	{Name: "fun_marketplace_registry_api"},
 }
 
 // CreateRoles ensures every role in [Roles] exists with the configured

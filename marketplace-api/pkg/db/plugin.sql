@@ -165,8 +165,8 @@ SELECT
   appstore.plugin_documentation_links.url_name,
   appstore.plugin_documentation_links.url
 FROM appstore.plugin_documentation_links
-WHERE appstore.plugin_documentation_links.plugin_id = sqlc.arg('plugin_id')::uuid
-ORDER BY appstore.plugin_documentation_links.title;
+WHERE appstore.plugin_documentation_links.plugin_id = sqlc.arg('plugin_id')::uuid AND appstore.plugin_documentation_links.deleted IS NULL
+ORDER BY appstore.plugin_documentation_links.position, appstore.plugin_documentation_links.title;
 
 -- name: PluginVersionListByPluginID :many
 -- published IS NOT NULL is explicit because plugin_definitions' policy no longer
