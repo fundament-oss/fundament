@@ -248,7 +248,7 @@ What lands on each shoot:
 | Deployment | `plugin-controller` | Real per-shoot env: `FUNDAMENT_CLUSTER_ID` (cluster UUID, also stands in for `FUNDAMENT_INSTALL_ID`), `FUNDAMENT_ORGANIZATION_ID` (from `tenant.clusters`), `MARKETPLACE_CATALOG_API_URL` (external, FUN-19) |
 
 Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
-`pluginController.shootImage` + `externalUrls.marketplace`):
+`pluginController.shootImage` + `externalUrls.marketplaceCatalogApi`):
 
 | Env | Meaning |
 |-----|---------|

@@ -7,8 +7,21 @@ import type PluginResourceStoreService from '../plugin-resources/plugin-resource
 import type { KubeResource, ParsedCrd } from '../plugin-resources/types';
 import * as fx from './fixtures';
 
+/**
+ * Routes and nav address an *installation* ("system--cert-manager"), while the
+ * fixtures index objects by catalog plugin name ("cert-manager") — the same
+ * indirection FakePluginRegistryService resolves for CRDs. A name that matches no
+ * installation is used as-is, so a fixture keyed on the plugin name still resolves.
+ */
+function fixtureName(installationName: string): string {
+  return (
+    Object.values(fx.pluginDefinitions).find((def) => def.installationName === installationName)
+      ?.name ?? installationName
+  );
+}
+
 function resourcesFor(pluginName: string, kind: string): KubeResource[] {
-  return fx.pluginResources[`${pluginName}/${kind}`] ?? [];
+  return fx.pluginResources[`${fixtureName(pluginName)}/${kind}`] ?? [];
 }
 
 @Injectable({ providedIn: 'root' })

@@ -1,5 +1,5 @@
 import { DriveStep, Slide, Tour } from './presentation.model';
-import { loc } from './i18n';
+import { loc, Localized } from './i18n';
 import { PLUGIN_INSTALLS_ENSURE_EVENT, PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
 
 // Tours are the walkthrough's content. The chooser groups them into "verhalen"
@@ -9,6 +9,13 @@ import { PLUGIN_INSTALLS_ENSURE_EVENT, PLUGIN_INSTALLS_RESET_EVENT } from './pre
 // demo transport (src/app/demo/mock-transport.ts); cluster/project ids must match
 // src/app/demo/fixtures.ts. A route whose RPCs the mock transport doesn't answer
 // renders an error pane mid-presentation, so stick to what is already stubbed.
+//
+// A slide with `embed` instead of `route` frames the marketplace demo, which is a
+// second app with the same rules of its own: the path must exist in
+// marketplace-frontend/src/app/app.routes.ts and its RPCs must be answered by
+// marketplace-frontend/src/app/demo/mock-transport.ts. Plugin ids are shared
+// between the two fixture sets on purpose, so 'pl-cert-manager' is the same
+// plugin on either side.
 //
 // Copy is written once per language with `loc(nl, en)`. Structure (ids, routes,
 // drive scripts) is shared, so the two locales cannot drift apart and a missing
@@ -75,6 +82,42 @@ const installPluginDrive: DriveStep[] = [
   { click: '[data-tour="install-confirm"]' },
 ];
 
+/**
+ * Searches the storefront for "cert", which narrows the grid to Cert Manager.
+ * The field lives in the marketplace's own header, and its handler reads
+ * `event.target.value` where the console's fields read `detail.value`; the drive
+ * runner sets the property before dispatching, so one step covers both apps.
+ */
+const searchMarketplaceDrive: DriveStep[] = [
+  { wait: 1200 },
+  { set: 'nldd-search-field', value: 'cert', type: true },
+];
+
+/** The marketplace listing every tour opens; the id is shared with the console fixtures. */
+const CERT_MANAGER_LISTING = '/plugins/pl-cert-manager';
+
+/**
+ * The two marketplace slides that the existing tours borrow. They are written
+ * once and take the framing that tour needs, so the storefront is introduced in
+ * the vocabulary of the story it lands in rather than three times over.
+ */
+const storefrontSlide = (lead: Localized, bullets?: Localized[]): Slide => ({
+  id: 'marketplace',
+  title: loc('De marktplaats', 'The marketplace'),
+  lead,
+  bullets,
+  embed: '/',
+});
+
+const listingSlide = (lead: Localized, bullets?: Localized[]): Slide => ({
+  id: 'marketplace-listing',
+  title: loc('Eén plugin van dichtbij', 'One plugin up close'),
+  lead,
+  bullets,
+  embed: CERT_MANAGER_LISTING,
+  skippable: true,
+});
+
 const closing = (nl: string, en: string): Slide => ({
   id: 'closing',
   kind: 'closing',
@@ -91,6 +134,7 @@ const ICONS = {
   layers: 'M12 3l9 5-9 5-9-5 9-5M3 14l9 5 9-5',
   shield: 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z',
   building: 'M4 21V7l8-4 8 4v14M9 21v-5h6v5M8 11h.01M12 11h.01M16 11h.01',
+  storefront: 'M4 9l1.5-5h13L20 9M4 9h16v11H4V9zM4 9a3 3 0 006 0 3 3 0 006 0 3 3 0 004 0',
 };
 
 // --- Verhalen -------------------------------------------------------------
@@ -245,12 +289,30 @@ const intro: Tour = {
       route: '/projects/pr-burgerzaken/limits',
       skippable: true,
     },
+    storefrontSlide(
+      loc(
+        'Bouwstenen voor je platform staan in een openbare marktplaats.',
+        'Building blocks for your platform live in a public marketplace.',
+      ),
+      [
+        loc(
+          'Gemaakt door de Fundament-teams, en door gemeenten en leveranciers zelf.',
+          'Made by the Fundament teams, and by municipalities and suppliers themselves.',
+        ),
+      ],
+    ),
+    listingSlide(
+      loc(
+        'Cert Manager: wie het maakt, welke versie er staat, en wat het op je cluster mag.',
+        'Cert Manager: who makes it, which version is current, and what it may do on your cluster.',
+      ),
+    ),
     {
       id: 'plugins',
       title: loc('Plugins', 'Plugins'),
       lead: loc(
-        'Een catalogus van bouwstenen: certificaten, logging, databases, inloggen.',
-        'A catalogue of building blocks: certificates, logging, databases, sign-in.',
+        'Wat je in de marktplaats vond, installeer je in de console.',
+        'What you found in the marketplace, you install in the console.',
       ),
       bullets: [
         loc(
@@ -313,8 +375,11 @@ const intro: Tour = {
           'Your team manages its certificates without kubectl or a separate dashboard.',
         ),
       ],
-      // The menu links to the CRD by `plural.group`, so the route carries that too.
-      route: '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io',
+      // Routes address an *installation*, not a plugin name, so the segment is the
+      // installation name the fixtures give cert-manager. The menu links to the CRD
+      // by `plural.group`, so the route carries that too.
+      route:
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io',
       drive: installedPluginDrive,
     },
     {
@@ -338,12 +403,217 @@ const intro: Tour = {
       // it the console falls back to matching the object by name, which is what the
       // list links to here anyway.
       route:
-        '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
       drive: installedPluginDrive,
     },
     closing(
       'Dit was een statische rondleiding met voorbeelddata. De echte console werkt precies zo, met jouw eigen clusters en projecten.',
       'That was a scripted tour on sample data. The real console works exactly like this, with your own clusters and projects.',
+    ),
+  ],
+};
+
+const marketplace: Tour = {
+  id: 'marketplace',
+  title: loc('De Plugin Marktplaats', 'The Plugin Marketplace'),
+  lead: loc(
+    'Van een plugin vinden tot hem installeren, en hoe je er zelf een publiceert.',
+    'From finding a plugin to installing it, and how you publish one yourself.',
+  ),
+  icon: ICONS.storefront,
+  slides: [
+    {
+      id: 'intro',
+      kind: 'opening',
+      full: true,
+      title: loc('De Plugin Marktplaats', 'The Plugin Marketplace'),
+      lead: loc(
+        'Eén plek waar bouwstenen voor Fundament te vinden zijn, van welk team ze ook komen.',
+        'One place to find building blocks for Fundament, whichever team they come from.',
+      ),
+      bullets: [
+        loc(
+          'De marktplaats is de etalage; de console is waar je installeert.',
+          'The marketplace is the shop window; the console is where you install.',
+        ),
+        loc(
+          'We lopen beide kanten langs: die van de gebruiker en die van de maker.',
+          "We walk both sides: the user's and the maker's.",
+        ),
+      ],
+      aside: KEYS_ASIDE,
+    },
+    {
+      id: 'storefront',
+      title: loc('De etalage', 'The shop window'),
+      lead: loc(
+        'De catalogus is openbaar. Je hoeft niet ingelogd te zijn om te zien wat er is.',
+        'The catalogue is public. You do not need to be signed in to see what is there.',
+      ),
+      bullets: [
+        loc(
+          'Gesorteerd op categorie: security, netwerk, observability, data en identity.',
+          'Sorted by category: security, networking, observability, data and identity.',
+        ),
+        loc(
+          'Iedereen kan hier kijken: een inkoper, een architect, of een team dat iets zoekt.',
+          'Anyone can look here: a buyer, an architect, or a team searching for something.',
+        ),
+      ],
+      embed: '/',
+    },
+    {
+      id: 'search',
+      title: loc('Iets zoeken', 'Searching for something'),
+      lead: loc(
+        'Zoeken gaat over naam, beschrijving, uitgever en tags tegelijk.',
+        'Search covers name, description, publisher and tags at once.',
+      ),
+      bullets: [
+        loc(
+          'Kijk mee: "cert" laat meteen zien wat er voor certificaten is.',
+          'Watch along: "cert" immediately shows what there is for certificates.',
+        ),
+      ],
+      embed: '/',
+      drive: searchMarketplaceDrive,
+    },
+    {
+      id: 'listing',
+      title: loc('De vermelding', 'The listing'),
+      lead: loc(
+        'Wie de plugin maakt, welke versie er staat, en waar hij voor bedoeld is.',
+        'Who makes the plugin, which version is current, and what it is for.',
+      ),
+      bullets: [
+        loc(
+          'De labels zeggen iets over herkomst en ondersteuning: Core, Rijksoverheid, support tijdens kantooruren.',
+          'The labels say something about origin and support: Core, Rijksoverheid, support during office hours.',
+        ),
+        loc(
+          'Geen sterren en geen downloadtellers: herkomst is wat telt, niet populariteit.',
+          'No stars and no download counters: provenance is what counts, not popularity.',
+        ),
+      ],
+      embed: CERT_MANAGER_LISTING,
+    },
+    {
+      id: 'permissions',
+      title: loc('Wat de plugin mag', 'What the plugin may do'),
+      lead: loc(
+        'Elke vermelding zegt vooraf welke rechten de plugin op je cluster krijgt.',
+        'Every listing says up front which rights the plugin gets on your cluster.',
+      ),
+      bullets: [
+        loc(
+          'Cert Manager leest en schrijft certificaten, maakt secrets aan, en leest ingresses.',
+          'Cert Manager reads and writes certificates, creates secrets, and reads ingresses.',
+        ),
+        loc(
+          'Dat staat er voordat je installeert, niet pas als het al draait.',
+          'That is there before you install, not once it is already running.',
+        ),
+      ],
+      embed: CERT_MANAGER_LISTING,
+      skippable: true,
+    },
+    {
+      id: 'install',
+      title: loc('Installeren gebeurt in de console', 'Installing happens in the console'),
+      lead: loc(
+        'De marktplaats kent je clusters niet, dus "Install plugin" brengt je naar de console.',
+        'The marketplace does not know your clusters, so "Install plugin" takes you to the console.',
+      ),
+      bullets: [
+        loc(
+          'Daar is wel bekend wie je bent en welke clusters van jouw organisatie zijn.',
+          'There it is known who you are and which clusters belong to your organization.',
+        ),
+        loc(
+          'Kijk mee: Cert Manager wordt hier op een cluster geïnstalleerd.',
+          'Watch along: Cert Manager is being installed on a cluster here.',
+        ),
+      ],
+      route: '/plugins',
+      drive: installPluginDrive,
+    },
+    {
+      id: 'installed',
+      title: loc('En dan staat hij er', 'And then it is there'),
+      lead: loc(
+        'Cert Manager draait nu op het cluster, dus elk project erop krijgt het in zijn menu.',
+        'Cert Manager now runs on the cluster, so every project on it gets it in the menu.',
+      ),
+      bullets: [
+        loc(
+          'Van etalage naar draaiende plugin, zonder ticket en zonder tussenpersoon.',
+          'From shop window to running plugin, with no ticket and no middleman.',
+        ),
+      ],
+      route: '/projects/pr-burgerzaken',
+      drive: installedPluginDrive,
+    },
+    {
+      id: 'my-plugins',
+      title: loc('De andere kant: zelf publiceren', 'The other side: publishing yourself'),
+      lead: loc(
+        'Wie een plugin maakt, ziet zijn eigen inzendingen en de status ervan.',
+        'Whoever makes a plugin sees their own submissions and their status.',
+      ),
+      bullets: [
+        loc(
+          'Draft, in review, wijzigingen gevraagd, gepubliceerd: elke build heeft zijn eigen status.',
+          'Draft, in review, changes requested, published: every build has its own status.',
+        ),
+        loc(
+          'De catalogus groeit dus met wat gemeenten en leveranciers zelf inbrengen.',
+          'So the catalogue grows with what municipalities and suppliers bring in themselves.',
+        ),
+      ],
+      embed: '/manage',
+    },
+    {
+      id: 'publishing',
+      title: loc('Publiceren met functl', 'Publishing with functl'),
+      lead: loc(
+        'Een plugin komt binnen via de commandoregel, niet via een formulier.',
+        'A plugin arrives over the command line, not through a form.',
+      ),
+      bullets: [
+        loc(
+          'Je pusht een build met functl; de vermelding wordt daarvan afgeleid.',
+          'You push a build with functl; the listing is derived from it.',
+        ),
+        loc(
+          'Daardoor hoort publiceren bij je pipeline, niet bij een los proces ernaast.',
+          'That makes publishing part of your pipeline instead of a separate process beside it.',
+        ),
+      ],
+      embed: '/manage/create',
+      skippable: true,
+    },
+    {
+      id: 'review',
+      title: loc('Gepusht, beoordeeld, gepubliceerd', 'Pushed, reviewed, published'),
+      lead: loc(
+        'Tussen jouw push en de etalage zit een centrale review.',
+        'Between your push and the shop window sits a central review.',
+      ),
+      bullets: [
+        loc(
+          'De statustracker laat zien waar je build staat en wat er nog moet gebeuren.',
+          'The status tracker shows where your build is and what still has to happen.',
+        ),
+        loc(
+          'Vraagt de reviewer wijzigingen, dan lees je hier waarom en push je een nieuwe versie.',
+          'If the reviewer asks for changes, you read why here and push a new version.',
+        ),
+      ],
+      embed: '/manage/pl-cert-manager',
+    },
+    closing(
+      'De marktplaats en de console zijn twee kanten van dezelfde catalogus: vinden en beoordelen aan de ene kant, installeren en beheren aan de andere.',
+      'The marketplace and the console are two sides of one catalogue: finding and judging on one side, installing and running on the other.',
     ),
   ],
 };
@@ -591,6 +861,24 @@ const platformEngineer: Tour = {
       route: '/clusters/add',
       drive: addClusterDrive,
     },
+    storefrontSlide(
+      loc(
+        'De catalogus waar je uit put, is geen lijst die jij bijhoudt.',
+        'The catalogue you draw from is not a list you maintain yourself.',
+      ),
+      [
+        loc(
+          'Wat een ander platformteam publiceert, staat er voor jou ook in.',
+          'What another platform team publishes is there for you as well.',
+        ),
+      ],
+    ),
+    listingSlide(
+      loc(
+        'Voor je iets aanzet, zie je wat het op je cluster mag: rechten en capabilities staan in de vermelding.',
+        'Before you switch something on, you see what it may do on your cluster: rights and capabilities are in the listing.',
+      ),
+    ),
     {
       id: 'plugins',
       title: loc('De catalogus', 'The catalogue'),
@@ -842,6 +1130,30 @@ const policyMaker: Tour = {
       ),
       route: '/projects',
     },
+    storefrontSlide(
+      loc(
+        'De gedeelde bouwstenen staan in een openbare marktplaats.',
+        'The shared building blocks live in a public marketplace.',
+      ),
+      [
+        loc(
+          'Wat één gemeente laat maken, kan een andere daarna gewoon gebruiken.',
+          'What one municipality has built can simply be used by another afterwards.',
+        ),
+      ],
+    ),
+    listingSlide(
+      loc(
+        'Elke vermelding zegt wie de maker is, welke ondersteuning erbij hoort, en wat de plugin mag.',
+        'Every listing says who the maker is, what support comes with it, and what the plugin may do.',
+      ),
+      [
+        loc(
+          'Dat is waar leveranciersonafhankelijkheid concreet wordt: de herkomst is te controleren.',
+          'That is where independence from suppliers becomes concrete: the provenance can be checked.',
+        ),
+      ],
+    ),
     {
       id: 'plugins',
       title: loc('Gebaande paden', 'Well-trodden paths'),
@@ -870,6 +1182,7 @@ const policyMaker: Tour = {
 
 export const TOURS: Record<string, Tour> = {
   [intro.id]: intro,
+  [marketplace.id]: marketplace,
   [developer.id]: developer,
   [platformEngineer.id]: platformEngineer,
   [securityOfficer.id]: securityOfficer,

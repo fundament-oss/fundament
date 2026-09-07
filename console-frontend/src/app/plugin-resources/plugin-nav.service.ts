@@ -10,14 +10,14 @@ export default class PluginNavService {
   projectNav = computed<PluginNavGroup[]>(() => this.buildNavGroups('project'));
 
   private buildNavGroups(section: 'project'): PluginNavGroup[] {
-    const shown = this.registry.allPlugins().filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0);
+    const shown = this.registry
+      .allPlugins()
+      .filter((plugin) => (plugin.menu[section]?.length ?? 0) > 0);
     // Two organizations may publish the same plugin, so a shared label would
     // give two indistinguishable nav groups. Qualify only the ambiguous ones —
     // adding the publisher everywhere is noise when there is nothing to resolve.
     const duplicated = new Set(
-      shown
-        .map((plugin) => plugin.label)
-        .filter((label, i, all) => all.indexOf(label) !== i),
+      shown.map((plugin) => plugin.label).filter((label, i, all) => all.indexOf(label) !== i),
     );
 
     return shown.map((plugin) => ({

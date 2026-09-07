@@ -25,3 +25,5 @@ plugins/gateway-api/envoy-gateway/console/
 .claude
 .github
 **/.vscode
+marketplace-frontend/node_modules/
+marketplace-frontend/dist/

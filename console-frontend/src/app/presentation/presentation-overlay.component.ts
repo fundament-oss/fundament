@@ -5,6 +5,7 @@ import {
   effect,
   ElementRef,
   inject,
+  viewChild,
   viewChildren,
 } from '@angular/core';
 import '@nldd/design-system/dropdown';
@@ -202,10 +203,49 @@ type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
           </div>
         }
       </aside>
+
+      @if (presentation.embedPath()) {
+        <!-- The marketplace demo, served from this origin under /marketplace/ so
+             the deck may frame it and drive scripts may reach into it. The src
+             is set by the service, not bound here: it also has to wait for the
+             app inside to report that it has bootstrapped. -->
+        <iframe
+          #embedFrame
+          class="app-frame"
+          [title]="presentation.ui().embedLabel"
+          [class.full]="presentation.deckFull()"
+        ></iframe>
+      }
     }
   `,
   styles: [
     `
+      /* The embedded app pane. Mirrors what html.presenting does to the console's
+         own body: pushed clear of the 40vw narration panel, and out of the way
+         entirely on a full-bleed slide. */
+      .app-frame {
+        position: fixed;
+        top: 0;
+        /* An iframe is a replaced element, so an auto width falls back to its
+           intrinsic 300px instead of stretching between the left and right
+           offsets. The width is therefore stated outright, as a percentage: a
+           fixed element's containing block is the viewport minus its scrollbar,
+           where 100vw would include it and push the right edge out of view. */
+        left: 40vw;
+        width: calc(100% - 40vw);
+        height: 100vh;
+        border: 0;
+        z-index: 70;
+        background: var(--fund-embed-bg, #fff);
+        transition:
+          left 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+          width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .app-frame.full {
+        left: 100%;
+        width: 0;
+      }
+
       .deck {
         position: fixed;
         inset: 0 auto 0 0;
@@ -607,7 +647,15 @@ export default class PresentationOverlayComponent {
 
   private readonly langDropdowns = viewChildren<ElementRef<LitDropdown>>('langDropdown');
 
+  private readonly embedFrame = viewChild<ElementRef<HTMLIFrameElement>>('embedFrame');
+
   constructor() {
+    // Hand the frame to the service as it comes and goes: the overlay renders it,
+    // the service loads and drives it.
+    effect(() => {
+      this.presentation.registerEmbedFrame(this.embedFrame()?.nativeElement ?? null);
+    });
+
     // The locale also changes from the `l` shortcut, which the dropdown cannot
     // see: the slotted <select> keeps its old selection and the component keeps
     // its old display label. Push the value in and re-run the component's own
@@ -632,17 +680,34 @@ export default class PresentationOverlayComponent {
     if (isLocale(value)) this.presentation.setLocale(value);
   }
 
+  /**
+   * The element that actually has focus, following `activeElement` down through
+   * shadow roots. `document.activeElement` stops at the web component host.
+   */
+  private static deepActiveElement(): HTMLElement | null {
+    let el = document.activeElement as HTMLElement | null;
+    while (el?.shadowRoot?.activeElement) {
+      el = el.shadowRoot.activeElement as HTMLElement;
+    }
+    return el;
+  }
+
   onKeydown(event: KeyboardEvent): void {
     if (!this.presentation.active()) return;
 
-    const target = event.target as HTMLElement | null;
+    // A keydown inside a web component's shadow DOM is retargeted to the host, so
+    // `event.target` is an <nldd-*> element for every design system control alike
+    // — a text field being typed into and a sheet that merely holds focus. Taking
+    // any of them for a field left the deck stuck on slides whose drive script
+    // ends with focus inside such a container. The real focused control is what
+    // decides, which means walking into the shadow roots.
+    const target = PresentationOverlayComponent.deepActiveElement();
     const tag = target?.tagName?.toLowerCase() ?? '';
-    const inField =
-      tag === 'input' ||
-      tag === 'textarea' ||
-      tag === 'select' ||
-      tag.startsWith('nldd-') ||
-      !!target?.isContentEditable;
+    const typing =
+      tag === 'input' || tag === 'textarea' || tag === 'select' || !!target?.isContentEditable;
+    // Space activates a focused button, so it stays the button's; the arrow keys
+    // mean nothing to one and stay the deck's.
+    const activatable = tag === 'button' || target?.getAttribute('role') === 'button';
 
     // An open app modal moves focus into itself, so the deck keys must still drive
     // navigation from there (and navigating closes the modal).
@@ -669,7 +734,8 @@ export default class PresentationOverlayComponent {
     }
     // Fields own their keys while typing — except when a modal is open, where the
     // focused control is a button/checkbox and the deck keys must still work.
-    if (inField && !modalOpen) return;
+    if (typing && !modalOpen) return;
+    if (event.key === ' ' && activatable && !modalOpen) return;
 
     // Language applies to the chooser too, so handle it before the slide keys.
     if (event.key === 'l' || event.key === 'L') {

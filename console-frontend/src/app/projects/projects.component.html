@@ -69,7 +69,7 @@
           </nldd-inline-dialog>
         </nldd-box>
       } @else {
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2 @5xl/main:grid-cols-3">
           @for (project of projects(); track project.id) {
             <nldd-box>
               <div class="card-body">
@@ -89,7 +89,7 @@
 
                 <!-- Card content -->
                 <div class="flex flex-1 flex-col py-2">
-                  <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <dl class="flex flex-wrap gap-x-6 gap-y-4">
                     <div>
                       <dt
                         class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"

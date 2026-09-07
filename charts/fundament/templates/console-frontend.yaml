@@ -11,10 +11,11 @@ data:
     {
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
-      "marketplaceApiUrl": "{{ $.Values.externalUrls.marketplace }}",
+      "marketplaceApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
       "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
-      "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}"
+      "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
+      "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}"
     }
 
 ---
@@ -40,7 +41,7 @@ spec:
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplace }}"
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplaceCatalogApi }}"
             # frame-src in nginx.conf. Plugin console UIs are iframed from the
             # dedicated plugin-proxy origin (FUN-17); the console never fetches
             # from it, so it stays out of connect-src.

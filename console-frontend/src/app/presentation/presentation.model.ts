@@ -38,6 +38,12 @@ export interface Slide {
   skippable?: boolean;
   /** Prominent link rendered under the slide body (e.g. on a closing slide). */
   link?: { url: string; label?: Localized };
+  /**
+   * Path inside the embedded marketplace demo, e.g. '/plugins/pl-cert-manager'.
+   * Mutually exclusive with `route`: the app pane frames the marketplace rather
+   * than the console, and the drive script runs against the frame's document.
+   */
+  embed?: string;
   /** Auto-drive script executed after the slide's route has rendered. */
   drive?: DriveStep[];
 }
