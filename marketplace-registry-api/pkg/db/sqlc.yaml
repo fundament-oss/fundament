@@ -1,0 +1,35 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "."
+    schema: "../../../db/fundament.sql"
+    # sqlc's strict mode rejects ORDER BY on fully-qualified (schema.table.column)
+    # names as used by the alias-free query convention; same setting as
+    # organization-api/pkg/db/sqlc.yaml.
+    strict_order_by: false
+    gen:
+      go:
+        package: "db"
+        out: "gen"
+        sql_package: "pgx/v5"
+        query_parameter_limit: 0
+        omit_unused_structs: true
+        output_db_file_name: "db.sqlc.go"
+        output_models_file_name: "models.sqlc.go"
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - column: "appstore.plugin_definitions.status"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "PluginDefinitionStatus"
+          - column: "appstore.plugins.visibility"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "PluginVisibility"
+          - column: "appstore.plugin_labels.name"
+            go_type:
+              import: "github.com/fundament-oss/fundament/common/dbconst"
+              type: "PluginLabelName"

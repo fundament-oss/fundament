@@ -124,10 +124,10 @@ jobs:
             dockerfile: openfsc-operator/Dockerfile
             context: "."
           - image-name: marketplace-catalog-api
-            dockerfile: marketplace-api/Dockerfile
+            dockerfile: marketplace-catalog-api/Dockerfile
             context: "."
           - image-name: marketplace-registry-api
-            dockerfile: marketplace-api/Dockerfile.registry
+            dockerfile: marketplace-registry-api/Dockerfile
             context: "."
     permissions:
       contents: read

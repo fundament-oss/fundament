@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	catalogv1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1"
-	"github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1/catalogv1connect"
+	catalogv1 "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1"
+	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1/catalogv1connect"
 )
 
 // Definition is the raw, hash-verifiable manifest returned by the catalog.
