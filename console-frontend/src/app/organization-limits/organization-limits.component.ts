@@ -28,6 +28,27 @@ import ResourceLimitSectionComponent, {
   type ResourceMode,
 } from '../resource-limit-section/resource-limit-section.component';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/icon-cell';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/number-field';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
+import '@nldd/design-system/top-title-bar';
 /** Platform defaults for a namespace LimitRange, as returned by the API. */
 interface NamespaceDefaults {
   defaultMemoryRequestMi: number | undefined;

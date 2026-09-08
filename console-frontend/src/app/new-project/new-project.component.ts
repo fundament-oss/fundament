@@ -26,6 +26,25 @@ import AutofocusDirective from '../autofocus.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/link';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/validation-list';
+
 @Component({
   selector: 'app-new-project',
   imports: [ReactiveFormsModule, AutofocusDirective, SheetSyncDirective],

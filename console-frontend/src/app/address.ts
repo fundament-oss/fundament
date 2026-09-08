@@ -51,3 +51,16 @@ export function inOrganization(organization: string | null, path = '/'): string 
   // the two, or the address bar reads `/organizations/gemeente-fundament/?present=1`.
   return `${PREFIX}${organization}${within.replace(/^\/(?=[?#])/, '')}`;
 }
+
+/**
+ * The page the console opens on, relative to the organization. It has no page of
+ * its own to show at the root, and the clusters are what it is mostly read for,
+ * so that is where both opening it and logging into it land you.
+ */
+export const HOME = '/clusters';
+
+/** Whether an address names no page at all: the bare root, with or without the
+ *  query string a visit brought along. */
+export function atRoot(url: string): boolean {
+  return url === '/' || url.startsWith('/?') || url.startsWith('/#');
+}

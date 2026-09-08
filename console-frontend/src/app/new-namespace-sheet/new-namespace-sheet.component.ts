@@ -28,6 +28,26 @@ import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import '@nldd/design-system/token-field';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/checkbox';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/page';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/validation-list';
 /**
  * Making a namespace, from wherever you were. The shell owns this sheet rather
  * than the namespace list, so the toolbar can open it over any page; that also

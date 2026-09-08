@@ -300,7 +300,8 @@
 <!-- Four, and exactly one of them is on: this says what the task is for you.
      A copy of what the rows use, because nldd-menu wants its items as direct
      children and they cannot travel inside a component of their own. What they
-     do is not copied: that is TaskStatusUi, once. -->
+     do is not copied: that is TaskStatusUi, once, and it opens the questions
+     on the one app-task-status-dialogs the shell renders. -->
 <ng-template #statusItems let-task>
   @for (option of store.statuses; track option) {
     <nldd-menu-item
@@ -321,8 +322,6 @@
     }
   }
 </ng-template>
-
-<app-task-status-dialogs></app-task-status-dialogs>
 
 <!-- ══════════════════════════════════════════════════════════════
      DELETE TASK CONFIRMATION

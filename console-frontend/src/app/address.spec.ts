@@ -1,4 +1,4 @@
-import { inOrganization, organizationOf, withinOrganization } from './address';
+import { atRoot, inOrganization, organizationOf, withinOrganization } from './address';
 
 describe('address', () => {
   it('reads the organization an address names', () => {
@@ -53,5 +53,19 @@ describe('address', () => {
 
   it('leaves the address as it is while no organization is known yet', () => {
     expect(inOrganization(null, '/clusters')).toBe('/clusters');
+  });
+
+  it('reads the bare root as naming no page', () => {
+    expect(atRoot('/')).toBe(true);
+  });
+
+  it('reads the root a visit brought a query to as naming no page', () => {
+    expect(atRoot('/?present=1')).toBe(true);
+    expect(atRoot('/#top')).toBe(true);
+  });
+
+  it('reads an address that names a page as naming one', () => {
+    expect(atRoot('/clusters')).toBe(false);
+    expect(atRoot('/organizations/gemeente-fundament')).toBe(false);
   });
 });

@@ -9,6 +9,17 @@ import {
 } from '@angular/core';
 import { toInt } from '../utils/limits';
 
+import '@nldd/design-system/cell';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/number-field';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
 /**
  * What a pair is set to. Defaults and custom both hold values and both let you
  * edit them; the difference is only whether those values are still the

@@ -27,7 +27,6 @@ import {
 } from '@angular/cdk/drag-drop';
 import TaskStore, { Task, Technician } from '../task-management/task-store';
 import TaskStatusUi from '../task-management/task-status-ui.service';
-import TaskStatusDialogsComponent from '../task-management/task-status-dialogs/task-status-dialogs';
 import TaskDetailComponent from './task-detail/task-detail';
 import TaskApiService, {
   TaskData,
@@ -92,7 +91,6 @@ const BULK_CONCURRENCY = 6;
     CdkDropList,
     CdkDrag,
     CdkDragPlaceholder,
-    TaskStatusDialogsComponent,
     TaskDetailComponent,
     TaskManagementTechnicianComponent,
   ],

@@ -11,9 +11,11 @@ import { TaskPatch, TaskStatusLabel } from './task-api.service';
  * happened to be on screen would be two dialogs that must be kept the same.
  *
  * The dialogs themselves are one component, app-task-status-dialogs, rendered
- * wherever a status menu can be opened.
+ * once by the shell above every page. Both questions are a native <dialog>
+ * opened with showModal(), so they sit in the top layer and are over whatever
+ * opened them however deep that was — a sheet included.
  */
-/** The four things a copy of app-task-status-dialogs can be asked to do. */
+/** The four things app-task-status-dialogs can be asked to do. */
 export interface DialogHandles {
   showWaiting: () => void;
   hideWaiting: () => void;
@@ -41,75 +43,23 @@ export default class TaskStatusUi {
   }
 
   /**
-   * Every app-task-status-dialogs on screen, by the element it sits in.
+   * What the shell's app-task-status-dialogs can be asked to do, once it has
+   * rendered.
    *
-   * There is more than one: the tasks page has a copy, and so does the task
-   * beside it, which is in a sheet. A single pair of handles was therefore
-   * whichever copy had rendered last, so choosing Waiting on a row opened the
-   * window inside the sheet. A closed sheet shows nothing, and a modal in it
-   * still takes the top layer, which is a page gone blank that swallows every
-   * click.
+   * One copy, so there is nothing to choose between. It used to be rendered per
+   * page as well as in the sheet, and the service then had to work out from the
+   * DOM which of them a menu belonged to: a copy inside a closed sheet shows
+   * nothing, and a modal in it still takes the top layer, so picking wrong was
+   * a page gone blank that swallowed every click.
    */
-  private readonly copies = new Map<HTMLElement, DialogHandles>();
+  private handles: DialogHandles | null = null;
 
-  /** The copy a question was opened in, so the same one closes it again. */
-  private openIn: DialogHandles | null = null;
-
-  registerDialogs(host: HTMLElement, handles: DialogHandles): void {
-    this.copies.set(host, handles);
+  registerDialogs(handles: DialogHandles): void {
+    this.handles = handles;
   }
 
-  unregisterDialogs(host: HTMLElement): void {
-    this.copies.delete(host);
-  }
-
-  /**
-   * Which copy a menu belongs to: the one you can see, and of those the one
-   * nearest the menu in the tree. Visibility settles the sheet, which is hidden
-   * while it is closed; nearness settles the other direction, because with the
-   * sheet open both copies are on screen and the menu in it means the one in it.
-   */
-  private copyFor(from?: Event): DialogHandles | null {
-    const trigger = (from?.target as Element | null) ?? null;
-    let best: DialogHandles | null = null;
-    let bestDepth = -1;
-    let bestNesting = Infinity;
-    this.copies.forEach((handles, host) => {
-      if (!host.checkVisibility()) return;
-      const depth = trigger ? TaskStatusUi.sharedDepth(trigger, host) : 0;
-      const nesting = TaskStatusUi.depthOf(host);
-      // A menu in the sheet shares more of its ancestry with the copy in there,
-      // so that one wins on the first number. A menu on the page shares exactly
-      // as much with both, because both copies hang under the page: the second
-      // number then picks the one that is not tucked away inside the sheet.
-      if (depth > bestDepth || (depth === bestDepth && nesting < bestNesting)) {
-        bestDepth = depth;
-        bestNesting = nesting;
-        best = handles;
-      }
-    });
-    return best;
-  }
-
-  /** How far down the tree an element sits. */
-  private static depthOf(el: Element): number {
-    let depth = 0;
-    for (let e: Element | null = el; e; e = e.parentElement) depth += 1;
-    return depth;
-  }
-
-  /** How many elements deep the two sit under the same ancestor. */
-  private static sharedDepth(a: Element, b: Element): number {
-    const ancestors = (el: Element): Element[] => {
-      const out: Element[] = [];
-      for (let e: Element | null = el; e; e = e.parentElement) out.unshift(e);
-      return out;
-    };
-    const one = ancestors(a);
-    const other = ancestors(b);
-    let i = 0;
-    while (i < one.length && i < other.length && one[i] === other[i]) i += 1;
-    return i;
+  unregisterDialogs(): void {
+    this.handles = null;
   }
 
   // — Status ————————————————————————————————————————————————————————————————
@@ -174,12 +124,11 @@ export default class TaskStatusUi {
    */
   private askToTakeOver(task: Task, status: TaskStatusLabel, from?: Event): void {
     this.takeOver.set({ task, status });
-    this.openIn = this.copyFor(from);
-    TaskStatusUi.openFromMenu(from, () => this.openIn?.showTakeOver());
+    TaskStatusUi.openFromMenu(from, () => this.handles?.showTakeOver());
   }
 
   cancelTakeOver(): void {
-    this.openIn?.hideTakeOver();
+    this.handles?.hideTakeOver();
     this.takeOver.set(null);
   }
 
@@ -326,12 +275,11 @@ export default class TaskStatusUi {
     } else {
       this.waitingChoice.set(first.status === 'Doing' ? 'finish' : 'start');
     }
-    this.openIn = this.copyFor(from);
-    TaskStatusUi.openFromMenu(from, () => this.openIn?.showWaiting());
+    TaskStatusUi.openFromMenu(from, () => this.handles?.showWaiting());
   }
 
   closeWaitingDialog(): void {
-    this.openIn?.hideWaiting();
+    this.handles?.hideWaiting();
     this.waitingSubject.set([]);
     this.waitingWriter = null;
   }

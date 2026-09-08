@@ -27,6 +27,23 @@ import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import opensElsewhere from '../opens-elsewhere';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/button';
+import '@nldd/design-system/icon-cell';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/modal-dialog';
+import '@nldd/design-system/page';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toolbar';
+import '@nldd/design-system/top-title-bar';
+
 @Component({
   selector: 'app-namespaces',
   imports: [ReactiveFormsModule, DialogSyncDirective, RouterOutlet],

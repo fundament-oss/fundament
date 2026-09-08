@@ -207,8 +207,14 @@
   width="420px"
   (close)="closePluginDetails()"
 >
-  <nldd-page sticky-header="" sticky-footer="">
-    <div slot="header" class="flex justify-end px-4 py-3">
+  <nldd-page
+    sticky-header=""
+    sticky-footer=""
+  >
+    <div
+      slot="header"
+      class="flex justify-end px-4 py-3"
+    >
       <nldd-icon-button
         icon="dismiss"
         text="Close"
@@ -219,7 +225,10 @@
     </div>
 
     @if (sheetPlugin(); as plugin) {
-      <nldd-simple-section class="space-y-5" padding-top="0">
+      <nldd-simple-section
+        class="space-y-5"
+        padding-top="0"
+      >
         <!-- Plugin Logo, Name & Version -->
         <div class="flex items-start gap-4">
           <app-plugin-icon

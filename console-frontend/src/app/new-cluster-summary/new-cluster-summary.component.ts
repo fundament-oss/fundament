@@ -22,6 +22,17 @@ import {
 import focusFirstModalInput from '../modal-focus';
 import PageNavService from '../page-nav.service';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/collection';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+
 @Component({
   selector: 'app-new-cluster-summary',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

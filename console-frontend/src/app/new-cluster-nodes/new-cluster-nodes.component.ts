@@ -14,6 +14,10 @@ import {
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 
+import '@nldd/design-system/button';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/title';
+
 @Component({
   selector: 'app-new-cluster-nodes',
   imports: [SharedNodePoolsFormComponent],

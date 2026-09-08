@@ -49,7 +49,6 @@ export interface Task extends TaskData {
 export default class TaskStore {
   private readonly taskApi = inject(TaskApiService);
 
-
   private readonly placementApi = inject(PlacementApiService);
 
   private readonly datacenterList = inject(DatacenterListService);
@@ -245,13 +244,12 @@ export default class TaskStore {
     // puts the old one back when the write does not land. Re-reading the whole
     // list for one field was a round trip that could only tell us what we just
     // wrote.
-    firstValueFrom(this.taskApi.updateTask(task.id, patch))
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, ...before } : t)));
-        this.toast.error(`Could not save ${what} — it has been put back`);
-      });
+    firstValueFrom(this.taskApi.updateTask(task.id, patch)).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+      this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, ...before } : t)));
+      this.toast.error(`Could not save ${what} — it has been put back`);
+    });
   }
 
   /**

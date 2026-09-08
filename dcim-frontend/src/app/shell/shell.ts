@@ -26,6 +26,7 @@ import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
 import opensElsewhere from '../shared/opens-elsewhere';
+import TaskStatusDialogsComponent from '../task-management/task-status-dialogs/task-status-dialogs';
 
 /**
  * The sections, in the order the sidebar shows them.
@@ -113,6 +114,7 @@ function sectionOf(url: string): string {
     AssetSheetComponent,
     CableSheetComponent,
     PlacementSheetComponent,
+    TaskStatusDialogsComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })

@@ -24,6 +24,24 @@ import {
 import '@nldd/design-system/checkbox-field';
 import '@nldd/design-system/file-field';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/checkbox';
+import '@nldd/design-system/container';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
+
 export interface Plugin {
   id: string;
   /** The install identifier ("openfsc"), which names the resource on the

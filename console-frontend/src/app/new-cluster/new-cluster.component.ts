@@ -13,6 +13,18 @@ import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { Region } from '../../generated/v1/cluster_pb';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
+import '@nldd/design-system/validation-list';
+
 @Component({
   selector: 'app-new-cluster',
   imports: [ReactiveFormsModule, AutofocusDirective],

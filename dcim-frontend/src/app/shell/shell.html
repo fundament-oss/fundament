@@ -219,6 +219,12 @@
   </nldd-bar-split-view>
 </nldd-app-view>
 
+<!-- The two questions a status menu can land on, once for the whole app. Both
+     are a native <dialog> opened with showModal(), so from here they are over
+     whatever asked for them, page or sheet. One copy per page and another in
+     the sheet meant the service had to guess from the DOM which was which. -->
+<app-task-status-dialogs></app-task-status-dialogs>
+
 <!-- Above the app, not in it: a form that makes something new belongs to no
      page, so it must survive the page you opened it from and be reachable from
      anywhere. Deferred, so it costs nothing until the first time you open it. -->

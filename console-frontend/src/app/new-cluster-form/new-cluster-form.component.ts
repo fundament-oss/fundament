@@ -21,6 +21,12 @@ import NewClusterComponent from '../new-cluster/new-cluster.component';
 import NewClusterNodesComponent from '../new-cluster-nodes/new-cluster-nodes.component';
 import NewClusterSummaryComponent from '../new-cluster-summary/new-cluster-summary.component';
 
+import '@nldd/design-system/page';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/top-title-bar';
+
 interface ProgressStep {
   name: string;
 }

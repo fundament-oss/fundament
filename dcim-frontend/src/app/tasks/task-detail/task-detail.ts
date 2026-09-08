@@ -16,7 +16,6 @@ import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import TaskStore, { Note, Task, Technician } from '../../task-management/task-store';
 import TaskStatusUi from '../../task-management/task-status-ui.service';
-import TaskStatusDialogsComponent from '../../task-management/task-status-dialogs/task-status-dialogs';
 import TaskApiService, {
   TaskData,
   TaskPatch,
@@ -58,7 +57,7 @@ interface NlddSheet {
   selector: 'app-task-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [NgTemplateOutlet, TaskStatusDialogsComponent],
+  imports: [NgTemplateOutlet],
   templateUrl: './task-detail.html',
 })
 export default class TaskDetailComponent {

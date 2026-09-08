@@ -12,15 +12,31 @@ import { Router } from '@angular/router';
 import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
+import { HOME } from '../address';
 import '@nldd/design-system/password-field';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/container';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/page';
+import '@nldd/design-system/page-footer';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/validation-list';
 /**
- * Where logging in lands you when nothing else was asked for: the clusters,
- * which is what the console is mostly read for. An address you were sent to
- * before the login page wins over it, and the organization is filled in on the
- * way there.
+ * Where logging in lands you when nothing else was asked for. The same page
+ * opening the console at its root lands on, so the two cannot drift apart. An
+ * address you were sent to before the login page wins over it, and the
+ * organization is filled in on the way there.
  */
-const DEFAULT_ROUTE = '/clusters';
+const DEFAULT_ROUTE = HOME;
 
 @Component({
   selector: 'app-login',

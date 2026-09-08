@@ -40,6 +40,27 @@ import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/date-picker';
 import '@nldd/design-system/popover';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/badge';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/card';
+import '@nldd/design-system/collection';
+import '@nldd/design-system/container';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/page';
+import '@nldd/design-system/progress-bar';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toolbar';
+import '@nldd/design-system/top-title-bar';
+
 Chart.register(...registerables, ZoomPlugin);
 
 interface ClusterOption {

@@ -46,6 +46,26 @@ import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/button';
+import '@nldd/design-system/button-group';
+import '@nldd/design-system/card';
+import '@nldd/design-system/collection';
+import '@nldd/design-system/container';
+import '@nldd/design-system/icon-button';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/search-field';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/tag';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toolbar';
+import '@nldd/design-system/top-title-bar';
+
 const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
   plugin.categories.map((category) => category.name).join(', ') || '—';
 

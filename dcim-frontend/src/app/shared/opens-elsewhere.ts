@@ -11,7 +11,5 @@
  */
 export default function opensElsewhere(event: Event): boolean {
   if (!(event instanceof MouseEvent)) return false;
-  return (
-    event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0
-  );
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
 }

@@ -22,6 +22,16 @@ import type { PluginInstallationItem } from '../plugin-resources/types';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/page';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
+
 @Component({
   selector: 'app-cluster-plugins',
   imports: [SharedPluginsFormComponent, SheetSyncDirective],

@@ -20,10 +20,10 @@ interface DialogRef {
  * The two questions a status menu can land on: what a task is waiting on, and
  * whether you are taking somebody else's over.
  *
- * Rendered wherever a status menu can be opened — the tasks page, and the sheet
- * the shell puts a task in. The state is not here but in TaskStatusUi, so the
- * two copies cannot disagree: whichever one is on screen shows the same
- * question about the same task.
+ * Rendered once, by the shell, above every page. Both questions are a native
+ * <dialog> opened with showModal(), so one copy over the app is over whatever
+ * asked for it however deep that was. The state is not here but in
+ * TaskStatusUi, which is where the pages reach it.
  */
 @Component({
   selector: 'app-task-status-dialogs',
@@ -84,17 +84,13 @@ export default class TaskStatusDialogsComponent {
 
   private readonly takeOverDialogEl = viewChild<ElementRef<HTMLElement>>('takeOverDialogEl');
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-
   constructor() {
     // The service decides when a dialog opens; it cannot reach into a template
-    // to do it, so the template hands it the four handles. Registered under this
-    // copy's own element, because there is more than one copy on screen and the
-    // service picks the one the menu belongs to.
+    // to do it, so the template hands it the four handles.
     effect(() => {
       const waiting = this.waitingDialogEl() as DialogRef | undefined;
       const takeOver = this.takeOverDialogEl() as DialogRef | undefined;
-      this.ui.registerDialogs(this.host.nativeElement as HTMLElement, {
+      this.ui.registerDialogs({
         showWaiting: () => waiting?.nativeElement.show?.(),
         hideWaiting: () => waiting?.nativeElement.hide?.(),
         showTakeOver: () => takeOver?.nativeElement.show?.(),
@@ -102,8 +98,6 @@ export default class TaskStatusDialogsComponent {
       });
     });
 
-    inject(DestroyRef).onDestroy(() =>
-      this.ui.unregisterDialogs(this.host.nativeElement as HTMLElement),
-    );
+    inject(DestroyRef).onDestroy(() => this.ui.unregisterDialogs());
   }
 }

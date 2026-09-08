@@ -6,7 +6,7 @@ import {
   type Routes,
 } from '@angular/router';
 import authGuard from './auth.guard';
-import { inOrganization, organizationOf } from './address';
+import { atRoot, HOME, inOrganization, organizationOf } from './address';
 import OrganizationContextService from './organization-context.service';
 import { OverlayService } from './overlay.service';
 
@@ -69,16 +69,25 @@ const organizationFromAddress: CanActivateFn = (route) => {
  * link written before the organization was part of one. Both go into the
  * organization this browser was last in.
  *
- * With none to go on the shell is still choosing, or asking which one, and it
- * navigates as soon as it knows. An address that does name an organization and
- * still ends up here matched nothing below it, and is left alone rather than
+ * The bare root is also sent on to the page the console opens on, so that
+ * visiting it lands where logging in does rather than on an empty pane. Its
+ * query string comes along: the walkthrough is started with `?present=1` on the
+ * root, and dropping it would open the plain console instead.
+ *
+ * With no organization to go on the shell is still choosing, or asking which
+ * one, and it navigates as soon as it knows — by then the address already says
+ * `/clusters`, so it lands there too. An address that does name an organization
+ * and still ends up here matched nothing below it, and is left alone rather than
  * prefixed a second time.
  */
 const intoCurrentOrganization: CanActivateFn = (route, state) => {
   if (organizationOf(state.url)) return true;
 
-  const last = OrganizationContextService.getStoredOrganizationName();
-  return last ? inject(Router).parseUrl(inOrganization(last, state.url)) : true;
+  const url = atRoot(state.url) ? `${HOME}${state.url.slice(1)}` : state.url;
+  const target = inOrganization(OrganizationContextService.getStoredOrganizationName(), url);
+  // Nothing to add: redirecting to the address we are already on would only
+  // arrive back here.
+  return target === state.url ? true : inject(Router).parseUrl(target);
 };
 
 const routes: Routes = [
