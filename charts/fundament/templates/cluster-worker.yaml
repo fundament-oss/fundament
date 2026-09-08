@@ -32,15 +32,15 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
-            {{- if $.Values.pluginController.shootImage }}
+            {{- if $.Values.pluginController.provisionShoots }}
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.
-            # Off unless pluginController.shootImage is set: the image must be
+            # Off unless pluginController.provisionShoots: the image must be
             # pullable from shoot nodes, which local dev registries are not.
             - name: PLUGIN_CONTROLLER_IMAGE
-              value: {{ $.Values.pluginController.shootImage }}
+              value: {{ $.Values.images.pluginController }}
             - name: PLUGIN_MARKETPLACE_CATALOG_API_URL
-              value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.shootImage is set" $.Values.externalUrls.marketplaceCatalogApi }}
+              value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.provisionShoots is set" $.Values.externalUrls.marketplaceCatalogApi }}
             - name: PLUGIN_LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             # Always rendered, so the manifest states the shoot fleet's
