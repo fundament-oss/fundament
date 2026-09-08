@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/fundament-oss/fundament/organization-api/pkg/catrust"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 )
@@ -30,25 +31,34 @@ type perShootLogs struct {
 	gardener gardener.Client
 	logger   *slog.Logger
 	now      func() time.Time
+	// trust builds the transport from the shoot's own CA (Plutono and
+	// Prometheus share the signer); the probe and the client must use the same.
+	trust *catrust.Trust
 
 	// newClient and discover are seams for tests; production wiring uses
 	// logs.NewLokiClientWithAuth and logs.DiscoverValiProxyBase.
-	newClient func(base, username, password string) logs.Client
-	discover  func(ctx context.Context, plutonoURL, username, password string) (string, error)
+	newClient func(base, username, password string, transport http.RoundTripper) logs.Client
+	discover  func(ctx context.Context, plutonoURL, username, password string, transport http.RoundTripper) (string, error)
 
 	cache *perShootCache[logs.Client]
 }
 
-func newPerShootLogs(g gardener.Client, logger *slog.Logger, opts ...logs.Option) *perShootLogs {
+// opts is a test seam (poll interval); production passes none. The per-shoot
+// transport is applied last so it always wins.
+func newPerShootLogs(g gardener.Client, logger *slog.Logger, trust *catrust.Trust, opts ...logs.Option) *perShootLogs {
+	withTransport := func(transport http.RoundTripper) []logs.Option {
+		return append(append([]logs.Option{}, opts...), logs.WithTransport(transport))
+	}
 	c := &perShootLogs{
 		gardener: g,
 		logger:   logger,
 		now:      time.Now,
-		newClient: func(base, username, password string) logs.Client {
-			return logs.NewLokiClientWithAuth(base, username, password, opts...)
+		trust:    trust,
+		newClient: func(base, username, password string, transport http.RoundTripper) logs.Client {
+			return logs.NewLokiClientWithAuth(base, username, password, withTransport(transport)...)
 		},
-		discover: func(ctx context.Context, plutonoURL, username, password string) (string, error) {
-			return logs.DiscoverValiProxyBase(ctx, plutonoURL, username, password, opts...)
+		discover: func(ctx context.Context, plutonoURL, username, password string, transport http.RoundTripper) (string, error) {
+			return logs.DiscoverValiProxyBase(ctx, plutonoURL, username, password, withTransport(transport)...)
 		},
 	}
 	// Resolving a logs backend is a secret read plus a sequential probe of
@@ -56,7 +66,7 @@ func newPerShootLogs(g gardener.Client, logger *slog.Logger, opts ...logs.Option
 	// needs a budget bigger than the single-secret-read default. Too small a
 	// budget cut the probe mid-scan on any landscape where the ids answer
 	// slowly, and — before negative caching — did so once per request.
-	c.cache = newPerShootCache(func() time.Time { return c.now() }, c.resolveClient, logsResolveTimeout)
+	c.cache = newPerShootCache("per-shoot vali", logger, func() time.Time { return c.now() }, c.resolveClient, logsResolveTimeout)
 	return c
 }
 
@@ -68,19 +78,21 @@ func (c *perShootLogs) resolveClient(ctx context.Context, clusterID uuid.UUID) (
 	if info.URL == "" {
 		return nil, fmt.Errorf("monitoring secret has no plutono-url annotation: %w", gardener.ErrNotFound)
 	}
-	base, err := c.discover(ctx, info.URL, info.Username, info.Password)
+	transport := c.trust.TransportFor(info.CABundle)
+	base, err := c.discover(ctx, info.URL, info.Username, info.Password, transport)
 	if err != nil {
 		return nil, fmt.Errorf("discover vali datasource: %w", err)
 	}
-	return c.newClient(base, info.Username, info.Password), nil
+	return c.newClient(base, info.Username, info.Password, transport), nil
 }
 
 // clientFor returns a client for the cluster's per-shoot Vali. It returns
 // gardener.ErrNotFound (possibly wrapped) while the shoot or its monitoring
 // stack is not available yet, and logs.ErrValiNotFound when Plutono answers
 // but no datasource proxies the Vali API; callers degrade to "no logs" on
-// both. The returned client re-resolves once on 401 (credential rotation) and
-// on 404/5xx (datasource-id drift), so both heal without a restart.
+// both. The returned client re-resolves once on 401 (credential rotation),
+// 404/5xx (datasource-id drift), or TLS verification failure (CA rotation),
+// so all heal without a restart.
 func (c *perShootLogs) clientFor(ctx context.Context, clusterID uuid.UUID) (logs.Client, error) {
 	_, err := c.cache.get(ctx, clusterID)
 	if err != nil {
@@ -101,7 +113,7 @@ type perShootLogsClient struct {
 func (p *perShootLogsClient) Backend() logs.Backend { return logs.BackendLoki }
 
 func (p *perShootLogsClient) Query(ctx context.Context, params *logs.QueryParams) ([]logs.Entry, error) {
-	return callWithReResolve(ctx, p, func(inner logs.Client) ([]logs.Entry, error) {
+	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) ([]logs.Entry, error) {
 		return inner.Query(ctx, params)
 	})
 }
@@ -113,7 +125,7 @@ func (p *perShootLogsClient) Query(ctx context.Context, params *logs.QueryParams
 // re-resolved, and a fresh inner tail spliced onto the same output channel, so
 // credential rotation heals mid-stream instead of ending the tail.
 func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams) (<-chan logs.TailEvent, error) {
-	inner, err := callWithReResolve(ctx, p, func(inner logs.Client) (<-chan logs.TailEvent, error) {
+	inner, err := callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) (<-chan logs.TailEvent, error) {
 		return inner.Tail(ctx, params)
 	})
 	if err != nil {
@@ -133,9 +145,8 @@ func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams)
 				if !ok {
 					return
 				}
-				if ev.Err != nil && !retried && isStaleResolution(ev.Err) {
+				if ev.Err != nil && !retried && isStaleResolution(ev.Err) && p.cache.cache.tryInvalidate(p.clusterID) {
 					retried = true
-					p.cache.cache.invalidate(p.clusterID)
 					p.cache.logger.InfoContext(ctx, "per-shoot vali tail hit a stale-resolution status, re-resolving",
 						"cluster_id", p.clusterID, "error", ev.Err)
 					next, rerr := p.restartTail(ctx, params)
@@ -178,37 +189,18 @@ func (*perShootLogsClient) forward(ctx context.Context, out chan<- logs.TailEven
 }
 
 func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (logs.Labels, error) {
-	return callWithReResolve(ctx, p, func(inner logs.Client) (logs.Labels, error) {
+	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) (logs.Labels, error) {
 		return inner.Labels(ctx, clusterID, namespace, start, end)
 	})
 }
 
-// callWithReResolve runs call against the currently cached inner client. On a
-// 401 (rotated credentials), 404, or 5xx (datasource id drifted, e.g. after a
-// Plutono re-provision) it invalidates the cache entry, re-resolves, and
-// retries exactly once; if re-resolution fails, the original error is
-// returned. A 400 (bad query) is never retried.
-func callWithReResolve[T any](ctx context.Context, p *perShootLogsClient, call func(logs.Client) (T, error)) (T, error) {
-	var zero T
-	inner, err := p.cache.cache.get(ctx, p.clusterID)
-	if err != nil {
-		return zero, err
-	}
-	out, err := call(inner)
-	if !isStaleResolution(err) {
-		return out, err
-	}
-	p.cache.cache.invalidate(p.clusterID)
-	p.cache.logger.InfoContext(ctx, "per-shoot vali answered with a stale-resolution status, re-resolving",
-		"cluster_id", p.clusterID, "error", err)
-	inner, rerr := p.cache.cache.get(ctx, p.clusterID)
-	if rerr != nil {
-		return zero, err
-	}
-	return call(inner)
-}
-
+// isStaleResolution: 401 (rotated credentials), 404 or 5xx (datasource id
+// drifted, e.g. after a Plutono re-provision), or a TLS verification failure
+// (rotated shoot CA). A 400 (bad query) is never retried.
 func isStaleResolution(err error) bool {
+	if isTLSVerificationFailure(err) {
+		return true
+	}
 	var statusErr *logs.StatusError
 	if !errors.As(err, &statusErr) {
 		return false

@@ -2,15 +2,12 @@ package prometheus
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"syscall"
 	"time"
@@ -54,8 +51,7 @@ type HTTPClient struct {
 // Option configures an HTTPClient.
 type Option func(*HTTPClient)
 
-// WithTransport sets a custom transport, e.g. to trust a private CA on the
-// path to a shoot's Plutono ingress in local development.
+// WithTransport sets a custom transport, e.g. one trusting a shoot's own CA.
 func WithTransport(rt http.RoundTripper) Option {
 	return func(c *HTTPClient) {
 		c.httpClient.Transport = rt
@@ -245,23 +241,4 @@ func isTransientNetErr(err error) bool {
 	return errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, io.EOF) ||
 		errors.Is(err, io.ErrUnexpectedEOF)
-}
-
-// TransportWithCA returns a clone of http.DefaultTransport (keeping its
-// proxy, dialer, and idle-connection settings) that trusts the PEM CA bundle
-// at path in addition to nothing else — the bundle fully replaces the system
-// pool, which is what a private-ingress deployment (e.g. Gardener seed CAs in
-// local dev) wants. Multiple CA certificates may be concatenated.
-func TransportWithCA(path string) (*http.Transport, error) {
-	pem, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read ca bundle: %w", err)
-	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(pem) {
-		return nil, fmt.Errorf("no certificates parsed from %s", path)
-	}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{RootCAs: pool}
-	return transport, nil
 }

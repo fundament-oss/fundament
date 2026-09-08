@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/fundament-oss/fundament/organization-api/pkg/catrust"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
@@ -40,28 +41,26 @@ func main() {
 
 	// Probe 4: does the DEFAULT transport (what production uses) verify TLS?
 	fmt.Println("== probe 4: TLS with default transport ==")
-	defaultOK := true
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, nil)
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
 	if err != nil {
-		defaultOK = false
-		fmt.Printf("FINDING: default transport fails: %v\n(private ingress CA — production wires it via PROMETHEUS_CA_FILE / prometheusCASecret)\n\n", err)
+		fmt.Printf("FINDING: default transport fails: %v\n(expected: the ingress cert is signed by this shoot's own CA)\n\n", err)
 	} else {
 		resp.Body.Close()
 		fmt.Printf("default transport OK (status %d)\n\n", resp.StatusCode)
 	}
 
-	// Same CA knob as production; no insecure fallback. On a landscape with a
-	// private ingress CA, extract the bundle and point PROMETHEUS_CA_FILE at it.
-	var opts []prom.Option
-	caFile := os.Getenv("PROMETHEUS_CA_FILE")
-	if caFile != "" {
-		transport, err := prom.TransportWithCA(caFile)
-		fatal("PROMETHEUS_CA_FILE", err)
-		opts = append(opts, prom.WithTransport(transport))
-	} else if !defaultOK {
-		fatal("tls", fmt.Errorf("default transport cannot verify %s and PROMETHEUS_CA_FILE is not set", info.PrometheusURL))
-	}
+	// Same trust model as production; no insecure fallback.
+	trust, err := catrust.New(os.Getenv("PROMETHEUS_CA_FILE"))
+	fatal("PROMETHEUS_CA_FILE", err)
+	transport := trust.TransportFor(info.CABundle)
+	fmt.Printf("== probe 4b: TLS with production trust (shoot CA: %d bytes) ==\n", len(info.CABundle))
+	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, info.PrometheusURL, http.NoBody) //nolint:gosec // probe target is operator-supplied
+	resp, err = (&http.Client{Timeout: 15 * time.Second, Transport: transport}).Do(req)       //nolint:gosec // probe target is operator-supplied
+	fatal("tls: neither the shoot CA nor PROMETHEUS_CA_FILE verifies "+info.PrometheusURL, err)
+	_ = resp.Body.Close()
+	fmt.Printf("production trust OK (status %d)\n\n", resp.StatusCode)
+	opts := []prom.Option{prom.WithTransport(transport)}
 	client := prom.NewHTTPClientWithAuth(info.PrometheusURL, info.Username, info.Password, opts...)
 	now := time.Now()
 
