@@ -1,5 +1,7 @@
 FROM golang:1.26.6-alpine AS builder
 
+RUN apk add --no-cache ca-certificates
+
 WORKDIR /build
 
 COPY go.mod go.sum ./
@@ -15,6 +17,7 @@ RUN CGO_ENABLED=0 go build -o /bin/plugin-controller ./plugin-controller/cmd
 
 FROM scratch
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /bin/plugin-controller /
 
 ENTRYPOINT ["/plugin-controller"]
