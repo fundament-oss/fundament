@@ -1,4 +1,5 @@
 import {
+  computed,
   Component,
   inject,
   signal,
@@ -13,7 +14,7 @@ import { ConnectError, Code } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -31,17 +32,45 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
-import { LoadingIndicatorComponent } from '../icons';
 import { formatDate as formatDateUtil } from '../utils/date-format';
+import PageNavService from '../page-nav.service';
+
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/container';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/icon-button';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/modal-dialog';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/validation-list';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
+  imports: [DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ProjectDetailComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -54,11 +83,18 @@ export default class ProjectDetailComponent implements OnInit {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
+
+  /** Falls back to the bare noun while the project is still loading, so no
+   *  button or dialog ever says "Delete undefined". */
+  projectLabel = computed(() => {
+    const p = this.project();
+    return p?.alias || p?.name || 'this project';
+  });
 
   namespaces = signal<Namespace[]>([]);
 
@@ -94,7 +130,7 @@ export default class ProjectDetailComponent implements OnInit {
       }
 
       this.project.set(response.project);
-      this.titleService.setTitle(response.project.alias || response.project.name);
+      this.titleService.setTitle('General');
 
       // Load namespaces and clusters for read-only display
       await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
@@ -115,7 +151,7 @@ export default class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -129,7 +165,7 @@ export default class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load clusters: ${error.message}`
           : 'Failed to load clusters',
@@ -172,7 +208,6 @@ export default class ProjectDetailComponent implements OnInit {
         alias: aliasToSave.trim(),
       });
       this.organizationDataService.updateProjectAlias(currentProject.id, aliasToSave.trim());
-      this.titleService.setTitle(aliasToSave.trim());
       this.showEditModal.set(false);
       this.editingAlias.set('');
     } catch (err) {
@@ -188,6 +223,15 @@ export default class ProjectDetailComponent implements OnInit {
   }
 
   deleteConfirmationInput = signal<string>('');
+
+  /**
+   * Set by the delete button. The field is not wrong until you have asked for
+   * the deletion: before that it is simply not filled in yet, and a button that
+   * sits there dead says nothing about what is missing.
+   */
+  deleteAttempted = signal(false);
+
+  deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
 
   /**
    * The full slug ("orgname/clustername/projectname") the user must type to confirm deletion.
@@ -212,6 +256,7 @@ export default class ProjectDetailComponent implements OnInit {
   }
 
   async deleteProject() {
+    this.deleteAttempted.set(true);
     const currentProject = this.project();
     if (!currentProject) return;
     if (!this.isDeleteConfirmed()) return;
@@ -224,12 +269,12 @@ export default class ProjectDetailComponent implements OnInit {
       await firstValueFrom(this.projectClient.deleteProject(request));
 
       this.showDeleteModal.set(false);
-      this.toastService.success(`Project '${currentProject.name}' deleted`);
+      this.notificationService.success(`Project '${currentProject.name}' deleted`);
 
       // Reload project data to update the selector modal
       await this.organizationDataService.reloadProjectsAndNamespaces();
 
-      this.router.navigate(['/projects']);
+      this.pageNav.goTo('/');
     } catch (err) {
       this.showDeleteModal.set(false);
       if (err instanceof ConnectError && err.code === Code.FailedPrecondition) {
@@ -248,6 +293,7 @@ export default class ProjectDetailComponent implements OnInit {
 
   onDeleteModalOpen(): void {
     this.deleteConfirmationInput.set('');
+    this.deleteAttempted.set(false);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

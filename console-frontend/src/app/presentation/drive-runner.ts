@@ -87,7 +87,11 @@ async function runStep(doc: Document, step: DriveStep, signal: AbortSignal): Pro
   }
   if (step.click) {
     const el = await waitForElement(doc, step.click, signal);
-    (el as HTMLElement | null)?.click();
+    // A design system control is a custom element wrapping the real button, and
+    // clicking the wrapper leaves that button untouched: a popovertarget never
+    // fires, so a menu that should open stays shut. Click the control inside.
+    const inner = el?.shadowRoot?.querySelector<HTMLElement>('button, a');
+    (inner ?? (el as HTMLElement | null))?.click();
     return;
   }
   if (step.submit) {

@@ -1,0 +1,137 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the list of rounds once the panes
+       collapse to one column, and echoes the round's own heading as it scrolls
+       out of view. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="selected()?.personName ?? 'Rounds'"
+    back-text="Rounds"
+    collapse-anchor="round-title"
+    (back)="goToRounds()"
+  ></nldd-top-title-bar>
+
+  @if (selected(); as round) {
+    <!-- Read-only: the walkthrough is the technician's, and this is a planner
+         looking at it. -->
+    <app-task-management-technician
+      embedded
+      [readOnly]="true"
+      [round]="round"
+    ></app-task-management-technician>
+    <!-- The walkthrough's own bar, docked by the page rather than pinned to the
+         bottom of the window. Fixed, it spanned the menu beside it too. -->
+  } @else if (rounds.rounds().length) {
+    <nldd-simple-section>
+      <!-- The same words as every other section, and no more of them: telling
+           you to pick something from the list beside it is telling you what the
+           layout already says. -->
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Nothing to pick, so no menu beside this: the list is the page. -->
+    <ng-container [ngTemplateOutlet]="roundsBody"></ng-container>
+  }
+</nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECOND SIDEBAR
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+    <ng-container [ngTemplateOutlet]="roundsBody"></ng-container>
+  </nldd-page>
+</ng-template>
+
+<!-- The same content in both places: beside a round it is the menu, and with no
+     rounds at all it is the page itself. -->
+<ng-template #roundsBody>
+  <nldd-simple-section>
+    <nldd-title size="3">
+      <h1>Rounds</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+
+    <!-- A read that failed says so. Without this the list below stands empty
+         and reads as "nothing is planned", which is a different answer than
+         "we could not ask". -->
+    @if (rounds.loadError(); as error) {
+      <nldd-banner variant="critical" [attr.text]="error"></nldd-banner>
+      <nldd-spacer size="12"></nldd-spacer>
+    }
+
+    <!-- What is not in anybody's round, in one line rather than one per kind of
+         gap. Which gap it is stands with the task, in the list this opens.
+         A sentence with a link rather than a row in the menu: the rows here are
+         rounds, and this one leaves the section. -->
+    @if (rounds.unplaced().length) {
+      <!-- Rich text rather than a text with a link component in it: this is a
+           sentence with a link in it, so it is written as one, and it reads at
+           the size everything else does. -->
+      <nldd-rich-text>
+        <p>
+          {{ unplacedLabel() }}.<br />
+          <a [attr.href]="tasksPath + '/inbox'" (click)="goToInbox($event)"
+            >Sort that out in Inbox</a
+          >
+        </p>
+      </nldd-rich-text>
+      <nldd-spacer size="16"></nldd-spacer>
+    }
+
+    @for (group of rounds.days(); track group.day; let index = $index) {
+      @if (index > 0) {
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-title size="5">
+        <h2>{{ dayLabel(group.day) }}</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        [attr.accessible-label]="'Rounds on ' + dayLabel(group.day)"
+      >
+        @for (round of group.rounds; track round.key) {
+          <nldd-list-item
+            [attr.href]="roundPath(round)"
+            [attr.current]="isSelected(round) ? '' : null"
+            (click)="goToRound($event, round)"
+          >
+            <nldd-text-cell
+              [attr.text]="round.personName"
+              [attr.supporting-text]="round.datacenter"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="progressLabel(round)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    }
+
+    @if (!rounds.days().length && !rounds.loadError()) {
+      <nldd-inline-dialog
+        icon="tools"
+        [attr.text]="rounds.loaded() ? 'No rounds planned' : 'Loading rounds'"
+        [attr.variant]="rounds.loaded() ? null : 'loading'"
+        supporting-text="A round needs a person, a data center and a day. Give the work those three in Tasks and it turns up here."
+      >
+        <nldd-button
+          slot="actions"
+          variant="secondary"
+          text="Go to tasks"
+          [attr.href]="tasksPath"
+          (click)="goToTasks($event)"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    }
+  </nldd-simple-section>
+</ng-template>

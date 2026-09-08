@@ -19,16 +19,29 @@ import {
   type GetAPIKeyResponse,
 } from '../generated/v1/apikey_pb.ts';
 
-export type { APIKey, CreateAPIKeyResponse, ListAPIKeysResponse, GetAPIKeyResponse };
+export type {
+  APIKey,
+  CreateAPIKeyResponse,
+  ListAPIKeysResponse,
+  GetAPIKeyResponse,
+};
 
 export class APIKeyService {
   private client: Client<typeof APIKeyServiceDesc>;
 
   constructor(baseUrl: string, authToken: string, organizationId?: string) {
-    this.client = createServiceClient(APIKeyServiceDesc, baseUrl, authToken, organizationId);
+    this.client = createServiceClient(
+      APIKeyServiceDesc,
+      baseUrl,
+      authToken,
+      organizationId,
+    );
   }
 
-  async createAPIKey(request: { name: string; expiresIn?: string }): Promise<CreateAPIKeyResponse> {
+  async createAPIKey(request: {
+    name: string;
+    expiresIn?: string;
+  }): Promise<CreateAPIKeyResponse> {
     try {
       return await createWithIdempotency(async (idempotencyKey) => {
         let status = '';
@@ -36,8 +49,10 @@ export class APIKeyService {
           { name: request.name, expiresIn: request.expiresIn ?? undefined },
           {
             headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
-            onHeader(headers) { status = headers.get(IDEMPOTENCY_STATUS_HEADER) ?? ''; },
-          }
+            onHeader(headers) {
+              status = headers.get(IDEMPOTENCY_STATUS_HEADER) ?? '';
+            },
+          },
         );
         return { response, status };
       });

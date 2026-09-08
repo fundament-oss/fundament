@@ -21,6 +21,8 @@ import { LogsApiService, type ClusterOption } from '../logs.service';
 import { LogBackend } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 
+import '@nldd/design-system/button';
+
 Chart.register(...registerables);
 
 const ALL_LEVELS: LogLevel[] = ['ERROR', 'WARN', 'INFO', 'DEBUG'];

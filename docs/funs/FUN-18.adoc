@@ -88,12 +88,12 @@ Do *not* hand-roll structural types for the components. An approximation that dr
 
 === Component quirks to plan for
 
-NLDD Design System components are web components, not native form controls, so a few patterns differ from plain HTML. The OpenFSC create form (`plugins/openfsc/console-ui/src/form.ts`) is the reference implementation; the recurring rules are:
+NLDD Design System components are form-associated custom elements, so most of what you know from a plain HTML form holds: they carry a `name`, they contribute to `FormData`, and the form validates them. What differs is that the control you would query for lives in a shadow root. The OpenFSC create form (`plugins/openfsc/console-ui/src/form.ts`) is the reference implementation; the recurring rules are:
 
 * `nldd-dropdown` wraps a *slotted native `<select>`* — keep the `<select>` and its options; the value lives on the `<select>`.
-* `nldd-checkbox-field` is **not** form-associated — read `.checked` off the elements directly, not via an `input[name]:checked` query.
-* `nldd-button` renders its native `<button>` in shadow DOM, so a `type="submit"` does not submit the light-DOM form. Drive submission from a `click` handler.
-* Validation is manual: `form.reportValidity()` does not see NLDD Design System controls. Surface errors with `nldd-form-field` (`error-message`) rather than native constraint validation.
+* The native control sits in shadow DOM, so a light-DOM query like `input[name]:checked` finds nothing. Read the state off the component (`.checked`, `.value`), or off the form: `new FormData(form)` lists these components under their own `name`.
+* `nldd-button` with `type="submit"` submits the form it belongs to; no click handler needed. Its own `<button>` cannot reach across the shadow boundary, so the component drives the form itself. A `form` attribute naming a form's id works too, which is how a submit button outside the form still submits it.
+* Since 0.8.84 the form sees these controls: `required`, `pattern`, `minlength` and `maxlength` on a component reach the form around it, so `form.reportValidity()` and a plain submit both stop on an empty required field. The message is yours to write, in an `nldd-validation-list` under the field. An item with a rule (`minlength`, `maxlength`, `match`, `required`) checks itself while the user types; anything only the server can decide is an item without a rule, named in `unmet` on the control.
 
 == Implementation
 

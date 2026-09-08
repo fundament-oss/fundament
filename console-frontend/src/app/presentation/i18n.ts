@@ -19,6 +19,12 @@ export const DEFAULT_LOCALE: Locale = 'nl';
 
 export const LOCALE_STORAGE_KEY = 'presentation-locale';
 
+/**
+ * Remembers a `?present=0`. The router drops query params on its first
+ * navigation, so without this the walkthrough came back on every refresh.
+ */
+export const PRESENT_STORAGE_KEY = 'presentation-skipped';
+
 /** Pairs the Dutch and English wording of one string. */
 export const loc = (nl: string, en: string): Localized => ({ nl, en });
 

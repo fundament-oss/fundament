@@ -1,106 +1,126 @@
-<div class="flex flex-col gap-4">
-  <!-- Header — hidden when embedded in a sheet takeover -->
-  @if (!embedded()) {
-    <div>
-      <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-        Manage ports — {{ deviceName() }}
-      </h3>
-      <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
-        {{ localPorts().length }} port{{ localPorts().length === 1 ? '' : 's' }}
-      </p>
-    </div>
-  }
+<nldd-page sticky-header>
+  <!-- Its own page inside the sheet, so the cable form is one step back. The
+       bar keeps the way back in full words until the title scrolls under it;
+       from then on it carries the title and the back button is a chevron. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="title()"
+    back-text="Cable"
+    collapse-anchor="ports-title"
+    (back)="back.emit()"
+  ></nldd-top-title-bar>
 
-  <!-- Existing ports -->
-  @if (localPorts().length > 0) {
-    <ul
-      class="divide-y divide-slate-100 dark:divide-gray-800 border border-slate-200 dark:border-gray-800 rounded-lg overflow-hidden"
-      aria-label="Ports"
-    >
-      @for (port of localPorts(); track port.id) {
-        <li class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-950 group">
-          <span class="flex-1 min-w-0">
-            <span class="text-sm font-mono text-slate-800 dark:text-gray-100">{{ port.name }}</span>
-          </span>
-          <span class="text-xs text-slate-400 dark:text-gray-500 shrink-0">{{
-            PORT_TYPE_LABEL[port.type]
-          }}</span>
-          <nldd-icon-button
-            icon="trash"
-            variant="neutral-transparent"
-            size="xs"
-            [attr.text]="'Remove port ' + port.name"
-            (click)="removePort(port.id)"
-            class="opacity-0 group-hover:opacity-100 transition-opacity"
-          ></nldd-icon-button>
-        </li>
+  <nldd-simple-section>
+    <nldd-title id="ports-title" size="3">
+      <h1>{{ title() }}</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+
+    <!-- What the device has. Removing is the one thing you can do to a row, and
+         the button stands there rather than appearing on hover: on a touch
+         screen there is no hover to appear on. -->
+    <nldd-list variant="box-tinted" accessible-label="Ports" empty-text="No ports on this device">
+      @for (port of ports(); track port.id) {
+        <nldd-list-item>
+          <nldd-text-cell width="full" [attr.text]="port.name"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            color="secondary"
+            [attr.text]="PORT_TYPE_LABEL[port.type]"
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-cell width="fit-content">
+            <nldd-icon-button
+              icon="trash"
+              variant="secondary"
+              size="sm"
+              [attr.text]="'Remove ' + port.name"
+              (click)="askRemove(port)"
+            ></nldd-icon-button>
+          </nldd-cell>
+        </nldd-list-item>
       }
-    </ul>
-  } @else {
-    <p class="text-xs text-slate-400 dark:text-gray-500 italic">No ports defined yet.</p>
-  }
+    </nldd-list>
 
-  <!-- Add port form -->
-  <div
-    class="flex flex-col gap-2 rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 p-3"
-  >
-    <p class="text-xs font-semibold text-slate-600 dark:text-gray-300 uppercase tracking-wide">
-      Add port
-    </p>
+    <nldd-spacer size="24"></nldd-spacer>
 
-    <div class="flex flex-col gap-2">
-      <!-- Name -->
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-slate-700 dark:text-gray-300" for="new-port-name"
-          >Name</label
-        >
-        <nldd-text-field
-          id="new-port-name"
-          [attr.value]="newPortName()"
-          placeholder="E.g. Gi0/5"
-          class="w-full font-mono"
-          (input)="newPortName.set($any($event.target).value)"
-          (change)="newPortName.set($any($event).detail?.value ?? newPortName())"
-        ></nldd-text-field>
-      </div>
+    <!-- In a box of its own, because it is something you fill in rather than
+         another row of the list above. Adding writes straight through, so this
+         is the only button here and it does what it says. -->
+    <nldd-box background="tinted">
+      <nldd-container padding-inline="16" padding-block="16">
+        <nldd-form>
+          <nldd-form-section text="Add port">
+            <nldd-form-field label="Name">
+              <nldd-text-field
+                id="new-port-name"
+                [attr.value]="newPortName()"
+                [attr.invalid]="nameError() ? '' : null"
+                [attr.unmet]="nameError() ? 'new-port-name-error' : null"
+                (input)="newPortName.set($any($event.target).value)"
+                (keydown.enter)="addPort()"
+              ></nldd-text-field>
+              @if (nameError()) {
+                <nldd-validation-list>
+                  <nldd-validation-item id="new-port-name-error">
+                    {{ nameError() }}
+                  </nldd-validation-item>
+                </nldd-validation-list>
+              }
+            </nldd-form-field>
 
-      <!-- Type -->
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-slate-700 dark:text-gray-300" for="new-port-type"
-          >Type</label
-        >
-        <nldd-dropdown>
-          <select
-            id="new-port-type"
-            [value]="newPortType()"
-            (change)="newPortType.set($any($event.target).value)"
-          >
-            @for (pt of PORT_TYPES; track pt.value) {
-              <option [value]="pt.value">{{ pt.label }}</option>
-            }
-          </select>
-        </nldd-dropdown>
-      </div>
+            <nldd-form-field label="Type">
+              <nldd-combo-box
+                id="new-port-type"
+                [attr.value]="newPortType()"
+                (change)="newPortType.set($any($event).detail.value)"
+              >
+                <nldd-menu>
+                  @for (pt of PORT_TYPES; track pt.value) {
+                    <nldd-menu-item [attr.value]="pt.value" [attr.text]="pt.label"></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-combo-box>
+            </nldd-form-field>
+          </nldd-form-section>
 
-      <nldd-button
-        variant="primary"
-        text="Add port"
-        start-icon="plus-small"
-        size="sm"
-        (click)="addPort()"
-        [attr.disabled]="canAddPort() ? null : true"
-        class="self-start"
-      ></nldd-button>
-    </div>
-  </div>
+          <nldd-form-actions>
+            <nldd-button
+              variant="secondary"
+              text="Add port"
+              start-icon="plus-small"
+              width="full"
+              (click)="addPort()"
+            ></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      </nldd-container>
+    </nldd-box>
+  </nldd-simple-section>
+</nldd-page>
 
-  <!-- Footer actions — cancel hidden when embedded (parent provides back navigation) -->
-  <div
-    class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-gray-800"
-  >
-    @if (!embedded()) {
-      <nldd-button variant="secondary" text="Cancel" size="sm" (click)="onCancel()"></nldd-button>
-    }
-    <nldd-button variant="primary" text="Save ports" (click)="onSave()" width="full"></nldd-button>
-  </div>
-</div>
+<!-- A port that carries a cable somewhere else disappears with it, so this asks
+     before it happens: there is no save step left to take it back. -->
+<nldd-modal-dialog
+  #removeModal
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Remove ' + (removing()?.name ?? '') + '?'"
+  supporting-text="The port disappears from this device. A cable that runs to it loses that end."
+  accessible-label="Confirm removing the port"
+  (close)="cancelRemove()"
+>
+  <nldd-button
+    slot="actions"
+    variant="primary"
+    text="Keep port"
+    (click)="cancelRemove()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Remove port"
+    (click)="confirmRemove()"
+  ></nldd-button>
+</nldd-modal-dialog>

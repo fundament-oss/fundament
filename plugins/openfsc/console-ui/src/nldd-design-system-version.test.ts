@@ -16,8 +16,15 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const read = (relative: string): { devDependencies?: Record<string, string>; dependencies?: Record<string, string> } =>
-  JSON.parse(readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8'));
+const read = (
+  relative: string,
+): {
+  devDependencies?: Record<string, string>;
+  dependencies?: Record<string, string>;
+} =>
+  JSON.parse(
+    readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8'),
+  );
 
 describe('@nldd/design-system pin', () => {
   it('matches the version console-frontend serves at /plugin-ui/nldd-design-system.js', () => {
@@ -27,8 +34,14 @@ describe('@nldd/design-system pin', () => {
     const pluginPin = plugin.devDependencies?.['@nldd/design-system'];
     const consolePin = console_.dependencies?.['@nldd/design-system'];
 
-    expect(pluginPin, 'plugin console-ui must pin @nldd/design-system').toBeDefined();
-    expect(consolePin, 'console-frontend must pin @nldd/design-system').toBeDefined();
+    expect(
+      pluginPin,
+      'plugin console-ui must pin @nldd/design-system',
+    ).toBeDefined();
+    expect(
+      consolePin,
+      'console-frontend must pin @nldd/design-system',
+    ).toBeDefined();
     expect(
       pluginPin,
       `plugin pins ${pluginPin} but the Console serves ${consolePin}; the plugin's types ` +
@@ -40,9 +53,12 @@ describe('@nldd/design-system pin', () => {
   // other's on a fresh install, reintroducing exactly the drift the equality check
   // above exists to prevent — and it would do so without the strings ever differing.
   it('is an exact pin on both sides, not a range', () => {
-    const pluginPin = read('../package.json').devDependencies?.['@nldd/design-system'] ?? '';
+    const pluginPin =
+      read('../package.json').devDependencies?.['@nldd/design-system'] ?? '';
     const consolePin =
-      read('../../../../console-frontend/package.json').dependencies?.['@nldd/design-system'] ?? '';
+      read('../../../../console-frontend/package.json').dependencies?.[
+        '@nldd/design-system'
+      ] ?? '';
 
     expect(pluginPin, 'plugin console-ui pin').toMatch(/^\d+\.\d+\.\d+$/);
     expect(consolePin, 'console-frontend pin').toMatch(/^\d+\.\d+\.\d+$/);

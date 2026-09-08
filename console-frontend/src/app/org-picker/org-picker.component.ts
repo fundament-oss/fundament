@@ -13,6 +13,21 @@ import type { Organization } from '../../generated/v1/organization_pb';
 import type { Invitation } from '../../generated/v1/invite_pb';
 import isPresenting from '../presentation/presenting';
 
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/container';
+import '@nldd/design-system/icon-cell';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+
 @Component({
   selector: 'app-org-picker',
   imports: [],

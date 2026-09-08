@@ -2,164 +2,207 @@
   #sheet
   appSheetSync
   [show]="show()"
-  accessible-label="Install plugin"
+  [attr.accessible-label]="'Plugin ' + pluginDisplayName()"
   placement="right"
-  width="480px"
-  (open)="onOpen()"
   (close)="onClose()"
 >
-  <nldd-page sticky-header sticky-footer>
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      text="Install plugin"
+      [attr.text]="'Plugin ' + pluginDisplayName()"
+      collapse-anchor="install-plugin-title"
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <p class="mb-4 text-gray-600 dark:text-gray-400">
-        Select cluster(s) to install plugin
-        <strong class="font-semibold">{{ pluginDisplayName() }}</strong> on:
-      </p>
-
-      @if (versions().length > 0) {
-        <nldd-form-field label="Version" class="mb-4 block">
-          <nldd-dropdown>
-            <select
-              appAutofocus
-              [value]="selectedVersion()"
-              (change)="onVersionChange($any($event).target.value)"
-            >
-              @for (v of versions(); track v.version) {
-                <option [value]="v.version">{{ v.version }}</option>
-              }
-            </select>
-          </nldd-dropdown>
-        </nldd-form-field>
-      } @else if (versionsError()) {
-        <nldd-box class="mb-4 block">
+      <nldd-title
+        id="install-plugin-title"
+        size="3"
+      >
+        <h1>Plugin {{ pluginDisplayName() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (versions().length === 0) {
+        @if (versionsError()) {
           <nldd-inline-dialog
-            class="card-body"
             icon="exclamation-triangle"
             icon-color="critical"
             text="Couldn't load versions"
             supporting-text="Something went wrong loading this plugin's versions. Close this dialog and try again."
           ></nldd-inline-dialog>
-        </nldd-box>
-      } @else {
-        <nldd-box class="mb-4 block">
+        } @else {
           <nldd-inline-dialog
-            class="card-body"
             variant="alert"
             text="No published version"
             supporting-text="This plugin has no published definition to install yet."
           ></nldd-inline-dialog>
-        </nldd-box>
-      }
-
-      @if (clusters().length === 0) {
-        <nldd-box>
-          <nldd-inline-dialog
-            class="card-body"
-            icon="ship-wheel"
-            icon-color="secondary"
-            text="No clusters found"
-            supporting-text="Create a cluster first to install plugins on it."
-          >
-          </nldd-inline-dialog>
-        </nldd-box>
-      } @else {
-        @if (eligibleClusters().length > 1) {
-          <nldd-checkbox-field
-            class="mb-2 block"
-            label="Select all available clusters"
-            [checked]="allSelected()"
-            (change)="setAllSelected($any($event).detail.checked)"
-          ></nldd-checkbox-field>
         }
-
-        <!-- data-tour: the per-cluster list the walkthrough ticks a single box in
-         (src/app/presentation/tours.ts). Keep the attribute. -->
-        <div data-tour="install-clusters" class="space-y-2">
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (clusters().length === 0) {
+        <nldd-inline-dialog
+          icon="kubernetes"
+          icon-color="secondary"
+          text="No clusters found"
+          supporting-text="Create a cluster first to install plugins on it."
+        ></nldd-inline-dialog>
+      } @else {
+        <!-- The same intro whether you are installing or managing: the sheet is
+             one screen with two states, and a text that changes under you reads
+             as a different screen. -->
+        @if (versions().length > 0) {
+          <nldd-rich-text>
+            <p>
+              Available versions are: {{ versionList() }}. If you want to upgrade, uninstall the
+              plugin and install a newer version.
+            </p>
+          </nldd-rich-text>
+          <nldd-spacer size="12"></nldd-spacer>
+        }
+        <!-- data-tour: the per-cluster list the walkthrough installs from
+             (src/app/presentation/tours.ts). Keep the attribute. -->
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Clusters"
+          data-tour="install-clusters"
+        >
           @for (cluster of clusters(); track cluster.id) {
-            <div
-              class="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
-            >
-              @if (cluster.phase !== null) {
-                <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
-                  <nldd-icon name="ship-wheel" class="mx-1 h-4 w-4 shrink-0"></nldd-icon>
-                  <span class="truncate">{{ cluster.name }}</span>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                  <nldd-tag size="sm" [attr.color]="statusFor(cluster.phase).tagColor">
-                    @if (isInProgress(cluster.phase)) {
-                      <app-loading-indicator
-                        slot="icon"
-                        class="fill-accent-600 dark:fill-accent-400 h-3 w-3 animate-spin text-gray-200 dark:text-gray-800"
-                      />
-                    } @else if (statusFor(cluster.phase).label === 'Installed') {
-                      <nldd-icon slot="icon" name="check-mark" class="h-3 w-3"></nldd-icon>
-                    }
-                    {{ statusFor(cluster.phase).label }}
-                  </nldd-tag>
-                  @if (isFailed(cluster.phase)) {
-                    <nldd-button
-                      type="button"
-                      (click)="onRetry(cluster.id)"
-                      text="Retry"
-                      variant="secondary"
-                      size="xs"
-                    ></nldd-button>
-                  }
-                  @if (!isInProgress(cluster.phase)) {
-                    <nldd-button
-                      type="button"
-                      (click)="onUninstall(cluster.id)"
-                      text="Remove"
-                      variant="destructive"
-                      size="xs"
-                    ></nldd-button>
-                  }
-                </div>
-              } @else if (!cluster.running) {
-                <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
-                  <nldd-icon
-                    name="ship-wheel"
-                    class="mx-1 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-600"
-                  ></nldd-icon>
-                  <span class="truncate text-gray-400 dark:text-gray-600">{{ cluster.name }}</span>
-                </div>
-                <nldd-tag class="shrink-0" color="neutral" size="sm" text="Not running"></nldd-tag>
-              } @else {
-                <nldd-checkbox-field
-                  class="-my-2 min-w-0 flex-1"
-                  [label]="cluster.name"
-                  [checked]="isSelected(cluster.id)"
-                  (change)="setSelected(cluster.id, $any($event).detail.checked)"
-                ></nldd-checkbox-field>
+            <nldd-list-item>
+              <nldd-icon-cell
+                icon="kubernetes"
+                size="24"
+                [attr.color]="cluster.running ? null : 'secondary'"
+              ></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                [attr.color]="cluster.running ? null : 'secondary'"
+                [attr.text]="cluster.name"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <!-- The tag cell takes the slack, so the tag sits right behind the
+                   name and the action stays pinned to the right. -->
+              <nldd-cell width="full">
+                <!-- Only for states no button can express: progress lives in the
+                     button's own loading state, and "installed" is already said
+                     by the version and the Uninstall button. -->
+                @if (
+                  cluster.phase !== null &&
+                  !isRunning(cluster.phase) &&
+                  !isInProgress(cluster.phase)
+                ) {
+                  <nldd-badge
+                    size="sm"
+                    [attr.color]="statusFor(cluster.phase).badgeColor"
+                    [attr.text]="statusFor(cluster.phase).label"
+                    [attr.pulse]="isInProgress(cluster.phase) ? '' : null"
+                  ></nldd-badge>
+                } @else if (cluster.phase === null && !cluster.running) {
+                  <nldd-badge
+                    color="neutral"
+                    size="sm"
+                    text="Not running"
+                  ></nldd-badge>
+                }
+              </nldd-cell>
+              @if (showsVersion(cluster)) {
+                <!-- Next to the action rather than the cluster name, where a bare
+                     version number would read as the cluster's own Kubernetes
+                     version. -->
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  [attr.text]="cluster.version"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
               }
-            </div>
+              @if (cluster.phase !== null && isFailed(cluster.phase)) {
+                <nldd-cell width="fit-content">
+                  <nldd-button
+                    type="button"
+                    (click)="onRetry(cluster.id, cluster.version)"
+                    text="Retry"
+                    variant="secondary"
+                    size="sm"
+                  ></nldd-button>
+                </nldd-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              }
+              @if (cluster.phase !== null && isInProgress(cluster.phase)) {
+                <!-- The button you pressed reports the work, rather than a tag
+                     appearing somewhere else on the row. Which button depends on
+                     which way the work goes. -->
+                <nldd-cell width="fit-content">
+                  <!-- `expandable` while installing too: without the chevron the
+                       button is 22px narrower, so the control you just pressed
+                       would appear to shrink under your cursor. -->
+                  <nldd-button
+                    loading
+                    type="button"
+                    [attr.expandable]="isRemoving(cluster.phase) ? null : ''"
+                    [attr.text]="isRemoving(cluster.phase) ? 'Uninstall' : 'Install'"
+                    [attr.variant]="isRemoving(cluster.phase) ? 'destructive' : 'primary'"
+                    size="sm"
+                  ></nldd-button>
+                </nldd-cell>
+              } @else if (cluster.phase !== null) {
+                <nldd-cell width="fit-content">
+                  <nldd-button
+                    type="button"
+                    (click)="onUninstall(cluster.id)"
+                    text="Uninstall"
+                    variant="destructive"
+                    size="sm"
+                  ></nldd-button>
+                </nldd-cell>
+              } @else if (cluster.running) {
+                <nldd-cell width="fit-content">
+                  <!-- The version is chosen here, on the row that installs it:
+                       a plugin is pinned per cluster, so there is no single
+                       version the whole sheet could carry. -->
+                  <!-- data-tour: the walkthrough's install slide clicks this
+                       (src/app/presentation/tours.ts). Keep the attribute. -->
+                  <nldd-button
+                    data-tour="install-confirm"
+                    type="button"
+                    expandable
+                    popup-type="menu"
+                    text="Install"
+                    variant="primary"
+                    size="sm"
+                    [attr.disabled]="versions().length === 0 ? '' : null"
+                  >
+                    <!-- Newest on its own at the top, the rest under a heading:
+                         which one you get by default stays obvious however many
+                         versions a plugin has published. -->
+                    <nldd-menu
+                      slot="popup"
+                      placement="bottom-end"
+                      accessible-label="Version"
+                    >
+                      <nldd-menu-item
+                        [attr.text]="versions()[0].version"
+                        (click)="onInstallOne(cluster.id, versions()[0])"
+                      ></nldd-menu-item>
+                      @if (earlierVersions().length > 0) {
+                        <nldd-menu-group text="Earlier versions">
+                          @for (v of earlierVersions(); track v.version) {
+                            <nldd-menu-item
+                              [attr.text]="v.version"
+                              (click)="onInstallOne(cluster.id, v)"
+                            ></nldd-menu-item>
+                          }
+                        </nldd-menu-group>
+                      }
+                    </nldd-menu>
+                  </nldd-button>
+                </nldd-cell>
+              }
+            </nldd-list-item>
           }
-        </div>
+        </nldd-list>
       }
     </nldd-simple-section>
-
-    <!-- data-tour: confirm button of the walkthrough's install slide
-         (src/app/presentation/tours.ts). Keep the attribute. -->
-    <div slot="footer" class="sheet-footer">
-      <nldd-button
-        data-tour="install-confirm"
-        type="button"
-        (click)="onInstallSelected()"
-        text="Install on selected ({{ selectedCount() }})"
-        variant="primary"
-        width="full"
-        [attr.disabled]="
-          eligibleClusters().length === 0 || selectedCount() === 0 || versions().length === 0
-            ? ''
-            : null
-        "
-      ></nldd-button>
-    </div>
   </nldd-page>
 </nldd-sheet>

@@ -2,7 +2,12 @@
 // form covers the common CORS case; JWT/OIDC/extAuth/authorization and other
 // features are configured via YAML.
 
-import { buildTargetRef, listValue, trimmedValue, type TargetRef } from './form-helpers.ts';
+import {
+  buildTargetRef,
+  listValue,
+  trimmedValue,
+  type TargetRef,
+} from './form-helpers.ts';
 
 export interface SecurityPolicyBody {
   apiVersion: 'gateway.envoyproxy.io/v1alpha1';
@@ -14,8 +19,13 @@ export interface SecurityPolicyBody {
   };
 }
 
-export function buildSecurityPolicyBody(root: ParentNode, namespace: string): SecurityPolicyBody {
-  const spec: SecurityPolicyBody['spec'] = { targetRefs: [buildTargetRef(root)] };
+export function buildSecurityPolicyBody(
+  root: ParentNode,
+  namespace: string,
+): SecurityPolicyBody {
+  const spec: SecurityPolicyBody['spec'] = {
+    targetRefs: [buildTargetRef(root)],
+  };
 
   const origins = listValue(root, 'cors-origins');
   const methods = listValue(root, 'cors-methods');

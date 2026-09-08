@@ -4,10 +4,17 @@
 
 import type { FundamentSdk } from './sdk.ts';
 
-function whenSettled(el: HTMLLinkElement | HTMLScriptElement, what: string): Promise<void> {
+function whenSettled(
+  el: HTMLLinkElement | HTMLScriptElement,
+  what: string,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     el.addEventListener('load', () => resolve(), { once: true });
-    el.addEventListener('error', () => reject(new Error(`failed to load ${what}`)), { once: true });
+    el.addEventListener(
+      'error',
+      () => reject(new Error(`failed to load ${what}`)),
+      { once: true },
+    );
   });
 }
 

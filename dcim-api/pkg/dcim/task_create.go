@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
@@ -23,7 +24,10 @@ func (s *Server) CreateTask(
 		Title:    req.GetTitle(),
 		Status:   taskStatusFromProto(req.GetStatus()),
 		Priority: taskPriorityFromProto(req.GetPriority()),
-		Category: taskCategoryFromProto(req.GetCategory()),
+	}
+
+	if req.HasBlockedReason() {
+		params.BlockedReason = pgtype.Text{String: req.GetBlockedReason(), Valid: true}
 	}
 
 	if req.HasDescription() {
@@ -47,13 +51,40 @@ func (s *Server) CreateTask(
 		params.Location = pgtype.Text{String: req.GetLocation(), Valid: true}
 	}
 
-	id, err := s.queries.TaskCreate(ctx, params)
+	// The row and its tags are two writes, so they go in one transaction: a tag
+	// that fails to write after the task is committed leaves a task the caller
+	// was told it did not get, and the retry makes a second one.
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	id, err := qtx.TaskCreate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == dbconst.ConstraintDcimTasksFkAssignee {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create task: %w", err))
+	}
+
+	// The tags live in their own table, so they are written after the task
+	// exists. A task without tags is a normal task, so an empty list is not an
+	// error and simply writes nothing.
+	if tags := req.GetTags(); len(tags) > 0 {
+		if err := qtx.TaskTagsAdd(ctx, db.TaskTagsAddParams{
+			TaskID: id,
+			Tags:   tags,
+		}); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to tag task: %w", err))
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "task created", "task_id", id)

@@ -1,0 +1,51 @@
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="show"
+  placement="right"
+  accessible-label="New Kubernetes cluster"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <!-- The later steps show a back button to the step before them, so the form
+         needs no in-page "previous" button. `collapse-anchor` points at the step's
+         own heading: scroll it under the bar and the bar takes over the title. -->
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="currentStepTitle()"
+      [attr.back-text]="previousStepName()"
+      collapse-anchor="new-cluster-form-step-title"
+      dismiss-text="Cancel"
+      (back)="goToStep(currentStepIndex() - 1)"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-step-indicator
+        accessible-label="Cluster creation progress"
+        [current]="currentStepNumber()"
+        [translations]="stepIndicatorTranslations"
+      >
+        @for (step of steps; track step.name; let i = $index) {
+          <nldd-step-indicator-item
+            [text]="step.name"
+            [status]="stepStatus(i)"
+            [button]="canNavigate(i)"
+            (click)="goToStep(i)"
+          ></nldd-step-indicator-item>
+        }
+      </nldd-step-indicator>
+      <nldd-spacer size="24"></nldd-spacer>
+      @switch (currentStepIndex()) {
+        @case (0) {
+          <app-new-cluster />
+        }
+        @case (1) {
+          <app-new-cluster-nodes />
+        }
+        @case (2) {
+          <app-new-cluster-summary />
+        }
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

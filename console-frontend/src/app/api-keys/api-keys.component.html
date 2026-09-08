@@ -1,68 +1,34 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">API keys</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">
-      Manage API keys for programmatic access to your organization
-    </p>
-  </div>
-
-  <div class="p-6">
-    <!-- Token Display (only shown once after creation) -->
-    @if (createdToken()) {
-      <div
-        class="mb-6 rounded-md border-2 border-green-500 bg-green-50 p-6 dark:border-green-600 dark:bg-green-950"
-      >
-        <div class="mb-4">
-          <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">
-            API key created successfully!
-          </h3>
-          <p class="mt-1 text-green-800 dark:text-green-200">
-            Copy this token now. For security reasons, it will not be shown again.
-          </p>
-        </div>
-        <div class="mb-4">
-          <nldd-form-field label="Your API token">
-            <div class="flex gap-2">
-              <nldd-text-field
-                id="apiToken"
-                [value]="createdToken()"
-                readonly
-                class="flex-1"
-              ></nldd-text-field>
-              <nldd-button
-                type="button"
-                (click)="copyToken()"
-                text="Copy"
-                start-icon="rectangle-stack"
-                variant="primary"
-              ></nldd-button>
-            </div>
-          </nldd-form-field>
-        </div>
-        <nldd-button
-          type="button"
-          (click)="dismissToken()"
-          text="I've saved the token"
-          start-icon="check-mark"
-          variant="primary"
-        ></nldd-button>
-      </div>
-    }
-
-    <!-- Error Message -->
-    @if (error()) {
-      <div class="bg-danger-50 dark:bg-danger-950 mb-4 rounded-md p-4">
-        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
-      </div>
-    }
-
-    <!-- Create Form -->
-    @if (isCreating()) {
-      <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
-        <h3 class="-mt-2 mb-4 text-lg font-semibold">Create new API key</h3>
+<!-- A sheet, not a page: keys are something you fetch beside what you were doing,
+     so the shell renders it and the page behind stays where it was. The table
+     became a list, because seven columns do not fit beside a page. -->
+<nldd-sheet
+  #apiKeysSheet
+  appSheetSync
+  [show]="show"
+  accessible-label="API keys"
+  placement="right"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="isCreating() ? 'New API key' : 'API keys'"
+      [attr.back-text]="isCreating() ? 'API keys' : null"
+      [attr.collapse-anchor]="isCreating() ? 'new-api-key-title' : 'api-keys-title'"
+      dismiss-text="Close"
+      (back)="cancelCreating()"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (isCreating()) {
+        <nldd-title
+          id="new-api-key-title"
+          size="3"
+        >
+          <h1>New API key</h1>
+        </nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
         <nldd-form
-          class="space-y-4"
           (submit)="createApiKey($event)"
           (keydown.enter)="createApiKey($event)"
         >
@@ -71,173 +37,216 @@
               appAutofocus
               id="name"
               [value]="newKeyName()"
-              placeholder="E.g. CLI key"
               (input)="newKeyName.set($any($event.target).value)"
-              (blur)="newKeyNameTouched.set(true)"
               (keyup.escape)="cancelCreating()"
-              [invalid]="!newKeyName().trim() && newKeyNameTouched()"
-              error-message="api-key-name-error"
+              [invalid]="!newKeyName().trim() && newKeySubmitted()"
+              unmet="api-key-name-error"
             ></nldd-text-field>
-            <nldd-form-field-error-text id="api-key-name-error">
-              Name is required
-            </nldd-form-field-error-text>
+            <nldd-validation-list>
+              <nldd-validation-item id="api-key-name-error"
+                >A name is required.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
-          <nldd-form-field label="Expires after (duration)">
+          <nldd-form-field
+            label="Expires after"
+            optional
+            optional-label="Optional"
+          >
             <nldd-text-field
               id="expiresIn"
               [value]="newKeyExpiresIn()"
-              placeholder="Leave blank if you don't want the key to expire."
               (input)="newKeyExpiresIn.set($any($event.target).value)"
               (keyup.escape)="cancelCreating()"
             ></nldd-text-field>
             <nldd-form-field-help-text>
-              Optional. Formatted as duration, eg. 300s, 5m or 1h.
+              A duration, for example 300s, 5m or 1h. Leave it empty and the key never expires.
             </nldd-form-field-help-text>
           </nldd-form-field>
-          <div class="flex gap-2">
-            <nldd-button
-              type="submit"
-              [disabled]="loading()"
-              text="Create"
-              variant="primary"
-            ></nldd-button>
+          <nldd-form-actions>
             <nldd-button
               type="button"
-              (click)="cancelCreating()"
-              [disabled]="loading()"
-              text="Cancel"
-              variant="secondary"
+              (click)="createApiKey()"
+              text="Create API key"
+              [attr.loading]="loading() ? '' : null"
+              variant="primary"
+              width="full"
             ></nldd-button>
-          </div>
+          </nldd-form-actions>
         </nldd-form>
-      </div>
-    } @else if (loading() || apiKeys().length > 0 || error()) {
-      <!-- Create Button -->
-      <nldd-button
-        type="button"
-        (click)="startCreating()"
-        [disabled]="loading()"
-        text="Create new API key"
-        start-icon="plus-small"
-        variant="primary"
-        class="mb-6"
-      ></nldd-button>
-    }
-
-    <!-- Loading State -->
-    @if (loading() && apiKeys().length === 0) {
-      <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">Loading API keys...</p>
-      </div>
-    }
-
-    <!-- API Keys Table -->
-    @if (apiKeys().length > 0) {
-      <nldd-table
-        accessible-label="API keys"
-        columns="minmax(160px, 1fr) 140px 120px 150px 120px 110px 64px"
-        md-columns="minmax(160px, 1fr) 140px 150px 110px 64px"
-        sm-columns="minmax(160px, 1fr) 140px 150px 110px 64px"
-      >
-        <nldd-table-row slot="header">
-          <nldd-text-cell text="**Name**"></nldd-text-cell>
-          <nldd-text-cell text="**Token prefix**"></nldd-text-cell>
-          <nldd-text-cell text="**Created**" hide-below="lg"></nldd-text-cell>
-          <nldd-text-cell text="**Last used**"></nldd-text-cell>
-          <nldd-text-cell text="**Expires**" hide-below="lg"></nldd-text-cell>
-          <nldd-text-cell text="**Status**"></nldd-text-cell>
-          <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-        </nldd-table-row>
-
-        @for (apiKey of apiKeys(); track apiKey.id) {
-          <nldd-table-row>
-            <nldd-text-cell [attr.text]="apiKey.name"></nldd-text-cell>
-            <nldd-text-cell
-              class="font-mono"
-              color="secondary"
-              [attr.text]="apiKey.tokenPrefix"
-            ></nldd-text-cell>
-            <nldd-text-cell
-              color="secondary"
-              hide-below="lg"
-              [attr.text]="formatDate(apiKey.created)"
-            ></nldd-text-cell>
-            <nldd-text-cell
-              color="secondary"
-              [attr.text]="formatDateTime(apiKey.lastUsed)"
-            ></nldd-text-cell>
-            <nldd-text-cell
-              hide-below="lg"
-              [attr.color]="apiKey.expires && isExpired(apiKey.expires) ? 'critical' : 'secondary'"
-              [attr.text]="apiKey.expires ? formatDate(apiKey.expires) : 'Never'"
-            ></nldd-text-cell>
-            <nldd-cell>
-              @if (isRevoked(apiKey.revoked)) {
-                <nldd-tag color="neutral" size="sm" text="Revoked"></nldd-tag>
-              } @else if (isExpired(apiKey.expires)) {
-                <nldd-tag color="warning" size="sm" text="Expired"></nldd-tag>
-              } @else {
-                <nldd-tag color="success" size="sm" text="Active"></nldd-tag>
-              }
-            </nldd-cell>
-            <nldd-cell horizontal-alignment="right">
-              <nldd-icon-button
-                icon="ellipsis"
-                size="sm"
-                variant="neutral-transparent"
-                expandable
-                popup-type="menu"
-                [attr.accessible-label]="'Actions for ' + apiKey.name"
-                [attr.disabled]="loading() ? '' : null"
-              >
-                <nldd-menu slot="popup">
-                  @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
-                    <nldd-menu-item
-                      text="Revoke"
-                      icon="slash-circle"
-                      (select)="openRevokeModal(apiKey.id, apiKey.name)"
-                    ></nldd-menu-item>
-                    <nldd-menu-divider></nldd-menu-divider>
-                  }
-                  <nldd-menu-item
-                    text="Delete"
-                    icon="trash"
-                    destructive
-                    (select)="openDeleteModal(apiKey.id, apiKey.name)"
-                  ></nldd-menu-item>
-                </nldd-menu>
-              </nldd-icon-button>
-            </nldd-cell>
-          </nldd-table-row>
-        }
-      </nldd-table>
-    }
-
-    <!-- Empty State -->
-    @if (!loading() && apiKeys().length === 0 && !error() && !isCreating()) {
-      <nldd-box>
-        <nldd-inline-dialog
-          class="card-body"
-          icon="lock-closed"
-          icon-color="secondary"
-          text="No API keys found"
-          supporting-text="Create your first API key to authenticate with the API."
+      } @else {
+        <nldd-title
+          id="api-keys-title"
+          size="3"
         >
-          <nldd-button
-            slot="actions"
-            (click)="startCreating()"
-            type="button"
-            text="Create an API key"
-            start-icon="plus-small"
-            variant="primary"
-            class="mb-4"
-          ></nldd-button>
-        </nldd-inline-dialog>
-      </nldd-box>
-    }
-  </div>
-</div>
-
+          <h1>API keys</h1>
+        </nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
+        <!-- Shown once and never again, so it says so and offers the copy. -->
+        @if (createdToken(); as token) {
+          <nldd-banner
+            variant="success"
+            text="API key created"
+            supporting-text="Copy the token now. It is not shown again."
+          ></nldd-banner>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-form-field label="Your API token">
+            <nldd-text-field
+              id="apiToken"
+              [value]="token"
+              readonly
+            ></nldd-text-field>
+          </nldd-form-field>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-toolbar label="Token actions">
+            <nldd-toolbar-item slot="start">
+              <nldd-button
+                type="button"
+                (click)="copyToken()"
+                text="Copy token"
+                start-icon="rectangle-stack"
+                variant="primary"
+              ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="rectangle-stack"
+                text="Copy token"
+                (select)="copyToken()"
+              ></nldd-menu-item>
+            </nldd-toolbar-item>
+            <nldd-toolbar-item slot="start">
+              <nldd-button
+                type="button"
+                (click)="dismissToken()"
+                text="I saved it"
+                start-icon="check-mark"
+                variant="secondary"
+              ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="check-mark"
+                text="I saved it"
+                (select)="dismissToken()"
+              ></nldd-menu-item>
+            </nldd-toolbar-item>
+          </nldd-toolbar>
+          <nldd-spacer size="24"></nldd-spacer>
+        }
+        @if (error(); as message) {
+          <nldd-banner
+            variant="critical"
+            text="Something went wrong"
+            [attr.supporting-text]="message"
+          >
+          </nldd-banner>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
+        <nldd-toolbar label="API key actions">
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              type="button"
+              (click)="startCreating()"
+              text="New API key…"
+              start-icon="plus-small"
+              variant="primary"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="plus-small"
+              text="New API key…"
+              (select)="startCreating()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-rich-text spacing="flat">
+          <p>Keys authenticate scripts and tools against this organization's API.</p>
+        </nldd-rich-text>
+        <nldd-spacer size="16"></nldd-spacer>
+        @if (loading() && apiKeys().length === 0) {
+          <nldd-activity-indicator
+            show-text
+            text="Loading API keys..."
+          ></nldd-activity-indicator>
+        } @else if (apiKeys().length === 0) {
+          <nldd-box>
+            <nldd-container padding="16">
+              <nldd-inline-dialog
+                icon="secure"
+                icon-color="secondary"
+                text="No API keys yet"
+                supporting-text="A key lets a script or tool talk to the API on your behalf."
+              ></nldd-inline-dialog>
+            </nldd-container>
+          </nldd-box>
+        } @else {
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="API keys"
+          >
+            @for (apiKey of apiKeys(); track apiKey.id) {
+              <nldd-list-item>
+                <nldd-text-cell
+                  width="full"
+                  [attr.supporting-text]="keyDetail(apiKey)"
+                >
+                  {{ apiKey.name }}&ngsp;
+                  @if (isRevoked(apiKey.revoked)) {
+                    <nldd-badge
+                      color="neutral"
+                      size="sm"
+                      text="Revoked"
+                    ></nldd-badge>
+                  } @else if (isExpired(apiKey.expires)) {
+                    <nldd-badge
+                      color="warning"
+                      size="sm"
+                      text="Expired"
+                    ></nldd-badge>
+                  } @else {
+                    <nldd-badge
+                      color="success"
+                      size="sm"
+                      text="Active"
+                    ></nldd-badge>
+                  }
+                </nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-icon-button
+                    icon="more"
+                    size="sm"
+                    variant="secondary"
+                    popup-type="menu"
+                    [attr.accessible-label]="'Actions for ' + apiKey.name"
+                    [attr.disabled]="loading() ? '' : null"
+                  >
+                    <nldd-menu slot="popup">
+                      @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
+                        <nldd-menu-item
+                          text="Revoke"
+                          icon="forbidden"
+                          (select)="openRevokeModal(apiKey.id, apiKey.name)"
+                        ></nldd-menu-item>
+                        <nldd-menu-divider></nldd-menu-divider>
+                      }
+                      <nldd-menu-item
+                        text="Delete"
+                        icon="delete"
+                        destructive
+                        (select)="openDeleteModal(apiKey.id, apiKey.name)"
+                      ></nldd-menu-item>
+                    </nldd-menu>
+                  </nldd-icon-button>
+                </nldd-cell>
+              </nldd-list-item>
+            }
+          </nldd-list>
+        }
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
 <!-- Revoke API Key Modal -->
 <nldd-modal-dialog
   #revokeDialog
@@ -255,7 +264,7 @@
     type="button"
     (click)="showRevokeModal.set(false)"
     text="Keep key active"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -265,7 +274,6 @@
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Delete API Key Modal -->
 <nldd-modal-dialog
   #deleteDialog
@@ -283,7 +291,7 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep key"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"

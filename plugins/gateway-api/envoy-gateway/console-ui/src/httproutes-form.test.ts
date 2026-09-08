@@ -26,7 +26,15 @@ function renderForm(o: {
 
 describe('buildHTTPRouteBody', () => {
   it('builds a route attaching to a Gateway with a default "/" path and one backend', () => {
-    const body = buildHTTPRouteBody(renderForm({ name: 'web', parent: 'demo', backend: 'echo', port: '8080' }), 'team-a');
+    const body = buildHTTPRouteBody(
+      renderForm({
+        name: 'web',
+        parent: 'demo',
+        backend: 'echo',
+        port: '8080',
+      }),
+      'team-a',
+    );
 
     expect(body.apiVersion).toBe('gateway.networking.k8s.io/v1');
     expect(body.kind).toBe('HTTPRoute');
@@ -43,11 +51,18 @@ describe('buildHTTPRouteBody', () => {
 
   it('includes hostnames and a sectionName when provided', () => {
     const body = buildHTTPRouteBody(
-      renderForm({ parent: 'demo', section: 'http', hostnames: 'a.example.com, b.example.com', path: '/api' }),
+      renderForm({
+        parent: 'demo',
+        section: 'http',
+        hostnames: 'a.example.com, b.example.com',
+        path: '/api',
+      }),
       'team-a',
     );
 
-    expect(body.spec.parentRefs).toEqual([{ name: 'demo', sectionName: 'http' }]);
+    expect(body.spec.parentRefs).toEqual([
+      { name: 'demo', sectionName: 'http' },
+    ]);
     expect(body.spec.hostnames).toEqual(['a.example.com', 'b.example.com']);
     expect(body.spec.rules[0].matches[0].path.value).toBe('/api');
   });

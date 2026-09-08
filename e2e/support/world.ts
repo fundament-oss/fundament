@@ -1,6 +1,9 @@
 import { World, IWorldOptions, setWorldConstructor } from '@cucumber/cucumber';
 import { Browser, BrowserContext, Page } from 'playwright';
-import { APIKeyService, type CreateAPIKeyResponse } from './api/apikey-service.ts';
+import {
+  APIKeyService,
+  type CreateAPIKeyResponse,
+} from './api/apikey-service.ts';
 import { TokenService } from './api/token-service.ts';
 
 export interface ICustomWorld extends World {
@@ -45,7 +48,8 @@ export class CustomWorld extends World implements ICustomWorld {
   organizationId?: string;
   currentUserEmail?: string;
   createdApiKeys: Map<string, CreateAPIKeyResponse> = new Map();
-  createdApiKeysByUser: Map<string, Map<string, CreateAPIKeyResponse>> = new Map();
+  createdApiKeysByUser: Map<string, Map<string, CreateAPIKeyResponse>> =
+    new Map();
   savedApiKeyId?: string;
   lastApiResponse?: unknown;
   lastApiError?: Error;

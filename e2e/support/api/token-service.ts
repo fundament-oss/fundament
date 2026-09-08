@@ -26,7 +26,7 @@ export class TokenService {
     const client: Client<typeof TokenServiceDesc> = createServiceClient(
       TokenServiceDesc,
       this.baseUrl,
-      apiToken
+      apiToken,
     );
 
     try {
@@ -46,12 +46,12 @@ export class TokenService {
   async mintPluginToken(
     userToken: string,
     clusterId: string,
-    installationId: string
+    installationId: string,
   ): Promise<MintPluginTokenResponse> {
     const client: Client<typeof TokenServiceDesc> = createServiceClient(
       TokenServiceDesc,
       this.baseUrl,
-      userToken
+      userToken,
     );
 
     try {

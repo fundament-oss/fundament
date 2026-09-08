@@ -1,111 +1,126 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Clusters</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your Kubernetes clusters</p>
-
-    @if (clusters().length > 0) {
-      <nldd-button
-        routerLink="/clusters/add"
-        text="Add cluster"
-        start-icon="plus-small"
-        variant="primary"
-        class="mt-4"
-      ></nldd-button>
-    }
-  </div>
-
-  <div class="card-body-lg">
-    <!-- Error Message -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Clusters"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="clusters-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="clusters-title"
+      size="2"
+    >
+      <h1>Clusters</h1>
+    </nldd-title>
+    <nldd-rich-text>
+      <p>Discover and manage your Kubernetes clusters.</p>
+    </nldd-rich-text>
     @if (errorMessage()) {
-      <div
-        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-      >
-        <nldd-icon
-          name="dismiss-circle"
-          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-        ></nldd-icon>
-        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-      </div>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
     }
-
-    <!-- Clusters Grid -->
     @if (clusters().length > 0) {
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        @for (cluster of clusters(); track cluster.id) {
-          <nldd-box>
-            <div class="card-body">
-              <!-- Card Header -->
-              <div class="flex items-start justify-between gap-3 py-2 pb-2">
-                <h2 class="min-w-0 truncate text-base font-semibold">
-                  {{ cluster.name }}
-                </h2>
-                <nldd-tag
-                  class="shrink-0"
-                  size="sm"
-                  [attr.color]="getStatusTagColor(cluster.status)"
-                  [attr.text]="getStatusLabel(cluster.status)"
-                ></nldd-tag>
-              </div>
-
-              <!-- Card Content -->
-              <div class="flex flex-1 flex-col py-2">
-                <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <div>
-                    <dt
-                      class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      Region
-                    </dt>
-                    <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
-                      {{ cluster.region.toUpperCase() }}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt
-                      class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      Node pools
-                    </dt>
-                    <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
-                      {{ cluster.nodePoolCount }}
-                    </dd>
-                  </div>
-                </dl>
-
-                <!-- Card Actions -->
-                <div class="mt-auto pt-5">
-                  <nldd-button
-                    routerLink="/clusters/{{ cluster.id }}"
-                    text="View details"
-                    start-icon="eye"
-                    variant="primary"
-                  ></nldd-button>
-                </div>
-              </div>
-            </div>
-          </nldd-box>
-        }
-      </div>
-    } @else {
-      <!-- Empty state -->
-      <nldd-box>
-        <nldd-inline-dialog
-          class="card-body"
-          icon="ship-wheel"
-          icon-color="secondary"
-          text="No clusters yet"
-          supporting-text="Add your first Kubernetes cluster to get started."
-        >
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-toolbar label="Cluster actions">
+        <nldd-toolbar-item slot="start">
           <nldd-button
-            routerLink="/clusters/add"
-            slot="actions"
-            text="Add cluster"
+            [attr.href]="pageNav.path('/clusters/new')"
+            text="New cluster…"
             start-icon="plus-small"
             variant="primary"
+            (click)="pageNav.navigate($event, '/clusters/new')"
           ></nldd-button>
-        </nldd-inline-dialog>
-      </nldd-box>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="New cluster…"
+            [attr.href]="pageNav.path('/clusters/new')"
+            (select)="pageNav.navigate($event, '/clusters/new')"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
     }
-  </div>
-</div>
+    <nldd-spacer size="24"></nldd-spacer>
+    @if (clusters().length > 0) {
+      <nldd-collection
+        layout="grid"
+        item-width="280px"
+      >
+        @for (cluster of clusters(); track cluster.id) {
+          <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
+          <nldd-card background="tinted">
+            <nldd-container padding="16">
+              <nldd-title size="4">
+                <h2>{{ cluster.name }}</h2>
+                <nldd-badge
+                  slot="end"
+                  [attr.color]="getStatusBadgeColor(cluster.status)"
+                  [attr.text]="getStatusLabel(cluster.status)"
+                  [attr.pulse]="isTransitionalStatus(cluster.status) ? '' : null"
+                ></nldd-badge>
+              </nldd-title>
+              <nldd-spacer size="16"></nldd-spacer>
+              <nldd-list variant="simple">
+                <nldd-list-item size="sm">
+                  <nldd-text-cell text="Region"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="cluster.region.toUpperCase()"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+                <nldd-list-item size="sm">
+                  <nldd-text-cell text="Node pools"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="cluster.nodePoolCount"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              </nldd-list>
+            </nldd-container>
+            <!-- In the footer slot rather than the body: the card keeps that slot
+                 at the bottom, so the buttons line up across a row of cards
+                 however tall each one's title and list turn out. -->
+            <nldd-container
+              slot="footer"
+              padding-inline="16"
+              padding-bottom="16"
+            >
+              <nldd-button
+                [attr.href]="pageNav.path('/clusters/' + cluster.id)"
+                text="View details"
+                variant="primary"
+                (click)="pageNav.navigate($event, '/clusters/' + cluster.id)"
+              ></nldd-button>
+            </nldd-container>
+          </nldd-card>
+        }
+      </nldd-collection>
+    } @else {
+      <nldd-inline-dialog
+        icon="kubernetes"
+        icon-color="secondary"
+        text="No clusters yet"
+        supporting-text="Add your first Kubernetes cluster to get started."
+      >
+        <nldd-button
+          slot="actions"
+          [attr.href]="pageNav.path('/clusters/new')"
+          text="New cluster…"
+          start-icon="plus-small"
+          variant="primary"
+          (click)="pageNav.navigate($event, '/clusters/new')"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    }
+  </nldd-simple-section>
+  <!-- The new-cluster form is a child route, so it renders as a sheet over
+       this list instead of replacing it. -->
+  <router-outlet />
+</nldd-page>

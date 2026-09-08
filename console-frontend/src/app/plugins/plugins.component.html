@@ -1,192 +1,188 @@
-<h1 class="text-3xl font-semibold">Plugins</h1>
-<p class="mt-1 mb-6 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
-  Discover and install plugins to expand your Kubernetes clusters
-</p>
-
-<div class="mb-6 flex flex-wrap items-center gap-4">
-  <nldd-search-field
-    class="max-w-md flex-1"
-    placeholder="Search plugins"
-    [value]="searchQuery"
-    (input)="onSearchInput($event)"
-  ></nldd-search-field>
-  <span class="text-sm text-gray-600 dark:text-gray-300">{{ summaryText }}</span>
-</div>
-
-<div class="flex flex-col-reverse gap-6 lg:flex-row">
-  <!-- Main Content Area -->
-  <div class="@container min-w-0 flex-1">
-    <!-- Plugin Cards Grid. Sized against this column's own width (@container)
-         rather than the viewport, because the app shell's left nav takes a
-         large, breakpoint-dependent slice out of it. -->
-    <div class="grid grid-cols-1 gap-6 @xl:grid-cols-2 @4xl:grid-cols-3">
-      @for (plugin of filteredPlugins; track plugin.id) {
-        <nldd-card class="block">
-          <!-- Plugin Card Header -->
-          <div class="p-6">
-            <div class="mb-3 flex items-start gap-4">
-              <!-- Plugin Logo -->
-              <app-plugin-icon
-                [name]="getPluginIconName(plugin.name)"
-                [label]="plugin.displayName || plugin.name"
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
-              />
-
-              <!-- Plugin Title -->
-              <div class="min-w-0 flex-1">
-                <h3 class="text-lg font-semibold">
-                  <a [routerLink]="['/plugins', plugin.id]" class="hover:underline">{{
-                    plugin.displayName || plugin.name
-                  }}</a>
-                </h3>
-                <p class="text-sm text-gray-600 dark:text-gray-300">{{ mockPluginVendor }}</p>
-              </div>
-            </div>
-
-            <!-- Tags -->
-            @if (
-              runningInstallCount(plugin.organizationName, plugin.name) > 0 || plugin.tags.length
-            ) {
-              <p class="mb-2 flex flex-wrap items-center gap-1">
-                @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
-                  <nldd-tag size="sm" color="success" icon="check-mark" text="Installed"></nldd-tag>
-                }
-                @for (tag of plugin.tags; track tag) {
-                  <nldd-tag
-                    size="sm"
-                    [attr.color]="tag.toLowerCase() === 'official' ? 'success' : 'neutral'"
-                    [attr.icon]="tag.toLowerCase() === 'official' ? 'check-mark' : null"
-                    [attr.text]="tag"
-                  ></nldd-tag>
-                }
-              </p>
-            }
-
-            <!-- Plugin Description -->
-            <p class="line-clamp-3 text-sm text-gray-600 dark:text-gray-300">
-              {{ plugin.descriptionShort }}
-            </p>
-          </div>
-
-          <!-- Plugin Card Actions -->
-          <div
-            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
-          >
-            <span class="shrink-0 font-mono text-sm text-gray-600 dark:text-gray-300">{{
-              mockPluginVersion
-            }}</span>
-            <div class="flex flex-wrap justify-end gap-2">
-              <!-- data-tour: target of the walkthrough's install slide
-                   (src/app/presentation/tours.ts). Keep the attribute. -->
-              @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
-                <nldd-button
-                  data-tour="plugin-install"
-                  (click)="onInstallPlugin(plugin)"
-                  type="button"
-                  text="Installed"
-                  start-icon="check-mark"
-                  variant="secondary"
-                  size="sm"
-                ></nldd-button>
-              } @else {
-                <nldd-button
-                  (click)="openPluginDetails(plugin)"
-                  type="button"
-                  text="Details"
-                  variant="secondary"
-                  size="sm"
-                ></nldd-button>
-                <nldd-button
-                  data-tour="plugin-install"
-                  (click)="onInstallPlugin(plugin)"
-                  type="button"
-                  text="Install"
-                  start-icon="cloud-arrow-down"
-                  variant="primary"
-                  size="sm"
-                ></nldd-button>
-              }
-            </div>
-          </div>
-        </nldd-card>
-      }
-    </div>
-
-    <!-- Loading State -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Plugins"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="plugins-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="plugins-title"
+      size="2"
+    >
+      <h1>Plugins</h1>
+    </nldd-title>
+    <nldd-rich-text>
+      <p>Discover and install plugins to expand your Kubernetes clusters.</p>
+    </nldd-rich-text>
     @if (isLoading()) {
-      <div class="py-12 text-center">
-        <div role="status" class="flex justify-center">
-          <app-loading-indicator
-            class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-          />
-          <span class="sr-only">Loading...</span>
-        </div>
-        <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugins...</p>
-      </div>
-    }
-
-    <!-- Empty State -->
-    @if (!isLoading() && filteredPlugins.length === 0) {
-      <nldd-box>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-activity-indicator
+        show-text
+        text="Loading plugins..."
+      ></nldd-activity-indicator>
+    } @else {
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- The filters were a sidebar of two lists; as menus they stay out of the
+           way until you need them, and the button label reports the active
+           filter so the current selection is readable without opening one. -->
+      <nldd-toolbar label="Plugin filters">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            expandable
+            popup-type="menu"
+            variant="secondary"
+            [attr.text]="getSelectedPresetLabel()"
+          >
+            <nldd-menu
+              slot="popup"
+              accessible-label="Presets"
+            >
+              @for (preset of presets; track preset.id) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="preset.name"
+                  [attr.details]="preset.count"
+                  [attr.selected]="selectedPreset === preset.id ? '' : null"
+                  (click)="selectPreset(preset.id)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            expandable
+            popup-type="menu"
+            variant="secondary"
+            [attr.text]="getSelectedCategoryLabel()"
+          >
+            <nldd-menu
+              slot="popup"
+              accessible-label="Categories"
+            >
+              @for (category of categories; track category.id) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="category.name"
+                  [attr.details]="category.count"
+                  [attr.selected]="selectedCategory === category.id ? '' : null"
+                  (click)="selectCategory(category.id)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-search-field
+            placeholder="Search plugins"
+            accessible-label="Search plugins"
+            [value]="searchQuery"
+            (input)="onSearchInput($event)"
+          ></nldd-search-field>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-rich-text>
+        <p>{{ summaryText }}</p>
+      </nldd-rich-text>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (filteredPlugins.length === 0) {
         <nldd-inline-dialog
-          class="card-body"
-          icon="puzzle-piece"
+          icon="plugin"
           icon-color="secondary"
           text="No plugins found"
-          supporting-text="Try adjusting your search or selecting a different category."
+          supporting-text="Try a different preset or category."
+        ></nldd-inline-dialog>
+      } @else {
+        <nldd-collection
+          layout="grid"
+          item-width="320px"
+          gap="16"
         >
-        </nldd-inline-dialog>
-      </nldd-box>
+          @for (plugin of filteredPlugins; track plugin.id) {
+            <nldd-card background="tinted">
+              <nldd-container padding="16">
+                <app-plugin-icon
+                  [name]="getPluginIconName(plugin.name)"
+                  class="block h-10 w-10"
+                />
+                <nldd-spacer size="12"></nldd-spacer>
+                <!-- Only the two tags that say something the description does
+                     not: whether it is official, and where it runs. The keyword
+                     tags repeat a word from the description and live on the
+                     details page instead. -->
+                <nldd-title size="5">
+                  <h2>
+                    {{ plugin.displayName || plugin.name }}
+                    @if (isOfficial(plugin)) {
+                      <nldd-tag
+                        color="success"
+                        size="sm"
+                        text="Official"
+                      ></nldd-tag>
+                    }
+                  </h2>
+                  <!-- Not a second green tag beside "Official": that one says what
+                       the plugin is, this says what it does in your clusters. -->
+                  @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
+                    <span slot="subtitle">
+                      Installed on
+                      {{ runningInstallCount(plugin.organizationName, plugin.name) }}/{{
+                        clusterCount
+                      }}
+                    </span>
+                  }
+                </nldd-title>
+                @if (plugin.descriptionShort) {
+                  <nldd-spacer size="8"></nldd-spacer>
+                  <nldd-rich-text>
+                    <p>{{ plugin.descriptionShort }}</p>
+                  </nldd-rich-text>
+                }
+              </nldd-container>
+              <!-- In the footer slot: the card keeps it at the bottom, so the
+                   buttons line up across a row however tall each card's text is. -->
+              <nldd-container
+                slot="footer"
+                padding-inline="16"
+                padding-bottom="16"
+              >
+                <nldd-button-group orientation="horizontal">
+                  <!-- Only Install gets the ellipsis: it reads as an immediate
+                       action while it actually opens a dialog for picking the
+                       clusters. "Manage" already promises a next step. -->
+                  <!-- data-tour: target of the walkthrough's install slide
+                       (src/app/presentation/tours.ts). Keep the attribute. -->
+                  <nldd-button
+                    data-tour="plugin-install"
+                    type="button"
+                    (click)="onInstallPlugin(plugin)"
+                    [text]="
+                      isPluginInstalledAnywhere(plugin.organizationName, plugin.name)
+                        ? 'Manage'
+                        : 'Install…'
+                    "
+                    variant="primary"
+                  ></nldd-button>
+                  <!-- A sheet rather than the page: the summary is what most
+                       presses want, and it keeps the grid and its filters
+                       behind. Its footer links on to the full listing. -->
+                  <nldd-button
+                    type="button"
+                    (click)="openPluginDetails(plugin)"
+                    text="Details"
+                    variant="secondary"
+                  ></nldd-button>
+                </nldd-button-group>
+              </nldd-container>
+            </nldd-card>
+          }
+        </nldd-collection>
+      }
     }
-  </div>
-
-  <!-- Right Sidebar with filters -->
-  <div class="shrink-0 space-y-6 lg:w-48 xl:w-56 2xl:w-64">
-    <!-- Preset Filter -->
-    <div>
-      <h2 class="mb-3 px-3 text-lg font-semibold">Presets</h2>
-      <nav class="space-y-1">
-        @for (preset of presets; track preset.id) {
-          <button
-            (click)="selectPreset(preset.id)"
-            [class]="
-              selectedPreset === preset.id
-                ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
-                : 'text-gray-700 hover:bg-white dark:text-white dark:hover:bg-gray-800'
-            "
-            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-200 xl:text-base"
-            [title]="preset.description"
-          >
-            <span class="min-w-0 truncate">{{ preset.name }}</span>
-            <span class="shrink-0 text-gray-600 dark:text-gray-300">{{ preset.count }}</span>
-          </button>
-        }
-      </nav>
-    </div>
-
-    <!-- Category Filter -->
-    <div>
-      <h2 class="mb-3 px-3 text-lg font-semibold">Categories</h2>
-      <nav class="space-y-1">
-        @for (category of categories; track category.id) {
-          <button
-            (click)="selectCategory(category.id)"
-            [class]="
-              selectedCategory === category.id
-                ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
-                : 'text-gray-700 hover:bg-white dark:text-white dark:hover:bg-gray-800'
-            "
-            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-200 xl:text-base"
-          >
-            <span class="min-w-0 truncate">{{ category.name }}</span>
-            <span class="shrink-0 text-gray-600 dark:text-gray-300">{{ category.count }}</span>
-          </button>
-        }
-      </nav>
-    </div>
-  </div>
-</div>
-
+  </nldd-simple-section>
+</nldd-page>
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"
@@ -211,8 +207,14 @@
   width="420px"
   (close)="closePluginDetails()"
 >
-  <nldd-page sticky-header="" sticky-footer="">
-    <div slot="header" class="flex justify-end px-4 py-3">
+  <nldd-page
+    sticky-header=""
+    sticky-footer=""
+  >
+    <div
+      slot="header"
+      class="flex justify-end px-4 py-3"
+    >
       <nldd-icon-button
         icon="dismiss"
         text="Close"
@@ -223,7 +225,10 @@
     </div>
 
     @if (sheetPlugin(); as plugin) {
-      <nldd-simple-section class="space-y-5" padding-top="0">
+      <nldd-simple-section
+        class="space-y-5"
+        padding-top="0"
+      >
         <!-- Plugin Logo, Name & Version -->
         <div class="flex items-start gap-4">
           <app-plugin-icon
@@ -322,7 +327,8 @@
           ></nldd-button>
         } @else {
           <nldd-button
-            [routerLink]="['/plugins', plugin.id]"
+            [attr.href]="pageNav.path('/plugins/' + plugin.id)"
+            (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
             text="View full details"
             start-icon="square-arrow-right-top"
             variant="secondary"

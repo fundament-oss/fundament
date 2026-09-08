@@ -1,6 +1,9 @@
 import {
   Component,
   inject,
+  Input,
+  Output,
+  EventEmitter,
   OnInit,
   signal,
   ChangeDetectionStrategy,
@@ -13,6 +16,7 @@ import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import {
   type APIKey,
@@ -22,13 +26,41 @@ import {
   RevokeAPIKeyRequestSchema,
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
-import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
 } from '../utils/date-format';
 import AutofocusDirective from '../autofocus.directive';
+
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/badge';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/container';
+import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
+import '@nldd/design-system/form-field';
+import '@nldd/design-system/icon-button';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/modal-dialog';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/text-field';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toolbar';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/validation-list';
 
 const getNameError = (field?: { invalid: boolean | null; touched: boolean | null }): string => {
   if (field?.invalid && field?.touched) {
@@ -51,15 +83,34 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
 
 @Component({
   selector: 'app-api-keys',
-  imports: [DialogSyncDirective, AutofocusDirective],
+  imports: [DialogSyncDirective, AutofocusDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
 export default class ApiKeysComponent implements OnInit {
-  private titleService = inject(TitleService);
+  /** Owned by the shell: the sheet opens over whatever page you were on, so
+   *  that page is not unmounted and is still there when you close it. */
+  @Input()
+  set show(open: boolean) {
+    const wasOpen = this.isOpen;
+    this.isOpen = open;
+    // The sheet stays mounted between visits, so a reopen has to fetch: a key
+    // made or revoked elsewhere would otherwise be missing from the list. An
+    // empty cache is the case that needs it most — no keys yet, or a first load
+    // that failed — so the reopen refetches whatever the list currently holds.
+    if (open && !wasOpen) this.loadApiKeys();
+  }
 
-  private toastService = inject(ToastService);
+  get show(): boolean {
+    return this.isOpen;
+  }
+
+  private isOpen = false;
+
+  @Output() closed = new EventEmitter<void>();
+
+  private notificationService = inject(NotificationService);
 
   private apiKeyClient = inject(APIKEY);
 
@@ -76,7 +127,9 @@ export default class ApiKeysComponent implements OnInit {
 
   newKeyName = signal('');
 
-  newKeyNameTouched = signal(false);
+  /** Set by the submit, not by leaving the field: an empty field you have not
+   *  tried to send yet is not a mistake. */
+  newKeySubmitted = signal(false);
 
   newKeyExpiresIn = signal('');
 
@@ -93,10 +146,6 @@ export default class ApiKeysComponent implements OnInit {
   createdToken = signal<string | null>(null);
 
   createdTokenPrefix = signal<string | null>(null);
-
-  constructor() {
-    this.titleService.setTitle('API keys');
-  }
 
   async ngOnInit() {
     await this.loadApiKeys();
@@ -188,7 +237,7 @@ export default class ApiKeysComponent implements OnInit {
   startCreating() {
     this.isCreating.set(true);
     this.newKeyName.set('');
-    this.newKeyNameTouched.set(false);
+    this.newKeySubmitted.set(false);
     this.newKeyExpiresIn.set('');
     this.error.set(null);
   }
@@ -196,12 +245,14 @@ export default class ApiKeysComponent implements OnInit {
   cancelCreating() {
     this.isCreating.set(false);
     this.newKeyName.set('');
-    this.newKeyNameTouched.set(false);
+    this.newKeySubmitted.set(false);
     this.newKeyExpiresIn.set('');
   }
 
   async createApiKey(event?: Event) {
     event?.preventDefault();
+
+    this.newKeySubmitted.set(true);
 
     const name = this.newKeyName().trim();
     if (!name) {
@@ -264,7 +315,7 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      this.toastService.success('API key copied to clipboard');
+      this.notificationService.success('API key copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }
@@ -297,5 +348,21 @@ export default class ApiKeysComponent implements OnInit {
   onDeleteModalOpen(): void {
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
+  }
+
+  /** The prefix, when it was last used and when it expires: what the columns of
+   *  the old table said, in the line under the name. */
+  keyDetail(apiKey: APIKey): string {
+    const lastUsed = apiKey.lastUsed
+      ? `Last used ${this.formatDateTime(apiKey.lastUsed)}`
+      : 'Never used';
+    const expires = apiKey.expires ? `Expires ${this.formatDate(apiKey.expires)}` : 'No expiry';
+    return [apiKey.tokenPrefix, lastUsed, expires].join(' · ');
+  }
+
+  /** Back to what was behind it. A direct link has nothing to go back to, so
+   *  that lands on the app's own empty state. */
+  onClose(): void {
+    this.closed.emit();
   }
 }

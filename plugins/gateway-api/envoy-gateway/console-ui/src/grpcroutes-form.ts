@@ -22,7 +22,10 @@ export interface GRPCRouteBody {
   };
 }
 
-export function buildGRPCRouteBody(root: ParentNode, namespace: string): GRPCRouteBody {
+export function buildGRPCRouteBody(
+  root: ParentNode,
+  namespace: string,
+): GRPCRouteBody {
   const spec: GRPCRouteBody['spec'] = {
     parentRefs: buildParentRefs(root),
     rules: [{ backendRefs: buildBackendRefs(root) }],

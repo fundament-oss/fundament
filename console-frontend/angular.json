@@ -33,7 +33,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.5MB",
+                  "maximumWarning": "1.65MB",
                   "maximumError": "1.75MB"
                 },
                 {
@@ -58,7 +58,19 @@
               "sourceMap": true
             },
             "demo": {
-              "browser": "src/main.demo.ts"
+              "browser": "src/main.demo.ts",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.85MB",
+                  "maximumError": "1.95MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "8kB",
+                  "maximumError": "60kB"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -84,7 +96,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "tsconfig.spec.json"
+            "tsConfig": "tsconfig.spec.json",
+            "setupFiles": ["src/test-setup.ts"]
           }
         },
         "lint": {

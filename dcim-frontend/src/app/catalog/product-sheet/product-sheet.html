@@ -1,0 +1,149 @@
+<!-- (close) keeps the state honest whichever way the sheet goes away: Escape and
+     a click outside close it without passing the Cancel button, and a signal
+     that still says "open" makes the next Add product do nothing. -->
+<nldd-sheet
+  #sheet
+  accessible-label="Product details"
+  placement="right"
+  (open)="onSheetOpen()"
+  (close)="onSheetClose()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="entry()?.id ? 'Edit product' : 'New product'"
+      dismiss-text="Cancel"
+      (dismiss)="close()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (errorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      }
+
+      <nldd-form>
+        <nldd-form-field label="Model name">
+          <nldd-text-field
+            #fModel
+            autofocus
+            [attr.value]="entry()?.model ?? ''"
+            [attr.invalid]="isFieldInvalid('model') ? '' : null"
+            unmet="error-model"
+            (keydown.enter)="save()"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-model">
+              {{ fieldError('model') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Manufacturer">
+          <nldd-text-field
+            #fManufacturer
+            [attr.value]="entry()?.manufacturer ?? ''"
+            [attr.invalid]="isFieldInvalid('manufacturer') ? '' : null"
+            unmet="error-manufacturer"
+            (keydown.enter)="save()"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-manufacturer">
+              {{ fieldError('manufacturer') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Part number">
+          <nldd-text-field
+            #fPartNumber
+            [attr.value]="entry()?.partNumber ?? ''"
+            [attr.invalid]="isFieldInvalid('part_number') ? '' : null"
+            unmet="error-part-number"
+            (keydown.enter)="save()"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-part-number">
+              {{ fieldError('part_number') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <!-- The rows and the way to add one in the same box: the button is the
+             last row of the list, so a new row appears right above where you
+             clicked instead of at the other end of the field. -->
+        <nldd-form-field label="Specifications">
+          <nldd-list variant="box-tinted" accessible-label="Specifications">
+            @for (spec of specRows(); track $index; let i = $index) {
+              <nldd-list-item>
+                <nldd-cell width="full">
+                  <nldd-text-field
+                    [attr.value]="spec.key"
+                    placeholder="Key"
+                    (input)="updateSpecKey(i, $event)"
+                  ></nldd-text-field>
+                </nldd-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-cell width="full">
+                  <nldd-text-field
+                    [attr.value]="spec.value"
+                    placeholder="Value"
+                    (input)="updateSpecVal(i, $event)"
+                  ></nldd-text-field>
+                </nldd-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-icon-button
+                    icon="delete"
+                    [attr.accessible-label]="'Remove ' + (spec.key || 'specification')"
+                    (click)="removeSpecRow(i)"
+                  ></nldd-icon-button>
+                </nldd-cell>
+              </nldd-list-item>
+            }
+            <nldd-list-item>
+              <nldd-cell width="full">
+                <nldd-button
+                  variant="secondary"
+                  width="full"
+                  text="Add specification"
+                  start-icon="plus-small"
+                  (click)="addSpecRow()"
+                ></nldd-button>
+              </nldd-cell>
+            </nldd-list-item>
+          </nldd-list>
+        </nldd-form-field>
+        <!-- Fifteen categories as buttons rather than a dropdown: they all fit,
+             and a product belongs to exactly one, so the choice is worth showing
+             rather than hiding behind a click. Elke knop draagt het icoon dat de
+             categorie ook in het menu en in een lijstregel heeft, behalve Other:
+             die drie puntjes staan voor "de rest" en zeggen naast het woord
+             niets meer. -->
+        <nldd-form-field label="Category">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Category"
+            [attr.invalid]="isFieldInvalid('category') ? '' : null"
+            unmet="error-category"
+          >
+            @for (cat of categories; track cat) {
+              <nldd-toggle-button
+                [attr.value]="cat"
+                [attr.text]="cat"
+                [attr.icon]="cat === 'Other' ? null : categoryIcon(cat)"
+                [attr.selected]="category() === cat ? '' : null"
+                (change)="onCategoryToggle(cat, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-category">
+              {{ fieldError('category') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <!-- Under the form rather than docked at the bottom of the sheet: the
+             button belongs to the fields above it. -->
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

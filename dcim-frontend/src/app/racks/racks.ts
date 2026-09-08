@@ -6,42 +6,36 @@ import {
   effect,
   inject,
   OnInit,
+  OnDestroy,
+  AfterViewInit,
+  TemplateRef,
   signal,
   untracked,
   viewChild,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
+import { pageTitle } from '../shell/page-title';
+import SecondaryNavService from '../shell/secondary-nav.service';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
+import DatacenterListService from '../datacenters/datacenter-list.service';
+import RackListService, { RackListItem } from './rack-list.service';
+import RackHistoryService from './rack-history.service';
+import RackNavComponent from './rack-nav';
 import InventoryApiService from '../inventory/inventory-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import connectErrorMessage from '../../connect/error';
-import DcSelectorComponent from '../shared/dc-selector';
-import RackDiagramComponent from './rack-diagram/rack-diagram';
-import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { Rack, RackDevice } from './rack.model';
-import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
+import { DeviceState, DeviceType, Rack, RackDevice } from './rack.model';
+import { RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
-
-interface RackListItem extends Rack {
-  usedU: number;
-  freeU: number;
-  totalPowerW: number;
-  deviceCount: number;
-  rowId: string;
-}
-
-interface RowOption {
-  id: string;
-  label: string;
-}
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
 
 interface AssetOption {
   id: string;
@@ -62,6 +56,7 @@ interface PlacementInfo {
   slotType: RackSlotType;
   uSize: number;
   deviceType: ReturnType<typeof categoryToDeviceType>;
+  category: string;
 }
 
 type InvalidFields = Record<string, string>;
@@ -78,13 +73,6 @@ interface RackNoteComment {
 interface RackNotes {
   description: string;
   comments: RackNoteComment[];
-}
-
-interface RackEvent {
-  user: string;
-  daysAgo: number;
-  description: string;
-  type: 'power' | 'hardware' | 'config' | 'alert';
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -134,61 +122,6 @@ const RACK_NOTES: Record<string, RackNotes> = {
   },
 };
 
-const RACK_HISTORY: Record<string, RackEvent[]> = {
-  'ams-01-r01': [
-    {
-      user: 'Ops Team',
-      daysAgo: 6,
-      description: 'Rack powered on after scheduled maintenance window',
-      type: 'power',
-    },
-    {
-      user: 'Monitoring',
-      daysAgo: 8,
-      description: 'server-02 went offline — PSU fault detected',
-      type: 'alert',
-    },
-    {
-      user: 'Jan de Vries',
-      daysAgo: 14,
-      description: 'patch-panel-01 installed in U3',
-      type: 'hardware',
-    },
-    {
-      user: 'Automation',
-      daysAgo: 27,
-      description: 'Config push: VLAN 42 updated on tor-switch-01',
-      type: 'config',
-    },
-    {
-      user: 'Sarah Müller',
-      daysAgo: 50,
-      description: 'Firmware update applied to server-01 (BIOS 2.8.0)',
-      type: 'hardware',
-    },
-  ],
-  'ams-01-r02': [
-    {
-      user: 'Monitoring',
-      daysAgo: 10,
-      description: 'NAS reported degraded RAID — drive rebuild initiated',
-      type: 'alert',
-    },
-    {
-      user: 'Tom Bakker',
-      daysAgo: 22,
-      description: 'Tape library firmware updated to v3.4.1',
-      type: 'hardware',
-    },
-    {
-      user: 'Ops Team',
-      daysAgo: 60,
-      description: 'UPS bypass test performed — all systems nominal',
-      type: 'power',
-    },
-  ],
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function findFirstFreeSlot(rack: Rack, uSize: number): number | null {
@@ -217,23 +150,33 @@ interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
 }
 
+/** One row of the rack list: a device with the units it fills, or a free unit. */
+interface RackRowItem {
+  key: string;
+  unit: number;
+  label: string;
+  device: RackDevice | null;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-racks',
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    FormsModule,
-    DcSelectorComponent,
-    RackDiagramComponent,
-    RackDiagramEditorComponent,
-    DropdownSyncDirective,
-  ],
+  imports: [RackNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class RacksComponent implements OnInit {
+export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** The rack list, handed to the shell for as long as this page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
   private readonly rackApi = inject(RackApiService);
+
+  /** The forms that make or change a rack live in the shell. */
+  private readonly overlays = inject(OverlayService);
 
   private readonly dcApi = inject(DatacenterApiService);
 
@@ -247,6 +190,8 @@ export default class RacksComponent implements OnInit {
 
   private readonly router = inject(Router);
 
+  private readonly title = inject(Title);
+
   readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
     { value: RackSlotType.POWER, label: 'Power' },
@@ -257,29 +202,47 @@ export default class RacksComponent implements OnInit {
     initialValue: this.route.snapshot.paramMap.get('rackId'),
   });
 
-  viewMode = signal<'front' | 'back'>('front');
-
-  searchQuery = signal('');
-
   activeModal = signal<'notes' | 'history' | null>(null);
 
   // ── Mutable rack list (per selected DC) ────────────────────────────────────
-  readonly mutableRacks = signal<RackListItem[]>([]);
+  private readonly rackList = inject(RackListService);
+
+  private readonly rackHistory = inject(RackHistoryService);
+
+  /** The list this section shares with the menu and the device page. */
+  readonly mutableRacks = this.rackList.racks;
+
+  readonly racksLoaded = this.rackList.loaded;
 
   // Placements keyed by rack id. Loaded on demand via ListPlacementsByRack.
   readonly placementsByRack = signal<Map<string, PlacementInfo[]>>(new Map());
 
   // ── DC list (loaded from the API) ──────────────────────────────────────────
-  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+  private readonly dcList = inject(DatacenterListService);
 
-  readonly selectedDcId = signal('');
+  /** The list this section shares with the data center pages, so the toggle
+   *  above the racks is filled the moment this page opens. */
+  readonly mutableDcs = this.dcList.datacenters;
+
+  readonly selectedDcId = this.rackList.selectedDcId;
 
   // ── Row options for the create-rack form (rooms + rows in the selected DC) ─
-  readonly rowOptions = signal<RowOption[]>([]);
+  /** The halls of the data center the form is set to. */
+  readonly formRooms = signal<Room[]>([]);
+
+  /** Every rack row in that data center, each knowing its hall. */
+  readonly formRows = signal<RackRow[]>([]);
+
+  readonly formRoomId = signal('');
+
+  readonly formRowId = signal('');
+
+  /** The rows of the chosen hall, which is what the second group offers. */
+  readonly rowsForFormRoom = computed(() =>
+    this.formRows().filter((row) => row.roomId === this.formRoomId()),
+  );
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  readonly editRack = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
-
   readonly rackErrorMessage = signal<string | null>(null);
 
   readonly invalidFields = signal<InvalidFields>({});
@@ -287,13 +250,11 @@ export default class RacksComponent implements OnInit {
   readonly deleteRack = signal<Rack | null>(null);
 
   // ── Edit-layout mode ───────────────────────────────────────────────────────
-  readonly editMode = signal(false);
-
   readonly deleteDeviceTarget = signal<RackDevice | null>(null);
 
   readonly addDeviceForm = signal<AddDeviceForm | null>(null);
 
-  readonly deviceSlotType = signal<string>(String(RackSlotType.UNIT));
+  readonly deviceSlotType = signal<RackSlotType>(RackSlotType.UNIT);
 
   readonly assetOptions = signal<AssetOption[]>([]);
 
@@ -301,13 +262,9 @@ export default class RacksComponent implements OnInit {
 
   readonly invalidDeviceFields = signal<InvalidFields>({});
 
-  private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
-
   private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
 
   private readonly fRackName = viewChild<NativeElementRef>('fRackName');
-
-  private readonly fRackRowId = viewChild<NativeElementRef>('fRackRowId');
 
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
@@ -321,8 +278,23 @@ export default class RacksComponent implements OnInit {
 
   readonly currentDC = computed(() => this.selectedDcId());
 
+  /** What the current data center is called, for the label of the rack list. */
+  readonly currentDcName = computed(
+    () => this.mutableDcs().find((dc) => dc.id === this.currentDC())?.name ?? '',
+  );
+
   constructor() {
-    // When the selected DC changes, fetch its racks and row options.
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.currentRack()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
+    // Add rack from the menu, or from the add button in the bar: both ask for
+    // this form through the address.
+    openOnCreateRequest(() => this.openCreateRack());
+    // The menu opens on every location, so nothing is picked here either: see
+    // the same effect in the rack menu.
+    // When a data center is picked, fetch its racks and row options.
     effect(() => {
       const dcId = this.selectedDcId();
       if (!dcId) return;
@@ -336,18 +308,16 @@ export default class RacksComponent implements OnInit {
       if (rackId) this.reloadDevicesForRack(rackId);
     });
 
+    // Nothing opens on its own: /racks is the list, and which rack is open is
+    // what the address says. Switching data center leaves the address pointing
+    // at a rack that is not in the list any more, and that clears it.
     effect(() => {
-      if (!this.currentRackId()) {
-        const first = this.mutableRacks()[0];
-        if (first) {
-          this.router.navigate(['/racks', first.id], { replaceUrl: true });
-        }
+      const racks = this.mutableRacks();
+      const id = this.currentRackId();
+      if (!id || racks.length === 0) return;
+      if (!racks.some((rack) => rack.id === id)) {
+        untracked(() => this.router.navigate(['/racks'], { replaceUrl: true }));
       }
-    });
-    effect(() => {
-      const el = this.rackSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.editRack() !== null) el?.show?.();
-      else el?.hide?.();
     });
     effect(() => {
       const el = this.rackModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -364,50 +334,22 @@ export default class RacksComponent implements OnInit {
       if (this.deleteDeviceTarget() !== null) el?.show?.();
       else el?.hide?.();
     });
-    effect(() => {
-      this.currentRackId();
-      this.editMode.set(false);
-    });
+  }
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.dcApi.listSites())
-      .then((res) => {
-        const dcs = res.sites.map((s) => DatacenterApiService.mapSite(s));
-        this.mutableDcs.set(dcs);
-        if (!this.selectedDcId() && dcs.length > 0) {
-          this.selectedDcId.set(dcs[0].id);
-        }
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.dcList.load();
   }
 
   private reloadRacks(dcId: string): void {
-    firstValueFrom(this.rackApi.listRacksBySite(dcId))
-      .then((res) => {
-        const racks: RackListItem[] = res.racks.flatMap((summary): RackListItem[] => {
-          const rack = summary.rack;
-          if (!rack) return [];
-          return [
-            {
-              id: rack.id,
-              name: rack.name,
-              dcId,
-              rowId: rack.rowId,
-              totalU: rack.totalUnits,
-              devices: [] as RackDevice[],
-              usedU: summary.usedUnits,
-              freeU: summary.freeUnits,
-              totalPowerW: summary.powerDrawW,
-              deviceCount: summary.deviceCount,
-            },
-          ];
-        });
-        untracked(() => this.mutableRacks.set(racks));
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.rackList.load(dcId);
   }
 
   private async reloadDevicesForRack(rackId: string): Promise<void> {
@@ -442,6 +384,7 @@ export default class RacksComponent implements OnInit {
             slotType: loc.rackSlotType,
             uSize: parseRackHeight(catalog?.specs),
             deviceType: categoryToDeviceType(catalog?.category),
+            category: catalog?.category ?? '',
           },
         ];
       });
@@ -463,6 +406,7 @@ export default class RacksComponent implements OnInit {
       id: p.placementId,
       name: p.assetTag,
       type: p.deviceType,
+      category: p.category,
       uSize: p.uSize,
       uStart: p.rackUnitStart,
       state: 'allocated',
@@ -477,22 +421,31 @@ export default class RacksComponent implements OnInit {
       ]);
       const rooms = roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r));
       const rows = rowsRes.rackRows.map((r) => DatacenterApiService.mapRackRow(r));
-      const roomName = new Map<string, string>(rooms.map((r: Room) => [r.id, r.name]));
-      const options = rows.map((r: RackRow) => ({
-        id: r.id,
-        label: `${roomName.get(r.roomId) ?? '—'} · ${r.name}`,
-      }));
-      this.rowOptions.set(options);
+      this.formRooms.set(rooms);
+      this.formRows.set(rows);
+      // Both groups open on their first button, so a new rack always has a
+      // place: nothing in this form is ever disabled waiting for a choice
+      // above it.
+      const room = rooms.find((r) => r.id === this.formRoomId()) ?? rooms[0];
+      this.formRoomId.set(room?.id ?? '');
+      const firstRow = rows.find((r) => r.roomId === room?.id);
+      this.formRowId.set(firstRow?.id ?? '');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
     }
   }
 
-  readonly filteredRacks = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    return this.mutableRacks().filter((r) => !q || r.name.toLowerCase().includes(q));
-  });
+  /** Picking a hall offers the rows in it, and lands on the first. */
+  onFormRoomToggle(id: string, selected: boolean): void {
+    if (!selected || id === this.formRoomId()) return;
+    this.formRoomId.set(id);
+    this.formRowId.set(this.formRows().find((row) => row.roomId === id)?.id ?? '');
+  }
+
+  onFormRowToggle(id: string, selected: boolean): void {
+    if (selected) this.formRowId.set(id);
+  }
 
   readonly currentRack = computed(() => {
     const id = this.currentRackId();
@@ -502,6 +455,126 @@ export default class RacksComponent implements OnInit {
     const placements = this.placementsByRack().get(id);
     const devices = placements ? RacksComponent.placementsToDevices(placements) : rack.devices;
     return { ...rack, devices };
+  });
+
+  /**
+   * The rack as a list: one row per device, however many units it takes, and
+   * one row per free unit. Counted down from the top, the way you stand in
+   * front of it.
+   */
+  readonly rackRows = computed((): RackRowItem[] => {
+    const rack = this.currentRack();
+    if (!rack) return [];
+    const byUnit = new Map<number, RackDevice>();
+    rack.devices.forEach((device) => {
+      RacksComponent.span(device).forEach((u) => byUnit.set(u, device));
+    });
+    const rows: RackRowItem[] = [];
+    for (let u = rack.totalU; u >= 1; u -= 1) {
+      const device = byUnit.get(u) ?? null;
+      if (!device) {
+        rows.push({ key: `u${u}`, unit: u, label: String(u), device: null });
+      } else if (u === device.uStart + device.uSize - 1) {
+        // A device fills several units but is one row, written down at the top
+        // unit of its span and skipped for the rest.
+        const label = device.uSize === 1 ? String(u) : `${device.uStart}-${u}`;
+        rows.push({ key: device.id, unit: device.uStart, label, device });
+      }
+    }
+    return rows;
+  });
+
+  /** The units a device fills, from its start upwards. */
+  private static span(device: RackDevice): number[] {
+    return Array.from({ length: device.uSize }, (unused, i) => device.uStart + i);
+  }
+
+  /**
+   * Where a device can go: every start unit whose whole span is free. A 4U
+   * machine needs four units in a row, so a free unit is not a place by
+   * itself. Counted down, in the order the list shows them.
+   */
+  moveTargets(device: RackDevice): number[] {
+    const rack = this.currentRack();
+    if (!rack) return [];
+    const taken = new Set<number>();
+    rack.devices
+      .filter((other) => other.id !== device.id)
+      .forEach((other) => RacksComponent.span(other).forEach((u) => taken.add(u)));
+    const starts = Array.from(
+      { length: rack.totalU - device.uSize + 1 },
+      (unused, i) => rack.totalU - device.uSize + 1 - i,
+    );
+    return starts.filter(
+      (start) =>
+        start !== device.uStart &&
+        Array.from({ length: device.uSize }, (unused, i) => start + i).every((u) => !taken.has(u)),
+    );
+  }
+
+  moveDevice(device: RackDevice, unit: number): void {
+    const rack = this.currentRack();
+    if (!rack) return;
+    this.applyDeviceChanges(
+      rack.id,
+      rack.devices.map((d) => (d.id === device.id ? { ...d, uStart: unit } : d)),
+    );
+  }
+
+  /**
+   * What a device is. A type and a state are two different questions, and the
+   * old legend answered them in one list of colours: a switch that was offline
+   * came out as "Switch" and said nothing about being down. The type is a tag
+   * behind the name, the state a dot on the right.
+   */
+  readonly deviceTypeText = (device: RackDevice): string => device.category ?? '';
+
+  /** What the thing is, in front of its name. */
+  readonly deviceTypeIcon = (device: RackDevice): string => {
+    const icons: Record<DeviceType, string> = {
+      machine: 'server',
+      switch: 'network-switch',
+      patch: 'network-patch-mapping',
+      pdu: 'power-plug',
+    };
+    return icons[device.type];
+  };
+
+  /** How a device is doing. */
+  readonly deviceStateText = (device: RackDevice): string => {
+    const states: Record<DeviceState, string> = {
+      allocated: 'Allocated',
+      free: 'Free',
+      offline: 'Offline',
+      locked: 'Locked',
+      reserved: 'Reserved',
+    };
+    return states[device.state];
+  };
+
+  /** The colours the legend used, by the name the design system gives them. */
+  readonly deviceStateColor = (device: RackDevice): string => {
+    const colors: Record<DeviceState, string> = {
+      allocated: 'lintblauw',
+      free: 'neutral',
+      offline: 'rood',
+      locked: 'paars',
+      reserved: 'lichtblauw',
+    };
+    return colors[device.state];
+  };
+
+  /**
+   * Which building this rack stands in.
+   *
+   * Said on the page and not only in the menu beside it: on a narrow screen
+   * that menu is a pane you have left behind, and a rack page can be opened
+   * from a link. R01-1 exists in every hall, so the name alone does not say
+   * where you are.
+   */
+  readonly currentRackDcName = computed(() => {
+    const rack = this.currentRack();
+    return this.mutableDcs().find((dc) => dc.id === rack?.dcId)?.name ?? '';
   });
 
   readonly rackStats = computed(() => {
@@ -525,78 +598,40 @@ export default class RacksComponent implements OnInit {
 
   readonly currentRackHistory = computed(() => {
     const id = this.currentRackId();
-    return id ? (RACK_HISTORY[id] ?? []) : [];
+    return id ? this.rackHistory.historyFor(id) : [];
   });
+
+  /** Where an event sits in the line: see the same list on an asset. */
+  historyPosition(index: number): 'first' | 'between' | 'last' | 'only' {
+    const last = this.currentRackHistory().length - 1;
+    if (last === 0) return 'only';
+    if (index === 0) return 'first';
+    return index === last ? 'last' : 'between';
+  }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
+  /** The data center the form is making a rack in. It opens on the one you are
+   *  looking at, and picking another one reloads the rows to choose from. */
+  readonly formDcId = signal('');
+
+  onFormDcToggle(id: string, selected: boolean): void {
+    if (!selected || id === this.formDcId()) return;
+    this.formDcId.set(id);
+    this.reloadRowOptions(id);
+    this.formRoomId.set('');
+    this.formRowId.set('');
+  }
+
+  /** Both routes into the form open the one the shell holds, so it survives
+   *  this page and the add button in the bar opens the same one. The data
+   *  center you are looking at comes along as the form's first answer. */
   openCreateRack(): void {
-    this.clearRackErrors();
-    this.editRack.set({
-      id: '',
-      name: '',
-      dcId: this.currentDC(),
-      rowId: '',
-      totalU: 42,
-      devices: [],
-    });
+    this.overlays.newRack(this.currentDC());
   }
 
   openEditRack(rack: RackListItem): void {
-    this.clearRackErrors();
-    this.editRack.set({ ...rack });
-  }
-
-  closeRackForm(): void {
-    this.clearRackErrors();
-    this.editRack.set(null);
-  }
-
-  saveRack(): void {
-    const form = this.editRack();
-    if (!form) return;
-    this.clearRackErrors();
-    const name = (this.fRackName()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const rowId = (this.fRackRowId()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const totalU =
-      parseInt((this.fRackTotalU()?.nativeElement as HTMLInputElement)?.value ?? '42', 10) || 42;
-    if (form.id) {
-      firstValueFrom(this.rackApi.updateRack(form.id, name, totalU))
-        .then(() => {
-          this.reloadRacks(this.selectedDcId());
-          this.editRack.set(null);
-        })
-        .catch((err) => this.handleRackError(err));
-    } else {
-      firstValueFrom(this.rackApi.createRack(name, totalU, rowId))
-        .then((res) => {
-          this.reloadRacks(this.selectedDcId());
-          if (res.rackId) {
-            this.router.navigate(['/racks', res.rackId]);
-          }
-          this.editRack.set(null);
-        })
-        .catch((err) => this.handleRackError(err));
-    }
-  }
-
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearRackErrors(): void {
-    this.invalidFields.set({});
-    this.rackErrorMessage.set(null);
-  }
-
-  private handleRackError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.rackErrorMessage.set(message);
+    this.overlays.editRack(rack);
   }
 
   openDeleteRack(rack: Rack): void {
@@ -621,10 +656,6 @@ export default class RacksComponent implements OnInit {
   }
 
   // ── Edit-layout mode actions ───────────────────────────────────────────────
-
-  toggleEditMode(): void {
-    this.editMode.update((v) => !v);
-  }
 
   applyDeviceChanges(rackId: string, devices: RackDevice[]): void {
     const placements = this.placementsByRack().get(rackId) ?? [];
@@ -687,53 +718,24 @@ export default class RacksComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  openAddDevice(): void {
+  /** @param unit the free unit you clicked; without one, the first free unit. */
+  /** The slot type as buttons: a radio group, so only the button that becomes
+   *  selected has anything to say. */
+  onSlotTypeToggle(value: RackSlotType, selected: boolean): void {
+    if (selected) this.deviceSlotType.set(value);
+  }
+
+  openAddDevice(unit?: number): void {
     const rack = this.currentRack();
     if (!rack) return;
-    this.clearDeviceErrors();
-    const firstFree = findFirstFreeSlot(rack, 1);
-    this.addDeviceForm.set({
-      assetId: '',
-      rackUnitStart: firstFree ?? rack.totalU,
-      slotType: RackSlotType.UNIT,
+    // The form itself lives in the shell, because the add button in the bar
+    // offers it from every page. From here it opens on this rack and, when you
+    // clicked a free slot, on that unit.
+    this.overlays.newPlacement({
+      dcId: rack.dcId,
+      rackId: rack.id,
+      rackUnitStart: unit ?? findFirstFreeSlot(rack, 1) ?? rack.totalU,
     });
-    this.deviceSlotType.set(String(RackSlotType.UNIT));
-    firstValueFrom(
-      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
-    )
-      .then((res) => {
-        this.assetOptions.set(
-          res.assets.map((a) => ({
-            id: a.id,
-            label: a.assetTag || a.id,
-          })),
-        );
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
-  }
-
-  closeAddDevice(): void {
-    this.clearDeviceErrors();
-    this.addDeviceForm.set(null);
-  }
-
-  saveDevice(): void {
-    const rack = this.currentRack();
-    const form = this.addDeviceForm();
-    if (!rack || !form) return;
-    this.clearDeviceErrors();
-    const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType = (Number(this.deviceSlotType()) as RackSlotType) || RackSlotType.UNIT;
-    const rackUnitStart =
-      parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
-    firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
-      .then(() => {
-        this.addDeviceForm.set(null);
-        this.reloadDevicesForRack(rack.id);
-        this.reloadRacks(this.selectedDcId());
-      })
-      .catch((err) => this.handleDeviceError(err));
   }
 
   isDeviceFieldInvalid(field: string): boolean {
@@ -757,11 +759,17 @@ export default class RacksComponent implements OnInit {
 
   readonly currentRackFreeU = computed(() => this.rackStats().freeU);
 
+  /** The toggle above the list: a radio group, so only the button that becomes
+   *  selected has anything to say. */
+  onDcToggle(id: string, selected: boolean): void {
+    if (selected && id !== this.currentDC()) this.selectDC(id);
+  }
+
   selectDC(dc: string): void {
-    this.searchQuery.set('');
     this.activeModal.set(null);
     this.selectedDcId.set(dc);
-    this.router.navigate(['/racks']);
+    // No navigation here: the rack in the address is not in this data center,
+    // so the effect above steps to the first one that is.
   }
 
   selectRack(id: string): void {
@@ -791,35 +799,5 @@ export default class RacksComponent implements OnInit {
     if (daysAgo < 7) return `${daysAgo} days ago`;
     const weeks = Math.floor(daysAgo / 7);
     return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-  };
-
-  readonly historyEventIcon = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'exclamation-triangle',
-      hardware: 'puzzle-piece',
-      config: 'gear',
-      alert: 'exclamation-triangle-filled',
-    };
-    return eventMap[type];
-  };
-
-  readonly historyEventIconColor = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'color: #f59e0b',
-      hardware: 'color: #3b82f6',
-      config: 'color: #6366f1',
-      alert: 'color: #ef4444',
-    };
-    return eventMap[type];
-  };
-
-  readonly historyEventIconBg = (type: RackEvent['type']): string => {
-    const eventMap: Record<RackEvent['type'], string> = {
-      power: 'bg-amber-50 dark:bg-amber-950',
-      hardware: 'bg-blue-50 dark:bg-blue-950',
-      config: 'bg-indigo-50 dark:bg-indigo-950',
-      alert: 'bg-red-50 dark:bg-red-950',
-    };
-    return eventMap[type];
   };
 }

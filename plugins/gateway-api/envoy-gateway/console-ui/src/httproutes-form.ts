@@ -25,7 +25,10 @@ export interface HTTPRouteBody {
   };
 }
 
-export function buildHTTPRouteBody(root: ParentNode, namespace: string): HTTPRouteBody {
+export function buildHTTPRouteBody(
+  root: ParentNode,
+  namespace: string,
+): HTTPRouteBody {
   const path = trimmedValue(root, 'path') || '/';
   const spec: HTTPRouteBody['spec'] = {
     parentRefs: buildParentRefs(root),

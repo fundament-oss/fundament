@@ -16,9 +16,9 @@ func createTaskForNote(t *testing.T, env *testEnv, title string) string {
 
 	return createTask(t, env, (&dcimv1.CreateTaskRequest_builder{
 		Title:    title,
-		Status:   dcimv1.TaskStatus_TASK_STATUS_READY,
+		Status:   dcimv1.TaskStatus_TASK_STATUS_TODO,
 		Priority: dcimv1.TaskPriority_TASK_PRIORITY_LOW,
-		Category: dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE,
+		Tags:     []string{"hardware"},
 	}).Build())
 }
 

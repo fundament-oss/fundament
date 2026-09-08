@@ -1,13 +1,13 @@
 @if (errorMessage()) {
-  <div class="bg-danger-50 dark:bg-danger-900/20 mb-6 flex items-center rounded-md p-4">
-    <p class="text-danger-800 dark:text-danger-200 font-medium">{{ errorMessage() }}</p>
-  </div>
+  <nldd-banner
+    variant="critical"
+    [attr.text]="errorMessage()"
+  ></nldd-banner>
 } @else if (loading()) {
-  <div class="card">
-    <div class="card-body text-center">
-      <p class="text-gray-600 dark:text-gray-300">Loading…</p>
-    </div>
-  </div>
+  <nldd-inline-dialog
+    variant="loading"
+    text="Loading..."
+  ></nldd-inline-dialog>
 } @else if (customUIUrl()) {
   <app-plugin-iframe
     [src]="customUIUrl()!"
@@ -20,12 +20,19 @@
     [namespaces]="namespaces()"
   />
 } @else {
-  <div class="card">
-    <div class="card-body text-center">
-      <p class="mb-4 text-gray-600 dark:text-gray-300">
-        Creating this resource from the console is not available.
-      </p>
-      <nldd-button [routerLink]="listLink" text="Back to list" variant="primary"></nldd-button>
-    </div>
-  </div>
+  <!-- The plugin ships no create screen, so the console has nothing to show:
+       one line saying so and the way back. -->
+  <nldd-inline-dialog
+    icon="plugin"
+    icon-color="secondary"
+    text="Creating this resource from the console is not available"
+    supporting-text="This plugin does not ship a screen for it."
+  >
+    <nldd-button
+      slot="actions"
+      [routerLink]="listLink"
+      text="Back to list"
+      variant="primary"
+    ></nldd-button>
+  </nldd-inline-dialog>
 }

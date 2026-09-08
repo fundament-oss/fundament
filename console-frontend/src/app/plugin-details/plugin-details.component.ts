@@ -12,13 +12,14 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
+import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
+import { PluginIconComponent } from '../icons';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
@@ -35,11 +36,30 @@ import {
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
 
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/box';
+import '@nldd/design-system/button';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/container';
+import '@nldd/design-system/icon-cell';
+import '@nldd/design-system/link';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/tag';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
 // The detail page's own shape. catalog.v1 returns ids where organization.v1
 // returned names, and splits the author into two scalars; resolving that here
 // keeps the template as it was.
@@ -60,6 +80,8 @@ interface PluginDetailView {
 // installed on the cluster, otherwise the PluginInstallation status phase.
 interface ClusterWithState extends ClusterSummary {
   phase: string | null;
+  // The version pinned on this cluster; empty when not installed.
+  version: string;
   running: boolean;
 }
 
@@ -69,15 +91,25 @@ interface ClusterWithState extends ClusterSummary {
 const displayNameOf = (plugin: { name: string; displayName: string }): string =>
   plugin.displayName || plugin.name;
 
+/** The "official" marker reads as a property of the name, not as one entry in a
+ *  tag row. */
+function isOfficialPlugin(plugin: { tags: string[] }): boolean {
+  return plugin.tags.some((tag) => tag.toLowerCase() === 'official');
+}
+
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent, LoadingIndicatorComponent, PluginIconComponent],
+  imports: [InstallPluginModalComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
 export default class PluginDetailsComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
+
+  isOfficial = isOfficialPlugin;
 
   private installPollingTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -89,7 +121,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -170,7 +202,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       };
 
       this.plugin.set(plugin);
-      this.titleService.setTitle(`${displayNameOf(plugin)} — Plugins`);
+      this.titleService.setTitle(displayNameOf(plugin));
 
       // metadata.name is the RFC-1123 slug of (organizationName, pluginName) — the
       // qualified pair is the plugin's identity, so match on that, not pluginName alone.
@@ -188,6 +220,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
           phase:
             installResults[i].find((item) => item.metadata.name === resourceName)?.status?.phase ??
             null,
+          version:
+            installResults[i].find((item) => item.metadata.name === resourceName)?.spec
+              ?.definitionRef?.pluginVersion ?? '',
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );
@@ -319,13 +354,15 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
       if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.toastService.success(`Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`);
+        this.notificationService.success(
+          `Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`,
+        );
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        this.toastService.error(
+        this.notificationService.error(
           `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
         );
       } else if (n.phase === null) {
-        this.toastService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
+        this.notificationService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
       }
     });
 
@@ -362,7 +399,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {
       failed.forEach((id) => this.setPhase(id, null));
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${failed.map((id) => this.clusterName(id)).join(', ')}`,
       );
     }
@@ -382,7 +419,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.setPhase(clusterId, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
@@ -407,7 +444,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }

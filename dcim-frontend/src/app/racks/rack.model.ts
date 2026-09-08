@@ -6,6 +6,9 @@ export type DeviceType = 'machine' | 'switch' | 'patch' | 'pdu';
 export interface RackDevice {
   id: string;
   type: DeviceType;
+  /** What the catalog calls it ("Server", "Storage"). Empty when the asset has
+   *  no catalog entry, and then it is not written down at all. */
+  category?: string;
   uStart: number;
   uSize: number;
   name: string;

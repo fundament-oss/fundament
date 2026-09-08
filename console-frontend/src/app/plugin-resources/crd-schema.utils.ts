@@ -108,11 +108,17 @@ export function toDateValue(val: unknown): string {
   return formatDate(String(val ?? ''));
 }
 
+/** An RFC 3339 timestamp, the shape Kubernetes writes its times in. */
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
 /**
- * Format an unknown value as a simple string for display.
+ * Format an unknown value as a simple string for display. A timestamp is read
+ * as a date rather than as a string: the schema does not always say a field is
+ * one, and 2026-10-09T11:08:30.638Z is nobody's idea of a readable moment.
  */
 export function toSimpleValue(val: unknown): string {
   if (val === null || val === undefined) return '\u2014';
+  if (typeof val === 'string' && ISO_TIMESTAMP.test(val)) return formatDate(val);
   if (typeof val === 'object') return JSON.stringify(val);
   return String(val);
 }

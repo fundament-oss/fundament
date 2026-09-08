@@ -1,7 +1,10 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
-import { APIKeyService, type CreateAPIKeyResponse } from '../support/api/apikey-service.ts';
+import {
+  APIKeyService,
+  type CreateAPIKeyResponse,
+} from '../support/api/apikey-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 
 // API token format constants (must match Go apitoken package)
@@ -20,7 +23,9 @@ export function setCurrentApiKey(key: CreateAPIKeyResponse | undefined) {
  * Decode a JWT and extract the first organization ID from the claims.
  */
 export function extractOrganizationId(token: string): string {
-  const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+  const payload = JSON.parse(
+    Buffer.from(token.split('.')[1], 'base64url').toString(),
+  );
   const orgIds: string[] = payload.organization_ids ?? [];
   if (orgIds.length === 0) {
     throw new Error('JWT contains no organization_ids');
@@ -52,7 +57,9 @@ async function waitForAuthzReady(service: APIKeyService): Promise<void> {
         err.code === 'permission_denied' &&
         Date.now() < deadline
       ) {
-        await new Promise((resolve) => setTimeout(resolve, AUTHZ_READY_INTERVAL_MS));
+        await new Promise((resolve) =>
+          setTimeout(resolve, AUTHZ_READY_INTERVAL_MS),
+        );
         continue;
       }
       throw err;
@@ -64,7 +71,8 @@ async function waitForAuthzReady(service: APIKeyService): Promise<void> {
  * Authenticate via password login and get JWT.
  */
 export async function authenticateWithPassword(email: string): Promise<string> {
-  const authnApiUrl = process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
+  const authnApiUrl =
+    process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
   const password = 'password';
 
   const response = await fetch(`${authnApiUrl}/login/password`, {
@@ -88,83 +96,100 @@ export async function authenticateWithPassword(email: string): Promise<string> {
 
 // --- Common Given Steps ---
 
-Given('I am authenticated as {string}', { timeout: AUTHZ_READY_TIMEOUT_MS + 10_000 }, async function (this: ICustomWorld, email: string) {
-  this.authToken = await authenticateWithPassword(email);
-  this.organizationId = extractOrganizationId(this.authToken);
-  this.currentUserEmail = email;
-  this.apiKeyService = new APIKeyService(this.organizationApiUrl!, this.authToken, this.organizationId);
-  // Initialize the user's API key map if not exists
-  if (!this.createdApiKeysByUser.has(email)) {
-    this.createdApiKeysByUser.set(email, new Map());
-  }
-  // Tolerate authz-worker -> OpenFGA propagation lag before any
-  // permission-gated step runs (otherwise CreateAPIKey etc. flake with
-  // permission_denied right after a fresh deploy).
-  await waitForAuthzReady(this.apiKeyService);
-});
+Given(
+  'I am authenticated as {string}',
+  { timeout: AUTHZ_READY_TIMEOUT_MS + 10_000 },
+  async function (this: ICustomWorld, email: string) {
+    this.authToken = await authenticateWithPassword(email);
+    this.organizationId = extractOrganizationId(this.authToken);
+    this.currentUserEmail = email;
+    this.apiKeyService = new APIKeyService(
+      this.organizationApiUrl!,
+      this.authToken,
+      this.organizationId,
+    );
+    // Initialize the user's API key map if not exists
+    if (!this.createdApiKeysByUser.has(email)) {
+      this.createdApiKeysByUser.set(email, new Map());
+    }
+    // Tolerate authz-worker -> OpenFGA propagation lag before any
+    // permission-gated step runs (otherwise CreateAPIKey etc. flake with
+    // permission_denied right after a fresh deploy).
+    await waitForAuthzReady(this.apiKeyService);
+  },
+);
 
 Given('I have no authentication', async function (this: ICustomWorld) {
   this.authToken = undefined;
   this.apiKeyService = undefined;
 });
 
-Given('I have created an API key named {string}', async function (this: ICustomWorld, name: string) {
-  let response;
-  try {
-    response = await this.apiKeyService!.createAPIKey({ name });
-  } catch (err) {
-    if (err instanceof ConnectRpcError && err.code === 'already_exists') {
-      // A leftover key from a previous test run. Delete it and retry.
-      const list = await this.apiKeyService!.listAPIKeys();
-      const existing = list.apiKeys.find((k) => k.name === name);
-      if (existing) {
-        await this.apiKeyService!.deleteAPIKey(existing.id);
-      }
+Given(
+  'I have created an API key named {string}',
+  async function (this: ICustomWorld, name: string) {
+    let response;
+    try {
       response = await this.apiKeyService!.createAPIKey({ name });
-    } else {
-      throw err;
-    }
-  }
-  currentApiKey = response;
-
-  this.createdApiKeys.set(name, response);
-  // Also track by user for cleanup
-  if (this.currentUserEmail) {
-    this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
-  }
-});
-
-Given('I have created an API key named {string} with expiry {string}', async function (this: ICustomWorld, name: string, expiresIn: string) {
-  let response;
-  try {
-    response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
-  } catch (err) {
-    if (err instanceof ConnectRpcError && err.code === 'already_exists') {
-      const list = await this.apiKeyService!.listAPIKeys();
-      const existing = list.apiKeys.find((k) => k.name === name);
-      if (existing) {
-        await this.apiKeyService!.deleteAPIKey(existing.id);
+    } catch (err) {
+      if (err instanceof ConnectRpcError && err.code === 'already_exists') {
+        // A leftover key from a previous test run. Delete it and retry.
+        const list = await this.apiKeyService!.listAPIKeys();
+        const existing = list.apiKeys.find((k) => k.name === name);
+        if (existing) {
+          await this.apiKeyService!.deleteAPIKey(existing.id);
+        }
+        response = await this.apiKeyService!.createAPIKey({ name });
+      } else {
+        throw err;
       }
-      response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
-    } else {
-      throw err;
     }
-  }
-  currentApiKey = response;
+    currentApiKey = response;
 
-  this.createdApiKeys.set(name, response);
-  if (this.currentUserEmail) {
-    this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
-  }
-});
+    this.createdApiKeys.set(name, response);
+    // Also track by user for cleanup
+    if (this.currentUserEmail) {
+      this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
+    }
+  },
+);
+
+Given(
+  'I have created an API key named {string} with expiry {string}',
+  async function (this: ICustomWorld, name: string, expiresIn: string) {
+    let response;
+    try {
+      response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
+    } catch (err) {
+      if (err instanceof ConnectRpcError && err.code === 'already_exists') {
+        const list = await this.apiKeyService!.listAPIKeys();
+        const existing = list.apiKeys.find((k) => k.name === name);
+        if (existing) {
+          await this.apiKeyService!.deleteAPIKey(existing.id);
+        }
+        response = await this.apiKeyService!.createAPIKey({ name, expiresIn });
+      } else {
+        throw err;
+      }
+    }
+    currentApiKey = response;
+
+    this.createdApiKeys.set(name, response);
+    if (this.currentUserEmail) {
+      this.createdApiKeysByUser.get(this.currentUserEmail)?.set(name, response);
+    }
+  },
+);
 
 Given('I have revoked the API key', async function (this: ICustomWorld) {
   await this.apiKeyService!.revokeAPIKey(currentApiKey!.id);
 });
 
-Given('I wait {int} seconds', async function (this: ICustomWorld, seconds: number) {
-  await new Promise(resolve => setTimeout(resolve, seconds * 1000));
-});
+Given(
+  'I wait {int} seconds',
+  async function (this: ICustomWorld, seconds: number) {
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+  },
+);
 
 // --- Common When Steps ---
 
@@ -187,11 +212,14 @@ Then('I should receive an error', async function (this: ICustomWorld) {
   expect(this.lastApiError).toBeDefined();
 });
 
-Then('I should receive an unauthenticated error', async function (this: ICustomWorld) {
-  expect(this.lastApiError).toBeDefined();
-  expect(this.lastApiError).toBeInstanceOf(ConnectRpcError);
-  expect((this.lastApiError as ConnectRpcError).code).toBe('unauthenticated');
-});
+Then(
+  'I should receive an unauthenticated error',
+  async function (this: ICustomWorld) {
+    expect(this.lastApiError).toBeDefined();
+    expect(this.lastApiError).toBeInstanceOf(ConnectRpcError);
+    expect((this.lastApiError as ConnectRpcError).code).toBe('unauthenticated');
+  },
+);
 
 Then('I should receive a not found error', async function (this: ICustomWorld) {
   expect(this.lastApiError).toBeDefined();
@@ -199,7 +227,10 @@ Then('I should receive a not found error', async function (this: ICustomWorld) {
   expect((this.lastApiError as ConnectRpcError).code).toBe('not_found');
 });
 
-Then('the error message should contain {string}', async function (this: ICustomWorld, expected: string) {
-  expect(this.lastApiError).toBeDefined();
-  expect(this.lastApiError!.message).toContain(expected);
-});
+Then(
+  'the error message should contain {string}',
+  async function (this: ICustomWorld, expected: string) {
+    expect(this.lastApiError).toBeDefined();
+    expect(this.lastApiError!.message).toContain(expected);
+  },
+);

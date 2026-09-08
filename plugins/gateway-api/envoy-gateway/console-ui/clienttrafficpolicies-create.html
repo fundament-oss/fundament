@@ -13,10 +13,23 @@
         <div class="plugin-error" id="error" hidden></div>
 
         <nldd-form-field label="Name">
-          <nldd-text-field id="name" name="name" required maxlength="63"
-            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="client-tls" error-message="name-error"></nldd-text-field>
-          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
-          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+          <nldd-text-field
+            id="name"
+            name="name"
+            required
+            maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+            placeholder="client-tls"
+            unmet="name-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text
+            >Lowercase letters, digits and dashes.</nldd-form-field-help-text
+          >
+          <nldd-validation-list>
+            <nldd-validation-item id="name-error"
+              >Enter a valid name.</nldd-validation-item
+            >
+          </nldd-validation-list>
         </nldd-form-field>
 
         <div id="namespace-field"></div>
@@ -26,25 +39,52 @@
           <!-- ClientTrafficPolicy only targets a Gateway. -->
           <input id="target-kind" type="hidden" value="Gateway" />
           <nldd-form-field label="Gateway name">
-            <nldd-text-field id="target-name" name="target-name" required placeholder="demo" error-message="target-name-error"></nldd-text-field>
-            <nldd-form-field-error-text id="target-name-error">This field is required.</nldd-form-field-error-text>
+            <nldd-text-field
+              id="target-name"
+              name="target-name"
+              required
+              placeholder="demo"
+              unmet="target-name-error"
+            ></nldd-text-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="target-name-error"
+                >This field is required.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
         </fieldset>
 
         <nldd-form-field label="Minimum TLS version (optional)">
           <nldd-dropdown>
-            <select id="tls-min-version" name="tls-min-version" aria-label="Minimum TLS version">
+            <select
+              id="tls-min-version"
+              name="tls-min-version"
+              aria-label="Minimum TLS version"
+            >
               <option value="">Default</option>
               <option value="1.2">1.2</option>
               <option value="1.3">1.3</option>
             </select>
           </nldd-dropdown>
-          <nldd-form-field-help-text>Lowest TLS version the Gateway accepts from clients.</nldd-form-field-help-text>
+          <nldd-form-field-help-text
+            >Lowest TLS version the Gateway accepts from
+            clients.</nldd-form-field-help-text
+          >
         </nldd-form-field>
 
         <div class="plugin-actions">
-          <nldd-button id="submit" type="button" variant="primary" text="Create ClientTrafficPolicy"></nldd-button>
-          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+          <nldd-button
+            id="submit"
+            type="button"
+            variant="primary"
+            text="Create ClientTrafficPolicy"
+          ></nldd-button>
+          <nldd-button
+            id="back"
+            type="button"
+            variant="secondary"
+            text="Back"
+          ></nldd-button>
         </div>
       </form>
     </div>

@@ -30,9 +30,9 @@ func createTaskFixture(t *testing.T, env *testEnv, title, assigneeID string) str
 	return createTask(t, env, (&dcimv1.CreateTaskRequest_builder{
 		Title:       title,
 		Description: &description,
-		Status:      dcimv1.TaskStatus_TASK_STATUS_READY,
+		Status:      dcimv1.TaskStatus_TASK_STATUS_TODO,
 		Priority:    dcimv1.TaskPriority_TASK_PRIORITY_LOW,
-		Category:    dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE,
+		Tags:        []string{"hardware"},
 		AssigneeId:  &assigneeID,
 		DueDate:     timestamppb.New(dueDate),
 		Location:    &location,
@@ -67,9 +67,9 @@ func TestTaskService_UpdateTask_HappyFlow(t *testing.T) {
 
 	newTitle := "Task After Update"
 	newDescription := "updated description"
-	newStatus := dcimv1.TaskStatus_TASK_STATUS_IN_PROGRESS
-	newPriority := dcimv1.TaskPriority_TASK_PRIORITY_CRITICAL
-	newCategory := dcimv1.TaskCategory_TASK_CATEGORY_NETWORK
+	newStatus := dcimv1.TaskStatus_TASK_STATUS_DOING
+	newPriority := dcimv1.TaskPriority_TASK_PRIORITY_URGENT
+	newTags := []string{"network"}
 	newLocation := "Room B"
 	newDueDate := dueDate.Add(48 * time.Hour)
 
@@ -80,7 +80,7 @@ func TestTaskService_UpdateTask_HappyFlow(t *testing.T) {
 			Description: &newDescription,
 			Status:      &newStatus,
 			Priority:    &newPriority,
-			Category:    &newCategory,
+			Tags:        newTags,
 			AssigneeId:  &newAssigneeID,
 			DueDate:     timestamppb.New(newDueDate),
 			Location:    &newLocation,
@@ -94,7 +94,7 @@ func TestTaskService_UpdateTask_HappyFlow(t *testing.T) {
 	assert.Equal(t, newDescription, task.GetDescription())
 	assert.Equal(t, newStatus, task.GetStatus())
 	assert.Equal(t, newPriority, task.GetPriority())
-	assert.Equal(t, newCategory, task.GetCategory())
+	assert.Equal(t, newTags, task.GetTags())
 	assert.Equal(t, newAssigneeID, task.GetAssigneeId())
 	assert.Equal(t, newLocation, task.GetLocation())
 	assert.True(t, newDueDate.Equal(task.GetDueDate().AsTime()))
@@ -126,13 +126,66 @@ func TestTaskService_UpdateTask_UnsetFieldsAreKept(t *testing.T) {
 
 	assert.Equal(t, newTitle, task.GetTitle())
 	assert.Equal(t, "fixture description", task.GetDescription())
-	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_READY, task.GetStatus())
+	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_TODO, task.GetStatus())
 	assert.Equal(t, dcimv1.TaskPriority_TASK_PRIORITY_LOW, task.GetPriority())
-	assert.Equal(t, dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE, task.GetCategory())
+	assert.Equal(t, []string{"hardware"}, task.GetTags())
 	assert.Equal(t, assigneeID, task.GetAssigneeId())
 	assert.Equal(t, "Room A", task.GetLocation())
 	assert.True(t, task.HasDueDate())
 	assert.True(t, dueDate.Equal(task.GetDueDate().AsTime()))
+}
+
+// Tags have no field presence, so an empty list cannot mean "carry none" — that
+// is what clear_tags is for. Sending neither has to leave the tags alone.
+func TestTaskService_UpdateTask_EmptyTagsAreKept(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	assigneeID := createUser(t, env, "Empty Tags", "emptytags@example.com", "")
+	taskID := createTaskFixture(t, env, "Task Keeping Tags", assigneeID)
+
+	newTitle := "Retagged By Accident"
+	_, err := client.UpdateTask(context.Background(),
+		(&dcimv1.UpdateTaskRequest_builder{
+			Id:    taskID,
+			Title: &newTitle,
+			Tags:  []string{},
+		}).Build(),
+	)
+	require.NoError(t, err)
+
+	task := getTask(t, env, taskID)
+
+	assert.Equal(t, newTitle, task.GetTitle())
+	assert.Equal(t, []string{"hardware"}, task.GetTags())
+}
+
+// clear_tags is the only way to say a task should carry no tags at all, and it
+// must leave the rest of the row alone.
+func TestTaskService_UpdateTask_ClearTags(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	assigneeID := createUser(t, env, "Clear Tags", "cleartags@example.com", "")
+	taskID := createTaskFixture(t, env, "Task Losing Tags", assigneeID)
+
+	_, err := client.UpdateTask(context.Background(),
+		(&dcimv1.UpdateTaskRequest_builder{
+			Id:        taskID,
+			ClearTags: true,
+		}).Build(),
+	)
+	require.NoError(t, err)
+
+	task := getTask(t, env, taskID)
+
+	assert.Empty(t, task.GetTags())
+	assert.Equal(t, "Task Losing Tags", task.GetTitle())
+	assert.Equal(t, dcimv1.TaskPriority_TASK_PRIORITY_LOW, task.GetPriority())
 }
 
 // The nullable columns clear when the caller explicitly sets the "empty"
@@ -169,7 +222,7 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 
 	// Clearing the nullable columns must not disturb the rest of the row.
 	assert.Equal(t, "Task Clearing Fields", task.GetTitle())
-	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_READY, task.GetStatus())
+	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_TODO, task.GetStatus())
 }
 
 // Emptying the description has to write NULL, not an empty string: CreateTask
@@ -262,9 +315,9 @@ func TestTaskService_CreateTask_UnknownAssignee(t *testing.T) {
 	_, err := client.CreateTask(context.Background(),
 		(&dcimv1.CreateTaskRequest_builder{
 			Title:      "Task For A Ghost",
-			Status:     dcimv1.TaskStatus_TASK_STATUS_READY,
+			Status:     dcimv1.TaskStatus_TASK_STATUS_TODO,
 			Priority:   dcimv1.TaskPriority_TASK_PRIORITY_LOW,
-			Category:   dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE,
+			Tags:       []string{"hardware"},
 			AssigneeId: ptr(validUUID),
 		}).Build(),
 	)

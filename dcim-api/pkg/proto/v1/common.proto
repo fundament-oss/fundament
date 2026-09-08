@@ -130,11 +130,22 @@ enum CableType {
 }
 
 // CableStatus aligns with dcim.physical_connections status check constraint.
+//
+// Where a cable is on its way to existing, and each value names what has to
+// happen next: buy it, wait for it, go and fit it. PLANNED used to sit where
+// TO_ORDER is now and answered none of those. It only said the cable was not
+// there yet, which left "have we bought this" unanswerable. It keeps number 10,
+// so every row that was planned is now to order: the earliest of the three, and
+// the only one that claims nothing on somebody's behalf.
+//
+// A cable that is drawn but not decided on has no status at all (UNSPECIFIED).
 enum CableStatus {
-  CABLE_STATUS_UNSPECIFIED    = 0;
-  CABLE_STATUS_PLANNED        = 10;
-  CABLE_STATUS_CONNECTED      = 20;
-  CABLE_STATUS_DECOMMISSIONED = 30;
+  CABLE_STATUS_UNSPECIFIED       = 0;
+  CABLE_STATUS_TO_ORDER          = 10;
+  CABLE_STATUS_ORDERED           = 12;
+  CABLE_STATUS_READY_TO_INSTALL  = 14;
+  CABLE_STATUS_CONNECTED         = 20;
+  CABLE_STATUS_DECOMMISSIONED    = 30;
 }
 
 // CableColor aligns with dcim.physical_connections color check constraint.

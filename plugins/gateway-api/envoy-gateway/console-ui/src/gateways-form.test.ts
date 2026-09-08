@@ -4,16 +4,23 @@
 // mirroring the part of Lit the form depends on.
 
 import { describe, expect, it } from 'vitest';
-import { buildGatewayBody, clusterIssuerControlHtml, validateForm } from './gateways-form.ts';
+import {
+  buildGatewayBody,
+  clusterIssuerControlHtml,
+  validateForm,
+} from './gateways-form.ts';
 
 function upgrade(root: ParentNode): void {
-  root.querySelectorAll('nldd-text-field, nldd-checkbox-field').forEach((el) => {
-    const v = el.getAttribute('value');
-    if (v !== null) (el as unknown as { value: string }).value = v;
-    const checked = el.hasAttribute('checked');
-    (el as unknown as { checked: boolean }).checked = checked;
-    if (el.hasAttribute('required')) (el as unknown as { required: boolean }).required = true;
-  });
+  root
+    .querySelectorAll('nldd-text-field, nldd-checkbox-field')
+    .forEach((el) => {
+      const v = el.getAttribute('value');
+      if (v !== null) (el as unknown as { value: string }).value = v;
+      const checked = el.hasAttribute('checked');
+      (el as unknown as { checked: boolean }).checked = checked;
+      if (el.hasAttribute('required'))
+        (el as unknown as { required: boolean }).required = true;
+    });
 }
 
 function renderForm(overrides: {
@@ -38,7 +45,10 @@ function renderForm(overrides: {
 
 describe('buildGatewayBody', () => {
   it('builds an HTTP-only Gateway with the eg class and All allowedRoutes', () => {
-    const body = buildGatewayBody(renderForm({ name: 'web', https: false }), 'team-a');
+    const body = buildGatewayBody(
+      renderForm({ name: 'web', https: false }),
+      'team-a',
+    );
 
     expect(body.apiVersion).toBe('gateway.networking.k8s.io/v1');
     expect(body.kind).toBe('Gateway');
@@ -72,7 +82,12 @@ describe('buildGatewayBody', () => {
 
   it('adds a cert-manager cluster-issuer annotation and derives the secret name', () => {
     const body = buildGatewayBody(
-      renderForm({ name: 'web', https: true, tlsMode: 'certManager', issuer: 'letsencrypt' }),
+      renderForm({
+        name: 'web',
+        https: true,
+        tlsMode: 'certManager',
+        issuer: 'letsencrypt',
+      }),
       'team-a',
     );
 
@@ -80,7 +95,9 @@ describe('buildGatewayBody', () => {
       'cert-manager.io/cluster-issuer': 'letsencrypt',
     });
     // Non-null assertion: HTTPS is enabled, so this listener always carries tls.
-    expect(body.spec.listeners[1].tls!.certificateRefs).toEqual([{ name: 'web-tls' }]);
+    expect(body.spec.listeners[1].tls!.certificateRefs).toEqual([
+      { name: 'web-tls' },
+    ]);
   });
 });
 
@@ -89,10 +106,18 @@ describe('validateForm', () => {
     expect(validateForm(renderForm({ name: '' }))).toBe(false);
   });
   it('fails when HTTPS+secret is chosen but no secret name given', () => {
-    expect(validateForm(renderForm({ https: true, tlsMode: 'secret', tlsSecret: '' }))).toBe(false);
+    expect(
+      validateForm(
+        renderForm({ https: true, tlsMode: 'secret', tlsSecret: '' }),
+      ),
+    ).toBe(false);
   });
   it('fails when HTTPS+certManager is chosen but no issuer given', () => {
-    expect(validateForm(renderForm({ https: true, tlsMode: 'certManager', issuer: '' }))).toBe(false);
+    expect(
+      validateForm(
+        renderForm({ https: true, tlsMode: 'certManager', issuer: '' }),
+      ),
+    ).toBe(false);
   });
   it('passes for a valid HTTP-only form', () => {
     expect(validateForm(renderForm({ name: 'web', https: false }))).toBe(true);
@@ -101,10 +126,17 @@ describe('validateForm', () => {
 
 describe('clusterIssuerControlHtml', () => {
   it('renders a dropdown of ClusterIssuer names with id cluster-issuer', () => {
-    const html = clusterIssuerControlHtml(['letsencrypt-prod', 'letsencrypt-staging']);
+    const html = clusterIssuerControlHtml([
+      'letsencrypt-prod',
+      'letsencrypt-staging',
+    ]);
     expect(html).toContain('<select id="cluster-issuer"');
-    expect(html).toContain('<option value="letsencrypt-prod">letsencrypt-prod</option>');
-    expect(html).toContain('<option value="letsencrypt-staging">letsencrypt-staging</option>');
+    expect(html).toContain(
+      '<option value="letsencrypt-prod">letsencrypt-prod</option>',
+    );
+    expect(html).toContain(
+      '<option value="letsencrypt-staging">letsencrypt-staging</option>',
+    );
   });
 
   it('falls back to a free-text field when there are no issuers', () => {

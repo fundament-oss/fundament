@@ -1,65 +1,102 @@
-<div class="flex min-h-[calc(100vh-4rem-1px)] items-center justify-center py-6">
-  <div class="w-full max-w-md">
-    <div class="card">
-      <div class="card-header">
-        <h2 class="text-xl font-semibold">Select an organization</h2>
-        <p class="mt-1 text-gray-500 dark:text-gray-400">
-          You have access to multiple organizations. Choose one to continue.
-        </p>
-      </div>
-      <div class="card-body divide-y divide-gray-200 dark:divide-gray-800">
-        @if (acceptedOrganizations().length > 0) {
-          <div class="space-y-1 pb-3">
-            @for (org of acceptedOrganizations(); track org.id) {
-              <button
-                type="button"
-                (click)="onSelect(org.id)"
-                class="ring-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950 flex w-full cursor-pointer items-center rounded-md px-3 py-2.5 text-left font-medium text-gray-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950"
-              >
-                <nldd-icon name="apartment-building" class="mr-3 h-5 w-5 shrink-0"></nldd-icon>
-                <span class="truncate">{{ org.alias }}</span>
-              </button>
-            }
-          </div>
-        }
-
-        @if (pendingInvitationList().length > 0) {
-          <div class="pt-3">
-            <p
-              class="mb-2 px-3 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-            >
-              Pending invitations
+<!-- Same container setup as the login screen, on purpose: both are a single
+     card on an otherwise empty page, one before you are in and one before you
+     have chosen where to be. Keep the two in sync.
+     The page around it owns the scroll region: this screen is slotted straight
+     into a split-view pane, and a pane clips what does not fit. -->
+<nldd-page>
+  <nldd-simple-section
+    horizontal-alignment="center"
+    vertical-alignment="center"
+  >
+    <!-- The panel carries its own width; the section only says where it sits. -->
+    <nldd-container max-width="480px">
+      <nldd-box>
+        <nldd-container
+          padding="16"
+          md-padding="24"
+          lg-padding="32"
+        >
+          <nldd-title size="3">
+            <h1>Select an organization</h1>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Select the organization you want to start with. You can switch between them at any
+              time from the toolbar.
             </p>
-            @for (invitation of pendingInvitationList(); track invitation.id) {
-              <div class="flex items-center justify-between rounded-md px-3 py-2.5">
-                <div class="flex min-w-0 items-center">
-                  <nldd-icon
-                    name="apartment-building"
-                    class="mr-3 h-5 w-5 shrink-0 text-gray-400 dark:text-gray-500"
-                  ></nldd-icon>
-                  <span class="truncate font-medium text-gray-500 dark:text-gray-400">{{
-                    invitation.organizationAlias
-                  }}</span>
-                </div>
-                <div class="ml-3 flex shrink-0 space-x-2">
-                  <nldd-button
-                    type="button"
-                    (click)="onAccept(invitation)"
-                    text="Accept"
-                    variant="primary"
-                  ></nldd-button>
-                  <nldd-button
-                    type="button"
-                    (click)="onDecline(invitation)"
-                    text="Decline"
-                    variant="secondary"
-                  ></nldd-button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-</div>
+          </nldd-rich-text>
+          <nldd-spacer size="24"></nldd-spacer>
+          @if (acceptedOrganizations().length > 0) {
+            <nldd-list
+              variant="box-tinted"
+              type="navigation"
+              accessible-label="Organizations"
+            >
+              @for (org of acceptedOrganizations(); track org.id) {
+                <nldd-list-item
+                  button
+                  (click)="onSelect(org.id)"
+                >
+                  <nldd-icon-cell icon="apartment-building"></nldd-icon-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell [attr.text]="org.alias || org.name"></nldd-text-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-icon-cell
+                    icon="chevron-right"
+                    size="20"
+                    color="secondary"
+                  ></nldd-icon-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
+          }
+          @if (pendingInvitationList().length > 0) {
+            <nldd-spacer size="24"></nldd-spacer>
+            <!-- A list of its own: these are not places you can go yet, they are
+                 offers to answer. -->
+            <nldd-title size="5">
+              <h2>Pending invitations</h2>
+            </nldd-title>
+            <nldd-spacer size="8"></nldd-spacer>
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Pending invitations"
+            >
+              @for (invitation of pendingInvitationList(); track invitation.id) {
+                <nldd-list-item>
+                  <nldd-icon-cell
+                    icon="apartment-building"
+                    color="secondary"
+                  ></nldd-icon-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell [attr.text]="invitation.organizationAlias"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-cell width="fit-content">
+                    <nldd-button
+                      type="button"
+                      (click)="onAccept(invitation)"
+                      text="Accept"
+                      size="sm"
+                      variant="primary"
+                    ></nldd-button>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-cell width="fit-content">
+                    <nldd-button
+                      type="button"
+                      (click)="onDecline(invitation)"
+                      text="Decline"
+                      size="sm"
+                      variant="destructive"
+                    ></nldd-button>
+                  </nldd-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
+          }
+        </nldd-container>
+      </nldd-box>
+    </nldd-container>
+  </nldd-simple-section>
+</nldd-page>

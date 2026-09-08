@@ -36,12 +36,16 @@ export function isExternalMode(root: ParentNode): boolean {
 export function applyMode(root: ParentNode): void {
   const isExternal = isExternalMode(root);
 
-  const externalFieldset = root.querySelector('#external-fieldset') as HTMLElement | null;
+  const externalFieldset = root.querySelector(
+    '#external-fieldset',
+  ) as HTMLElement | null;
   if (externalFieldset) externalFieldset.hidden = !isExternal;
 
-  root.querySelectorAll<NlddTextField>('[data-external-required]').forEach((el) => {
-    el.required = isExternal;
-  });
+  root
+    .querySelectorAll<NlddTextField>('[data-external-required]')
+    .forEach((el) => {
+      el.required = isExternal;
+    });
   // Per-gateway certificate overrides are only valid in External mode.
   root.querySelectorAll<HTMLElement>('.gw-cert-field').forEach((el) => {
     el.hidden = !isExternal;
@@ -51,8 +55,8 @@ export function applyMode(root: ParentNode): void {
 // — Validation ————————————————————————————————————————————————————————————————
 // nldd-text-field exposes no constraint validity and doesn't forward
 // pattern/maxlength to its inner <input>, so form.reportValidity() can't see it.
-// Validate from the element's attributes and surface errors via the linked
-// nldd-form-field-error-text.
+// Validate from the element's attributes and surface errors through the item of
+// the linked nldd-validation-list.
 
 // Applies a `pattern` attribute the way a native <input> would: anchored at both
 // ends. A malformed pattern is a bug in the markup, not something the user typed —
@@ -62,14 +66,17 @@ function matchesPattern(value: string, pattern: string): boolean {
   try {
     return new RegExp(`^(?:${pattern})$`).test(value);
   } catch (err) {
-    console.error(`invalid pattern ${JSON.stringify(pattern)} on a form field`, err);
+    console.error(
+      `invalid pattern ${JSON.stringify(pattern)} on a form field`,
+      err,
+    );
     return true;
   }
 }
 
 function setFieldError(el: NlddTextField, message: string): void {
   el.setAttribute('invalid', '');
-  const errId = el.getAttribute('error-message');
+  const errId = el.getAttribute('unmet');
   const errEl = errId ? el.ownerDocument.getElementById(errId) : null;
   if (errEl && message) errEl.textContent = message;
 }
@@ -133,12 +140,18 @@ export function gatherGateways(
 ): Gateway[] {
   return [...root.querySelectorAll<HTMLElement>(`#${kind}s .gateway-row`)]
     .map((row): Gateway | null => {
-      const name = (row.querySelector('.gw-name') as NlddTextField).value.trim();
+      const name = (
+        row.querySelector('.gw-name') as NlddTextField
+      ).value.trim();
       if (!name) return null;
       const gw: Gateway = { name };
-      const self = (row.querySelector('.gw-self') as NlddTextField | null)?.value.trim();
+      const self = (
+        row.querySelector('.gw-self') as NlddTextField | null
+      )?.value.trim();
       if (self) gw.selfAddress = self;
-      const cert = (row.querySelector('.gw-cert') as NlddTextField | null)?.value.trim();
+      const cert = (
+        row.querySelector('.gw-cert') as NlddTextField | null
+      )?.value.trim();
       if (isExternal && cert) {
         gw.certificate = { existingSecret: cert };
       }
@@ -148,15 +161,24 @@ export function gatherGateways(
 }
 
 // Assigns `value` onto `obj[key]` only when truthy, keeping the payload minimal.
-function setIf(obj: Record<string, unknown>, key: string, value: unknown): void {
+function setIf(
+  obj: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
   if (value) obj[key] = value;
 }
 
-export function buildBody(root: ParentNode, namespace: string): FSCInstallationBody {
+export function buildBody(
+  root: ParentNode,
+  namespace: string,
+): FSCInstallationBody {
   const mode = trimmedValue(root, 'mode');
   const isExternal = mode === 'External';
 
-  const postgres: Record<string, unknown> = { storageClass: trimmedValue(root, 'pg-storageClass') };
+  const postgres: Record<string, unknown> = {
+    storageClass: trimmedValue(root, 'pg-storageClass'),
+  };
   const instances = trimmedValue(root, 'pg-instances');
   if (instances) postgres.instances = Number(instances);
   setIf(postgres, 'image', trimmedValue(root, 'pg-image'));
@@ -190,7 +212,9 @@ export function buildBody(root: ParentNode, namespace: string): FSCInstallationB
   // elements directly rather than via an input[name]:checked query. Both `checked`
   // and `value` are declared reactive properties on NLDDCheckboxField.
   const grants = [
-    ...root.querySelectorAll<NlddCheckboxField>('nldd-checkbox-field[name="autoSignGrants"]'),
+    ...root.querySelectorAll<NlddCheckboxField>(
+      'nldd-checkbox-field[name="autoSignGrants"]',
+    ),
   ]
     .filter((el) => el.checked)
     .map((el) => el.value);
@@ -221,7 +245,11 @@ export function namespaceFieldHtml(namespaces: string[] | undefined): string {
     return (
       `<nldd-form-field label="Namespace">` +
       `<nldd-dropdown><select id="namespace" name="namespace" required aria-label="Namespace">` +
-      namespaces.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('') +
+      namespaces
+        .map(
+          (n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`,
+        )
+        .join('') +
       `</select></nldd-dropdown></nldd-form-field>`
     );
   }
@@ -230,8 +258,8 @@ export function namespaceFieldHtml(namespaces: string[] | undefined): string {
     `<nldd-text-field id="namespace" name="namespace" required
        pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?"
        data-error="Use lowercase letters, digits and dashes."
-       placeholder="my-namespace" error-message="namespace-error"></nldd-text-field>` +
-    `<nldd-form-field-error-text id="namespace-error">Enter a valid namespace.</nldd-form-field-error-text>` +
+       placeholder="my-namespace" unmet="namespace-error"></nldd-text-field>` +
+    `<nldd-validation-list><nldd-validation-item id="namespace-error">Enter a valid namespace.</nldd-validation-item></nldd-validation-list>` +
     `</nldd-form-field>`
   );
 }
@@ -244,8 +272,8 @@ export function gatewayRowHtml(kind: GatewayKind, seq: number): string {
       ? `<nldd-form-field label="Self address" style="flex: 1 1 16rem">
            <nldd-text-field class="gw-self" type="url" pattern="https://.+"
              data-error="Must start with https://"
-             placeholder="https://inway.example.com" error-message="${selfErrId}"></nldd-text-field>
-           <nldd-form-field-error-text id="${selfErrId}">Must start with https://</nldd-form-field-error-text>
+             placeholder="https://inway.example.com" unmet="${selfErrId}"></nldd-text-field>
+           <nldd-validation-list><nldd-validation-item id="${selfErrId}">Must start with https://</nldd-validation-item></nldd-validation-list>
          </nldd-form-field>`
       : '';
   return `
@@ -253,8 +281,8 @@ export function gatewayRowHtml(kind: GatewayKind, seq: number): string {
       <nldd-text-field class="gw-name" required maxlength="30"
         pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?"
         data-error="Use lowercase letters, digits and dashes."
-        placeholder="default" error-message="${nameErrId}"></nldd-text-field>
-      <nldd-form-field-error-text id="${nameErrId}">Enter a valid name (max 30 chars).</nldd-form-field-error-text>
+        placeholder="default" unmet="${nameErrId}"></nldd-text-field>
+      <nldd-validation-list><nldd-validation-item id="${nameErrId}">Enter a valid name (max 30 chars).</nldd-validation-item></nldd-validation-list>
     </nldd-form-field>
     ${selfAddress}
     <nldd-form-field label="Certificate secret" class="gw-cert-field" style="flex: 1 1 14rem">
