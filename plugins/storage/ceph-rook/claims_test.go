@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
@@ -79,7 +80,7 @@ func TestClaimOwnerIgnoresDeletingPools(t *testing.T) {
 	early := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	deleting := poolAt("old", early, "disk-1")
-	deleting.DeletionTimestamp = ptr(metav1.NewTime(early.Add(time.Minute)))
+	deleting.DeletionTimestamp = ptr.To(metav1.NewTime(early.Add(time.Minute)))
 	deleting.Finalizers = []string{"test/keep-visible"}
 
 	live := poolAt("new", early.Add(time.Hour), "disk-1")
@@ -152,5 +153,3 @@ func TestOwnedByChecksKind(t *testing.T) {
 	assert.True(t, ownedBy(refs, "StoragePool", &pool))
 	assert.False(t, ownedBy(refs, "BlockStorage", &pool), "same name+UID under another kind is not ours")
 }
-
-func ptr[T any](v T) *T { return &v }

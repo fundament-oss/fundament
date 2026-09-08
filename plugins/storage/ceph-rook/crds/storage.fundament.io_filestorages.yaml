@@ -73,10 +73,15 @@ spec:
                 type: string
             type: object
           status:
-            description: FileStorageStatus is the observed state; same contract as
-              BlockStorageStatus.
+            description: |-
+              ConsumerStatus is the observed state shared by the consumer kinds
+              (BlockStorage, FileStorage). Fields describe the derived Rook object and
+              StorageClass, sized against the whole cluster's OSD set.
             properties:
               conditions:
+                description: |-
+                  Conditions carries ConditionReady. listType=map on type so the API server
+                  merges by condition type rather than by position.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -140,6 +145,8 @@ spec:
               message:
                 type: string
               observedGeneration:
+                description: ObservedGeneration is the metadata.generation this status
+                  was computed from.
                 format: int64
                 type: integer
               phase:

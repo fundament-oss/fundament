@@ -4,6 +4,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+// cephFSDataPoolName names the CephFilesystem's data pool. Rook derives the
+// actual Ceph pool as <filesystem>-<this>, which the StorageClass's pool
+// parameter must match exactly — both renderers share this constant so they
+// cannot drift apart.
+const cephFSDataPoolName = "data0"
+
 // RenderCephFilesystem builds the CephFilesystem for a FileStorage. Both pools
 // replicate at the same size: the metadata pool is small but every file op
 // touches it, so it never deserves less redundancy than the data.
@@ -28,10 +34,8 @@ func RenderCephFilesystem(namespace, name string, replicas int, failureDomain st
 		}
 	}
 
-	// Named so the derived pool is <name>-data0, which the StorageClass's pool
-	// parameter must match exactly.
 	dataPool := pool()
-	dataPool["name"] = "data0"
+	dataPool["name"] = cephFSDataPoolName
 
 	u.Object["spec"] = map[string]any{
 		"metadataPool": pool(),

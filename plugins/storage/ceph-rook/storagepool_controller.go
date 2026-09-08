@@ -33,15 +33,20 @@ type StoragePoolReconciler struct {
 }
 
 // SetupWithManager registers the controller with the manager. It watches
-// StoragePool (the primary resource) and maps Disk changes to all
-// StoragePools so that a disk becoming available or unavailable triggers
-// reconciliation of every pool.
+// StoragePool (the primary resource), maps Disk changes to all StoragePools so
+// that a disk becoming available or unavailable triggers reconciliation of
+// every pool, and maps CephCluster changes the same way so a pool reconciled
+// before the singleton existed contributes its disks the moment it appears.
 func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.StoragePool{}).
 		Watches(
 			&v1alpha1.Disk{},
-			handler.EnqueueRequestsFromMapFunc(r.diskToStoragePools),
+			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
+		).
+		Watches(
+			rookStub("CephCluster"),
+			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
 		).
 		Complete(r); err != nil {
 		return fmt.Errorf("register StoragePool controller: %w", err)
@@ -49,10 +54,11 @@ func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	return nil
 }
 
-// diskToStoragePools maps a Disk event to reconcile.Requests for every
-// StoragePool. When a disk changes its availability, all pools may be affected
-// (node count and therefore replication may change).
-func (r *StoragePoolReconciler) diskToStoragePools(ctx context.Context, _ client.Object) []reconcile.Request {
+// toAllStoragePools maps a Disk or CephCluster event to reconcile.Requests for
+// every StoragePool: a disk changing availability can shift any pool's
+// selection, and a CephCluster appearing means every pool's disks must be
+// recorded in it.
+func (r *StoragePoolReconciler) toAllStoragePools(ctx context.Context, _ client.Object) []reconcile.Request {
 	var pools v1alpha1.StoragePoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
 		// Return empty; the reconciler will retry on the next event.
@@ -116,7 +122,8 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 
 	// Step 3: Set the singleton CephCluster's spec.storage.nodes to the union of
 	// all pools' disks, so pools don't clobber each other.
-	if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
+	clusterExists, err := r.reconcileCephClusterNodes(ctx)
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes: %w", err)
 	}
 
@@ -131,6 +138,21 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
 			Reason:  v1alpha1.ReasonNoUsableDisks,
+			Message: status.Message,
+		})
+	}
+
+	// Ready below means "this pool's disks are recorded in the CephCluster".
+	// Without the CephCluster nothing was recorded; its watch re-reconciles
+	// every pool the moment it appears.
+	if !clusterExists {
+		status := pool.Status
+		status.Phase = v1alpha1.PhaseDegraded
+		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
+		status.Message = fmt.Sprintf("CephCluster %s/%s not found: disks are contributed once it exists", r.ClusterNamespace, cephClusterName)
+		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.ReasonCephClusterMissing,
 			Message: status.Message,
 		})
 	}
@@ -288,46 +310,43 @@ func (r *StoragePoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1
 }
 
 // reconcileCephClusterNodes loads the singleton CephCluster and sets
-// spec.storage.nodes to the union of all live StoragePools' disks. It returns
-// that union: the disks behind every OSD in the cluster, which is what callers
-// size replication against.
-func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) ([]v1alpha1.DiskStatus, error) {
+// spec.storage.nodes to the union of all live StoragePools' disks. It reports
+// whether the CephCluster exists: when it does not, nothing was recorded and
+// the caller must not present the pool as contributed.
+func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
 	union, err := diskUnion(ctx, r.Client)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	nodes := BuildStorageNodes(union)
 	nodesIface := storageNodesToInterface(nodes)
 
 	// Fetch the singleton CephCluster.
-	cc := &unstructured.Unstructured{}
-	cc.SetAPIVersion(cephAPIVersion)
-	cc.SetKind("CephCluster")
+	cc := rookStub("CephCluster")
 	err = r.Client.Get(ctx, types.NamespacedName{Namespace: r.ClusterNamespace, Name: cephClusterName}, cc)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Not created yet. The union still stands; it describes the pools.
-			return union, nil
+			return false, nil
 		}
-		return nil, fmt.Errorf("get CephCluster: %w", err)
+		return false, fmt.Errorf("get CephCluster: %w", err)
 	}
 
 	// Skip the identical write, for the same reason writeStatus does.
 	if current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes"); err == nil &&
 		found && equality.Semantic.DeepEqual(current, nodesIface) {
-		return union, nil
+		return true, nil
 	}
 
 	// Set only spec.storage.nodes; do not touch other fields.
 	if err := unstructured.SetNestedSlice(cc.Object, nodesIface, "spec", "storage", "nodes"); err != nil {
-		return nil, fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
+		return true, fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
 	}
 
 	if err := r.Client.Update(ctx, cc); err != nil {
-		return nil, fmt.Errorf("update CephCluster: %w", err)
+		return true, fmt.Errorf("update CephCluster: %w", err)
 	}
-	return union, nil
+	return true, nil
 }
 
 // storageNodesToInterface converts []map[string]any to []interface{} as
@@ -382,10 +401,11 @@ func controllerRef(owner metav1.Object, kind string) metav1.OwnerReference {
 
 // notOursError reports an existing object this owner is not allowed to touch.
 //
-// Terminal: no amount of retrying makes someone else's object ours. The owner is
-// left Degraded with this message, and the operator renaming the owner or
-// removing the conflicting object produces a watch event that reconciles it
-// again -- which is the only thing that can resolve it.
+// Terminal: no amount of retrying makes someone else's object ours. The owner
+// is left Degraded with this message. Renaming the owner produces a watch
+// event via For(); removing the conflicting object produces one via the
+// consumer controllers' same-named watches (Owns alone would not see a foreign
+// object).
 func notOursError(ownerKind, kind, name string) error {
 	//nolint:wrapcheck // TerminalError is a wrapper; wrapping it again adds nothing
 	return reconcile.TerminalError(fmt.Errorf(

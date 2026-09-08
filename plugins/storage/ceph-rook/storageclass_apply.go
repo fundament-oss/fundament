@@ -3,14 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -46,8 +50,17 @@ func applyOwnedStorageClass(ctx context.Context, c client.Client, owner client.O
 			desired.Name, strings.Join(drift, ", ")))
 	}
 
+	before := existing.DeepCopy()
 	existing.AllowVolumeExpansion = desired.AllowVolumeExpansion
-	existing.OwnerReferences = desired.OwnerReferences
+	// Upserts our controller ref and keeps any other party's ownerRef, unlike
+	// assigning desired.OwnerReferences wholesale.
+	if err := controllerutil.SetControllerReference(owner, &existing, c.Scheme()); err != nil {
+		return fmt.Errorf("set StorageClass controller reference: %w", err)
+	}
+	// Skip the identical write: Disk events fan out here on every reconcile.
+	if equality.Semantic.DeepEqual(before, &existing) {
+		return nil
+	}
 	if err := c.Update(ctx, &existing); err != nil {
 		return fmt.Errorf("update StorageClass: %w", err)
 	}
@@ -62,34 +75,15 @@ func immutableStorageClassDrift(existing, desired *storagev1.StorageClass) []str
 	if existing.Provisioner != desired.Provisioner {
 		drift = append(drift, "provisioner")
 	}
-	if !mapsEqual(existing.Parameters, desired.Parameters) {
+	if !maps.Equal(existing.Parameters, desired.Parameters) {
 		drift = append(drift, "parameters")
 	}
-	if !ptrEqual(existing.ReclaimPolicy, desired.ReclaimPolicy) {
+	if !ptr.Equal(existing.ReclaimPolicy, desired.ReclaimPolicy) {
 		drift = append(drift, "reclaimPolicy")
 	}
-	if !ptrEqual(existing.VolumeBindingMode, desired.VolumeBindingMode) {
+	if !ptr.Equal(existing.VolumeBindingMode, desired.VolumeBindingMode) {
 		drift = append(drift, "volumeBindingMode")
 	}
 	sort.Strings(drift)
 	return drift
-}
-
-func mapsEqual(a, b map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if bv, ok := b[k]; !ok || bv != v {
-			return false
-		}
-	}
-	return true
-}
-
-func ptrEqual[T comparable](a, b *T) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	return *a == *b
 }

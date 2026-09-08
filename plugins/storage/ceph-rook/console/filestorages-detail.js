@@ -1,4 +1,12 @@
-import { loadSdk, escapeHtml, renderDefList } from './_shared.js';
+import {
+  loadSdk,
+  escapeHtml,
+  renderDefList,
+  replicationFieldHtml,
+  metadataServersFieldHtml,
+  metadataServersError,
+  wireSubmit,
+} from './_shared.js';
 
 await loadSdk();
 const ctx = await fundament.init;
@@ -58,33 +66,13 @@ async function showDetail() {
 async function showEdit(item) {
   actions.hidden = true;
 
-  const replication = item.spec?.replication ?? 'auto';
-  const options = ['auto', '1', '2', '3']
-    .map(
-      (v) =>
-        `<option value="${v}"${v === replication ? ' selected' : ''}>${
-          v === 'auto' ? 'auto (recommended)' : v
-        }</option>`,
-    )
-    .join('');
-  const metadataServers = item.spec?.metadataServers ?? 1;
-
   content.innerHTML = `
     <form id="edit-form" class="plugin-form" novalidate>
       <div class="plugin-error" id="edit-error" hidden></div>
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="replication">Replication</label>
-        <select id="replication" name="replication" class="plugin-select">${options}</select>
-        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
-      </div>
+      ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="mds-count">Metadata servers</label>
-        <input id="mds-count" name="metadataServers" type="number" class="plugin-input"
-               min="1" max="5" value="${escapeHtml(String(metadataServers))}" />
-        <span class="plugin-hint">Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.</span>
-      </div>
+      ${metadataServersFieldHtml(item.spec?.metadataServers ?? 1)}
 
       <div class="plugin-actions">
         <button type="submit" class="plugin-button" id="save-btn">Save</button>
@@ -94,42 +82,29 @@ async function showEdit(item) {
   `;
 
   const form = document.getElementById('edit-form');
-  const errorBox = document.getElementById('edit-error');
-  const saveBtn = document.getElementById('save-btn');
+  const metadataServers = () => Number(form.querySelector('[name="metadataServers"]').value);
 
   document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.hidden = true;
-
-    const metadataServers = Number(form.querySelector('[name="metadataServers"]').value);
-    if (!Number.isInteger(metadataServers) || metadataServers < 1 || metadataServers > 5) {
-      errorBox.textContent = 'Metadata servers must be a whole number from 1 to 5.';
-      errorBox.hidden = false;
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
+  wireSubmit(form, {
+    button: document.getElementById('save-btn'),
+    errorBox: document.getElementById('edit-error'),
+    busyLabel: 'Saving…',
+    failPrefix: 'Failed to save',
+    validate: () => metadataServersError(metadataServers()),
+    action: async () => {
       // Merge-patch of spec only: status is untouched.
       await fundament.k8s.patch(
         { ...RESOURCE, name },
         {
           spec: {
             replication: form.querySelector('[name="replication"]').value,
-            metadataServers,
+            metadataServers: metadataServers(),
           },
         },
       );
       await showDetail();
-    } catch (err) {
-      errorBox.textContent = `Failed to save: ${err?.message ?? err}`;
-      errorBox.hidden = false;
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-    }
+    },
   });
 }
 

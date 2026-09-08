@@ -19,21 +19,6 @@ type FileStorageSpec struct {
 	MetadataServers int32 `json:"metadataServers,omitempty"`
 }
 
-// FileStorageStatus is the observed state; same contract as BlockStorageStatus.
-type FileStorageStatus struct {
-	Phase            string `json:"phase,omitempty"`
-	StorageClassName string `json:"storageClassName,omitempty"`
-	Replicas         int    `json:"replicas,omitempty"`
-	FailureDomain    string `json:"failureDomain,omitempty"`
-	Message          string `json:"message,omitempty"`
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
@@ -43,8 +28,8 @@ type FileStorageStatus struct {
 type FileStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              FileStorageSpec   `json:"spec,omitempty"`
-	Status            FileStorageStatus `json:"status,omitempty"`
+	Spec              FileStorageSpec `json:"spec,omitempty"`
+	Status            ConsumerStatus  `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

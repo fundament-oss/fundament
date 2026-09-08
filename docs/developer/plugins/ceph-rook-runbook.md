@@ -717,7 +717,7 @@ To keep the disks for a future run, use `just storage-disks reset` instead of `p
 | Second install fails after a first attempt | Stale OSD metadata | `just storage-disks reset` |
 | Node container will not stop | Stale RBD mapping | `just storage-disks unmap-stale` |
 | Pool stuck `Provisioning` | CephBlockPool not Ready | `kubectl -n rook-ceph describe cephblockpool ceph-<pool>` |
-| Pool `Degraded` | Conflict or drift | Read `status.message` — it names the action |
+| Pool `Degraded` | Conflict, drift, missing CephCluster, or Rook reporting `Failure` | Read `status.message` — it names the action |
 
 ## Related
 

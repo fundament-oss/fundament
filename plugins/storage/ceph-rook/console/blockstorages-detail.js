@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, renderDefList } from './_shared.js';
+import { loadSdk, escapeHtml, renderDefList, replicationFieldHtml, wireSubmit } from './_shared.js';
 
 await loadSdk();
 const ctx = await fundament.init;
@@ -57,25 +57,11 @@ async function showDetail() {
 async function showEdit(item) {
   actions.hidden = true;
 
-  const replication = item.spec?.replication ?? 'auto';
-  const options = ['auto', '1', '2', '3']
-    .map(
-      (v) =>
-        `<option value="${v}"${v === replication ? ' selected' : ''}>${
-          v === 'auto' ? 'auto (recommended)' : v
-        }</option>`,
-    )
-    .join('');
-
   content.innerHTML = `
     <form id="edit-form" class="plugin-form" novalidate>
       <div class="plugin-error" id="edit-error" hidden></div>
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="replication">Replication</label>
-        <select id="replication" name="replication" class="plugin-select">${options}</select>
-        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
-      </div>
+      ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
 
       <div class="plugin-actions">
         <button type="submit" class="plugin-button" id="save-btn">Save</button>
@@ -85,18 +71,15 @@ async function showEdit(item) {
   `;
 
   const form = document.getElementById('edit-form');
-  const errorBox = document.getElementById('edit-error');
-  const saveBtn = document.getElementById('save-btn');
 
   document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.hidden = true;
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
+  wireSubmit(form, {
+    button: document.getElementById('save-btn'),
+    errorBox: document.getElementById('edit-error'),
+    busyLabel: 'Saving…',
+    failPrefix: 'Failed to save',
+    action: async () => {
       // Merge-patch of spec only: status is untouched.
       await fundament.k8s.patch(
         { ...RESOURCE, name },
@@ -105,12 +88,7 @@ async function showEdit(item) {
         },
       );
       await showDetail();
-    } catch (err) {
-      errorBox.textContent = `Failed to save: ${err?.message ?? err}`;
-      errorBox.hidden = false;
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-    }
+    },
   });
 }
 

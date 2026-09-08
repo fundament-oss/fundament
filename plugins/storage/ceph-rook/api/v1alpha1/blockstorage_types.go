@@ -11,29 +11,6 @@ type BlockStorageSpec struct {
 	Replication string `json:"replication,omitempty"`
 }
 
-// ReasonNoOSDs: no StoragePool contributes usable disks, so there is nothing
-// to place data on. Consumer kinds (BlockStorage, FileStorage) share it.
-const ReasonNoOSDs = "NoOSDs"
-
-// BlockStorageStatus is the observed state. Fields describe the derived
-// CephBlockPool and StorageClass, sized against the whole cluster's OSD set.
-type BlockStorageStatus struct {
-	Phase            string `json:"phase,omitempty"`
-	StorageClassName string `json:"storageClassName,omitempty"`
-	Replicas         int    `json:"replicas,omitempty"`
-	FailureDomain    string `json:"failureDomain,omitempty"`
-	Message          string `json:"message,omitempty"`
-	// ObservedGeneration is the metadata.generation this status was computed from.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Conditions carries ConditionReady. listType=map on type so the API server
-	// merges by condition type rather than by position.
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
@@ -43,8 +20,8 @@ type BlockStorageStatus struct {
 type BlockStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              BlockStorageSpec   `json:"spec,omitempty"`
-	Status            BlockStorageStatus `json:"status,omitempty"`
+	Spec              BlockStorageSpec `json:"spec,omitempty"`
+	Status            ConsumerStatus   `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
