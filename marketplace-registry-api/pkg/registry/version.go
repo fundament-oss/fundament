@@ -33,13 +33,19 @@ func (s *Server) ListPluginVersions(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin versions: %w", err))
 	}
 
+	versionIDs := make([]uuid.UUID, 0, len(rows))
+	for i := range rows {
+		versionIDs = append(versionIDs, rows[i].ID)
+	}
+
+	submissions, err := s.loadSubmissions(ctx, versionIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	versions := make([]*registryv1.PluginVersion, 0, len(rows))
 	for i := range rows {
-		version, err := s.versionFromRow(ctx, versionRowFromList(&rows[i]))
-		if err != nil {
-			return nil, err
-		}
-		versions = append(versions, version)
+		versions = append(versions, versionFromRow(versionRowFromList(&rows[i]), submissions))
 	}
 
 	return registryv1.ListPluginVersionsResponse_builder{Versions: versions}.Build(), nil
@@ -56,7 +62,7 @@ func (s *Server) GetPluginVersion(
 		return nil, versionLookupError(err)
 	}
 
-	version, err := s.versionFromRow(ctx, versionRowFromGet(&row))
+	version, err := s.versionFromGetRow(ctx, &row)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +147,7 @@ func (s *Server) SubmitPluginVersion(
 	// Already pending: return the current state rather than opening a second
 	// round, which submissions_uq_open would refuse anyway.
 	if row.Status == dbconst.PluginDefinitionStatus_Pending {
-		version, err := s.versionFromRow(ctx, versionRowFromGet(&row))
+		version, err := s.versionFromGetRow(ctx, &row)
 		if err != nil {
 			return nil, err
 		}
@@ -160,16 +166,27 @@ func (s *Server) SubmitPluginVersion(
 	defer rollback.Rollback(ctx, tx, s.logger)
 	qtx := s.queries.WithTx(tx)
 
-	if err := qtx.PluginVersionSetStatus(ctx, db.PluginVersionSetStatusParams{
-		ID:     versionID,
-		Status: string(dbconst.PluginDefinitionStatus_Pending),
-	}); err != nil {
+	updated, err := qtx.PluginVersionSetStatus(ctx, db.PluginVersionSetStatusParams{
+		ID:             versionID,
+		Status:         string(dbconst.PluginDefinitionStatus_Pending),
+		ExpectedStatus: string(row.Status),
+	})
+	if err != nil {
 		return nil, writeError(err, "submitting plugin version")
+	}
+	if updated == 0 {
+		return nil, statusChangedError(row.Status)
 	}
 	if _, err := qtx.SubmissionCreate(ctx, db.SubmissionCreateParams{
 		PluginDefinitionID: versionID,
 		SubmitterUserID:    userID,
 	}); err != nil {
+		// submissions_uq_open: a round is open on a version the status says is
+		// submittable.
+		if isUniqueViolation(err) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("a submission is already open for this version"))
+		}
 		return nil, writeError(err, "opening submission")
 	}
 
@@ -210,11 +227,16 @@ func (s *Server) WithdrawPluginVersion(
 	defer rollback.Rollback(ctx, tx, s.logger)
 	qtx := s.queries.WithTx(tx)
 
-	if err := qtx.PluginVersionSetStatus(ctx, db.PluginVersionSetStatusParams{
-		ID:     versionID,
-		Status: string(dbconst.PluginDefinitionStatus_Withdrawn),
-	}); err != nil {
+	updated, err := qtx.PluginVersionSetStatus(ctx, db.PluginVersionSetStatusParams{
+		ID:             versionID,
+		Status:         string(dbconst.PluginDefinitionStatus_Withdrawn),
+		ExpectedStatus: string(dbconst.PluginDefinitionStatus_Pending),
+	})
+	if err != nil {
 		return nil, writeError(err, "withdrawing plugin version")
+	}
+	if updated == 0 {
+		return nil, statusChangedError(dbconst.PluginDefinitionStatus_Pending)
 	}
 	if err := qtx.SubmissionCloseOpen(ctx, db.SubmissionCloseOpenParams{
 		PluginDefinitionID: versionID,
@@ -282,14 +304,47 @@ func versionRowFromList(row *db.PluginVersionListByPluginIDRow) *registryVersion
 	}
 }
 
-func (s *Server) versionFromRow(ctx context.Context, row *registryVersionRow) (*registryv1.PluginVersion, error) {
-	// A DRAFT has never been submitted, so no row here is the normal case.
-	submission, err := s.queries.SubmissionLatestByDefinitionID(ctx, db.SubmissionLatestByDefinitionIDParams{
-		PluginDefinitionID: row.ID,
-	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("loading submission: %w", err))
+// loadSubmissions is the latest review round of each version, keyed by version
+// id. A DRAFT has never been submitted, so a version missing from the map is the
+// normal case.
+func (s *Server) loadSubmissions(
+	ctx context.Context,
+	versionIDs []uuid.UUID,
+) (map[uuid.UUID]db.SubmissionLatestByDefinitionIDsRow, error) {
+	submissions := map[uuid.UUID]db.SubmissionLatestByDefinitionIDsRow{}
+	if len(versionIDs) == 0 {
+		return submissions, nil
 	}
+
+	rows, err := s.queries.SubmissionLatestByDefinitionIDs(ctx, db.SubmissionLatestByDefinitionIDsParams{
+		PluginDefinitionIds: versionIDs,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("loading submissions: %w", err))
+	}
+	for _, row := range rows {
+		submissions[row.PluginDefinitionID] = row
+	}
+
+	return submissions, nil
+}
+
+func (s *Server) versionFromGetRow(
+	ctx context.Context,
+	row *db.PluginVersionGetByIDRow,
+) (*registryv1.PluginVersion, error) {
+	submissions, err := s.loadSubmissions(ctx, []uuid.UUID{row.ID})
+	if err != nil {
+		return nil, err
+	}
+	return versionFromRow(versionRowFromGet(row), submissions), nil
+}
+
+func versionFromRow(
+	row *registryVersionRow,
+	submissions map[uuid.UUID]db.SubmissionLatestByDefinitionIDsRow,
+) *registryv1.PluginVersion {
+	submission := submissions[row.ID]
 
 	return registryv1.PluginVersion_builder{
 		Id:             row.ID.String(),
@@ -303,7 +358,7 @@ func (s *Server) versionFromRow(ctx context.Context, row *registryVersionRow) (*
 		Submitted:      timestamptzOrNil(submission.Submitted),
 		Published:      timestamptzOrNil(row.Published),
 		ReviewFeedback: submission.Feedback,
-	}.Build(), nil
+	}.Build()
 }
 
 func (s *Server) loadVersion(ctx context.Context, versionID uuid.UUID) (*registryv1.PluginVersion, error) {
@@ -311,7 +366,13 @@ func (s *Server) loadVersion(ctx context.Context, versionID uuid.UUID) (*registr
 	if err != nil {
 		return nil, versionLookupError(err)
 	}
-	return s.versionFromRow(ctx, versionRowFromGet(&row))
+	return s.versionFromGetRow(ctx, &row)
+}
+
+// statusChangedError is the zero-row outcome of a guarded status write.
+func statusChangedError(expected dbconst.PluginDefinitionStatus) error {
+	return connect.NewError(connect.CodeFailedPrecondition,
+		fmt.Errorf("plugin version is no longer in status %s", expected))
 }
 
 // versionLookupError mirrors pluginLookupError: RLS reaches the owning

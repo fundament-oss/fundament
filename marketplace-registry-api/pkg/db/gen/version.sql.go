@@ -14,10 +14,10 @@ import (
 )
 
 const categoryList = `-- name: CategoryList :many
-SELECT appstore.categories.id, appstore.categories.name
+SELECT id, name
 FROM appstore.categories
-WHERE appstore.categories.deleted IS NULL
-ORDER BY appstore.categories.name ASC
+WHERE deleted IS NULL
+ORDER BY name ASC
 `
 
 type CategoryListRow struct {
@@ -58,7 +58,7 @@ INSERT INTO appstore.plugin_definitions (
 	$5::text,
 	'draft'
 )
-RETURNING appstore.plugin_definitions.id, appstore.plugin_definitions.created
+RETURNING id, created
 `
 
 type PluginVersionCreateParams struct {
@@ -91,20 +91,20 @@ func (q *Queries) PluginVersionCreate(ctx context.Context, arg PluginVersionCrea
 
 const pluginVersionGetByID = `-- name: PluginVersionGetByID :one
 SELECT
-	appstore.plugin_definitions.id,
-	appstore.plugin_definitions.plugin_id,
-	appstore.plugin_definitions.plugin_version,
-	appstore.plugin_definitions.manifest,
-	appstore.plugin_definitions.hash,
-	appstore.plugin_definitions.status,
-	appstore.plugin_definitions.release_notes,
-	appstore.plugin_definitions.created,
-	appstore.plugin_definitions.published
+	plugin_definitions.id,
+	plugin_definitions.plugin_id,
+	plugin_definitions.plugin_version,
+	plugin_definitions.manifest,
+	plugin_definitions.hash,
+	plugin_definitions.status,
+	plugin_definitions.release_notes,
+	plugin_definitions.created,
+	plugin_definitions.published
 FROM appstore.plugin_definitions
-JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
-WHERE appstore.plugin_definitions.id = $1::uuid
-  AND appstore.plugin_definitions.deleted IS NULL
-  AND appstore.plugins.deleted IS NULL
+JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
+WHERE plugin_definitions.id = $1::uuid
+  AND plugin_definitions.deleted IS NULL
+  AND plugins.deleted IS NULL
 `
 
 type PluginVersionGetByIDParams struct {
@@ -143,21 +143,21 @@ func (q *Queries) PluginVersionGetByID(ctx context.Context, arg PluginVersionGet
 const pluginVersionListByPluginID = `-- name: PluginVersionListByPluginID :many
 
 SELECT
-	appstore.plugin_definitions.id,
-	appstore.plugin_definitions.plugin_id,
-	appstore.plugin_definitions.plugin_version,
-	appstore.plugin_definitions.manifest,
-	appstore.plugin_definitions.hash,
-	appstore.plugin_definitions.status,
-	appstore.plugin_definitions.release_notes,
-	appstore.plugin_definitions.created,
-	appstore.plugin_definitions.published
+	plugin_definitions.id,
+	plugin_definitions.plugin_id,
+	plugin_definitions.plugin_version,
+	plugin_definitions.manifest,
+	plugin_definitions.hash,
+	plugin_definitions.status,
+	plugin_definitions.release_notes,
+	plugin_definitions.created,
+	plugin_definitions.published
 FROM appstore.plugin_definitions
-JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
-WHERE appstore.plugin_definitions.plugin_id = $1::uuid
-  AND appstore.plugin_definitions.deleted IS NULL
-  AND appstore.plugins.deleted IS NULL
-ORDER BY appstore.plugin_definitions.created DESC
+JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
+WHERE plugin_definitions.plugin_id = $1::uuid
+  AND plugin_definitions.deleted IS NULL
+  AND plugins.deleted IS NULL
+ORDER BY plugin_definitions.created DESC
 `
 
 type PluginVersionListByPluginIDParams struct {
@@ -212,29 +212,37 @@ func (q *Queries) PluginVersionListByPluginID(ctx context.Context, arg PluginVer
 	return items, nil
 }
 
-const pluginVersionSetStatus = `-- name: PluginVersionSetStatus :exec
+const pluginVersionSetStatus = `-- name: PluginVersionSetStatus :execrows
 UPDATE appstore.plugin_definitions SET status = $1::text
-WHERE appstore.plugin_definitions.id = $2::uuid
-  AND appstore.plugin_definitions.deleted IS NULL
+WHERE id = $2::uuid
+  AND status = $3::text
+  AND deleted IS NULL
 `
 
 type PluginVersionSetStatusParams struct {
-	Status string
-	ID     uuid.UUID
+	Status         string
+	ID             uuid.UUID
+	ExpectedStatus string
 }
 
 // No join to plugins: an UPDATE cannot reference it without a FROM clause, and
-// the policy already gates ownership. The caller has read the version through
-// PluginVersionGetByID, which does check the plugin is not deleted.
-func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionSetStatusParams) error {
-	_, err := q.db.Exec(ctx, pluginVersionSetStatus, arg.Status, arg.ID)
-	return err
+// the policy already gates ownership.
+//
+// expected_status is the status the handler's read saw, on another pooled
+// connection. Without it a withdrawal racing an approval would un-publish the
+// approved version; zero rows means the status moved underneath the handler.
+func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionSetStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pluginVersionSetStatus, arg.Status, arg.ID, arg.ExpectedStatus)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const pluginVersionsSoftDeleteByPluginID = `-- name: PluginVersionsSoftDeleteByPluginID :exec
 UPDATE appstore.plugin_definitions SET deleted = now()
-WHERE appstore.plugin_definitions.plugin_id = $1::uuid
-  AND appstore.plugin_definitions.deleted IS NULL
+WHERE plugin_id = $1::uuid
+  AND deleted IS NULL
 `
 
 type PluginVersionsSoftDeleteByPluginIDParams struct {
@@ -249,9 +257,9 @@ func (q *Queries) PluginVersionsSoftDeleteByPluginID(ctx context.Context, arg Pl
 
 const submissionCloseOpen = `-- name: SubmissionCloseOpen :exec
 UPDATE appstore.submissions SET closed = now()
-WHERE appstore.submissions.plugin_definition_id = $1::uuid
-  AND appstore.submissions.closed IS NULL
-  AND appstore.submissions.deleted IS NULL
+WHERE plugin_definition_id = $1::uuid
+  AND closed IS NULL
+  AND deleted IS NULL
 `
 
 type SubmissionCloseOpenParams struct {
@@ -267,12 +275,12 @@ func (q *Queries) SubmissionCloseOpen(ctx context.Context, arg SubmissionCloseOp
 
 const submissionCloseOpenByPluginID = `-- name: SubmissionCloseOpenByPluginID :exec
 UPDATE appstore.submissions SET closed = now()
-WHERE appstore.submissions.closed IS NULL
-  AND appstore.submissions.deleted IS NULL
+WHERE closed IS NULL
+  AND deleted IS NULL
   AND EXISTS (
 	SELECT 1 FROM appstore.plugin_definitions
-	 WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id
-	   AND appstore.plugin_definitions.plugin_id = $1::uuid
+	 WHERE plugin_definitions.id = submissions.plugin_definition_id
+	   AND plugin_definitions.plugin_id = $1::uuid
   )
 `
 
@@ -289,7 +297,7 @@ func (q *Queries) SubmissionCloseOpenByPluginID(ctx context.Context, arg Submiss
 const submissionCreate = `-- name: SubmissionCreate :one
 INSERT INTO appstore.submissions (plugin_definition_id, submitter_user_id)
 VALUES ($1::uuid, $2::uuid)
-RETURNING appstore.submissions.id
+RETURNING id
 `
 
 type SubmissionCreateParams struct {
@@ -304,22 +312,25 @@ func (q *Queries) SubmissionCreate(ctx context.Context, arg SubmissionCreatePara
 	return id, err
 }
 
-const submissionLatestByDefinitionID = `-- name: SubmissionLatestByDefinitionID :one
-SELECT appstore.submissions.submitted, appstore.submissions.feedback
+const submissionLatestByDefinitionIDs = `-- name: SubmissionLatestByDefinitionIDs :many
+SELECT DISTINCT ON (plugin_definition_id)
+	plugin_definition_id,
+	submitted,
+	feedback
 FROM appstore.submissions
-WHERE appstore.submissions.plugin_definition_id = $1::uuid
-  AND appstore.submissions.deleted IS NULL
-ORDER BY appstore.submissions.submitted DESC
-LIMIT 1
+WHERE plugin_definition_id = ANY($1::uuid[])
+  AND deleted IS NULL
+ORDER BY plugin_definition_id ASC, submitted DESC
 `
 
-type SubmissionLatestByDefinitionIDParams struct {
-	PluginDefinitionID uuid.UUID
+type SubmissionLatestByDefinitionIDsParams struct {
+	PluginDefinitionIds []uuid.UUID
 }
 
-type SubmissionLatestByDefinitionIDRow struct {
-	Submitted pgtype.Timestamptz
-	Feedback  string
+type SubmissionLatestByDefinitionIDsRow struct {
+	PluginDefinitionID uuid.UUID
+	Submitted          pgtype.Timestamptz
+	Feedback           string
 }
 
 // Supplies both fields registry.v1.PluginVersion needs from the review record:
@@ -327,19 +338,32 @@ type SubmissionLatestByDefinitionIDRow struct {
 // developer's surface (FUN-20), which is read rather than copied onto the
 // version. Latest round wins, so a note stops showing once the developer
 // resubmits and a fresh round opens.
-func (q *Queries) SubmissionLatestByDefinitionID(ctx context.Context, arg SubmissionLatestByDefinitionIDParams) (SubmissionLatestByDefinitionIDRow, error) {
-	row := q.db.QueryRow(ctx, submissionLatestByDefinitionID, arg.PluginDefinitionID)
-	var i SubmissionLatestByDefinitionIDRow
-	err := row.Scan(&i.Submitted, &i.Feedback)
-	return i, err
+func (q *Queries) SubmissionLatestByDefinitionIDs(ctx context.Context, arg SubmissionLatestByDefinitionIDsParams) ([]SubmissionLatestByDefinitionIDsRow, error) {
+	rows, err := q.db.Query(ctx, submissionLatestByDefinitionIDs, arg.PluginDefinitionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SubmissionLatestByDefinitionIDsRow
+	for rows.Next() {
+		var i SubmissionLatestByDefinitionIDsRow
+		if err := rows.Scan(&i.PluginDefinitionID, &i.Submitted, &i.Feedback); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const submissionOpenByDefinitionID = `-- name: SubmissionOpenByDefinitionID :one
-SELECT appstore.submissions.id, appstore.submissions.submitted
+SELECT id, submitted
 FROM appstore.submissions
-WHERE appstore.submissions.plugin_definition_id = $1::uuid
-  AND appstore.submissions.closed IS NULL
-  AND appstore.submissions.deleted IS NULL
+WHERE plugin_definition_id = $1::uuid
+  AND closed IS NULL
+  AND deleted IS NULL
 `
 
 type SubmissionOpenByDefinitionIDParams struct {

@@ -168,6 +168,57 @@ func TestListPluginsReturnsOnlyTheCallersOrganization(t *testing.T) {
 	assert.Equal(t, "postgres-operator", resp.GetPlugins()[0].GetName())
 }
 
+// One query per kind covers the whole page, so every child row has to be routed
+// back to its own listing.
+func TestListPluginsKeepsChildRowsWithTheirOwnListing(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	first := createPlugin(t, client, "postgres-operator")
+	second := createPlugin(t, client, "cert-manager")
+
+	_, err := client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
+		PluginId:    first.GetId(),
+		DisplayName: "Postgres Operator",
+		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+		Tags:        []string{"database"},
+		Features: []*marketplacev1.FeatureBlock{
+			marketplacev1.FeatureBlock_builder{Title: "Backups", Body: "Nightly."}.Build(),
+		},
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.UpdatePlugin(context.Background(), registryv1.UpdatePluginRequest_builder{
+		PluginId:    second.GetId(),
+		DisplayName: "Cert Manager",
+		Visibility:  registryv1.PluginVisibility_PLUGIN_VISIBILITY_PUBLIC,
+		Tags:        []string{"certificates", "tls"},
+		DocumentationLinks: []*marketplacev1.DocumentationLink{
+			marketplacev1.DocumentationLink_builder{Title: "Guide", UrlName: "guide", Url: "https://example.com/guide"}.Build(),
+		},
+	}.Build())
+	require.NoError(t, err)
+
+	resp, err := client.ListPlugins(context.Background(), registryv1.ListPluginsRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	byName := map[string]*registryv1.Plugin{}
+	for _, plugin := range resp.GetPlugins() {
+		byName[plugin.GetName()] = plugin
+	}
+	require.Len(t, byName, 2)
+
+	assert.Equal(t, []string{"database"}, byName["postgres-operator"].GetTags())
+	require.Len(t, byName["postgres-operator"].GetFeatures(), 1)
+	assert.Equal(t, "Backups", byName["postgres-operator"].GetFeatures()[0].GetTitle())
+	assert.Empty(t, byName["postgres-operator"].GetDocumentationLinks())
+
+	assert.Equal(t, []string{"certificates", "tls"}, byName["cert-manager"].GetTags())
+	require.Len(t, byName["cert-manager"].GetDocumentationLinks(), 1)
+	assert.Equal(t, "Guide", byName["cert-manager"].GetDocumentationLinks()[0].GetTitle())
+	assert.Empty(t, byName["cert-manager"].GetFeatures())
+}
+
 // RLS scopes the role to the caller's organization, so another organization's
 // plugin resolves to nothing and is indistinguishable from one that never
 // existed.

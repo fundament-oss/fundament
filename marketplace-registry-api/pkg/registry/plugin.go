@@ -29,13 +29,19 @@ func (s *Server) ListPlugins(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugins: %w", err))
 	}
 
+	pluginIDs := make([]uuid.UUID, 0, len(rows))
+	for i := range rows {
+		pluginIDs = append(pluginIDs, rows[i].ID)
+	}
+
+	children, err := s.loadPluginChildren(ctx, pluginIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	plugins := make([]*registryv1.Plugin, 0, len(rows))
 	for i := range rows {
-		plugin, err := s.pluginFromRow(ctx, pluginRowFromList(&rows[i]))
-		if err != nil {
-			return nil, err
-		}
-		plugins = append(plugins, plugin)
+		plugins = append(plugins, pluginFromRow(pluginRowFromList(&rows[i]), children))
 	}
 
 	return registryv1.ListPluginsResponse_builder{Plugins: plugins}.Build(), nil
@@ -52,12 +58,14 @@ func (s *Server) GetPlugin(
 		return nil, pluginLookupError(err)
 	}
 
-	plugin, err := s.pluginFromRow(ctx, pluginRowFromGet(&row))
+	children, err := s.loadPluginChildren(ctx, []uuid.UUID{row.ID})
 	if err != nil {
 		return nil, err
 	}
 
-	return registryv1.GetPluginResponse_builder{Plugin: plugin}.Build(), nil
+	return registryv1.GetPluginResponse_builder{
+		Plugin: pluginFromRow(pluginRowFromGet(&row), children),
+	}.Build(), nil
 }
 
 func (s *Server) CreatePlugin(
@@ -138,7 +146,7 @@ func (s *Server) UpdatePlugin(
 	defer rollback.Rollback(ctx, tx, s.logger)
 	qtx := s.queries.WithTx(tx)
 
-	if err := qtx.PluginUpdate(ctx, db.PluginUpdateParams{
+	updated, err := qtx.PluginUpdate(ctx, db.PluginUpdateParams{
 		ID:               pluginID,
 		DisplayName:      req.GetDisplayName(),
 		DescriptionShort: req.GetDescriptionShort(),
@@ -149,8 +157,14 @@ func (s *Server) UpdatePlugin(
 		AuthorUrl:        textOrNull(req.GetAuthorUrl()),
 		License:          req.GetLicense(),
 		Visibility:       visibilityToDB(req.GetVisibility()),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, writeError(err, "updating plugin")
+	}
+	// Otherwise the replacements below would commit against a listing deleted
+	// since the lookup.
+	if updated == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("plugin not found"))
 	}
 
 	// A full replacement: everything the request omits is cleared.
@@ -311,74 +325,101 @@ func (s *Server) loadPlugin(ctx context.Context, pluginID uuid.UUID) (*registryv
 	if err != nil {
 		return nil, pluginLookupError(err)
 	}
-	return s.pluginFromRow(ctx, pluginRowFromGet(&row))
+
+	children, err := s.loadPluginChildren(ctx, []uuid.UUID{row.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	return pluginFromRow(pluginRowFromGet(&row), children), nil
 }
 
-func (s *Server) pluginFromRow(ctx context.Context, row *registryPluginRow) (*registryv1.Plugin, error) {
-	categoryIDs, err := s.queries.PluginCategoriesListByPluginID(ctx, db.PluginCategoriesListByPluginIDParams{
-		PluginID: row.ID,
+// pluginChildren is the child rows of a set of listings, keyed by plugin id.
+// One query per kind covers the whole set; per listing it was five queries a
+// row, each a pool acquire that re-runs the RLS GUCs.
+type pluginChildren struct {
+	categories  map[uuid.UUID][]string
+	tags        map[uuid.UUID][]string
+	allowedOrgs map[uuid.UUID][]string
+	links       map[uuid.UUID][]*marketplacev1.DocumentationLink
+	features    map[uuid.UUID][]*marketplacev1.FeatureBlock
+}
+
+func (s *Server) loadPluginChildren(ctx context.Context, pluginIDs []uuid.UUID) (*pluginChildren, error) {
+	children := &pluginChildren{
+		categories:  map[uuid.UUID][]string{},
+		tags:        map[uuid.UUID][]string{},
+		allowedOrgs: map[uuid.UUID][]string{},
+		links:       map[uuid.UUID][]*marketplacev1.DocumentationLink{},
+		features:    map[uuid.UUID][]*marketplacev1.FeatureBlock{},
+	}
+	if len(pluginIDs) == 0 {
+		return children, nil
+	}
+
+	categoryRows, err := s.queries.PluginCategoriesListByPluginIDs(ctx, db.PluginCategoriesListByPluginIDsParams{
+		PluginIds: pluginIDs,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin categories: %w", err))
 	}
+	for _, row := range categoryRows {
+		children.categories[row.PluginID] = append(children.categories[row.PluginID], row.CategoryID.String())
+	}
 
-	tags, err := s.queries.PluginTagsListByPluginID(ctx, db.PluginTagsListByPluginIDParams{
-		PluginID: row.ID,
+	tagRows, err := s.queries.PluginTagsListByPluginIDs(ctx, db.PluginTagsListByPluginIDsParams{
+		PluginIds: pluginIDs,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin tags: %w", err))
 	}
+	for _, row := range tagRows {
+		children.tags[row.PluginID] = append(children.tags[row.PluginID], row.Name)
+	}
 
-	allowedOrgs, err := s.queries.PluginAllowedOrgsListByPluginID(ctx, db.PluginAllowedOrgsListByPluginIDParams{
-		PluginID: row.ID,
+	allowedOrgRows, err := s.queries.PluginAllowedOrgsListByPluginIDs(ctx, db.PluginAllowedOrgsListByPluginIDsParams{
+		PluginIds: pluginIDs,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing allowed organizations: %w", err))
 	}
+	for _, row := range allowedOrgRows {
+		children.allowedOrgs[row.PluginID] = append(children.allowedOrgs[row.PluginID], row.OrganizationID.String())
+	}
 
-	linkRows, err := s.queries.PluginDocLinksListByPluginID(ctx, db.PluginDocLinksListByPluginIDParams{
-		PluginID: row.ID,
+	linkRows, err := s.queries.PluginDocLinksListByPluginIDs(ctx, db.PluginDocLinksListByPluginIDsParams{
+		PluginIds: pluginIDs,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing documentation links: %w", err))
 	}
+	for _, row := range linkRows {
+		children.links[row.PluginID] = append(children.links[row.PluginID], marketplacev1.DocumentationLink_builder{
+			Id:      row.ID.String(),
+			Title:   row.Title,
+			UrlName: row.UrlName,
+			Url:     row.Url,
+		}.Build())
+	}
 
-	featureRows, err := s.queries.PluginFeaturesListByPluginID(ctx, db.PluginFeaturesListByPluginIDParams{
-		PluginID: row.ID,
+	featureRows, err := s.queries.PluginFeaturesListByPluginIDs(ctx, db.PluginFeaturesListByPluginIDsParams{
+		PluginIds: pluginIDs,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing feature blocks: %w", err))
 	}
-
-	links := make([]*marketplacev1.DocumentationLink, 0, len(linkRows))
-	for _, link := range linkRows {
-		links = append(links, marketplacev1.DocumentationLink_builder{
-			Id:      link.ID.String(),
-			Title:   link.Title,
-			UrlName: link.UrlName,
-			Url:     link.Url,
+	for _, row := range featureRows {
+		children.features[row.PluginID] = append(children.features[row.PluginID], marketplacev1.FeatureBlock_builder{
+			Id:    row.ID.String(),
+			Title: row.Title,
+			Body:  row.Body,
 		}.Build())
 	}
 
-	features := make([]*marketplacev1.FeatureBlock, 0, len(featureRows))
-	for _, feature := range featureRows {
-		features = append(features, marketplacev1.FeatureBlock_builder{
-			Id:    feature.ID.String(),
-			Title: feature.Title,
-			Body:  feature.Body,
-		}.Build())
-	}
+	return children, nil
+}
 
-	allowed := make([]string, 0, len(allowedOrgs))
-	for _, id := range allowedOrgs {
-		allowed = append(allowed, id.String())
-	}
-
-	categories := make([]string, 0, len(categoryIDs))
-	for _, id := range categoryIDs {
-		categories = append(categories, id.String())
-	}
-
+func pluginFromRow(row *registryPluginRow, children *pluginChildren) *registryv1.Plugin {
 	return registryv1.Plugin_builder{
 		Id:                       row.ID.String(),
 		Name:                     row.Name,
@@ -387,20 +428,20 @@ func (s *Server) pluginFromRow(ctx context.Context, row *registryPluginRow) (*re
 		Description:              row.Description,
 		OrganizationId:           row.OrganizationID.String(),
 		Image:                    row.Image,
-		CategoryIds:              categories,
-		Tags:                     tags,
+		CategoryIds:              children.categories[row.ID],
+		Tags:                     children.tags[row.ID],
 		AuthorName:               row.AuthorName,
 		AuthorUrl:                row.AuthorURL,
 		RepositoryUrl:            row.RepositoryURL,
 		License:                  row.License,
-		DocumentationLinks:       links,
-		Features:                 features,
+		DocumentationLinks:       children.links[row.ID],
+		Features:                 children.features[row.ID],
 		Visibility:               row.Visibility,
-		AllowedOrganizationIds:   allowed,
+		AllowedOrganizationIds:   children.allowedOrgs[row.ID],
 		LatestPublishedVersionId: uuidOrEmpty(row.LatestPublishedVersionID),
 		Created:                  row.Created,
 		Updated:                  row.Updated,
-	}.Build(), nil
+	}.Build()
 }
 
 func (s *Server) replaceCategories(ctx context.Context, qtx *db.Queries, pluginID uuid.UUID, categoryIDs []string) error {

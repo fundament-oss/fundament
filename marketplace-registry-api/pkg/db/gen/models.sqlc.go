@@ -3,3 +3,12 @@
 //   sqlc v1.30.0
 
 package db
+
+import (
+	"github.com/google/uuid"
+)
+
+type AppstoreCategoriesPlugin struct {
+	PluginID   uuid.UUID
+	CategoryID uuid.UUID
+}

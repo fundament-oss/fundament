@@ -40,7 +40,7 @@ func main() {
 // newHealthMux serves the probes. readyz reports the database because a pod
 // that cannot reach it can serve no RPC; livez deliberately does not, so a brief
 // database outage does not get the container killed and restarted.
-func newHealthMux(deploymentVersion string, database *psqldb.DB) *http.ServeMux {
+func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -51,8 +51,11 @@ func newHealthMux(deploymentVersion string, database *psqldb.DB) *http.ServeMux 
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
 			if err := database.Pool.Ping(ctx); err != nil {
+				// The probe is public and a pgx error names the host, port,
+				// database and role, so the detail stays in the log.
+				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
-				_, _ = w.Write([]byte("database: " + err.Error()))
+				_, _ = w.Write([]byte("database unavailable"))
 				return
 			}
 		}
@@ -101,7 +104,7 @@ func run() error {
 
 	// Health endpoints sit on an outer mux so they bypass CORS and every
 	// interceptor — a probe carries no JWT.
-	outerMux := newHealthMux(cfg.DeploymentVersion, database)
+	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database)
 	outerMux.Handle("/", server.Handler())
 
 	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.

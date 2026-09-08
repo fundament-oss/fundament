@@ -63,6 +63,8 @@ func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
 
 	mux.Handle(registryv1connect.NewPublicationServiceHandler(s, interceptors))
 
+	// Unauthenticated, as on every other surface here: the descriptors are
+	// public and grpcurl carries no token.
 	reflector := grpcreflect.NewStaticReflector("registry.v1.PublicationService")
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))

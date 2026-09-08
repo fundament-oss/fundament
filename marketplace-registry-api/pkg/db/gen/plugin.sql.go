@@ -31,7 +31,7 @@ func (q *Queries) PluginAllowedOrgInsert(ctx context.Context, arg PluginAllowedO
 
 const pluginAllowedOrgsDeleteByPluginID = `-- name: PluginAllowedOrgsDeleteByPluginID :exec
 DELETE FROM appstore.plugin_allowed_organizations
-WHERE appstore.plugin_allowed_organizations.plugin_id = $1::uuid
+WHERE plugin_id = $1::uuid
 `
 
 type PluginAllowedOrgsDeleteByPluginIDParams struct {
@@ -43,30 +43,35 @@ func (q *Queries) PluginAllowedOrgsDeleteByPluginID(ctx context.Context, arg Plu
 	return err
 }
 
-const pluginAllowedOrgsListByPluginID = `-- name: PluginAllowedOrgsListByPluginID :many
-SELECT appstore.plugin_allowed_organizations.organization_id
+const pluginAllowedOrgsListByPluginIDs = `-- name: PluginAllowedOrgsListByPluginIDs :many
+SELECT plugin_id, organization_id
 FROM appstore.plugin_allowed_organizations
-WHERE appstore.plugin_allowed_organizations.plugin_id = $1::uuid
-ORDER BY appstore.plugin_allowed_organizations.organization_id ASC
+WHERE plugin_id = ANY($1::uuid[])
+ORDER BY plugin_id ASC, organization_id ASC
 `
 
-type PluginAllowedOrgsListByPluginIDParams struct {
-	PluginID uuid.UUID
+type PluginAllowedOrgsListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
 }
 
-func (q *Queries) PluginAllowedOrgsListByPluginID(ctx context.Context, arg PluginAllowedOrgsListByPluginIDParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, pluginAllowedOrgsListByPluginID, arg.PluginID)
+type PluginAllowedOrgsListByPluginIDsRow struct {
+	PluginID       uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+func (q *Queries) PluginAllowedOrgsListByPluginIDs(ctx context.Context, arg PluginAllowedOrgsListByPluginIDsParams) ([]PluginAllowedOrgsListByPluginIDsRow, error) {
+	rows, err := q.db.Query(ctx, pluginAllowedOrgsListByPluginIDs, arg.PluginIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []PluginAllowedOrgsListByPluginIDsRow
 	for rows.Next() {
-		var organization_id uuid.UUID
-		if err := rows.Scan(&organization_id); err != nil {
+		var i PluginAllowedOrgsListByPluginIDsRow
+		if err := rows.Scan(&i.PluginID, &i.OrganizationID); err != nil {
 			return nil, err
 		}
-		items = append(items, organization_id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -76,7 +81,7 @@ func (q *Queries) PluginAllowedOrgsListByPluginID(ctx context.Context, arg Plugi
 
 const pluginCategoriesDeleteByPluginID = `-- name: PluginCategoriesDeleteByPluginID :exec
 DELETE FROM appstore.categories_plugins
-WHERE appstore.categories_plugins.plugin_id = $1::uuid
+WHERE plugin_id = $1::uuid
 `
 
 type PluginCategoriesDeleteByPluginIDParams struct {
@@ -88,30 +93,30 @@ func (q *Queries) PluginCategoriesDeleteByPluginID(ctx context.Context, arg Plug
 	return err
 }
 
-const pluginCategoriesListByPluginID = `-- name: PluginCategoriesListByPluginID :many
-SELECT appstore.categories_plugins.category_id
+const pluginCategoriesListByPluginIDs = `-- name: PluginCategoriesListByPluginIDs :many
+SELECT plugin_id, category_id
 FROM appstore.categories_plugins
-WHERE appstore.categories_plugins.plugin_id = $1::uuid
-ORDER BY appstore.categories_plugins.category_id ASC
+WHERE plugin_id = ANY($1::uuid[])
+ORDER BY plugin_id ASC, category_id ASC
 `
 
-type PluginCategoriesListByPluginIDParams struct {
-	PluginID uuid.UUID
+type PluginCategoriesListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
 }
 
-func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg PluginCategoriesListByPluginIDParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, pluginCategoriesListByPluginID, arg.PluginID)
+func (q *Queries) PluginCategoriesListByPluginIDs(ctx context.Context, arg PluginCategoriesListByPluginIDsParams) ([]AppstoreCategoriesPlugin, error) {
+	rows, err := q.db.Query(ctx, pluginCategoriesListByPluginIDs, arg.PluginIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []AppstoreCategoriesPlugin
 	for rows.Next() {
-		var category_id uuid.UUID
-		if err := rows.Scan(&category_id); err != nil {
+		var i AppstoreCategoriesPlugin
+		if err := rows.Scan(&i.PluginID, &i.CategoryID); err != nil {
 			return nil, err
 		}
-		items = append(items, category_id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -150,7 +155,7 @@ INSERT INTO appstore.plugins (
 	$8::text,
 	$9::text
 )
-RETURNING appstore.plugins.id
+RETURNING id
 `
 
 type PluginCreateParams struct {
@@ -220,9 +225,9 @@ UPDATE appstore.plugin_documentation_links SET
 	url_name = $2::text,
 	url = $3::text,
 	position = $4::integer
-WHERE appstore.plugin_documentation_links.id = $5::uuid
-  AND appstore.plugin_documentation_links.plugin_id = $6::uuid
-  AND appstore.plugin_documentation_links.deleted IS NULL
+WHERE id = $5::uuid
+  AND plugin_id = $6::uuid
+  AND deleted IS NULL
 `
 
 type PluginDocLinkUpdateParams struct {
@@ -235,8 +240,7 @@ type PluginDocLinkUpdateParams struct {
 }
 
 // Scoped by plugin_id as well as id so a link belonging to another listing
-// cannot be pulled into this one; the row count is how the handler tells an
-// unknown id from a successful update.
+// cannot be pulled into this one; zero rows means the id was not real.
 func (q *Queries) PluginDocLinkUpdate(ctx context.Context, arg PluginDocLinkUpdateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, pluginDocLinkUpdate,
 		arg.Title,
@@ -252,39 +256,37 @@ func (q *Queries) PluginDocLinkUpdate(ctx context.Context, arg PluginDocLinkUpda
 	return result.RowsAffected(), nil
 }
 
-const pluginDocLinksListByPluginID = `-- name: PluginDocLinksListByPluginID :many
-SELECT
-	appstore.plugin_documentation_links.id,
-	appstore.plugin_documentation_links.title,
-	appstore.plugin_documentation_links.url_name,
-	appstore.plugin_documentation_links.url
+const pluginDocLinksListByPluginIDs = `-- name: PluginDocLinksListByPluginIDs :many
+SELECT plugin_id, id, title, url_name, url
 FROM appstore.plugin_documentation_links
-WHERE appstore.plugin_documentation_links.plugin_id = $1::uuid
-  AND appstore.plugin_documentation_links.deleted IS NULL
-ORDER BY appstore.plugin_documentation_links.position ASC
+WHERE plugin_id = ANY($1::uuid[])
+  AND deleted IS NULL
+ORDER BY plugin_id ASC, position ASC
 `
 
-type PluginDocLinksListByPluginIDParams struct {
+type PluginDocLinksListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
+}
+
+type PluginDocLinksListByPluginIDsRow struct {
 	PluginID uuid.UUID
+	ID       uuid.UUID
+	Title    string
+	UrlName  string
+	Url      string
 }
 
-type PluginDocLinksListByPluginIDRow struct {
-	ID      uuid.UUID
-	Title   string
-	UrlName string
-	Url     string
-}
-
-func (q *Queries) PluginDocLinksListByPluginID(ctx context.Context, arg PluginDocLinksListByPluginIDParams) ([]PluginDocLinksListByPluginIDRow, error) {
-	rows, err := q.db.Query(ctx, pluginDocLinksListByPluginID, arg.PluginID)
+func (q *Queries) PluginDocLinksListByPluginIDs(ctx context.Context, arg PluginDocLinksListByPluginIDsParams) ([]PluginDocLinksListByPluginIDsRow, error) {
+	rows, err := q.db.Query(ctx, pluginDocLinksListByPluginIDs, arg.PluginIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PluginDocLinksListByPluginIDRow
+	var items []PluginDocLinksListByPluginIDsRow
 	for rows.Next() {
-		var i PluginDocLinksListByPluginIDRow
+		var i PluginDocLinksListByPluginIDsRow
 		if err := rows.Scan(
+			&i.PluginID,
 			&i.ID,
 			&i.Title,
 			&i.UrlName,
@@ -302,9 +304,9 @@ func (q *Queries) PluginDocLinksListByPluginID(ctx context.Context, arg PluginDo
 
 const pluginDocLinksSoftDeleteNotIn = `-- name: PluginDocLinksSoftDeleteNotIn :exec
 UPDATE appstore.plugin_documentation_links SET deleted = now()
-WHERE appstore.plugin_documentation_links.plugin_id = $1::uuid
-  AND appstore.plugin_documentation_links.deleted IS NULL
-  AND appstore.plugin_documentation_links.id <> ALL($2::uuid[])
+WHERE plugin_id = $1::uuid
+  AND deleted IS NULL
+  AND id <> ALL($2::uuid[])
 `
 
 type PluginDocLinksSoftDeleteNotInParams struct {
@@ -313,8 +315,7 @@ type PluginDocLinksSoftDeleteNotInParams struct {
 }
 
 // A documentation link has an id the API hands out, so replacement soft-deletes
-// rather than removing. The links the request still carries are excluded: their
-// ids survive the update, which is what makes an id worth handing out.
+// rather than removing and spares the ids the request carried back.
 func (q *Queries) PluginDocLinksSoftDeleteNotIn(ctx context.Context, arg PluginDocLinksSoftDeleteNotInParams) error {
 	_, err := q.db.Exec(ctx, pluginDocLinksSoftDeleteNotIn, arg.PluginID, arg.KeptIds)
 	return err
@@ -352,9 +353,9 @@ UPDATE appstore.plugin_features SET
 	title = $1::text,
 	body = $2::text,
 	position = $3::integer
-WHERE appstore.plugin_features.id = $4::uuid
-  AND appstore.plugin_features.plugin_id = $5::uuid
-  AND appstore.plugin_features.deleted IS NULL
+WHERE id = $4::uuid
+  AND plugin_id = $5::uuid
+  AND deleted IS NULL
 `
 
 type PluginFeatureUpdateParams struct {
@@ -365,8 +366,7 @@ type PluginFeatureUpdateParams struct {
 	PluginID uuid.UUID
 }
 
-// Mirrors PluginDocLinkUpdate: scoped by plugin_id as well as id, with
-// the row count standing in for "was that id real".
+// Mirrors PluginDocLinkUpdate.
 func (q *Queries) PluginFeatureUpdate(ctx context.Context, arg PluginFeatureUpdateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, pluginFeatureUpdate,
 		arg.Title,
@@ -381,37 +381,40 @@ func (q *Queries) PluginFeatureUpdate(ctx context.Context, arg PluginFeatureUpda
 	return result.RowsAffected(), nil
 }
 
-const pluginFeaturesListByPluginID = `-- name: PluginFeaturesListByPluginID :many
-SELECT
-	appstore.plugin_features.id,
-	appstore.plugin_features.title,
-	appstore.plugin_features.body
+const pluginFeaturesListByPluginIDs = `-- name: PluginFeaturesListByPluginIDs :many
+SELECT plugin_id, id, title, body
 FROM appstore.plugin_features
-WHERE appstore.plugin_features.plugin_id = $1::uuid
-  AND appstore.plugin_features.deleted IS NULL
-ORDER BY appstore.plugin_features.position ASC
+WHERE plugin_id = ANY($1::uuid[])
+  AND deleted IS NULL
+ORDER BY plugin_id ASC, position ASC
 `
 
-type PluginFeaturesListByPluginIDParams struct {
+type PluginFeaturesListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
+}
+
+type PluginFeaturesListByPluginIDsRow struct {
 	PluginID uuid.UUID
+	ID       uuid.UUID
+	Title    string
+	Body     string
 }
 
-type PluginFeaturesListByPluginIDRow struct {
-	ID    uuid.UUID
-	Title string
-	Body  string
-}
-
-func (q *Queries) PluginFeaturesListByPluginID(ctx context.Context, arg PluginFeaturesListByPluginIDParams) ([]PluginFeaturesListByPluginIDRow, error) {
-	rows, err := q.db.Query(ctx, pluginFeaturesListByPluginID, arg.PluginID)
+func (q *Queries) PluginFeaturesListByPluginIDs(ctx context.Context, arg PluginFeaturesListByPluginIDsParams) ([]PluginFeaturesListByPluginIDsRow, error) {
+	rows, err := q.db.Query(ctx, pluginFeaturesListByPluginIDs, arg.PluginIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PluginFeaturesListByPluginIDRow
+	var items []PluginFeaturesListByPluginIDsRow
 	for rows.Next() {
-		var i PluginFeaturesListByPluginIDRow
-		if err := rows.Scan(&i.ID, &i.Title, &i.Body); err != nil {
+		var i PluginFeaturesListByPluginIDsRow
+		if err := rows.Scan(
+			&i.PluginID,
+			&i.ID,
+			&i.Title,
+			&i.Body,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -424,9 +427,9 @@ func (q *Queries) PluginFeaturesListByPluginID(ctx context.Context, arg PluginFe
 
 const pluginFeaturesSoftDeleteNotIn = `-- name: PluginFeaturesSoftDeleteNotIn :exec
 UPDATE appstore.plugin_features SET deleted = now()
-WHERE appstore.plugin_features.plugin_id = $1::uuid
-  AND appstore.plugin_features.deleted IS NULL
-  AND appstore.plugin_features.id <> ALL($2::uuid[])
+WHERE plugin_id = $1::uuid
+  AND deleted IS NULL
+  AND id <> ALL($2::uuid[])
 `
 
 type PluginFeaturesSoftDeleteNotInParams struct {
@@ -434,8 +437,7 @@ type PluginFeaturesSoftDeleteNotInParams struct {
 	KeptIds  []uuid.UUID
 }
 
-// A feature block has an id the API hands out, so replacement soft-deletes
-// rather than removing, and spares the ids the request carried back.
+// Mirrors PluginDocLinksSoftDeleteNotIn.
 func (q *Queries) PluginFeaturesSoftDeleteNotIn(ctx context.Context, arg PluginFeaturesSoftDeleteNotInParams) error {
 	_, err := q.db.Exec(ctx, pluginFeaturesSoftDeleteNotIn, arg.PluginID, arg.KeptIds)
 	return err
@@ -443,30 +445,30 @@ func (q *Queries) PluginFeaturesSoftDeleteNotIn(ctx context.Context, arg PluginF
 
 const pluginGetByID = `-- name: PluginGetByID :one
 SELECT
-	appstore.plugins.id,
-	appstore.plugins.name,
-	appstore.plugins.display_name,
-	appstore.plugins.description_short,
-	appstore.plugins.description,
-	appstore.plugins.organization_id,
-	appstore.plugins.image,
-	appstore.plugins.author_name,
-	appstore.plugins.author_url,
-	appstore.plugins.repository_url,
-	appstore.plugins.license,
-	appstore.plugins.visibility,
-	appstore.plugins.created,
-	appstore.plugins.updated,
-	(SELECT appstore.plugin_definitions.id
+	id,
+	name,
+	display_name,
+	description_short,
+	description,
+	organization_id,
+	image,
+	author_name,
+	author_url,
+	repository_url,
+	license,
+	visibility,
+	created,
+	updated,
+	(SELECT plugin_definitions.id
 	   FROM appstore.plugin_definitions
-	  WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-	    AND appstore.plugin_definitions.published IS NOT NULL
-	    AND appstore.plugin_definitions.deleted IS NULL
-	  ORDER BY appstore.plugin_definitions.published DESC
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.published IS NOT NULL
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.published DESC
 	  LIMIT 1) AS latest_published_version_id
 FROM appstore.plugins
-WHERE appstore.plugins.id = $1::uuid
-  AND appstore.plugins.deleted IS NULL
+WHERE id = $1::uuid
+  AND deleted IS NULL
 `
 
 type PluginGetByIDParams struct {
@@ -517,30 +519,30 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 const pluginList = `-- name: PluginList :many
 
 SELECT
-	appstore.plugins.id,
-	appstore.plugins.name,
-	appstore.plugins.display_name,
-	appstore.plugins.description_short,
-	appstore.plugins.description,
-	appstore.plugins.organization_id,
-	appstore.plugins.image,
-	appstore.plugins.author_name,
-	appstore.plugins.author_url,
-	appstore.plugins.repository_url,
-	appstore.plugins.license,
-	appstore.plugins.visibility,
-	appstore.plugins.created,
-	appstore.plugins.updated,
-	(SELECT appstore.plugin_definitions.id
+	id,
+	name,
+	display_name,
+	description_short,
+	description,
+	organization_id,
+	image,
+	author_name,
+	author_url,
+	repository_url,
+	license,
+	visibility,
+	created,
+	updated,
+	(SELECT plugin_definitions.id
 	   FROM appstore.plugin_definitions
-	  WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-	    AND appstore.plugin_definitions.published IS NOT NULL
-	    AND appstore.plugin_definitions.deleted IS NULL
-	  ORDER BY appstore.plugin_definitions.published DESC
+	  WHERE plugin_definitions.plugin_id = plugins.id
+	    AND plugin_definitions.published IS NOT NULL
+	    AND plugin_definitions.deleted IS NULL
+	  ORDER BY plugin_definitions.published DESC
 	  LIMIT 1) AS latest_published_version_id
 FROM appstore.plugins
-WHERE appstore.plugins.deleted IS NULL
-ORDER BY appstore.plugins.name ASC
+WHERE deleted IS NULL
+ORDER BY name ASC
 `
 
 type PluginListRow struct {
@@ -604,17 +606,14 @@ func (q *Queries) PluginList(ctx context.Context) ([]PluginListRow, error) {
 
 const pluginSoftDelete = `-- name: PluginSoftDelete :exec
 UPDATE appstore.plugins SET deleted = now()
-WHERE appstore.plugins.id = $1::uuid
-  AND appstore.plugins.deleted IS NULL
+WHERE id = $1::uuid
+  AND deleted IS NULL
 `
 
 type PluginSoftDeleteParams struct {
 	ID uuid.UUID
 }
 
-// The deleted guard makes this idempotent and, together with the one on
-// PluginUpdate, keeps a delete landing between a handler's lookup and
-// its write from being undone: the two run on separate pooled connections.
 func (q *Queries) PluginSoftDelete(ctx context.Context, arg PluginSoftDeleteParams) error {
 	_, err := q.db.Exec(ctx, pluginSoftDelete, arg.ID)
 	return err
@@ -638,46 +637,53 @@ func (q *Queries) PluginTagInsert(ctx context.Context, arg PluginTagInsertParams
 
 const pluginTagsDeleteByPluginID = `-- name: PluginTagsDeleteByPluginID :exec
 DELETE FROM appstore.plugins_tags
-WHERE appstore.plugins_tags.plugin_id = $1::uuid
+WHERE plugin_id = $1::uuid
 `
 
 type PluginTagsDeleteByPluginIDParams struct {
 	PluginID uuid.UUID
 }
 
-// An edge, not an entity: UpdatePlugin's full replacement removes it outright
-// rather than soft-deleting.
+// An edge, not an entity: replacement removes it outright rather than
+// soft-deleting.
 func (q *Queries) PluginTagsDeleteByPluginID(ctx context.Context, arg PluginTagsDeleteByPluginIDParams) error {
 	_, err := q.db.Exec(ctx, pluginTagsDeleteByPluginID, arg.PluginID)
 	return err
 }
 
-const pluginTagsListByPluginID = `-- name: PluginTagsListByPluginID :many
-SELECT appstore.tags.name
+const pluginTagsListByPluginIDs = `-- name: PluginTagsListByPluginIDs :many
+SELECT plugins_tags.plugin_id, tags.name
 FROM appstore.plugins_tags
-JOIN appstore.tags ON appstore.tags.id = appstore.plugins_tags.tag_id
-WHERE appstore.plugins_tags.plugin_id = $1::uuid
-  AND appstore.tags.deleted IS NULL
-ORDER BY appstore.tags.name ASC
+JOIN appstore.tags ON tags.id = plugins_tags.tag_id
+WHERE plugins_tags.plugin_id = ANY($1::uuid[])
+  AND tags.deleted IS NULL
+ORDER BY plugins_tags.plugin_id ASC, tags.name ASC
 `
 
-type PluginTagsListByPluginIDParams struct {
-	PluginID uuid.UUID
+type PluginTagsListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
 }
 
-func (q *Queries) PluginTagsListByPluginID(ctx context.Context, arg PluginTagsListByPluginIDParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, pluginTagsListByPluginID, arg.PluginID)
+type PluginTagsListByPluginIDsRow struct {
+	PluginID uuid.UUID
+	Name     string
+}
+
+// Takes an array so ListPlugins reads every listing's tags in one query rather
+// than one per listing, as do the other child-row lists here.
+func (q *Queries) PluginTagsListByPluginIDs(ctx context.Context, arg PluginTagsListByPluginIDsParams) ([]PluginTagsListByPluginIDsRow, error) {
+	rows, err := q.db.Query(ctx, pluginTagsListByPluginIDs, arg.PluginIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []PluginTagsListByPluginIDsRow
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
+		var i PluginTagsListByPluginIDsRow
+		if err := rows.Scan(&i.PluginID, &i.Name); err != nil {
 			return nil, err
 		}
-		items = append(items, name)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -685,7 +691,7 @@ func (q *Queries) PluginTagsListByPluginID(ctx context.Context, arg PluginTagsLi
 	return items, nil
 }
 
-const pluginUpdate = `-- name: PluginUpdate :exec
+const pluginUpdate = `-- name: PluginUpdate :execrows
 UPDATE appstore.plugins SET
 	display_name = $1::text,
 	description_short = $2::text,
@@ -697,8 +703,8 @@ UPDATE appstore.plugins SET
 	license = $8::text,
 	visibility = $9::text,
 	updated = now()
-WHERE appstore.plugins.id = $10::uuid
-  AND appstore.plugins.deleted IS NULL
+WHERE id = $10::uuid
+  AND deleted IS NULL
 `
 
 type PluginUpdateParams struct {
@@ -714,9 +720,10 @@ type PluginUpdateParams struct {
 	ID               uuid.UUID
 }
 
-// name is absent: it is immutable once reserved (FUN-5).
-func (q *Queries) PluginUpdate(ctx context.Context, arg PluginUpdateParams) error {
-	_, err := q.db.Exec(ctx, pluginUpdate,
+// name is absent: it is immutable once reserved (FUN-5). Zero rows means the
+// listing was soft-deleted after the handler looked it up.
+func (q *Queries) PluginUpdate(ctx context.Context, arg PluginUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pluginUpdate,
 		arg.DisplayName,
 		arg.DescriptionShort,
 		arg.Description,
@@ -728,14 +735,17 @@ func (q *Queries) PluginUpdate(ctx context.Context, arg PluginUpdateParams) erro
 		arg.Visibility,
 		arg.ID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const tagGetByName = `-- name: TagGetByName :one
-SELECT appstore.tags.id
+SELECT id
 FROM appstore.tags
-WHERE appstore.tags.name = $1::text
-  AND appstore.tags.deleted IS NULL
+WHERE name = $1::text
+  AND deleted IS NULL
 `
 
 type TagGetByNameParams struct {
@@ -758,10 +768,9 @@ type TagInsertIfMissingParams struct {
 	Name string
 }
 
-// Tags have no identity a client holds, so they are addressed by name and
-// created on demand. DO NOTHING rather than DO UPDATE deliberately: tags are a
-// vocabulary shared across every publisher, and DO UPDATE would need UPDATE on
-// the table, letting one publisher rename another's tag.
+// DO NOTHING rather than DO UPDATE: tags are a vocabulary shared across every
+// publisher, and DO UPDATE would need UPDATE on the table, letting one publisher
+// rename another's tag.
 func (q *Queries) TagInsertIfMissing(ctx context.Context, arg TagInsertIfMissingParams) error {
 	_, err := q.db.Exec(ctx, tagInsertIfMissing, arg.Name)
 	return err
