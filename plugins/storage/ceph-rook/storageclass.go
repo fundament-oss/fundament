@@ -4,6 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // RBDProvisioner is the CSI driver name for a Rook operator in rookNamespace.
@@ -19,15 +20,12 @@ func RBDProvisioner(rookNamespace string) string {
 // CephCluster and its CSI secrets and is the clusterID; rookNamespace runs the
 // operator and names the driver.
 func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace string) *storagev1.StorageClass {
-	reclaim := corev1.PersistentVolumeReclaimDelete
-	allowExpansion := true
-
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Provisioner:   RBDProvisioner(rookNamespace),
-		ReclaimPolicy: &reclaim,
+		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
 		// The csi.storage.k8s.io/*-secret-name keys name the Rook-managed Secrets
 		// the CSI driver looks up; no credential is in this file.
 		Parameters: map[string]string{ //nolint:gosec // G101: CSI parameter names, not credentials
@@ -44,8 +42,8 @@ func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace str
 			"csi.storage.k8s.io/controller-expand-secret-namespace": clusterNamespace,
 			"csi.storage.k8s.io/fstype":                             "ext4",
 		},
-		AllowVolumeExpansion: &allowExpansion,
-		VolumeBindingMode:    &[]storagev1.VolumeBindingMode{storagev1.VolumeBindingImmediate}[0],
+		AllowVolumeExpansion: ptr.To(true),
+		VolumeBindingMode:    ptr.To(storagev1.VolumeBindingImmediate),
 	}
 }
 
@@ -57,23 +55,20 @@ func CephFSProvisioner(rookNamespace string) string {
 
 // RenderCephFSStorageClass builds the CephFS StorageClass. fsName is the
 // CephFilesystem's name; the pool parameter must name Rook's derived data pool
-// <fsName>-data0 or provisioning fails.
+// or provisioning fails.
 func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace string) *storagev1.StorageClass {
-	reclaim := corev1.PersistentVolumeReclaimDelete
-	allowExpansion := true
-
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Provisioner:   CephFSProvisioner(rookNamespace),
-		ReclaimPolicy: &reclaim,
+		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
 		// The csi.storage.k8s.io/*-secret-name keys name the Rook-managed Secrets
 		// the CSI driver looks up; no credential is in this file.
 		Parameters: map[string]string{ //nolint:gosec // G101: CSI parameter names, not credentials
 			"clusterID": clusterNamespace,
 			"fsName":    fsName,
-			"pool":      fsName + "-data0",
+			"pool":      fsName + "-" + cephFSDataPoolName,
 			"csi.storage.k8s.io/provisioner-secret-name":            "rook-csi-cephfs-provisioner",
 			"csi.storage.k8s.io/provisioner-secret-namespace":       clusterNamespace,
 			"csi.storage.k8s.io/node-stage-secret-name":             "rook-csi-cephfs-node",
@@ -83,7 +78,7 @@ func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace stri
 			"csi.storage.k8s.io/controller-expand-secret-name":      "rook-csi-cephfs-provisioner",
 			"csi.storage.k8s.io/controller-expand-secret-namespace": clusterNamespace,
 		},
-		AllowVolumeExpansion: &allowExpansion,
-		VolumeBindingMode:    &[]storagev1.VolumeBindingMode{storagev1.VolumeBindingImmediate}[0],
+		AllowVolumeExpansion: ptr.To(true),
+		VolumeBindingMode:    ptr.To(storagev1.VolumeBindingImmediate),
 	}
 }

@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -28,19 +29,22 @@ func testBlockStorage(name string) *v1alpha1.BlockStorage {
 	}
 }
 
-func newBlockReconciler(c client.Client) *BlockStorageReconciler {
-	return &BlockStorageReconciler{Client: c, ClusterNamespace: testNamespace, RookNamespace: testNamespace}
+func newBlockReconciler(c client.Client) *ConsumerReconciler[*v1alpha1.BlockStorage] {
+	return NewBlockStorageReconciler(c, testNamespace, testNamespace)
 }
 
-func reconcileBlock(t *testing.T, r *BlockStorageReconciler, name string) (ctrl.Result, error) {
+// Every test in this file reconciles one BlockStorage named "fast".
+const blockName = "fast"
+
+func reconcileBlock(t *testing.T, r *ConsumerReconciler[*v1alpha1.BlockStorage]) (ctrl.Result, error) {
 	t.Helper()
-	return r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: name}})
+	return r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: blockName}})
 }
 
-func getBlock(t *testing.T, c client.Client, name string) *v1alpha1.BlockStorage {
+func getBlock(t *testing.T, c client.Client) *v1alpha1.BlockStorage {
 	t.Helper()
 	var bs v1alpha1.BlockStorage
-	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: name}, &bs))
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: blockName}, &bs))
 	return &bs
 }
 
@@ -57,7 +61,7 @@ func TestBlockStorageCreatesDerivedObjects(t *testing.T) {
 	)
 	r := newBlockReconciler(c)
 
-	res, err := reconcileBlock(t, r, "fast")
+	res, err := reconcileBlock(t, r)
 	require.NoError(t, err)
 	assert.Equal(t, provisioningRequeue, res.RequeueAfter)
 
@@ -77,7 +81,7 @@ func TestBlockStorageCreatesDerivedObjects(t *testing.T) {
 	require.Len(t, cbp.GetOwnerReferences(), 1)
 	assert.Equal(t, "BlockStorage", cbp.GetOwnerReferences()[0].Kind)
 
-	bs := getBlock(t, c, "fast")
+	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseProvisioning, bs.Status.Phase)
 	assert.Equal(t, "ceph-fast", bs.Status.StorageClassName)
 	assert.Equal(t, 2, bs.Status.Replicas)
@@ -90,14 +94,14 @@ func TestBlockStorageDegradedWithoutOSDs(t *testing.T) {
 	c := newFakeClient(t, cephCluster(), testBlockStorage("fast"))
 	r := newBlockReconciler(c)
 
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.NoError(t, err)
 
 	var sc storagev1.StorageClass
 	getErr := c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc)
 	assert.True(t, apierrors.IsNotFound(getErr), "no StorageClass without OSDs")
 
-	bs := getBlock(t, c, "fast")
+	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
 	assert.Contains(t, bs.Status.Message, "create a StoragePool")
 	cond := meta.FindStatusCondition(bs.Status.Conditions, v1alpha1.ConditionReady)
@@ -122,13 +126,13 @@ func TestBlockStorageRefusesForeignStorageClass(t *testing.T) {
 	)
 	r := newBlockReconciler(c)
 
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not owned by this BlockStorage")
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
 		"refusing to adopt a foreign object is not retryable")
 
-	bs := getBlock(t, c, "fast")
+	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
 }
 
@@ -151,15 +155,66 @@ func TestBlockStorageRefusesForeignCephBlockPool(t *testing.T) {
 	)
 	r := newBlockReconciler(c)
 
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CephBlockPool")
 	assert.Contains(t, err.Error(), "not owned by this BlockStorage")
 	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
 		"refusing to adopt a foreign object is not retryable")
 
-	bs := getBlock(t, c, "fast")
+	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
+}
+
+// Reconciling an owned StorageClass must upsert our controller ref, not
+// replace the whole list: a non-controller ownerRef someone else attached
+// survives.
+func TestBlockStorageKeepsForeignOwnerRefOnStorageClass(t *testing.T) {
+	t.Parallel()
+	bs := testBlockStorage("fast")
+	sc := RenderStorageClass("ceph-fast", testNamespace, "ceph-fast", testNamespace)
+	sc.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: v1alpha1.GroupVersion.String(), Kind: "BlockStorage",
+			Name: "fast", UID: bs.UID,
+			Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
+		},
+		{APIVersion: "v1", Kind: "ConfigMap", Name: "tracker", UID: types.UID("uid-tracker")},
+	}
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		bs,
+		sc,
+	)
+	r := newBlockReconciler(c)
+
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	var got storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &got))
+	require.Len(t, got.OwnerReferences, 2, "the foreign non-controller ownerRef must survive")
+	assert.True(t, ownedBy(got.OwnerReferences, "BlockStorage", bs))
+}
+
+// Removing a conflicting foreign object is notOursError's documented recovery.
+// A foreign object carries no ownerRef for Owns() to match, so its deletion
+// must map to the same-named consumer or the consumer stays Degraded until the
+// ~10h resync.
+func TestConflictingObjectEventMapsToSameNamedConsumer(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t, testBlockStorage("fast"), testBlockStorage("other"))
+	r := newBlockReconciler(c)
+
+	foreign := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "ceph-fast"}}
+	reqs := r.toSameNamedConsumer(context.Background(), foreign)
+	require.Len(t, reqs, 1)
+	assert.Equal(t, "fast", reqs[0].Name)
+
+	unrelated := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "local-path"}}
+	assert.Empty(t, r.toSameNamedConsumer(context.Background(), unrelated))
 }
 
 // CephBlockPool reporting Ready flips phase and condition.
@@ -172,7 +227,7 @@ func TestBlockStorageReadyWhenBlockPoolReady(t *testing.T) {
 		testBlockStorage("fast"),
 	)
 	r := newBlockReconciler(c)
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.NoError(t, err)
 
 	cbp := &unstructured.Unstructured{}
@@ -183,11 +238,11 @@ func TestBlockStorageReadyWhenBlockPoolReady(t *testing.T) {
 	require.NoError(t, unstructured.SetNestedField(cbp.Object, "Ready", "status", "phase"))
 	require.NoError(t, c.Update(context.Background(), cbp))
 
-	res, err := reconcileBlock(t, r, "fast")
+	res, err := reconcileBlock(t, r)
 	require.NoError(t, err)
 	assert.Zero(t, res.RequeueAfter, "Ready pool needs no requeue")
 
-	bs := getBlock(t, c, "fast")
+	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseReady, bs.Status.Phase)
 	cond := meta.FindStatusCondition(bs.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
@@ -206,10 +261,10 @@ func TestBlockStorageClampsReplicationToNodes(t *testing.T) {
 		bs,
 	)
 	r := newBlockReconciler(c)
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.NoError(t, err)
 
-	got := getBlock(t, c, "fast")
+	got := getBlock(t, c)
 	assert.Equal(t, 1, got.Status.Replicas)
 	assert.Contains(t, got.Status.Message, "clamped")
 }
@@ -224,13 +279,83 @@ func TestBlockStorageDoesNotRewriteUnchangedStatus(t *testing.T) {
 		testBlockStorage("fast"),
 	)
 	r := newBlockReconciler(c)
-	_, err := reconcileBlock(t, r, "fast")
+	_, err := reconcileBlock(t, r)
 	require.NoError(t, err)
-	before := getBlock(t, c, "fast").ResourceVersion
+	before := getBlock(t, c).ResourceVersion
 
-	_, err = reconcileBlock(t, r, "fast")
+	_, err = reconcileBlock(t, r)
 	require.NoError(t, err)
-	assert.Equal(t, before, getBlock(t, c, "fast").ResourceVersion)
+	assert.Equal(t, before, getBlock(t, c).ResourceVersion)
+}
+
+// End-to-end drift: an owned StorageClass whose immutable fields differ is a
+// terminal error naming the one recovery, and must not be updated in place --
+// the API server would refuse it and the controller would hot-loop.
+func TestBlockStorageImmutableStorageClassDriftIsTerminal(t *testing.T) {
+	t.Parallel()
+	bs := testBlockStorage("fast")
+	drifted := RenderStorageClass("ceph-fast", testNamespace, "ceph-fast", testNamespace)
+	drifted.OwnerReferences = []metav1.OwnerReference{controllerRef(bs, "BlockStorage")}
+	drifted.Parameters = map[string]string{"pool": "somewhere-else"}
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		bs,
+		drifted,
+	)
+	r := newBlockReconciler(c)
+
+	_, err := reconcileBlock(t, r)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
+		"retrying cannot change an immutable field")
+	assert.Contains(t, err.Error(), "Delete the StorageClass")
+
+	var got storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &got))
+	assert.Equal(t, map[string]string{"pool": "somewhere-else"}, got.Parameters,
+		"no update may be issued against a drifted StorageClass")
+
+	assert.Equal(t, v1alpha1.PhaseDegraded, getBlock(t, c).Status.Phase)
+}
+
+// Identical derived objects must not be rewritten either: every Disk event
+// fans out to every consumer, and an unconditional Update is serialised, sent
+// and admission-checked even when the API server would no-op it.
+func TestBlockStorageDoesNotRewriteUnchangedDerivedObjects(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		testBlockStorage("fast"),
+	)
+	r := newBlockReconciler(c)
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	var sc storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc))
+	cbp := &unstructured.Unstructured{}
+	cbp.SetAPIVersion(cephAPIVersion)
+	cbp.SetKind("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, cbp))
+
+	_, err = reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	var scAfter storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &scAfter))
+	assert.Equal(t, sc.ResourceVersion, scAfter.ResourceVersion, "unchanged StorageClass rewritten")
+
+	cbpAfter := &unstructured.Unstructured{}
+	cbpAfter.SetAPIVersion(cephAPIVersion)
+	cbpAfter.SetKind("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, cbpAfter))
+	assert.Equal(t, cbp.GetResourceVersion(), cbpAfter.GetResourceVersion(), "unchanged CephBlockPool rewritten")
 }
 
 // A pure unit test of the immutable-field diff storageclass_apply.go uses to
@@ -249,6 +374,6 @@ func TestImmutableStorageClassDrift(t *testing.T) {
 
 	// allowVolumeExpansion is the one field Kubernetes lets us update.
 	expandable := desired.DeepCopy()
-	expandable.AllowVolumeExpansion = ptr(false)
+	expandable.AllowVolumeExpansion = ptr.To(false)
 	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
 }

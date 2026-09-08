@@ -1,4 +1,13 @@
-import { loadSdk, escapeHtml, navigateToDetail, navigateBack } from './_shared.js';
+import {
+  loadSdk,
+  navigateToDetail,
+  navigateBack,
+  replicationFieldHtml,
+  metadataServersFieldHtml,
+  metadataServersError,
+  resourceNameError,
+  wireSubmit,
+} from './_shared.js';
 
 await loadSdk();
 await fundament.init;
@@ -23,23 +32,9 @@ content.innerHTML = `
       <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed cephfs-).</span>
     </div>
 
-    <div class="plugin-field">
-      <label class="plugin-label" for="replication">Replication</label>
-      <select id="replication" name="replication" class="plugin-select">
-        <option value="auto" selected>auto (recommended)</option>
-        <option value="1">1 — no replication</option>
-        <option value="2">2 — two replicas</option>
-        <option value="3">3 — three replicas</option>
-      </select>
-      <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
-    </div>
+    ${replicationFieldHtml()}
 
-    <div class="plugin-field">
-      <label class="plugin-label" for="mds-count">Metadata servers</label>
-      <input id="mds-count" name="metadataServers" type="number" class="plugin-input"
-             min="1" max="5" value="1" />
-      <span class="plugin-hint">Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.</span>
-    </div>
+    ${metadataServersFieldHtml()}
 
     <div class="plugin-actions">
       <button id="submit-btn" type="submit" class="plugin-button">Create FileStorage</button>
@@ -49,58 +44,38 @@ content.innerHTML = `
 `;
 
 const form = document.getElementById('create-form');
-const errorBox = document.getElementById('error-box');
-const submitBtn = document.getElementById('submit-btn');
-
-function showError(message) {
-  errorBox.textContent = message;
-  errorBox.hidden = false;
-}
+const nameInput = form.querySelector('[name="name"]');
+const metadataServers = () => Number(form.querySelector('[name="metadataServers"]').value);
 
 document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorBox.hidden = true;
-
-  const nameInput = form.querySelector('[name="name"]');
-  const name = nameInput.value.trim();
-  if (!name) {
-    showError('Please enter a name.');
-    nameInput.focus();
-    return;
-  }
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(name)) {
-    showError('Use lowercase letters, digits and dashes only.');
-    nameInput.focus();
-    return;
-  }
-
-  const replication = form.querySelector('[name="replication"]').value;
-
-  const metadataServers = Number(form.querySelector('[name="metadataServers"]').value);
-  if (!Number.isInteger(metadataServers) || metadataServers < 1 || metadataServers > 5) {
-    showError('Metadata servers must be a whole number from 1 to 5.');
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Creating…';
-
-  try {
+wireSubmit(form, {
+  button: document.getElementById('submit-btn'),
+  errorBox: document.getElementById('error-box'),
+  busyLabel: 'Creating…',
+  failPrefix: 'Failed to create FileStorage',
+  validate: () => {
+    const invalid = resourceNameError(nameInput.value.trim());
+    if (invalid) {
+      nameInput.focus();
+      return invalid;
+    }
+    return metadataServersError(metadataServers());
+  },
+  action: async () => {
+    const name = nameInput.value.trim();
     await fundament.k8s.create(
       { group: 'storage.fundament.io', version: 'v1alpha1', resource: 'filestorages' },
       {
         apiVersion: 'storage.fundament.io/v1alpha1',
         kind: 'FileStorage',
         metadata: { name },
-        spec: { replication, metadataServers },
+        spec: {
+          replication: form.querySelector('[name="replication"]').value,
+          metadataServers: metadataServers(),
+        },
       },
     );
     navigateToDetail(name);
-  } catch (err) {
-    showError(`Failed to create FileStorage: ${err?.message ?? err}`);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Create FileStorage';
-  }
+  },
 });

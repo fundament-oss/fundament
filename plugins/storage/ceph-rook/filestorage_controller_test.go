@@ -19,26 +19,29 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-func testFileStorage(name string) *v1alpha1.FileStorage {
+// Every test in this file reconciles one FileStorage named "shared".
+const fileName = "shared"
+
+func testFileStorage() *v1alpha1.FileStorage {
 	return &v1alpha1.FileStorage{
-		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID("uid-" + name)},
+		ObjectMeta: metav1.ObjectMeta{Name: fileName, UID: types.UID("uid-" + fileName)},
 		Spec:       v1alpha1.FileStorageSpec{Replication: "auto", MetadataServers: 1},
 	}
 }
 
-func newFileReconciler(c client.Client) *FileStorageReconciler {
-	return &FileStorageReconciler{Client: c, ClusterNamespace: testNamespace, RookNamespace: testNamespace}
+func newFileReconciler(c client.Client) *ConsumerReconciler[*v1alpha1.FileStorage] {
+	return NewFileStorageReconciler(c, testNamespace, testNamespace)
 }
 
-func reconcileFile(t *testing.T, r *FileStorageReconciler, name string) (ctrl.Result, error) {
+func reconcileFile(t *testing.T, r *ConsumerReconciler[*v1alpha1.FileStorage]) (ctrl.Result, error) {
 	t.Helper()
-	return r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: name}})
+	return r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: fileName}})
 }
 
-func getFile(t *testing.T, c client.Client, name string) *v1alpha1.FileStorage {
+func getFile(t *testing.T, c client.Client) *v1alpha1.FileStorage {
 	t.Helper()
 	var fs v1alpha1.FileStorage
-	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: name}, &fs))
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: fileName}, &fs))
 	return &fs
 }
 
@@ -55,7 +58,7 @@ func getCephFilesystem(t *testing.T, c client.Client, name string) *unstructured
 // Happy path: cephfs-prefixed CephFilesystem + StorageClass, sized on the union.
 func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 	t.Parallel()
-	fsObj := testFileStorage("shared")
+	fsObj := testFileStorage()
 	fsObj.Spec.MetadataServers = 2
 	c := newFakeClient(t,
 		cephCluster(),
@@ -66,7 +69,7 @@ func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 	)
 	r := newFileReconciler(c)
 
-	res, err := reconcileFile(t, r, "shared")
+	res, err := reconcileFile(t, r)
 	require.NoError(t, err)
 	assert.Equal(t, provisioningRequeue, res.RequeueAfter)
 
@@ -84,7 +87,7 @@ func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 	require.Len(t, sc.OwnerReferences, 1)
 	assert.Equal(t, "FileStorage", sc.OwnerReferences[0].Kind)
 
-	got := getFile(t, c, "shared")
+	got := getFile(t, c)
 	assert.Equal(t, v1alpha1.PhaseProvisioning, got.Status.Phase)
 	assert.Equal(t, "cephfs-shared", got.Status.StorageClassName)
 	assert.Equal(t, 2, got.Status.Replicas)
@@ -94,17 +97,17 @@ func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 // No StoragePool contributes disks: Degraded, nothing created.
 func TestFileStorageDegradedWithoutOSDs(t *testing.T) {
 	t.Parallel()
-	c := newFakeClient(t, cephCluster(), testFileStorage("shared"))
+	c := newFakeClient(t, cephCluster(), testFileStorage())
 	r := newFileReconciler(c)
 
-	_, err := reconcileFile(t, r, "shared")
+	_, err := reconcileFile(t, r)
 	require.NoError(t, err)
 
 	var sc storagev1.StorageClass
 	getErr := c.Get(context.Background(), types.NamespacedName{Name: "cephfs-shared"}, &sc)
 	assert.True(t, apierrors.IsNotFound(getErr))
 
-	got := getFile(t, c, "shared")
+	got := getFile(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, got.Status.Phase)
 	assert.Contains(t, got.Status.Message, "create a StoragePool")
 	cond := meta.FindStatusCondition(got.Status.Conditions, v1alpha1.ConditionReady)
@@ -124,15 +127,15 @@ func TestFileStorageRefusesForeignCephFilesystem(t *testing.T) {
 		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "node-a-1"),
-		testFileStorage("shared"),
+		testFileStorage(),
 		foreign,
 	)
 	r := newFileReconciler(c)
 
-	_, err := reconcileFile(t, r, "shared")
+	_, err := reconcileFile(t, r)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not owned by this FileStorage")
-	assert.Equal(t, v1alpha1.PhaseDegraded, getFile(t, c, "shared").Status.Phase)
+	assert.Equal(t, v1alpha1.PhaseDegraded, getFile(t, c).Status.Phase)
 }
 
 // CephFilesystem reporting Ready flips phase and condition.
@@ -142,31 +145,62 @@ func TestFileStorageReadyWhenFilesystemReady(t *testing.T) {
 		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "node-a-1"),
-		testFileStorage("shared"),
+		testFileStorage(),
 	)
 	r := newFileReconciler(c)
-	_, err := reconcileFile(t, r, "shared")
+	_, err := reconcileFile(t, r)
 	require.NoError(t, err)
 
 	cfs := getCephFilesystem(t, c, "cephfs-shared")
 	require.NoError(t, unstructured.SetNestedField(cfs.Object, "Ready", "status", "phase"))
 	require.NoError(t, c.Update(context.Background(), cfs))
 
-	res, err := reconcileFile(t, r, "shared")
+	res, err := reconcileFile(t, r)
 	require.NoError(t, err)
 	assert.Zero(t, res.RequeueAfter)
 
-	got := getFile(t, c, "shared")
+	got := getFile(t, c)
 	assert.Equal(t, v1alpha1.PhaseReady, got.Status.Phase)
 	cond := meta.FindStatusCondition(got.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
 }
 
+// Rook reporting Failure (e.g. MDS pods unschedulable) is a dead end, not
+// progress: surface it as Degraded instead of Provisioning forever.
+func TestFileStorageDegradedWhenFilesystemFails(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		testFileStorage(),
+	)
+	r := newFileReconciler(c)
+	_, err := reconcileFile(t, r)
+	require.NoError(t, err)
+
+	cfs := getCephFilesystem(t, c, "cephfs-shared")
+	require.NoError(t, unstructured.SetNestedField(cfs.Object, "Failure", "status", "phase"))
+	require.NoError(t, c.Update(context.Background(), cfs))
+
+	res, err := reconcileFile(t, r)
+	require.NoError(t, err)
+	assert.Equal(t, provisioningRequeue, res.RequeueAfter, "recheck in case Rook recovers")
+
+	got := getFile(t, c)
+	assert.Equal(t, v1alpha1.PhaseDegraded, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "Failure")
+	cond := meta.FindStatusCondition(got.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonRookFailure, cond.Reason)
+}
+
 // Explicit replication clamps to the union's node count, like BlockStorage.
 func TestFileStorageClampsReplicationToNodes(t *testing.T) {
 	t.Parallel()
-	fsObj := testFileStorage("shared")
+	fsObj := testFileStorage()
 	fsObj.Spec.Replication = "3"
 	c := newFakeClient(t,
 		cephCluster(),
@@ -175,10 +209,10 @@ func TestFileStorageClampsReplicationToNodes(t *testing.T) {
 		fsObj,
 	)
 	r := newFileReconciler(c)
-	_, err := reconcileFile(t, r, "shared")
+	_, err := reconcileFile(t, r)
 	require.NoError(t, err)
 
-	got := getFile(t, c, "shared")
+	got := getFile(t, c)
 	assert.Equal(t, 1, got.Status.Replicas)
 	assert.Contains(t, got.Status.Message, "clamped")
 }
@@ -190,14 +224,14 @@ func TestFileStorageDoesNotRewriteUnchangedStatus(t *testing.T) {
 		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "node-a-1"),
-		testFileStorage("shared"),
+		testFileStorage(),
 	)
 	r := newFileReconciler(c)
-	_, err := reconcileFile(t, r, "shared")
+	_, err := reconcileFile(t, r)
 	require.NoError(t, err)
-	before := getFile(t, c, "shared").ResourceVersion
+	before := getFile(t, c).ResourceVersion
 
-	_, err = reconcileFile(t, r, "shared")
+	_, err = reconcileFile(t, r)
 	require.NoError(t, err)
-	assert.Equal(t, before, getFile(t, c, "shared").ResourceVersion)
+	assert.Equal(t, before, getFile(t, c).ResourceVersion)
 }

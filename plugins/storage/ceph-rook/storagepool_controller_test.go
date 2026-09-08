@@ -150,6 +150,52 @@ func TestReconcileContributesDisks(t *testing.T) {
 	assert.Equal(t, int64(300), pool.Status.RawCapacityBytes)
 }
 
+// Ready means "this pool's disks are recorded in the shared Ceph cluster".
+// Without the singleton CephCluster nothing was recorded, so the pool must not
+// report Ready.
+func TestReconcileDegradedWithoutCephCluster(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+	)
+	r := newReconciler(c)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	pool := getPool(t, c, "pool")
+	assert.Equal(t, v1alpha1.PhaseDegraded, pool.Status.Phase)
+	assert.Contains(t, pool.Status.Message, "CephCluster")
+	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonCephClusterMissing, cond.Reason)
+}
+
+// When the CephCluster appears later (its watch enqueues every pool), the next
+// reconcile records the disks and flips the pool to Ready.
+func TestReconcileRecoversWhenCephClusterAppears(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+	)
+	r := newReconciler(c)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
+
+	require.NoError(t, c.Create(context.Background(), cephCluster()))
+
+	_, err = reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
+	assert.Equal(t, v1alpha1.PhaseReady, getPool(t, c, "pool").Status.Phase)
+}
+
 // A disk listed by two pools belongs to the older one; the younger pool skips
 // it rather than double-counting the same device.
 func TestReconcileSkipsDisksClaimedByAnotherPool(t *testing.T) {

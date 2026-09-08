@@ -39,6 +39,9 @@ const (
 	// ReasonNoUsableDisks: spec.disks resolved to nothing, so there is no OSD to
 	// build a pool on.
 	ReasonNoUsableDisks = "NoUsableDisks"
+	// ReasonCephClusterMissing: the singleton CephCluster does not exist, so the
+	// pool's disks are not recorded anywhere yet.
+	ReasonCephClusterMissing = "CephClusterMissing"
 	// ReasonReconcileError: the reconcile itself failed; message carries the error.
 	ReasonReconcileError = "ReconcileError"
 )

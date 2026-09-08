@@ -63,8 +63,9 @@ spec:
             type: object
           status:
             description: |-
-              BlockStorageStatus is the observed state. Fields describe the derived
-              CephBlockPool and StorageClass, sized against the whole cluster's OSD set.
+              ConsumerStatus is the observed state shared by the consumer kinds
+              (BlockStorage, FileStorage). Fields describe the derived Rook object and
+              StorageClass, sized against the whole cluster's OSD set.
             properties:
               conditions:
                 description: |-

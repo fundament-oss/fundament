@@ -91,6 +91,82 @@ export function renderDefList(pairs) {
   return `<dl class="plugin-deflist">${rows}</dl>`;
 }
 
+// Mirrors the Kubernetes object-name pattern the CRDs enforce; returns an
+// error message or null.
+export function resourceNameError(name) {
+  if (!name) return 'Please enter a name.';
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(name)) {
+    return 'Use lowercase letters, digits and dashes only.';
+  }
+  return null;
+}
+
+// Replication <select> shared by every consumer create/edit form.
+export function replicationFieldHtml(selected = 'auto') {
+  const label = (v) => (v === 'auto' ? 'auto (recommended)' : {
+    1: '1 — no replication',
+    2: '2 — two replicas',
+    3: '3 — three replicas',
+  }[v]);
+  const options = ['auto', '1', '2', '3']
+    .map((v) => `<option value="${v}"${v === selected ? ' selected' : ''}>${label(v)}</option>`)
+    .join('');
+  return `
+    <div class="plugin-field">
+      <label class="plugin-label" for="replication">Replication</label>
+      <select id="replication" name="replication" class="plugin-select">${options}</select>
+      <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
+    </div>`;
+}
+
+// Metadata-servers input shared by the FileStorage create and edit forms.
+export function metadataServersFieldHtml(value = 1) {
+  return `
+    <div class="plugin-field">
+      <label class="plugin-label" for="mds-count">Metadata servers</label>
+      <input id="mds-count" name="metadataServers" type="number" class="plugin-input"
+             min="1" max="5" value="${escapeHtml(String(value))}" />
+      <span class="plugin-hint">Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.</span>
+    </div>`;
+}
+
+// Bounds mirror the CRD's validation; returns an error message or null.
+export function metadataServersError(value) {
+  if (!Number.isInteger(value) || value < 1 || value > 5) {
+    return 'Metadata servers must be a whole number from 1 to 5.';
+  }
+  return null;
+}
+
+// Wires the shared submit flow: validate, disable the button with busyLabel,
+// run action, surface failures in errorBox and restore the button. On success
+// the button stays disabled -- the action navigates or re-renders.
+export function wireSubmit(form, { button, errorBox, busyLabel, failPrefix, validate, action }) {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorBox.hidden = true;
+
+    const invalid = validate?.();
+    if (invalid) {
+      errorBox.textContent = invalid;
+      errorBox.hidden = false;
+      return;
+    }
+
+    const idleLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = busyLabel;
+    try {
+      await action();
+    } catch (err) {
+      errorBox.textContent = `${failPrefix}: ${err?.message ?? err}`;
+      errorBox.hidden = false;
+      button.disabled = false;
+      button.textContent = idleLabel;
+    }
+  });
+}
+
 export function humanizeBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const tib = bytes / 1024 ** 4;
