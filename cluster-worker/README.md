@@ -248,7 +248,8 @@ What lands on each shoot:
 | Deployment | `plugin-controller` | Real per-shoot env: `FUNDAMENT_CLUSTER_ID` (cluster UUID, also stands in for `FUNDAMENT_INSTALL_ID`), `FUNDAMENT_ORGANIZATION_ID` (from `tenant.clusters`), `MARKETPLACE_CATALOG_API_URL` (external, FUN-19) |
 
 Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
-`pluginController.shootImage` + `externalUrls.marketplaceCatalogApi`):
+`images.pluginController` + `externalUrls.marketplaceCatalogApi` when
+`pluginController.provisionShoots` is enabled):
 
 | Env | Meaning |
 |-----|---------|
@@ -265,8 +266,9 @@ mock-Gardener and PR environments need no configuration.
 Run this end-to-end check whenever the machinery or the CRD changes (it is
 deliberately not CI — see the repo's testing conventions):
 
-1. Deploy with real Gardener and set `pluginController.shootImage` to an image
-   the shoot nodes can pull, plus a shoot-reachable `externalUrls.organization`.
+1. Deploy with real Gardener, enable `pluginController.provisionShoots` with an
+   `images.pluginController` the shoot nodes can pull, plus a shoot-reachable
+   `externalUrls.organization`.
    For local Gardener setups the plugin sandbox's NodePort/socat relay
    (`just plugins sandbox-up`, `plugins/Justfile`) is the reference for making
    org-api reachable from another cluster.
@@ -283,7 +285,7 @@ deliberately not CI — see the repo's testing conventions):
 
 #### Disabling is not uninstalling
 
-Clearing `pluginController.shootImage` stops the handler from provisioning or
+Disabling `pluginController.provisionShoots` stops the handler from provisioning or
 updating the machinery, but removes nothing: already-provisioned shoots keep
 running the plugin-controller Deployment with its ClusterRole, and the CRD
 stays installed. A per-cluster opt-out with a full, ordered teardown (drain
