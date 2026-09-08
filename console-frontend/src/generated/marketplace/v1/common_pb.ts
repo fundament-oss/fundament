@@ -5,6 +5,7 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file marketplace/v1/common.proto.
  */
 export const file_marketplace_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiKwoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkiTQoRRG9jdW1lbnRhdGlvbkxpbmsSCgoCaWQYCiABKAkSDQoFdGl0bGUYFCABKAkSEAoIdXJsX25hbWUYHiABKAkSCwoDdXJsGCggASgJKvsBChBTdWJtaXNzaW9uU3RhdHVzEiEKHVNVQk1JU1NJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASGwoXU1VCTUlTU0lPTl9TVEFUVVNfRFJBRlQQARIdChlTVUJNSVNTSU9OX1NUQVRVU19QRU5ESU5HEAISJwojU1VCTUlTU0lPTl9TVEFUVVNfQ0hBTkdFU19SRVFVRVNURUQQAxIeChpTVUJNSVNTSU9OX1NUQVRVU19BUFBST1ZFRBAEEh4KGlNVQk1JU1NJT05fU1RBVFVTX1JFSkVDVEVEEAUSHwobU1VCTUlTU0lPTl9TVEFUVVNfV0lUSERSQVdOEAZCaVpdZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1hcGkvcGtnL3Byb3RvL2dlbi9tYXJrZXRwbGFjZS92MTttYXJrZXRwbGFjZXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
+  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBkJpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * appstore.categories. A curated vocabulary: a developer picks from it rather
@@ -152,6 +153,16 @@ export type FeatureBlock = Message<"marketplace.v1.FeatureBlock"> & {
    * @generated from field: string body = 20;
    */
   body: string;
+
+  /**
+   * Server-assigned, and stable across an UpdatePlugin that carries it back,
+   * exactly like DocumentationLink.id. Numbered last rather than first because
+   * renumbering title and body would change the wire format catalog.v1 clients
+   * already speak.
+   *
+   * @generated from field: string id = 30;
+   */
+  id: string;
 };
 
 /**
@@ -169,6 +180,9 @@ export const FeatureBlockSchema: GenMessage<FeatureBlock> = /*@__PURE__*/
  */
 export type DocumentationLink = Message<"marketplace.v1.DocumentationLink"> & {
   /**
+   * Server-assigned, and stable across an UpdatePlugin that carries it back.
+   * Empty means "a link that does not exist yet".
+   *
    * @generated from field: string id = 10;
    */
   id: string;

@@ -153,7 +153,7 @@ WHERE appstore.categories_plugins.plugin_id = sqlc.arg('plugin_id')::uuid AND ap
 ORDER BY appstore.categories.name;
 
 -- name: PluginFeaturesListByPluginID :many
-SELECT appstore.plugin_features.title, appstore.plugin_features.body
+SELECT appstore.plugin_features.id, appstore.plugin_features.title, appstore.plugin_features.body
 FROM appstore.plugin_features
 WHERE appstore.plugin_features.plugin_id = sqlc.arg('plugin_id')::uuid AND appstore.plugin_features.deleted IS NULL
 ORDER BY appstore.plugin_features.position, appstore.plugin_features.title;

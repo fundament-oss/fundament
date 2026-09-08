@@ -737,9 +737,11 @@ type UpdatePluginRequest_builder struct {
 	Image         string
 	RepositoryUrl string
 	License       string
-	// A link with no id is created; one with an id replaces that link.
-	// Links the request omits are deleted, per the full-replacement rule.
-	DocumentationLinks     []*v1.DocumentationLink
+	// A link with no id is created; one carrying an id updates that link in
+	// place, keeping its id. Links the request omits are soft-deleted.
+	DocumentationLinks []*v1.DocumentationLink
+	// Same rule as documentation_links: no id creates, an id updates that block
+	// in place, and an omitted block is soft-deleted.
 	Features               []*v1.FeatureBlock
 	Visibility             PluginVisibility
 	AllowedOrganizationIds []string

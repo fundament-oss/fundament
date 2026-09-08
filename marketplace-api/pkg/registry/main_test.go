@@ -1,4 +1,4 @@
-package catalog_test
+package registry_test
 
 import (
 	"context"
@@ -21,13 +21,13 @@ import (
 	"github.com/fundament-oss/fundament/common/testdb"
 )
 
-const testDBPort = 45330
+const testDBPort = 45331
 
 // instanceDir names this package's data directory. It is not shared with
-// pkg/registry: go test ./... runs the two packages at once, and a second
+// pkg/catalog: go test ./... runs the two packages at once, and a second
 // postmaster over one PGDATA stops the first, which reads downstream as
 // SQLSTATE 57P01 from whatever the first was running.
-const instanceDir = "fundament-test-pg-marketplace"
+const instanceDir = "fundament-test-pg-marketplace-registry"
 
 func TestMain(m *testing.M) {
 	// The environment variable is the cache root CI restores, not the data

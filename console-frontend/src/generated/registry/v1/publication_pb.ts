@@ -228,14 +228,17 @@ export type UpdatePluginRequest = Message<"registry.v1.UpdatePluginRequest"> & {
   license: string;
 
   /**
-   * A link with no id is created; one with an id replaces that link.
-   * Links the request omits are deleted, per the full-replacement rule.
+   * A link with no id is created; one carrying an id updates that link in
+   * place, keeping its id. Links the request omits are soft-deleted.
    *
    * @generated from field: repeated marketplace.v1.DocumentationLink documentation_links = 100;
    */
   documentationLinks: DocumentationLink[];
 
   /**
+   * Same rule as documentation_links: no id creates, an id updates that block
+   * in place, and an omitted block is soft-deleted.
+   *
    * @generated from field: repeated marketplace.v1.FeatureBlock features = 110;
    */
   features: FeatureBlock[];

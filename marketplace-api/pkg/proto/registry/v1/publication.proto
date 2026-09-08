@@ -129,9 +129,11 @@ message UpdatePluginRequest {
     (buf.validate.field).string = {uri: true}
   ];
   string license = 90 [(buf.validate.field).string = {max_len: 64}];
-  // A link with no id is created; one with an id replaces that link.
-  // Links the request omits are deleted, per the full-replacement rule.
+  // A link with no id is created; one carrying an id updates that link in
+  // place, keeping its id. Links the request omits are soft-deleted.
   repeated marketplace.v1.DocumentationLink documentation_links = 100 [(buf.validate.field).repeated = {max_items: 20}];
+  // Same rule as documentation_links: no id creates, an id updates that block
+  // in place, and an omitted block is soft-deleted.
   repeated marketplace.v1.FeatureBlock features = 110 [(buf.validate.field).repeated = {max_items: 20}];
   PluginVisibility visibility = 120 [(buf.validate.field).enum = {
     defined_only: true

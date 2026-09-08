@@ -174,6 +174,7 @@ func (s *Server) GetPlugin(
 	featureBlocks := make([]*marketplacev1.FeatureBlock, 0, len(features))
 	for _, feature := range features {
 		featureBlocks = append(featureBlocks, marketplacev1.FeatureBlock_builder{
+			Id:    feature.ID.String(),
 			Title: feature.Title,
 			Body:  feature.Body,
 		}.Build())
