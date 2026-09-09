@@ -66,8 +66,8 @@ message PluginVersion {
   string id = 10;
   string plugin_id = 20;
   string version = 30;
-  // Container image the plugin runs, read out of the manifest rather than
-  // stored alongside it — the pinned manifest is the source of truth.
+  // Container image the plugin runs, written out of the manifest at push time
+  // — the pinned manifest stays the source of truth.
   string image = 40;
   string definition_hash = 50;
   string release_notes = 60;

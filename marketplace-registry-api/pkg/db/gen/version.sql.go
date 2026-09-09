@@ -49,13 +49,14 @@ func (q *Queries) CategoryList(ctx context.Context) ([]CategoryListRow, error) {
 
 const pluginVersionCreate = `-- name: PluginVersionCreate :one
 INSERT INTO appstore.plugin_definitions (
-	plugin_id, plugin_version, manifest, hash, release_notes, status
+	plugin_id, plugin_version, manifest, hash, image, release_notes, status
 ) VALUES (
 	$1::uuid,
 	$2::text,
 	$3::bytea,
 	$4::text,
 	$5::text,
+	$6::text,
 	'draft'
 )
 RETURNING id, created
@@ -66,6 +67,7 @@ type PluginVersionCreateParams struct {
 	PluginVersion string
 	Manifest      []byte
 	Hash          string
+	Image         string
 	ReleaseNotes  string
 }
 
@@ -74,14 +76,15 @@ type PluginVersionCreateRow struct {
 	Created pgtype.Timestamptz
 }
 
-// Lands in DRAFT. The hash is computed by the server from the manifest bytes,
-// never supplied by the client.
+// Lands in DRAFT. The hash and image are computed by the server from the
+// manifest bytes, never supplied by the client.
 func (q *Queries) PluginVersionCreate(ctx context.Context, arg PluginVersionCreateParams) (PluginVersionCreateRow, error) {
 	row := q.db.QueryRow(ctx, pluginVersionCreate,
 		arg.PluginID,
 		arg.PluginVersion,
 		arg.Manifest,
 		arg.Hash,
+		arg.Image,
 		arg.ReleaseNotes,
 	)
 	var i PluginVersionCreateRow
@@ -94,7 +97,7 @@ SELECT
 	plugin_definitions.id,
 	plugin_definitions.plugin_id,
 	plugin_definitions.plugin_version,
-	plugin_definitions.manifest,
+	plugin_definitions.image,
 	plugin_definitions.hash,
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
@@ -115,7 +118,7 @@ type PluginVersionGetByIDRow struct {
 	ID            uuid.UUID
 	PluginID      uuid.UUID
 	PluginVersion string
-	Manifest      []byte
+	Image         string
 	Hash          string
 	Status        dbconst.PluginDefinitionStatus
 	ReleaseNotes  string
@@ -130,7 +133,7 @@ func (q *Queries) PluginVersionGetByID(ctx context.Context, arg PluginVersionGet
 		&i.ID,
 		&i.PluginID,
 		&i.PluginVersion,
-		&i.Manifest,
+		&i.Image,
 		&i.Hash,
 		&i.Status,
 		&i.ReleaseNotes,
@@ -146,7 +149,7 @@ SELECT
 	plugin_definitions.id,
 	plugin_definitions.plugin_id,
 	plugin_definitions.plugin_version,
-	plugin_definitions.manifest,
+	plugin_definitions.image,
 	plugin_definitions.hash,
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
@@ -168,7 +171,7 @@ type PluginVersionListByPluginIDRow struct {
 	ID            uuid.UUID
 	PluginID      uuid.UUID
 	PluginVersion string
-	Manifest      []byte
+	Image         string
 	Hash          string
 	Status        dbconst.PluginDefinitionStatus
 	ReleaseNotes  string
@@ -182,6 +185,9 @@ type PluginVersionListByPluginIDRow struct {
 // would find the row. plugin_definitions' own policy gates on ownership through
 // that join already, but writing it explicitly keeps a query that is later
 // changed to select by version id from silently widening its scope.
+// Selects the image column, not the manifest: the manifest is capped at 1 MiB
+// per version, and nothing here needs more of it than the image written out of
+// it at push time.
 func (q *Queries) PluginVersionListByPluginID(ctx context.Context, arg PluginVersionListByPluginIDParams) ([]PluginVersionListByPluginIDRow, error) {
 	rows, err := q.db.Query(ctx, pluginVersionListByPluginID, arg.PluginID)
 	if err != nil {
@@ -195,7 +201,7 @@ func (q *Queries) PluginVersionListByPluginID(ctx context.Context, arg PluginVer
 			&i.ID,
 			&i.PluginID,
 			&i.PluginVersion,
-			&i.Manifest,
+			&i.Image,
 			&i.Hash,
 			&i.Status,
 			&i.ReleaseNotes,

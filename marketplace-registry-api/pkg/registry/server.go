@@ -12,6 +12,7 @@ import (
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
@@ -27,15 +28,17 @@ type Server struct {
 	logger        *slog.Logger
 	db            *psqldb.DB
 	queries       *db.Queries
+	authz         *authz.Client
 	authValidator *auth.Validator
 	handler       http.Handler
 }
 
-func New(logger *slog.Logger, cfg Config, database *psqldb.DB) *Server {
+func New(logger *slog.Logger, cfg Config, database *psqldb.DB, authzClient *authz.Client) *Server {
 	s := &Server{
 		logger:  logger,
 		db:      database,
 		queries: db.New(database.Pool),
+		authz:   authzClient,
 		// NewValidatorForAudience, not NewValidator: a PluginToken must not be
 		// accepted here (FUN-17).
 		authValidator: auth.NewValidatorForAudience(

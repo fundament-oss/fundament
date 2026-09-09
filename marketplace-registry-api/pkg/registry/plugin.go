@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/rollback"
 	marketplacev1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
@@ -81,6 +82,10 @@ func (s *Server) CreatePlugin(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	if err := s.checkPermission(ctx, authz.CanCreatePlugin(), authz.Organization(organizationID)); err != nil {
+		return nil, err
+	}
+
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("begin transaction: %w", err))
@@ -104,7 +109,7 @@ func (s *Server) CreatePlugin(
 			return nil, connect.NewError(connect.CodeAlreadyExists,
 				fmt.Errorf("plugin %q already exists in this organization", req.GetName()))
 		}
-		return nil, writeError(err, "creating plugin")
+		return nil, s.writeError(ctx, err, "creating plugin")
 	}
 
 	if err := s.replaceCategories(ctx, qtx, pluginID, req.GetCategoryIds()); err != nil {
@@ -134,9 +139,15 @@ func (s *Server) UpdatePlugin(
 
 	// The update itself is RLS-scoped, but a listing the caller does not own
 	// would silently affect zero rows and read back as NOT_FOUND only by
-	// accident; looking it up first makes that explicit.
+	// accident; looking it up first makes that explicit. The lookup also keeps
+	// NOT_FOUND the default denial (FUN-12): the OpenFGA check below only runs
+	// for a listing the caller's organization can see.
 	if _, err := s.queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: pluginID}); err != nil {
 		return nil, pluginLookupError(err)
+	}
+
+	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+		return nil, err
 	}
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -159,7 +170,7 @@ func (s *Server) UpdatePlugin(
 		Visibility:       visibilityToDB(req.GetVisibility()),
 	})
 	if err != nil {
-		return nil, writeError(err, "updating plugin")
+		return nil, s.writeError(ctx, err, "updating plugin")
 	}
 	// Otherwise the replacements below would commit against a listing deleted
 	// since the lookup.
@@ -210,6 +221,10 @@ func (s *Server) DeletePlugin(
 		return nil, pluginLookupError(err)
 	}
 
+	if err := s.checkPermissionWithRetry(ctx, authz.CanDelete(), authz.Plugin(pluginID)); err != nil {
+		return nil, err
+	}
+
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("begin transaction: %w", err))
@@ -220,15 +235,15 @@ func (s *Server) DeletePlugin(
 	if err := qtx.SubmissionCloseOpenByPluginID(ctx, db.SubmissionCloseOpenByPluginIDParams{
 		PluginID: pluginID,
 	}); err != nil {
-		return nil, writeError(err, "closing open submissions")
+		return nil, s.writeError(ctx, err, "closing open submissions")
 	}
 	if err := qtx.PluginVersionsSoftDeleteByPluginID(ctx, db.PluginVersionsSoftDeleteByPluginIDParams{
 		PluginID: pluginID,
 	}); err != nil {
-		return nil, writeError(err, "deleting plugin versions")
+		return nil, s.writeError(ctx, err, "deleting plugin versions")
 	}
 	if err := qtx.PluginSoftDelete(ctx, db.PluginSoftDeleteParams{ID: pluginID}); err != nil {
-		return nil, writeError(err, "deleting plugin")
+		return nil, s.writeError(ctx, err, "deleting plugin")
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -448,7 +463,7 @@ func (s *Server) replaceCategories(ctx context.Context, qtx *db.Queries, pluginI
 	if err := qtx.PluginCategoriesDeleteByPluginID(ctx, db.PluginCategoriesDeleteByPluginIDParams{
 		PluginID: pluginID,
 	}); err != nil {
-		return writeError(err, "clearing categories")
+		return s.writeError(ctx, err, "clearing categories")
 	}
 
 	for _, categoryID := range categoryIDs {
@@ -460,7 +475,7 @@ func (s *Server) replaceCategories(ctx context.Context, qtx *db.Queries, pluginI
 				return connect.NewError(connect.CodeInvalidArgument,
 					fmt.Errorf("unknown category %s", categoryID))
 			}
-			return writeError(err, "attaching category")
+			return s.writeError(ctx, err, "attaching category")
 		}
 	}
 
@@ -471,7 +486,7 @@ func (s *Server) replaceTags(ctx context.Context, qtx *db.Queries, pluginID uuid
 	if err := qtx.PluginTagsDeleteByPluginID(ctx, db.PluginTagsDeleteByPluginIDParams{
 		PluginID: pluginID,
 	}); err != nil {
-		return writeError(err, "clearing tags")
+		return s.writeError(ctx, err, "clearing tags")
 	}
 
 	for _, name := range tags {
@@ -479,17 +494,17 @@ func (s *Server) replaceTags(ctx context.Context, qtx *db.Queries, pluginID uuid
 		// on the shared tags vocabulary. Either this call created the row or a
 		// committed one already exists, so the select finds it in both cases.
 		if err := qtx.TagInsertIfMissing(ctx, db.TagInsertIfMissingParams{Name: name}); err != nil {
-			return writeError(err, "creating tag")
+			return s.writeError(ctx, err, "creating tag")
 		}
 		tagID, err := qtx.TagGetByName(ctx, db.TagGetByNameParams{Name: name})
 		if err != nil {
-			return writeError(err, "resolving tag")
+			return s.writeError(ctx, err, "resolving tag")
 		}
 		if err := qtx.PluginTagInsert(ctx, db.PluginTagInsertParams{
 			PluginID: pluginID,
 			TagID:    tagID,
 		}); err != nil {
-			return writeError(err, "attaching tag")
+			return s.writeError(ctx, err, "attaching tag")
 		}
 	}
 
@@ -500,7 +515,7 @@ func (s *Server) replaceAllowedOrganizations(ctx context.Context, qtx *db.Querie
 	if err := qtx.PluginAllowedOrgsDeleteByPluginID(ctx, db.PluginAllowedOrgsDeleteByPluginIDParams{
 		PluginID: pluginID,
 	}); err != nil {
-		return writeError(err, "clearing allowed organizations")
+		return s.writeError(ctx, err, "clearing allowed organizations")
 	}
 
 	for _, organizationID := range organizationIDs {
@@ -512,7 +527,7 @@ func (s *Server) replaceAllowedOrganizations(ctx context.Context, qtx *db.Querie
 				return connect.NewError(connect.CodeInvalidArgument,
 					fmt.Errorf("unknown organization %s", organizationID))
 			}
-			return writeError(err, "allowing organization")
+			return s.writeError(ctx, err, "allowing organization")
 		}
 	}
 
@@ -538,7 +553,7 @@ func (s *Server) replaceDocumentationLinks(ctx context.Context, qtx *db.Queries,
 		PluginID: pluginID,
 		KeptIds:  kept,
 	}); err != nil {
-		return writeError(err, "clearing documentation links")
+		return s.writeError(ctx, err, "clearing documentation links")
 	}
 
 	for position, link := range links {
@@ -550,7 +565,7 @@ func (s *Server) replaceDocumentationLinks(ctx context.Context, qtx *db.Queries,
 				Url:      link.GetUrl(),
 				Position: int32(position),
 			}); err != nil {
-				return writeError(err, "adding documentation link")
+				return s.writeError(ctx, err, "adding documentation link")
 			}
 			continue
 		}
@@ -564,7 +579,7 @@ func (s *Server) replaceDocumentationLinks(ctx context.Context, qtx *db.Queries,
 			Position: int32(position),
 		})
 		if err != nil {
-			return writeError(err, "updating documentation link")
+			return s.writeError(ctx, err, "updating documentation link")
 		}
 		// Scoped by plugin_id, so this also catches a link id belonging to
 		// another listing rather than letting it read as a silent no-op.
@@ -594,7 +609,7 @@ func (s *Server) replaceFeatures(ctx context.Context, qtx *db.Queries, pluginID 
 		PluginID: pluginID,
 		KeptIds:  kept,
 	}); err != nil {
-		return writeError(err, "clearing feature blocks")
+		return s.writeError(ctx, err, "clearing feature blocks")
 	}
 
 	for position, feature := range features {
@@ -605,7 +620,7 @@ func (s *Server) replaceFeatures(ctx context.Context, qtx *db.Queries, pluginID 
 				Body:     feature.GetBody(),
 				Position: int32(position),
 			}); err != nil {
-				return writeError(err, "adding feature block")
+				return s.writeError(ctx, err, "adding feature block")
 			}
 			continue
 		}
@@ -618,7 +633,7 @@ func (s *Server) replaceFeatures(ctx context.Context, qtx *db.Queries, pluginID 
 			Position: int32(position),
 		})
 		if err != nil {
-			return writeError(err, "updating feature block")
+			return s.writeError(ctx, err, "updating feature block")
 		}
 		if updated == 0 {
 			return connect.NewError(connect.CodeInvalidArgument,
@@ -676,17 +691,22 @@ func pluginLookupError(err error) error {
 }
 
 // writeError maps an RLS rejection to PERMISSION_DENIED. Reaching it means the
-// row passed the handler's own lookup but the policy refused the write.
-func writeError(err error, action string) error {
-	if isRLSDenied(err) {
+// row passed the handler's own lookup but the policy refused the write. The
+// same SQLSTATE also covers a missing table GRANT (which the regenerated 038
+// grants could lose), so the pg detail is logged before the response goes
+// opaque.
+func (s *Server) writeError(ctx context.Context, err error, action string) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.InsufficientPrivilege {
+		s.logger.WarnContext(ctx, "write refused with insufficient_privilege",
+			"action", action,
+			"message", pgErr.Message,
+			"table", pgErr.TableName,
+			"constraint", pgErr.ConstraintName,
+		)
 		return connect.NewError(connect.CodePermissionDenied, errors.New("permission denied"))
 	}
 	return connect.NewError(connect.CodeInternal, fmt.Errorf("%s: %w", action, err))
-}
-
-func isRLSDenied(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.InsufficientPrivilege
 }
 
 func isUniqueViolation(err error) bool {

@@ -6,11 +6,14 @@
 -- changed to select by version id from silently widening its scope.
 
 -- name: PluginVersionListByPluginID :many
+-- Selects the image column, not the manifest: the manifest is capped at 1 MiB
+-- per version, and nothing here needs more of it than the image written out of
+-- it at push time.
 SELECT
 	plugin_definitions.id,
 	plugin_definitions.plugin_id,
 	plugin_definitions.plugin_version,
-	plugin_definitions.manifest,
+	plugin_definitions.image,
 	plugin_definitions.hash,
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
@@ -28,7 +31,7 @@ SELECT
 	plugin_definitions.id,
 	plugin_definitions.plugin_id,
 	plugin_definitions.plugin_version,
-	plugin_definitions.manifest,
+	plugin_definitions.image,
 	plugin_definitions.hash,
 	plugin_definitions.status,
 	plugin_definitions.release_notes,
@@ -41,15 +44,16 @@ WHERE plugin_definitions.id = sqlc.arg('id')::uuid
   AND plugins.deleted IS NULL;
 
 -- name: PluginVersionCreate :one
--- Lands in DRAFT. The hash is computed by the server from the manifest bytes,
--- never supplied by the client.
+-- Lands in DRAFT. The hash and image are computed by the server from the
+-- manifest bytes, never supplied by the client.
 INSERT INTO appstore.plugin_definitions (
-	plugin_id, plugin_version, manifest, hash, release_notes, status
+	plugin_id, plugin_version, manifest, hash, image, release_notes, status
 ) VALUES (
 	sqlc.arg('plugin_id')::uuid,
 	sqlc.arg('plugin_version')::text,
 	sqlc.arg('manifest')::bytea,
 	sqlc.arg('hash')::text,
+	sqlc.arg('image')::text,
 	sqlc.arg('release_notes')::text,
 	'draft'
 )

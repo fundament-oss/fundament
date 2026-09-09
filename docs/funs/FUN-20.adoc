@@ -128,6 +128,8 @@ Most of `appstore` already fit: the listing fields, `visibility`, `status` and `
 
 Its policies gate *ownership only*, reaching the owning organization through `plugin_id`. Lifecycle filtering is the queries' job. This is not a simplification for its own sake: under `FOR ALL`, the `USING` predicate also gates updates, so a policy carrying `deleted IS NULL` makes a row stop satisfying its own policy at the moment a statement sets `deleted`, and soft delete becomes impossible. The policies stay a pure tenancy boundary.
 
+RLS is the tenancy boundary, not the whole authorization story. Every write RPC first checks OpenFGA — `can_create_plugin` on the organization for `CreatePlugin`, `can_edit`/`can_delete` on the plugin for everything else — so publishing stays an organization-admin action, matching what the model already said and what the superseded `PutPluginDefinition` enforced. The ownership tuples arrive through the `plugins_outbox` trigger and the authz worker (link:/funs/fun-15[FUN-15]), so the plugin-object checks retry briefly on denial: pushing a version right after creating the listing is the normal flow, and the tuple syncs asynchronously. Reads stay RLS-scoped only.
+
 `USING` and `WITH CHECK` are kept separate so an owner cannot reassign a plugin to another organization by updating `organization_id` — the same no-transfer rule `plugins_update_owner` already enforces.
 
 The policies reference in one direction only: definitions reach up to plugins, and plugins reach nothing. The catalog's policies are mutually referential and had to work around SQLSTATE 42P17; not repeating that is deliberate.
@@ -142,7 +144,7 @@ Only the parts that are decisions rather than mechanics.
 
 *Organization scoping fails closed.* The organization is pushed into a session GUC on connection acquire and reset on release, destroying the connection if the reset fails rather than returning a poisoned one to the pool. This is organization-api's mechanism, reused rather than reinvented. An unset GUC is not an error, because public and user-scoped endpoints share a pool; that is safe only because every policy compares against `authn.current_organization_id()`, and `NULL` never matches. Policies must never be written to grant on an absent GUC.
 
-*`NOT_FOUND` is the default denial.* Every RPC addresses rows by id and RLS scopes the role to the caller's organization, so an id the caller does not own resolves to nothing. `PERMISSION_DENIED` is reserved for the two denials the service can actually observe: a failed organization-membership check, and SQLSTATE 42501 from a policy refusing a write (link:/funs/fun-12[FUN-12]).
+*`NOT_FOUND` is the default denial.* Every RPC addresses rows by id and RLS scopes the role to the caller's organization, so an id the caller does not own resolves to nothing. `PERMISSION_DENIED` is reserved for the denials the service can actually observe: a failed organization-membership check, an OpenFGA refusal on a write, and SQLSTATE 42501 from a policy refusing a write (link:/funs/fun-12[FUN-12]). The OpenFGA check runs after the RLS-scoped lookup, so another organization's listing still reads as `NOT_FOUND` rather than confirming its existence.
 
 *A name containing `--` is rejected before the database sees it.* protovalidate's DNS-1123 rule permits it but `plugins_ck_name` does not, and a check violation surfacing as `INTERNAL` would be a worse answer than an accurate `INVALID_ARGUMENT`.
 

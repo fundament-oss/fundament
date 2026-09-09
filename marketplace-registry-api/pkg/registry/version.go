@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/db/gen"
@@ -83,6 +84,12 @@ func (s *Server) CreatePluginVersion(
 		return nil, pluginLookupError(err)
 	}
 
+	// With retry: pushing a version right after CreatePlugin is the normal CLI
+	// flow, and the ownership tuple syncs asynchronously.
+	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+		return nil, err
+	}
+
 	manifest, err := parseManifest(req.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -101,6 +108,7 @@ func (s *Server) CreatePluginVersion(
 		PluginVersion: version,
 		Manifest:      req.GetManifest(),
 		Hash:          manifest.hash,
+		Image:         manifest.image,
 		ReleaseNotes:  req.GetReleaseNotes(),
 	})
 	if err != nil {
@@ -108,7 +116,7 @@ func (s *Server) CreatePluginVersion(
 			return nil, connect.NewError(connect.CodeAlreadyExists,
 				fmt.Errorf("version %q already exists for this plugin", version))
 		}
-		return nil, writeError(err, "creating plugin version")
+		return nil, s.writeError(ctx, err, "creating plugin version")
 	}
 
 	return registryv1.CreatePluginVersionResponse_builder{
@@ -144,6 +152,10 @@ func (s *Server) SubmitPluginVersion(
 		return nil, versionLookupError(err)
 	}
 
+	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(row.PluginID)); err != nil {
+		return nil, err
+	}
+
 	// Already pending: return the current state rather than opening a second
 	// round, which submissions_uq_open would refuse anyway.
 	if row.Status == dbconst.PluginDefinitionStatus_Pending {
@@ -172,7 +184,7 @@ func (s *Server) SubmitPluginVersion(
 		ExpectedStatus: string(row.Status),
 	})
 	if err != nil {
-		return nil, writeError(err, "submitting plugin version")
+		return nil, s.writeError(ctx, err, "submitting plugin version")
 	}
 	if updated == 0 {
 		return nil, statusChangedError(row.Status)
@@ -187,7 +199,7 @@ func (s *Server) SubmitPluginVersion(
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.New("a submission is already open for this version"))
 		}
-		return nil, writeError(err, "opening submission")
+		return nil, s.writeError(ctx, err, "opening submission")
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -215,6 +227,10 @@ func (s *Server) WithdrawPluginVersion(
 		return nil, versionLookupError(err)
 	}
 
+	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(row.PluginID)); err != nil {
+		return nil, err
+	}
+
 	if row.Status != dbconst.PluginDefinitionStatus_Pending {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			fmt.Errorf("cannot withdraw a version in status %s", row.Status))
@@ -233,7 +249,7 @@ func (s *Server) WithdrawPluginVersion(
 		ExpectedStatus: string(dbconst.PluginDefinitionStatus_Pending),
 	})
 	if err != nil {
-		return nil, writeError(err, "withdrawing plugin version")
+		return nil, s.writeError(ctx, err, "withdrawing plugin version")
 	}
 	if updated == 0 {
 		return nil, statusChangedError(dbconst.PluginDefinitionStatus_Pending)
@@ -242,7 +258,7 @@ func (s *Server) WithdrawPluginVersion(
 		PluginDefinitionID: versionID,
 	})
 	if err != nil {
-		return nil, writeError(err, "closing submission")
+		return nil, s.writeError(ctx, err, "closing submission")
 	}
 	// The status write above only landed because the version was still PENDING,
 	// so a round must have been open. Zero rows means it closed underneath the
@@ -288,7 +304,7 @@ type registryVersionRow struct {
 	ID           uuid.UUID
 	PluginID     uuid.UUID
 	Version      string
-	Manifest     []byte
+	Image        string
 	Hash         string
 	Status       dbconst.PluginDefinitionStatus
 	ReleaseNotes string
@@ -299,7 +315,7 @@ type registryVersionRow struct {
 func versionRowFromGet(row *db.PluginVersionGetByIDRow) *registryVersionRow {
 	return &registryVersionRow{
 		ID: row.ID, PluginID: row.PluginID, Version: row.PluginVersion,
-		Manifest: row.Manifest, Hash: row.Hash, Status: row.Status,
+		Image: row.Image, Hash: row.Hash, Status: row.Status,
 		ReleaseNotes: row.ReleaseNotes, Created: row.Created, Published: row.Published,
 	}
 }
@@ -307,7 +323,7 @@ func versionRowFromGet(row *db.PluginVersionGetByIDRow) *registryVersionRow {
 func versionRowFromList(row *db.PluginVersionListByPluginIDRow) *registryVersionRow {
 	return &registryVersionRow{
 		ID: row.ID, PluginID: row.PluginID, Version: row.PluginVersion,
-		Manifest: row.Manifest, Hash: row.Hash, Status: row.Status,
+		Image: row.Image, Hash: row.Hash, Status: row.Status,
 		ReleaseNotes: row.ReleaseNotes, Created: row.Created, Published: row.Published,
 	}
 }
@@ -358,7 +374,7 @@ func versionFromRow(
 		Id:             row.ID.String(),
 		PluginId:       row.PluginID.String(),
 		Version:        row.Version,
-		Image:          imageFor(row.Manifest),
+		Image:          row.Image,
 		DefinitionHash: row.Hash,
 		ReleaseNotes:   row.ReleaseNotes,
 		Status:         statusFromDB(row.Status),

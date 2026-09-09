@@ -13,6 +13,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/registry"
@@ -27,8 +28,11 @@ type config struct {
 	JWTSecret  string     `env:"JWT_SECRET,required,notEmpty"`
 	// Served on /version so callers outside the cluster can tell which release
 	// is answering; the previous one keeps serving until Flux reconciles.
-	DeploymentVersion  string   `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
-	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS"`
+	DeploymentVersion string `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
+	// Required: this surface takes credentials, and an empty list would mean a
+	// wildcard origin, which browsers reject on credentialed requests.
+	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS,required,notEmpty"`
+	OpenFGA            authz.Config
 }
 
 func main() {
@@ -37,10 +41,11 @@ func main() {
 	}
 }
 
-// newHealthMux serves the probes. readyz reports the database because a pod
-// that cannot reach it can serve no RPC; livez deliberately does not, so a brief
-// database outage does not get the container killed and restarted.
-func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB) *http.ServeMux {
+// newHealthMux serves the probes. readyz reports the database and OpenFGA
+// because a pod that cannot reach either can serve no write RPC; livez
+// deliberately reports neither, so a brief outage does not get the container
+// killed and restarted.
+func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB, authzClient *authz.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -56,6 +61,16 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_, _ = w.Write([]byte("database unavailable"))
+				return
+			}
+		}
+		if authzClient != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			if err := authzClient.Healthy(ctx); err != nil {
+				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte("openfga unavailable"))
 				return
 			}
 		}
@@ -97,14 +112,21 @@ func run() error {
 	// Refuse to serve against a schema this build does not know about.
 	dbversion.MustAssertLatestVersion(ctx, logger, database.Pool)
 
+	// Every write RPC checks OpenFGA before RLS sees the statement, so the
+	// client is required, not optional.
+	authzClient, err := authz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("creating authz client: %w", err)
+	}
+
 	server := registry.New(logger, registry.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-	}, database)
+	}, database, authzClient)
 
 	// Health endpoints sit on an outer mux so they bypass CORS and every
 	// interceptor — a probe carries no JWT.
-	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database)
+	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database, authzClient)
 	outerMux.Handle("/", server.Handler())
 
 	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.

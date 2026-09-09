@@ -180,8 +180,8 @@ export type PluginVersion = Message<"registry.v1.PluginVersion"> & {
   version: string;
 
   /**
-   * Container image the plugin runs, read out of the manifest rather than
-   * stored alongside it — the pinned manifest is the source of truth.
+   * Container image the plugin runs, written out of the manifest at push time
+   * — the pinned manifest stays the source of truth.
    *
    * @generated from field: string image = 40;
    */

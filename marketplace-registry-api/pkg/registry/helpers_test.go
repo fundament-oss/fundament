@@ -97,7 +97,7 @@ func newClient(t *testing.T, env *testEnv, opts ...connect.ClientOption) registr
 	require.NoError(t, err)
 	t.Cleanup(database.Close)
 
-	server := registry.New(slog.Default(), registry.Config{JWTSecret: testJWTSecret}, database)
+	server := registry.New(slog.Default(), registry.Config{JWTSecret: testJWTSecret}, database, nil)
 
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(ts.Close)

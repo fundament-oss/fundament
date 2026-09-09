@@ -1129,6 +1129,7 @@ CREATE TABLE appstore.plugin_definitions (
 	plugin_version text NOT NULL,
 	manifest bytea NOT NULL,
 	hash text NOT NULL,
+	image text NOT NULL DEFAULT '',
 	status text NOT NULL DEFAULT 'draft',
 	published timestamptz,
 	release_notes text NOT NULL DEFAULT '',
@@ -1138,6 +1139,8 @@ CREATE TABLE appstore.plugin_definitions (
 	CONSTRAINT plugin_definitions_pk PRIMARY KEY (id),
 	CONSTRAINT plugin_definitions_ck_status CHECK (status IN ('draft', 'pending', 'changes_requested', 'approved', 'rejected', 'withdrawn'))
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.image IS E'Denormalized from the manifest at write time so lists never parse YAML; the pinned manifest stays the source of truth.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugin_definitions.published IS E'Null until the version is live. The public catalog''s entire visibility predicate.';
 -- ddl-end --

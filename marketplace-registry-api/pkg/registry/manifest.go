@@ -48,14 +48,3 @@ func (m parsedManifest) checkMatches(pluginName, requestedVersion string) error 
 
 	return nil
 }
-
-// imageFor reports the container image recorded in a stored manifest. A version
-// whose bytes no longer parse still lists, with an empty image, rather than
-// failing the whole call.
-func imageFor(manifest []byte) string {
-	definition, err := pluginruntime.ParseDefinition(manifest)
-	if err != nil {
-		return ""
-	}
-	return definition.Spec.Image
-}
