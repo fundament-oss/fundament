@@ -56,6 +56,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_marketplace_admin_api"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -1870,6 +1874,36 @@ END;]]> </definition>
 	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
+<policy name="plugins_select_admin" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_select_admin" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_update_admin" table="appstore.plugin_definitions" command="UPDATE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="submissions_select_admin" table="appstore.submissions" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="submissions_update_admin" table="appstore.submissions" command="UPDATE" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+	<expression type="check-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_tags_select_admin" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="categories_plugins_select_admin" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="plugin_allowed_organizations_select_api" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
@@ -1988,6 +2022,10 @@ END;]]> </definition>
 
 <policy name="organizations_select_catalog" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public')]]> </expression>
+</policy>
+
+<policy name="organizations_select_admin" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL)]]> </expression>
 </policy>
 
 <policy name="organization_limits_organization_policy" table="tenant.organization_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
@@ -5397,6 +5435,91 @@ END;]]> </definition>
 <permission>
 	<object name="appstore.categories" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore" type="schema"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_definitions" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="status" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="published" parent="appstore.plugin_definitions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="appstore.submissions" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="reviewer_user_id" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="reviewed" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="closed" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="rejection_reason" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="feedback" parent="appstore.submissions" type="column"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.tags" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins_tags" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories_plugins" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>
