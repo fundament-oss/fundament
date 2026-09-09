@@ -1,24 +1,22 @@
-{{- if $.Values.marketplaceFrontend.enabled }}
+{{- if $.Values.marketplaceAdminFrontend.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: marketplace-frontend-config
+  name: marketplace-admin-frontend-config
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
 data:
-  # The public storefront: the catalog audience only (FUN-20). The developer
-  # portal and the review backoffice are their own deployables over the same
-  # image (marketplace-registry-frontend.yaml, marketplace-admin-frontend.yaml),
-  # so this config carries no registry or admin API URL. developerUrl points
-  # the "Build a plugin" hand-off at the portal; empty hides those links.
+  # The review backoffice (FUN-20): the Fundament-reviewer audience only, one
+  # of three deployables over the marketplace-frontend image — this one built
+  # with BUILD_SCRIPT=build:admin and deployed on the restricted admin host,
+  # like the API it fronts.
   config.json: |
     {
-      "catalogApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
+      "catalogApiUrl": "",
       "registryApiUrl": "",
-      "adminApiUrl": "",
-      "consoleUrl": "{{ $.Values.externalUrls.console }}",
-      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
+      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}",
+      "storefrontUrl": "{{ $.Values.externalUrls.marketplace }}"
     }
 
 {{- /*
@@ -28,9 +26,9 @@ data:
 */}}
 {{- $allowedHosts := list }}
 {{- if $.Values.ingress.enabled }}
-{{- $allowedHosts = append $allowedHosts (printf "marketplace.%s%s" (include "fundament.ingress.infix" .) $.Values.ingress.domain) }}
+{{- $allowedHosts = append $allowedHosts (printf "marketplace-admin.%s%s" (include "fundament.ingress.infix" .) $.Values.ingress.domain) }}
 {{- end }}
-{{- range $.Values.marketplaceFrontend.httproute.hostnames }}
+{{- range $.Values.marketplaceAdminFrontend.httproute.hostnames }}
 {{- $allowedHosts = append $allowedHosts . }}
 {{- end }}
 
@@ -38,34 +36,34 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: marketplace-frontend
+  name: marketplace-admin-frontend
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
 spec:
-  replicas: {{ $.Values.marketplaceFrontend.replicas }}
+  replicas: {{ $.Values.marketplaceAdminFrontend.replicas }}
   selector:
     matchLabels:
-      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 6 }}
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-admin-frontend") | nindent 6 }}
   template:
     metadata:
       annotations:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-        checksum/config: {{ printf "%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry | sha256sum }}
+                checksum/config: {{ printf "%s|%s" $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.marketplace | sha256sum }}
       labels:
-        {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
+        {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 8 }}
     spec:
       containers:
-        - name: marketplace-frontend
-          image: {{ $.Values.images.marketplaceFrontend }}
+        - name: marketplace-admin-frontend
+          image: {{ $.Values.images.marketplaceAdminFrontend }}
           env:
             # Substituted into the CSP connect-src directive by the server
             # (see marketplace-frontend/src/server.ts). These are the origins the
             # browser calls; a server render uses the internal URLs below. Unset
             # URLs collapse to extra whitespace, leaving connect-src 'self'.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }}"
+              value: "{{ $.Values.externalUrls.marketplaceAdminApi }}"
             {{- if $allowedHosts }}
             - name: NG_ALLOWED_HOSTS
               value: "{{ join "," $allowedHosts }}"
@@ -73,8 +71,8 @@ spec:
             # Base URLs the renderer uses for its own calls. Without these it
             # would reach the APIs by their public hostname, leaving the cluster
             # and coming back in through the gateway for every page it renders.
-            {{- with $.Values.marketplaceFrontend.internalApiUrls.catalog }}
-            - name: CATALOG_API_INTERNAL_URL
+            {{- with $.Values.marketplaceAdminFrontend.internalApiUrls.admin }}
+            - name: ADMIN_API_INTERNAL_URL
               value: "{{ . }}"
             {{- end }}
           ports:
@@ -108,15 +106,15 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: marketplace-frontend-config
+            name: marketplace-admin-frontend-config
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: marketplace-frontend
+  name: marketplace-admin-frontend
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -124,16 +122,16 @@ spec:
       targetPort: http
       name: http
   selector:
-    {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-frontend") | nindent 4 }}
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-admin-frontend") | nindent 4 }}
 
 {{- if $.Values.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: marketplace-frontend
+  name: marketplace-admin-frontend
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
   {{- if $.Values.ingress.tls.clusterIssuer }}
   annotations:
     cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
@@ -143,18 +141,18 @@ spec:
   {{- if $.Values.ingress.tls.clusterIssuer }}
   tls:
     - hosts:
-        - marketplace.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: marketplace-frontend-tls
+        - marketplace-admin.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: marketplace-admin-frontend-tls
   {{- end }}
   rules:
-    - host: marketplace.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+    - host: marketplace-admin.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: marketplace-frontend
+                name: marketplace-admin-frontend
                 port:
                   name: http
 {{- end }}

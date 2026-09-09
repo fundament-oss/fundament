@@ -16,8 +16,12 @@ RUN bun install --frozen-lockfile
 # Copy source files
 COPY marketplace-frontend/ .
 
-# Build the application: a browser bundle plus the Node server that renders it
-RUN bun run build
+# Build the application: a browser bundle plus the Node server that renders it.
+# BUILD_SCRIPT selects the audience (FUN-20): build (storefront, the default),
+# build:registry (developer portal) or build:admin (review backoffice) — one
+# source, three deployables, same trick as console-demo-frontend.
+ARG BUILD_SCRIPT=build
+RUN bun run "$BUILD_SCRIPT"
 
 # Production stage
 # The storefront is server-rendered, so this ships as a Node server rather than

@@ -132,6 +132,16 @@ jobs:
           - image-name: marketplace-admin-api
             dockerfile: marketplace-admin-api/Dockerfile
             context: "."
+          # Same image source as marketplace-frontend, built for the developer
+          # and reviewer audiences (FUN-20), like console-demo-frontend.
+          - image-name: marketplace-registry-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:registry
+          - image-name: marketplace-admin-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:admin
     permissions:
       contents: read
       packages: write
@@ -360,6 +370,8 @@ jobs:
             | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Registry API | https://marketplace-registry-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`

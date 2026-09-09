@@ -38,9 +38,9 @@ export interface PluginSubmission {
   status: SubmissionStatus;
   // Set once a decision is made.
   reviewedAt?: string; // ISO date
-  // Raw reviewer_user_id. Which store marketplace reviewers authenticate
-  // against is undecided (FUN-20), so this cannot be resolved to a person and
-  // is not even in the same namespace as submitterUserId.
+  // Raw reviewer_user_id: a dcim.users id — reviewers authenticate against
+  // the staff IDP (FUN-20). Nothing resolves staff ids to a person yet, and it
+  // is not in the same namespace as submitterUserId.
   reviewedBy?: string;
   // Present only when status === 'rejected'.
   rejectionReason?: RejectionReasonValue;

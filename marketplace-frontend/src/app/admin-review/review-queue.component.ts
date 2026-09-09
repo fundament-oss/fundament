@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 import { PluginIconComponent } from '../icons';
 import AdminReviewService, { type PluginSubmission } from './admin-review.service';
 import { type SubmissionStatus, statusLabel, statusBadgeClass } from '../status/submission-status';
@@ -42,6 +43,9 @@ const SUMMARY_STATUSES: { status: SubmissionStatus; dotColorVar: string }[] = [
 })
 export default class ReviewQueueComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  // The storefront is its own deployable (FUN-20); empty hides the link.
+  protected storefrontUrl = inject(ConfigService).getConfig().storefrontUrl ?? '';
 
   private service = inject(AdminReviewService);
 

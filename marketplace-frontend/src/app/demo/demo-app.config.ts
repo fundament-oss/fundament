@@ -10,7 +10,12 @@ import {
   withInMemoryScrolling,
   withHashLocation,
 } from '@angular/router';
-import routes from '../app.routes';
+// Both route tables export default `routes`; importing two of them into one
+// file forces the renames.
+// eslint-disable-next-line import-x/no-rename-default
+import catalogRoutes from '../app.routes';
+// eslint-disable-next-line import-x/no-rename-default
+import registryRoutes from '../app.routes.registry';
 import { ConfigService, CONFIG_LOADER, AppConfiguration } from '../config.service';
 import { CATALOG_TRANSPORT, REGISTRY_TRANSPORT } from '../../connect/tokens';
 import { createDemoCatalogTransport, createDemoRegistryTransport } from './mock-transport';
@@ -44,14 +49,18 @@ const demoConfig: AppConfiguration = {
   consoleUrl: `${window.location.origin}/?present=0`,
 };
 
-// The backoffice is not part of the walkthrough and has no in-memory transport,
-// so its routes are dropped rather than left to build the real one: opening
-// /admin in the demo would call demo://admin for real, which `connect-src
-// 'self'` blocks — a console error and a dead screen. The wildcard route sends
-// those paths back to the storefront. Stubbing ReviewService here instead would
-// make the routes work again, and is the change to make if the deck ever shows
-// a reviewer's queue.
-const demoRoutes = routes.filter((route) => !route.path?.startsWith('admin'));
+// The walkthrough spans the storefront and the developer flow, which the
+// split builds ship separately (FUN-20): the union is reassembled here. The
+// backoffice stays out — it has no in-memory transport, so its routes would
+// build the real one and call demo://admin for real, which `connect-src
+// 'self'` blocks. Stubbing ReviewService is the change to make if the deck
+// ever shows a reviewer's queue. The catalog wildcard comes last so unknown
+// paths still land on the storefront.
+const demoRoutes = [
+  ...catalogRoutes.filter((route) => route.path !== '**'),
+  ...registryRoutes.filter((route) => route.path?.startsWith('manage')),
+  ...catalogRoutes.filter((route) => route.path === '**'),
+];
 
 // Written out rather than spread over `appConfig`: the demo needs a different
 // router (hash location, see below) and no hydration, which leaves almost

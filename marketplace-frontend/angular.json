@@ -33,7 +33,12 @@
             ],
             "styles": ["src/styles.css"],
             "security": {
-              "allowedHosts": ["marketplace.fundament.localhost", "localhost"]
+              "allowedHosts": [
+                "marketplace.fundament.localhost",
+                "marketplace-registry.fundament.localhost",
+                "marketplace-admin.fundament.localhost",
+                "localhost"
+              ]
             }
           },
           "configurations": {
@@ -82,6 +87,38 @@
                   "maximumError": "60kB"
                 }
               ]
+            },
+            "registry": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/app.routes.ts",
+                  "with": "src/app/app.routes.registry.ts"
+                },
+                {
+                  "replace": "src/app/app.routes.server.ts",
+                  "with": "src/app/app.routes.server.registry.ts"
+                },
+                {
+                  "replace": "src/app/variant.ts",
+                  "with": "src/app/variant.registry.ts"
+                }
+              ]
+            },
+            "admin": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/app.routes.ts",
+                  "with": "src/app/app.routes.admin.ts"
+                },
+                {
+                  "replace": "src/app/app.routes.server.ts",
+                  "with": "src/app/app.routes.server.admin.ts"
+                },
+                {
+                  "replace": "src/app/variant.ts",
+                  "with": "src/app/variant.admin.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -89,7 +126,11 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "allowedHosts": ["marketplace.fundament.localhost"]
+            "allowedHosts": [
+              "marketplace.fundament.localhost",
+              "marketplace-registry.fundament.localhost",
+              "marketplace-admin.fundament.localhost"
+            ]
           },
           "configurations": {
             "production": {
@@ -97,6 +138,12 @@
             },
             "development": {
               "buildTarget": "fundament-marketplace:build:development"
+            },
+            "registry": {
+              "buildTarget": "fundament-marketplace:build:development,registry"
+            },
+            "admin": {
+              "buildTarget": "fundament-marketplace:build:development,admin"
             }
           },
           "defaultConfiguration": "development"

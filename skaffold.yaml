@@ -114,6 +114,25 @@ build:
       docker:
         dockerfile: marketplace-admin-api/Dockerfile
 
+    # The storefront image built for the other two audiences (FUN-20). The
+    # hotreload profile swaps the dockerfile by index; START_SCRIPT is consumed
+    # by the hotreload image and ignored (unconsumed ARG) by the production one.
+    - image: marketplace-registry-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+        buildArgs:
+          BUILD_SCRIPT: build:registry
+          START_SCRIPT: start:registry
+
+    - image: marketplace-admin-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+        buildArgs:
+          BUILD_SCRIPT: build:admin
+          START_SCRIPT: start:admin
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -144,6 +163,8 @@ deploy:
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
           images.marketplaceRegistryApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_api}}"
           images.marketplaceAdminApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_api}}"
+          images.marketplaceRegistryFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_frontend}}"
+          images.marketplaceAdminFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_frontend}}"
 
 profiles:
   - name: env-local
@@ -291,6 +312,18 @@ profiles:
         value: marketplace-admin-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/17/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/18/docker/dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/18/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/19/docker/dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/19/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

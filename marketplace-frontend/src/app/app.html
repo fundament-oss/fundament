@@ -4,29 +4,77 @@
     <a routerLink="/" class="flex shrink-0 items-center gap-2">
       <app-fundament-logo-icon class="text-accent-600 h-6 w-6" />
       <span class="text-lg font-semibold">
-        Fundament <span class="text-accent-600">Marketplace</span>
+        Fundament
+        @switch (variant) {
+          @case ('registry') {
+            <span class="text-accent-600">Developer Portal</span>
+          }
+          @case ('admin') {
+            <span class="text-accent-600">Review Backoffice</span>
+          }
+          @default {
+            <span class="text-accent-600">Marketplace</span>
+          }
+        }
       </span>
     </a>
 
-    <!-- Search -->
-    <form
-      class="ml-2 hidden max-w-md flex-1 sm:block"
-      (submit)="submitSearch(); $event.preventDefault()"
-    >
-      <nldd-search-field
-        placeholder="Search plugins"
-        [value]="searchQuery()"
-        (input)="onSearchInput($event)"
-      ></nldd-search-field>
-    </form>
+    @if (variant === 'catalog') {
+      <!-- Search -->
+      <form
+        class="ml-2 hidden max-w-md flex-1 sm:block"
+        (submit)="submitSearch(); $event.preventDefault()"
+      >
+        <nldd-search-field
+          placeholder="Search plugins"
+          [value]="searchQuery()"
+          (input)="onSearchInput($event)"
+        ></nldd-search-field>
+      </form>
+    }
 
     <nav class="ml-auto flex items-center gap-2" aria-label="Primary">
-      <nldd-button
-        routerLink="/manage/create"
-        text="Build a plugin"
-        variant="neutral-base"
-      ></nldd-button>
-      <nldd-button routerLink="/manage" text="Sign in" variant="neutral-tinted"></nldd-button>
+      @if (variant === 'catalog') {
+        <!-- href in the split deployment, routerLink when no portal URL is
+             configured — the demo bundle carries the manage routes itself. -->
+        @if (developerUrl) {
+          <a [href]="developerUrl + '/manage/create'">
+            <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
+          </a>
+          <a [href]="developerUrl + '/manage'">
+            <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
+          </a>
+        } @else {
+          <nldd-button
+            routerLink="/manage/create"
+            text="Build a plugin"
+            variant="neutral-base"
+          ></nldd-button>
+          <nldd-button routerLink="/manage" text="Sign in" variant="neutral-tinted"></nldd-button>
+        }
+      }
+      @if (variant === 'registry' && organizationContext.organizationIds().length > 1) {
+        <!-- Which organization the portal publishes for; ids until a lookup
+             can resolve names (FUN-20). -->
+        <!-- [selected] on the options, not [value] on the select: the select's
+             value binding evaluates before @for has rendered the options. -->
+        <select
+          class="border-dividers bg-surface-base rounded-md border px-2 py-1.5 font-mono text-sm"
+          aria-label="Active organization"
+          (change)="onOrganizationChange($event)"
+        >
+          @for (id of organizationContext.organizationIds(); track id) {
+            <option [value]="id" [selected]="id === organizationContext.organizationId()">
+              {{ id.slice(0, 8) }}…
+            </option>
+          }
+        </select>
+      }
+      @if (variant !== 'catalog' && storefrontUrl) {
+        <a [href]="storefrontUrl">
+          <nldd-button text="Browse the marketplace" variant="neutral-tinted"></nldd-button>
+        </a>
+      }
       <nldd-icon-button
         [icon]="isDarkMode() ? 'sun' : 'moon'"
         [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -49,7 +97,13 @@
     class="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-base text-gray-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 dark:text-gray-400"
   >
     <p>Fundament Marketplace — Plugins that integrate with your clusters.</p>
-    <a routerLink="/manage/create" class="link">Build a plugin</a>
+    @if (variant === 'catalog') {
+      @if (developerUrl) {
+        <a [href]="developerUrl + '/manage/create'" class="link">Build a plugin</a>
+      } @else {
+        <a routerLink="/manage/create" class="link">Build a plugin</a>
+      }
+    }
   </div>
 </footer>
 

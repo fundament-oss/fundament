@@ -1,4 +1,4 @@
-import { InjectionToken, REQUEST, inject } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
 import { Transport } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { DescService } from '@bufbuild/protobuf';
@@ -8,6 +8,8 @@ import { ConfigService } from '../app/config.service';
 import { CatalogService } from '../generated/catalog/v1/catalog_pb';
 import { PublicationService } from '../generated/registry/v1/publication_pb';
 import { ReviewService } from '../generated/admin/v1/review_pb';
+import OrganizationContextService from '../app/organization-context.service';
+import { credentialedFetch } from './credentialed-fetch';
 
 // One transport per deployable (FUN-20): the storefront, the developer's
 // publishing API and the backoffice are three services behind three hosts.
@@ -21,26 +23,19 @@ export const CATALOG_TRANSPORT = new InjectionToken<Transport>('catalog-transpor
     createConnectTransport({ baseUrl: inject(ConfigService).getConfig().catalogApiUrl }),
 });
 
-// The two authenticated APIs are called with the visitor's session. In the
-// browser that means asking fetch to send cookies cross-origin; during a server
-// render there is no cookie jar and `credentials: 'include'` does nothing, so
-// the visitor's Cookie header is forwarded from the incoming request instead.
-// Must be called in an injection context.
-function credentialedFetch(): typeof fetch {
-  const request = inject(REQUEST, { optional: true });
+// Every registry.v1 RPC is organization-scoped through the Fun-Organization
+// header (FUN-6). The active organization is resolved lazily from the
+// session's membership list, so the first RPC waits for it.
+function registryFetch(): typeof fetch {
+  const base = credentialedFetch();
+  const organizationContext = inject(OrganizationContextService);
 
-  if (!request) {
-    return (input, init) => fetch(input, { ...init, credentials: 'include' });
-  }
-
-  const cookie = request.headers.get('cookie');
-
-  return (input, init) => {
+  return async (input, init) => {
+    const organizationId = await organizationContext.ensureOrganizationId();
+    if (!organizationId) return base(input, init);
     const headers = new Headers(init?.headers);
-    if (cookie) {
-      headers.set('cookie', cookie);
-    }
-    return fetch(input, { ...init, headers });
+    headers.set('Fun-Organization', organizationId);
+    return base(input, { ...init, headers });
   };
 }
 
@@ -49,7 +44,7 @@ export const REGISTRY_TRANSPORT = new InjectionToken<Transport>('registry-transp
   factory: () =>
     createConnectTransport({
       baseUrl: inject(ConfigService).getConfig().registryApiUrl,
-      fetch: credentialedFetch(),
+      fetch: registryFetch(),
     }),
 });
 

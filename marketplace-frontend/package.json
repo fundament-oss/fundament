@@ -4,7 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:registry": "ng serve --configuration registry",
+    "start:admin": "ng serve --configuration admin",
     "build": "ng build",
+    "build:registry": "ng build --configuration production,registry",
+    "build:admin": "ng build --configuration production,admin",
     "build:demo": "ng build --configuration production,demo --base-href /marketplace/",
     "serve:ssr": "node dist/fundament-marketplace/server/server.mjs",
     "watch": "ng build --watch --configuration development",

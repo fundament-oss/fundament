@@ -13,8 +13,11 @@ import (
 
 // Config holds the Fundament CLI configuration.
 type Config struct {
-	APIEndpoint  string `yaml:"api_endpoint"`
-	AuthnURL     string `yaml:"authn_url"`
+	APIEndpoint string `yaml:"api_endpoint"`
+	AuthnURL    string `yaml:"authn_url"`
+	// Base URL of marketplace-registry-api, the plugin publishing surface
+	// (FUN-20). Empty means publishing commands refuse to run.
+	RegistryURL  string `yaml:"registry_url,omitempty"`
 	Output       string `yaml:"output"`
 	Organization string `yaml:"organization,omitempty"`
 }
@@ -37,6 +40,7 @@ func DefaultConfig() *Config {
 const (
 	EnvAPIEndpoint = "FUNCTL_API_ENDPOINT"
 	EnvAuthnURL    = "FUNCTL_AUTHN_URL"
+	EnvRegistryURL = "FUNCTL_REGISTRY_URL"
 )
 
 // applyEnvOverrides overrides endpoint settings from the environment.
@@ -49,6 +53,9 @@ func applyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv(EnvAuthnURL); v != "" {
 		cfg.AuthnURL = v
+	}
+	if v := os.Getenv(EnvRegistryURL); v != "" {
+		cfg.RegistryURL = v
 	}
 }
 
