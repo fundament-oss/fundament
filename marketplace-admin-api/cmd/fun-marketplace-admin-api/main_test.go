@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +15,7 @@ import (
 // Deployment never goes ready, so they are worth pinning even while the mux
 // serves nothing else.
 func TestHealthMuxServesProbes(t *testing.T) {
-	server := httptest.NewServer(newHealthMux("v1.2.3"))
+	server := httptest.NewServer(newHealthMux(slog.New(slog.DiscardHandler), "v1.2.3", nil))
 	t.Cleanup(server.Close)
 
 	for _, path := range []string{"/livez", "/readyz"} {
@@ -31,7 +32,7 @@ func TestHealthMuxServesProbes(t *testing.T) {
 // /version is how CI tells which release is answering, so it must echo
 // DEPLOYMENT_VERSION verbatim rather than a build-time constant.
 func TestHealthMuxVersionEchoesDeploymentVersion(t *testing.T) {
-	server := httptest.NewServer(newHealthMux("v1.2.3"))
+	server := httptest.NewServer(newHealthMux(slog.New(slog.DiscardHandler), "v1.2.3", nil))
 	t.Cleanup(server.Close)
 
 	resp, err := server.Client().Get(server.URL + "/version")
