@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	storagev1 "k8s.io/api/storage/v1"
@@ -14,10 +13,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
@@ -101,8 +101,13 @@ func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 		For(r.newObject()).
 		Owns(&storagev1.StorageClass{}).
 		Owns(rookStub(r.rookKind)).
+		// No predicate on Disk: its changes arrive via the status subresource,
+		// which a generation filter would drop. StoragePool matters only through
+		// spec.disks, and the predicate keeps every pool status write from
+		// re-enqueueing every consumer.
 		Watches(&v1alpha1.Disk{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers)).
-		Watches(&v1alpha1.StoragePool{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers)).
+		Watches(&v1alpha1.StoragePool{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// Owns only sees objects carrying our ownerRef. These watches cover
 		// foreign same-named objects, whose removal is notOursError's
 		// documented recovery and would otherwise produce no event.
@@ -239,65 +244,22 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-// writeStatus persists status via the status subresource, refetching first so a
-// stale resourceVersion from earlier in the reconcile doesn't cause a conflict.
-//
-// ready is upserted as the consumer's Ready condition. Conditions and
-// observedGeneration are taken from the refetched object rather than from the
-// caller's status value: the caller builds the observable fields, this decides
-// what generation they describe.
-func (r *ConsumerReconciler[T]) writeStatus(ctx context.Context, obj T, status *v1alpha1.ConsumerStatus, ready *metav1.Condition) error {
-	current := r.newObject()
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: obj.GetName()}, current); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil // deleted mid-reconcile; nothing to record
-		}
-		return fmt.Errorf("get %s %s for status update: %w", r.kind, obj.GetName(), err)
+// statusWriter builds the shared writer (see status.go) for this consumer kind.
+func (r *ConsumerReconciler[T]) statusWriter() statusWriter[T, v1alpha1.ConsumerStatus, *v1alpha1.ConsumerStatus] {
+	return statusWriter[T, v1alpha1.ConsumerStatus, *v1alpha1.ConsumerStatus]{
+		client:    r.Client,
+		kind:      r.kind,
+		newObject: r.newObject,
+		statusOf:  func(o T) *v1alpha1.ConsumerStatus { return o.ConsumerStatus() },
 	}
-
-	status.ObservedGeneration = current.GetGeneration()
-	// Carry the existing conditions so SetStatusCondition can preserve
-	// lastTransitionTime for a condition whose status has not flipped. Cloned,
-	// not aliased: SetStatusCondition mutates the existing element through a
-	// pointer into the backing array, so sharing it with current would mutate
-	// both sides and the DeepEqual below could never see a condition change.
-	status.Conditions = slices.Clone(current.ConsumerStatus().Conditions)
-	ready.Type = v1alpha1.ConditionReady
-	ready.ObservedGeneration = current.GetGeneration()
-	meta.SetStatusCondition(&status.Conditions, *ready)
-
-	// Every Disk event in the cluster fans out to a reconcile of every
-	// consumer, and the status is identical almost every time. The API server
-	// would no-op the write, but not before it has been serialised and sent.
-	// Compared semantically rather than with ==, which stopped compiling once
-	// Conditions was added and would silently compare slice headers if it ever
-	// did.
-	if equality.Semantic.DeepEqual(*current.ConsumerStatus(), *status) {
-		return nil
-	}
-	*current.ConsumerStatus() = *status
-	if err := r.Client.Status().Update(ctx, current); err != nil {
-		return fmt.Errorf("update %s status %s: %w", r.kind, obj.GetName(), err)
-	}
-	return nil
 }
 
-// setDegraded records a reconcile failure on the consumer. Status write
-// failures are logged rather than returned: the caller is already returning
-// the real error, and masking it with a status-write error would hide the
-// cause.
+func (r *ConsumerReconciler[T]) writeStatus(ctx context.Context, obj T, status *v1alpha1.ConsumerStatus, ready *metav1.Condition) error {
+	return r.statusWriter().write(ctx, obj.GetName(), status, ready)
+}
+
 func (r *ConsumerReconciler[T]) setDegraded(ctx context.Context, obj T, cause error) {
-	status := *obj.ConsumerStatus()
-	status.Phase = v1alpha1.PhaseDegraded
-	status.Message = cause.Error()
-	ready := metav1.Condition{
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ReasonReconcileError,
-		Message: cause.Error(),
-	}
-	if err := r.writeStatus(ctx, obj, &status, &ready); err != nil {
-		log.FromContext(ctx).Error(err, "could not record degraded status", "kind", r.kind, "name", obj.GetName())
-	}
+	r.statusWriter().setDegraded(ctx, obj, cause)
 }
 
 // rookStub is an empty Rook object carrying only its GVK, which is all Owns
@@ -318,8 +280,7 @@ func rookStub(kind string) *unstructured.Unstructured {
 // reads the phase without a second Get. An identical object is not rewritten,
 // for the same fan-out reason as writeStatus.
 func applyOwnedRookObject(ctx context.Context, c client.Client, owner client.Object, ownerKind string, desired *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	ownerRef := controllerRef(owner, ownerKind)
-	desired.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+	desired.SetOwnerReferences([]metav1.OwnerReference{controllerRef(owner, ownerKind)})
 	kind := desired.GetKind()
 
 	existing := rookStub(kind)
@@ -334,26 +295,18 @@ func applyOwnedRookObject(ctx context.Context, c client.Client, owner client.Obj
 		return nil, fmt.Errorf("get %s: %w", kind, err)
 	}
 
-	owned := false
-	for _, ref := range existing.GetOwnerReferences() {
-		if ref.Controller != nil && *ref.Controller &&
-			ref.Kind == ownerRef.Kind && ref.Name == ownerRef.Name && ref.UID == ownerRef.UID {
-			owned = true
-			break
-		}
-	}
-	if !owned {
+	if !ownedBy(existing.GetOwnerReferences(), ownerKind, owner) {
 		return nil, notOursError(ownerKind, kind, desired.GetName())
 	}
 
-	if equality.Semantic.DeepEqual(existing.Object["spec"], desired.Object["spec"]) &&
-		equality.Semantic.DeepEqual(existing.GetOwnerReferences(), desired.GetOwnerReferences()) {
+	if equality.Semantic.DeepEqual(existing.Object["spec"], desired.Object["spec"]) {
 		return existing, nil
 	}
 
-	// Update spec and owner refs while preserving the existing resource version.
+	// Update only spec, keeping the existing owner references: ownedBy proved
+	// our controller ref is present, and assigning desired's list wholesale
+	// would drop a foreign non-controller ref (see applyOwnedStorageClass).
 	existing.Object["spec"] = desired.Object["spec"]
-	existing.SetOwnerReferences(desired.GetOwnerReferences())
 	if err := c.Update(ctx, existing); err != nil {
 		return nil, fmt.Errorf("update %s: %w", kind, err)
 	}

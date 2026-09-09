@@ -3,20 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
@@ -40,13 +39,18 @@ type StoragePoolReconciler struct {
 func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.StoragePool{}).
+		// No predicate: Disk changes arrive via the status subresource, which a
+		// generation filter would drop.
 		Watches(
 			&v1alpha1.Disk{},
 			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
 		).
+		// Only spec changes matter here; without the predicate Rook's ~1/min
+		// status heartbeat would fan out to a reconcile of every pool.
 		Watches(
 			rookStub("CephCluster"),
 			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r); err != nil {
 		return fmt.Errorf("register StoragePool controller: %w", err)
@@ -148,7 +152,9 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 	if !clusterExists {
 		status := pool.Status
 		status.Phase = v1alpha1.PhaseDegraded
-		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
+		// Selection succeeded, so selectedDiskCount reports it. RawCapacityBytes
+		// stays 0: it counts contributed disks, and nothing was recorded.
+		status.SelectedDiskCount, status.RawCapacityBytes = len(selected), 0
 		status.Message = fmt.Sprintf("CephCluster %s/%s not found: disks are contributed once it exists", r.ClusterNamespace, cephClusterName)
 		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
@@ -191,63 +197,22 @@ func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
 	return "no usable disks"
 }
 
-// writeStatus persists status via the status subresource, refetching first so a
-// stale resourceVersion from earlier in the reconcile doesn't cause a conflict.
-//
-// ready is upserted as the pool's Ready condition. Conditions and
-// observedGeneration are taken from the refetched object rather than from the
-// caller's status value: the caller builds the observable fields, this decides
-// what generation they describe.
-func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status *v1alpha1.StoragePoolStatus, ready *metav1.Condition) error {
-	var current v1alpha1.StoragePool
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: pool.Name}, &current); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil // deleted mid-reconcile; nothing to record
-		}
-		return fmt.Errorf("get StoragePool %s for status update: %w", pool.Name, err)
+// statusWriter builds the shared writer (see status.go) for StoragePool.
+func (r *StoragePoolReconciler) statusWriter() statusWriter[*v1alpha1.StoragePool, v1alpha1.StoragePoolStatus, *v1alpha1.StoragePoolStatus] {
+	return statusWriter[*v1alpha1.StoragePool, v1alpha1.StoragePoolStatus, *v1alpha1.StoragePoolStatus]{
+		client:    r.Client,
+		kind:      "StoragePool",
+		newObject: func() *v1alpha1.StoragePool { return &v1alpha1.StoragePool{} },
+		statusOf:  func(p *v1alpha1.StoragePool) *v1alpha1.StoragePoolStatus { return &p.Status },
 	}
-
-	status.ObservedGeneration = current.Generation
-	// Carry the existing conditions so SetStatusCondition can preserve
-	// lastTransitionTime for a condition whose status has not flipped. Cloned,
-	// not aliased: SetStatusCondition mutates the existing element through a
-	// pointer into the backing array, so sharing it with current would mutate
-	// both sides and the DeepEqual below could never see a condition change.
-	status.Conditions = slices.Clone(current.Status.Conditions)
-	ready.Type = v1alpha1.ConditionReady
-	ready.ObservedGeneration = current.Generation
-	meta.SetStatusCondition(&status.Conditions, *ready)
-
-	// Every Disk event in the cluster fans out to a reconcile of every pool, and
-	// the status is identical almost every time. The API server would no-op the
-	// write, but not before it has been serialised and sent. Compared semantically
-	// rather than with ==, which stopped compiling once Conditions was added and
-	// would silently compare slice headers if it ever did.
-	if equality.Semantic.DeepEqual(current.Status, *status) {
-		return nil
-	}
-	current.Status = *status
-	if err := r.Client.Status().Update(ctx, &current); err != nil {
-		return fmt.Errorf("update StoragePool status %s: %w", pool.Name, err)
-	}
-	return nil
 }
 
-// setDegraded records a reconcile failure on the pool. Status write failures are
-// logged rather than returned: the caller is already returning the real error,
-// and masking it with a status-write error would hide the cause.
+func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status *v1alpha1.StoragePoolStatus, ready *metav1.Condition) error {
+	return r.statusWriter().write(ctx, pool.Name, status, ready)
+}
+
 func (r *StoragePoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.StoragePool, cause error) {
-	status := pool.Status
-	status.Phase = v1alpha1.PhaseDegraded
-	status.Message = cause.Error()
-	ready := metav1.Condition{
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ReasonReconcileError,
-		Message: cause.Error(),
-	}
-	if err := r.writeStatus(ctx, pool, &status, &ready); err != nil {
-		log.FromContext(ctx).Error(err, "could not record degraded status", "storagePool", pool.Name)
-	}
+	r.statusWriter().setDegraded(ctx, pool, cause)
 }
 
 // resolveDisks fetches DiskStatus for each disk this pool selects, and returns

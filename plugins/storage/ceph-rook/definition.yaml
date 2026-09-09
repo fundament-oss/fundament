@@ -120,7 +120,7 @@ spec:
       - crd: storagepools.storage.fundament.io
         list: true
         detail: true
-        icon: archive-box
+        icon: file-box
       - crd: blockstorages.storage.fundament.io
         list: true
         detail: true

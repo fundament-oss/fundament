@@ -20,6 +20,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
@@ -167,6 +168,9 @@ func TestReconcileDegradedWithoutCephCluster(t *testing.T) {
 	pool := getPool(t, c, "pool")
 	assert.Equal(t, v1alpha1.PhaseDegraded, pool.Status.Phase)
 	assert.Contains(t, pool.Status.Message, "CephCluster")
+	assert.Equal(t, 1, pool.Status.SelectedDiskCount,
+		"selection resolved; only the contribution is pending")
+	assert.Zero(t, pool.Status.RawCapacityBytes, "nothing was contributed yet")
 	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
@@ -540,6 +544,19 @@ func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
 }
 
 func firstErr(_ ctrl.Result, err error) error { return err }
+
+// Owns() and Watches() resolve a watched type's GVK through apiutil at builder
+// time, which is the one thing about an unstructured stub that can fail — and
+// it would fail at manager start, not here, so it is worth pinning for every
+// kind the controllers register.
+func TestRookStubsResolveGVK(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem"} {
+		gvk, err := apiutil.GVKForObject(rookStub(kind), testScheme(t))
+		require.NoError(t, err)
+		assert.Equal(t, schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}, gvk)
+	}
+}
 
 // readyCondition returns the pool's Ready condition, failing if it is absent.
 func readyCondition(t *testing.T, pool *v1alpha1.StoragePool) metav1.Condition {
