@@ -99,7 +99,7 @@ func run() error {
 	)
 
 	// The store id is generated at creation, so services resolve it by name.
-	resolver, err := authz.New(cfg.OpenFGA)
+	store, err := authz.NewStore(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
@@ -122,7 +122,7 @@ func run() error {
 	healthServer := startHealthServer(&cfg, logger, w)
 
 	// On a first install the bootstrap Job has usually not run yet.
-	storeID, err := awaitStore(ctx, logger, resolver, cfg.OpenFGA.StoreName)
+	storeID, err := awaitStore(ctx, logger, store, cfg.OpenFGA.StoreName)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			logger.Info("stopped while waiting for the OpenFGA store")
@@ -164,12 +164,12 @@ func run() error {
 
 // awaitStore blocks until the store named in the configuration exists.
 func awaitStore(
-	ctx context.Context, logger *slog.Logger, resolver *authz.Client, name string,
+	ctx context.Context, logger *slog.Logger, store *authz.Store, name string,
 ) (string, error) {
 	const retry = 5 * time.Second
 
 	for {
-		id, err := resolver.StoreIDFor(ctx)
+		id, err := store.ID(ctx)
 		if err == nil {
 			return id, nil
 		}

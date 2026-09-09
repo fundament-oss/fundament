@@ -98,10 +98,12 @@ func run() error {
 		"store_name", cfg.OpenFGA.StoreName,
 	)
 
-	authzClient, err := authz.New(cfg.OpenFGA)
+	authzStore, err := authz.NewStore(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
+
+	authzClient := authz.NewClient(authzStore)
 
 	logger.Debug("OpenFGA client connected")
 
@@ -208,7 +210,7 @@ func run() error {
 		if err := db.Pool.Ping(ctx); err != nil {
 			errs = append(errs, "database: "+err.Error())
 		}
-		if err := authzClient.Healthy(ctx); err != nil {
+		if err := authzStore.Healthy(ctx); err != nil {
 			errs = append(errs, "openfga: "+err.Error())
 		}
 		if breaker.IsOpen() {
