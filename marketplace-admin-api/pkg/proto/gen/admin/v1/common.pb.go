@@ -555,6 +555,7 @@ type PluginVersion struct {
 	xxx_hidden_Created        *timestamppb.Timestamp  `protobuf:"bytes,100,opt,name=created"`
 	xxx_hidden_Submitted      *timestamppb.Timestamp  `protobuf:"bytes,110,opt,name=submitted"`
 	xxx_hidden_Published      *timestamppb.Timestamp  `protobuf:"bytes,120,opt,name=published"`
+	xxx_hidden_ManifestError  string                  `protobuf:"bytes,130,opt,name=manifest_error,json=manifestError"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -670,6 +671,13 @@ func (x *PluginVersion) GetPublished() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PluginVersion) GetManifestError() string {
+	if x != nil {
+		return x.xxx_hidden_ManifestError
+	}
+	return ""
+}
+
 func (x *PluginVersion) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -716,6 +724,10 @@ func (x *PluginVersion) SetSubmitted(v *timestamppb.Timestamp) {
 
 func (x *PluginVersion) SetPublished(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Published = v
+}
+
+func (x *PluginVersion) SetManifestError(v string) {
+	x.xxx_hidden_ManifestError = v
 }
 
 func (x *PluginVersion) HasCreated() bool {
@@ -768,6 +780,12 @@ type PluginVersion_builder struct {
 	Created      *timestamppb.Timestamp
 	Submitted    *timestamppb.Timestamp
 	Published    *timestamppb.Timestamp
+	// Set when the stored manifest failed to parse, in which case capabilities
+	// and permissions are absent because they could not be derived — not
+	// because the version declares none. A reviewer must not read the empty
+	// sections as "asks for nothing"; a version whose review payload cannot be
+	// displayed is a version that cannot be approved responsibly.
+	ManifestError string
 }
 
 func (b0 PluginVersion_builder) Build() *PluginVersion {
@@ -786,6 +804,7 @@ func (b0 PluginVersion_builder) Build() *PluginVersion {
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Submitted = b.Submitted
 	x.xxx_hidden_Published = b.Published
+	x.xxx_hidden_ManifestError = b.ManifestError
 	return m0
 }
 
@@ -820,7 +839,7 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\fcategory_ids\x18P \x03(\tR\vcategoryIds\x12\x12\n" +
 	"\x04tags\x18Z \x03(\tR\x04tags\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
-	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\x86\x04\n" +
+	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xae\x04\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -834,7 +853,8 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\vpermissions\x18Z \x03(\v2 .marketplace.v1.PluginPermissionR\vpermissions\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x128\n" +
 	"\tsubmitted\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tsubmitted\x128\n" +
-	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished*\x8c\x02\n" +
+	"\tpublished\x18x \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12&\n" +
+	"\x0emanifest_error\x18\x82\x01 \x01(\tR\rmanifestError*\x8c\x02\n" +
 	"\x0fRejectionReason\x12 \n" +
 	"\x1cREJECTION_REASON_UNSPECIFIED\x10\x00\x12(\n" +
 	"$REJECTION_REASON_INCOMPLETE_METADATA\x10\x01\x12\x1e\n" +

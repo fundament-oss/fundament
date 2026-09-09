@@ -87,8 +87,8 @@ spec:
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       marketplace: https://marketplace.pr${PR_NUM}.${DOMAIN}
       marketplaceCatalogApi: https://marketplace-catalog-api.pr${PR_NUM}.${DOMAIN}
-      # marketplace{Registry,Admin}Api are left unset: those two marketplace
-      # APIs have no implementation yet (FUN-20 defers them).
+      marketplaceRegistryApi: https://marketplace-registry-api.pr${PR_NUM}.${DOMAIN}
+      marketplaceAdminApi: https://marketplace-admin-api.pr${PR_NUM}.${DOMAIN}
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://marketplace.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}
@@ -321,6 +321,8 @@ spec:
       replicas: 1
       internalApiUrls:
         catalog: http://marketplace-catalog-api:8080
+        registry: http://marketplace-registry-api:8080
+        admin: http://marketplace-admin-api:8080
       httproute:
         enabled: true
         parentRefs:
@@ -364,7 +366,7 @@ spec:
         hostnames:
           - marketplace-registry-api.pr${PR_NUM}.${DOMAIN}
 
-    # Review backoffice: validates the reviewer's UserToken.
+    # Review backoffice: validates the reviewer's DCIM token (staff IDP).
     marketplaceAdminApi:
       enabled: true
       replicas: 1
