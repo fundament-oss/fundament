@@ -85,9 +85,14 @@ WHERE plugin_definition_id = sqlc.arg('plugin_definition_id')::uuid
   AND closed IS NULL
   AND deleted IS NULL;
 
--- name: SubmissionCloseOpen :exec
+-- name: SubmissionCloseOpen :execrows
 -- Withdrawal closes the round without a decision, so reviewed and
 -- reviewer_user_id stay null and submissions_ck_reviewed still holds.
+--
+-- :execrows for the same reason PluginVersionSetStatus is: the status write
+-- above says the version was PENDING, so a round must be open. Zero rows means
+-- it was closed underneath the handler, and withdrawing without closing
+-- anything would report success for half a transition.
 UPDATE appstore.submissions SET closed = now()
 WHERE plugin_definition_id = sqlc.arg('plugin_definition_id')::uuid
   AND closed IS NULL

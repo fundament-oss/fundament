@@ -238,10 +238,18 @@ func (s *Server) WithdrawPluginVersion(
 	if updated == 0 {
 		return nil, statusChangedError(dbconst.PluginDefinitionStatus_Pending)
 	}
-	if err := qtx.SubmissionCloseOpen(ctx, db.SubmissionCloseOpenParams{
+	closed, err := qtx.SubmissionCloseOpen(ctx, db.SubmissionCloseOpenParams{
 		PluginDefinitionID: versionID,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, writeError(err, "closing submission")
+	}
+	// The status write above only landed because the version was still PENDING,
+	// so a round must have been open. Zero rows means it closed underneath the
+	// handler, and withdrawing without closing anything is half a transition.
+	if closed == 0 {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("no open submission to withdraw"))
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -94,16 +94,20 @@ func (q *Queries) PluginCategoriesDeleteByPluginID(ctx context.Context, arg Plug
 }
 
 const pluginCategoriesListByPluginIDs = `-- name: PluginCategoriesListByPluginIDs :many
-SELECT plugin_id, category_id
+SELECT categories_plugins.plugin_id, categories_plugins.category_id
 FROM appstore.categories_plugins
-WHERE plugin_id = ANY($1::uuid[])
-ORDER BY plugin_id ASC, category_id ASC
+JOIN appstore.categories ON categories.id = categories_plugins.category_id
+WHERE categories_plugins.plugin_id = ANY($1::uuid[])
+  AND categories.deleted IS NULL
+ORDER BY categories_plugins.plugin_id ASC, categories_plugins.category_id ASC
 `
 
 type PluginCategoriesListByPluginIDsParams struct {
 	PluginIds []uuid.UUID
 }
 
+// Joined to the vocabulary so a category soft-deleted after it was attached
+// stops being handed out: ListCategories would never resolve the id.
 func (q *Queries) PluginCategoriesListByPluginIDs(ctx context.Context, arg PluginCategoriesListByPluginIDsParams) ([]AppstoreCategoriesPlugin, error) {
 	rows, err := q.db.Query(ctx, pluginCategoriesListByPluginIDs, arg.PluginIds)
 	if err != nil {
@@ -261,7 +265,7 @@ SELECT plugin_id, id, title, url_name, url
 FROM appstore.plugin_documentation_links
 WHERE plugin_id = ANY($1::uuid[])
   AND deleted IS NULL
-ORDER BY plugin_id ASC, position ASC
+ORDER BY plugin_id ASC, position ASC, id ASC
 `
 
 type PluginDocLinksListByPluginIDsParams struct {
@@ -386,7 +390,7 @@ SELECT plugin_id, id, title, body
 FROM appstore.plugin_features
 WHERE plugin_id = ANY($1::uuid[])
   AND deleted IS NULL
-ORDER BY plugin_id ASC, position ASC
+ORDER BY plugin_id ASC, position ASC, id ASC
 `
 
 type PluginFeaturesListByPluginIDsParams struct {

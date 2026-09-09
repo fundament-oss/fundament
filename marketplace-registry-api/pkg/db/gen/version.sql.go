@@ -255,7 +255,7 @@ func (q *Queries) PluginVersionsSoftDeleteByPluginID(ctx context.Context, arg Pl
 	return err
 }
 
-const submissionCloseOpen = `-- name: SubmissionCloseOpen :exec
+const submissionCloseOpen = `-- name: SubmissionCloseOpen :execrows
 UPDATE appstore.submissions SET closed = now()
 WHERE plugin_definition_id = $1::uuid
   AND closed IS NULL
@@ -268,9 +268,17 @@ type SubmissionCloseOpenParams struct {
 
 // Withdrawal closes the round without a decision, so reviewed and
 // reviewer_user_id stay null and submissions_ck_reviewed still holds.
-func (q *Queries) SubmissionCloseOpen(ctx context.Context, arg SubmissionCloseOpenParams) error {
-	_, err := q.db.Exec(ctx, submissionCloseOpen, arg.PluginDefinitionID)
-	return err
+//
+// :execrows for the same reason PluginVersionSetStatus is: the status write
+// above says the version was PENDING, so a round must be open. Zero rows means
+// it was closed underneath the handler, and withdrawing without closing
+// anything would report success for half a transition.
+func (q *Queries) SubmissionCloseOpen(ctx context.Context, arg SubmissionCloseOpenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, submissionCloseOpen, arg.PluginDefinitionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const submissionCloseOpenByPluginID = `-- name: SubmissionCloseOpenByPluginID :exec

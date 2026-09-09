@@ -134,10 +134,14 @@ DELETE FROM appstore.plugins_tags
 WHERE plugin_id = sqlc.arg('plugin_id')::uuid;
 
 -- name: PluginCategoriesListByPluginIDs :many
-SELECT plugin_id, category_id
+-- Joined to the vocabulary so a category soft-deleted after it was attached
+-- stops being handed out: ListCategories would never resolve the id.
+SELECT categories_plugins.plugin_id, categories_plugins.category_id
 FROM appstore.categories_plugins
-WHERE plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
-ORDER BY plugin_id ASC, category_id ASC;
+JOIN appstore.categories ON categories.id = categories_plugins.category_id
+WHERE categories_plugins.plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
+  AND categories.deleted IS NULL
+ORDER BY categories_plugins.plugin_id ASC, categories_plugins.category_id ASC;
 
 -- name: PluginCategoryInsert :exec
 INSERT INTO appstore.categories_plugins (plugin_id, category_id)
@@ -168,7 +172,7 @@ SELECT plugin_id, id, title, url_name, url
 FROM appstore.plugin_documentation_links
 WHERE plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND deleted IS NULL
-ORDER BY plugin_id ASC, position ASC;
+ORDER BY plugin_id ASC, position ASC, id ASC;
 
 -- name: PluginDocLinkInsert :exec
 INSERT INTO appstore.plugin_documentation_links (plugin_id, title, url_name, url, position)
@@ -205,7 +209,7 @@ SELECT plugin_id, id, title, body
 FROM appstore.plugin_features
 WHERE plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND deleted IS NULL
-ORDER BY plugin_id ASC, position ASC;
+ORDER BY plugin_id ASC, position ASC, id ASC;
 
 -- name: PluginFeatureInsert :exec
 INSERT INTO appstore.plugin_features (plugin_id, title, body, position)
