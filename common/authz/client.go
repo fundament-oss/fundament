@@ -10,40 +10,18 @@ import (
 	"github.com/openfga/go-sdk/client"
 )
 
-// ErrNoStore reports that no store with the configured name exists.
-var ErrNoStore = errors.New("openfga store not provisioned")
-
-// Config holds configuration for the OpenFGA client.
-type Config struct {
-	APIURL string `env:"OPENFGA_API_URL,required,notEmpty"`
-	// The store id is generated at creation, so services resolve it from this name.
-	StoreName string `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
-}
-
 // Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.
 // See https://openid.github.io/authzen/ for the AuthZEN specification.
 //
 // Checks run against the store's latest authorization model; no id is pinned.
 type Client struct {
 	fga   *client.OpenFgaClient
-	store *storeRef
+	store *Store
 }
 
-// New creates a new authorization client. The store is resolved on first use,
-// so a service can start before OpenFGA is provisioned and report itself
-// unready until it is.
-func New(cfg Config) (*Client, error) {
-	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{ApiUrl: cfg.APIURL})
-	if err != nil {
-		return nil, fmt.Errorf("create OpenFGA client: %w", err)
-	}
-
-	return &Client{fga: fgaClient, store: &storeRef{name: cfg.StoreName}}, nil
-}
-
-// StoreIDFor returns the store id for a request.
-func (c *Client) StoreIDFor(ctx context.Context) (string, error) {
-	return c.store.get(ctx, c.fga)
+// NewClient creates an authorization client that evaluates against store.
+func NewClient(store *Store) *Client {
+	return &Client{fga: store.fga, store: store}
 }
 
 // CanViewCluster is a convenience wrapper around Evaluate for the frequently
@@ -64,41 +42,6 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 		return false, fmt.Errorf("openfga can_view: %w", err)
 	}
 	return dec.Decision, nil
-}
-
-// Healthy checks that the store still exists, looking it up again by name when
-// it does not.
-//
-// GetStore is the probe: Check answers from an in-process typesystem cache and
-// cannot observe a replaced datastore.
-func (c *Client) Healthy(ctx context.Context) error {
-	id, err := c.StoreIDFor(ctx)
-	if err != nil {
-		return fmt.Errorf("openfga: %w", err)
-	}
-
-	if err := c.getStore(ctx, id); err == nil {
-		return nil
-	}
-
-	fresh, err := c.store.resolve(ctx, c.fga)
-	if err != nil {
-		return fmt.Errorf("openfga: %w", err)
-	}
-
-	if err := c.getStore(ctx, fresh); err != nil {
-		return fmt.Errorf("openfga: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Client) getStore(ctx context.Context, id string) error {
-	if _, err := c.fga.GetStore(ctx).Options(client.ClientGetStoreOptions{StoreId: &id}).Execute(); err != nil {
-		return fmt.Errorf("get store %s: %w", id, err)
-	}
-
-	return nil
 }
 
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
@@ -144,7 +87,7 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 		checkReq.Context = &checkContext
 	}
 
-	storeID, err := c.StoreIDFor(ctx)
+	storeID, err := c.store.ID(ctx)
 	if err != nil {
 		return Decision{Decision: false}, err
 	}

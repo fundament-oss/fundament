@@ -35,13 +35,13 @@ func storesServer(t *testing.T, stores []map[string]any, calls *int) *httptest.S
 	return srv
 }
 
-func newRef(t *testing.T, url string) (*storeRef, *client.OpenFgaClient) {
+func newRef(t *testing.T, url string) *Store {
 	t.Helper()
 
-	fga, err := client.NewSdkClient(&client.ClientConfiguration{ApiUrl: url})
+	store, err := NewStore(Config{APIURL: url, StoreName: "fundament"})
 	require.NoError(t, err)
 
-	return &storeRef{name: "fundament"}, fga
+	return store
 }
 
 func TestResolvePicksTheOldestMatch(t *testing.T) {
@@ -52,9 +52,9 @@ func TestResolvePicksTheOldestMatch(t *testing.T) {
 		{"id": "03other", "name": "something-else", "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"},
 	}, nil)
 
-	ref, fga := newRef(t, srv.URL)
+	ref := newRef(t, srv.URL)
 
-	id, err := ref.resolve(context.Background(), fga)
+	id, err := ref.refresh(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "01older", id, "every service must converge on the same store")
 }
@@ -67,9 +67,9 @@ func TestResolveBreaksTiesOnID(t *testing.T) {
 		{"id": "aaa", "name": "fundament", "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"},
 	}, nil)
 
-	ref, fga := newRef(t, srv.URL)
+	ref := newRef(t, srv.URL)
 
-	id, err := ref.resolve(context.Background(), fga)
+	id, err := ref.refresh(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "aaa", id)
 }
@@ -86,32 +86,32 @@ func TestResolveSkipsSoftDeletedStores(t *testing.T) {
 		{"id": "02live", "name": "fundament", "created_at": "2026-01-02T00:00:00Z", "updated_at": "2026-01-02T00:00:00Z"},
 	}, nil)
 
-	ref, fga := newRef(t, srv.URL)
+	ref := newRef(t, srv.URL)
 
-	id, err := ref.resolve(context.Background(), fga)
+	id, err := ref.refresh(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "02live", id)
 }
 
 func TestResolveReportsNoStore(t *testing.T) {
 	srv := storesServer(t, nil, nil)
-	ref, fga := newRef(t, srv.URL)
+	ref := newRef(t, srv.URL)
 
-	_, err := ref.resolve(context.Background(), fga)
+	_, err := ref.refresh(context.Background())
 	require.ErrorIs(t, err, ErrNoStore)
 }
 
-func TestGetCachesAfterFirstResolve(t *testing.T) {
+func TestIDCachesAfterFirstResolve(t *testing.T) {
 	calls := 0
 	srv := storesServer(t, []map[string]any{
 		{"id": "01abc", "name": "fundament", "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"},
 	}, &calls)
 
-	ref, fga := newRef(t, srv.URL)
+	ref := newRef(t, srv.URL)
 	ctx := context.Background()
 
 	for range 3 {
-		id, err := ref.get(ctx, fga)
+		id, err := ref.ID(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, "01abc", id)
 	}

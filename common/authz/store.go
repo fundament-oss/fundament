@@ -2,6 +2,7 @@ package authz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -12,48 +13,99 @@ import (
 	"github.com/openfga/go-sdk/client"
 )
 
-// storeRef caches the id of the store this client evaluates against. The id is
-// generated at creation, so it is looked up from the name.
-type storeRef struct {
+// ErrNoStore reports that no store with the configured name exists.
+var ErrNoStore = errors.New("openfga store not provisioned")
+
+// Config holds configuration for the OpenFGA client.
+type Config struct {
+	APIURL string `env:"OPENFGA_API_URL,required,notEmpty"`
+	// The store id is generated at creation, so services resolve it from this name.
+	StoreName string `env:"OPENFGA_STORE_NAME,notEmpty" envDefault:"fundament"`
+}
+
+// Store caches the id of the store named in the config. The id is generated at
+// creation, so it is looked up from the name.
+type Store struct {
+	fga  *client.OpenFgaClient
 	name string
 
 	mu sync.RWMutex
 	id string
 }
 
-func (s *storeRef) cached() string {
+// NewStore references the store named in the config. The id is resolved on
+// first use, so a service can start before OpenFGA is provisioned and report
+// itself unready until it is.
+func NewStore(cfg Config) (*Store, error) {
+	fga, err := client.NewSdkClient(&client.ClientConfiguration{ApiUrl: cfg.APIURL})
+	if err != nil {
+		return nil, fmt.Errorf("create OpenFGA client: %w", err)
+	}
+
+	return &Store{fga: fga, name: cfg.StoreName}, nil
+}
+
+// ID returns the cached id, resolving it the first time.
+func (s *Store) ID(ctx context.Context) (string, error) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	id := s.id
+	s.mu.RUnlock()
 
-	return s.id
+	if id != "" {
+		return id, nil
+	}
+
+	return s.refresh(ctx)
 }
 
-func (s *storeRef) set(id string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// Healthy checks that the referenced store still exists, resolving it again by
+// name when it does not.
+//
+// GetStore is the probe: Check answers from an in-process typesystem cache and
+// cannot observe a replaced datastore.
+func (s *Store) Healthy(ctx context.Context) error {
+	id, err := s.ID(ctx)
+	if err != nil {
+		return fmt.Errorf("openfga: %w", err)
+	}
 
-	s.id = id
+	if err := s.exists(ctx, id); err == nil {
+		return nil
+	}
+
+	fresh, err := s.refresh(ctx)
+	if err != nil {
+		return fmt.Errorf("openfga: %w", err)
+	}
+
+	if err := s.exists(ctx, fresh); err != nil {
+		return fmt.Errorf("openfga: %w", err)
+	}
+
+	return nil
 }
 
-// resolve looks the store up and caches it.
-func (s *storeRef) resolve(ctx context.Context, fga *client.OpenFgaClient) (string, error) {
-	id, err := ResolveStoreID(ctx, fga, s.name)
+// refresh resolves the id again and replaces the cache, for when the cached
+// store no longer exists.
+func (s *Store) refresh(ctx context.Context) (string, error) {
+	id, err := ResolveStoreID(ctx, s.fga, s.name)
 	if err != nil {
 		return "", err
 	}
 
-	s.set(id)
+	s.mu.Lock()
+	s.id = id
+	s.mu.Unlock()
 
 	return id, nil
 }
 
-// get returns the cached id, looking it up the first time.
-func (s *storeRef) get(ctx context.Context, fga *client.OpenFgaClient) (string, error) {
-	if id := s.cached(); id != "" {
-		return id, nil
+func (s *Store) exists(ctx context.Context, id string) error {
+	if _, err := s.fga.GetStore(ctx).Options(client.ClientGetStoreOptions{StoreId: &id}).Execute(); err != nil {
+		return fmt.Errorf("get store %s: %w", id, err)
 	}
 
-	return s.resolve(ctx, fga)
+	return nil
 }
 
 // ResolveStoreID returns the id of the store called name, or ErrNoStore.

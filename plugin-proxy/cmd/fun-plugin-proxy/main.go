@@ -66,16 +66,18 @@ func run() error {
 
 	// OpenFGA backs the asset handler's can_view gate in every mode and, in
 	// real mode, doubles as the installation proxy's cluster authorizer.
-	openfga, err := openfgaauthz.New(cfg.OpenFGA)
+	openfgaStore, err := openfgaauthz.NewStore(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("openfga client: %w", err)
 	}
 
+	openfga := openfgaauthz.NewClient(openfgaStore)
+
 	publicMux := http.NewServeMux()
-	registerHealth(publicMux, openfga, logger)
+	registerHealth(publicMux, openfgaStore, logger)
 
 	internalMux := http.NewServeMux()
-	registerHealth(internalMux, openfga, logger)
+	registerHealth(internalMux, openfgaStore, logger)
 
 	// Static assets + strict CSP.
 	cfgCsp := &assets.CSPConfig{
@@ -251,7 +253,7 @@ func run() error {
 	return runErr
 }
 
-func registerHealth(mux *http.ServeMux, authzClient *openfgaauthz.Client, logger *slog.Logger) {
+func registerHealth(mux *http.ServeMux, store *openfgaauthz.Store, logger *slog.Logger) {
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -263,7 +265,7 @@ func registerHealth(mux *http.ServeMux, authzClient *openfgaauthz.Client, logger
 		// The can_view gate runs in every mode, so an unresolved store means
 		// this pod cannot authorize any request. This mux is also served
 		// publicly, so the reason is logged rather than returned.
-		if err := authzClient.Healthy(ctx); err != nil {
+		if err := store.Healthy(ctx); err != nil {
 			logger.Error("readiness: openfga unavailable", "err", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("not ready"))
