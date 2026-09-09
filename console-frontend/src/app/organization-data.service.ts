@@ -47,6 +47,11 @@ export class OrganizationDataService {
    *  both happen in a sheet the shell owns. */
   readonly membersChanged = signal(0);
 
+  /** And for node pools, which are edited in a sheet over the cluster page that
+   *  lists them: a child route, so that page is never unmounted and would go on
+   *  showing the pools it fetched when it was opened. */
+  readonly nodePoolsChanged = signal(0);
+
   /** TEMPORARY, dev only: roles have no API, so a fresh grant waits here for the
    *  member id the list assigns. The sheet that hands it out belongs to the
    *  shell, so it cannot park it on the list itself. Delete with the mock

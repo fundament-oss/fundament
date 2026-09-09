@@ -25,6 +25,7 @@ import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatTimeAgo } from '../utils/date-format';
+import { organizationPermissionLabel } from '../utils/role-label';
 import '@nldd/design-system/search-field';
 import opensElsewhere from '../opens-elsewhere';
 
@@ -62,10 +63,6 @@ interface OrganizationMember {
   isCurrentUser?: boolean;
   created?: Date;
 }
-
-/** 'admin' reads as a value, 'Admin' as a label. The tag shows the label. */
-const permissionLabel = (permission: string): string =>
-  permission ? permission[0].toUpperCase() + permission.slice(1) : permission;
 
 /** Name or email; a member without a name is only findable by their address. */
 const filterByQuery = (members: OrganizationMember[], query: string): OrganizationMember[] => {
@@ -425,7 +422,7 @@ export default class OrganizationMembersComponent implements OnInit {
     this.pageNav.goTo('/members/permissions');
   }
 
-  permissionLabel = permissionLabel;
+  permissionLabel = organizationPermissionLabel;
 
   formatTimeAgo = formatTimeAgo;
 

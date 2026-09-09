@@ -17,6 +17,7 @@ import AutofocusDirective from '../autofocus.directive';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatTimeAgo } from '../utils/date-format';
+import { projectRoleLabel } from '../utils/role-label';
 import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
 import type { RoleBinding } from '../utils/mock-role-bindings';
 import {
@@ -65,9 +66,6 @@ interface ProjectMemberView {
   /** 'org' when the project role equals the organization role. */
   source: 'org' | 'project';
 }
-
-const roleLabel = (role: ProjectMemberRole): string =>
-  role === ProjectMemberRole.ADMIN ? 'Admin' : 'Viewer';
 
 /** Locked: an organization admin is admin here too, and this page cannot change
  *  what the organization decided. */
@@ -226,7 +224,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   ProjectMemberRole = ProjectMemberRole;
 
-  roleLabel = roleLabel;
+  roleLabel = projectRoleLabel;
 
   isLocked = isLocked;
 
@@ -257,7 +255,11 @@ export default class ProjectMemberSheetComponent implements OnInit {
           ? {
               member: found,
               source:
-                roleLabel(found.role).toLowerCase() === orgRoleByUserId.get(found.userId)
+                // The organization permission is a bare string ("admin" /
+                // "viewer"), so this compares values, not the labels the tags
+                // show — those name their scope and would never match.
+                (found.role === ProjectMemberRole.ADMIN ? 'admin' : 'viewer') ===
+                orgRoleByUserId.get(found.userId)
                   ? 'org'
                   : 'project',
             }
@@ -387,7 +389,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
         this.projectClient.updateProjectMemberRole({ memberId: view.member.id, role }),
       );
       this.notificationService.success(
-        `${view.member.userName} is now ${roleLabel(role).toLowerCase()}`,
+        `${view.member.userName} is now ${projectRoleLabel(role).toLowerCase()}`,
       );
       await this.load();
     } catch (err) {

@@ -345,7 +345,9 @@
                       <nldd-menu-item
                         icon="user-admin"
                         [attr.text]="
-                          member.permission === 'admin' ? 'Switch to viewer' : 'Switch to admin'
+                          member.permission === 'admin'
+                            ? 'Switch to organization viewer'
+                            : 'Switch to organization admin'
                         "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
@@ -385,7 +387,11 @@
                            a sheet holding a single radio group. -->
                       <nldd-menu-item
                         icon="user-admin"
-                        [attr.text]="member.permission === 'admin' ? 'Make viewer' : 'Make admin'"
+                        [attr.text]="
+                          member.permission === 'admin'
+                            ? 'Make organization viewer'
+                            : 'Make organization admin'
+                        "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>

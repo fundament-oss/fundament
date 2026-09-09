@@ -57,9 +57,6 @@ interface NamespaceMember {
   viaAll: boolean;
 }
 
-const roleLabel = (role: ProjectMemberRole): string =>
-  role === ProjectMemberRole.ADMIN ? 'Admin' : 'Viewer';
-
 /** What a member may do here, and where it comes from when it was not given for
  *  this namespace alone. */
 const accessSummary = (entry: NamespaceMember): string => {
@@ -139,8 +136,6 @@ export default class NamespaceSheetComponent implements OnInit {
   rolesSubmitted = signal(false);
 
   allRoles = ALL_ROLES;
-
-  roleLabel = roleLabel;
 
   accessSummary = accessSummary;
 

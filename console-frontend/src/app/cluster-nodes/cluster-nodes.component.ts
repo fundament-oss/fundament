@@ -29,6 +29,8 @@ import {
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 import { fetchClusterName } from '../utils/cluster-status';
 import PageNavService from '../page-nav.service';
+import { NotificationService } from '../notification.service';
+import { OrganizationDataService } from '../organization-data.service';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -39,6 +41,27 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+
+/**
+ * What the submit did, in one line. One pool by name, because the name is what
+ * you were just looking at; more than one by number, because a list of them is
+ * not a sentence. A submit that both adds and removes says neither.
+ */
+function nodePoolChangeText(
+  created: NodePoolData[],
+  updated: NodePoolData[],
+  deleted: NodePool[],
+): string {
+  const pools = (group: { name: string }[], verb: string) =>
+    group.length === 1
+      ? `Node pool '${group[0].name}' ${verb}`
+      : `${group.length} node pools ${verb}`;
+
+  if (created.length && !updated.length && !deleted.length) return pools(created, 'added');
+  if (deleted.length && !created.length && !updated.length) return pools(deleted, 'removed');
+  if (updated.length && !created.length && !deleted.length) return pools(updated, 'updated');
+  return 'Node pools updated';
+}
 
 @Component({
   selector: 'app-cluster-nodes',
@@ -59,6 +82,10 @@ export default class ClusterNodesComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private client = inject(CLUSTER);
+
+  private notificationService = inject(NotificationService);
+
+  private organizationData = inject(OrganizationDataService);
 
   private regionCatalog = inject(RegionCatalogService);
 
@@ -155,16 +182,27 @@ export default class ClusterNodesComponent implements OnInit {
       const existingPoolsMap = new Map(this.existingNodePools.map((p) => [p.name, p]));
       const newPoolsMap = new Map(newPools.map((p) => [p.name, p]));
 
+      const deleted = this.existingNodePools.filter(
+        (existingPool) => !newPoolsMap.has(existingPool.name),
+      );
+      const created = newPools.filter((newPool) => !existingPoolsMap.has(newPool.name));
+      const updated = newPools.filter((newPool) => {
+        const existingPool = existingPoolsMap.get(newPool.name);
+        return (
+          !!existingPool &&
+          (existingPool.minNodes !== newPool.autoscaleMin ||
+            existingPool.maxNodes !== newPool.autoscaleMax)
+        );
+      });
+
       // Delete pools that no longer exist
       await Promise.all(
-        this.existingNodePools
-          .filter((existingPool) => !newPoolsMap.has(existingPool.name))
-          .map((existingPool) => {
-            const deleteRequest = create(DeleteNodePoolRequestSchema, {
-              nodePoolId: existingPool.id,
-            });
-            return firstValueFrom(this.client.deleteNodePool(deleteRequest));
-          }),
+        deleted.map((existingPool) => {
+          const deleteRequest = create(DeleteNodePoolRequestSchema, {
+            nodePoolId: existingPool.id,
+          });
+          return firstValueFrom(this.client.deleteNodePool(deleteRequest));
+        }),
       );
 
       // Create or update pools
@@ -203,6 +241,11 @@ export default class ClusterNodesComponent implements OnInit {
           return undefined;
         }),
       );
+
+      // The page behind this sheet is where the pools are listed, and it was
+      // never unmounted, so it hears from here that its cards are out of date.
+      this.organizationData.nodePoolsChanged.update((revision) => revision + 1);
+      this.notificationService.success(nodePoolChangeText(created, updated, deleted));
 
       // Navigate back to cluster overview on success
       this.pageNav.goTo(`/clusters/${this.clusterId}`);

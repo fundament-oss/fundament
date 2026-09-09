@@ -71,15 +71,17 @@ export default class InviteMemberSheetComponent {
 
   inviteError = signal<string | null>(null);
 
+  /** Named with their scope, the way the tags on the members list are: this is
+   *  standing in the organization, not in one of its projects. */
   permissionOptions = [
     {
       value: 'viewer',
-      label: 'Viewer',
+      label: 'Organization viewer',
       description: 'Can look at the organization, its clusters and its members.',
     },
     {
       value: 'admin',
-      label: 'Admin',
+      label: 'Organization admin',
       description: 'Can also create clusters, invite members and reach every project.',
     },
   ];

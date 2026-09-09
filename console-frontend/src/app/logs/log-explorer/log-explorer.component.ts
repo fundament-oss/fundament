@@ -128,8 +128,21 @@ function formatTimestamp(date: Date): string {
   });
 }
 
+/** The moment a line arrived, to the millisecond, in the reader's own zone.
+ *  Reading it back as UTC put the detail panel a whole offset away from the
+ *  timestamp column next to it, on the same line of the same log. */
 function formatTimestampFull(date: Date): string {
-  return date.toISOString().replace('T', ' ').replace('Z', ' UTC');
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3,
+    hour12: false,
+    timeZoneName: 'short',
+  });
 }
 
 function fieldEntries(log: LogEntry): { key: string; value: string }[] {
