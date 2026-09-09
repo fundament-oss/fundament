@@ -235,6 +235,12 @@ marketplaceRegistryApi:
   replicas: 1
   logLevel: debug
 
+# Review backoffice. Authenticated, so it picks up the shared jwtSecret above.
+marketplaceAdminApi:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+
 authzWorker:
   enabled: true
   replicas: 1

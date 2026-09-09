@@ -9,7 +9,7 @@ import "marketplace/v1/common.proto";
 
 option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
-option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/admin/v1;adminv1";
+option go_package = "github.com/fundament-oss/fundament/marketplace-admin-api/pkg/proto/gen/admin/v1;adminv1";
 
 // ReviewService is the Fundament backoffice API. It acts on submissions from
 // every publishing organization, so the authz question is "is a Fundament
