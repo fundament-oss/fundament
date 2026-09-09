@@ -7,5 +7,6 @@ plugins:
     include_imports: true
 inputs:
   - directory: ../marketplace-api/pkg/proto
+  - directory: ../marketplace-admin-api/pkg/proto
   - directory: ../marketplace-catalog-api/pkg/proto
   - directory: ../marketplace-registry-api/pkg/proto

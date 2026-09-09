@@ -57,6 +57,7 @@ images:
   marketplaceFrontend: ghcr.io/fundament-oss/fundament/marketplace-frontend:latest
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
+  marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
 
 # Database (CloudNativePG)
 db:
@@ -344,6 +345,16 @@ marketplaceCatalogApi:
 
 # Marketplace Registry API
 marketplaceRegistryApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Marketplace Admin API (the Fundament review backoffice)
+marketplaceAdminApi:
   enabled: false
   replicas: 1
   logLevel: info

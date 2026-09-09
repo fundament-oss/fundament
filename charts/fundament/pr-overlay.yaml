@@ -111,6 +111,7 @@ spec:
       dcimAuthnApi: ${IMAGE_PREFIX}/dcim-authn-api:${IMAGE_TAG}
       marketplaceCatalogApi: ${IMAGE_PREFIX}/marketplace-catalog-api:${IMAGE_TAG}
       marketplaceRegistryApi: ${IMAGE_PREFIX}/marketplace-registry-api:${IMAGE_TAG}
+      marketplaceAdminApi: ${IMAGE_PREFIX}/marketplace-admin-api:${IMAGE_TAG}
 
     authnApi:
       replicas: 1
@@ -362,6 +363,22 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - marketplace-registry-api.pr${PR_NUM}.${DOMAIN}
+
+    # Review backoffice: validates the reviewer's UserToken.
+    marketplaceAdminApi:
+      enabled: true
+      replicas: 1
+      logLevel: debug
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - marketplace-admin-api.pr${PR_NUM}.${DOMAIN}
 
     ingress:
       enabled: false
