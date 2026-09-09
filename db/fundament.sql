@@ -1601,6 +1601,53 @@ CREATE POLICY plugin_allowed_organizations_all_registry ON appstore.plugin_allow
 	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
 -- ddl-end --
 
+-- object: plugins_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_admin ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_admin ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_definitions_all_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_all_admin ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_all_admin ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_admin_api
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: submissions_all_admin | type: POLICY --
+-- DROP POLICY IF EXISTS submissions_all_admin ON appstore.submissions CASCADE;
+CREATE POLICY submissions_all_admin ON appstore.submissions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_admin_api
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: plugins_tags_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_select_admin ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_select_admin ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: categories_plugins_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_select_admin ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_select_admin ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
 -- object: plugin_allowed_organizations_select_api | type: POLICY --
 -- DROP POLICY IF EXISTS plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations CASCADE;
 CREATE POLICY plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations
@@ -1791,6 +1838,15 @@ CREATE POLICY organizations_select_catalog ON tenant.organizations
 	FOR SELECT
 	TO fun_marketplace_catalog_api
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public'));
+-- ddl-end --
+
+-- object: organizations_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_admin ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_admin ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL));
 -- ddl-end --
 
 -- object: organization_limits_organization_policy | type: POLICY --
@@ -4800,6 +4856,142 @@ GRANT SELECT,INSERT
 GRANT SELECT
    ON TABLE appstore.categories
    TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_06186b41ac" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_1ef32a10b1" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_2c220bdfe0 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_55abf03dc9 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_1828d4a177 | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_e7370906e9 | type: PERMISSION --
+GRANT UPDATE(published)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_f165ddaba3 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_9153607b55 | type: PERMISSION --
+GRANT UPDATE(reviewer_user_id)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_1066fc42d8 | type: PERMISSION --
+GRANT UPDATE(reviewed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_bf2e75bd96 | type: PERMISSION --
+GRANT UPDATE(closed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_32d8da87e3 | type: PERMISSION --
+GRANT UPDATE(rejection_reason)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_6a8ec3d2b0 | type: PERMISSION --
+GRANT UPDATE(feedback)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_eda1398348 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_df7e1a526f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.tags
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_ad567998bf | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_297c355a5c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_b6d3ca0302 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_marketplace_admin_api;
 
 -- ddl-end --
 
