@@ -40,10 +40,24 @@ spec:
             - name: DEPLOYMENT_VERSION
               value: {{ $.Values.deploymentVersion | quote }}
             {{- end }}
-            {{- if $.Values.externalUrls.corsAllowedOrigins }}
+            # Defaults to the console: this surface takes credentials, and an
+            # empty list would mean a wildcard origin, which browsers reject.
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ $.Values.externalUrls.corsAllowedOrigins }}
-            {{- end }}
+              value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.console }}
+            # Write RPCs check OpenFGA (plugin can_edit/can_delete, organization
+            # can_create_plugin) in front of the RLS tenancy boundary.
+            - name: OPENFGA_API_URL
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: store-id
+            - name: OPENFGA_AUTHORIZATION_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: authorization-model-id
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
 

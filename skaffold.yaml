@@ -102,12 +102,12 @@ build:
     - image: marketplace-catalog-api
       context: .
       docker:
-        dockerfile: marketplace-api/Dockerfile
+        dockerfile: marketplace-catalog-api/Dockerfile
 
     - image: marketplace-registry-api
       context: .
       docker:
-        dockerfile: marketplace-api/Dockerfile.registry
+        dockerfile: marketplace-registry-api/Dockerfile
 
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
@@ -270,13 +270,13 @@ profiles:
         value: {}
       - op: replace
         path: /build/artifacts/15/docker/dockerfile
-        value: marketplace-api/hotreload/Dockerfile
+        value: marketplace-catalog-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/15/sync
         value: {}
       - op: replace
         path: /build/artifacts/16/docker/dockerfile
-        value: marketplace-api/hotreload/Dockerfile.registry
+        value: marketplace-registry-api/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/16/sync
         value: {}

@@ -202,8 +202,12 @@ jobs:
         working-directory: dcim-api
         run: go test ./... -count=1
 
-  marketplace-api:
+  marketplace-catalog-api:
     runs-on: ubuntu-24.04
+    # Its own database root: the catalog and registry jobs each start a
+    # postmaster, and two of them cannot share one PGDATA.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-catalog
     steps:
       - uses: actions/checkout@v5
 
@@ -223,7 +227,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
-          key: embedded-pg-${{ runner.os }}
+          key: embedded-pg-catalog-${{ runner.os }}
 
       - name: Install dependencies
         run: go get ./...
@@ -232,8 +236,46 @@ jobs:
         if: steps.cache-trek.outputs.cache-hit != 'true'
         run: go install github.com/printeers/trek@v0.12.1
 
-      - name: Run tests (marketplace-api)
-        working-directory: marketplace-api
+      - name: Run tests (marketplace-catalog-api)
+        working-directory: marketplace-catalog-api
+        run: go test ./... -count=1
+
+  marketplace-registry-api:
+    runs-on: ubuntu-24.04
+    # Its own database root: the catalog and registry jobs each start a
+    # postmaster, and two of them cannot share one PGDATA.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-registry
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-registry-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (marketplace-registry-api)
+        working-directory: marketplace-registry-api
         run: go test ./... -count=1
 
   test-other:
@@ -250,7 +292,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api|marketplace-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api|marketplace-catalog-api|marketplace-registry-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04
