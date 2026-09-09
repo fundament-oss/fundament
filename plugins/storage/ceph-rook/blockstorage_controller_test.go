@@ -199,6 +199,41 @@ func TestBlockStorageKeepsForeignOwnerRefOnStorageClass(t *testing.T) {
 	assert.True(t, ownedBy(got.OwnerReferences, "BlockStorage", bs))
 }
 
+// Updating an owned CephBlockPool must keep the existing ownerReferences, not
+// assign desired's single-ref list: a non-controller ownerRef someone else
+// attached survives.
+func TestBlockStorageKeepsForeignOwnerRefOnCephBlockPool(t *testing.T) {
+	t.Parallel()
+	bs := testBlockStorage("fast")
+	// Stale replica count forces the update path rather than the DeepEqual skip.
+	cbp := RenderCephBlockPool(testNamespace, "ceph-fast", 3, "host")
+	cbp.SetOwnerReferences([]metav1.OwnerReference{
+		{
+			APIVersion: v1alpha1.GroupVersion.String(), Kind: "BlockStorage",
+			Name: "fast", UID: bs.UID,
+			Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
+		},
+		{APIVersion: "v1", Kind: "ConfigMap", Name: "tracker", UID: types.UID("uid-tracker")},
+	})
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		bs,
+		cbp,
+	)
+	r := newBlockReconciler(c)
+
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	got := rookStub("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, got))
+	require.Len(t, got.GetOwnerReferences(), 2, "the foreign non-controller ownerRef must survive")
+	assert.True(t, ownedBy(got.GetOwnerReferences(), "BlockStorage", bs))
+}
+
 // Removing a conflicting foreign object is notOursError's documented recovery.
 // A foreign object carries no ownerRef for Owns() to match, so its deletion
 // must map to the same-named consumer or the consumer stays Degraded until the

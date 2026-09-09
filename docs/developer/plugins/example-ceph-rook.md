@@ -45,8 +45,7 @@ plugins/storage/ceph-rook/
 ├── crds/                    # Generated CRD YAML, embedded and applied at install
 ├── diskinventory_controller.go  # Rook discovery ConfigMaps -> Disk CRs
 ├── storagepool_controller.go    # StoragePool -> CephCluster OSDs
-├── blockstorage_controller.go   # BlockStorage -> CephBlockPool, RBD StorageClass
-├── filestorage_controller.go    # FileStorage -> CephFilesystem, CephFS StorageClass
+├── consumer_controller.go       # Generic consumer reconciler: BlockStorage -> CephBlockPool + RBD StorageClass, FileStorage -> CephFilesystem + CephFS StorageClass
 ├── union.go                 # Shared disk union: every live StoragePool's disks, deduplicated
 ├── claims.go                # Derived names + which pool owns a contested disk
 ├── replication.go           # "auto" -> replica count and CRUSH failure domain
@@ -59,6 +58,7 @@ plugins/storage/ceph-rook/
 ├── storageclass_apply.go    # Create/reconcile a StorageClass its owner already owns
 ├── console/                 # Hand-written console pages (no build step)
 │   ├── _shared.js           # SDK loader, escaping, navigation helpers
+│   ├── consumer-pages.js    # List/detail/create page factory for BlockStorage + FileStorage
 │   ├── disk-picker.js       # Shared disk-selection widget (pool/consumer create+edit)
 │   ├── disks-list.{html,js}
 │   ├── disks-detail.{html,js}
@@ -71,11 +71,11 @@ plugins/storage/ceph-rook/
 └── Dockerfile               # Multi-stage build (Go build + alpine with helm)
 ```
 
-Most `*.go` files above have a matching `*_test.go`. `union.go` and
-`storageclass_apply.go` are the exceptions — both are exercised indirectly
-through the controller test files (`blockstorage_controller_test.go`,
-`filestorage_controller_test.go`, `storagepool_controller_test.go`) rather
-than a dedicated unit test of their own.
+Most `*.go` files above have a matching `*_test.go`. The exceptions are
+`union.go`, `storageclass_apply.go` and `consumer_controller.go` — all three
+are exercised through the per-kind controller test files
+(`blockstorage_controller_test.go`, `filestorage_controller_test.go`,
+`storagepool_controller_test.go`) rather than a test file of their own.
 
 ### What the console can do
 
