@@ -51,7 +51,7 @@ func TestModelSatisfiesStoreFile(t *testing.T) {
 	store, err := fga.CreateStore(ctx, &openfgav1.CreateStoreRequest{Name: "model-test"})
 	require.NoError(t, err)
 
-	model, err := transformer.TransformDSLToProto(string(ModelDSL))
+	model, err := transformer.TransformDSLToProto(ModelDSL)
 	require.NoError(t, err)
 
 	written, err := fga.WriteAuthorizationModel(ctx, &openfgav1.WriteAuthorizationModelRequest{
