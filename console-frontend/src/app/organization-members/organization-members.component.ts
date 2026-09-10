@@ -26,6 +26,7 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatTimeAgo } from '../utils/date-format';
 import { organizationPermissionLabel } from '../utils/role-label';
+import InvitationEmailComponent from '../invitation-email/invitation-email.component';
 import '@nldd/design-system/search-field';
 import opensElsewhere from '../opens-elsewhere';
 
@@ -125,7 +126,7 @@ const comparatorFor =
 
 @Component({
   selector: 'app-organization-members',
-  imports: [RouterOutlet, DialogSyncDirective],
+  imports: [RouterOutlet, DialogSyncDirective, InvitationEmailComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -168,6 +169,23 @@ export default class OrganizationMembersComponent implements OnInit {
   showDeleteModal = signal(false);
 
   deletingMember = signal<OrganizationMember | null>(null);
+
+  /** The pending member whose invitation message is being shown, or nobody. */
+  invitationEmailMember = signal<OrganizationMember | null>(null);
+
+  /** Null-safe for the same reason removeMemberTitle is: the dialog is in the
+   *  DOM before anyone is picked. */
+  invitationEmailTitle = computed(() => {
+    const member = this.invitationEmailMember();
+    const name = member?.email || member?.name;
+    return name ? `Invitation for ${name}` : 'Invitation';
+  });
+
+  organizationName = computed(() => this.organizationDataService.currentOrganizationDisplayName());
+
+  openInvitationEmail(member: OrganizationMember): void {
+    this.invitationEmailMember.set(member);
+  }
 
   /** The dialog sits in the DOM before anyone is picked, so this has to read as
    *  a sentence with the blank still open. It said "Remove undefined". */

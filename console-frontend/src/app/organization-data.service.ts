@@ -3,6 +3,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
+import OrganizationContextService from './organization-context.service';
 import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
@@ -58,6 +59,8 @@ export class OrganizationDataService {
    *  bindings. */
   readonly pendingProjectGrant = signal<{ userId: string; bindings: RoleBinding[] } | null>(null);
 
+  private organizationContext = inject(OrganizationContextService);
+
   private organizationClient = inject(ORGANIZATION);
 
   private clusterClient = inject(CLUSTER);
@@ -74,6 +77,24 @@ export class OrganizationDataService {
   organizations = signal<OrganizationData[]>([]);
 
   loading = signal(false);
+
+  /**
+   * What the current organization is called on screen.
+   *
+   * The alias is the name a person gave it; `name` is the one the address uses
+   * and is always there, so it is the fallback. One computed because everything
+   * that names the organization to a human has to agree: the sidebar selector,
+   * the picker, the mobile back button and now the invitation email.
+   *
+   * Reads `organizations()`, not `userOrganizations()`. The former is replaced
+   * by loadOrganizationData with a single entry for the organization actually
+   * selected; the latter is the full membership list used by the picker.
+   */
+  readonly currentOrganizationDisplayName = computed(() => {
+    const id = this.organizationContext.currentOrganizationId();
+    const org = id ? this.getOrganizationById(id) : undefined;
+    return org?.alias || org?.name || '';
+  });
 
   // Lookup maps for O(1) access
   private projectMap = computed(() => {

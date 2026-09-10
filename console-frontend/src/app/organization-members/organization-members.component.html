@@ -351,6 +351,19 @@
                         "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
+                      <!-- Nothing was ever sent, so this is not a resend: it is
+                           the message the admin still has to deliver by hand,
+                           for an invitation made last week or made by functl.
+                           Guarded on the address: the proto says email is set
+                           for invited members, and without one the message
+                           would name nobody to send it to. -->
+                      @if (member.email) {
+                        <nldd-menu-item
+                          text="Send invitation email…"
+                          icon="envelope"
+                          (select)="openInvitationEmail(member)"
+                        ></nldd-menu-item>
+                      }
                       <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
                         text="Cancel invitation"
@@ -464,6 +477,32 @@
     (click)="confirmDeleteMember()"
     text="Remove member"
     variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>
+<!-- Invitation Email Modal -->
+<nldd-modal-dialog
+  appDialogSync
+  [show]="!!invitationEmailMember()"
+  [attr.text]="invitationEmailTitle()"
+  accessible-label="Invitation email"
+  (close)="invitationEmailMember.set(null)"
+>
+  <!-- The dialog stays in the DOM with nobody picked, so the panel is guarded
+       rather than handed null inputs to build a message out of. -->
+  @if (invitationEmailMember(); as member) {
+    <app-invitation-email
+      [email]="member.email || ''"
+      [permission]="member.permission"
+      [organization]="organizationName()"
+      idleText="Invitation pending"
+    />
+  }
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="invitationEmailMember.set(null)"
+    text="Done"
+    variant="primary"
   ></nldd-button>
 </nldd-modal-dialog>
 <!-- Invite Sheet -->

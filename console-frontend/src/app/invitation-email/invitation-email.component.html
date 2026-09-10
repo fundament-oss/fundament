@@ -1,0 +1,46 @@
+<!-- The banner doubles as the copy confirmation: it is a live region, so
+     changing what it says announces the copy. See the component docblock for
+     why a notification cannot do this from inside a sheet or a dialog. -->
+<nldd-banner
+  variant="success"
+  [attr.text]="copied() ? 'Message copied to clipboard' : idleText()"
+  [attr.supporting-text]="
+    copied()
+      ? 'Paste it into an email to ' + email() + '.'
+      : 'No email is sent automatically. Send this message to ' + email() + ' yourself.'
+  "
+></nldd-banner>
+<nldd-spacer size="12"></nldd-spacer>
+<!-- Shown in full rather than summarised: the admin is about to send it under
+     their own name, so they get to read it first. Multi-line, because the body
+     is nine lines and a single-line field would run them together. -->
+<nldd-form-field label="Message">
+  <!-- rows floors the height; resize defaults to "auto", which grows the field
+       to fit, so a long organization name that wraps is still shown whole. -->
+  <nldd-multi-line-text-field
+    input-id="invitationMessage"
+    rows="10"
+    readonly
+    [value]="message().body"
+  ></nldd-multi-line-text-field>
+</nldd-form-field>
+<nldd-spacer size="16"></nldd-spacer>
+<nldd-button
+  appAutofocus
+  [attr.href]="message().mailto"
+  text="Open in email app"
+  start-icon="envelope"
+  variant="primary"
+  width="full"
+></nldd-button>
+<nldd-spacer size="8"></nldd-spacer>
+<!-- Not optional polish: a browser with no registered mail handler does nothing
+     at all on the link above, silently, and then this is the only way through. -->
+<nldd-button
+  type="button"
+  (click)="copy()"
+  text="Copy message"
+  start-icon="copy"
+  variant="secondary"
+  width="full"
+></nldd-button>
