@@ -589,10 +589,12 @@
       </nldd-list>
     </nldd-container>
 
-    @if (!hasNoLogs()) {
+    @if (showFilterControls()) {
       <!-- Searching stays out here: it is the one filter you type into while
      reading, and the Filters button beside it only appears once the column
-     has folded into a sheet. -->
+     has folded into a sheet. It also stays when the query came back empty
+     because of what you typed: taking the field away would leave reloading
+     the page as the only way to change the search. -->
       <nldd-toolbar label="Search and filter">
         <nldd-toolbar-item
           slot="start"
@@ -673,9 +675,10 @@
          filtered on beyond that, each with the way back out. The menus are only
          here while the filter column is a sheet; with the column beside the list
          it already shows them. -->
-    <!-- Not in the empty state: with nothing on screen to narrow, a row of
-         filters is chrome around an absence. -->
-    @if (!hasNoLogs() && (filtersCollapsed() || activeFilterChips().length > 0)) {
+    <!-- Not in the empty state, unless a filter is what emptied it: with
+         nothing on screen and nothing narrowing it, a row of filters is chrome
+         around an absence. -->
+    @if (showFilterControls() && (filtersCollapsed() || activeFilterChips().length > 0)) {
       <nldd-container
         layout="wrap"
         gap="8"
@@ -786,13 +789,31 @@
     <!-- Two different nothings. Nothing came back at all: the filters are the
          way out, so the page steps aside for one line that says so and offers
          them. Something came back but the search narrowed it to nothing: the
-         toolbar and the count stay, because widening is what you do next. -->
+         toolbar and the count stay, because widening is what you do next.
+         The search runs on the backend, so a term that matches nothing lands in
+         the first branch as well - and there it says so, and offers the way
+         back. -->
     @if (hasNoLogs()) {
       @if (isLoading()) {
         <nldd-activity-indicator
           show-text
           text="Loading logs"
         ></nldd-activity-indicator>
+      } @else if (hasSearchText()) {
+        <nldd-inline-dialog
+          icon="search"
+          icon-color="secondary"
+          text="No log entries match your search"
+          supporting-text="Try another search term, a wider time range, or fewer filters."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            text="Clear search"
+            variant="secondary"
+            (click)="clearSearch()"
+          ></nldd-button>
+        </nldd-inline-dialog>
       } @else {
         <nldd-inline-dialog text="No log entries"></nldd-inline-dialog>
       }
@@ -803,9 +824,25 @@
       <nldd-spacer size="8"></nldd-spacer>
       @if (filteredLogs().length === 0) {
         <nldd-inline-dialog
-          text="No log entries match the current filters"
+          [attr.icon]="hasSearchText() ? 'search' : null"
+          icon-color="secondary"
+          [attr.text]="
+            hasSearchText()
+              ? 'No log entries match your search'
+              : 'No log entries match the current filters'
+          "
           supporting-text="Try a wider time range, fewer filters, or another search term."
-        ></nldd-inline-dialog>
+        >
+          @if (hasSearchText()) {
+            <nldd-button
+              slot="actions"
+              type="button"
+              text="Clear search"
+              variant="secondary"
+              (click)="clearSearch()"
+            ></nldd-button>
+          }
+        </nldd-inline-dialog>
       } @else {
         <!-- Histogram. The counts come from the backend's aggregation over the
            whole window, so this is a picture of the range you selected rather

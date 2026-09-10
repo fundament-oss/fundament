@@ -282,6 +282,21 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    *  matched none of what did: only the second one is about the filters. */
   readonly hasNoLogs = computed(() => this.allLogs().length === 0);
 
+  readonly hasSearchText = computed(() => this.searchText().trim().length > 0);
+
+  /**
+   * Whether the search field and the filter tokens are on screen.
+   *
+   * They go away when the cluster simply has no logs, where a row of controls
+   * would be chrome around an absence. They stay whenever something is
+   * narrowing the query, empty result or not: the search runs on the backend,
+   * so a term that matches nothing empties the list, and hiding the field then
+   * leaves reloading the page as the only way to type something else.
+   */
+  readonly showFilterControls = computed(
+    () => !this.hasNoLogs() || this.hasSearchText() || this.activeFilterChips().length > 0,
+  );
+
   // ── request state
   readonly isLoading = signal(false);
 
@@ -1147,6 +1162,18 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.searchDebounce = setTimeout(() => {
       this.reloadForFilterChange();
     }, 400);
+  }
+
+  /** Drops the search term and asks for the logs again straight away: the
+   *  debounce is there for typing, and this is a click. */
+  clearSearch(): void {
+    if (this.searchDebounce !== null) {
+      clearTimeout(this.searchDebounce);
+      this.searchDebounce = null;
+    }
+    this.searchText.set('');
+    this.currentPage.set(0);
+    this.reloadForFilterChange();
   }
 
   clearAllFilters(): void {
