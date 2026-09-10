@@ -807,39 +807,51 @@
           supporting-text="Try a wider time range, fewer filters, or another search term."
         ></nldd-inline-dialog>
       } @else {
-        <!-- Histogram -->
-        <nldd-box background="base">
-          <nldd-container padding="16">
-            <div class="pt-3 pb-1">
-              <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <span class="flex items-center gap-1.5"
-                  ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span
-                  >Error</span
-                >
-                <span class="flex items-center gap-1.5"
-                  ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span
-                  >Warn</span
-                >
-                <span class="flex items-center gap-1.5"
-                  ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span
-                  >Info</span
-                >
-                <span class="flex items-center gap-1.5"
-                  ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span
-                  >Debug</span
-                >
+        <!-- Histogram. The counts come from the backend's aggregation over the
+           whole window, so this is a picture of the range you selected rather
+           than of the page below it. It is dropped entirely when those counts
+           are missing: an empty chart above a full list reads as "no traffic",
+           which is the one thing it must never say. -->
+        @if (histogramBuckets().length > 0) {
+          <nldd-box background="base">
+            <nldd-container padding="16">
+              <div class="pt-3 pb-1">
+                <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <span class="flex items-center gap-1.5"
+                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span
+                    >Error</span
+                  >
+                  <span class="flex items-center gap-1.5"
+                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span
+                    >Warn</span
+                  >
+                  <span class="flex items-center gap-1.5"
+                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span
+                    >Info</span
+                  >
+                  <span class="flex items-center gap-1.5"
+                    ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span
+                    >Debug</span
+                  >
+                  <!-- Plugin and pod-log sources cannot be aggregated, so their
+                   counts are the loaded lines. Saying so is the difference
+                   between a sample and a claim about the cluster. -->
+                  @if (!histogramExact()) {
+                    <span class="ml-auto">Counted from the loaded lines, not the whole range</span>
+                  }
+                </div>
               </div>
-            </div>
-            <div
-              class="pb-3"
-              style="height: 100px"
-            >
-              <canvas #histogramChart></canvas>
-            </div>
-          </nldd-container>
-        </nldd-box>
+              <div
+                class="pb-3"
+                style="height: 100px"
+              >
+                <canvas #histogramChart></canvas>
+              </div>
+            </nldd-container>
+          </nldd-box>
 
-        <nldd-spacer size="16"></nldd-spacer>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
         <!-- The count and the sort belong to the list, so they ride in its own
            toolbar slot instead of a bar of their own above it. -->
         <nldd-list accessible-label="Log entries">

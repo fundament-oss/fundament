@@ -369,7 +369,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     return { from: new Date(now.getTime() - minutes * 60 * 1000), to: now };
   });
 
-  // ── filtered logs without level filter (used for counts + histogram)
+  // ── filtered logs without level filter (the base for the list, and the
+  //    fallback the chip counts use when the histogram did not come back)
   private readonly filteredLogsNoLevel = computed(() => {
     const { from, to } = this.timeRange();
     // Tailed entries carry a server timestamp of "now", which is at or past
@@ -410,8 +411,29 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     return this.levelCounts()[level].toLocaleString();
   }
 
-  // ── level counts for chips (within the fetched, already level-filtered set)
+  /**
+   * Counts for the severity chips.
+   *
+   * Taken from the histogram whenever there is one, rather than from the
+   * fetched page: the page stops at LOG_LIMIT while the chart directly above
+   * counts the whole window, and a chip reading "2,000" under bars that sum to
+   * forty thousand is worse than either number on its own. The page is only
+   * the fallback for when the counts did not come back — which is also when
+   * the chart is hidden, so the two are never on screen disagreeing.
+   */
   readonly levelCounts = computed(() => {
+    const buckets = this.histogramBuckets();
+    if (buckets.length > 0) {
+      return buckets.reduce(
+        (total, b) => ({
+          ERROR: total.ERROR + b.error,
+          WARN: total.WARN + b.warn,
+          INFO: total.INFO + b.info,
+          DEBUG: total.DEBUG + b.debug,
+        }),
+        { ERROR: 0, WARN: 0, INFO: 0, DEBUG: 0 },
+      );
+    }
     const logs = this.filteredLogsNoLevel();
     return {
       ERROR: logs.filter((l) => l.level === 'ERROR').length,
@@ -465,39 +487,63 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     return `{${matchers.join(', ')}}${pipeline.length ? ` ${pipeline.join(' ')}` : ''}`;
   });
 
-  // ── histogram buckets
-  readonly histogramBuckets = computed((): HistogramBucket[] => {
-    const { from, to } = this.timeRange();
-    const BUCKET_COUNT = 30;
-    const bucketMs = (to.getTime() - from.getTime()) / BUCKET_COUNT;
+  // ── histogram
+  //
+  // Counted by the backend over the whole window, not reduced from the entry
+  // page: the page is the newest LOG_LIMIT lines, so counting it here pinned
+  // every total at the limit and drew a cliff wherever the page happened to
+  // start — a shape indistinguishable from traffic actually falling off.
+  readonly histogramBuckets = signal<HistogramBucket[]>([]);
 
-    const buckets: HistogramBucket[] = Array.from({ length: BUCKET_COUNT }, (_, i) => {
-      const bucketTime = new Date(from.getTime() + i * bucketMs);
-      return {
-        label: bucketTime.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }),
-        error: 0,
-        warn: 0,
-        info: 0,
-        debug: 0,
-      };
-    });
+  /** False when the counts came from a bounded page because the backend
+   *  cannot aggregate (Kubernetes pod logs, plugin logs). */
+  readonly histogramExact = signal(true);
 
-    this.filteredLogs().forEach((log) => {
-      const idx = Math.min(
-        Math.floor((log.timestamp.getTime() - from.getTime()) / bucketMs),
-        BUCKET_COUNT - 1,
-      );
-      if (idx >= 0) {
-        const key = log.level.toLowerCase() as 'error' | 'warn' | 'info' | 'debug';
-        buckets[idx][key] += 1;
-      }
-    });
+  private readonly HISTOGRAM_BUCKETS = 30;
 
-    return buckets;
+  /**
+   * How many one-second tail ticks pass between histogram refreshes. Every
+   * refresh is a backend round trip, and thirty buckets of a sliding window
+   * cannot show a one-second change anyway.
+   */
+  private readonly LIVE_HISTOGRAM_REFRESH_TICKS = 5;
+
+  /**
+   * Which load the answers on screen belong to.
+   *
+   * A load is two independent requests, the entries and the counts, and a
+   * filter change can start a new pair before the last one has landed. Without
+   * a ticket a slow response overwrites a fast newer one — and worse, a late
+   * entry list can pair with an early histogram, leaving the chart describing
+   * a different filter than the lines underneath it.
+   */
+  private loadSeq = 0;
+
+  /**
+   * Axis labels for the buckets. A window wider than a day needs the date:
+   * now that the chart really does span the whole range, twelve identical
+   * "08:00" ticks would be seven different days.
+   */
+  readonly histogramLabels = computed((): string[] => {
+    const buckets = this.histogramBuckets();
+    if (buckets.length === 0) return [];
+    const spanMs = buckets[buckets.length - 1].start.getTime() - buckets[0].start.getTime();
+    const multiDay = spanMs > 24 * 60 * 60 * 1000;
+    return buckets.map((b) =>
+      multiDay
+        ? b.start.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
+        : b.start.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+    );
   });
 
   // ── selected log index for prev/next navigation
@@ -533,7 +579,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     effect(() => {
       const buckets = this.histogramBuckets();
       if (this.histogram) {
-        this.histogram.data.labels = buckets.map((b) => b.label);
+        this.histogram.data.labels = this.histogramLabels();
         this.histogram.data.datasets[0].data = buckets.map((b) => b.error);
         this.histogram.data.datasets[1].data = buckets.map((b) => b.warn);
         this.histogram.data.datasets[2].data = buckets.map((b) => b.info);
@@ -675,20 +721,22 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private async loadLogs(): Promise<void> {
+    this.loadSeq += 1;
+    const seq = this.loadSeq;
     const clusterId = this.selectedCluster();
     if (!clusterId) {
-      this.allLogs.set([]);
+      this.clearLogs();
       return;
     }
     // Live mode reads one pod at a time (Kubernetes pod-log semantics), so a
     // namespace + pod selection is a hard requirement before querying.
     if (this.isLiveMode() && (!this.selectedNamespace() || !this.selectedPod())) {
-      this.allLogs.set([]);
+      this.clearLogs();
       return;
     }
     // The Kubernetes fallback can only read a single pod, so require one.
     if (this.isFallback() && (!this.selectedNamespace() || !this.selectedPod())) {
-      this.allLogs.set([]);
+      this.clearLogs();
       return;
     }
 
@@ -711,15 +759,126 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         to,
         limit: this.LOG_LIMIT,
       });
+      if (seq !== this.loadSeq) return;
       this.backend.set(result.backend);
       this.allLogs.set(result.entries);
       this.currentPage.set(0);
+      // The chart is context for the lines, so it is not allowed to hold them
+      // up: the page is done here, and the counts land on their own ticket.
+      this.isLoading.set(false);
+      this.refreshHistogram(from, to, seq);
     } catch {
+      if (seq !== this.loadSeq) return;
       this.loadError.set(true);
-      this.allLogs.set([]);
-    } finally {
+      // Voids the histogram still in flight for this load: a chart above an
+      // empty, errored list would be describing logs the page cannot show.
+      this.clearLogs();
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Puts counts under the chart for the window the entry list just queried.
+   *
+   * A backend that can aggregate is asked; one that cannot would answer by
+   * re-reading the pod's log and counting the page it got back — the same page
+   * this component is already holding — so that page is counted here instead.
+   * It saves a second read of the same log per filter change, and it makes the
+   * chart and the list provably the same lines rather than two reads that
+   * happened to be taken a moment apart.
+   */
+  private refreshHistogram(from: Date, to: Date, seq: number): void {
+    if (!this.isFallback()) {
+      this.loadHistogram(from, to, seq).catch(() => {
+        // loadHistogram reports its own failures by dropping the chart.
+      });
+      return;
+    }
+    this.histogramBuckets.set(this.bucketFetchedEntries(from, to));
+    this.histogramExact.set(false);
+  }
+
+  /**
+   * Buckets the entries already on the page, laid out exactly as the backend
+   * lays its own out: HISTOGRAM_BUCKETS equal divisions of the window, empty
+   * ones included, so a quiet stretch draws as a zero and not as a gap.
+   *
+   * Only ever used for counts that are a page rather than a window, which is
+   * what `histogramExact` is false for and what the caption says out loud.
+   */
+  private bucketFetchedEntries(from: Date, to: Date): HistogramBucket[] {
+    const width = (to.getTime() - from.getTime()) / this.HISTOGRAM_BUCKETS;
+    const buckets: HistogramBucket[] = Array.from({ length: this.HISTOGRAM_BUCKETS }, (_, i) => ({
+      start: new Date(from.getTime() + i * width),
+      error: 0,
+      warn: 0,
+      info: 0,
+      debug: 0,
+    }));
+    if (width <= 0) return buckets;
+    this.filteredLogs().forEach((log) => {
+      // Clamped rather than dropped: a live tail carries server timestamps a
+      // moment past the anchor, and those lines are in the list, so leaving
+      // them out of the chart would understate exactly the edge being watched.
+      const idx = Math.min(
+        Math.max(Math.floor((log.timestamp.getTime() - from.getTime()) / width), 0),
+        this.HISTOGRAM_BUCKETS - 1,
+      );
+      buckets[idx][log.level.toLowerCase() as 'error' | 'warn' | 'info' | 'debug'] += 1;
+    });
+    return buckets;
+  }
+
+  /**
+   * Fetches the bucketed counts for the window the entry list is querying.
+   *
+   * Kept separate from the entry query and never allowed to fail the page: the
+   * chart is context for the lines, so a backend that can serve lines but not
+   * aggregates should still show you your logs. `seq` is the load it belongs
+   * to; an answer for a load that has been superseded is dropped rather than
+   * painted over the current one.
+   */
+  private async loadHistogram(from: Date, to: Date, seq: number): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    try {
+      const result = await this.logsApi.histogram({
+        clusterId,
+        namespace: this.selectedNamespace() || undefined,
+        pod: this.selectedPod() || undefined,
+        container: this.selectedContainer() || undefined,
+        search: this.searchText() || undefined,
+        levels: this.requestedLevels(),
+        source: this.requestedSource(),
+        from,
+        to,
+        buckets: this.HISTOGRAM_BUCKETS,
+        // A backend that cannot aggregate counts a page instead. Handing it
+        // the entry query's limit keeps that page the one the list is
+        // showing, rather than a second, larger read of the same pod log.
+        limit: this.LOG_LIMIT,
+      });
+      if (seq !== this.loadSeq) return;
+      this.histogramBuckets.set(result.buckets);
+      this.histogramExact.set(result.exact);
+    } catch {
+      if (seq !== this.loadSeq) return;
+      // An empty chart above a full list reads as "no traffic", which is the
+      // opposite of what happened, so drop the chart instead.
+      this.histogramBuckets.set([]);
+      this.histogramExact.set(true);
+    }
+  }
+
+  /**
+   * Drop what is on screen and void what is still in flight: the answers to a
+   * load we have given up on must not arrive later and repopulate half a page.
+   */
+  private clearLogs(): void {
+    this.loadSeq += 1;
+    this.allLogs.set([]);
+    this.histogramBuckets.set([]);
+    this.histogramExact.set(true);
   }
 
   // ── chart
@@ -728,7 +887,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     const config: ChartConfiguration = {
       type: 'bar',
       data: {
-        labels: buckets.map((b) => b.label),
+        labels: this.histogramLabels(),
         datasets: [
           {
             label: 'Error',
@@ -844,12 +1003,24 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.liveTailRate.set(0);
     this.currentPage.set(0);
 
+    let ticksSinceHistogram = 0;
     this.liveTailRateInterval = setInterval(() => {
       this.liveTailRate.set(this.liveTailReceived);
       this.liveTailReceived = 0;
-      // Slide the window with the clock so the histogram and the lower bound
-      // keep up with a long-running tail.
+      // Slide the window with the clock so the lower bound keeps up with a
+      // long-running tail.
       this.windowAnchor.set(Date.now());
+      // The counts do not slide with it — they are a server answer, fetched
+      // once per load — so without this the chart would keep describing the
+      // window it was loaded with while the list moved out from under it.
+      ticksSinceHistogram += 1;
+      // Counting the page costs nothing, so it keeps pace with the tail; a
+      // fetch is a round trip, so it goes at the slower rate.
+      if (this.isFallback() || ticksSinceHistogram >= this.LIVE_HISTOGRAM_REFRESH_TICKS) {
+        ticksSinceHistogram = 0;
+        const { from, to } = this.timeRange();
+        this.refreshHistogram(from, to, this.loadSeq);
+      }
     }, 1000);
 
     this.liveTailSub = this.logsApi

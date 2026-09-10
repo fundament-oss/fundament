@@ -40,6 +40,9 @@ const (
 	// LogsServiceGetLogLabelsProcedure is the fully-qualified name of the LogsService's GetLogLabels
 	// RPC.
 	LogsServiceGetLogLabelsProcedure = "/organization.v1.LogsService/GetLogLabels"
+	// LogsServiceGetLogHistogramProcedure is the fully-qualified name of the LogsService's
+	// GetLogHistogram RPC.
+	LogsServiceGetLogHistogramProcedure = "/organization.v1.LogsService/GetLogHistogram"
 )
 
 // LogsServiceClient is a client for the organization.v1.LogsService service.
@@ -51,6 +54,15 @@ type LogsServiceClient interface {
 	// GetLogLabels returns the distinct label values (namespaces, pods,
 	// containers) available for a cluster, used to populate filter dropdowns.
 	GetLogLabels(context.Context, *v1.GetLogLabelsRequest) (*v1.GetLogLabelsResponse, error)
+	// GetLogHistogram returns per-severity log counts bucketed over the
+	// requested window.
+	//
+	// This cannot be derived from QueryLogs: those entries are the newest
+	// QueryLogsRequest.limit lines, so counting them client-side describes the
+	// page rather than the window — on a busy cluster the totals pin at the
+	// limit and the chart renders a traffic cliff at whatever moment the page
+	// happens to start.
+	GetLogHistogram(context.Context, *v1.GetLogHistogramRequest) (*v1.GetLogHistogramResponse, error)
 }
 
 // NewLogsServiceClient constructs a client for the organization.v1.LogsService service. By default,
@@ -82,14 +94,21 @@ func NewLogsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(logsServiceMethods.ByName("GetLogLabels")),
 			connect.WithClientOptions(opts...),
 		),
+		getLogHistogram: connect.NewClient[v1.GetLogHistogramRequest, v1.GetLogHistogramResponse](
+			httpClient,
+			baseURL+LogsServiceGetLogHistogramProcedure,
+			connect.WithSchema(logsServiceMethods.ByName("GetLogHistogram")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // logsServiceClient implements LogsServiceClient.
 type logsServiceClient struct {
-	queryLogs    *connect.Client[v1.QueryLogsRequest, v1.QueryLogsResponse]
-	tailLogs     *connect.Client[v1.TailLogsRequest, v1.LogEntry]
-	getLogLabels *connect.Client[v1.GetLogLabelsRequest, v1.GetLogLabelsResponse]
+	queryLogs       *connect.Client[v1.QueryLogsRequest, v1.QueryLogsResponse]
+	tailLogs        *connect.Client[v1.TailLogsRequest, v1.LogEntry]
+	getLogLabels    *connect.Client[v1.GetLogLabelsRequest, v1.GetLogLabelsResponse]
+	getLogHistogram *connect.Client[v1.GetLogHistogramRequest, v1.GetLogHistogramResponse]
 }
 
 // QueryLogs calls organization.v1.LogsService.QueryLogs.
@@ -115,6 +134,15 @@ func (c *logsServiceClient) GetLogLabels(ctx context.Context, req *v1.GetLogLabe
 	return nil, err
 }
 
+// GetLogHistogram calls organization.v1.LogsService.GetLogHistogram.
+func (c *logsServiceClient) GetLogHistogram(ctx context.Context, req *v1.GetLogHistogramRequest) (*v1.GetLogHistogramResponse, error) {
+	response, err := c.getLogHistogram.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // LogsServiceHandler is an implementation of the organization.v1.LogsService service.
 type LogsServiceHandler interface {
 	// Query returns a bounded set of log entries matching the given filters.
@@ -124,6 +152,15 @@ type LogsServiceHandler interface {
 	// GetLogLabels returns the distinct label values (namespaces, pods,
 	// containers) available for a cluster, used to populate filter dropdowns.
 	GetLogLabels(context.Context, *v1.GetLogLabelsRequest) (*v1.GetLogLabelsResponse, error)
+	// GetLogHistogram returns per-severity log counts bucketed over the
+	// requested window.
+	//
+	// This cannot be derived from QueryLogs: those entries are the newest
+	// QueryLogsRequest.limit lines, so counting them client-side describes the
+	// page rather than the window — on a busy cluster the totals pin at the
+	// limit and the chart renders a traffic cliff at whatever moment the page
+	// happens to start.
+	GetLogHistogram(context.Context, *v1.GetLogHistogramRequest) (*v1.GetLogHistogramResponse, error)
 }
 
 // NewLogsServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -151,6 +188,12 @@ func NewLogsServiceHandler(svc LogsServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(logsServiceMethods.ByName("GetLogLabels")),
 		connect.WithHandlerOptions(opts...),
 	)
+	logsServiceGetLogHistogramHandler := connect.NewUnaryHandlerSimple(
+		LogsServiceGetLogHistogramProcedure,
+		svc.GetLogHistogram,
+		connect.WithSchema(logsServiceMethods.ByName("GetLogHistogram")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.LogsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case LogsServiceQueryLogsProcedure:
@@ -159,6 +202,8 @@ func NewLogsServiceHandler(svc LogsServiceHandler, opts ...connect.HandlerOption
 			logsServiceTailLogsHandler.ServeHTTP(w, r)
 		case LogsServiceGetLogLabelsProcedure:
 			logsServiceGetLogLabelsHandler.ServeHTTP(w, r)
+		case LogsServiceGetLogHistogramProcedure:
+			logsServiceGetLogHistogramHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -178,4 +223,8 @@ func (UnimplementedLogsServiceHandler) TailLogs(context.Context, *v1.TailLogsReq
 
 func (UnimplementedLogsServiceHandler) GetLogLabels(context.Context, *v1.GetLogLabelsRequest) (*v1.GetLogLabelsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.LogsService.GetLogLabels is not implemented"))
+}
+
+func (UnimplementedLogsServiceHandler) GetLogHistogram(context.Context, *v1.GetLogHistogramRequest) (*v1.GetLogHistogramResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.LogsService.GetLogHistogram is not implemented"))
 }

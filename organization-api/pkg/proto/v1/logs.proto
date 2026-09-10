@@ -25,6 +25,16 @@ service LogsService {
   // GetLogLabels returns the distinct label values (namespaces, pods,
   // containers) available for a cluster, used to populate filter dropdowns.
   rpc GetLogLabels(GetLogLabelsRequest) returns (GetLogLabelsResponse);
+
+  // GetLogHistogram returns per-severity log counts bucketed over the
+  // requested window.
+  //
+  // This cannot be derived from QueryLogs: those entries are the newest
+  // QueryLogsRequest.limit lines, so counting them client-side describes the
+  // page rather than the window — on a busy cluster the totals pin at the
+  // limit and the chart renders a traffic cliff at whatever moment the page
+  // happens to start.
+  rpc GetLogHistogram(GetLogHistogramRequest) returns (GetLogHistogramResponse);
 }
 
 // LogBackend identifies which backend served a response, so the frontend can
@@ -146,4 +156,68 @@ message GetLogLabelsResponse {
   repeated string containers = 30;
   // Which backend answered (the Kubernetes fallback returns empty lists).
   LogBackend backend = 40;
+}
+
+// GetLogHistogramRequest asks for bucketed counts over a window. The filters
+// mirror QueryLogsRequest so the chart describes exactly the query the entry
+// list is showing.
+message GetLogHistogramRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional label filters. Empty means "all".
+  string namespace = 20;
+  string pod = 30;
+  string container = 40;
+  // Optional free-text line filter.
+  string search = 60;
+  // Time range to bucket. Defaults to the last hour when not set.
+  google.protobuf.Timestamp start = 70 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 80 [features.field_presence = EXPLICIT];
+  // How many equal buckets to divide the window into. Defaults to 30 when
+  // zero and is capped at 200: each bucket is one aggregation step, and the
+  // range comes from the wire.
+  int32 buckets = 90 [(buf.validate.field).int32 = {gte: 0, lte: 200}];
+  // Optional severity filter; see QueryLogsRequest.levels. An unselected
+  // level is reported as zero rather than omitted, so the series stay aligned.
+  repeated string levels = 100 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      string: {max_len: 16}
+    }
+  }];
+  // Which of the cluster's log sources to read.
+  LogSource source = 110;
+  // How many lines a backend that cannot aggregate may read before counting
+  // them. Ignored by backends that do aggregate (Vali), whose counts cover the
+  // whole window however this is set. Defaults and caps exactly as
+  // QueryLogsRequest.limit does: 1000 when zero, never above 5000.
+  //
+  // Set it to the same value as QueryLogsRequest.limit: the fallback then
+  // counts exactly the page the entry list is showing, instead of reading the
+  // pod's log a second time at a different size and reporting totals the list
+  // below it cannot account for.
+  int32 limit = 120 [(buf.validate.field).int32 = {gte: 0, lte: 5000}];
+}
+
+// LogHistogramBucket is one bucket of the window, counted per severity.
+message LogHistogramBucket {
+  // Start of the bucket. Every bucket spans (end - start) / buckets, so the
+  // width is implied rather than repeated on each one.
+  google.protobuf.Timestamp start = 10;
+  int64 error_count = 20;
+  int64 warn_count = 30;
+  int64 info_count = 40;
+  int64 debug_count = 50;
+}
+
+// GetLogHistogramResponse contains one bucket per requested division of the
+// window, oldest first.
+message GetLogHistogramResponse {
+  repeated LogHistogramBucket buckets = 10;
+  // Which backend answered.
+  LogBackend backend = 20;
+  // Whether the counts cover the whole window. False when the backend cannot
+  // aggregate and the counts were taken from a bounded page of entries
+  // instead (the Kubernetes pod-log fallback and plugin logs), which is the
+  // case the caller has to caveat in its UI.
+  bool exact = 30;
 }
