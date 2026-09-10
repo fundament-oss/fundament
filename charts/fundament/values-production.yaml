@@ -13,6 +13,12 @@ authnApi:
 organizationApi:
   enabled: true
   replicas: 2
+  # Read cluster system logs from each shoot's own Vali through the Plutono
+  # datasource proxy (ADR-0027) rather than serving generated data. Needs
+  # clusterWorker.gardenerKubeconfigSecret set: without it organization-api
+  # falls back to a noop Gardener client, resolution fails, and the console
+  # reports "No log backend is configured".
+  logsURL: per-shoot
 
 consoleFrontend:
   enabled: true
