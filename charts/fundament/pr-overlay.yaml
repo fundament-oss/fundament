@@ -89,7 +89,9 @@ spec:
       marketplaceCatalogApi: https://marketplace-catalog-api.pr${PR_NUM}.${DOMAIN}
       marketplaceRegistryApi: https://marketplace-registry-api.pr${PR_NUM}.${DOMAIN}
       marketplaceAdminApi: https://marketplace-admin-api.pr${PR_NUM}.${DOMAIN}
-      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://marketplace.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
+      marketplaceRegistry: https://marketplace-registry.pr${PR_NUM}.${DOMAIN}
+      marketplaceAdmin: https://marketplace-admin.pr${PR_NUM}.${DOMAIN}
+      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://marketplace.pr${PR_NUM}.${DOMAIN},https://marketplace-registry.pr${PR_NUM}.${DOMAIN},https://marketplace-admin.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     deploymentVersion: ${IMAGE_TAG}
 
@@ -112,6 +114,8 @@ spec:
       marketplaceCatalogApi: ${IMAGE_PREFIX}/marketplace-catalog-api:${IMAGE_TAG}
       marketplaceRegistryApi: ${IMAGE_PREFIX}/marketplace-registry-api:${IMAGE_TAG}
       marketplaceAdminApi: ${IMAGE_PREFIX}/marketplace-admin-api:${IMAGE_TAG}
+      marketplaceRegistryFrontend: ${IMAGE_PREFIX}/marketplace-registry-frontend:${IMAGE_TAG}
+      marketplaceAdminFrontend: ${IMAGE_PREFIX}/marketplace-admin-frontend:${IMAGE_TAG}
 
     authnApi:
       replicas: 1
@@ -321,8 +325,6 @@ spec:
       replicas: 1
       internalApiUrls:
         catalog: http://marketplace-catalog-api:8080
-        registry: http://marketplace-registry-api:8080
-        admin: http://marketplace-admin-api:8080
       httproute:
         enabled: true
         parentRefs:
@@ -333,6 +335,40 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - marketplace.pr${PR_NUM}.${DOMAIN}
+
+    # Developer portal and review backoffice: the storefront image built for
+    # the other two audiences (FUN-20).
+    marketplaceRegistryFrontend:
+      enabled: true
+      replicas: 1
+      internalApiUrls:
+        registry: http://marketplace-registry-api:8080
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - marketplace-registry.pr${PR_NUM}.${DOMAIN}
+
+    marketplaceAdminFrontend:
+      enabled: true
+      replicas: 1
+      internalApiUrls:
+        admin: http://marketplace-admin-api:8080
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - marketplace-admin.pr${PR_NUM}.${DOMAIN}
 
     # Anonymous storefront API: no auth, so no Dex client and no JWT secret.
     marketplaceCatalogApi:

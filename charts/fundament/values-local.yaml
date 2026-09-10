@@ -17,7 +17,9 @@ externalUrls:
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.localhost:8443
   marketplaceRegistryApi: https://marketplace-registry-api.fundament.localhost:8443
   marketplaceAdminApi: https://marketplace-admin-api.fundament.localhost:8443
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  marketplaceRegistry: https://marketplace-registry.fundament.localhost:8443
+  marketplaceAdmin: https://marketplace-admin.fundament.localhost:8443
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://marketplace-registry.fundament.localhost:8443,https://marketplace-admin.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -158,11 +160,23 @@ dcimFrontend:
 marketplaceFrontend:
   enabled: true
   replicas: 1
-  # The renderer calls the APIs in-cluster rather than back in through the
+  # The renderer calls the catalog in-cluster rather than back in through the
   # ingress.
   internalApiUrls:
     catalog: http://marketplace-catalog-api:8080
+
+# Developer portal and review backoffice: the storefront image built for the
+# other two audiences (FUN-20).
+marketplaceRegistryFrontend:
+  enabled: true
+  replicas: 1
+  internalApiUrls:
     registry: http://marketplace-registry-api:8080
+
+marketplaceAdminFrontend:
+  enabled: true
+  replicas: 1
+  internalApiUrls:
     admin: http://marketplace-admin-api:8080
 
 dexDcim:

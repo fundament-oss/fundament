@@ -40,11 +40,11 @@ spec:
             - name: DEPLOYMENT_VERSION
               value: {{ $.Values.deploymentVersion | quote }}
             {{- end }}
-            # Defaults to the marketplace storefront, which carries the review
-            # backoffice UI: this surface takes credentials, and an empty list
-            # would mean a wildcard origin, which browsers reject.
+            # Defaults to the review backoffice frontend: this surface takes
+            # credentials, and an empty list would mean a wildcard origin,
+            # which browsers reject.
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.marketplace }}
+              value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.marketplaceAdmin }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
 

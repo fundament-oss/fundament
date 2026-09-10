@@ -25,6 +25,7 @@ type CLI struct {
 	Org       OrgCmd       `cmd:"" help:"Manage organization."`
 	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
 	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
+	Plugin    PluginCmd    `cmd:"" help:"Publish plugins to the marketplace."`
 	APIKey    APIKeyCmd    `cmd:"" name:"apikey" help:"Manage API keys."`
 	Version   VersionCmd   `cmd:"" help:"Print the functl version."`
 }

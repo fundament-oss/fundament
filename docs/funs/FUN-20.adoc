@@ -11,7 +11,7 @@
 
 The marketplace is where organizations outside Fundament publish plugins, Fundament reviews them, and users discover them. link:/funs/fun-11[FUN-11] describes the plugin system and the in-console catalog; this FUN records the decisions behind the APIs of the marketplace itself.
 
-All three APIs are implemented. The marketplace frontend is separate work.
+All three APIs are implemented. The marketplace frontend follows the same split: one source tree (`marketplace-frontend`), built three times — storefront, developer portal, review backoffice — each deployed on its own host with only its own audience's routes and API URL. The backoffice build rides the same restricted admin host policy as `marketplace-admin-api`, so the review UI never reaches a storefront visitor's browser.
 
 == Three APIs
 
@@ -162,7 +162,7 @@ Only the parts that are decisions rather than mechanics.
 
 |`PutPluginDefinition`
 |`registry.v1` `CreatePluginVersion`
-|`plugins/cmd/plugin-publish`
+|`functl plugin publish` (done; it replaced `plugins/cmd/plugin-publish`)
 
 |`GetPluginDefinition`
 |`registry.v1`, as an unauthenticated procedure
@@ -185,7 +185,7 @@ The console reads are the authenticated in-product catalog (link:/funs/fun-11[FU
 * Idempotency keys on `CreatePlugin` and `CreatePluginVersion`. link:/funs/fun-15[FUN-15] is opt-in per procedure, and `tenant.idempotency_keys` would give the marketplace role access to `tenant`, which <<One store>> avoids. Both RPCs are naturally idempotent on their unique constraints meanwhile.
 * A publisher role. link:/funs/fun-7[FUN-7] has only `admin` and `viewer`, so any member of the owning organization can publish — no worse than the status quo, but not the end state.
 * Republishing a version. link:/funs/fun-19[FUN-19] describes soft-delete-then-publish; `CreatePluginVersion` is create-only.
-* `functl plugins push`. Named as the client here and in the proto comments, but no such command exists yet; the current publisher is `plugins/cmd/plugin-publish`.
+* `functl plugin publish` exists and is the publisher (it absorbed `plugins/cmd/plugin-publish`, taking its auth from functl's API-key session). Republishing a version through it stays impossible by design — see the republish bullet below.
 * Sideloading a build onto a cluster. It creates a `PluginInstallation`, so it belongs to `organization-api`.
 * Developer login via the Console, for the publishing surface.
 * Pagination on `ListPlugins`.

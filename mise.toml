@@ -5,6 +5,7 @@ SKAFFOLD_DEFAULT_REPO = "k3d-registry.localhost:5111"
 # Point functl at the local dev endpoints, and log at debug level.
 FUNCTL_API_ENDPOINT = "https://organization.fundament.localhost:8443"
 FUNCTL_AUTHN_URL = "https://authn.fundament.localhost:8443"
+FUNCTL_REGISTRY_URL = "https://marketplace-registry-api.fundament.localhost:8443"
 FUNCTL_DEBUG = "true"
 
 [tools]

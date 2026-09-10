@@ -3,14 +3,17 @@ import {
   inject,
   signal,
   computed,
+  effect,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 import { PluginIconComponent } from '../icons';
 import PluginDevelopmentService, { type AuthoredPlugin } from './plugin-development.service';
+import OrganizationContextService from '../organization-context.service';
 import {
   type SubmissionStatus,
   statusLabel,
@@ -46,6 +49,10 @@ const SUMMARY_STATUSES: { status: SubmissionStatus; dotColorVar: string }[] = [
 export default class PluginDevelopmentComponent implements OnInit {
   private titleService = inject(TitleService);
 
+  // URL of the sibling deployable this page links out to (FUN-20); empty
+  // when that area is not deployed, which hides the link.
+  protected storefrontUrl = inject(ConfigService).getConfig().storefrontUrl ?? '';
+
   private service = inject(PluginDevelopmentService);
 
   private router = inject(Router);
@@ -66,11 +73,37 @@ export default class PluginDevelopmentComponent implements OnInit {
     }));
   });
 
+  private organizationContext = inject(OrganizationContextService);
+
+  // The organization the initial load ran under; a later switch reloads.
+  private loadedForOrganization: string | null = null;
+
+  private initialized = false;
+
   constructor() {
     this.titleService.setTitle('My plugins');
+
+    // The header's organization picker changes which org the Fun-Organization
+    // header names; a list fetched under the old org must not stay on screen
+    // while actions from it would be sent under the new one.
+    effect(() => {
+      const organizationId = this.organizationContext.organizationId();
+      if (this.initialized && organizationId !== this.loadedForOrganization) {
+        this.loadedForOrganization = organizationId;
+        this.load().catch(() => {});
+      }
+    });
   }
 
   async ngOnInit() {
+    this.loadedForOrganization = await this.organizationContext.ensureOrganizationId();
+    this.initialized = true;
+    await this.load();
+  }
+
+  private async load() {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
     try {
       this.plugins.set(await this.service.listPlugins());
     } catch (error) {

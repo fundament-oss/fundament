@@ -1,7 +1,11 @@
 import { Routes } from '@angular/router';
 
+// The public storefront's route table — the default build. The developer
+// portal and the review backoffice are their own deployables over the same
+// source (FUN-20): their build configurations swap this file for
+// app.routes.registry.ts / app.routes.admin.ts, so neither area ships to a
+// storefront visitor's browser.
 const routes: Routes = [
-  // Public storefront
   {
     path: '',
     loadComponent: () => import('./marketplace/index.component').then((m) => m.default),
@@ -9,36 +13,6 @@ const routes: Routes = [
   {
     path: 'plugins/:id',
     loadComponent: () => import('./marketplace/plugin-detail.component').then((m) => m.default),
-  },
-  // Developer area
-  // `create` is registered before `:id` so it is not parsed as a plugin id.
-  {
-    path: 'manage/create',
-    loadComponent: () => import('./plugin-create/plugin-create.component').then((m) => m.default),
-  },
-  {
-    path: 'manage',
-    loadComponent: () =>
-      import('./plugin-development/plugin-development.component').then((m) => m.default),
-  },
-  {
-    path: 'manage/:id',
-    loadComponent: () =>
-      import('./plugin-development-detail/plugin-development-detail.component').then(
-        (m) => m.default,
-      ),
-  },
-  // Admin review area.
-  // `submissions/:id` is registered before the bare `admin` route only for
-  // clarity; the router matches on the full path either way.
-  {
-    path: 'admin/submissions/:id',
-    loadComponent: () =>
-      import('./admin-review/submission-detail.component').then((m) => m.default),
-  },
-  {
-    path: 'admin',
-    loadComponent: () => import('./admin-review/review-queue.component').then((m) => m.default),
   },
   { path: '**', redirectTo: '' },
 ];

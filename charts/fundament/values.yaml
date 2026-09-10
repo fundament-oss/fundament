@@ -32,6 +32,8 @@ externalUrls:
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
   marketplace: "" # e.g., https://marketplace.example.com (storefront; empty points the console's "View full details" button at its own plugin page)
+  marketplaceRegistry: "" # e.g., https://marketplace-registry.example.com (developer portal frontend)
+  marketplaceAdmin: "" # e.g., https://marketplace-admin.example.com (review backoffice frontend; restricted host)
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
@@ -58,6 +60,10 @@ images:
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
   marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
+  # Same source as marketplaceFrontend, built for the other two audiences
+  # (BUILD_SCRIPT=build:registry / build:admin), like consoleDemoFrontend.
+  marketplaceRegistryFrontend: ghcr.io/fundament-oss/fundament/marketplace-registry-frontend:latest
+  marketplaceAdminFrontend: ghcr.io/fundament-oss/fundament/marketplace-admin-frontend:latest
 
 # Database (CloudNativePG)
 db:
@@ -211,8 +217,6 @@ marketplaceFrontend:
   # the public URL from externalUrls.
   internalApiUrls:
     catalog: ""
-    registry: ""
-    admin: ""
   httproute:
     enabled: false
     parentRefs: []
@@ -220,6 +224,31 @@ marketplaceFrontend:
     #    namespace: gateway-ns
     hostnames: []
     #  - marketplace.example.com
+
+# Developer portal frontend: the same image as marketplaceFrontend, built for
+# the publishing audience (BUILD_SCRIPT=build:registry; FUN-20).
+marketplaceRegistryFrontend:
+  enabled: false
+  replicas: 1
+  internalApiUrls:
+    registry: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Review backoffice frontend: the same image built for the reviewer audience
+# (BUILD_SCRIPT=build:admin). Deploy on the restricted admin host, like the
+# admin API it fronts.
+marketplaceAdminFrontend:
+  enabled: false
+  replicas: 1
+  internalApiUrls:
+    admin: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
 
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:

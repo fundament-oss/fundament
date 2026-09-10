@@ -74,12 +74,22 @@
             ></nldd-button>
           }
           @case ('approved') {
-            <nldd-button
-              [routerLink]="['/plugins', plugin.id]"
-              text="View in catalog"
-              start-icon="eye"
-              variant="secondary"
-            ></nldd-button>
+            @if (storefrontUrl) {
+              <a [href]="storefrontUrl + '/plugins/' + plugin.id">
+                <nldd-button
+                  text="View in catalog"
+                  start-icon="eye"
+                  variant="secondary"
+                ></nldd-button>
+              </a>
+            } @else {
+              <nldd-button
+                [routerLink]="['/plugins', plugin.id]"
+                text="View in catalog"
+                start-icon="eye"
+                variant="secondary"
+              ></nldd-button>
+            }
           }
         }
         @if (plugin.status !== 'approved') {
