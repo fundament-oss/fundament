@@ -394,8 +394,19 @@ export default class App implements OnInit {
     // be in: the address is written to say where you actually landed. Replacing
     // it rather than adding to it, so the back button does not lead to an
     // address that would only send you here again.
-    if (name && organizationOf(this.router.url) !== name) {
-      this.router.navigateByUrl(inOrganization(name, this.router.url), { replaceUrl: true });
+    //
+    // The address is the one being arrived at, not the one already arrived on:
+    // loading the organization takes a few calls, and the arrival that started
+    // this can still be under way — waiting on the guard, or on the page's own
+    // chunk. `router.url` then still reads as the page being left, and writing
+    // from it would cancel that arrival and drop the page it named: opening
+    // /clusters would land on the organization's empty root instead.
+    const arriving = this.router.getCurrentNavigation();
+    const address = arriving
+      ? this.router.serializeUrl(arriving.finalUrl ?? arriving.extractedUrl)
+      : this.router.url;
+    if (name && organizationOf(address) !== name) {
+      this.router.navigateByUrl(inOrganization(name, address), { replaceUrl: true });
     }
   }
 
