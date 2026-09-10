@@ -109,7 +109,7 @@ func run() error {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
 
-	w := worker.New(pool, fgaClient, logger, worker.Config{
+	w := worker.New(pool, fgaClient, store, logger, worker.Config{
 		PollInterval: cfg.PollInterval,
 		BatchSize:    cfg.BatchSize,
 		BaseBackoff:  cfg.BaseBackoff,
@@ -131,10 +131,6 @@ func run() error {
 		}
 
 		return err
-	}
-
-	if err := fgaClient.SetStoreId(storeID); err != nil {
-		return fmt.Errorf("failed to set store id: %w", err)
 	}
 
 	logger.Info("OpenFGA store resolved", "store_name", cfg.OpenFGA.StoreName, "store_id", storeID)
