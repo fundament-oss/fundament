@@ -24,7 +24,7 @@ OSDs.
 | 3 · Publish | The image builds and the definition reaches organization-api |
 | 4 · Install | The plugin's install path runs: Helm, CRDs, CephCluster bootstrap |
 | 5 · Discovery | The DiskInventory reconciler turns real probes into `Disk` CRs |
-| 6 · Pool | The StoragePool reconciler produces OSDs, a CephBlockPool and a StorageClass |
+| 6 · Pool | The StoragePool reconciler produces OSDs; BlockStorage/FileStorage each produce a StorageClass |
 | 7 · PVC | The whole chain actually stores data |
 | 8 · Regressions | The specific behaviours fixed in review hold on a real cluster |
 
@@ -345,7 +345,7 @@ Devices present but no `Disk` CRs means the filter rejected them: with
 `DEV_LOOP_DEVICES: "true"` only entries with `"type": "part"` on a `/dev/loopNpN` path
 survive.
 
-## Phase 6 · StoragePool → StorageClass
+## Phase 6 · StoragePool → BlockStorage/FileStorage → StorageClass
 
 Disk names are cluster-specific (node name + a hash of the device's stable identity), so they cannot be
 hard-coded. Build the pool from whatever was discovered:
@@ -358,40 +358,77 @@ kind: StoragePool
 metadata:
   name: test-pool
 spec:
-  replication: auto
   disks:
 $DISKS
 YAML
 ```
 
-Watch it provision — the first OSD takes a few minutes:
+A `StoragePool` only contributes disks; it derives no `StorageClass` on its own. Create a
+`BlockStorage` (RWO, RBD) and a `FileStorage` (RWX, CephFS) to turn that capacity into
+StorageClasses — both ride the OSD set the pool above just contributed to:
+
+```bash
+kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
+apiVersion: storage.fundament.io/v1alpha1
+kind: BlockStorage
+metadata:
+  name: test-pool
+spec:
+  replication: auto
+---
+apiVersion: storage.fundament.io/v1alpha1
+kind: FileStorage
+metadata:
+  name: test-pool
+spec:
+  replication: auto
+  metadataServers: 1
+YAML
+```
+
+`BlockStorage` and `FileStorage` are named `test-pool` here too — a different kind, so no
+collision with the `StoragePool` above — which is why every `ceph-test-pool` reference
+below still holds. Name it something else and the derived `StorageClass` follows: see
+[Derived object names](./example-ceph-rook.md#derived-object-names).
+
+Watch them provision — the first OSD takes a few minutes:
 
 ```bash
 kubectl --context k3d-fundament-plugin get storagepool test-pool -w
+kubectl --context k3d-fundament-plugin get blockstorage test-pool -w
 ```
 
 ```bash
 kubectl --context k3d-fundament-plugin get storagepool test-pool -o yaml | yq .status
+kubectl --context k3d-fundament-plugin get blockstorage test-pool -o yaml | yq .status
 ```
 
-Expected, on this single-node cluster:
+Expected, on this single-node cluster. The `StoragePool` reports only its disk
+contribution:
+
+```yaml
+phase: Ready
+selectedDiskCount: 3
+rawCapacityBytes: 64418217984        # this pool's contribution, before replication
+```
+
+The `BlockStorage` reports the derived `StorageClass` and the replication it resolved:
 
 ```yaml
 phase: Ready
 storageClassName: ceph-test-pool     # note the ceph- prefix
 replicas: 1                          # auto = min(3, cluster nodes with disks); one node -> 1
 failureDomain: osd                   # host domain needs >=2 replicas across >=2 nodes
-selectedDiskCount: 3
-rawCapacityBytes: 64418217984        # this pool's contribution, before replication
 ```
 
-`rawCapacityBytes` is the raw size of the disks this pool contributes, **not** its
-capacity — all pools share one OSD set and Ceph places data across every OSD in it. Ask
-Ceph for real free space (`ceph df` in the toolbox). A pool that resolves *no* disks
-reports `Degraded` with the reason in `status.message` and creates no `StorageClass`.
+`rawCapacityBytes` is the raw size of the disks the pool contributes, **not** anyone's
+capacity — all consumers share one OSD set and Ceph places data across every OSD in it.
+Ask Ceph for real free space (`ceph df` in the toolbox). A `BlockStorage`/`FileStorage`
+that finds no `StoragePool` contributing disks reports `Degraded` with `"no OSDs: create
+a StoragePool with disks first"` in `status.message`, and creates no `StorageClass`.
 
-`selectedDiskCount` is how many of `spec.disks` resolved, **not** how many OSDs are
-running. Check the OSDs separately:
+`selectedDiskCount` is how many of the `StoragePool`'s `spec.disks` resolved, **not** how
+many OSDs are running. Check the OSDs separately:
 
 ```bash
 kubectl --context k3d-fundament-plugin -n rook-ceph get pods -l app=rook-ceph-osd
@@ -409,8 +446,21 @@ kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool \
   -o jsonpath='{.metadata.ownerReferences}' | jq .
 ```
 
-The owner reference must name `test-pool` with `controller: true` — that is what makes
-deletion cascade.
+The owner reference must name `test-pool` with `kind: BlockStorage` and `controller:
+true` — that is what makes deletion cascade.
+
+`FileStorage` behaves the same way, over the same OSDs, producing a `cephfs-test-pool`
+`StorageClass` and `CephFilesystem` with one active and one standby MDS:
+
+```bash
+kubectl --context k3d-fundament-plugin get filestorage test-pool -o yaml | yq .status
+kubectl --context k3d-fundament-plugin get storageclass cephfs-test-pool
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephfilesystem cephfs-test-pool
+```
+
+Phase 7 below only exercises the RBD path. Mounting CephFS additionally needs the `ceph`
+kernel module — see the note in
+[Phase 2](#phase-2--baseline-without-the-plugin).
 
 ## Phase 7 · Bind a PVC
 
@@ -496,16 +546,16 @@ https://console.fundament.localhost:8443/
 
 Check the browser console for CSP violations. There should be none.
 
-### 8a-2 · Pool editing, deletion and disk details
+### 8a-2 · Pool/consumer editing and disk details
 
 These exercise the console CRUD pages. Keep devtools open throughout — a CSP
 violation anywhere here is a failure, not cosmetic.
 
-1. Open a StoragePool → **Edit** → change replication → **Save**. The detail view
-   returns and `status.replicas` reflects the new value.
-2. **Edit** again → uncheck a disk. The OSD-retirement warning must be visible.
-   Save, then confirm `status.selectedDiskCount` drops and the device leaves
-   `spec.storage.nodes`:
+1. Open the `BlockStorage` → **Edit** → change replication → **Save**. The detail
+   view returns and `status.replicas` reflects the new value.
+2. Open the `StoragePool` → **Edit** → uncheck a disk. The OSD-retirement warning
+   must be visible. Save, then confirm `status.selectedDiskCount` drops and the
+   device leaves `spec.storage.nodes`:
 
    ```bash
    kubectl --context k3d-fundament-plugin -n rook-ceph get cephcluster rook-ceph \
@@ -514,10 +564,12 @@ violation anywhere here is a failure, not cosmetic.
 
    The OSD pod for that device is still `Running`. That is correct, not a bug.
 3. **Edit** → uncheck every disk → Save is refused with "Select at least one disk."
-4. Bind a PVC to the pool's StorageClass, then **Delete**. It must be refused,
-   naming the volume, with only a Close button.
-5. Delete the PVC, then **Delete** → type the pool name → confirm. The pool, its
-   StorageClass and its CephBlockPool all disappear.
+4. Re-check the disk and **Save** to restore the pool before phase 7/8d rely on it
+   again.
+5. Note that none of `StoragePool`, `BlockStorage` or `FileStorage` offer delete
+   from the console — see
+   [What the console can do](./example-ceph-rook.md#what-the-console-can-do).
+   `kubectl delete` is the only way; phase 8d below uses it.
 6. Open **Disks** → click a path. The detail page shows every field, and
    `Claimed by` is set for a pooled disk (plain text — cross-kind links are not
    expressible in the host contract).
@@ -537,29 +589,42 @@ YAML
 
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
 apiVersion: storage.fundament.io/v1alpha1
-kind: StoragePool
+kind: BlockStorage
 metadata:
   name: squatter
 spec:
   replication: auto
-  disks: []
 YAML
 
-kubectl --context k3d-fundament-plugin get storagepool squatter -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
+kubectl --context k3d-fundament-plugin get blockstorage squatter -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
 ```
 
-Expect `Degraded` and a message naming the conflict. Critically, the foreign object must be
-untouched:
+`squatter` resolves the OSDs `test-pool` already contributed, so the reconciler gets far
+enough to collide with `ceph-squatter`. Expect `Degraded` and a message naming the
+conflict. Critically, the foreign object must be untouched:
 
 ```bash
 kubectl --context k3d-fundament-plugin get storageclass ceph-squatter \
   -o jsonpath='{.provisioner}{" owners="}{.metadata.ownerReferences}{"\n"}'
 # rancher.io/local-path owners=      <- unchanged, no owner reference
 
-kubectl --context k3d-fundament-plugin delete storagepool squatter
+kubectl --context k3d-fundament-plugin delete blockstorage squatter
 kubectl --context k3d-fundament-plugin get storageclass ceph-squatter   # must still exist
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephblockpool ceph-squatter  # NotFound (it was owned, GC'd with the BlockStorage)
 kubectl --context k3d-fundament-plugin delete storageclass ceph-squatter
 ```
+
+### 8b-2 · Upgrading from a pre-split install
+
+This is a pre-GA breaking change with no automated migration. A StoragePool created
+before the split had already derived a CephBlockPool and StorageClass named
+`ceph-<poolname>`; after upgrading, that StoragePool no longer reconciles either —
+they simply persist, orphaned, until the StoragePool itself is deleted, which garbage
+collects them via the owner reference. Creating a BlockStorage with the same name
+derives the same `ceph-<name>`, so it collides with the still-present foreign-looking
+objects and goes `Degraded` refusing adoption, exactly as in 8b above. To recover,
+either delete the stale CephBlockPool/StorageClass pair first or pick a different
+BlockStorage name.
 
 ### 8c · `claimedBy` updates immediately
 
@@ -577,7 +642,9 @@ disks.
 
 ### 8d · Deleting a pool shrinks the CephCluster
 
-Nothing else recomputes this: the CephCluster carries no owner reference.
+Nothing else recomputes this: the CephCluster carries no owner reference. `StoragePool`
+and `BlockStorage`/`FileStorage` are independent objects, so deleting the pool does not
+cascade to the derived `StorageClass`es — only to the CephCluster's device list.
 
 ```bash
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephcluster rook-ceph \
@@ -587,8 +654,25 @@ kubectl --context k3d-fundament-plugin delete storagepool test-pool
 
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephcluster rook-ceph \
   -o jsonpath='{.spec.storage.nodes}' | jq .      # now empty
-kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool   # NotFound (cascade)
+kubectl --context k3d-fundament-plugin get blockstorage test-pool \
+  -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
+# Degraded / no OSDs: create a StoragePool with disks first
+kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool   # still exists
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephblockpool ceph-test-pool  # still exists
+```
+
+The `CephBlockPool`/`CephFilesystem` and their `StorageClass`es are owned by
+`BlockStorage`/`FileStorage`, not by the `StoragePool`, so they only disappear when those
+are deleted:
+
+```bash
+kubectl --context k3d-fundament-plugin delete blockstorage test-pool
+kubectl --context k3d-fundament-plugin delete filestorage test-pool
+
+kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool     # NotFound (cascade)
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephblockpool ceph-test-pool  # NotFound
+kubectl --context k3d-fundament-plugin get storageclass cephfs-test-pool   # NotFound (cascade)
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephfilesystem cephfs-test-pool  # NotFound
 ```
 
 :::caution[The OSDs stay]
@@ -632,7 +716,7 @@ To keep the disks for a future run, use `just storage-disks reset` instead of `p
 | Second install fails after a first attempt | Stale OSD metadata | `just storage-disks reset` |
 | Node container will not stop | Stale RBD mapping | `just storage-disks unmap-stale` |
 | Pool stuck `Provisioning` | CephBlockPool not Ready | `kubectl -n rook-ceph describe cephblockpool ceph-<pool>` |
-| Pool `Degraded` | Conflict or drift | Read `status.message` — it names the action |
+| Pool `Degraded` | Conflict, drift, missing CephCluster, or Rook reporting `Failure` | Read `status.message` — it names the action |
 
 ## Related
 

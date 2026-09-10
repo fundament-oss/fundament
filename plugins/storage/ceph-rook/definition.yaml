@@ -4,7 +4,7 @@ metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
   version: v0.1.0
-  description: Block storage for in-cluster workloads, backed by Ceph and Rook.
+  description: Block and shared file storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
   icon: server-stack
@@ -15,6 +15,7 @@ metadata:
   tags:
     - storage
     - block
+    - file
     - ceph
 spec:
   permissions:
@@ -32,6 +33,12 @@ spec:
           - storagepools
           - storagepools/status
           - storagepools/finalizers
+          - blockstorages
+          - blockstorages/status
+          - blockstorages/finalizers
+          - filestorages
+          - filestorages/status
+          - filestorages/finalizers
         verbs:
           - get
           - list
@@ -46,6 +53,7 @@ spec:
         resources:
           - cephclusters
           - cephblockpools
+          - cephfilesystems
         verbs:
           - get
           - list
@@ -54,8 +62,9 @@ spec:
           - update
           - patch
           - delete
-      # --- StorageClasses: created/updated by the StoragePool controller and
-      # watched via Owns(). No delete; cascade is the k8s garbage collector. ---
+      # --- StorageClasses: created/updated by the BlockStorage/FileStorage
+      # controllers and watched via Owns(). No delete; cascade is the k8s
+      # garbage collector. ---
       - apiGroups:
           - storage.k8s.io
         resources:
@@ -111,7 +120,15 @@ spec:
       - crd: storagepools.storage.fundament.io
         list: true
         detail: true
+        icon: file-box
+      - crd: blockstorages.storage.fundament.io
+        list: true
+        detail: true
         icon: circle-stack
+      - crd: filestorages.storage.fundament.io
+        list: true
+        detail: true
+        icon: folder-open
       - crd: disks.storage.fundament.io
         list: true
         detail: true
@@ -119,6 +136,8 @@ spec:
   crds:
     - disks.storage.fundament.io
     - storagepools.storage.fundament.io
+    - blockstorages.storage.fundament.io
+    - filestorages.storage.fundament.io
   customComponents:
     StoragePool:
       list: storagepools-list.html
@@ -127,8 +146,39 @@ spec:
     Disk:
       list: disks-list.html
       detail: disks-detail.html
+    BlockStorage:
+      list: blockstorages-list.html
+      detail: blockstorages-detail.html
+      create: blockstorages-create.html
+    FileStorage:
+      list: filestorages-list.html
+      detail: filestorages-detail.html
+      create: filestorages-create.html
   uiHints:
     storagepools.storage.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Degraded:
+            badge: danger
+            label: Degraded
+    blockstorages.storage.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Provisioning:
+            badge: warning
+            label: Provisioning
+          Degraded:
+            badge: danger
+            label: Degraded
+    filestorages.storage.fundament.io:
       statusMapping:
         jsonPath: ".status.phase"
         values:
@@ -155,6 +205,14 @@ spec:
     - group: storage.fundament.io
       version: v1alpha1
       resource: storagepools
+      verbs: [list, get, create, patch]
+    - group: storage.fundament.io
+      version: v1alpha1
+      resource: blockstorages
+      verbs: [list, get, create, patch]
+    - group: storage.fundament.io
+      version: v1alpha1
+      resource: filestorages
       verbs: [list, get, create, patch]
     - group: ceph.rook.io
       version: v1

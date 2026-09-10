@@ -111,6 +111,32 @@ func TestDefinition(t *testing.T) {
 		assert.ElementsMatch(t, []string{"list", "get"}, found.Verbs)
 	})
 
+	t.Run("allowedResources/blockstorages", func(t *testing.T) {
+		t.Parallel()
+		var found *pluginruntime.AllowedResource
+		for i := range def.Spec.AllowedResources {
+			if def.Spec.AllowedResources[i].Resource == "blockstorages" {
+				found = &def.Spec.AllowedResources[i]
+				break
+			}
+		}
+		require.NotNil(t, found, "allowedResources must contain blockstorages")
+		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
+	})
+
+	t.Run("allowedResources/filestorages", func(t *testing.T) {
+		t.Parallel()
+		var found *pluginruntime.AllowedResource
+		for i := range def.Spec.AllowedResources {
+			if def.Spec.AllowedResources[i].Resource == "filestorages" {
+				found = &def.Spec.AllowedResources[i]
+				break
+			}
+		}
+		require.NotNil(t, found, "allowedResources must contain filestorages")
+		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
+	})
+
 	t.Run("customComponents/html-files-exist", func(t *testing.T) {
 		t.Parallel()
 		for kind, mapping := range def.Spec.CustomComponents {
@@ -171,6 +197,10 @@ func TestConsoleOffersNoStoragePoolDelete(t *testing.T) {
 		"console/storagepools-detail.html",
 		"console/storagepools-detail.js",
 		"console/storagepools-list.js",
+		"console/blockstorages-detail.js",
+		"console/blockstorages-list.js",
+		"console/filestorages-detail.js",
+		"console/filestorages-list.js",
 	} {
 		src, err := os.ReadFile(path)
 		require.NoError(t, err)

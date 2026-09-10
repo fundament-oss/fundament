@@ -293,29 +293,30 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
 - Ingress for Kubernetes workloads via the Gateway API
 - Advanced traffic management with Envoy
 - Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', ''),
-    ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
+    ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block and shared file storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
 
-The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes, exposing discovered raw disks as block storage. Once installed, create a StoragePool to provision a StorageClass that any PersistentVolumeClaim can reference.
+The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes, exposing discovered raw disks as block and shared file storage. Once installed, create a StoragePool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference.
 
 ## Key Features
 
 - **Automatic Disk Discovery**: Rook scans nodes for raw block devices and publishes them as Disk CRs
-- **Declarative Storage Pools**: A single StoragePool CR configures OSDs, replication, and produces a ready-to-use StorageClass
-- **Tunable Replication**: Set replication to auto, 1, 2, or 3 — auto derives the replica count from the number of nodes contributing disks to the cluster
-- **In-Cluster Block Storage**: No external storage backend required; data stays within the cluster
+- **Declarative Storage Pools**: A StoragePool CR selects disks to contribute as OSDs to the shared cluster
+- **Block and File Storage Classes**: A BlockStorage CR produces a ready-to-use RBD StorageClass; a FileStorage CR produces a CephFS StorageClass with active/standby metadata servers
+- **Tunable Replication**: Set replication to auto, 1, 2, or 3 on each BlockStorage or FileStorage — auto derives the replica count from the number of nodes contributing disks to the cluster
 
 ## Use Cases
 
 - Persistent block volumes for stateful workloads (databases, message queues)
-- ReadWriteOnce volumes for single-node workloads on bare-metal or VM clusters
+- Shared volumes multiple pods can mount at once (shared caches, content repositories)
+- ReadWriteOnce and ReadWriteMany volumes for workloads on bare-metal or VM clusters
 - Cost-effective in-cluster storage using spare raw disks
 
 ## Requirements
 
 - **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem are not offered.
 - **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. Nothing narrows them: the plugin runs with full cluster-admin on the cluster you install it into. Install it only if that tradeoff is acceptable for your cluster.
-- Block storage (RBD, ReadWriteOnce) only. Shared filesystems (CephFS) and object storage (RGW) are not yet supported.
-- All storage pools share one Ceph cluster. Data is placed across every disk in it, so additional pools give you additional StorageClasses rather than isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
+- Block storage (RBD, ReadWriteOnce) and shared file storage (CephFS, ReadWriteMany) are supported. Object storage (RGW) is not yet supported.
+- All storage pools share one Ceph cluster. Data is placed across every disk in it, so additional BlockStorage/FileStorage objects give you additional StorageClasses rather than isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,
