@@ -52,10 +52,12 @@ func run() error {
 		return fmt.Errorf("create OpenFGA client: %w", err)
 	}
 
-	waitCtx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	// The SDK's HTTP client has no timeout, so this deadline is what ends a
+	// call to a server that accepts the connection and never answers.
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 
-	if err := awaitServer(waitCtx, fga, cfg.APIURL); err != nil {
+	if err := awaitServer(ctx, fga, cfg.APIURL); err != nil {
 		return err
 	}
 

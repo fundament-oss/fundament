@@ -10,7 +10,8 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "openfga-bootstrap" "component" "backend") | nindent 4 }}
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 3600
+  # A week, so a failed run stays inspectable until the next release deletes it.
+  ttlSecondsAfterFinished: 604800
   template:
     metadata:
       labels:
