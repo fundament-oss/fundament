@@ -73,8 +73,10 @@ func run() error {
 
 	openfga := openfgaauthz.NewClient(openfgaStore)
 
+	// Probes use the internal port. The public readyz is reachable from the
+	// internet, so it makes no OpenFGA call.
 	publicMux := http.NewServeMux()
-	registerHealth(publicMux, openfgaStore, logger)
+	registerHealth(publicMux, nil, logger)
 
 	internalMux := http.NewServeMux()
 	registerHealth(internalMux, openfgaStore, logger)
@@ -259,12 +261,18 @@ func registerHealth(mux *http.ServeMux, store *openfgaauthz.Store, logger *slog.
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if store == nil {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
 
 		// The can_view gate runs in every mode, so an unresolved store means
-		// this pod cannot authorize any request. This mux is also served
-		// publicly, so the reason is logged rather than returned.
+		// this pod cannot authorize any request.
 		if err := store.Healthy(ctx); err != nil {
 			logger.Error("readiness: openfga unavailable", "err", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
