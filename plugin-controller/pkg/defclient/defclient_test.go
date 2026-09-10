@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	catalogv1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1"
-	"github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1/catalogv1connect"
+	catalogv1 "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1"
+	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1/catalogv1connect"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/defclient"
 )
 

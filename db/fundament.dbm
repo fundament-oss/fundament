@@ -1403,7 +1403,7 @@ END;]]> </definition>
 	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
-<table name="plugin_definitions" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
+<table name="plugin_definitions" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1620"/>
@@ -1421,6 +1421,10 @@ END;]]> </definition>
 	</column>
 	<column name="hash" not-null="true">
 		<type name="text" length="0"/>
+	</column>
+	<column name="image" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Denormalized from the manifest at write time so lists never parse YAML; the pinned manifest stays the source of truth.]]> </comment>
 	</column>
 	<column name="status" not-null="true" default-value="'draft'">
 		<type name="text" length="0"/>

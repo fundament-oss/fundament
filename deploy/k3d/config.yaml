@@ -30,6 +30,21 @@ options:
       - arg: --kube-apiserver-arg=feature-gates=WatchList=true
         nodeFilters:
           - server:*
+      # Audit logging for local log-analysis testing, not a production audit trail.
+      - arg: --kube-apiserver-arg=audit-policy-file=/etc/rancher/k3s/audit-policy.yaml
+        nodeFilters:
+          - server:*
+      - arg: --kube-apiserver-arg=audit-log-path=/var/log/k8s-audit/audit.log
+        nodeFilters:
+          - server:*
+      # Kept small: a local cluster has no reason to hold audit history.
+      # maxbackup 0 would mean "retain every rotation", so 1 is the floor.
+      - arg: --kube-apiserver-arg=audit-log-maxsize=10
+        nodeFilters:
+          - server:*
+      - arg: --kube-apiserver-arg=audit-log-maxbackup=1
+        nodeFilters:
+          - server:*
 registries:
   create:
     name: "registry.localhost"
@@ -41,6 +56,7 @@ registries:
         endpoint:
           - http://registry.localhost:5000
 volumes:
+  - volume: ${PWD}/deploy/k3d/audit-policy.yaml:/etc/rancher/k3s/audit-policy.yaml
   - volume: ${PWD}/deploy/k3d/resources/cloudnative-pg.yaml:/var/lib/rancher/k3s/server/manifests/cloudnative-pg.yaml
   - volume: ${PWD}/deploy/k3d/resources/cert-manager.yaml:/var/lib/rancher/k3s/server/manifests/cert-manager.yaml
   - volume: ${PWD}/deploy/k3d/resources/ingress-nginx.yaml:/var/lib/rancher/k3s/server/manifests/ingress-nginx.yaml

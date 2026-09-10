@@ -1,0 +1,17 @@
+# Workspace, not a module: catalog/v1 and registry/v1 live with the services
+# that serve them, and both import marketplace/v1, which belongs to neither.
+# buf resolves a local import only within a workspace, and the three module
+# directories are siblings, so it has to sit at the root.
+version: v2
+modules:
+  - path: marketplace-api/pkg/proto
+  - path: marketplace-catalog-api/pkg/proto
+  - path: marketplace-registry-api/pkg/proto
+deps:
+  - buf.build/bufbuild/protovalidate
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

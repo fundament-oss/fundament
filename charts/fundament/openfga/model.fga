@@ -12,6 +12,7 @@ type organization
     define can_create_apikey: viewer
     define can_list_apikeys: viewer
     define can_create_cluster: admin
+    define can_create_plugin: admin
     define can_list_clusters: admin or viewer
     define can_invite_member: admin
     define can_edit_member: admin

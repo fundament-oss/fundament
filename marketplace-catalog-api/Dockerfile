@@ -1,0 +1,15 @@
+FROM golang:1.26.6-alpine AS builder
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY marketplace-catalog-api/ ./marketplace-catalog-api/
+# The API contract lives with neither service: catalog.v1 and registry.v1 both
+# import marketplace.v1.
+COPY marketplace-api/ ./marketplace-api/
+COPY plugin-sdk/pluginruntime/ ./plugin-sdk/pluginruntime/
+COPY common/ ./common/
+RUN CGO_ENABLED=0 go build -o /build/bin/marketplace-catalog-api ./marketplace-catalog-api/cmd/fun-marketplace-catalog-api
+
+FROM scratch
+COPY --from=builder /build/bin/marketplace-catalog-api /
+ENTRYPOINT ["/marketplace-catalog-api"]

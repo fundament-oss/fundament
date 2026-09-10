@@ -1,0 +1,89 @@
+# Kubernetes API audit policy for the local k3d clusters, so log-analysis tooling has real
+# events to develop against. Sized for a laptop, not a production audit trail.
+# Levels: None drops, Metadata keeps who/what/when, Request adds the sent object,
+# RequestResponse adds what the API server returned. First matching rule wins.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # users and userGroups within one rule are AND-ed, so identity classes need separate rules.
+  #
+  # Reads by the control plane: high volume, no detection value. Their writes fall through to
+  # the rules below, so nothing a controller *changes* is lost.
+  - level: None
+    verbs: ["get", "list", "watch"]
+    users:
+      - system:apiserver
+      - system:kube-scheduler
+      - system:kube-controller-manager
+      - system:kube-proxy
+      - system:volume-scheduler
+      - system:k3s-supervisor
+      - system:k3s-controller
+      - system:serviceaccount:kube-system:generic-garbage-collector
+
+  - level: None
+    verbs: ["get", "list", "watch"]
+    userGroups: ["system:nodes"]
+
+  - level: None
+    verbs: ["get", "list", "watch"]
+    userGroups: ["system:serviceaccounts:kube-system"]
+
+  # Leader election and endpoint churn: written constantly by healthy components, and an
+  # attacker gains nothing by touching them.
+  - level: None
+    resources:
+      - group: "coordination.k8s.io"
+        resources: ["leases"]
+      - group: ""
+        resources: ["endpoints", "events"]
+      - group: "discovery.k8s.io"
+        resources: ["endpointslices"]
+
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /livez*
+      - /readyz*
+      - /version
+      - /metrics
+      - /openapi*
+      - /api*
+
+  # RBAC and admission, with bodies. Metadata alone says "a binding was created"; the body says
+  # which role it granted and to whom, which is the difference between noticing a change and
+  # knowing it was a privilege escalation. Admission config is here because disabling a webhook
+  # is how an attacker turns off the cluster's own guardrails.
+  - level: RequestResponse
+    resources:
+      - group: "rbac.authorization.k8s.io"
+        resources: ["roles", "clusterroles", "rolebindings", "clusterrolebindings"]
+      - group: "admissionregistration.k8s.io"
+        resources: ["*"]
+
+  # ServiceAccount writes, with bodies: a new identity in the cluster, and the usual way an
+  # attacker persists after the way in is closed.
+  - level: RequestResponse
+    verbs: ["create", "update", "patch", "delete"]
+    resources:
+      - group: ""
+        resources: ["serviceaccounts"]
+
+  # Token requests: who minted a credential for which identity, and for how long.
+  # Request, never RequestResponse -- the response body is the token itself.
+  - level: Request
+    resources:
+      - group: ""
+        resources: ["serviceaccounts/token"]
+
+  # Secrets and ConfigMaps: which secret was read, by whom, when -- never its contents.
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps"]
+
+  # Everything else, including failed and unauthenticated requests: who tried what, and whether
+  # the API server allowed it. This is what a password-spray or an enumeration sweep looks like.
+  - level: Metadata
