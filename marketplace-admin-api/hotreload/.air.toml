@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 cmd = "go build -o tmp/marketplace-admin-api ./marketplace-admin-api/cmd/fun-marketplace-admin-api"
 entrypoint = "tmp/marketplace-admin-api"
 include_ext = ["go", "mod", "sum"]
-include_dir = ["marketplace-admin-api", "marketplace-api", "common"]
+include_dir = ["marketplace-admin-api", "marketplace-api", "common", "plugin-sdk"]
 exclude_dir = ["tmp"]
 delay = 500
 

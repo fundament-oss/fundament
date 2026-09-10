@@ -96,13 +96,20 @@ spec:
               port: http
             initialDelaySeconds: 10
           volumeMounts:
+            # subPath, not a directory mount: the hot-reload image's Angular dev
+            # server refuses to serve the symlink a directory-mounted ConfigMap
+            # leaves behind and falls through to the router, which 302s the
+            # request. subPath materializes a real file. The update caveat does
+            # not apply — checksum/config above rolls the pod on every change.
             # Read by the browser over HTTP and by the renderer straight off disk.
             - name: config
-              mountPath: /app/dist/fundament-marketplace/browser/assets/config
+              mountPath: /app/dist/fundament-marketplace/browser/assets/config/config.json
+              subPath: config.json
               readOnly: true
             # Same file for the hot-reload image, which serves from the sources.
             - name: config
-              mountPath: /app/public/assets/config
+              mountPath: /app/public/assets/config/config.json
+              subPath: config.json
               readOnly: true
       volumes:
         - name: config

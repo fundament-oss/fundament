@@ -88,4 +88,10 @@ message PluginVersion {
   google.protobuf.Timestamp created = 100;
   google.protobuf.Timestamp submitted = 110;
   google.protobuf.Timestamp published = 120;
+  // Set when the stored manifest failed to parse, in which case capabilities
+  // and permissions are absent because they could not be derived — not
+  // because the version declares none. A reviewer must not read the empty
+  // sections as "asks for nothing"; a version whose review payload cannot be
+  // displayed is a version that cannot be approved responsibly.
+  string manifest_error = 130;
 }
