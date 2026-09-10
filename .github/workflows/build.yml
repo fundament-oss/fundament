@@ -129,6 +129,9 @@ jobs:
           - image-name: marketplace-registry-api
             dockerfile: marketplace-registry-api/Dockerfile
             context: "."
+          - image-name: marketplace-admin-api
+            dockerfile: marketplace-admin-api/Dockerfile
+            context: "."
     permissions:
       contents: read
       packages: write
@@ -356,6 +359,7 @@ jobs:
             | Marketplace | https://marketplace.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Registry API | https://marketplace-registry-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
