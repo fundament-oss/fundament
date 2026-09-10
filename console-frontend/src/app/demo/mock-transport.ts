@@ -25,6 +25,7 @@ import {
   ListClusterNamespacesResponseSchema,
   ListProjectNamespacesResponseSchema,
   CreateNamespaceResponseSchema,
+  DeleteNamespaceResponseSchema,
   NamespaceSchema,
 } from '../../generated/v1/namespace_pb';
 import {
@@ -263,6 +264,14 @@ export default function createDemoTransport(): Transport {
           );
         }
         return create(CreateNamespaceResponseSchema, { namespaceId: id });
+      },
+      deleteNamespace: async (req) => {
+        await delay();
+        // Drop it from the fixtures, the mirror of what createNamespace appends:
+        // without this the demo answers "unimplemented" and the row stays put.
+        const index = fx.namespaces.findIndex((n) => n.id === req.namespaceId);
+        if (index !== -1) fx.namespaces.splice(index, 1);
+        return create(DeleteNamespaceResponseSchema, {});
       },
     });
 

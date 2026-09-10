@@ -40,8 +40,9 @@ export interface OrganizationData {
   providedIn: 'root',
 })
 export class OrganizationDataService {
-  /** Bumped when a namespace is created somewhere other than the list that
-   *  shows them: that sheet belongs to the shell now, not to the page. */
+  /** Bumped when a namespace is created or deleted somewhere other than the
+   *  list that shows them: the create sheet belongs to the shell, and the
+   *  namespace sheet is a child route that leaves the list mounted behind it. */
   readonly namespacesChanged = signal(0);
 
   /** The same, for members: inviting someone and adding someone to a project

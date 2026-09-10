@@ -284,6 +284,11 @@ export default class NamespaceSheetComponent implements OnInit {
         this.namespaceClient.deleteNamespace({ namespaceId: this.namespaceId() }),
       );
       this.notificationService.success(`Namespace '${this.namespaceName()}' deleted`);
+      // The list this sheet opened over is a parent route, so it is still
+      // mounted and would go on showing the row that was just deleted. Same
+      // signal the create sheet bumps, and bumped before the sheet closes so
+      // the row is gone by the time the list is uncovered.
+      this.organizationData.namespacesChanged.update((count) => count + 1);
       // The namespace count rides along on the project, so it is the projects
       // that have to come back, not the organization: reloading that one drops
       // every project it holds and nothing fetches them again.
