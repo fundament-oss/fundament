@@ -154,26 +154,6 @@ html.presenting-full {
   --fund-modal-inset-left: 0px;
 }
 
-/* NotificationService promotes the design system's notification region into the
-   top layer (see raiseRegion), so a message raised from inside a sheet is not
-   painted behind it. Being a popover brings the UA's own dialog styling with it
-   — a border, a background, inset: 0 — which has nothing to do with this
-   element, so it is undone here. The region sets its own position, top, right,
-   left, display and max-height as inline styles, and those still win, including
-   the padding it writes while the stack scrolls. */
-#nldd-notification-region:popover-open {
-  inset: auto;
-  width: auto;
-  height: auto;
-  max-width: none;
-  margin: 0;
-  border: 0;
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  color: inherit;
-}
-
 /* An nldd-text-cell without a width is `full`, which the design system compiles
    to flex-basis: 0 with min-width: 0. Beside a `fit-content` value cell (basis
    auto, so max-content) a row too narrow for both leaves the label a shrink
@@ -183,7 +163,7 @@ html.presenting-full {
    shadow tree's :host rules whatever the specificity, so this reaches every
    cell at once; :not([min-width]) leaves the escape hatch, since the component
    writes that attribute as an inline style of its own.
-   Defect in @nldd/design-system 0.8.86 — see nldd-text-cell-collapse.md. */
+   Defect in @nldd/design-system 0.8.86 — see nldd-design-system-issues.md. */
 nldd-text-cell:not([min-width]) {
   min-width: min-content;
 }

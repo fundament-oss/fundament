@@ -221,10 +221,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   // 'vali' reads the shoot's system logs from the Gardener logging stack
   // (history, cross-pod search); 'live' reads a single plugin pod through the
   // kube-api-proxy (live only, pod required, per-user access). The two behave
-  // differently by design — the mode switch makes that explicit up front.
-  //
-  // TODO(#978 follow-up): the switch and the live-mode hints are provisional
-  // (deliberately loud orange) — a proper UI design pass is still pending.
+  // differently by design — the tab bar makes that explicit up front, and the
+  // page text under it says what the picked source can and cannot answer.
   readonly sourceMode = signal<'vali' | 'live'>('vali');
 
   readonly isLiveMode = computed(() => this.sourceMode() === 'live');

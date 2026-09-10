@@ -5,6 +5,7 @@ import {
   Output,
   EventEmitter,
   OnInit,
+  OnDestroy,
   signal,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -26,7 +27,6 @@ import {
   RevokeAPIKeyRequestSchema,
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
-import { NotificationService } from '../notification.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -88,7 +88,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
-export default class ApiKeysComponent implements OnInit {
+export default class ApiKeysComponent implements OnInit, OnDestroy {
   /** Owned by the shell: the sheet opens over whatever page you were on, so
    *  that page is not unmounted and is still there when you close it. */
   @Input()
@@ -110,8 +110,6 @@ export default class ApiKeysComponent implements OnInit {
 
   @Output() closed = new EventEmitter<void>();
 
-  private notificationService = inject(NotificationService);
-
   private apiKeyClient = inject(APIKEY);
 
   private idempotency = createIdempotencyRef();
@@ -132,6 +130,14 @@ export default class ApiKeysComponent implements OnInit {
   newKeySubmitted = signal(false);
 
   newKeyExpiresIn = signal('');
+
+  /** Said in the banner over the token, not in a notification: this sheet is a
+   *  modal dialog, and a notification raised from inside one is painted behind
+   *  it. The banner is a live region already, so changing what it says is what
+   *  announces the copy. */
+  copied = signal(false);
+
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Modal state
   showRevokeModal = signal(false);
@@ -275,6 +281,7 @@ export default class ApiKeysComponent implements OnInit {
       );
 
       // Store the token to display to the user (only time it's shown)
+      this.clearCopied();
       this.createdToken.set(response.token);
       this.createdTokenPrefix.set(response.tokenPrefix);
 
@@ -315,13 +322,33 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      this.notificationService.success('Token copied to clipboard');
+      this.confirmCopied();
     } catch {
+      this.copied.set(false);
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }
   }
 
+  /** Back to what the banner said before after a few seconds, so copying again
+   *  has something to confirm rather than changing nothing on screen. */
+  private confirmCopied() {
+    this.copied.set(true);
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => this.copied.set(false), 5000);
+  }
+
+  private clearCopied() {
+    if (this.copiedTimer) clearTimeout(this.copiedTimer);
+    this.copiedTimer = null;
+    this.copied.set(false);
+  }
+
+  ngOnDestroy(): void {
+    this.clearCopied();
+  }
+
   dismissToken() {
+    this.clearCopied();
     this.createdToken.set(null);
     this.createdTokenPrefix.set(null);
   }

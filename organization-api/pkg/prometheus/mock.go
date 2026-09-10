@@ -12,9 +12,12 @@ import (
 
 // ClusterInfo contains the cluster data needed for mock metric generation.
 type ClusterInfo struct {
-	ID        string
-	Name      string
-	NodePools []NodePoolInfo
+	ID   string
+	Name string
+	// KubernetesVersion is the cluster's catalog version ("1.31"); the mock
+	// reports it as the kubelet version every node runs.
+	KubernetesVersion string
+	NodePools         []NodePoolInfo
 }
 
 // NodePoolInfo contains node pool data needed for mock metric generation.
@@ -188,9 +191,71 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 		return mockNSDistributed(clusters, mockNetBytesPerSec, nsFilter)
 	case strings.Contains(q, "container_network_transmit_bytes_total"):
 		return mockNSDistributed(clusters, mockNetBytesPerSec*0.5, nsFilter)
+	case strings.Contains(q, "kube_node_labels"):
+		return mockNodeLabels(clusters)
+	case strings.Contains(q, "kube_node_status_condition"):
+		return mockNodeReady(clusters)
+	case strings.Contains(q, "kube_node_info"):
+		return mockNodeInfo(clusters)
 	default:
 		return nil
 	}
+}
+
+// mockNodeLabels answers kube_node_labels: one series per node carrying the
+// Gardener worker-pool label, which is what maps a node back to its pool.
+func mockNodeLabels(clusters []ClusterInfo) []Sample {
+	var result []Sample
+	for _, cl := range clusters {
+		for _, n := range mockClusterNodes(cl) {
+			result = append(result, Sample{
+				Labels: map[string]string{
+					"node":                             n.name,
+					"cluster":                          n.clusterName,
+					"label_worker_gardener_cloud_pool": n.poolName,
+				},
+				Value: 1,
+			})
+		}
+	}
+	return result
+}
+
+// mockNodeReady answers kube_node_status_condition. Mock clusters are healthy
+// clusters: every node reports Ready.
+func mockNodeReady(clusters []ClusterInfo) []Sample {
+	var result []Sample
+	for _, cl := range clusters {
+		for _, n := range mockClusterNodes(cl) {
+			result = append(result, Sample{
+				Labels: map[string]string{"node": n.name, "cluster": n.clusterName, "condition": "Ready"},
+				Value:  1,
+			})
+		}
+	}
+	return result
+}
+
+// mockNodeInfo answers kube_node_info, which carries the kubelet version.
+func mockNodeInfo(clusters []ClusterInfo) []Sample {
+	var result []Sample
+	for _, cl := range clusters {
+		version := cl.KubernetesVersion
+		if version != "" {
+			version = "v" + version
+		}
+		for _, n := range mockClusterNodes(cl) {
+			result = append(result, Sample{
+				Labels: map[string]string{
+					"node":            n.name,
+					"cluster":         n.clusterName,
+					"kubelet_version": version,
+				},
+				Value: 1,
+			})
+		}
+	}
+	return result
 }
 
 func mockCPUUsage(clusters []ClusterInfo, t time.Time, byNode, byNamespace, byCluster bool, nsFilter []string) []Sample {

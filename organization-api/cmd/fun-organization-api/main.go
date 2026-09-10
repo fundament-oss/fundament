@@ -128,9 +128,10 @@ func run() error {
 				})
 			}
 			clusters = append(clusters, prom.ClusterInfo{
-				ID:        row.ID.String(),
-				Name:      row.Name,
-				NodePools: nodePools,
+				ID:                row.ID.String(),
+				Name:              row.Name,
+				KubernetesVersion: row.KubernetesVersion,
+				NodePools:         nodePools,
 			})
 		}
 		return clusters, nil

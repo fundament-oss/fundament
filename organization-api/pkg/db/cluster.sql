@@ -14,7 +14,13 @@ SELECT
     shoot_status_updated,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.outbox_error,
+    (SELECT COUNT(*)
+     FROM tenant.projects
+     WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
+    (SELECT COUNT(*)
+     FROM tenant.node_pools
+     WHERE node_pools.cluster_id = clusters.id AND node_pools.deleted IS NULL) AS node_pool_count
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 ORDER BY created DESC;

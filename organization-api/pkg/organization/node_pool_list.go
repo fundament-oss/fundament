@@ -36,25 +36,14 @@ func (s *Server) ListNodePools(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list node pools: %w", err))
 	}
 
+	runtimes := s.nodePoolRuntimes(ctx, clusterID, len(nodePools))
+
 	result := make([]*organizationv1.NodePool, 0, len(nodePools))
 	for i := range nodePools {
-		result = append(result, nodePoolFromListRow(&nodePools[i]))
+		result = append(result, nodePoolFromRow(&nodePools[i], runtimes[nodePools[i].Name]))
 	}
 
 	return organizationv1.ListNodePoolsResponse_builder{
 		NodePools: result,
 	}.Build(), nil
-}
-
-func nodePoolFromListRow(row *db.TenantNodePool) *organizationv1.NodePool {
-	return organizationv1.NodePool_builder{
-		Id:           row.ID.String(),
-		Name:         row.Name,
-		MachineType:  row.MachineType,
-		CurrentNodes: 0, // Stub: would come from actual cluster state
-		MinNodes:     row.AutoscaleMin,
-		MaxNodes:     row.AutoscaleMax,
-		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
-		Version:      "",                                                         // Stub: would come from actual cluster state
-	}.Build()
 }

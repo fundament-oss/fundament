@@ -82,12 +82,19 @@
           <h1>API keys</h1>
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
-        <!-- Shown once and never again, so it says so and offers the copy. -->
+        <!-- Shown once and never again, so it says so and offers the copy. The
+             same banner confirms the copy: it is a live region, so changing what
+             it says announces it, and a notification cannot be seen from inside
+             a sheet — the sheet is a modal dialog and paints over it. -->
         @if (createdToken(); as token) {
           <nldd-banner
             variant="success"
-            text="API key created"
-            supporting-text="Copy the token now. It is not shown again."
+            [attr.text]="copied() ? 'Token copied to clipboard' : 'API key created'"
+            [attr.supporting-text]="
+              copied()
+                ? 'Keep it somewhere safe. It is not shown again.'
+                : 'Copy the token now. It is not shown again.'
+            "
           ></nldd-banner>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-form-field label="Your API token">
