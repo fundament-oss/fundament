@@ -284,7 +284,15 @@ export default class NamespaceSheetComponent implements OnInit {
         this.namespaceClient.deleteNamespace({ namespaceId: this.namespaceId() }),
       );
       this.notificationService.success(`Namespace '${this.namespaceName()}' deleted`);
-      await this.organizationData.loadOrganizationData();
+      // The namespace count rides along on the project, so it is the projects
+      // that have to come back, not the organization: reloading that one drops
+      // every project it holds and nothing fetches them again.
+      //
+      // Swallowed, and after the notification: the namespace is gone either way,
+      // and a failed refresh reported as "Namespace not deleted" would say the
+      // opposite of what happened. The list it could not refresh keeps what it
+      // had, and the next project that opens fetches it again.
+      await this.organizationData.reloadProjectsAndNamespaces().catch(() => {});
       this.onClose();
     } catch (err) {
       this.notificationService.error(
