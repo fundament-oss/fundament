@@ -430,13 +430,10 @@ jobs:
 
             # Migrations run as a Job named db-migrations-<helm-revision>, with a
             # 5m TTL after success. If the Job is gone, migrations almost
-            # certainly succeeded.
+            # certainly succeeded. When the release resets, the same container
+            # clears the OpenFGA tuples first.
             kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
             kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
-
-            # Under db.reset this Job also clears the OpenFGA tuples, before
-            # reseeding, so the two datastores are reset together:
-            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c reset-openfga-tuples
             ```
 
             **6. Routes & TLS**
