@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
 import PluginDevelopmentService, {
@@ -33,6 +34,10 @@ import PluginStatusTrackerComponent from '../plugin-status-tracker/plugin-status
 })
 export default class PluginDevelopmentDetailComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  // URL of the sibling deployable this page links out to (FUN-20); empty
+  // when that area is not deployed, which hides the link.
+  protected storefrontUrl = inject(ConfigService).getConfig().storefrontUrl ?? '';
 
   private toastService = inject(ToastService);
 

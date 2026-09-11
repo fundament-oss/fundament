@@ -1,0 +1,160 @@
+{{- if $.Values.marketplaceAdminFrontend.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: marketplace-admin-frontend-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
+data:
+  # The review backoffice (FUN-20): the Fundament-reviewer audience only, one
+  # of three deployables over the marketplace-frontend image — this one built
+  # with BUILD_SCRIPT=build:admin and deployed on the restricted admin host,
+  # like the API it fronts.
+  config.json: |
+    {
+      "catalogApiUrl": "",
+      "registryApiUrl": "",
+      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}",
+      "storefrontUrl": "{{ $.Values.externalUrls.marketplace }}"
+    }
+
+{{- /*
+  Hostnames the server-rendered app will answer for. Angular's SSR engine
+  rejects a request whose Host (or forwarded host) is not on this list, which is
+  what keeps a spoofed host header from steering server-side rendering.
+*/}}
+{{- $allowedHosts := list }}
+{{- if $.Values.ingress.enabled }}
+{{- $allowedHosts = append $allowedHosts (printf "marketplace-admin.%s%s" (include "fundament.ingress.infix" .) $.Values.ingress.domain) }}
+{{- end }}
+{{- range $.Values.marketplaceAdminFrontend.httproute.hostnames }}
+{{- $allowedHosts = append $allowedHosts . }}
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketplace-admin-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ $.Values.marketplaceAdminFrontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-admin-frontend") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # server.ts reads the mounted config.json once at process start, so a
+        # changed URL only reaches the browser; roll the pods to keep the
+        # server-rendered first paint on the same APIs.
+                checksum/config: {{ printf "%s|%s" $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.marketplace | sha256sum }}
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: marketplace-admin-frontend
+          image: {{ $.Values.images.marketplaceAdminFrontend }}
+          env:
+            # Substituted into the CSP connect-src directive by the server
+            # (see marketplace-frontend/src/server.ts). These are the origins the
+            # browser calls; a server render uses the internal URLs below. Unset
+            # URLs collapse to extra whitespace, leaving connect-src 'self'.
+            - name: CONNECT_SRC
+              value: "{{ $.Values.externalUrls.marketplaceAdminApi }}"
+            {{- if $allowedHosts }}
+            - name: NG_ALLOWED_HOSTS
+              value: "{{ join "," $allowedHosts }}"
+            {{- end }}
+            # Base URLs the renderer uses for its own calls. Without these it
+            # would reach the APIs by their public hostname, leaving the cluster
+            # and coming back in through the gateway for every page it renders.
+            {{- with $.Values.marketplaceAdminFrontend.internalApiUrls.admin }}
+            - name: ADMIN_API_INTERNAL_URL
+              value: "{{ . }}"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 4000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+          volumeMounts:
+            # subPath, not a directory mount: the hot-reload image's Angular dev
+            # server refuses to serve the symlink a directory-mounted ConfigMap
+            # leaves behind and falls through to the router, which 302s the
+            # request. subPath materializes a real file. The update caveat does
+            # not apply — checksum/config above rolls the pod on every change.
+            # Read by the browser over HTTP and by the renderer straight off disk.
+            - name: config
+              mountPath: /app/dist/fundament-marketplace/browser/assets/config/config.json
+              subPath: config.json
+              readOnly: true
+            # Same file for the hot-reload image, which serves from the sources.
+            - name: config
+              mountPath: /app/public/assets/config/config.json
+              subPath: config.json
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: marketplace-admin-frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketplace-admin-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-admin-frontend") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marketplace-admin-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-admin-frontend" "component" "frontend") | nindent 4 }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - marketplace-admin.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: marketplace-admin-frontend-tls
+  {{- end }}
+  rules:
+    - host: marketplace-admin.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: marketplace-admin-frontend
+                port:
+                  name: http
+{{- end }}
+
+{{- end }}

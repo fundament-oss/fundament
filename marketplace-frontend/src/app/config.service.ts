@@ -13,6 +13,19 @@ export interface AppConfiguration {
    * to the console. Empty means no console is reachable from this environment.
    */
   consoleUrl?: string;
+  /**
+   * Public URLs of the sibling marketplace frontends. The storefront, the
+   * developer portal and the review backoffice are three deployables over one
+   * source (FUN-20), so a link into another area is a URL, not a route. Empty
+   * means that area is not deployed here and its links are hidden.
+   */
+  storefrontUrl?: string;
+  developerUrl?: string;
+  /**
+   * Base URL of authn-api. The developer portal resolves the session's
+   * organization membership through it; the other builds leave it empty.
+   */
+  authnApiUrl?: string;
 }
 
 export type ConfigLoader = () => Promise<AppConfiguration>;

@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 import MarketplaceService, {
   type MarketplacePluginSummary,
   type Category,
@@ -28,6 +29,10 @@ import connectErrorMessage from '../../connect/error';
 })
 export default class MarketplaceIndexComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  // URL of the sibling deployable this page links out to (FUN-20); empty
+  // when that area is not deployed, which hides the link.
+  protected developerUrl = inject(ConfigService).getConfig().developerUrl ?? '';
 
   private service = inject(MarketplaceService);
 

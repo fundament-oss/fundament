@@ -76,7 +76,17 @@
       </p>
       <div class="mt-5 flex flex-wrap gap-3">
         <nldd-button routerLink="/manage" text="Go to my plugins" variant="primary"></nldd-button>
-        <nldd-button routerLink="/" text="Browse the marketplace" variant="secondary"></nldd-button>
+        @if (storefrontUrl) {
+          <a [href]="storefrontUrl">
+            <nldd-button text="Browse the marketplace" variant="secondary"></nldd-button>
+          </a>
+        } @else {
+          <nldd-button
+            routerLink="/"
+            text="Browse the marketplace"
+            variant="secondary"
+          ></nldd-button>
+        }
       </div>
     </div>
   </nldd-card>

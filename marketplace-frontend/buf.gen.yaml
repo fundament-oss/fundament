@@ -6,6 +6,8 @@ plugins:
       - target=ts
     include_imports: true
 inputs:
+  - directory: ../authn-api/pkg/proto
   - directory: ../marketplace-api/pkg/proto
+  - directory: ../marketplace-admin-api/pkg/proto
   - directory: ../marketplace-catalog-api/pkg/proto
   - directory: ../marketplace-registry-api/pkg/proto

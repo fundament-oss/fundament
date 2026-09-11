@@ -7,16 +7,18 @@ metadata:
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 4 }}
 data:
-  # The three marketplace APIs are three deployables (FUN-20), so each gets its
-  # own base URL rather than a shared one with a path prefix. An empty URL means
-  # that service is not deployed in this environment; the app still serves, but
-  # the views that call it fail.
+  # The public storefront: the catalog audience only (FUN-20). The developer
+  # portal and the review backoffice are their own deployables over the same
+  # image (marketplace-registry-frontend.yaml, marketplace-admin-frontend.yaml),
+  # so this config carries no registry or admin API URL. developerUrl points
+  # the "Build a plugin" hand-off at the portal; empty hides those links.
   config.json: |
     {
       "catalogApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
-      "registryApiUrl": "{{ $.Values.externalUrls.marketplaceRegistryApi }}",
-      "adminApiUrl": "{{ $.Values.externalUrls.marketplaceAdminApi }}",
-      "consoleUrl": "{{ $.Values.externalUrls.console }}"
+      "registryApiUrl": "",
+      "adminApiUrl": "",
+      "consoleUrl": "{{ $.Values.externalUrls.console }}",
+      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
     }
 
 {{- /*
@@ -50,7 +52,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-        checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.marketplaceAdminApi $.Values.externalUrls.console | sha256sum }}
+        checksum/config: {{ printf "%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
     spec:
@@ -63,7 +65,7 @@ spec:
             # browser calls; a server render uses the internal URLs below. Unset
             # URLs collapse to extra whitespace, leaving connect-src 'self'.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.marketplaceRegistryApi }} {{ $.Values.externalUrls.marketplaceAdminApi }}"
+              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }}"
             {{- if $allowedHosts }}
             - name: NG_ALLOWED_HOSTS
               value: "{{ join "," $allowedHosts }}"
@@ -73,14 +75,6 @@ spec:
             # and coming back in through the gateway for every page it renders.
             {{- with $.Values.marketplaceFrontend.internalApiUrls.catalog }}
             - name: CATALOG_API_INTERNAL_URL
-              value: "{{ . }}"
-            {{- end }}
-            {{- with $.Values.marketplaceFrontend.internalApiUrls.registry }}
-            - name: REGISTRY_API_INTERNAL_URL
-              value: "{{ . }}"
-            {{- end }}
-            {{- with $.Values.marketplaceFrontend.internalApiUrls.admin }}
-            - name: ADMIN_API_INTERNAL_URL
               value: "{{ . }}"
             {{- end }}
           ports:
@@ -96,13 +90,20 @@ spec:
               port: http
             initialDelaySeconds: 10
           volumeMounts:
+            # subPath, not a directory mount: the hot-reload image's Angular dev
+            # server refuses to serve the symlink a directory-mounted ConfigMap
+            # leaves behind and falls through to the router, which 302s the
+            # request. subPath materializes a real file. The update caveat does
+            # not apply — checksum/config above rolls the pod on every change.
             # Read by the browser over HTTP and by the renderer straight off disk.
             - name: config
-              mountPath: /app/dist/fundament-marketplace/browser/assets/config
+              mountPath: /app/dist/fundament-marketplace/browser/assets/config/config.json
+              subPath: config.json
               readOnly: true
             # Same file for the hot-reload image, which serves from the sources.
             - name: config
-              mountPath: /app/public/assets/config
+              mountPath: /app/public/assets/config/config.json
+              subPath: config.json
               readOnly: true
       volumes:
         - name: config

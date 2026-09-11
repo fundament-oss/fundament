@@ -1,25 +1,18 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
 
 /**
- * Render mode per area.
+ * Render mode for the public storefront (the default build): server-rendered
+ * throughout. It is anonymous, its content is the thing search engines and
+ * link previews need to see, and the catalog call it depends on is cheap.
  *
- * The public storefront is server-rendered: it is anonymous, its content is the
- * thing search engines and link previews need to see, and the catalog call it
- * depends on is cheap.
- *
- * The developer and backoffice areas are client-rendered. They are behind a
- * login, so they have nothing to offer a crawler, and rendering them on the
- * server would mean forwarding the visitor's session to the APIs and making
- * every response uncacheable and user-specific. Angular serves the static CSR
- * shell for these routes and the browser takes it from there.
+ * The developer portal and the review backoffice are separate builds with
+ * their own server-route tables (app.routes.server.registry.ts /
+ * app.routes.server.admin.ts), client-rendered because they sit behind a
+ * login.
  */
 const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Server },
   { path: 'plugins/:id', renderMode: RenderMode.Server },
-  { path: 'manage', renderMode: RenderMode.Client },
-  { path: 'manage/**', renderMode: RenderMode.Client },
-  { path: 'admin', renderMode: RenderMode.Client },
-  { path: 'admin/**', renderMode: RenderMode.Client },
   // Unknown paths redirect to the storefront (see app.routes.ts).
   { path: '**', renderMode: RenderMode.Server },
 ];

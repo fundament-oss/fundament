@@ -55,6 +55,14 @@ Things to keep in mind when working on server-rendered routes:
 bun install
 bun start        # dev server, server-rendering the same routes as production
 bun run build    # production build (browser bundle + Node server)
+
+# One source, three deployables (FUN-20): the storefront is the default build;
+# the developer portal and the review backoffice swap the route tables via
+# fileReplacements and deploy on their own hosts.
+bun run start:registry   # developer portal dev server
+bun run start:admin      # review backoffice dev server
+bun run build:registry
+bun run build:admin
 bun run serve:ssr  # run the production server from dist/
 bun run lint
 bun run format

@@ -24,6 +24,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
 import { ToastService } from './toast.service';
 import ThemeService from './theme.service';
+import { ConfigService } from './config.service';
+import OrganizationContextService from './organization-context.service';
+import { VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
@@ -44,6 +47,20 @@ export default class App {
 
   protected toastService = inject(ToastService);
 
+  private configService = inject(ConfigService);
+
+  // Which audience this build serves; the shell renders per-variant chrome
+  // and links to the sibling deployables by URL, never by route.
+  protected readonly variant = VARIANT;
+
+  protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
+
+  protected readonly storefrontUrl = this.configService.getConfig().storefrontUrl ?? '';
+
+  // The organization the developer portal acts for; the picker only shows
+  // when the session belongs to more than one.
+  protected organizationContext = inject(OrganizationContextService);
+
   // Theme state, owned by ThemeService so the server can render it too.
   isDarkMode = this.themeService.isDarkMode;
 
@@ -56,6 +73,19 @@ export default class App {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.searchQuery.set(params.get('q') ?? '');
     });
+
+    if (this.variant === 'registry') {
+      // Resolve the membership up front so the picker is filled before the
+      // first registry call needs the header.
+      this.organizationContext.ensureOrganizationId().catch(() => {});
+    }
+  }
+
+  protected onOrganizationChange(event: Event) {
+    this.organizationContext.setOrganizationId((event.target as HTMLSelectElement).value);
+    // A detail page's plugin belongs to the previous organization; the list
+    // reloads itself when the org signal changes.
+    this.router.navigateByUrl('/manage').catch(() => {});
   }
 
   // The marketplace home is the only page whose content the ?q= param drives,

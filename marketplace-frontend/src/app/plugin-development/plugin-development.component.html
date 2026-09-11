@@ -1,7 +1,17 @@
-<a routerLink="/" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
-  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
-  All plugins
-</a>
+@if (storefrontUrl) {
+  <a
+    [href]="storefrontUrl"
+    class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    All plugins
+  </a>
+} @else {
+  <a routerLink="/" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    All plugins
+  </a>
+}
 
 <h1 class="text-3xl font-semibold">My plugins</h1>
 <p class="mt-1 max-w-2xl text-lg text-gray-600 dark:text-gray-300">

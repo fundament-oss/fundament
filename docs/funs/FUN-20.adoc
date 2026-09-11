@@ -11,7 +11,7 @@
 
 The marketplace is where organizations outside Fundament publish plugins, Fundament reviews them, and users discover them. link:/funs/fun-11[FUN-11] describes the plugin system and the in-console catalog; this FUN records the decisions behind the APIs of the marketplace itself.
 
-`marketplace-catalog-api` and `marketplace-registry-api` are implemented; `marketplace-admin-api` is contract-only. The marketplace frontend is separate work.
+All three APIs are implemented. The marketplace frontend follows the same split: one source tree (`marketplace-frontend`), built three times — storefront, developer portal, review backoffice — each deployed on its own host with only its own audience's routes and API URL. The backoffice build rides the same restricted admin host policy as `marketplace-admin-api`, so the review UI never reaches a storefront visitor's browser.
 
 == Three APIs
 
@@ -96,7 +96,7 @@ One state vocabulary, `marketplace.v1.SubmissionStatus`, is imported by both sur
 
 Every other transition is refused with `FAILED_PRECONDITION`. `APPROVED` and `REJECTED` are terminal on the publisher surface: an approved version is immutable because its hash is a consent record, and a rejected one is resubmitted as a new version rather than revived.
 
-Because `admin.v1` is contract-only, a version submitted through `registry.v1` cannot currently leave `PENDING`. `marketplace-registry-api` is complete against its own contract but not end-to-end until the admin API lands. That is deliberate sequencing, not a gap in this design.
+Every decision closes the review round in the same transaction that moves the version's status, and both writes are guarded — the status write on `status = 'pending'`, the round write on `closed IS NULL` — so a decision racing a withdrawal (or a second reviewer) fails with `FAILED_PRECONDITION` rather than half-landing.
 
 == The contract is normalized
 
@@ -134,6 +134,8 @@ RLS is the tenancy boundary, not the whole authorization story. Every write RPC 
 
 The policies reference in one direction only: definitions reach up to plugins, and plugins reach nothing. The catalog's policies are mutually referential and had to work around SQLSTATE 42P17; not repeating that is deliberate.
 
+`marketplace-admin-api` gets `fun_marketplace_admin_api`. The role is not organization-scoped — a reviewer acts on submissions from every publishing organization — so its policies are `USING (true)` reads over the listing tables plus a `tenant.organizations` SELECT covering every organization with a listing, published or not: `ListPublishers` must resolve a publisher whose first version is still under review, which the catalog's public-only policy deliberately hides. What the role may *write* is fenced by column grants instead of policies: on `appstore.submissions` the decision columns (`reviewer_user_id`, `reviewed`, `closed`, `rejection_reason`, `feedback`), on `appstore.plugin_definitions` only `status` and `published`. `hash`, `manifest` and `image` are the consent record link:/funs/fun-17[FUN-17] makes immutable, so the grant — not just the service's Go — refuses them, and a round's identity (which version, who submitted) stays the publisher's alone. There is no OpenFGA check on this surface: the model has no reviewer concept yet (see <<Deferred>>), so "is a Fundament reviewer" is the admin-host restriction plus the credential the service validates — the DCIM token, issued by `dcim-authn-api` against the staff IDP (`dexDcim`). Reviewers are Fundament staff, so they authenticate where staff already do; a customer's console token or a plugin token is refused by issuer alone, both being minted by `fundament-authn-api`.
+
 One hole this work does not close. `plugins_tags_all_api` and `categories_plugins_all_api` are `FOR ALL TO fun_fundament_api USING (true)` with no ownership predicate, so any authenticated session can attach a tag or category to any organization's plugin. The registry's own policies are ownership-scoped from the start; tightening the `fun_fundament_api` ones is follow-up work.
 
 == Implementation notes
@@ -160,7 +162,7 @@ Only the parts that are decisions rather than mechanics.
 
 |`PutPluginDefinition`
 |`registry.v1` `CreatePluginVersion`
-|`plugins/cmd/plugin-publish`
+|`functl plugin publish` (done; it replaced `plugins/cmd/plugin-publish`)
 
 |`GetPluginDefinition`
 |`registry.v1`, as an unauthenticated procedure
@@ -179,18 +181,17 @@ The console reads are the authenticated in-product catalog (link:/funs/fun-11[FU
 
 == Deferred
 
-* `marketplace-admin-api`. Contract-only; until it exists nothing can move a version out of `PENDING`.
 * The `marketplace-frontend` application.
 * Idempotency keys on `CreatePlugin` and `CreatePluginVersion`. link:/funs/fun-15[FUN-15] is opt-in per procedure, and `tenant.idempotency_keys` would give the marketplace role access to `tenant`, which <<One store>> avoids. Both RPCs are naturally idempotent on their unique constraints meanwhile.
 * A publisher role. link:/funs/fun-7[FUN-7] has only `admin` and `viewer`, so any member of the owning organization can publish — no worse than the status quo, but not the end state.
 * Republishing a version. link:/funs/fun-19[FUN-19] describes soft-delete-then-publish; `CreatePluginVersion` is create-only.
-* `functl plugins push`. Named as the client here and in the proto comments, but no such command exists yet; the current publisher is `plugins/cmd/plugin-publish`.
+* `functl plugin publish` exists and is the publisher (it absorbed `plugins/cmd/plugin-publish`, taking its auth from functl's API-key session). Republishing a version through it stays impossible by design — see the republish bullet below.
 * Sideloading a build onto a cluster. It creates a `PluginInstallation`, so it belongs to `organization-api`.
 * Developer login via the Console, for the publishing surface.
 * Pagination on `ListPlugins`.
 * Who sets the editorial fields. `PluginLabel` and `featured` are curation decisions; no API writes them and the curation surface is undesigned.
 * A lookup over `tenant.users`. Nothing resolves an arbitrary user identifier today, so the backoffice renders identifiers where a submitter's name and email belong.
-* Which store marketplace reviewers authenticate against. `tenant.users` and `dcim.users` are separate, which is why `reviewer_user_id` is namespaced apart from `submitter_user_id`.
+* A reviewer relation in the OpenFGA model. Reviewers authenticate against `dcim.users` (the staff store, via `dcim-authn-api`) — that settles which store `reviewer_user_id` points into, and why it is namespaced apart from `submitter_user_id` — but the model still has no reviewer concept, so any authenticated staff member can decide a submission.
 * An organization picker for `allowed_organization_ids`. The allow-list is writable but not discoverable — a developer names organizations they are not a member of, and nothing lets them browse those.
 
 == References

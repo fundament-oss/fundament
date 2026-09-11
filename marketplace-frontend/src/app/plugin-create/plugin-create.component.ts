@@ -1,6 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 
 interface CreateStep {
   command: string;
@@ -22,21 +23,25 @@ interface CreateStep {
 export default class PluginCreateComponent {
   private titleService = inject(TitleService);
 
+  // URL of the sibling deployable this page links out to (FUN-20); empty
+  // when that area is not deployed, which hides the link.
+  protected storefrontUrl = inject(ConfigService).getConfig().storefrontUrl ?? '';
+
   readonly steps: CreateStep[] = [
     {
-      command: 'functl plugins create my-plugin',
-      title: 'Scaffold a new plugin',
-      body: 'Generates a plugin project with a PluginDefinition manifest (metadata, permissions and menu entries) and a starter reconciler you can build on.',
-    },
-    {
-      command: 'functl login',
+      command: 'functl auth login',
       title: 'Authenticate',
-      body: 'Signs you in to Fundament so the CLI can push builds to the plugin registry on your behalf.',
+      body: 'Signs you in to Fundament with an API key so the CLI can publish to the marketplace registry on your behalf.',
     },
     {
-      command: 'functl plugins push',
-      title: 'Push a build',
-      body: 'Builds and uploads your plugin image, then registers the version. Pushed builds can be sideloaded onto your own clusters for testing before you submit them for review.',
+      command: 'functl org set <org-id>',
+      title: 'Pick your organization',
+      body: 'Publishing is organization-scoped: every listing and version belongs to the organization you select here.',
+    },
+    {
+      command: 'functl plugin publish definition.yaml --image repo@sha256:… --create',
+      title: 'Publish a version',
+      body: 'Uploads your PluginDefinition manifest with the pushed image digest and registers the version. --create reserves the listing on first publish; published builds can be sideloaded onto your own clusters for testing before you submit them for review.',
     },
   ];
 

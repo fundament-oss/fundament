@@ -3,6 +3,7 @@ modules:
   - path: ../authn-api/pkg/proto
   - path: ../organization-api/pkg/proto
   - path: ../marketplace-api/pkg/proto
+  - path: ../marketplace-admin-api/pkg/proto
   - path: ../marketplace-catalog-api/pkg/proto
   - path: ../marketplace-registry-api/pkg/proto
 deps:

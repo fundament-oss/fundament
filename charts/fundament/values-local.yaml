@@ -15,9 +15,11 @@ externalUrls:
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
   marketplace: https://marketplace.fundament.localhost:8443
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.localhost:8443
-  # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
-  # have no implementation yet (FUN-20 defers them).
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  marketplaceRegistryApi: https://marketplace-registry-api.fundament.localhost:8443
+  marketplaceAdminApi: https://marketplace-admin-api.fundament.localhost:8443
+  marketplaceRegistry: https://marketplace-registry.fundament.localhost:8443
+  marketplaceAdmin: https://marketplace-admin.fundament.localhost:8443
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://marketplace-registry.fundament.localhost:8443,https://marketplace-admin.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -159,11 +161,23 @@ marketplaceFrontend:
   enabled: true
   replicas: 1
   # The renderer calls the catalog in-cluster rather than back in through the
-  # ingress. The registry and admin APIs have no implementation yet (FUN-20
-  # defers them); when they land they take http://marketplace-registry-api and
-  # http://marketplace-admin-api.
+  # ingress.
   internalApiUrls:
     catalog: http://marketplace-catalog-api:8080
+
+# Developer portal and review backoffice: the storefront image built for the
+# other two audiences (FUN-20).
+marketplaceRegistryFrontend:
+  enabled: true
+  replicas: 1
+  internalApiUrls:
+    registry: http://marketplace-registry-api:8080
+
+marketplaceAdminFrontend:
+  enabled: true
+  replicas: 1
+  internalApiUrls:
+    admin: http://marketplace-admin-api:8080
 
 dexDcim:
   enabled: true
@@ -231,6 +245,12 @@ marketplaceCatalogApi:
 
 # Publisher API. Authenticated, so it picks up the shared jwtSecret above.
 marketplaceRegistryApi:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+
+# Review backoffice. Authenticated, so it picks up the shared jwtSecret above.
+marketplaceAdminApi:
   enabled: true
   replicas: 1
   logLevel: debug

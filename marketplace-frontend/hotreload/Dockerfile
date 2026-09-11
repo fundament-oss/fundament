@@ -20,5 +20,9 @@ EXPOSE 4000
 
 # Start development server with hot reload. It server-renders the storefront the
 # same way the production server does; see marketplace-frontend/src/server.ts.
+# START_SCRIPT selects the audience, mirroring the production image's
+# BUILD_SCRIPT: start, start:registry or start:admin.
 # Configure dev server to listen on 0.0.0.0:4000 for pod accessibility
-CMD ["sh", "-c", "bun start --host 0.0.0.0 --port 4000"]
+ARG START_SCRIPT=start
+ENV START_SCRIPT=$START_SCRIPT
+CMD ["sh", "-c", "bun run \"$START_SCRIPT\" --host 0.0.0.0 --port 4000"]
