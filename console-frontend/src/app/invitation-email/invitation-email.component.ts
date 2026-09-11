@@ -3,23 +3,18 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
-  DestroyRef,
   inject,
   input,
-  signal,
 } from '@angular/core';
 import { buildInvitationEmail } from '../utils/invitation-email';
 import AutofocusDirective from '../autofocus.directive';
+import { NotificationService } from '../notification.service';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/spacer';
-
-/** How long the banner stands as a confirmation before going back to what it
- *  said, so copying a second time has something to change again. */
-const COPIED_FOR = 5000;
 
 /**
  * The message an admin sends by hand after creating an invitation, with the two
@@ -59,7 +54,7 @@ export default class InvitationEmailComponent {
    *  other is looking up one that already existed. */
   readonly idleText = input('Invitation created');
 
-  readonly copied = signal(false);
+  private notificationService = inject(NotificationService);
 
   readonly message = computed(() =>
     buildInvitationEmail({
@@ -69,14 +64,6 @@ export default class InvitationEmailComponent {
       consoleUrl: window.location.origin,
     }),
   );
-
-  private copyTimer?: ReturnType<typeof setTimeout>;
-
-  constructor() {
-    // The sheet can be closed while the confirmation is still standing, and the
-    // dialog's content is destroyed the moment its member is cleared.
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.copyTimer));
-  }
 
   async copy() {
     const { body } = this.message();
@@ -97,19 +84,9 @@ export default class InvitationEmailComponent {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      this.confirmCopied();
+      this.notificationService.success('Message copied to clipboard');
     } catch {
-      this.copied.set(false);
+      this.notificationService.error('Failed to copy the message. Please copy it manually.');
     }
-  }
-
-  /** The banner is a live region, so changing what it says announces the copy.
-   *  A notification cannot do it: this sits inside a sheet and a modal dialog,
-   *  which are in the browser's top layer and paint over the notification
-   *  region entirely. */
-  private confirmCopied() {
-    this.copied.set(true);
-    clearTimeout(this.copyTimer);
-    this.copyTimer = setTimeout(() => this.copied.set(false), COPIED_FOR);
   }
 }

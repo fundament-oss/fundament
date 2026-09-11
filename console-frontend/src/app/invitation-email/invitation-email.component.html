@@ -1,13 +1,11 @@
-<!-- The banner doubles as the copy confirmation: it is a live region, so
-     changing what it says announces the copy. See the component docblock for
-     why a notification cannot do this from inside a sheet or a dialog. -->
+<!-- The copy is confirmed by a notification, which reaches over the sheet and
+     the dialog this panel is rendered into: see
+     NotificationService.raiseRegion. -->
 <nldd-banner
   variant="success"
-  [attr.text]="copied() ? 'Message copied to clipboard' : idleText()"
+  [attr.text]="idleText()"
   [attr.supporting-text]="
-    copied()
-      ? 'Paste it into an email to ' + email() + '.'
-      : 'No email is sent automatically. Send this message to ' + email() + ' yourself.'
+    'No email is sent automatically. Send this message to ' + email() + ' yourself.'
   "
 ></nldd-banner>
 <nldd-spacer size="12"></nldd-spacer>

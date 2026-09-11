@@ -12,12 +12,11 @@ type Variant = 'neutral' | 'accent' | 'success' | 'warning' | 'critical';
  * be removed when it is done, so the only thing this service does is put one in
  * the document and take it out again.
  *
- * Not from inside an open sheet or modal dialog. Those are <dialog>s opened with
- * showModal(), so they are in the browser's top layer and the region — a fixed
- * element on document.body — is painted behind them, unseen and unclickable.
- * A message that belongs to a sheet goes in an nldd-banner in the sheet itself;
- * one raised on the way out of a sheet is fine, since it surfaces the moment the
- * sheet closes. See nldd-design-system-issues.md.
+ * That region is a plain fixed element on document.body, and a sheet or modal
+ * dialog is a <dialog> opened with showModal() — in the browser's top layer,
+ * painting over everything outside it. So every message is raised through
+ * raiseRegion, which promotes the region into the top layer as well and keeps a
+ * notification visible from inside a sheet.
  */
 @Injectable({
   providedIn: 'root',
@@ -65,5 +64,35 @@ export class NotificationService {
     });
     this.open.add(notification);
     document.body.appendChild(notification);
+    NotificationService.raiseRegion();
+  }
+
+  /**
+   * Puts the region the notification just moved into in front of an open sheet.
+   *
+   * The design system parks every notification in one fixed region on
+   * document.body. An nldd-sheet is a <dialog> opened with showModal(), which
+   * lives in the browser's top layer, and everything outside the top layer
+   * paints behind it — so a message raised from inside a sheet was there all
+   * along and nobody ever saw it. A popover is in the top layer too, and one
+   * shown after a dialog opened stacks above it.
+   *
+   * Per message rather than once: the region comes and goes with the messages in
+   * it, and a sheet opened since the last one would otherwise be on top again.
+   * The UA's own popover styling comes along with the promotion and is undone in
+   * styles.css.
+   */
+  private static raiseRegion() {
+    const region = document.getElementById('nldd-notification-region');
+    if (!region || !('showPopover' in region)) return;
+    try {
+      if (region.getAttribute('popover') !== 'manual') region.setAttribute('popover', 'manual');
+      // Shown again from the top of the stack, not left where it was.
+      if (region.matches(':popover-open')) region.hidePopover();
+      region.showPopover();
+    } catch {
+      // A browser that refuses the promotion is left with the region where the
+      // design system put it, which is what it was before this existed.
+    }
   }
 }

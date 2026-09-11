@@ -85,10 +85,6 @@ export default class InviteMemberSheetComponent {
 
   createdPermission = signal('viewer');
 
-  /** How many were created without leaving the sheet, so the notification on the
-   *  way out can account for all of them rather than only the last. */
-  createdCount = signal(0);
-
   organizationName = computed(() => this.organizationDataService.currentOrganizationDisplayName());
 
   /** Named with their scope, the way the tags on the members list are: this is
@@ -115,7 +111,6 @@ export default class InviteMemberSheetComponent {
       if (!this.show()) return;
       this.resetForm();
       this.step.set('form');
-      this.createdCount.set(0);
     });
   }
 
@@ -135,17 +130,6 @@ export default class InviteMemberSheetComponent {
   }
 
   onClose() {
-    // Raised here rather than at the moment of success: the sheet is a modal
-    // <dialog>, so it is in the browser's top layer and paints over the
-    // notification region entirely. On the way out it is seen.
-    const created = this.createdCount();
-    if (created === 1) {
-      this.notificationService.success(
-        `'${this.createdEmail()}' invited as ${this.createdPermission()}`,
-      );
-    } else if (created > 1) {
-      this.notificationService.success(`${created} invitations created`);
-    }
     this.closed.emit();
   }
 
@@ -169,8 +153,12 @@ export default class InviteMemberSheetComponent {
       });
       this.createdEmail.set(email);
       this.createdPermission.set(permission);
-      this.createdCount.update((count) => count + 1);
       this.step.set('created');
+      // Said at the moment it happens, not on the way out of the sheet: the
+      // notification region is promoted into the top layer, so it is seen over
+      // the sheet (see NotificationService.raiseRegion). Inviting several people
+      // in a row that way gets a confirmation each, naming who it was.
+      this.notificationService.success(`'${email}' invited as ${permission}`);
       // The list of members is a page of its own, and it may well be the page
       // behind this sheet, so it hears about the invitation from here.
       this.organizationDataService.membersChanged.update((count) => count + 1);
