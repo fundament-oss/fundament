@@ -26,7 +26,7 @@ func newMockServer(t *testing.T, cfg *proxy.Config) *httptest.Server {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
 	}
-	srv, err := proxy.New(slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, nil)
+	srv, err := proxy.New(slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, nil, nil)
 	require.NoError(t, err)
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
@@ -111,7 +111,7 @@ func TestClusterProxy_RejectsPluginToken(t *testing.T) {
 	srv, err := proxy.New(logger, &proxy.Config{
 		JWTSecret: secret,
 		Mode:      "mock",
-	}, nil)
+	}, nil, nil)
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(srv.Handler())

@@ -73,10 +73,12 @@ func run() error {
 		}
 	}
 
-	authzClient, err := authz.New(cfg.OpenFGA)
+	authzStore, err := authz.NewStore(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenFGA client: %w", err)
 	}
+
+	authzClient := authz.NewClient(authzStore)
 
 	var gardenerClient *gardener.Client
 	if cfg.KubeProxyMode == "real" {
@@ -97,7 +99,7 @@ func run() error {
 		GardenerClient:          gardenerClient,
 		MockPluginTemplatesDir:  cfg.MockPluginTemplatesDir,
 		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
-	}, authzClient)
+	}, authzClient, authzStore)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)
 	}

@@ -45,7 +45,7 @@ func main() {
 // because a pod that cannot reach either can serve no write RPC; livez
 // deliberately reports neither, so a brief outage does not get the container
 // killed and restarted.
-func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB, authzClient *authz.Client) *http.ServeMux {
+func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqldb.DB, store *authz.Store) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -64,10 +64,10 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 				return
 			}
 		}
-		if authzClient != nil {
+		if store != nil {
 			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 			defer cancel()
-			if err := authzClient.Healthy(ctx); err != nil {
+			if err := store.Healthy(ctx); err != nil {
 				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_, _ = w.Write([]byte("openfga unavailable"))
@@ -114,10 +114,12 @@ func run() error {
 
 	// Every write RPC checks OpenFGA before RLS sees the statement, so the
 	// client is required, not optional.
-	authzClient, err := authz.New(cfg.OpenFGA)
+	authzStore, err := authz.NewStore(cfg.OpenFGA)
 	if err != nil {
 		return fmt.Errorf("creating authz client: %w", err)
 	}
+
+	authzClient := authz.NewClient(authzStore)
 
 	server := registry.New(logger, registry.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
@@ -126,7 +128,7 @@ func run() error {
 
 	// Health endpoints sit on an outer mux so they bypass CORS and every
 	// interceptor — a probe carries no JWT.
-	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database, authzClient)
+	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database, authzStore)
 	outerMux.Handle("/", server.Handler())
 
 	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.

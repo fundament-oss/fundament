@@ -10,31 +10,18 @@ import (
 	"github.com/openfga/go-sdk/client"
 )
 
-// Config holds configuration for the OpenFGA client.
-type Config struct {
-	APIURL               string `env:"OPENFGA_API_URL,required,notEmpty"`
-	StoreID              string `env:"OPENFGA_STORE_ID,required,notEmpty"`
-	AuthorizationModelID string `env:"OPENFGA_AUTHORIZATION_MODEL_ID"`
-}
-
 // Client wraps the OpenFGA SDK client with an AuthZEN-compatible interface.
 // See https://openid.github.io/authzen/ for the AuthZEN specification.
+//
+// Checks run against the store's latest authorization model; no id is pinned.
 type Client struct {
-	fga *client.OpenFgaClient
+	fga   *client.OpenFgaClient
+	store *Store
 }
 
-// New creates a new authorization client.
-func New(cfg Config) (*Client, error) {
-	fgaClient, err := client.NewSdkClient(&client.ClientConfiguration{
-		ApiUrl:               cfg.APIURL,
-		StoreId:              cfg.StoreID,
-		AuthorizationModelId: cfg.AuthorizationModelID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create OpenFGA client: %w", err)
-	}
-
-	return &Client{fga: fgaClient}, nil
+// NewClient creates an authorization client that evaluates against store.
+func NewClient(store *Store) *Client {
+	return &Client{fga: store.fga, store: store}
 }
 
 // CanViewCluster is a convenience wrapper around Evaluate for the frequently
@@ -55,15 +42,6 @@ func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID
 		return false, fmt.Errorf("openfga can_view: %w", err)
 	}
 	return dec.Decision, nil
-}
-
-// Healthy checks that the OpenFGA store is reachable.
-func (c *Client) Healthy(ctx context.Context) error {
-	_, err := c.fga.GetStore(ctx).Execute()
-	if err != nil {
-		return fmt.Errorf("openfga: %w", err)
-	}
-	return nil
 }
 
 // Evaluate performs a single access evaluation following the AuthZEN Access Evaluation API.
@@ -109,7 +87,15 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 		checkReq.Context = &checkContext
 	}
 
-	resp, err := c.fga.Check(ctx).Body(checkReq).Execute()
+	storeID, err := c.store.ID(ctx)
+	if err != nil {
+		return Decision{Decision: false}, err
+	}
+
+	resp, err := c.fga.Check(ctx).
+		Body(checkReq).
+		Options(client.ClientCheckOptions{StoreId: &storeID}).
+		Execute()
 	if err != nil {
 		return Decision{Decision: false}, fmt.Errorf("check: %w", err)
 	}
