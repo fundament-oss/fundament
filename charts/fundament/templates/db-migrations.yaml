@@ -68,7 +68,10 @@ spec:
               done
               echo "database openfga accepts connections"
               # Absent until openfga migrates, which runs unordered against this Job.
-              if psql "$OPENFGA_DATASTORE_URI" -tAc "SELECT to_regclass('public.tuple')" | grep -q tuple; then
+              # Captured, not piped: under set -e a failing psql then aborts the Job
+              # instead of reading as "no schema".
+              schema=$(psql "$OPENFGA_DATASTORE_URI" -tAc "SELECT to_regclass('public.tuple')")
+              if [ -n "$schema" ]; then
                 psql "$OPENFGA_DATASTORE_URI" -v ON_ERROR_STOP=1 -c "TRUNCATE tuple, changelog"
                 echo "OpenFGA tuples cleared."
               else
