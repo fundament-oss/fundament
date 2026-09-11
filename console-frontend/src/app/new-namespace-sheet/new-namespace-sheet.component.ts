@@ -218,7 +218,11 @@ export default class NewNamespaceSheetComponent {
       // The list that shows namespaces is a page of its own, and it may well be
       // the page behind this sheet, so it hears about the new one from here.
       this.organizationDataService.namespacesChanged.update((count) => count + 1);
-      await this.organizationDataService.loadOrganizationData();
+      // The projects, not the organization: the count that changed hangs off the
+      // project, and reloading the organization drops the projects for good.
+      // Swallowed because the namespace exists either way, and a failed refresh
+      // reported as "Failed to create namespace" would say it does not.
+      await this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {});
     } catch (error) {
       this.createErrorMessage.set(
         error instanceof Error

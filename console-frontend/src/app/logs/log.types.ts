@@ -12,8 +12,14 @@ export interface LogEntry {
   fields: Record<string, unknown>;
 }
 
+/**
+ * One bucket of the log histogram, as counted by the backend. `start` is the
+ * bucket's own timestamp rather than a formatted label: the axis label depends
+ * on how wide the selected window is, which is the chart's business, not the
+ * data's.
+ */
 export interface HistogramBucket {
-  label: string;
+  start: Date;
   error: number;
   warn: number;
   info: number;

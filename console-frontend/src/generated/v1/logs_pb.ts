@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/logs.proto.
  */
 export const file_v1_logs: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9sb2dzLnByb3RvEg9vcmdhbml6YXRpb24udjEigwIKCExvZ0VudHJ5Ei0KCXRpbWVzdGFtcBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGV2ZWwYFCABKAkSDwoHY2x1c3RlchgeIAEoCRIRCgluYW1lc3BhY2UYKCABKAkSCwoDcG9kGDIgASgJEhEKCWNvbnRhaW5lchg8IAEoCRIPCgdtZXNzYWdlGEYgASgJEjUKBmZpZWxkcxhQIAMoCzIlLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeS5GaWVsZHNFbnRyeRotCgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrwCChBRdWVyeUxvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIwCgVzdGFydBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhkKBWxpbWl0GFogASgFQgq6SAcaBRiIJygAEh4KBmxldmVscxhkIAMoCUIOukgLkgEIEAQiBHICGBASKgoGc291cmNlGG4gASgOMhoub3JnYW5pemF0aW9uLnYxLkxvZ1NvdXJjZSJtChFRdWVyeUxvZ3NSZXNwb25zZRIqCgdlbnRyaWVzGAogAygLMhkub3JnYW5pemF0aW9uLnYxLkxvZ0VudHJ5EiwKB2JhY2tlbmQYFCABKA4yGy5vcmdhbml6YXRpb24udjEuTG9nQmFja2VuZCK+AQoPVGFpbExvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIeCgZsZXZlbHMYZCADKAlCDrpIC5IBCBAEIgRyAhgQEioKBnNvdXJjZRhuIAEoDjIaLm9yZ2FuaXphdGlvbi52MS5Mb2dTb3VyY2UiqAEKE0dldExvZ0xhYmVsc1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQESEQoJbmFtZXNwYWNlGBQgASgJEjAKBXN0YXJ0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESLgoDZW5kGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiegoUR2V0TG9nTGFiZWxzUmVzcG9uc2USEgoKbmFtZXNwYWNlcxgKIAMoCRIMCgRwb2RzGBQgAygJEhIKCmNvbnRhaW5lcnMYHiADKAkSLAoHYmFja2VuZBgoIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kKnEKCkxvZ0JhY2tlbmQSGwoXTE9HX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIUChBMT0dfQkFDS0VORF9MT0tJEAESGgoWTE9HX0JBQ0tFTkRfS1VCRVJORVRFUxACEhQKEExPR19CQUNLRU5EX05PTkUQAypWCglMb2dTb3VyY2USGgoWTE9HX1NPVVJDRV9VTlNQRUNJRklFRBAAEhYKEkxPR19TT1VSQ0VfQ0xVU1RFUhABEhUKEUxPR19TT1VSQ0VfUExVR0lOEAIyiQIKC0xvZ3NTZXJ2aWNlElIKCVF1ZXJ5TG9ncxIhLm9yZ2FuaXphdGlvbi52MS5RdWVyeUxvZ3NSZXF1ZXN0GiIub3JnYW5pemF0aW9uLnYxLlF1ZXJ5TG9nc1Jlc3BvbnNlEkkKCFRhaWxMb2dzEiAub3JnYW5pemF0aW9uLnYxLlRhaWxMb2dzUmVxdWVzdBoZLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeTABElsKDEdldExvZ0xhYmVscxIkLm9yZ2FuaXphdGlvbi52MS5HZXRMb2dMYWJlbHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkdldExvZ0xhYmVsc1Jlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS9sb2dzLnByb3RvEg9vcmdhbml6YXRpb24udjEigwIKCExvZ0VudHJ5Ei0KCXRpbWVzdGFtcBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFbGV2ZWwYFCABKAkSDwoHY2x1c3RlchgeIAEoCRIRCgluYW1lc3BhY2UYKCABKAkSCwoDcG9kGDIgASgJEhEKCWNvbnRhaW5lchg8IAEoCRIPCgdtZXNzYWdlGEYgASgJEjUKBmZpZWxkcxhQIAMoCzIlLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeS5GaWVsZHNFbnRyeRotCgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrwCChBRdWVyeUxvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIwCgVzdGFydBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhkKBWxpbWl0GFogASgFQgq6SAcaBRiIJygAEh4KBmxldmVscxhkIAMoCUIOukgLkgEIEAQiBHICGBASKgoGc291cmNlGG4gASgOMhoub3JnYW5pemF0aW9uLnYxLkxvZ1NvdXJjZSJtChFRdWVyeUxvZ3NSZXNwb25zZRIqCgdlbnRyaWVzGAogAygLMhkub3JnYW5pemF0aW9uLnYxLkxvZ0VudHJ5EiwKB2JhY2tlbmQYFCABKA4yGy5vcmdhbml6YXRpb24udjEuTG9nQmFja2VuZCK+AQoPVGFpbExvZ3NSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIeCgZsZXZlbHMYZCADKAlCDrpIC5IBCBAEIgRyAhgQEioKBnNvdXJjZRhuIAEoDjIaLm9yZ2FuaXphdGlvbi52MS5Mb2dTb3VyY2UiqAEKE0dldExvZ0xhYmVsc1JlcXVlc3QSHAoKY2x1c3Rlcl9pZBgKIAEoCUIIukgFcgOwAQESEQoJbmFtZXNwYWNlGBQgASgJEjAKBXN0YXJ0GB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESLgoDZW5kGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiegoUR2V0TG9nTGFiZWxzUmVzcG9uc2USEgoKbmFtZXNwYWNlcxgKIAMoCRIMCgRwb2RzGBQgAygJEhIKCmNvbnRhaW5lcnMYHiADKAkSLAoHYmFja2VuZBgoIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kIt8CChZHZXRMb2dIaXN0b2dyYW1SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEhEKCW5hbWVzcGFjZRgUIAEoCRILCgNwb2QYHiABKAkSEQoJY29udGFpbmVyGCggASgJEg4KBnNlYXJjaBg8IAEoCRIwCgVzdGFydBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEi4KA2VuZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhsKB2J1Y2tldHMYWiABKAVCCrpIBxoFGMgBKAASHgoGbGV2ZWxzGGQgAygJQg66SAuSAQgQBCIEcgIYEBIqCgZzb3VyY2UYbiABKA4yGi5vcmdhbml6YXRpb24udjEuTG9nU291cmNlEhkKBWxpbWl0GHggASgFQgq6SAcaBRiIJygAIpEBChJMb2dIaXN0b2dyYW1CdWNrZXQSKQoFc3RhcnQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2Vycm9yX2NvdW50GBQgASgDEhIKCndhcm5fY291bnQYHiABKAMSEgoKaW5mb19jb3VudBgoIAEoAxITCgtkZWJ1Z19jb3VudBgyIAEoAyKMAQoXR2V0TG9nSGlzdG9ncmFtUmVzcG9uc2USNAoHYnVja2V0cxgKIAMoCzIjLm9yZ2FuaXphdGlvbi52MS5Mb2dIaXN0b2dyYW1CdWNrZXQSLAoHYmFja2VuZBgUIAEoDjIbLm9yZ2FuaXphdGlvbi52MS5Mb2dCYWNrZW5kEg0KBWV4YWN0GB4gASgIKnEKCkxvZ0JhY2tlbmQSGwoXTE9HX0JBQ0tFTkRfVU5TUEVDSUZJRUQQABIUChBMT0dfQkFDS0VORF9MT0tJEAESGgoWTE9HX0JBQ0tFTkRfS1VCRVJORVRFUxACEhQKEExPR19CQUNLRU5EX05PTkUQAypWCglMb2dTb3VyY2USGgoWTE9HX1NPVVJDRV9VTlNQRUNJRklFRBAAEhYKEkxPR19TT1VSQ0VfQ0xVU1RFUhABEhUKEUxPR19TT1VSQ0VfUExVR0lOEAIy7wIKC0xvZ3NTZXJ2aWNlElIKCVF1ZXJ5TG9ncxIhLm9yZ2FuaXphdGlvbi52MS5RdWVyeUxvZ3NSZXF1ZXN0GiIub3JnYW5pemF0aW9uLnYxLlF1ZXJ5TG9nc1Jlc3BvbnNlEkkKCFRhaWxMb2dzEiAub3JnYW5pemF0aW9uLnYxLlRhaWxMb2dzUmVxdWVzdBoZLm9yZ2FuaXphdGlvbi52MS5Mb2dFbnRyeTABElsKDEdldExvZ0xhYmVscxIkLm9yZ2FuaXphdGlvbi52MS5HZXRMb2dMYWJlbHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkdldExvZ0xhYmVsc1Jlc3BvbnNlEmQKD0dldExvZ0hpc3RvZ3JhbRInLm9yZ2FuaXphdGlvbi52MS5HZXRMb2dIaXN0b2dyYW1SZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldExvZ0hpc3RvZ3JhbVJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * LogEntry is a single log line. Mirrors the console-frontend LogEntry view type.
@@ -314,6 +314,181 @@ export const GetLogLabelsResponseSchema: GenMessage<GetLogLabelsResponse> = /*@_
   messageDesc(file_v1_logs, 5);
 
 /**
+ * GetLogHistogramRequest asks for bucketed counts over a window. The filters
+ * mirror QueryLogsRequest so the chart describes exactly the query the entry
+ * list is showing.
+ *
+ * @generated from message organization.v1.GetLogHistogramRequest
+ */
+export type GetLogHistogramRequest = Message<"organization.v1.GetLogHistogramRequest"> & {
+  /**
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+
+  /**
+   * Optional label filters. Empty means "all".
+   *
+   * @generated from field: string namespace = 20;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string pod = 30;
+   */
+  pod: string;
+
+  /**
+   * @generated from field: string container = 40;
+   */
+  container: string;
+
+  /**
+   * Optional free-text line filter.
+   *
+   * @generated from field: string search = 60;
+   */
+  search: string;
+
+  /**
+   * Time range to bucket. Defaults to the last hour when not set.
+   *
+   * @generated from field: google.protobuf.Timestamp start = 70 [features.field_presence = EXPLICIT];
+   */
+  start?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp end = 80 [features.field_presence = EXPLICIT];
+   */
+  end?: Timestamp | undefined;
+
+  /**
+   * How many equal buckets to divide the window into. Defaults to 30 when
+   * zero and is capped at 200: each bucket is one aggregation step, and the
+   * range comes from the wire.
+   *
+   * @generated from field: int32 buckets = 90;
+   */
+  buckets: number;
+
+  /**
+   * Optional severity filter; see QueryLogsRequest.levels. An unselected
+   * level is reported as zero rather than omitted, so the series stay aligned.
+   *
+   * @generated from field: repeated string levels = 100;
+   */
+  levels: string[];
+
+  /**
+   * Which of the cluster's log sources to read.
+   *
+   * @generated from field: organization.v1.LogSource source = 110;
+   */
+  source: LogSource;
+
+  /**
+   * How many lines a backend that cannot aggregate may read before counting
+   * them. Ignored by backends that do aggregate (Vali), whose counts cover the
+   * whole window however this is set. Defaults and caps exactly as
+   * QueryLogsRequest.limit does: 1000 when zero, never above 5000.
+   *
+   * Set it to the same value as QueryLogsRequest.limit: the fallback then
+   * counts exactly the page the entry list is showing, instead of reading the
+   * pod's log a second time at a different size and reporting totals the list
+   * below it cannot account for.
+   *
+   * @generated from field: int32 limit = 120;
+   */
+  limit: number;
+};
+
+/**
+ * Describes the message organization.v1.GetLogHistogramRequest.
+ * Use `create(GetLogHistogramRequestSchema)` to create a new message.
+ */
+export const GetLogHistogramRequestSchema: GenMessage<GetLogHistogramRequest> = /*@__PURE__*/
+  messageDesc(file_v1_logs, 6);
+
+/**
+ * LogHistogramBucket is one bucket of the window, counted per severity.
+ *
+ * @generated from message organization.v1.LogHistogramBucket
+ */
+export type LogHistogramBucket = Message<"organization.v1.LogHistogramBucket"> & {
+  /**
+   * Start of the bucket. Every bucket spans (end - start) / buckets, so the
+   * width is implied rather than repeated on each one.
+   *
+   * @generated from field: google.protobuf.Timestamp start = 10;
+   */
+  start?: Timestamp | undefined;
+
+  /**
+   * @generated from field: int64 error_count = 20;
+   */
+  errorCount: bigint;
+
+  /**
+   * @generated from field: int64 warn_count = 30;
+   */
+  warnCount: bigint;
+
+  /**
+   * @generated from field: int64 info_count = 40;
+   */
+  infoCount: bigint;
+
+  /**
+   * @generated from field: int64 debug_count = 50;
+   */
+  debugCount: bigint;
+};
+
+/**
+ * Describes the message organization.v1.LogHistogramBucket.
+ * Use `create(LogHistogramBucketSchema)` to create a new message.
+ */
+export const LogHistogramBucketSchema: GenMessage<LogHistogramBucket> = /*@__PURE__*/
+  messageDesc(file_v1_logs, 7);
+
+/**
+ * GetLogHistogramResponse contains one bucket per requested division of the
+ * window, oldest first.
+ *
+ * @generated from message organization.v1.GetLogHistogramResponse
+ */
+export type GetLogHistogramResponse = Message<"organization.v1.GetLogHistogramResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.LogHistogramBucket buckets = 10;
+   */
+  buckets: LogHistogramBucket[];
+
+  /**
+   * Which backend answered.
+   *
+   * @generated from field: organization.v1.LogBackend backend = 20;
+   */
+  backend: LogBackend;
+
+  /**
+   * Whether the counts cover the whole window. False when the backend cannot
+   * aggregate and the counts were taken from a bounded page of entries
+   * instead (the Kubernetes pod-log fallback and plugin logs), which is the
+   * case the caller has to caveat in its UI.
+   *
+   * @generated from field: bool exact = 30;
+   */
+  exact: boolean;
+};
+
+/**
+ * Describes the message organization.v1.GetLogHistogramResponse.
+ * Use `create(GetLogHistogramResponseSchema)` to create a new message.
+ */
+export const GetLogHistogramResponseSchema: GenMessage<GetLogHistogramResponse> = /*@__PURE__*/
+  messageDesc(file_v1_logs, 8);
+
+/**
  * LogBackend identifies which backend served a response, so the frontend can
  * adapt its UI (e.g. the Kubernetes fallback cannot do cross-pod search).
  *
@@ -433,6 +608,23 @@ export const LogsService: GenService<{
     methodKind: "unary";
     input: typeof GetLogLabelsRequestSchema;
     output: typeof GetLogLabelsResponseSchema;
+  },
+  /**
+   * GetLogHistogram returns per-severity log counts bucketed over the
+   * requested window.
+   *
+   * This cannot be derived from QueryLogs: those entries are the newest
+   * QueryLogsRequest.limit lines, so counting them client-side describes the
+   * page rather than the window — on a busy cluster the totals pin at the
+   * limit and the chart renders a traffic cliff at whatever moment the page
+   * happens to start.
+   *
+   * @generated from rpc organization.v1.LogsService.GetLogHistogram
+   */
+  getLogHistogram: {
+    methodKind: "unary";
+    input: typeof GetLogHistogramRequestSchema;
+    output: typeof GetLogHistogramResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_logs, 0);

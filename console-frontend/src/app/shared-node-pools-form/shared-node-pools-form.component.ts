@@ -62,8 +62,18 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   @Input() submitButtonText = 'Next step';
 
+  /**
+   * The pools to start from, for a form that edits pools that already exist.
+   * An empty list is an answer, not a missing one: a cluster with no pools has
+   * to look like a cluster with no pools, or the sheet invents one — a pool
+   * with a generated name that the page behind the sheet rightly says is not
+   * there, and that saving would then create.
+   *
+   * Null is the absence of an answer, which is what the create wizard binds:
+   * nothing exists yet there, so the form keeps the one pool it starts with.
+   */
   @Input() set initialData(data: NodePoolData[] | null) {
-    if (data && data.length > 0) {
+    if (data) {
       this.loadInitialData(data);
     }
   }

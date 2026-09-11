@@ -20,6 +20,7 @@ import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { formatUsageValue, getUsagePercentage } from '../utils/usage';
+import { downloadCsv, slugify } from '../utils/csv';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
@@ -231,6 +232,72 @@ function formatRange(start: string, end: string): string {
   const short: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const long: Intl.DateTimeFormatOptions = { ...short, year: 'numeric' };
   return `${from.toLocaleDateString('en-US', sameYear ? short : long)} – ${to.toLocaleDateString('en-US', long)}`;
+}
+
+/** The columns every exported row fills, whatever it describes. */
+const CSV_HEADER = ['Section', 'Name', 'Metric', 'Value', 'Total', 'Unit'];
+
+/** A measurement as a spreadsheet wants it: plain, and without a float's tail. */
+function csvNumber(value: number): string {
+  return String(Number(value.toFixed(4)));
+}
+
+interface UsageEntry {
+  used: number;
+  total: number;
+  unit?: string;
+}
+
+/**
+ * The three usage figures of the totals, a cluster or a node, one metric per row.
+ *
+ * `measured` false leaves the numbers blank rather than writing the zeros an
+ * unreachable Prometheus produced: a blank cell reads as "not measured", where
+ * a 0 would claim it was measured and came to nothing.
+ */
+function usageRows(
+  section: string,
+  name: string,
+  entry: { cpu: UsageEntry; memory: UsageEntry; pods: UsageEntry },
+  measured: boolean,
+): string[][] {
+  const metrics: [string, UsageEntry, string][] = [
+    ['CPU', entry.cpu, 'cores'],
+    ['Memory', entry.memory, 'GiB'],
+    ['Pods', entry.pods, 'pods'],
+  ];
+  return metrics.map(([metric, usage, fallbackUnit]) => [
+    section,
+    name,
+    metric,
+    measured ? csvNumber(usage.used) : '',
+    measured ? csvNumber(usage.total) : '',
+    usage.unit ?? fallbackUnit,
+  ]);
+}
+
+/** One namespace's nine figures. None of them has a ceiling to sit under, so the
+ *  Total column stays empty on every row. */
+function namespaceRows(ns: NamespaceUsageData): string[][] {
+  const metrics: [string, number, string][] = [
+    ['CPU used', ns.cpu, 'cores'],
+    ['CPU requests', ns.cpuRequests, 'cores'],
+    ['CPU limits', ns.cpuLimits, 'cores'],
+    ['Memory used', ns.memory, 'GiB'],
+    ['Memory requests', ns.memoryRequests, 'GiB'],
+    ['Memory limits', ns.memoryLimits, 'GiB'],
+    ['Pods', ns.pods, 'pods'],
+    ['Network receive', ns.networkReceiveMbs, 'MB/s'],
+    ['Network transmit', ns.networkTransmitMbs, 'MB/s'],
+  ];
+  return metrics.map(([metric, value, unit]) => [
+    'Namespace',
+    ns.name,
+    metric,
+    csvNumber(value),
+    '',
+    unit,
+  ]);
 }
 
 type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
@@ -505,6 +572,98 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   selectCluster(id: string): void {
     this.selectedClusterId.set(id);
     this.onClusterChange();
+  }
+
+  /** Nothing has arrived yet, so there is nothing to hand over. */
+  canExport = computed(
+    () =>
+      !!this.currentTotals() ||
+      this.namespaceUsage().length > 0 ||
+      this.clusterSummaries().length > 0 ||
+      this.nodeUsage().length > 0,
+  );
+
+  /** What the file is called: the filter it was taken under and the period it
+   *  covers, so two downloads from two views do not land on the same name. */
+  private csvFilename(): string {
+    const preset = this.selectedPreset();
+    const period = preset === 'custom' ? `${this.dateFrom}_${this.dateTo}` : preset;
+    return `metrics-${slugify(this.exportScope())}-${period}-${toLocalDateString(new Date())}.csv`;
+  }
+
+  /** The filter the export was taken under, named the way the toolbar names it. */
+  private exportScope(): string {
+    if (this.viewMode() === 'project') return `Project ${this.projectId() ?? ''}`.trim();
+    return this.clusterLabel();
+  }
+
+  /**
+   * Everything on screen, as one file.
+   *
+   * The page holds four different shapes of number — totals, a card per cluster
+   * or node, a wide namespace table, and five series over time — and a CSV holds
+   * one shape. So every figure becomes its own row and says which section it came
+   * from, which is the layout a pivot table wants anyway. Taking only the
+   * namespace table instead would hand back an empty file to anyone exporting the
+   * organisation view, where namespaces are the one thing that can be absent.
+   *
+   * What is exported is what is filtered: the namespace picker narrows the file
+   * the same way it narrows the table.
+   */
+  exportCsv(): void {
+    if (!this.canExport()) return;
+    const scope = this.exportScope();
+    const rows: string[][] = [CSV_HEADER, ...this.metaRows(scope)];
+
+    const totals = this.currentTotals();
+    if (totals) rows.push(...usageRows('Totals', scope, totals, !this.totalsUnavailable()));
+
+    this.clusterSummaries().forEach((c) => {
+      rows.push(...usageRows('Cluster', c.name, c, !c.unavailable));
+    });
+    this.nodeUsage().forEach((node) => {
+      rows.push(...usageRows('Node', node.name, node, true));
+    });
+    this.filteredNamespaceUsage().forEach((ns) => rows.push(...namespaceRows(ns)));
+    rows.push(...this.seriesRows());
+
+    downloadCsv(this.csvFilename(), rows);
+  }
+
+  /** What the file is of, in the file. A CSV arrives without the page around it,
+   *  and "0.4 cores" means nothing without the period it was measured over. */
+  private metaRows(scope: string): string[][] {
+    // Read off the dates rather than customRange(), which a zoom leaves unset
+    // even though it has just put the preset on Custom.
+    const preset = this.selectedPreset();
+    const period = preset === 'custom' ? `${this.dateFrom} to ${this.dateTo}` : `Last ${preset}`;
+    return [
+      ['Export', '', 'Scope', scope, '', ''],
+      ['Export', '', 'Period', period, '', ''],
+      ['Export', '', 'Generated', new Date().toISOString(), '', ''],
+    ];
+  }
+
+  /** The charts' points, one row per sample. Grouped by series rather than by
+   *  moment, so sorting on the Name column still lines the five series up. */
+  private seriesRows(): string[][] {
+    const series: [string, number[], string][] = [
+      ['CPU', this.cpuSeriesData, 'cores'],
+      ['Memory', this.memorySeriesData, 'GiB'],
+      ['Pods', this.podSeriesData, 'pods'],
+      ['Network receive', this.networkRxSeriesData, 'MB/s'],
+      ['Network transmit', this.networkTxSeriesData, 'MB/s'],
+    ];
+    return series.flatMap(([metric, data, unit]) =>
+      data.map((value, i) => [
+        'Time series',
+        this.chartDates[i] ?? '',
+        metric,
+        csvNumber(value),
+        '',
+        unit,
+      ]),
+    );
   }
 
   private onChartZoom(source: Chart): void {

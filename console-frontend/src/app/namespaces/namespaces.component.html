@@ -16,24 +16,30 @@
       <h1>Namespaces</h1>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
-    <nldd-toolbar label="Namespace actions">
-      <nldd-toolbar-item slot="start">
-        <nldd-button
-          type="button"
-          (click)="overlays.newNamespace.set(projectId())"
-          text="New namespace…"
-          start-icon="plus-small"
-          variant="primary"
-        ></nldd-button>
-        <nldd-menu-item
-          slot="overflow"
-          icon="plus-small"
-          text="New namespace…"
-          (select)="overlays.newNamespace.set(projectId())"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
-    </nldd-toolbar>
-    <nldd-spacer size="16"></nldd-spacer>
+    <!-- Only once there is a list to act on. With none, the empty state below
+         makes the same offer in the middle of the page, and two primary buttons
+         with one label and one action are a choice that is not a choice. Hidden
+         while loading too, so it does not arrive and then leave again. -->
+    @if (namespaces().length > 0) {
+      <nldd-toolbar label="Namespace actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            type="button"
+            (click)="overlays.newNamespace.set(projectId())"
+            text="New namespace…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="New namespace…"
+            (select)="overlays.newNamespace.set(projectId())"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+    }
     @if (isLoading()) {
       <nldd-activity-indicator
         show-text

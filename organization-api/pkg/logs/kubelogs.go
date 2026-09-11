@@ -258,3 +258,12 @@ func (c *KubeClient) lineToEntry(line string, p *QueryParams) Entry {
 		Fields:    fields,
 	}
 }
+
+// Histogram counts the entries this backend can fetch, which is a bounded page
+// of one pod's log rather than the window: the pod-log endpoint returns lines,
+// not aggregates, so there is nothing to ask it for. The result is reported as
+// inexact, and callers are expected to say so — the whole point of moving the
+// histogram server-side was to stop presenting a page as a total.
+func (c *KubeClient) Histogram(ctx context.Context, p *HistogramParams) (Histogram, error) {
+	return histogramFromQuery(ctx, c, p)
+}

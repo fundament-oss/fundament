@@ -36,6 +36,10 @@
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-toolbar label="Cluster actions">
+        <!-- Parked until there is a terminal to open: the handler behind this
+             only logged to the console, and a button that does nothing is worse
+             than one that is not there. Uncomment both halves together, the
+             button and its overflow twin.
         <nldd-toolbar-item slot="start">
           <nldd-button
             type="button"
@@ -51,6 +55,7 @@
             (select)="openTerminal()"
           ></nldd-menu-item>
         </nldd-toolbar-item>
+        -->
         <nldd-toolbar-item slot="start">
           <!-- The span carries the hover: a disabled button fires no pointer
                events, so the tooltip would never open on the one state it has
@@ -119,8 +124,10 @@
                   horizontal-alignment="right"
                   [attr.text]="clusterData.basics.kubernetesVersion || 'Unknown'"
                 ></nldd-text-cell>
-                <!-- No upgrade offered from a version nobody knows: there is
-                     nothing to upgrade from. -->
+                <!-- Parked until an upgrade can actually be started: this button
+                     never had a click handler. The @if around it is the rule for
+                     when it may come back — no upgrade is offered from a version
+                     nobody knows, because there is nothing to upgrade from.
                 @if (clusterData.basics.kubernetesVersion) {
                   <nldd-spacer-cell size="8"></nldd-spacer-cell>
                   <nldd-cell width="fit-content">
@@ -132,6 +139,7 @@
                     ></nldd-button>
                   </nldd-cell>
                 }
+                -->
               </nldd-list-item>
               <nldd-list-item>
                 <nldd-text-cell text="Created"></nldd-text-cell>
@@ -139,7 +147,7 @@
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
-                  [attr.text]="formatDate(clusterData.creationDate)"
+                  [attr.text]="formatDate(clusterData.created, 'Unknown')"
                 ></nldd-text-cell>
               </nldd-list-item>
             </nldd-list>

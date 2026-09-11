@@ -15,6 +15,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
+import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
@@ -381,7 +382,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     },
     status: ClusterStatus.UNSPECIFIED,
     syncState: null as SyncState | null,
-    creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
+    created: undefined as Timestamp | undefined,
     activity: [
       {
         timestamp: '2024-12-06T14:30:00Z',
@@ -454,6 +455,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.clusterData.created = response.cluster.created;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
       // Fetch namespaces, plugins, and events in parallel
@@ -476,6 +478,34 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** What the node pool cards show. Its own method because the sheet that edits
+   *  the pools stands over this page rather than replacing it, so this page has
+   *  to fetch them again on its own. */
+  private async loadNodePools(clusterId: string): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
+      );
+      this.clusterData.nodePools = response.nodePools;
+      this.cdr.markForCheck();
+    } catch {
+      // The cards keep what they had: pools that were there a moment ago are
+      // better than an empty box saying there are none.
+    }
+  }
+
+  /** The revision the cards were built from. Seeded to the signal's own initial
+   *  value, so mounting does not fetch a second time on top of ngOnInit. */
+  private nodePoolsRevision = 0;
+
+  private readonly reloadNodePools = effect(() => {
+    const revision = this.organizationDataService.nodePoolsChanged();
+    if (revision === this.nodePoolsRevision) return;
+    this.nodePoolsRevision = revision;
+    const clusterId = this.clusterData.basics.id;
+    if (clusterId) this.loadNodePools(clusterId);
+  });
+
   private async pollClusterStatus() {
     const clusterId = this.clusterData.basics.id;
     try {
@@ -489,6 +519,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.clusterData.created = response.cluster.created;
       // The usage card loads once on init; when the cluster finishes
       // provisioning while the page is open, fetch it now instead of
       // requiring a page refresh.
@@ -573,11 +604,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  openTerminal(): void {
-    // Mock implementation - would open terminal in real app
-    // eslint-disable-next-line no-console
-    console.log('Opening terminal for cluster:', this.clusterData.basics.name);
-  }
+  // Parked with the "Open terminal" button in the template, which was the only
+  // caller. It logged to the console and opened nothing.
+  // openTerminal(): void {
+  //   console.log('Opening terminal for cluster:', this.clusterData.basics.name);
+  // }
 
   isDownloadingKubeconfig = signal<boolean>(false);
 

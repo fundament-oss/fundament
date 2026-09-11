@@ -57,9 +57,6 @@ interface NamespaceMember {
   viaAll: boolean;
 }
 
-const roleLabel = (role: ProjectMemberRole): string =>
-  role === ProjectMemberRole.ADMIN ? 'Admin' : 'Viewer';
-
 /** What a member may do here, and where it comes from when it was not given for
  *  this namespace alone. */
 const accessSummary = (entry: NamespaceMember): string => {
@@ -139,8 +136,6 @@ export default class NamespaceSheetComponent implements OnInit {
   rolesSubmitted = signal(false);
 
   allRoles = ALL_ROLES;
-
-  roleLabel = roleLabel;
 
   accessSummary = accessSummary;
 
@@ -289,7 +284,20 @@ export default class NamespaceSheetComponent implements OnInit {
         this.namespaceClient.deleteNamespace({ namespaceId: this.namespaceId() }),
       );
       this.notificationService.success(`Namespace '${this.namespaceName()}' deleted`);
-      await this.organizationData.loadOrganizationData();
+      // The list this sheet opened over is a parent route, so it is still
+      // mounted and would go on showing the row that was just deleted. Same
+      // signal the create sheet bumps, and bumped before the sheet closes so
+      // the row is gone by the time the list is uncovered.
+      this.organizationData.namespacesChanged.update((count) => count + 1);
+      // The namespace count rides along on the project, so it is the projects
+      // that have to come back, not the organization: reloading that one drops
+      // every project it holds and nothing fetches them again.
+      //
+      // Swallowed, and after the notification: the namespace is gone either way,
+      // and a failed refresh reported as "Namespace not deleted" would say the
+      // opposite of what happened. The list it could not refresh keeps what it
+      // had, and the next project that opens fetches it again.
+      await this.organizationData.reloadProjectsAndNamespaces().catch(() => {});
       this.onClose();
     } catch (err) {
       this.notificationService.error(
