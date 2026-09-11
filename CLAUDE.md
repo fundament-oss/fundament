@@ -13,3 +13,4 @@
 - We always use soft deletes, records will never be thrown away
 - In the Terraform provider, always set fields to `types.StringNull()` (or the appropriate null type) in the `else` branch when a value may be nil or invalid. Never leave a field unset.
 - In Go tests, always use `github.com/stretchr/testify/assert` and `github.com/stretchr/testify/require` instead of hand-rolled `if got != want { t.Errorf(...) }` checks.
+- When opening a pull request, populate the body from `.github/pull_request_template.md`; drop optional sections that don't apply.
