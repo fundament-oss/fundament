@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/fundament-oss/fundament/common/kubename"
@@ -203,16 +204,30 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	}
 
 	if existing != nil {
-		if err := r.updateShootSpec(existing, cluster); err != nil {
-			return err
-		}
-
 		r.logger.Info("updating shoot",
 			"shoot", existing.Name,
 			"cluster_id", cluster.ID,
 			"namespace", existing.Namespace)
 
-		if err := r.client.Update(ctx, existing); err != nil {
+		// Gardener's controllers update shoots continuously (status, finalizers -
+		// especially right after creation, when the cluster and node-pool outbox
+		// events sync back to back), so a plain get-modify-update regularly loses
+		// the optimistic-concurrency race. Re-read and re-apply on conflict,
+		// re-reading by name/namespace so every attempt deterministically targets
+		// the shoot found above. Errors are returned unwrapped inside the closure
+		// so RetryOnConflict can recognize conflicts.
+		key := client.ObjectKeyFromObject(existing)
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			shoot := &gardencorev1beta1.Shoot{}
+			if err := r.client.Get(ctx, key, shoot); err != nil {
+				return err
+			}
+			if err := r.updateShootSpec(shoot, cluster); err != nil {
+				return err
+			}
+			return r.client.Update(ctx, shoot)
+		})
+		if err != nil {
 			return fmt.Errorf("failed to update shoot: %w", err)
 		}
 		return nil
