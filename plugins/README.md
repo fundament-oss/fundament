@@ -1,49 +1,48 @@
-# Plugin Sandbox
+# Plugins
 
-These are Fundament's first-party plugins, built in-tree. A **new** plugin should
-be scaffolded as a standalone project instead:
+First-party Fundament plugins, built in-tree by the core team. Plugins in their own project start at [Writing a plugin](../docs/developer/plugins/writing-a-plugin.md).
 
-```shell
-functl plugin create my-plugin
+## Where to look
+
+| For | Go to |
+|---|---|
+| Running a plugin in the local sandbox, step by step | [Testing plugins locally](../docs/developer/plugins/testing-plugins-locally.md) |
+| One plugin's flow, config and recipes | its README, see [First-party plugins](#first-party-plugins) |
+| Recipes | `just plugins`, and `just plugins <module>` per plugin |
+| Runtime, controller, PluginInstallation, RBAC model | [Plugins overview](../docs/developer/plugins/index.md) |
+| Console pages | [Custom UI](../docs/developer/plugins/custom-ui.md), [Console integration](../docs/developer/plugins/console-integration.md) |
+
+## Layout
+
+```
+plugins/
+├── mod.just                  just plugins <recipe>
+├── sandbox/                  the k3d-fundament-plugin cluster: k3d config, skaffold, chart values
+└── <path>/                   one plugin; gateway-api/ and storage/ group related plugins
+    ├── main.go, plugin.go    package main in the root Go module
+    ├── definition.yaml       PluginDefinition
+    ├── Dockerfile            built with the repository root as context
+    ├── console/              console pages (console-ui/: Vite app built into console/)
+    ├── Justfile              test and plugin-specific recipes, a module of mod.just
+    ├── test-resources.yaml   sample resources for the test recipe
+    └── README.md             the plugin's flow, config and recipes
 ```
 
-See [docs/developer/plugins/writing-a-plugin.md](../docs/developer/plugins/writing-a-plugin.md).
+## First-party plugins
 
-A self-contained development environment lives in `sandbox/`. It creates an isolated K3D cluster with only the plugin controller -- no database, auth services, or other Fundament components needed. The sandbox cluster (`fundament-plugin`) uses a separate registry on port `5112`, so it can coexist with the main Fundament cluster without conflicts.
+| Plugin | `<path>` | Module |
+|---|---|---|
+| [Cert Manager](cert-manager/README.md) | `cert-manager` | `cert-manager` |
+| [External DNS](external-dns/README.md) | `external-dns` | `external-dns` |
+| [Gateway API (Envoy Gateway)](gateway-api/envoy-gateway/README.md) | `gateway-api/envoy-gateway` | `envoy-gateway` |
+| [Gateway API (Istio)](gateway-api/istio/README.md) | `gateway-api/istio` | none |
+| [OpenFSC](openfsc/README.md) | `openfsc` | `openfsc` |
+| [Ceph Storage (Rook)](../docs/developer/plugins/example-ceph-rook.md) | `storage/ceph-rook` | `ceph-rook` |
 
-## Quick Start
+## Adding a first-party plugin
 
-```shell
-just cluster-create   # Create K3D cluster + registry (~10s)
-just dev              # Build + deploy plugin-controller with file watching
-just deploy           # One-time build without file watching
-
-# In another terminal. `just plugins install` no longer exists: publish the
-# definition, then create a PluginInstallation pinning the published
-# pluginVersion/definitionHash (see the comments in plugins/mod.just).
-just plugins publish cert-manager   # Build + push the image, publish the definition
-just plugins status                 # Check PluginInstallation status
-just logs                          # Watch controller logs
-
-# Verify cert-manager actually works:
-just cert-manager test             # Creates a self-signed ClusterIssuer + Certificate
-just cert-manager test-cleanup     # Remove test resources
-
-# Install and verify external-dns:
-just plugins publish external-dns   # Build + push the image, publish the definition
-just external-dns test             # Creates a DNSEndpoint resource
-just external-dns test-cleanup     # Remove test resources
-
-# Install and verify OpenFSC (see plugins/openfsc/README.md):
-just openfsc operator-push         # Build the openfsc-operator image for the sandbox
-just plugins publish openfsc        # Build + push the image, publish the definition
-just openfsc test                  # Sample FSCInstallation reaches Active
-just openfsc test-cleanup          # Remove the sample installation
-
-# Cleanup:
-just plugins uninstall cert-manager
-just plugins uninstall external-dns
-just cluster-delete
-```
-
-All commands are defined in the `Justfile`. Run `just --list` to see available commands.
+1. A directory under `plugins/` with the files from [Layout](#layout).
+2. `permissions.rbac` covers everything the plugin creates outside its own namespace, including Helm's release storage (Secrets): [RBAC model](../docs/developer/plugins/index.md#rbac-model).
+3. `mod <module> '<path>'` in `mod.just`.
+4. A README with its flow.
+5. The first publish with `--create`, or a listing in `db/seed/0101-appstore-catalog.sql`.
