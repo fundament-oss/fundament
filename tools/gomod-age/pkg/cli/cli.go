@@ -83,7 +83,7 @@ func (c *CLI) Run(ctx context.Context, env *Env) int {
 		"allow_count", len(cfg.Allow),
 	)
 
-	proxyClient := proxy.NewClient(nil)
+	proxyClient := proxy.NewClient(proxy.Options{})
 	results, err := checker.Check(ctx, cfg, proxyClient, time.Now())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
