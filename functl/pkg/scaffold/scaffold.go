@@ -10,6 +10,7 @@ package scaffold
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"time"
 )
 
 // Templates are embedded with the "all:" prefix so Go does not skip entries
@@ -46,6 +48,26 @@ const (
 	ConsoleVite    = "vite"
 )
 
+// GoVersion is the Go toolchain a scaffolded project asks for. It is rendered
+// into both go.mod and mise.toml, so the two cannot drift apart.
+const GoVersion = "1.26.6"
+
+// Licenses are the SPDX identifiers whose full text is embedded, i.e. the ones
+// `functl plugin create` can write a complete LICENSE file for. Any other
+// identifier is still accepted; it gets a placeholder LICENSE to fill in.
+var Licenses = []string{"MIT", "Apache-2.0", "GPL-3.0-only", "EUPL-1.2"}
+
+// licenseTemplates maps a lowercased SPDX identifier to its template under
+// templates/licenses/. The deprecated "GPL-3.0" is accepted as a synonym
+// because it is still what most people type.
+var licenseTemplates = map[string]string{
+	"mit":          "MIT",
+	"apache-2.0":   "Apache-2.0",
+	"gpl-3.0-only": "GPL-3.0-only",
+	"gpl-3.0":      "GPL-3.0-only",
+	"eupl-1.2":     "EUPL-1.2",
+}
+
 // Options describes the plugin project to generate.
 type Options struct {
 	Name        string
@@ -61,7 +83,10 @@ type Options struct {
 	Dir         string
 	SDKVersion  string
 	SDKReplace  string
-	Force       bool
+	// Year is the copyright year written into the LICENSE file. It defaults to
+	// the current year; tests set it so a generated project is reproducible.
+	Year  int
+	Force bool
 }
 
 // data is what the templates see. It is a distinct type from Options so derived
@@ -76,6 +101,8 @@ type data struct {
 	Module      string
 	SDKVersion  string
 	SDKReplace  string
+	Year        int
+	GoVersion   string
 
 	// BinaryName is the compiled binary and the default image repository name.
 	BinaryName string
@@ -122,6 +149,10 @@ func Generate(opts Options) ([]string, error) {
 		}
 	}
 
+	if err := renderLicense(d, files); err != nil {
+		return nil, err
+	}
+
 	if err := writeAll(opts.Dir, files); err != nil {
 		return nil, err
 	}
@@ -163,6 +194,9 @@ func validate(opts *Options) error {
 	if opts.SDKVersion == "" {
 		opts.SDKVersion = DefaultSDKVersion
 	}
+	if opts.Year == 0 {
+		opts.Year = time.Now().Year()
+	}
 	return validateTargetDir(opts.Dir, opts.Force)
 }
 
@@ -177,6 +211,8 @@ func newData(opts *Options) *data {
 		Module:         opts.Module,
 		SDKVersion:     opts.SDKVersion,
 		SDKReplace:     opts.SDKReplace,
+		Year:           opts.Year,
+		GoVersion:      GoVersion,
 		BinaryName:     opts.Name + "-plugin",
 		GoType:         goTypeName(opts.Name),
 		CRD:            opts.CRD,
@@ -213,6 +249,28 @@ func goTypeName(name string) string {
 		out = "Plugin" + out
 	}
 	return out
+}
+
+// renderLicense writes the LICENSE file. A licence we ship the text for is
+// written in full; anything else gets a placeholder naming it, because a
+// definition.yaml claiming a licence with no text next to it is worse than an
+// obvious TODO.
+func renderLicense(d *data, files map[string][]byte) error {
+	name, ok := licenseTemplates[strings.ToLower(d.License)]
+	if !ok {
+		name = "other"
+	}
+	p := "templates/licenses/" + name + templateSuffix
+	src, err := templatesFS.ReadFile(p)
+	if err != nil {
+		return fmt.Errorf("read licence template %q: %w", p, err)
+	}
+	out, err := renderString(p, string(src), d)
+	if err != nil {
+		return err
+	}
+	files["LICENSE"] = []byte(out)
+	return nil
 }
 
 // renderSet renders every template under templates/<set>/ into files, keyed by
@@ -258,8 +316,26 @@ func renderSet(set string, d *data, files map[string][]byte) error {
 	return nil
 }
 
+// templateFuncs are available to every template.
+//
+// quote is not optional decoration: free-text metadata (a display name, a
+// description, an author) goes into YAML and JSON unescaped otherwise, and a
+// ": " or a quote in it produces a file that does not parse.
+var templateFuncs = template.FuncMap{"quote": quote}
+
+// quote renders s as a JSON string. YAML 1.2 is a superset of JSON, so the one
+// escaping is valid in both definition.yaml and console-ui/package.json.
+func quote(s string) string {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false) // "R&D" should stay readable, not become "R\u0026D".
+	// Encoding a string cannot fail, and Encode appends a newline.
+	_ = enc.Encode(s)
+	return strings.TrimSuffix(buf.String(), "\n")
+}
+
 func renderString(name, text string, d *data) (string, error) {
-	tmpl, err := template.New(name).Option("missingkey=error").Parse(text)
+	tmpl, err := template.New(name).Funcs(templateFuncs).Option("missingkey=error").Parse(text)
 	if err != nil {
 		return "", fmt.Errorf("parse template %q: %w", name, err)
 	}

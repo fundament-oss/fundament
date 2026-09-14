@@ -1,0 +1,8 @@
+# Tool versions for this plugin, managed with mise (https://mise.jdx.dev).
+# `mise install` gets every tool below at the pinned version.
+[tools]
+go = "{{.GoVersion}}"
+just = "1.42.4"
+{{- if .ConsoleVite}}
+bun = "1.4.0"
+{{- end}}

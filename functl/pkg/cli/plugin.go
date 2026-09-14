@@ -43,7 +43,7 @@ type PluginCreateCmd struct {
 	DisplayName string `help:"Human-readable name shown in the console."`
 	Description string `help:"One-line description of what the plugin does."`
 	Author      string `help:"Plugin author."`
-	License     string `help:"SPDX license identifier."`
+	License     string `help:"SPDX license identifier. The text is written to LICENSE for MIT, Apache-2.0, GPL-3.0-only and EUPL-1.2; anything else gets a placeholder."`
 	Module      string `help:"Go module path for the generated project."`
 	Template    string `help:"Project template: minimal or helm." enum:"minimal,helm," default:""`
 	Console     string `help:"Console UI variant: none, vanilla or vite." enum:"none,vanilla,vite," default:""`
@@ -72,25 +72,32 @@ func (c *PluginCreateCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to scaffold plugin: %w", err)
 	}
 
-	if ctx.Output == OutputJSON {
-		return PrintJSON(map[string]any{
-			"name":  opts.Name,
-			"dir":   opts.Dir,
-			"files": files,
-		})
+	if ctx.Output != OutputJSON {
+		fmt.Printf("Created %s in %s (%d files)\n", opts.Name, opts.Dir, len(files))
 	}
-
-	fmt.Printf("Created %s in %s (%d files)\n", opts.Name, opts.Dir, len(files))
 
 	// git init and go mod tidy are conveniences: the project on disk is already
 	// correct without them, so a missing tool warns rather than fails. Failing
-	// here would force the user to re-run into a now non-empty directory.
+	// here would force the user to re-run into a now non-empty directory. They
+	// run before the JSON is printed, and report into it: a script that skipped
+	// them without knowing would hit "missing go.sum entry" on its first build.
+	gitInit := true
 	if c.Git {
-		runOptional(opts.Dir, "git", "init", "--quiet")
+		gitInit = runOptional(opts.Dir, "git", "init", "--quiet")
 	}
 	tidied := true
 	if c.Tidy {
 		tidied = c.tidy(&opts)
+	}
+
+	if ctx.Output == OutputJSON {
+		return PrintJSON(map[string]any{
+			"name":   opts.Name,
+			"dir":    opts.Dir,
+			"files":  files,
+			"git":    gitInit,
+			"tidied": tidied,
+		})
 	}
 
 	c.printNextSteps(&opts, tidied)
@@ -162,7 +169,7 @@ func (c *PluginCreateCmd) resolve() (scaffold.Options, error) {
 	if err != nil {
 		return scaffold.Options{}, err
 	}
-	license, err := p.ask("License (SPDX id)", c.License, "Apache-2.0")
+	license, err := p.ask("License ("+strings.Join(scaffold.Licenses, ", ")+", or another SPDX id)", c.License, "Apache-2.0")
 	if err != nil {
 		return scaffold.Options{}, err
 	}
@@ -503,12 +510,13 @@ func isTerminal(f *os.File) bool {
 	return term.IsTerminal(int(f.Fd()))
 }
 
-// runOptional runs a command in dir, reporting failures as warnings. Used for
-// steps that improve the result but are not required for it to be correct.
-func runOptional(dir, name string, args ...string) {
+// runOptional runs a command in dir, reporting failures as warnings and
+// returning whether it succeeded. Used for steps that improve the result but
+// are not required for it to be correct.
+func runOptional(dir, name string, args ...string) bool {
 	if _, err := exec.LookPath(name); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %s not found, skipping '%s %s'\n", name, name, strings.Join(args, " "))
-		return
+		return false
 	}
 	// No timeout: `go mod tidy` on a cold module cache is legitimately slow, and
 	// this runs in the foreground where the user can interrupt it.
@@ -518,7 +526,9 @@ func runOptional(dir, name string, args ...string) {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: '%s %s' failed: %v\n", name, strings.Join(args, " "), err)
+		return false
 	}
+	return true
 }
 
 func gitConfig(key string) string {
@@ -569,9 +579,15 @@ func titleCase(name string) string {
 	return strings.Join(parts, " ")
 }
 
-// titleCaseIdentifier turns "my-plugin" into "MyPlugin".
+// titleCaseIdentifier turns "my-plugin" into "MyPlugin". A plugin name may
+// start with a digit ("1password"), which a Kind may not, so it gets the same
+// "Plugin" prefix scaffold.goTypeName uses for the generated Go type.
 func titleCaseIdentifier(name string) string {
-	return strings.ReplaceAll(titleCase(name), " ", "")
+	id := strings.ReplaceAll(titleCase(name), " ", "")
+	if id != "" && id[0] >= '0' && id[0] <= '9' {
+		id = "Plugin" + id
+	}
+	return id
 }
 
 // plural is a deliberately naive pluralisation for the default CRD name; the

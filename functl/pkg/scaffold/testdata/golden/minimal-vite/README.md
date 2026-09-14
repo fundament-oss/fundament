@@ -2,8 +2,8 @@
 
 A demo plugin.
 
-A [Fundament](https://github.com/fundament-oss/fundament) plugin, scaffolded with
-`functl plugin create`.
+A [Fundament](https://github.com/fundament-oss/fundament) plugin named
+`demo`, scaffolded with `functl plugin create`.
 
 ## Layout
 
@@ -13,15 +13,18 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin, scaffolded wit
 | `plugin.go`          | The plugin itself                                                |
 | `main.go`            | Hands the plugin to the SDK runtime                              |
 | `Justfile`           | Build, test, lint and image recipes                              |
+| `mise.toml`          | Pinned tool versions (Go, just, bun)                            |
+| `LICENSE`            | MIT                                                     |
 | `console.go`         | Embeds the console UI assets                                     |
 | `console/`           | Vite build output (generated)                       |
 | `console-ui/`        | Console UI source (TypeScript + Vite)                            |
 
 ## Develop
 
-Recipes are in the `Justfile`; run `just --list` to see them all. Install
-[just](https://just.systems) if you do not have it (`brew install just`,
-`cargo install just`, or your package manager).
+Tool versions are pinned in `mise.toml`. With [mise](https://mise.jdx.dev)
+installed, `mise install` gets Go, [just](https://just.systems) and
+[bun](https://bun.sh) at the versions this project expects. Recipes live in the
+`Justfile`; run `just --list` to see them all.
 
 ```shell
 go mod tidy      # needs network access, or a warm module cache
@@ -57,7 +60,9 @@ just docker
   referenced actually exist; nothing checks the rest, so change them together.
 - Every `TODO` marker in this project.
 
-`metadata.license` says `Apache-2.0`. Add the licence text as a `LICENSE` file.
+`metadata.license` says `MIT`, and `LICENSE` holds its text. If that
+file says TODO, `functl plugin create` had no text for the licence you chose --
+paste it in, or re-create with one of MIT, Apache-2.0, GPL-3.0-only or EUPL-1.2.
 
 ## Publish
 

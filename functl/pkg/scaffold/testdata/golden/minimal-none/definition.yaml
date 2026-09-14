@@ -2,11 +2,11 @@ apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
   name: demo
-  displayName: Demo
+  displayName: "Demo"
   version: v0.1.0
-  description: A demo plugin.
-  author: Demo Author
-  license: Apache-2.0
+  description: "A demo plugin."
+  author: "Demo Author"
+  license: "MIT"
   icon: puzzle-piece
   urls:
     homepage: https://example.com

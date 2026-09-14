@@ -2,11 +2,11 @@ apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
   name: demo
-  displayName: Demo
+  displayName: "Demo"
   version: v0.1.0
-  description: A demo plugin.
-  author: Demo Author
-  license: Apache-2.0
+  description: "A demo plugin."
+  author: "Demo Author"
+  license: "MIT"
   icon: puzzle-piece
   urls:
     homepage: https://example.com
@@ -39,9 +39,9 @@ spec:
           - delete
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install ... --create-namespace --wait`
-      # with Helm's default "secret" storage driver. These rules grant what Helm
-      # itself needs to create and wait on a release. Rules are cluster-wide
-      # (PolicyRule carries no namespace). Trim anything your chart does not use.
+      # with Helm's default "secret" storage driver. These three rules are what
+      # Helm itself cannot do without, whatever the chart contains. Rules are
+      # cluster-wide (PolicyRule carries no namespace).
       - apiGroups:
           - ""
         resources:
@@ -54,9 +54,6 @@ spec:
           - ""
         resources:
           - secrets # Helm release storage
-          - serviceaccounts
-          - services
-          - configmaps
         verbs:
           - get
           - list
@@ -73,63 +70,45 @@ spec:
           - get
           - list
           - watch
-      - apiGroups:
-          - apps
-        resources:
-          - deployments
-        verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-      - apiGroups:
-          - apps
-        resources:
-          - replicasets # helm --wait polls the Deployment rollout via ReplicaSets
-        verbs:
-          - get
-          - list
-          - watch
-      - apiGroups:
-          - apiextensions.k8s.io
-        resources:
-          - customresourcedefinitions
-        verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-      - apiGroups:
-          - rbac.authorization.k8s.io
-        resources:
-          - clusterroles
-          - roles
-        verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-          - bind # create (Cluster)RoleBindings that reference these
-          - escalate # write the chart's rules without holding every one of them
-      - apiGroups:
-          - rbac.authorization.k8s.io
-        resources:
-          - clusterrolebindings
-          - rolebindings
-        verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
+      # --- What your chart creates ---
+      # TODO: Helm can only create what this ClusterRole allows, so add a rule
+      # per kind of object in your chart -- and only those. The blocks below are
+      # the common ones, commented out on purpose: uncomment what your chart
+      # really uses rather than starting from a role that can do everything.
+      #
+      # - apiGroups:
+      #     - ""
+      #   resources:
+      #     - serviceaccounts
+      #     - services
+      #     - configmaps
+      #   verbs: [get, list, watch, create, update, patch, delete]
+      # - apiGroups:
+      #     - apps
+      #   resources:
+      #     - deployments
+      #   verbs: [get, list, watch, create, update, patch, delete]
+      # - apiGroups:
+      #     - apps
+      #   resources:
+      #     - replicasets # helm --wait polls the Deployment rollout via ReplicaSets
+      #   verbs: [get, list, watch]
+      # - apiGroups:
+      #     - apiextensions.k8s.io
+      #   resources:
+      #     - customresourcedefinitions
+      #   verbs: [get, list, watch, create, update, patch, delete]
+      # - apiGroups:
+      #     - rbac.authorization.k8s.io
+      #   resources:
+      #     - clusterroles
+      #     - roles
+      #   # bind: create (Cluster)RoleBindings that reference these.
+      #   # escalate: write the chart's rules without holding every one of them.
+      #   verbs: [get, list, watch, create, update, patch, delete, bind, escalate]
+      # - apiGroups:
+      #     - rbac.authorization.k8s.io
+      #   resources:
+      #     - clusterrolebindings
+      #     - rolebindings
+      #   verbs: [get, list, watch, create, update, patch, delete]

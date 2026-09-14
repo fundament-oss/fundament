@@ -33,6 +33,7 @@ functl plugin create my-plugin \
 | `--console`             | `none`, `vanilla`, `vite` | `vanilla` is plain HTML + ES modules. `vite` is a TypeScript app with the NLDD design system, built with bun. |
 | `--crd` / `--kind`      | `<plural>.<group>` / Kind | The custom resource the generated console pages and CRD checks refer to.          |
 | `--module`              | Go module path            | The generated `go.mod` module path.                                              |
+| `--license`             | SPDX id                   | `metadata.license`, and the `LICENSE` file. MIT, Apache-2.0, GPL-3.0-only and EUPL-1.2 are written in full; any other id gets a placeholder to fill in. |
 | `--dir`                 | path                      | Where to write the project (default `./<name>`).                                 |
 | `--no-git` / `--no-tidy`|                           | Skip `git init` / `go mod tidy`.                                                 |
 | `--yes`                 |                           | Accept every default without prompting.                                          |
@@ -52,8 +53,14 @@ my-plugin/
 ├── Dockerfile
 ├── Justfile
 ├── go.mod
+├── mise.toml             pinned tool versions (Go, just, bun)
+├── LICENSE               the text of --license
 └── README.md
 ```
+
+Tool versions are pinned in `mise.toml`, the same way this repository pins its
+own: `mise install` in the new project gets the Go toolchain its `go.mod` asks
+for, plus `just` and, with `--console=vite`, `bun`.
 
 ## Fill in `definition.yaml`
 
@@ -115,8 +122,12 @@ spec:
 
 `spec.permissions.rbac` is materialised verbatim as a ClusterRole bound to the
 plugin's ServiceAccount, so grant only what the plugin actually uses. The `helm`
-template starts you off with the rules Helm itself needs to create and wait on a
-release; trim anything your chart does not touch.
+template starts from the least privilege that can work: the three rules Helm
+itself cannot install a release without (namespaces, its release Secrets, and
+Pods for `--wait`). Everything a chart might additionally create -- Deployments,
+Services, ServiceAccounts, ConfigMaps, CRDs, RBAC -- is there as commented-out
+rules, so you add what your chart needs instead of trimming a role that can
+already do everything.
 
 `customComponents` maps a CRD kind to the HTML files your plugin ships under
 `console/`. It is optional: any menu entry without a custom component renders the

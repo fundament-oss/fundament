@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/format"
@@ -14,19 +15,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden trees in testdata/golden")
 
 // testOptions is a fully specified set of options, so a golden tree never
-// depends on the machine it was generated on (git config, working directory).
+// depends on the machine it was generated on (git config, working directory,
+// today's date). The licence is MIT because its text is short: every golden
+// tree carries a copy of it.
 func testOptions(tmpl, console, dir string) Options {
 	return Options{
 		Name:        "demo",
 		DisplayName: "Demo",
 		Description: "A demo plugin.",
 		Author:      "Demo Author",
-		License:     "Apache-2.0",
+		License:     "MIT",
 		Module:      "example.com/demo-plugin",
 		Template:    tmpl,
 		Console:     console,
@@ -34,6 +39,7 @@ func testOptions(tmpl, console, dir string) Options {
 		Kind:        "Widget",
 		Dir:         dir,
 		SDKVersion:  DefaultSDKVersion,
+		Year:        2026,
 	}
 }
 
@@ -154,7 +160,7 @@ func TestTemplatesAreWellFormed(t *testing.T) {
 
 		src, err := templatesFS.ReadFile(p)
 		require.NoError(t, err)
-		_, err = template.New(p).Option("missingkey=error").Parse(string(src))
+		_, err = template.New(p).Funcs(templateFuncs).Option("missingkey=error").Parse(string(src))
 		assert.NoError(t, err, "template %q must parse", p)
 		return nil
 	})
@@ -237,6 +243,101 @@ func TestNameLimitMatchesController(t *testing.T) {
 	// plugin-controller/pkg/controller/resources.go: maxInstallationNameLen = 56,
 	// i.e. 63 (the Kubernetes DNS-label limit) minus len("plugin-").
 	assert.Equal(t, 63-len("plugin-"), maxPluginNameLen)
+}
+
+// TestGenerateEscapesMetadata covers the free-text metadata, which reaches YAML
+// and JSON through text/template and is not escaped by it: a ": " or a quote in
+// a description used to produce a definition.yaml or a package.json that does
+// not parse.
+func TestGenerateEscapesMetadata(t *testing.T) {
+	tests := map[string]func(*Options){
+		"colon in description":  func(o *Options) { o.Description = "Backup plugin: runs nightly" },
+		"hash in display name":  func(o *Options) { o.DisplayName = "Foo #2" },
+		"quote in display name": func(o *Options) { o.DisplayName = `Say "hi"` },
+		"colon in author":       func(o *Options) { o.Author = "Team: Platform" },
+		"ampersand in author":   func(o *Options) { o.Author = "R&D" },
+	}
+
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			opts := testOptions(TemplateMinimal, ConsoleVite, dir)
+			mutate(&opts)
+			_, err := Generate(opts)
+			require.NoError(t, err)
+
+			src, err := os.ReadFile(filepath.Join(dir, "definition.yaml")) //nolint:gosec // G304: a path built from t.TempDir().
+			require.NoError(t, err)
+			def, err := pluginruntime.ParseSourceDefinition(src)
+			require.NoError(t, err, "definition.yaml must parse")
+			assert.Equal(t, opts.DisplayName, def.Metadata.DisplayName)
+			assert.Equal(t, opts.Description, def.Metadata.Description)
+			assert.Equal(t, opts.Author, def.Metadata.Author)
+
+			pkg, err := os.ReadFile(filepath.Join(dir, "console-ui", "package.json")) //nolint:gosec // G304: a path built from t.TempDir().
+			require.NoError(t, err)
+			assert.True(t, json.Valid(pkg), "console-ui/package.json must be valid JSON:\n%s", pkg)
+		})
+	}
+}
+
+// A project whose definition.yaml claims a licence should carry that licence's
+// text, and an identifier we have no text for must be obvious rather than silent.
+func TestGenerateWritesLicense(t *testing.T) {
+	t.Run("known licence", func(t *testing.T) {
+		dir := t.TempDir()
+		opts := testOptions(TemplateMinimal, ConsoleNone, dir)
+		opts.License = "MIT"
+		_, err := Generate(opts)
+		require.NoError(t, err)
+
+		text, err := os.ReadFile(filepath.Join(dir, "LICENSE")) //nolint:gosec // G304: a path built from t.TempDir().
+		require.NoError(t, err)
+		assert.Contains(t, string(text), "MIT License")
+		assert.Contains(t, string(text), "Copyright (c) 2026 Demo Author")
+		assert.NotContains(t, string(text), "TODO")
+	})
+
+	t.Run("unknown licence", func(t *testing.T) {
+		dir := t.TempDir()
+		opts := testOptions(TemplateMinimal, ConsoleNone, dir)
+		opts.License = "BSD-3-Clause"
+		_, err := Generate(opts)
+		require.NoError(t, err)
+
+		text, err := os.ReadFile(filepath.Join(dir, "LICENSE")) //nolint:gosec // G304: a path built from t.TempDir().
+		require.NoError(t, err)
+		assert.Contains(t, string(text), "BSD-3-Clause")
+		assert.Contains(t, string(text), "TODO")
+	})
+
+	t.Run("every offered licence has text", func(t *testing.T) {
+		for _, id := range Licenses {
+			dir := t.TempDir()
+			opts := testOptions(TemplateMinimal, ConsoleNone, dir)
+			opts.License = id
+			_, err := Generate(opts)
+			require.NoError(t, err)
+
+			text, err := os.ReadFile(filepath.Join(dir, "LICENSE")) //nolint:gosec // G304: a path built from t.TempDir(). //nolint:gosec // G304: a path built from t.TempDir().
+			require.NoError(t, err)
+			assert.NotContains(t, string(text), "TODO", "%s must ship a full licence text", id)
+		}
+	})
+}
+
+// The Go version is rendered into both go.mod and mise.toml; a developer who
+// runs `mise install` must get the toolchain go.mod asks for.
+func TestGoVersionIsConsistent(t *testing.T) {
+	dir := t.TempDir()
+	_, err := Generate(testOptions(TemplateMinimal, ConsoleNone, dir))
+	require.NoError(t, err)
+
+	for _, f := range []string{"go.mod", "mise.toml"} {
+		src, err := os.ReadFile(filepath.Join(dir, f)) //nolint:gosec // G304: a path built from t.TempDir().
+		require.NoError(t, err)
+		assert.Contains(t, string(src), GoVersion, "%s must pin Go %s", f, GoVersion)
+	}
 }
 
 func TestGoTypeName(t *testing.T) {

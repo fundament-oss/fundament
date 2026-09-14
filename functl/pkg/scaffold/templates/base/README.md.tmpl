@@ -2,8 +2,8 @@
 
 {{.Description}}
 
-A [Fundament](https://github.com/fundament-oss/fundament) plugin, scaffolded with
-`functl plugin create`.
+A [Fundament](https://github.com/fundament-oss/fundament) plugin named
+`{{.Name}}`, scaffolded with `functl plugin create`.
 
 ## Layout
 
@@ -13,6 +13,8 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin, scaffolded wit
 | `plugin.go`          | The plugin itself                                                |
 | `main.go`            | Hands the plugin to the SDK runtime                              |
 | `Justfile`           | Build, test, lint and image recipes                              |
+| `mise.toml`          | Pinned tool versions (Go, just{{if .ConsoleVite}}, bun{{end}})                            |
+| `LICENSE`            | {{.License}}                                                     |
 {{- if .HasConsole}}
 | `console.go`         | Embeds the console UI assets                                     |
 | `console/`           | {{if .ConsoleVite}}Vite build output (generated){{else}}Console UI pages{{end}}                       |
@@ -23,9 +25,10 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin, scaffolded wit
 
 ## Develop
 
-Recipes are in the `Justfile`; run `just --list` to see them all. Install
-[just](https://just.systems) if you do not have it (`brew install just`,
-`cargo install just`, or your package manager).
+Tool versions are pinned in `mise.toml`. With [mise](https://mise.jdx.dev)
+installed, `mise install` gets Go, [just](https://just.systems){{if .ConsoleVite}} and
+[bun](https://bun.sh){{end}} at the versions this project expects. Recipes live in the
+`Justfile`; run `just --list` to see them all.
 
 ```shell
 go mod tidy      # needs network access, or a warm module cache
@@ -57,6 +60,8 @@ just docker
   the cluster. It is materialised verbatim as a ClusterRole, so grant only what
   the plugin uses.
 {{- if .IsHelm}}
+  The rules that ship are only what Helm itself needs to install a release;
+  uncomment the commented blocks for the kinds of object your chart creates.
 - `plugin.go`: point `repoURL`, `chartName` and `chartVersion` at the chart you
   install, and list its CRDs in `expectedCRDs`.
 {{- end}}
@@ -67,7 +72,9 @@ just docker
 {{- end}}
 - Every `TODO` marker in this project.
 
-`metadata.license` says `{{.License}}`. Add the licence text as a `LICENSE` file.
+`metadata.license` says `{{.License}}`, and `LICENSE` holds its text. If that
+file says TODO, `functl plugin create` had no text for the licence you chose --
+paste it in, or re-create with one of MIT, Apache-2.0, GPL-3.0-only or EUPL-1.2.
 
 ## Publish
 
