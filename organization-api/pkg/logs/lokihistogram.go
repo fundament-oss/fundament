@@ -74,6 +74,11 @@ func (c *LokiClient) Histogram(ctx context.Context, p *HistogramParams) (Histogr
 	step = step.Truncate(time.Second)
 	if step < time.Second {
 		step = time.Second
+		// A window too short to give every bucket a whole second gets fewer
+		// buckets rather than a wider one: counting traffic from before the
+		// window the caller asked for would be the wrong answer, not a
+		// coarser one.
+		buckets = max(min(buckets, int(end.Sub(start)/step)), 1)
 	}
 	start = end.Add(-time.Duration(buckets) * step)
 

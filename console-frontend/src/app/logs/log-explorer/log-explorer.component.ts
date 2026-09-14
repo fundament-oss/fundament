@@ -788,7 +788,6 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       // Voids the histogram still in flight for this load: a chart above an
       // empty, errored list would be describing logs the page cannot show.
       this.clearLogs();
-      this.isLoading.set(false);
     }
   }
 
@@ -891,6 +890,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
    */
   private clearLogs(): void {
     this.loadSeq += 1;
+    // Supersedes whatever is in flight, and the superseded load returns on its
+    // seq check without touching isLoading — so the spinner is cleared here.
+    this.isLoading.set(false);
     this.allLogs.set([]);
     this.histogramBuckets.set([]);
     this.histogramExact.set(true);

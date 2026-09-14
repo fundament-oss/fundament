@@ -42,6 +42,26 @@ func NewMockClient(listClusters func(ctx context.Context) ([]ClusterInfo, error)
 	return &MockClient{listClusters: listClusters}
 }
 
+// ForCluster returns a view of the mock scoped to one cluster. Our PromQL
+// carries no cluster selector — per-shoot Prometheus holds one cluster and
+// needs none — so without this a cluster-scoped query answers with every
+// cluster in the org: two clusters with a pool of the same name would report
+// each other's nodes, and their totals would each be the org's.
+func (c *MockClient) ForCluster(clusterID string) *MockClient {
+	return &MockClient{listClusters: func(ctx context.Context) ([]ClusterInfo, error) {
+		all, err := c.listClusters(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, cl := range all {
+			if cl.ID == clusterID {
+				return []ClusterInfo{cl}, nil
+			}
+		}
+		return nil, nil
+	}}
+}
+
 func (c *MockClient) Query(ctx context.Context, query string, t time.Time) ([]Sample, error) {
 	clusters, err := c.filteredClusters(ctx, query)
 	if err != nil {

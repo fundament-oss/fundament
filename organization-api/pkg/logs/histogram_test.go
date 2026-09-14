@@ -206,6 +206,23 @@ func TestLokiClient_HistogramBucketLayout(t *testing.T) {
 	}
 }
 
+// A window too short to give every requested bucket a whole second must not be
+// widened to fit them: the counts would cover traffic from before the window.
+func TestLokiClient_HistogramShortWindowKeepsItsStart(t *testing.T) {
+	srv, _ := matrixServer(t, map[string]int64{"total": 1})
+	c := NewLokiClient(srv.URL)
+
+	end := time.Now().Truncate(time.Second)
+	start := end.Add(-60 * time.Second)
+	h, err := c.Histogram(context.Background(), &HistogramParams{
+		QueryParams: QueryParams{ClusterID: "c", Start: start, End: end},
+		Buckets:     200,
+	})
+	require.NoError(t, err)
+	require.Len(t, h.Buckets, 60)
+	assert.Equal(t, start.UTC(), h.Buckets[0].Start.UTC())
+}
+
 // The LogQL level filter and parseLogLine must classify the same line the same
 // way. Nothing re-checks the counts the way FilterByLevels re-checks entries,
 // so a drift here is a silently wrong chart.
