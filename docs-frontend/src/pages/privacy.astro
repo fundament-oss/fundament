@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout
+  title="Privacy · Fundament"
+  description="What this site measures, where the statistics run, and how to opt out. No cookies, no third parties."
+>
+  <nldd-simple-section width="800px">
+    <nldd-rich-text>
+      <h1>Privacy</h1>
+      <p>
+        This site counts visits so we can see which documentation gets read. It does so without
+        cookies, without profiles and without third parties.
+      </p>
+
+      <h2>What is measured</h2>
+      <p>
+        For each visit: the page and its title, the referring site, browser, operating system,
+        device type, screen size, language, country and region derived from your IP address, and the
+        time.
+      </p>
+      <p>
+        Your IP address is not stored. It is used to look up the location and to compute a visitor
+        ID, a one-way hash that rotates periodically, and is then discarded.
+      </p>
+
+      <h2>Where it runs</h2>
+      <p>
+        The statistics run on <a href="https://umami.is/" target="_blank" rel="noopener noreferrer"
+          >Umami</a
+        >, open-source software hosted by the Fundament team on its own Kubernetes cluster in Europe. The data
+        is not shared, sold or used for advertising.
+      </p>
+
+      <h2>Opting out</h2>
+      <p>
+        Any common tracker or ad blocker blocks the script. The site works exactly the same without
+        it.
+      </p>
+    </nldd-rich-text>
+  </nldd-simple-section>
+</Layout>
+
+<script>
+  import '@nldd/design-system/simple-section';
+  import '@nldd/design-system/rich-text';
+</script>
