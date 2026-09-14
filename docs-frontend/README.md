@@ -26,6 +26,17 @@ just docs-build-external # same, and verify external http(s) links
 `bun install`, `bun start` and `bun run build` still work if you have already
 run `node scripts/sync-docs.mjs`.
 
+## Analytics
+
+Every page loads the Umami tracker from `statistieken.projects.digilab.network`,
+self-hosted on digikluster
+([tenant-digilab-ops](https://gitlab.com/digilab.overheid.nl/platform/flux/tenant-digilab-ops),
+`apps/umami/`). The script attributes live in `src/analytics.ts`, which feeds
+both the Starlight `head` config and `src/layouts/Landing.astro`. Its
+`data-domains` attribute is what keeps the dev server and `bun run preview` from
+posting localhost hits into the live dashboard, so do not drop it. If the site
+moves to another host, update it there.
+
 ## Writing links
 
 Write links in the relative form that works on GitHub. `scripts/sync-docs.mjs`

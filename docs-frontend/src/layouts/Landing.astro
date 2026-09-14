@@ -3,6 +3,7 @@
 // applies to Starlight-rendered doc pages, and this layout is outside that
 // pipeline, so the landing page would otherwise ship without the design system.
 import '@nldd/design-system/styles';
+import { umamiScriptAttrs } from '../analytics';
 
 export interface Props {
   title?: string;
@@ -30,6 +31,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <link rel="shortcut icon" href="/img/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <script is:inline {...umamiScriptAttrs}></script>
   </head>
   <body>
     <nldd-app-view>
