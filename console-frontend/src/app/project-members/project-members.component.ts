@@ -21,6 +21,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import { NotificationService } from '../notification.service';
 import { formatTimeAgo } from '../utils/date-format';
+import { projectRoleLabel } from '../utils/role-label';
 import { mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
@@ -78,12 +79,6 @@ const stringToRole = (s: string): ProjectMemberRole => {
 
 const formatMemberDate = (member: ProjectMember): string =>
   formatTimeAgo(member.created ? timestampDate(member.created) : undefined);
-
-/** 'admin' reads as a value, 'Admin' as a label. The tag shows the label. */
-const roleLabel = (role: ProjectMemberRole): string => {
-  const value = roleToString(role);
-  return value ? value[0].toUpperCase() + value.slice(1) : value;
-};
 
 /** Which namespaces this member has a role in. One of them is worth naming: the
  *  name says more than the number does. Beyond that it is a count, and the sheet
@@ -343,7 +338,7 @@ export default class ProjectMembersComponent implements OnInit {
 
   roleToString = roleToString;
 
-  roleLabel = roleLabel;
+  roleLabel = projectRoleLabel;
 
   formatMemberDate = formatMemberDate;
 }

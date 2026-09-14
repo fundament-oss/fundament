@@ -25,6 +25,7 @@ import {
   ListClusterNamespacesResponseSchema,
   ListProjectNamespacesResponseSchema,
   CreateNamespaceResponseSchema,
+  DeleteNamespaceResponseSchema,
   NamespaceSchema,
 } from '../../generated/v1/namespace_pb';
 import {
@@ -63,10 +64,12 @@ import {
 import {
   LogsService,
   QueryLogsResponseSchema,
+  GetLogHistogramResponseSchema,
   GetLogLabelsResponseSchema,
   LogEntrySchema,
   LogBackend,
   type QueryLogsRequest,
+  type GetLogHistogramRequest,
   type TailLogsRequest,
   type GetLogLabelsRequest,
 } from '../../generated/v1/logs_pb';
@@ -261,6 +264,14 @@ export default function createDemoTransport(): Transport {
           );
         }
         return create(CreateNamespaceResponseSchema, { namespaceId: id });
+      },
+      deleteNamespace: async (req) => {
+        await delay();
+        // Drop it from the fixtures, the mirror of what createNamespace appends:
+        // without this the demo answers "unimplemented" and the row stays put.
+        const index = fx.namespaces.findIndex((n) => n.id === req.namespaceId);
+        if (index !== -1) fx.namespaces.splice(index, 1);
+        return create(DeleteNamespaceResponseSchema, {});
       },
     });
 
@@ -539,6 +550,39 @@ export default function createDemoTransport(): Transport {
           pods: unique(inScope.map((line) => line.pod)),
           containers: unique(inScope.map((line) => line.container)),
           backend: LogBackend.LOKI,
+        });
+      },
+      // The demo's histogram is counted over the whole window, like the real
+      // backend's: the fixture lines are the population, not a page of it.
+      getLogHistogram: async (req: GetLogHistogramRequest) => {
+        await delay(60);
+        const now = Date.now();
+        const start = req.start ? Number(req.start.seconds) * 1000 : now - 3600_000;
+        const end = req.end ? Number(req.end.seconds) * 1000 : now;
+        const count = req.buckets > 0 ? req.buckets : 30;
+        const width = Math.max(1, (end - start) / count);
+        const buckets = Array.from({ length: count }, (_, i) => ({
+          start: timestampFromDate(new Date(start + i * width)),
+          errorCount: 0n,
+          warnCount: 0n,
+          infoCount: 0n,
+          debugCount: 0n,
+        }));
+        fx.logLines
+          .filter((line) => logMatches(line, req))
+          .map((line) => ({ line, at: now - line.ago * 1000 }))
+          .filter(({ at }) => at >= start && at <= end)
+          .forEach(({ line, at }) => {
+            const bucket = buckets[Math.min(Math.floor((at - start) / width), count - 1)];
+            if (line.level === 'ERROR') bucket.errorCount += 1n;
+            else if (line.level === 'WARN') bucket.warnCount += 1n;
+            else if (line.level === 'DEBUG') bucket.debugCount += 1n;
+            else bucket.infoCount += 1n;
+          });
+        return create(GetLogHistogramResponseSchema, {
+          buckets,
+          backend: LogBackend.LOKI,
+          exact: true,
         });
       },
       // Live tail: a line every second or so, off the same set, so the stream

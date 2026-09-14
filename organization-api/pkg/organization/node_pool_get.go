@@ -32,20 +32,25 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
+	runtime := s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1)[nodePool.Name]
+
 	return organizationv1.GetNodePoolResponse_builder{
-		NodePool: nodePoolFromRow(&nodePool),
+		NodePool: nodePoolFromRow(&nodePool, runtime),
 	}.Build(), nil
 }
 
-func nodePoolFromRow(row *db.TenantNodePool) *organizationv1.NodePool {
+// The pool as the database holds it, filled out with what the cluster reports
+// about it. An empty runtime (no metrics backend) leaves the live fields at
+// their zero value, which the console reads as "unknown".
+func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizationv1.NodePool {
 	return organizationv1.NodePool_builder{
 		Id:           row.ID.String(),
 		Name:         row.Name,
 		MachineType:  row.MachineType,
-		CurrentNodes: 0, // Stub: would come from actual cluster state
+		CurrentNodes: runtime.nodes,
 		MinNodes:     row.AutoscaleMin,
 		MaxNodes:     row.AutoscaleMax,
-		Status:       organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, // Stub
-		Version:      "",                                                         // Stub: would come from actual cluster state
+		Status:       runtime.status(),
+		Version:      runtime.version,
 	}.Build()
 }

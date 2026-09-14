@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   inject,
   input,
   signal,
@@ -16,6 +17,8 @@ import { OrganizationDataService } from '../organization-data.service';
 import { INVITE } from '../../connect/tokens';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
+import InvitationEmailComponent from '../invitation-email/invitation-email.component';
+import { organizationPermissionLabel } from '../utils/role-label';
 
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
@@ -43,7 +46,7 @@ import '@nldd/design-system/validation-list';
  */
 @Component({
   selector: 'app-invite-member-sheet',
-  imports: [SheetSyncDirective, AutofocusDirective],
+  imports: [SheetSyncDirective, AutofocusDirective, InvitationEmailComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './invite-member-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,15 +74,32 @@ export default class InviteMemberSheetComponent {
 
   inviteError = signal<string | null>(null);
 
+  /** The sheet does not close on a successful invitation any more: nothing is
+   *  sent, so the admin still has a message to deliver, and this is the one
+   *  moment we know everything needed to write it. */
+  step = signal<'form' | 'created'>('form');
+
+  /** Snapshotted at submit, not read back off the form: "Invite another person"
+   *  clears the fields while the created step may still be showing them. */
+  createdEmail = signal('');
+
+  createdPermission = signal('viewer');
+
+  organizationName = computed(() => this.organizationDataService.currentOrganizationDisplayName());
+
+  /** Named with their scope, the way the tags on the members list are: this is
+   *  standing in the organization, not in one of its projects. The label comes
+   *  from role-label so this list, the tag on the row, the menu item that
+   *  changes it and now the invitation email all say the same words. */
   permissionOptions = [
     {
       value: 'viewer',
-      label: 'Viewer',
+      label: organizationPermissionLabel('viewer'),
       description: 'Can look at the organization, its clusters and its members.',
     },
     {
       value: 'admin',
-      label: 'Admin',
+      label: organizationPermissionLabel('admin'),
       description: 'Can also create clusters, invite members and reach every project.',
     },
   ];
@@ -89,12 +109,24 @@ export default class InviteMemberSheetComponent {
     // to start from nothing rather than from whoever you invited last time.
     effect(() => {
       if (!this.show()) return;
-      this.inviteEmail.set('');
-      this.inviteSubmitted.set(false);
-      this.invitePermission.set('viewer');
-      this.inviteError.set(null);
-      this.isSubmitting.set(false);
+      this.resetForm();
+      this.step.set('form');
     });
+  }
+
+  private resetForm() {
+    this.inviteEmail.set('');
+    this.inviteSubmitted.set(false);
+    this.invitePermission.set('viewer');
+    this.inviteError.set(null);
+    this.isSubmitting.set(false);
+  }
+
+  /** Back to an empty form with the sheet still standing, for onboarding
+   *  several people in one go. */
+  inviteAnother() {
+    this.resetForm();
+    this.step.set('form');
   }
 
   onClose() {
@@ -119,7 +151,13 @@ export default class InviteMemberSheetComponent {
       await withIdempotency((opts) => this.inviteClient.inviteMember({ email, permission }, opts), {
         signal: this.idempotency.reset(),
       });
-      this.closed.emit();
+      this.createdEmail.set(email);
+      this.createdPermission.set(permission);
+      this.step.set('created');
+      // Said at the moment it happens, not on the way out of the sheet: the
+      // notification region is promoted into the top layer, so it is seen over
+      // the sheet (see NotificationService.raiseRegion). Inviting several people
+      // in a row that way gets a confirmation each, naming who it was.
       this.notificationService.success(`'${email}' invited as ${permission}`);
       // The list of members is a page of its own, and it may well be the page
       // behind this sheet, so it hears about the invitation from here.

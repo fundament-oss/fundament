@@ -181,10 +181,13 @@ export default class ClusterNamespacesComponent implements OnInit {
 
       this.notificationService.success(`Namespace '${namespaceName}' deleted`);
 
-      // Reload namespaces and organization data
+      // Reload namespaces and the projects that count them. Not the organization:
+      // reloading that one empties every project out of the sidebar and nothing
+      // fetches them back. Its failure is swallowed because the namespace is
+      // deleted either way, and saying "Failed to delete" would be untrue.
       await Promise.all([
         this.loadNamespaces(),
-        this.organizationDataService.loadOrganizationData(),
+        this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {}),
       ]);
     } catch (error) {
       this.errorMessage.set(
@@ -232,9 +235,11 @@ export default class ClusterNamespacesComponent implements OnInit {
       }
 
       this.selection.clear();
+      // See confirmDeleteNamespace: the projects carry the namespace counts, and
+      // reloading the organization would take them out of the sidebar.
       await Promise.all([
         this.loadNamespaces(),
-        this.organizationDataService.loadOrganizationData(),
+        this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {}),
       ]);
     } finally {
       this.isBulkDeleting.set(false);

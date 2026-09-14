@@ -964,6 +964,467 @@ func (b0 GetLogLabelsResponse_builder) Build() *GetLogLabelsResponse {
 	return m0
 }
 
+// GetLogHistogramRequest asks for bucketed counts over a window. The filters
+// mirror QueryLogsRequest so the chart describes exactly the query the entry
+// list is showing.
+type GetLogHistogramRequest struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Namespace string                 `protobuf:"bytes,20,opt,name=namespace"`
+	xxx_hidden_Pod       string                 `protobuf:"bytes,30,opt,name=pod"`
+	xxx_hidden_Container string                 `protobuf:"bytes,40,opt,name=container"`
+	xxx_hidden_Search    string                 `protobuf:"bytes,60,opt,name=search"`
+	xxx_hidden_Start     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=start"`
+	xxx_hidden_End       *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=end"`
+	xxx_hidden_Buckets   int32                  `protobuf:"varint,90,opt,name=buckets"`
+	xxx_hidden_Levels    []string               `protobuf:"bytes,100,rep,name=levels"`
+	xxx_hidden_Source    LogSource              `protobuf:"varint,110,opt,name=source,enum=organization.v1.LogSource"`
+	xxx_hidden_Limit     int32                  `protobuf:"varint,120,opt,name=limit"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *GetLogHistogramRequest) Reset() {
+	*x = GetLogHistogramRequest{}
+	mi := &file_v1_logs_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLogHistogramRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLogHistogramRequest) ProtoMessage() {}
+
+func (x *GetLogHistogramRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_logs_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetLogHistogramRequest) GetClusterId() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterId
+	}
+	return ""
+}
+
+func (x *GetLogHistogramRequest) GetNamespace() string {
+	if x != nil {
+		return x.xxx_hidden_Namespace
+	}
+	return ""
+}
+
+func (x *GetLogHistogramRequest) GetPod() string {
+	if x != nil {
+		return x.xxx_hidden_Pod
+	}
+	return ""
+}
+
+func (x *GetLogHistogramRequest) GetContainer() string {
+	if x != nil {
+		return x.xxx_hidden_Container
+	}
+	return ""
+}
+
+func (x *GetLogHistogramRequest) GetSearch() string {
+	if x != nil {
+		return x.xxx_hidden_Search
+	}
+	return ""
+}
+
+func (x *GetLogHistogramRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *GetLogHistogramRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_End
+	}
+	return nil
+}
+
+func (x *GetLogHistogramRequest) GetBuckets() int32 {
+	if x != nil {
+		return x.xxx_hidden_Buckets
+	}
+	return 0
+}
+
+func (x *GetLogHistogramRequest) GetLevels() []string {
+	if x != nil {
+		return x.xxx_hidden_Levels
+	}
+	return nil
+}
+
+func (x *GetLogHistogramRequest) GetSource() LogSource {
+	if x != nil {
+		return x.xxx_hidden_Source
+	}
+	return LogSource_LOG_SOURCE_UNSPECIFIED
+}
+
+func (x *GetLogHistogramRequest) GetLimit() int32 {
+	if x != nil {
+		return x.xxx_hidden_Limit
+	}
+	return 0
+}
+
+func (x *GetLogHistogramRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *GetLogHistogramRequest) SetNamespace(v string) {
+	x.xxx_hidden_Namespace = v
+}
+
+func (x *GetLogHistogramRequest) SetPod(v string) {
+	x.xxx_hidden_Pod = v
+}
+
+func (x *GetLogHistogramRequest) SetContainer(v string) {
+	x.xxx_hidden_Container = v
+}
+
+func (x *GetLogHistogramRequest) SetSearch(v string) {
+	x.xxx_hidden_Search = v
+}
+
+func (x *GetLogHistogramRequest) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *GetLogHistogramRequest) SetEnd(v *timestamppb.Timestamp) {
+	x.xxx_hidden_End = v
+}
+
+func (x *GetLogHistogramRequest) SetBuckets(v int32) {
+	x.xxx_hidden_Buckets = v
+}
+
+func (x *GetLogHistogramRequest) SetLevels(v []string) {
+	x.xxx_hidden_Levels = v
+}
+
+func (x *GetLogHistogramRequest) SetSource(v LogSource) {
+	x.xxx_hidden_Source = v
+}
+
+func (x *GetLogHistogramRequest) SetLimit(v int32) {
+	x.xxx_hidden_Limit = v
+}
+
+func (x *GetLogHistogramRequest) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *GetLogHistogramRequest) HasEnd() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_End != nil
+}
+
+func (x *GetLogHistogramRequest) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+func (x *GetLogHistogramRequest) ClearEnd() {
+	x.xxx_hidden_End = nil
+}
+
+type GetLogHistogramRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterId string
+	// Optional label filters. Empty means "all".
+	Namespace string
+	Pod       string
+	Container string
+	// Optional free-text line filter.
+	Search string
+	// Time range to bucket. Defaults to the last hour when not set.
+	Start *timestamppb.Timestamp
+	End   *timestamppb.Timestamp
+	// How many equal buckets to divide the window into. Defaults to 30 when
+	// zero and is capped at 200: each bucket is one aggregation step, and the
+	// range comes from the wire.
+	Buckets int32
+	// Optional severity filter; see QueryLogsRequest.levels. An unselected
+	// level is reported as zero rather than omitted, so the series stay aligned.
+	Levels []string
+	// Which of the cluster's log sources to read.
+	Source LogSource
+	// How many lines a backend that cannot aggregate may read before counting
+	// them. Ignored by backends that do aggregate (Vali), whose counts cover the
+	// whole window however this is set. Defaults and caps exactly as
+	// QueryLogsRequest.limit does: 1000 when zero, never above 5000.
+	//
+	// Set it to the same value as QueryLogsRequest.limit: the fallback then
+	// counts exactly the page the entry list is showing, instead of reading the
+	// pod's log a second time at a different size and reporting totals the list
+	// below it cannot account for.
+	Limit int32
+}
+
+func (b0 GetLogHistogramRequest_builder) Build() *GetLogHistogramRequest {
+	m0 := &GetLogHistogramRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_Namespace = b.Namespace
+	x.xxx_hidden_Pod = b.Pod
+	x.xxx_hidden_Container = b.Container
+	x.xxx_hidden_Search = b.Search
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_End = b.End
+	x.xxx_hidden_Buckets = b.Buckets
+	x.xxx_hidden_Levels = b.Levels
+	x.xxx_hidden_Source = b.Source
+	x.xxx_hidden_Limit = b.Limit
+	return m0
+}
+
+// LogHistogramBucket is one bucket of the window, counted per severity.
+type LogHistogramBucket struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Start      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=start"`
+	xxx_hidden_ErrorCount int64                  `protobuf:"varint,20,opt,name=error_count,json=errorCount"`
+	xxx_hidden_WarnCount  int64                  `protobuf:"varint,30,opt,name=warn_count,json=warnCount"`
+	xxx_hidden_InfoCount  int64                  `protobuf:"varint,40,opt,name=info_count,json=infoCount"`
+	xxx_hidden_DebugCount int64                  `protobuf:"varint,50,opt,name=debug_count,json=debugCount"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *LogHistogramBucket) Reset() {
+	*x = LogHistogramBucket{}
+	mi := &file_v1_logs_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogHistogramBucket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogHistogramBucket) ProtoMessage() {}
+
+func (x *LogHistogramBucket) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_logs_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *LogHistogramBucket) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *LogHistogramBucket) GetErrorCount() int64 {
+	if x != nil {
+		return x.xxx_hidden_ErrorCount
+	}
+	return 0
+}
+
+func (x *LogHistogramBucket) GetWarnCount() int64 {
+	if x != nil {
+		return x.xxx_hidden_WarnCount
+	}
+	return 0
+}
+
+func (x *LogHistogramBucket) GetInfoCount() int64 {
+	if x != nil {
+		return x.xxx_hidden_InfoCount
+	}
+	return 0
+}
+
+func (x *LogHistogramBucket) GetDebugCount() int64 {
+	if x != nil {
+		return x.xxx_hidden_DebugCount
+	}
+	return 0
+}
+
+func (x *LogHistogramBucket) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *LogHistogramBucket) SetErrorCount(v int64) {
+	x.xxx_hidden_ErrorCount = v
+}
+
+func (x *LogHistogramBucket) SetWarnCount(v int64) {
+	x.xxx_hidden_WarnCount = v
+}
+
+func (x *LogHistogramBucket) SetInfoCount(v int64) {
+	x.xxx_hidden_InfoCount = v
+}
+
+func (x *LogHistogramBucket) SetDebugCount(v int64) {
+	x.xxx_hidden_DebugCount = v
+}
+
+func (x *LogHistogramBucket) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *LogHistogramBucket) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+type LogHistogramBucket_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Start of the bucket. Every bucket spans (end - start) / buckets, so the
+	// width is implied rather than repeated on each one.
+	Start      *timestamppb.Timestamp
+	ErrorCount int64
+	WarnCount  int64
+	InfoCount  int64
+	DebugCount int64
+}
+
+func (b0 LogHistogramBucket_builder) Build() *LogHistogramBucket {
+	m0 := &LogHistogramBucket{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_ErrorCount = b.ErrorCount
+	x.xxx_hidden_WarnCount = b.WarnCount
+	x.xxx_hidden_InfoCount = b.InfoCount
+	x.xxx_hidden_DebugCount = b.DebugCount
+	return m0
+}
+
+// GetLogHistogramResponse contains one bucket per requested division of the
+// window, oldest first.
+type GetLogHistogramResponse struct {
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Buckets *[]*LogHistogramBucket `protobuf:"bytes,10,rep,name=buckets"`
+	xxx_hidden_Backend LogBackend             `protobuf:"varint,20,opt,name=backend,enum=organization.v1.LogBackend"`
+	xxx_hidden_Exact   bool                   `protobuf:"varint,30,opt,name=exact"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetLogHistogramResponse) Reset() {
+	*x = GetLogHistogramResponse{}
+	mi := &file_v1_logs_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLogHistogramResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLogHistogramResponse) ProtoMessage() {}
+
+func (x *GetLogHistogramResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_logs_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetLogHistogramResponse) GetBuckets() []*LogHistogramBucket {
+	if x != nil {
+		if x.xxx_hidden_Buckets != nil {
+			return *x.xxx_hidden_Buckets
+		}
+	}
+	return nil
+}
+
+func (x *GetLogHistogramResponse) GetBackend() LogBackend {
+	if x != nil {
+		return x.xxx_hidden_Backend
+	}
+	return LogBackend_LOG_BACKEND_UNSPECIFIED
+}
+
+func (x *GetLogHistogramResponse) GetExact() bool {
+	if x != nil {
+		return x.xxx_hidden_Exact
+	}
+	return false
+}
+
+func (x *GetLogHistogramResponse) SetBuckets(v []*LogHistogramBucket) {
+	x.xxx_hidden_Buckets = &v
+}
+
+func (x *GetLogHistogramResponse) SetBackend(v LogBackend) {
+	x.xxx_hidden_Backend = v
+}
+
+func (x *GetLogHistogramResponse) SetExact(v bool) {
+	x.xxx_hidden_Exact = v
+}
+
+type GetLogHistogramResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Buckets []*LogHistogramBucket
+	// Which backend answered.
+	Backend LogBackend
+	// Whether the counts cover the whole window. False when the backend cannot
+	// aggregate and the counts were taken from a bounded page of entries
+	// instead (the Kubernetes pod-log fallback and plugin logs), which is the
+	// case the caller has to caveat in its UI.
+	Exact bool
+}
+
+func (b0 GetLogHistogramResponse_builder) Build() *GetLogHistogramResponse {
+	m0 := &GetLogHistogramResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Buckets = &b.Buckets
+	x.xxx_hidden_Backend = b.Backend
+	x.xxx_hidden_Exact = b.Exact
+	return m0
+}
+
 var File_v1_logs_proto protoreflect.FileDescriptor
 
 const file_v1_logs_proto_rawDesc = "" +
@@ -1026,7 +1487,39 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\n" +
 	"containers\x18\x1e \x03(\tR\n" +
 	"containers\x125\n" +
-	"\abackend\x18( \x01(\x0e2\x1b.organization.v1.LogBackendR\abackend*q\n" +
+	"\abackend\x18( \x01(\x0e2\x1b.organization.v1.LogBackendR\abackend\"\xb9\x03\n" +
+	"\x16GetLogHistogramRequest\x12'\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\x1c\n" +
+	"\tnamespace\x18\x14 \x01(\tR\tnamespace\x12\x10\n" +
+	"\x03pod\x18\x1e \x01(\tR\x03pod\x12\x1c\n" +
+	"\tcontainer\x18( \x01(\tR\tcontainer\x12\x16\n" +
+	"\x06search\x18< \x01(\tR\x06search\x127\n" +
+	"\x05start\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
+	"\x03end\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12$\n" +
+	"\abuckets\x18Z \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\abuckets\x12&\n" +
+	"\x06levels\x18d \x03(\tB\x0e\xbaH\v\x92\x01\b\x10\x04\"\x04r\x02\x18\x10R\x06levels\x122\n" +
+	"\x06source\x18n \x01(\x0e2\x1a.organization.v1.LogSourceR\x06source\x12 \n" +
+	"\x05limit\x18x \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x88'(\x00R\x05limit\"\xc6\x01\n" +
+	"\x12LogHistogramBucket\x120\n" +
+	"\x05start\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12\x1f\n" +
+	"\verror_count\x18\x14 \x01(\x03R\n" +
+	"errorCount\x12\x1d\n" +
+	"\n" +
+	"warn_count\x18\x1e \x01(\x03R\twarnCount\x12\x1d\n" +
+	"\n" +
+	"info_count\x18( \x01(\x03R\tinfoCount\x12\x1f\n" +
+	"\vdebug_count\x182 \x01(\x03R\n" +
+	"debugCount\"\xa5\x01\n" +
+	"\x17GetLogHistogramResponse\x12=\n" +
+	"\abuckets\x18\n" +
+	" \x03(\v2#.organization.v1.LogHistogramBucketR\abuckets\x125\n" +
+	"\abackend\x18\x14 \x01(\x0e2\x1b.organization.v1.LogBackendR\abackend\x12\x14\n" +
+	"\x05exact\x18\x1e \x01(\bR\x05exact*q\n" +
 	"\n" +
 	"LogBackend\x12\x1b\n" +
 	"\x17LOG_BACKEND_UNSPECIFIED\x10\x00\x12\x14\n" +
@@ -1036,49 +1529,61 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\tLogSource\x12\x1a\n" +
 	"\x16LOG_SOURCE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12LOG_SOURCE_CLUSTER\x10\x01\x12\x15\n" +
-	"\x11LOG_SOURCE_PLUGIN\x10\x022\x89\x02\n" +
+	"\x11LOG_SOURCE_PLUGIN\x10\x022\xef\x02\n" +
 	"\vLogsService\x12R\n" +
 	"\tQueryLogs\x12!.organization.v1.QueryLogsRequest\x1a\".organization.v1.QueryLogsResponse\x12I\n" +
 	"\bTailLogs\x12 .organization.v1.TailLogsRequest\x1a\x19.organization.v1.LogEntry0\x01\x12[\n" +
-	"\fGetLogLabels\x12$.organization.v1.GetLogLabelsRequest\x1a%.organization.v1.GetLogLabelsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\fGetLogLabels\x12$.organization.v1.GetLogLabelsRequest\x1a%.organization.v1.GetLogLabelsResponse\x12d\n" +
+	"\x0fGetLogHistogram\x12'.organization.v1.GetLogHistogramRequest\x1a(.organization.v1.GetLogHistogramResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_logs_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_v1_logs_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_v1_logs_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_v1_logs_proto_goTypes = []any{
-	(LogBackend)(0),               // 0: organization.v1.LogBackend
-	(LogSource)(0),                // 1: organization.v1.LogSource
-	(*LogEntry)(nil),              // 2: organization.v1.LogEntry
-	(*QueryLogsRequest)(nil),      // 3: organization.v1.QueryLogsRequest
-	(*QueryLogsResponse)(nil),     // 4: organization.v1.QueryLogsResponse
-	(*TailLogsRequest)(nil),       // 5: organization.v1.TailLogsRequest
-	(*GetLogLabelsRequest)(nil),   // 6: organization.v1.GetLogLabelsRequest
-	(*GetLogLabelsResponse)(nil),  // 7: organization.v1.GetLogLabelsResponse
-	nil,                           // 8: organization.v1.LogEntry.FieldsEntry
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(LogBackend)(0),                 // 0: organization.v1.LogBackend
+	(LogSource)(0),                  // 1: organization.v1.LogSource
+	(*LogEntry)(nil),                // 2: organization.v1.LogEntry
+	(*QueryLogsRequest)(nil),        // 3: organization.v1.QueryLogsRequest
+	(*QueryLogsResponse)(nil),       // 4: organization.v1.QueryLogsResponse
+	(*TailLogsRequest)(nil),         // 5: organization.v1.TailLogsRequest
+	(*GetLogLabelsRequest)(nil),     // 6: organization.v1.GetLogLabelsRequest
+	(*GetLogLabelsResponse)(nil),    // 7: organization.v1.GetLogLabelsResponse
+	(*GetLogHistogramRequest)(nil),  // 8: organization.v1.GetLogHistogramRequest
+	(*LogHistogramBucket)(nil),      // 9: organization.v1.LogHistogramBucket
+	(*GetLogHistogramResponse)(nil), // 10: organization.v1.GetLogHistogramResponse
+	nil,                             // 11: organization.v1.LogEntry.FieldsEntry
+	(*timestamppb.Timestamp)(nil),   // 12: google.protobuf.Timestamp
 }
 var file_v1_logs_proto_depIdxs = []int32{
-	9,  // 0: organization.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
-	8,  // 1: organization.v1.LogEntry.fields:type_name -> organization.v1.LogEntry.FieldsEntry
-	9,  // 2: organization.v1.QueryLogsRequest.start:type_name -> google.protobuf.Timestamp
-	9,  // 3: organization.v1.QueryLogsRequest.end:type_name -> google.protobuf.Timestamp
+	12, // 0: organization.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
+	11, // 1: organization.v1.LogEntry.fields:type_name -> organization.v1.LogEntry.FieldsEntry
+	12, // 2: organization.v1.QueryLogsRequest.start:type_name -> google.protobuf.Timestamp
+	12, // 3: organization.v1.QueryLogsRequest.end:type_name -> google.protobuf.Timestamp
 	1,  // 4: organization.v1.QueryLogsRequest.source:type_name -> organization.v1.LogSource
 	2,  // 5: organization.v1.QueryLogsResponse.entries:type_name -> organization.v1.LogEntry
 	0,  // 6: organization.v1.QueryLogsResponse.backend:type_name -> organization.v1.LogBackend
 	1,  // 7: organization.v1.TailLogsRequest.source:type_name -> organization.v1.LogSource
-	9,  // 8: organization.v1.GetLogLabelsRequest.start:type_name -> google.protobuf.Timestamp
-	9,  // 9: organization.v1.GetLogLabelsRequest.end:type_name -> google.protobuf.Timestamp
+	12, // 8: organization.v1.GetLogLabelsRequest.start:type_name -> google.protobuf.Timestamp
+	12, // 9: organization.v1.GetLogLabelsRequest.end:type_name -> google.protobuf.Timestamp
 	0,  // 10: organization.v1.GetLogLabelsResponse.backend:type_name -> organization.v1.LogBackend
-	3,  // 11: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
-	5,  // 12: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
-	6,  // 13: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
-	4,  // 14: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
-	2,  // 15: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
-	7,  // 16: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
-	14, // [14:17] is the sub-list for method output_type
-	11, // [11:14] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	12, // 11: organization.v1.GetLogHistogramRequest.start:type_name -> google.protobuf.Timestamp
+	12, // 12: organization.v1.GetLogHistogramRequest.end:type_name -> google.protobuf.Timestamp
+	1,  // 13: organization.v1.GetLogHistogramRequest.source:type_name -> organization.v1.LogSource
+	12, // 14: organization.v1.LogHistogramBucket.start:type_name -> google.protobuf.Timestamp
+	9,  // 15: organization.v1.GetLogHistogramResponse.buckets:type_name -> organization.v1.LogHistogramBucket
+	0,  // 16: organization.v1.GetLogHistogramResponse.backend:type_name -> organization.v1.LogBackend
+	3,  // 17: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
+	5,  // 18: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
+	6,  // 19: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
+	8,  // 20: organization.v1.LogsService.GetLogHistogram:input_type -> organization.v1.GetLogHistogramRequest
+	4,  // 21: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
+	2,  // 22: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
+	7,  // 23: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
+	10, // 24: organization.v1.LogsService.GetLogHistogram:output_type -> organization.v1.GetLogHistogramResponse
+	21, // [21:25] is the sub-list for method output_type
+	17, // [17:21] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_v1_logs_proto_init() }
@@ -1092,7 +1597,7 @@ func file_v1_logs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_logs_proto_rawDesc), len(file_v1_logs_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   7,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

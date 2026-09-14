@@ -85,6 +85,10 @@ type Client interface {
 	// values are observed in (label values are time-scoped in Vali); zero
 	// values leave the backend's default window.
 	Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (Labels, error)
+	// Histogram returns per-severity counts bucketed over the window, covering
+	// all of it rather than the newest Limit entries. A backend that cannot
+	// aggregate counts what it can fetch and clears Histogram.Exact.
+	Histogram(ctx context.Context, p *HistogramParams) (Histogram, error)
 }
 
 const defaultLimit = 1000

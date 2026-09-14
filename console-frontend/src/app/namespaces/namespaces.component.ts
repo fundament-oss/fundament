@@ -105,9 +105,9 @@ export default class NamespacesComponent implements OnInit {
     await Promise.all([this.loadNamespaces(projectId), this.loadMembers(projectId)]);
   }
 
-  /** The sheet that creates one lives in the shell and may well be standing
-   *  over this very list, so the list hears about a new namespace from there. */
-  private readonly reloadOnCreate = effect(() => {
+  /** The sheets that create and delete one stand over this very list without
+   *  unmounting it, so the list hears about both from the shared signal. */
+  private readonly reloadOnChange = effect(() => {
     this.organizationDataService.namespacesChanged();
     const projectId = this.projectId();
     if (projectId) this.loadNamespaces(projectId);

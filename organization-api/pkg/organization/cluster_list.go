@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"connectrpc.com/connect"
 
@@ -45,8 +46,8 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 		Name:          row.Name,
 		Status:        clusterStatusFromDB(row.Deleted, row.ShootStatus),
 		Region:        row.Region,
-		ProjectCount:  0, // Stub
-		NodePoolCount: 0, // Stub
+		ProjectCount:  countAsInt32(row.ProjectCount),
+		NodePoolCount: countAsInt32(row.NodePoolCount),
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,
 			row.OutboxRetries,
@@ -56,4 +57,17 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 			row.ShootStatusUpdated,
 		),
 	}.Build()
+}
+
+// COUNT(*) comes back as int64 while the wire format is int32. A cluster does
+// not hold two billion projects or node pools, but the clamp keeps the
+// conversion from ever wrapping into a negative count.
+func countAsInt32(count int64) int32 {
+	if count < 0 {
+		return 0
+	}
+	if count > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	return int32(count)
 }

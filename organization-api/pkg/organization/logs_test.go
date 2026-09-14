@@ -6,11 +6,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
@@ -417,4 +419,103 @@ func Test_Logs_LevelFilterAppliedServerSide(t *testing.T) {
 	}.Build())
 	require.NoError(t, err)
 	assert.Greater(t, len(all.GetEntries()), len(res.GetEntries()))
+}
+
+// The histogram must describe the window rather than a page of it: over a
+// window holding far more lines than the entry limit, the counts have to
+// exceed that limit. This is the defect that kept the chart off the console.
+func Test_Logs_Histogram_CountsWholeWindow(t *testing.T) {
+	t.Parallel()
+	l := newLogsEnv(t)
+
+	end := time.Now()
+	req := organizationv1.GetLogHistogramRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Start:     timestamppb.New(end.Add(-24 * time.Hour)),
+		End:       timestamppb.New(end),
+		Buckets:   24,
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	res, err := l.client.GetLogHistogram(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_LOKI, res.GetBackend())
+	assert.True(t, res.GetExact())
+	buckets := res.GetBuckets()
+	require.Len(t, buckets, 24)
+
+	var total int64
+	for _, b := range buckets {
+		total += b.GetErrorCount() + b.GetWarnCount() + b.GetInfoCount() + b.GetDebugCount()
+	}
+	assert.Greater(t, total, int64(logs.MaxLimit),
+		"a count bounded by the entry limit is the bug this RPC exists to fix")
+
+	// Oldest first, evenly spaced: the caller draws them in order and labels
+	// them from these timestamps.
+	for i := 1; i < len(buckets); i++ {
+		assert.True(t, buckets[i].GetStart().AsTime().After(buckets[i-1].GetStart().AsTime()))
+	}
+}
+
+// The severity filter narrows the chart exactly as it narrows the list, so the
+// two cannot disagree about what the query means.
+func Test_Logs_Histogram_LevelFilter(t *testing.T) {
+	t.Parallel()
+	l := newLogsEnv(t)
+
+	end := time.Now()
+	req := organizationv1.GetLogHistogramRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Start:     timestamppb.New(end.Add(-time.Hour)),
+		End:       timestamppb.New(end),
+		Buckets:   12,
+		Levels:    []string{"ERROR"},
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	res, err := l.client.GetLogHistogram(ctx, req)
+	require.NoError(t, err)
+	var errors, others int64
+	for _, b := range res.GetBuckets() {
+		errors += b.GetErrorCount()
+		others += b.GetWarnCount() + b.GetInfoCount() + b.GetDebugCount()
+	}
+	assert.Positive(t, errors)
+	assert.Zero(t, others)
+}
+
+// A cluster with no reachable backend degrades the way the other log RPCs do:
+// an empty answer, not a failed page.
+func Test_Logs_Histogram_PerShoot_MonitoringMissing_Degrades(t *testing.T) {
+	t.Parallel()
+	l := newPerShootLogsEnv(t, &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)})
+
+	req := organizationv1.GetLogHistogramRequest_builder{
+		ClusterId: l.clusterID.String(),
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	res, err := l.client.GetLogHistogram(ctx, req)
+	require.NoError(t, err, "a cluster without logs must not fail the RPC")
+	assert.Empty(t, res.GetBuckets())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_NONE, res.GetBackend())
+}
+
+func Test_Logs_Histogram_UnknownCluster_NotFound(t *testing.T) {
+	t.Parallel()
+	l := newLogsEnv(t)
+
+	req := organizationv1.GetLogHistogramRequest_builder{
+		ClusterId: uuid.New().String(),
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	l.authed(callInfo.RequestHeader())
+
+	_, err := l.client.GetLogHistogram(ctx, req)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }

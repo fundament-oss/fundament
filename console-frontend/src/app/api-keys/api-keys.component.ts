@@ -315,7 +315,7 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      this.notificationService.success('API key copied to clipboard');
+      this.notificationService.success('Token copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }

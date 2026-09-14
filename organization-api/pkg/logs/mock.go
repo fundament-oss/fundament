@@ -204,3 +204,54 @@ func hashSeed(s string) int64 {
 	_, _ = h.Write([]byte(s))
 	return int64(h.Sum32())
 }
+
+// Histogram counts synthetic entries across the whole window rather than the
+// newest Limit of them, so local dev and CI exercise the same
+// "counts describe the window" contract the real backend has — and so the
+// chart does not develop a cliff the mock data does not actually have.
+func (m *MockClient) Histogram(ctx context.Context, p *HistogramParams) (Histogram, error) {
+	hp := *p
+	if hp.End.IsZero() {
+		hp.End = m.now()
+	}
+	if hp.Start.IsZero() {
+		hp.Start = hp.End.Add(-time.Hour)
+	}
+	start, end, count, step := hp.window()
+	buckets := emptyBuckets(start, count, step)
+	if step <= 0 {
+		return Histogram{Buckets: buckets, Exact: true}, nil
+	}
+
+	streams := matchingStreams(&hp.QueryParams)
+	if len(streams) == 0 {
+		return Histogram{Buckets: buckets, Exact: true}, nil
+	}
+	want := NormalizedLevels(hp.Levels)
+	seed := hashSeed(hp.ClusterID)
+	tick := end.Truncate(mockInterval)
+	scanned := 0
+	for ; scanned < mockMaxScan && !tick.Before(start); scanned++ {
+		if scanned%mockScanCtxInterval == 0 && ctx.Err() != nil {
+			return Histogram{}, fmt.Errorf("mock histogram cancelled: %w", ctx.Err())
+		}
+		e := m.entryAt(tick, hp.ClusterID, &streams[streamIndex(tick, seed, len(streams))])
+		tick = tick.Add(-mockInterval)
+		if !MatchesSearch(e.Message, hp.Search) {
+			continue
+		}
+		if want != nil && !want[NormalizeLevel(e.Level)] {
+			continue
+		}
+		idx := int(e.Timestamp.Sub(start) / step)
+		if idx < 0 || idx >= count {
+			continue
+		}
+		buckets[idx].add(e.Level, 1)
+	}
+	// The scan is bounded, so a window wider than mockMaxScan ticks stops
+	// short and leaves its oldest buckets under-counted. Reporting that as
+	// exact would be the very claim this RPC exists to stop making, so the
+	// cap — not the loop finishing — decides.
+	return Histogram{Buckets: buckets, Exact: scanned < mockMaxScan}, nil
+}

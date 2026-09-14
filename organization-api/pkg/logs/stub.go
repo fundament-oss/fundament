@@ -24,3 +24,8 @@ func (StubClient) Tail(_ context.Context, _ *QueryParams) (<-chan TailEvent, err
 func (StubClient) Labels(_ context.Context, _, _ string, _, _ time.Time) (Labels, error) {
 	return Labels{}, nil
 }
+
+func (StubClient) Histogram(_ context.Context, p *HistogramParams) (Histogram, error) {
+	start, _, buckets, step := p.window()
+	return Histogram{Buckets: emptyBuckets(start, buckets, step), Exact: true}, nil
+}

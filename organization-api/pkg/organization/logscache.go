@@ -177,6 +177,12 @@ func (*perShootLogsClient) forward(ctx context.Context, out chan<- logs.TailEven
 	}
 }
 
+func (p *perShootLogsClient) Histogram(ctx context.Context, params *logs.HistogramParams) (logs.Histogram, error) {
+	return callWithReResolve(ctx, p, func(inner logs.Client) (logs.Histogram, error) {
+		return inner.Histogram(ctx, params)
+	})
+}
+
 func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (logs.Labels, error) {
 	return callWithReResolve(ctx, p, func(inner logs.Client) (logs.Labels, error) {
 		return inner.Labels(ctx, clusterID, namespace, start, end)

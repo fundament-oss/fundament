@@ -49,7 +49,9 @@ func (s *Server) promClientFor(ctx context.Context, clusterID uuid.UUID) (prom.C
 		return s.perShoot.clientFor(ctx, clusterID)
 	case "", "mock":
 		if s.mockPromClient != nil {
-			return s.mockPromClient, nil
+			// Scoped to the cluster the caller asked about: the mock answers
+			// from the database, and our PromQL carries no cluster selector.
+			return s.mockPromClient.ForCluster(clusterID.String()), nil
 		}
 		return prom.StubClient{}, nil
 	default:

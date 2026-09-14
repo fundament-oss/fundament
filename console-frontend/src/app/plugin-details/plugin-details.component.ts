@@ -246,7 +246,14 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     let html = description
       .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-semibold mb-3">$1</h1>')
       .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-2 mt-4">$1</h2>')
-      .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/^- (.*$)/gim, '<li>$1</li>')
+      // A run of items is a list. Without the wrapper these were bare <li>
+      // elements, and every list rule nldd-rich-text has is keyed on ul/ol — so
+      // the bullets lost their marker and their indent, and stood in a wider
+      // column than the paragraphs around them. The indent comes from the design
+      // system now instead of from a hardcoded ml-4, and assistive tech is told
+      // it is reading a list.
+      .replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, (run) => `<ul>${run}</ul>`)
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\n\n/g, '</p><p class="mb-3">')
       .trim();

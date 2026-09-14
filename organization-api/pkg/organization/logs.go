@@ -309,6 +309,84 @@ func (s *Server) GetLogLabels(
 	}.Build(), nil
 }
 
+// GetLogHistogram returns per-severity counts bucketed over the window.
+//
+// It exists because the entry list cannot answer this question: QueryLogs
+// returns the newest limit lines, so counting them describes the page. On a
+// busy cluster that pinned every total at the limit and drew a cliff wherever
+// the page happened to start — a shape the reader had no way to tell from real
+// traffic falling off.
+func (s *Server) GetLogHistogram(
+	ctx context.Context,
+	req *organizationv1.GetLogHistogramRequest,
+) (*organizationv1.GetLogHistogramResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
+
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Cluster(clusterID)); err != nil {
+		return nil, err
+	}
+	if err := s.assertClusterExists(ctx, clusterID); err != nil {
+		return nil, err
+	}
+
+	params := logs.HistogramParams{
+		QueryParams: logs.QueryParams{
+			ClusterID: clusterID.String(),
+			Namespace: req.GetNamespace(),
+			Pod:       req.GetPod(),
+			Container: req.GetContainer(),
+			Search:    req.GetSearch(),
+			Levels:    req.GetLevels(),
+			Limit:     int(req.GetLimit()),
+		},
+		Buckets: int(req.GetBuckets()),
+	}
+	if req.HasStart() {
+		params.Start = req.GetStart().AsTime()
+	}
+	if req.HasEnd() {
+		params.End = req.GetEnd().AsTime()
+	}
+
+	client, err := s.logClientForSource(ctx, clusterID, req.GetSource(), callerAuthHeaders(ctx))
+	if err != nil {
+		s.logLogsUnavailable(ctx, clusterID, err)
+		return organizationv1.GetLogHistogramResponse_builder{
+			Backend: organizationv1.LogBackend_LOG_BACKEND_NONE,
+		}.Build(), nil
+	}
+
+	histogram, err := client.Histogram(ctx, &params)
+	if err != nil {
+		if s.degradeLogError(ctx, clusterID, err) {
+			return organizationv1.GetLogHistogramResponse_builder{
+				Backend: organizationv1.LogBackend_LOG_BACKEND_NONE,
+			}.Build(), nil
+		}
+		return nil, mapLogError(err)
+	}
+
+	return organizationv1.GetLogHistogramResponse_builder{
+		Buckets: toProtoBuckets(histogram.Buckets),
+		Backend: toProtoBackend(client.Backend()),
+		Exact:   histogram.Exact,
+	}.Build(), nil
+}
+
+func toProtoBuckets(buckets []logs.HistogramBucket) []*organizationv1.LogHistogramBucket {
+	out := make([]*organizationv1.LogHistogramBucket, 0, len(buckets))
+	for i := range buckets {
+		out = append(out, organizationv1.LogHistogramBucket_builder{
+			Start:      timestamppb.New(buckets[i].Start),
+			ErrorCount: buckets[i].Error,
+			WarnCount:  buckets[i].Warn,
+			InfoCount:  buckets[i].Info,
+			DebugCount: buckets[i].Debug,
+		}.Build())
+	}
+	return out
+}
+
 func (s *Server) assertClusterExists(ctx context.Context, clusterID uuid.UUID) error {
 	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

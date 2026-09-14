@@ -170,16 +170,24 @@
           }
         </nldd-menu-group>
       </nldd-toolbar-item>
+      <!-- The button and the menu item are the same action twice over, not two
+           actions: the toolbar shows the button while it fits and moves it into
+           the overflow menu when it does not. -->
       <nldd-toolbar-item slot="end">
         <nldd-button
           type="button"
           text="Download CSV"
           start-icon="download-table"
+          accessible-label="Download the metrics on screen as CSV"
+          [attr.disabled]="canExport() ? null : ''"
+          (click)="exportCsv()"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
           icon="download-table"
           text="Download CSV"
+          [attr.disabled]="canExport() ? null : ''"
+          (select)="exportCsv()"
         ></nldd-menu-item>
       </nldd-toolbar-item>
     </nldd-toolbar>

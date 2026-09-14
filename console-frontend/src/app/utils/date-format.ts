@@ -26,7 +26,7 @@ export function formatDate(value: Timestamp | string | undefined, fallback?: str
  * Formats a date with time (from Timestamp or string) to a localized date-time string.
  * @param value - The date value (Timestamp, string, or undefined)
  * @param fallback - The fallback string to return if value is undefined or formatting fails (default: empty string for undefined/Timestamp, original value for strings)
- * @returns Formatted date-time string (e.g., "January 15, 2024, 02:30 PM")
+ * @returns Formatted date-time string (e.g., "January 15, 2024 at 02:30 PM GMT+1")
  */
 /**
  * Returns a human-readable relative time duration string (e.g., "3 days", "2 years").
@@ -54,8 +54,8 @@ export function formatTimeAgo(date: Date | undefined): string {
   return `${diffYears} years ago`;
 }
 
-/** Date and time with the month abbreviated: "Aug 9, 2026 at 10:48 AM". For a
- *  column of timestamps, where a full month name makes every row a different
+/** Date and time with the month abbreviated: "Aug 9, 2026, 10:48 AM GMT+2". For
+ *  a column of timestamps, where a full month name makes every row a different
  *  width and the eye has nothing to line up on. */
 export function formatShortDateTime(
   value: Timestamp | string | undefined,
@@ -71,6 +71,9 @@ export function formatShortDateTime(
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      // The zone the reader is in, said out loud. Without it a moment on screen
+      // is a number you cannot check: local and UTC look exactly the same.
+      timeZoneName: 'short',
     });
   } catch {
     return fallback ?? '';
@@ -101,6 +104,8 @@ export function formatDateTime(value: Timestamp | string | undefined, fallback?:
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      // See formatShortDateTime: the zone is part of the moment, not decoration.
+      timeZoneName: 'short',
     });
   } catch {
     // Return original string value if formatting fails, otherwise use fallback

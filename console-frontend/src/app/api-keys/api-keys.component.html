@@ -82,7 +82,9 @@
           <h1>API keys</h1>
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
-        <!-- Shown once and never again, so it says so and offers the copy. -->
+        <!-- Shown once and never again, so it says so and offers the copy. The
+             copy itself is confirmed by a notification, which reaches over the
+             sheet: see NotificationService.raiseRegion. -->
         @if (createdToken(); as token) {
           <nldd-banner
             variant="success"

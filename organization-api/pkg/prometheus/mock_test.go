@@ -5,6 +5,9 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testCluster = ClusterInfo{
@@ -233,6 +236,26 @@ func TestMockClient_Query_FiltersByClusterName(t *testing.T) {
 	want := mockCPUCoresPerNode * float64(len(nodes))
 	if len(samples) != 1 || samples[0].Value != want {
 		t.Errorf("got %v, want 1 sample with value %v", samples, want)
+	}
+}
+
+// The node-pool queries carry no cluster selector, so an unscoped mock would
+// answer a one-cluster question with every cluster's nodes.
+func TestMockClient_ForCluster_ScopesToOneCluster(t *testing.T) {
+	other := ClusterInfo{
+		ID:   "bbbbbbbb-0000-0000-0000-000000000002",
+		Name: "other-cluster",
+		NodePools: []NodePoolInfo{
+			{Name: "workers", MachineType: "c1-medium", AutoscaleMin: 3, AutoscaleMax: 3},
+		},
+	}
+	client := makeMockClient([]ClusterInfo{testCluster, other}).ForCluster(other.ID)
+
+	samples, err := client.Query(context.Background(), `kube_node_labels`, time.Now())
+	require.NoError(t, err)
+	require.Len(t, samples, 3)
+	for _, s := range samples {
+		assert.Equal(t, "other-cluster", s.Labels["cluster"])
 	}
 }
 

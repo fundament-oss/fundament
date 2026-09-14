@@ -1,8 +1,9 @@
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, effect, DestroyRef } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { METRICS } from '../connect/tokens';
 import { GetOrgWorkloadMetricsRequestSchema } from '../generated/v1/metrics_pb';
+import OrganizationContextService from './organization-context.service';
 
 /** How often to ask, when nobody is watching the metrics page. */
 const POLL_MS = 60_000;
@@ -20,6 +21,8 @@ const POLL_MS = 60_000;
 export default class MetricsHealthService {
   private metricsClient = inject(METRICS);
 
+  private organizationContext = inject(OrganizationContextService);
+
   private destroyRef = inject(DestroyRef);
 
   /** 'unknown' until the first answer: a badge on a guess is worse than none. */
@@ -28,6 +31,17 @@ export default class MetricsHealthService {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   private checking = false;
+
+  /**
+   * Signing in and having an organization are two moments, and the first comes
+   * first: the call carries the Fun-Organization header, which the backend
+   * rejects the request without. So the poller starts at sign-in but stays
+   * quiet until the organization it would ask about is known.
+   */
+  private readonly checkOnOrganization = effect(() => {
+    const organizationId = this.organizationContext.currentOrganizationId();
+    if (organizationId && this.timer) this.check();
+  });
 
   start(): void {
     if (this.timer) return;
@@ -56,6 +70,10 @@ export default class MetricsHealthService {
 
   private async check(): Promise<void> {
     if (this.checking || document.visibilityState === 'hidden') return;
+    // No organization selected yet: asking would be answered with a 400, and a
+    // badge reading "down" over a missing header would be a lie. The effect
+    // above asks again the moment one is selected.
+    if (!this.organizationContext.currentOrganizationId()) return;
     this.checking = true;
     try {
       await firstValueFrom(
