@@ -1,0 +1,248 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 22
+:state: prediscussion
+
+= FUN-22 Cluster Workload Identity
+
+== Introduction
+
+Fundament provisions workloads onto the clusters it manages. The first of these is the plugin-controller, which cluster-worker installs into `fundament-system` on every ready shoot (link:/funs/fun-11[FUN-11], link:/funs/fun-19[FUN-19]). Some of those workloads need to call back into the control plane: the plugin-controller fetches the PluginDefinition manifest for every installation it reconciles. Today nothing running on a shoot can prove to the control plane which cluster it is, so every such call has had to be anonymous, and an anonymous endpoint cannot be tenanted.
+
+The concrete cost is visible in the marketplace. The controller fetches definitions from `catalog.v1.CatalogService/GetPluginDefinition`, the anonymous storefront API (link:/funs/fun-20[FUN-20]). To keep the controller working, the catalog role's policy on `appstore.plugin_definitions` was widened to `deleted IS NULL`, so anyone who knows `organization/plugin@version` can read an unpublished manifest. In the other direction, the catalog role sees only `visibility = 'public'` listings, so a RESTRICTED plugin cannot be installed on any shoot at all, even by an organization on its allow-list: the controller cannot fetch it, and the console, which browses the same anonymous catalog, cannot even offer it. FUN-20 already names the second problem: the definition fetch "cannot go to `catalog.v1`, because the controller must resolve definitions for restricted listings too."
+
+Both are one problem. This FUN gives shoot workloads an identity the control plane can verify, so that the endpoints they call can be authenticated and scoped to the cluster's organization, and it gives the console's install-time reads the same tenanted surface, so that a restricted plugin becomes installable end to end. It describes the general mechanism first and the plugin-controller as its first consumer. It adds a third token type to the two of link:/funs/fun-17[FUN-17], supersedes the "public endpoint" paragraph of link:/funs/fun-19[FUN-19], and settles the "fourth surface" that link:/funs/fun-20[FUN-20] left open.
+
+== The credential: the shoot's own ServiceAccount tokens
+
+Every Kubernetes API server is an OIDC issuer for its own ServiceAccounts. It holds a signing key and an issuer string; every ServiceAccount token it mints is a JWT with `iss` set to that string and `sub` set to `system:serviceaccount:<namespace>:<name>`. Since bound tokens became the default, a pod receives its token through a projected volume that names an `audience` and an `expirationSeconds`. Kubelet requests the token from the API server, writes it to the pod's filesystem, and requests a fresh one once about 80% of the lifetime has passed. The token is bound to the pod: deleting the pod or the ServiceAccount invalidates it before it expires. Nobody distributes a secret by hand, and the only copy at rest is the file on the pod's filesystem while the pod runs.
+
+Two ways exist to verify such a token from outside the pod. Anyone with access to the API server can post a `TokenReview` naming the token and the audience they expect, and receive back whether it authenticated and as which user. Or a verifier can fetch the API server's OpenID discovery document and JSON Web Key Set and check the signature itself, which is how AWS IRSA and Azure Workload Identity consume Kubernetes ServiceAccount tokens.
+
+Gardener runs a shoot's API server in the seed, so the tenant cannot set its flags, but the issuer settings are exposed under `spec.kubernetes.kubeAPIServer.serviceAccountConfig`: `issuer`, `acceptedIssuers` for migrations, and `maxTokenExpiration`. The default issuer is the shoot's external API server URL. Gardener also offers a *managed issuer*: a shoot annotated `authentication.gardener.cloud/issuer=managed` gets an issuer served by gardener-discovery-server on the garden, whose discovery documents are public, with the URL published in `shoot.status.advertisedAddresses` under `service-account-issuer`. The annotation cannot be removed once set, and the discovery server has to be deployed by the Gardener operator.
+
+The identity this FUN federates is therefore `system:serviceaccount:fundament-system:<workload>` on a specific shoot, proven by a token the shoot itself minted and rotates.
+
+=== Why not Gardener's WorkloadIdentity
+
+Gardener has a resource called `WorkloadIdentity` (`security.gardener.cloud`) and it is tempting to reach for it. It is not the same thing. A `WorkloadIdentity` is a garden-cluster resource referenced through a `CredentialsBinding` in the slot that used to hold a cloud-provider `Secret`. The garden API server mints its JWTs, gardenlet requests them, and the provider extensions in the seed present them to AWS, Azure or GCP so that Gardener can create infrastructure without a stored client secret. In that flow Gardener is the issuer and the cloud provider is the relying party; the "workload" is Gardener's own control plane acting for the shoot. Nothing inside a shoot can request one, nothing projects one into a shoot pod, and its subject identifies the `WorkloadIdentity` object, not a cluster. cluster-worker already uses one, as the local provider's infrastructure credential, which is its intended use.
+
+== The exchange
+
+A shoot workload turns its ServiceAccount token into a fundament credential at authn-api:
+
+----
+TokenService/ExchangeWorkloadToken(cluster_id)
+Authorization: Bearer <projected ServiceAccount token>
+----
+
+The `cluster_id` is the fundament cluster UUID the workload already knows: cluster-worker stamps it as `FUNDAMENT_CLUSTER_ID` on every plugin-controller Deployment it renders. authn-api is already the relying party for an external issuer: it verifies Dex ID tokens and turns them into UserTokens, and it turns API keys into short-lived UserTokens through `ExchangeToken` (link:/funs/fun-9[FUN-9]). A shoot's API server is one more issuer, and authn-api is where foreign identities become fundament tokens. The exchange runs these checks in order:
+
+. The request is well formed before anything remote happens: the bearer is a JWT, its `aud` claim contains `fundament-authn-api`, and its `exp` lies no further ahead than the configured projected-token lifetime plus clock skew. A UserToken, PluginToken or WorkloadToken in the header fails here, so no fundament token can mint another one through this path.
+. The cluster named by `cluster_id` exists in `tenant.clusters` and is not deleted. This is the source of the organization; the shoot's own claim about its organization is never trusted.
+. The token verifies against *that* cluster's API server with the expected audience. A token from cluster X presented as cluster Y is verified by Y and fails by construction, so the request cannot be replayed across clusters and no issuer bookkeeping is needed. The verifier is described in <<The verifier>>.
+. The verified subject is on the allow-list for a known workload. For the plugin-controller that is `system:serviceaccount:fundament-system:plugin-controller`.
+. The verifier's organization id equals the database row's. The verifier must return one: in real mode it is the shoot's `fundament.io/organization-id` label, read from the Shoot object the verifier resolved anyway; the sandbox and mock verifiers return the seeded organization. A missing or mismatching organization fails the exchange and is logged as an inconsistency.
+
+Every failure before signing is the same `unauthenticated` to the caller, with the specific reason in the log, so an unknown cluster id, a bad token and a foreign subject are indistinguishable from outside (link:/funs/fun-12[FUN-12]). authn-api then signs a WorkloadToken.
+
+=== Token age and replay
+
+The projected token is a bearer token: whoever holds it can exchange it until it expires, from anywhere, and a `TokenReview` does not see where the request came from. The design bounds that rather than eliminating it.
+
+What the shoot checks on every review: the signature, `exp` and `nbf`, the audience, and that the pod and ServiceAccount the token is bound to still exist, so a token outlives neither. What authn-api adds: the pre-check on `exp` above, and a log line per exchange carrying the cluster, organization, workload, outcome and the token's credential id (`authentication.kubernetes.io/credential-id` in the review's user extras; present from Kubernetes 1.30, logged as absent on older shoots) so an audit can tie WorkloadTokens back to the projected token that produced them.
+
+Nothing makes the exchange single-use, and kubelet's rotation does not invalidate the previous token. A captured projected token can therefore be exchanged repeatedly for its whole remaining lifetime, and each exchange yields a WorkloadToken. To keep the total from outliving the credential that was stolen, the WorkloadToken's `exp` is capped at the presented ServiceAccount token's `exp`: the replay window is exactly the projected token's remaining lifetime, at most `expirationSeconds`, and what it buys is access the legitimate holder had anyway, for the same cluster. Tokens only ever travel in `Authorization` headers over TLS, so capture requires the pod's filesystem or a compromised endpoint, both covered in <<Threat model>>. Two hardenings remain available without changing the design: shorten `expirationSeconds` towards the ten-minute minimum Kubernetes allows, and, once every exchange sees a fresh token, refuse a second exchange of the same credential id. Both are deferred; the same reasoning FUN-17 applies to the PluginToken applies here.
+
+== The WorkloadToken
+
+The WorkloadToken is the third JWT type alongside the UserToken and PluginToken of link:/funs/fun-17[FUN-17]. authn-api mints two audiences today: `fundament-user` for the UserToken, whether it came from a Dex login or from an API-key exchange, and `fundament-plugin` for the PluginToken. DCIM tokens come from a different issuer, `dcim-authn-api`, and are told apart by issuer rather than audience. The name follows the same rule as the other two, which name the kind of principal: a user, a user acting through a plugin, and now a workload. `fundament-workload` was preferred over `fundament-cluster`, which would suggest the cluster itself is the principal when it is only where the workload runs, and over `fundament-cluster-workload`, which says the same thing at twice the length. The WorkloadToken is signed with the same HS256 secret and distinguished the same way, by audience:
+
+[cols="1,3"]
+|===
+|Claim |Value
+
+|`iss`
+|`fundament-authn-api`
+
+|`aud`
+|`fundament-workload`
+
+|`sub`
+|The cluster UUID (`tenant.clusters.id`)
+
+|`organization_id`
+|The owning organization, from the database
+
+|`workload`
+|The workload name the subject was allow-listed under, e.g. `plugin-controller`
+
+|`iat`, `jti`
+|Issue time and a unique id, as every fundament token carries; `jti` is what a future single-use rule would key on
+
+|`exp`
+|15 minutes after issue, or the presented ServiceAccount token's `exp` if that is sooner. The workload re-exchanges rather than refreshes.
+|===
+
+It represents *a workload on one cluster*. It carries no user, no scope and no permissions; what a WorkloadToken may do is decided by the surface that accepts it, against the cluster's organization and the `workload` claim. It is parsed only by a dedicated `ParseWorkloadToken` in `common/auth`, following `ParsePluginToken`. It must never pass through the shared `Validator`, whose `UserID()` would read the cluster UUID as a user. That rule is enforced by the audiences, not by convention: on master every validator for the `fundament-authn-api` issuer is constructed with an audience, and the three audience-less validators (dcim-api, dcim-authn-api, marketplace-admin-api) pin the `dcim-authn-api` issuer, which rejects a WorkloadToken on issuer alone.
+
+Services that accept it: the installer surface of <<The first consumer: plugin-controller>>, and any future surface built for shoot workloads. Services that reject it, by audience: authn-api's own endpoints, organization-api, dcim-api, kube-api-proxy, plugin-proxy, `registry.v1`, `admin.v1` and `catalog.v1`. One validator predates the audience rule: the plugin SDK's runtime validator (`plugin-sdk/pluginruntime/auth`) checks the HMAC signature only, so a WorkloadToken presented to a plugin would parse there with an empty user. Nothing in the platform wires that validator today; pinning it to `fundament-plugin` is tracked separately and is not part of this change. The walls of FUN-17 extend to three types: a WorkloadToken cannot mint a PluginToken or a UserToken, and neither of those can be exchanged for a WorkloadToken.
+
+== The verifier
+
+authn-api verifies shoot tokens through a `ShootTokenVerifier` interface: given a cluster id, a token and the expected audience, return the authenticated subject and the cluster's organization id, or an error. Whatever the implementation, a verdict counts as authenticated only when all of the following hold: the review reports `authenticated: true`; `fundament-authn-api` appears in the review's `audiences`; the `username` equals the allow-listed subject exactly; and the call returned at all, since an error or a timeout is a denial, never a retry into acceptance. Two implementations are worth building; one of them now.
+
+=== TokenReview, now
+
+The verifier posts an `authenticationv1.TokenReview` carrying the token and the audience to the cluster's API server, through the shoot access fundament already holds: the shared `common/gardener` client resolves the shoot by its `fundament.io/cluster-id` label and mints a short-lived admin kubeconfig through the `adminkubeconfig` subresource, cached and refreshed per cluster. kube-api-proxy and plugin-proxy use the same package; kube-api-proxy already posts `SubjectAccessReview` and `TokenRequest` to shoots this way. The Shoot object resolved on the way carries the organization label the exchange cross-checks. This needs no Gardener feature beyond what is in use, no DNS to a discovery host, and works identically against local Gardener and against the k3d plugin sandbox. Each call carries a short timeout, and a cluster whose reviews keep failing is skipped for a cooling period so a dead shoot cannot pin authn-api's request handlers.
+
+Its cost is that authn-api now holds cluster-admin on every shoot, next to the JWT secret. The chart already renders the Gardener kubeconfig mount and `GARDENER_KUBECONFIG` env for authn-api whenever cluster-worker has one, so this is a matter of reading what is mounted. kube-api-proxy and plugin-proxy already hold the same kubeconfigs and are internet-facing, so this adds a holder rather than a new class of exposure, but it is a widening; see <<Threat model>>. A `TokenReview` needs only `create` on `tokenreviews`, so a narrower credential per shoot is possible later without changing the design.
+
+=== The managed issuer, the end state
+
+With the managed issuer, the verifier needs no cluster credential at all. Every shoot is annotated `authentication.gardener.cloud/issuer=managed` at creation, cluster-worker records the issuer URL from `shoot.status.advertisedAddresses[name=service-account-issuer]` when the shoot becomes ready, and authn-api verifies tokens offline against the JWKS served by gardener-discovery-server, exactly as it verifies Dex ID tokens today. The token's `iss` must equal the issuer recorded for the requested `cluster_id`, which replaces the by-construction binding of the TokenReview path with an explicit mapping, and the organization comes from the same `tenant.clusters` row that holds the issuer.
+
+The prerequisites are what defer it: the discovery server must be deployed on the garden (the upstream operator example enables it; whether the PoC garden does is unverified), the annotation is irreversible once set, the management cluster needs DNS to the discovery host, which is a known fragility in the local setup, and `tenant.clusters` gains an issuer column, authored in `db/fundament.dbm` like every schema change. None of this changes the exchange, the token or the consumers, which is why the verifier is an interface. It should be built when a second real environment exists or when holding shoot admin kubeconfigs in authn-api stops being acceptable.
+
+== The first consumer: plugin-controller
+
+The plugin-controller Deployment that cluster-worker renders onto shoots, and the chart's Deployment of the same controller, gain a projected token and one environment variable. The YAML shows only the additions; `FUNDAMENT_CLUSTER_ID` and the other existing variables stay as they are.
+
+[source,yaml]
+----
+volumes:
+  - name: fundament-token
+    projected:
+      sources:
+        - serviceAccountToken:
+            audience: fundament-authn-api
+            expirationSeconds: 3600
+            path: token
+env:
+  - name: FUNDAMENT_AUTHN_API_URL
+    value: https://authn.<external domain>
+----
+
+mounted at `/var/run/secrets/fundament/token`. The default token stays mounted because controller-runtime needs it. The audience keeps the two tokens disjoint: the controller's kube token fails the audience check at exchange, and the projected token is useless against the kube API. The lifetime is 3600 and must not be 3607: Gardener enables the API server's `extendTokenExpiration` by default, and that flag turns a request for exactly 3607 seconds, the value the ServiceAccount admission plugin uses for the default token, into a token valid for a year. The exchange's `exp` pre-check assumes the configured lifetime.
+
+The controller reads the file on every exchange (kubelet rotates it in place), calls `ExchangeWorkloadToken`, caches the WorkloadToken and exchanges again once 80% of its lifetime has passed. An exchange failure surfaces through the existing definition-fetch error path, a requeue; definitions already verified against their pinned hash stay in the controller's cache, so an unreachable control plane does not disturb running installations.
+
+=== The installer surface
+
+With a WorkloadToken the definition fetch can be tenanted, and FUN-20's fourth surface has a name: `install.v1.InstallService`, the reads an *installer* needs, evaluated as the installing organization. It carries five RPCs with the same requests and responses as their `catalog.v1` namesakes: `ListPlugins`, `GetPlugin`, `ListPluginVersions`, `GetPluginDefinition` and `ListPublishers`. The last returns the owner of every listing `ListPlugins` returns, drafts and RESTRICTED listings included, because installs are addressed by organization name. It is served from the marketplace-catalog-api binary on its own path, behind its own auth interceptor and its own CORS configuration (credentialed, with `Authorization` and `Fun-Organization` allowed, as the registry's is; the catalog's stays anonymous and narrow), from its own database role `fun_marketplace_install_api` with its own pool, using the organization-session pattern of the registry (link:/funs/fun-20[FUN-20], "Organization scoping fails closed"). It is a fourth surface in FUN-20's sense, an audience with its own credential, without being a fourth deployable.
+
+Two credentials are accepted, and the interceptor decides the organization from the credential alone:
+
+* A WorkloadToken. The `workload` claim must be `plugin-controller`; the organization is the token's `organization_id`; a `Fun-Organization` header on such a request is rejected. This is the controller fetching a definition.
+* A UserToken with a `Fun-Organization` header, the header checked against the token's membership list exactly as organization-api and the registry do. This is the console browsing what the organization may install. The console's two catalog-backed pages, the plugin list with its install flow and the plugin detail page, move their `ListPlugins`, `GetPlugin`, `ListPluginVersions` and `ListPublishers` calls from the anonymous catalog client to this surface in this change, so that a restricted plugin an organization is allow-listed for appears where a user installs plugins. The storefront (marketplace-frontend) keeps using the anonymous catalog; the deprecated `organization-api` PluginService reads FUN-20 lists are unaffected and retire on FUN-20's own schedule.
+
+Visibility and lifecycle are both enforced in the role's row-level policies, which is safe here because the role only reads: the objection FUN-20 records against lifecycle predicates in policies, that a `FOR ALL` policy with `deleted IS NULL` makes soft delete impossible, does not arise for `FOR SELECT`. The two policies, written out:
+
+----
+CREATE POLICY plugins_select_install ON appstore.plugins
+  FOR SELECT TO fun_marketplace_install_api
+  USING (
+    appstore.plugins.deleted IS NULL
+    AND (
+      appstore.plugins.visibility = 'public'
+      OR appstore.plugins.organization_id = authn.current_organization_id()
+      OR EXISTS (
+        SELECT 1 FROM appstore.plugin_allowed_organizations
+        WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id
+          AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()
+      )
+    )
+  );
+
+CREATE POLICY plugin_definitions_select_install ON appstore.plugin_definitions
+  FOR SELECT TO fun_marketplace_install_api
+  USING (
+    appstore.plugin_definitions.deleted IS NULL
+    AND EXISTS (
+      SELECT 1 FROM appstore.plugins
+      WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id
+        AND appstore.plugins.deleted IS NULL
+        AND (
+          appstore.plugin_definitions.published IS NOT NULL
+          OR appstore.plugins.organization_id = authn.current_organization_id()
+        )
+    )
+  );
+----
+
+The definitions policy reaches up to plugins and plugins reach nothing, the one direction FUN-20 allows, so the two cannot recurse. `appstore.plugin_allowed_organizations` has no `deleted` column by design: it is a pure association replaced wholesale by `registry.v1` `UpdatePlugin` from its `allowed_organization_ids` field, which is where a developer sets it when making a listing RESTRICTED. The allow-list exists on master today; nothing reads it on the install path yet, because the catalog role sees public listings only, and organization-api's role already carries the same predicate. The installer role is its first reader on this path.
+
+The lifecycle rule says an organization can install its own unpublished versions on its own clusters, which is the sideload and development loop, while a foreign unpublished version is `NOT_FOUND`, as is anything else the caller may not see (link:/funs/fun-12[FUN-12]). FUN-20 warned that the fetch "must not gain a status gate — hiding an approved definition from the controller breaks reconciliation." The rule honours that: the console only offers published versions, and the policy always serves those. One consequence follows for later work. Should a flow ever clear `published` on a live version, every installation pinned to it would stop reconciling after its controller's next restart. Such a flow must keep serving already-pinned hashes, or accept that outcome explicitly.
+
+Once the controller and the console use `install.v1`, `catalog.v1/GetPluginDefinition` returns to storefront semantics, published and public only, or is removed, and the catalog role's definition policy returns to `published IS NOT NULL`. The anonymous draft path closes.
+
+== Threat model
+
+*A compromised plugin-controller, or a tenant with cluster-admin on their own shoot.* Either can read the projected token and exchange it. What they gain is a WorkloadToken for that cluster, and with it read access to the definitions their organization may install, which is the set the console already shows them. They cannot obtain a token for another cluster: verification is per cluster and the organization comes from the database.
+
+*Abuse of the exchange.* The exchange is reachable without a fundament credential, because its caller has none yet, and under the TokenReview verifier authn-api cannot check a signature itself. So a caller who knows a cluster id, which is not a secret, and sends any well-formed JWT makes authn-api resolve the shoot and post a review to a tenant's API server. This is a denial-of-service and amplification vector: against authn-api, whose handlers wait on remote calls, and against shoot API servers, which receive traffic they did not ask for. What this FUN does about it: the local pre-checks in <<The exchange>> reject anything that is not shaped like a projected token before any remote call; every review carries its own short timeout, independent of the caller's deadline, and a per-cluster circuit breaker that only the cluster's own answers move; and every failure is one generic error, so the response body is not an oracle for cluster existence. Response time still is: an unknown id is refused after the database lookup, a known one only after the review, and making the two equally slow would mean either a review for every guessed id or an artificial delay. Cluster ids are not secret, so this is accepted. What it defers, to be revisited when fundament has more than one real environment: rate limiting per source and per cluster at the ingress or in authn-api, and serving the exchange on an internal endpoint that is not internet-reachable at all, the way cloud providers expose their token services on private addresses. The second needs a network path from shoot networks to the management cluster that bypasses the public ingress; on the local setup that is the relay container, on a metal-stack landscape it is a partition-level route, and neither exists as a designed thing yet.
+
+*A compromised authn-api.* It already holds the JWT secret, so it could forge any token type today; that is FUN-17's known risk, closed only by the asymmetric-signing follow-up FUN-17 names. With the TokenReview verifier it additionally holds admin kubeconfigs for every shoot. The kubeconfigs are short-lived and minted on demand, and two other internet-facing services hold the same, but this is the concrete widening the managed-issuer verifier removes.
+
+*Replay and confusion.* A WorkloadToken presented to any other surface fails on audience. A ServiceAccount token presented anywhere but the exchange is just a kube token for a different audience. The projected token cannot be used against the kube API, and the kube token cannot be exchanged. Tokens travel only in `Authorization` headers over TLS.
+
+*A shoot that lies about its organization.* Cannot: `tenant.clusters` is authoritative and the shoot label is a cross-check that fails closed.
+
+*A pod or node filesystem read.* The projected token is a file on the pod's filesystem. Anyone who can read it, a container escape or a node compromise, holds the credential for its remaining lifetime; see <<Token age and replay>> for the bound.
+
+== Lifecycle
+
+* The projected token rotates on the kubelet's schedule; the WorkloadToken is re-exchanged at 80% of its lifetime. Both happen without operator action.
+* Deleting the controller's ServiceAccount, or the pod, invalidates the projected token immediately. cluster-worker re-creates both on the next reconcile, which is the intended heal path, not a revocation mechanism.
+* Deleting a cluster in fundament soft-deletes its row, and the exchange refuses the cluster from that moment, before the shoot is gone. A WorkloadToken already issued stays valid until its `exp`, at most 15 minutes.
+* Rotating `JWT_SECRET` invalidates every WorkloadToken along with every other token, as today. Controllers recover on their next exchange.
+* Sub-TTL revocation of one cluster's tokens is not provided; the 15-minute window bounds it, and a deny-list keyed on cluster id could be added at the accepting surface if ever needed.
+
+== Local development and testing
+
+Everything that works locally today keeps working, which takes three things.
+
+*The verifier follows the mode.* In real mode (`just dev -p local-gardener`, the PoC) authn-api reads the Gardener kubeconfig the chart already mounts and posts a `TokenReview` to the shoot. Without one, it uses the sandbox kubeconfig, the same `sandboxKubeconfigSecret` that points kube-api-proxy and plugin-proxy at k3d-fundament-plugin. The sandbox verifier accepts only the seeded cluster id, so a request naming any other cluster fails the way it would in real mode, and it returns the seeded organization. With neither, every exchange is denied: plugin-controller runs only on shoots and in the sandbox, never in the management cluster, so there is nothing else to verify against. A fixed-token mock verifier serves unit tests and the cucumber suite in CI, where no controller runs.
+
+*The sandbox controller gets a real cluster id.* The chart's plugin-controller Deployment, which the sandbox installs, has `FUNDAMENT_CLUSTER_ID` set to the Helm release name today, which no `tenant.clusters` row matches. The chart gains a `pluginController.clusterId` value, and `plugins/sandbox/values.yaml` sets it to the seeded acme-corp cluster, the row plugin-proxy's mock already uses. Its projected token is signed by k3d-fundament-plugin and verified by the sandbox verifier; it needs no mock.
+
+*The sandbox controller needs a second way out.* It reaches the catalog through a NodePort and a relay container (`just plugins sandbox-catalog`); authn-api gets the same bridge.
+
+Coverage is Go interface tests that run on every push: the token parser, the exchange handler with a fake verifier, the verifier implementations with a fake clientset including the negative cases (wrong audience, wrong subject, review error, wrong cluster id in sandbox mode), the installer policies branch by branch under both credentials, the controller's token source against a test server, and the rendered Deployment. Real-shoot verification is an on-demand walk-through, never a CI suite.
+
+== Rollout
+
+Everything up to the controller change is additive: the token type, the exchange, the installer surface, the console's move to it and the new Deployment can all ship while the anonymous catalog RPC keeps serving. Tightening the catalog is the one breaking step, and it ships in the same release as the new Deployment, as the last commit of the stack. A shoot whose controller cluster-worker has not yet re-rendered fails its definition fetches with requeues until the next reconcile tick, then recovers unaided. While the PoC is the only real environment, that window is accepted; an evidence gate on anonymous unpublished reads, or a temporary flag on the catalog, was considered and is not needed at this scale. During the window the operator watches two lines: cluster-worker's `provisioned plugin machinery` per cluster, and the controller's first successful exchange in its log.
+
+== Amendments to earlier FUNs
+
+* link:/funs/fun-17[FUN-17], "Two token types", gains a third type: the WorkloadToken, `aud=fundament-workload`, representing a workload on one cluster, accepted by the installer surface and by future shoot-workload surfaces, rejected by everything else. Its "JWT-secret compromise" paragraph applies unchanged.
+* link:/funs/fun-19[FUN-19], "The definition fetch is a cross-cluster call", first bullet: "`GetPluginDefinition` is a *public* endpoint. The controller fetching a definition has no user session to present" is superseded. The controller has a cluster identity to present, and the fetch is authenticated and tenanted. The second bullet, reachability from the plugin cluster, stands and now also covers authn-api's external URL.
+* link:/funs/fun-20[FUN-20], "Superseding organization-api's PluginService": the table row that moves `GetPluginDefinition` to `registry.v1` "as an unauthenticated procedure" is replaced by `install.v1`, authenticated with a WorkloadToken. The "fourth surface" for the console's install-time reads is the same surface, and the console adopts it in this change.
+
+== Alternatives considered
+
+*A static credential injected by cluster-worker.* cluster-worker writes to every shoot with admin credentials, so it could drop a per-cluster API key or client certificate into `fundament-system` when it provisions the controller. Rejected: it is a long-lived secret at rest on a tenant's cluster, it needs its own rotation machinery, and API keys are user-bound (link:/funs/fun-9[FUN-9]) with no service-identity concept. The projected token is rotated by kubelet, bound to a pod, and revocable by deleting a ServiceAccount, for free.
+
+*Gardener `WorkloadIdentity`.* See <<Why not Gardener's WorkloadIdentity>>.
+
+*Verification inside plugin-proxy or kube-api-proxy.* Both already hold cluster access in real, sandbox and mock modes, and authn-api already asks plugin-proxy an installation question before minting a PluginToken, so an internal "review this token" RPC there is the smallest diff. Rejected: FUN-17 scopes plugin-proxy to the console-to-plugin data path plus an installation lookup, and kube-api-proxy to the Kubernetes data path; cluster identity is neither, and a second shoot workload would make either an odd owner. authn-api is already the place where external identities become fundament tokens.
+
+*A shared cluster-access service.* Gardener access lives in more places than one might expect: cluster-worker and organization-api each build their own client, kube-api-proxy and plugin-proxy share `common/gardener`, and authn-api joins them here, five holders of the garden kubeconfig. A single service in front of Gardener, offering token review, token requests and access reviews, would leave one holder. Not done now: the two proxies need raw shoot API access to proxy requests and cannot give up their credential, so the service would remove at most two holders while adding a deployable and a hop on every exchange. The shared library is the consolidation this FUN relies on; a gateway service stays an option if the number of holders keeps growing or if the managed issuer never lands.
+
+*Per-request verification at the resource server.* The installer surface could post a `TokenReview` for every request and skip the exchange. Rejected: every surface shoot workloads ever call would need shoot access, and the audience-per-token discipline of FUN-17 is exactly what lets a surface accept a WorkloadToken with nothing but the shared secret.
+
+*The managed issuer first.* The closer analogue of Azure Workload Identity and the eventual design, but it front-loads a garden component, an irreversible shoot annotation, a DNS dependency and an issuer column for a benefit, no shoot credential in authn-api, that the TokenReview path can add behind the same interface later.
+
+*Restricting the catalog now and living without drafts.* Tightening `catalog.v1` to published listings today would close the leak without any identity work, but it would also end the sideload loop and leave RESTRICTED plugins uninstallable. The leak and the gap have the same cause; fixing the cause fixes both.
+
+== Related
+
+* link:/funs/fun-9[FUN-9 API Keys], the existing credential-to-JWT exchange.
+* link:/funs/fun-11[FUN-11 Plugins and the Marketplace], the plugin-controller and PluginInstallation model.
+* link:/funs/fun-12[FUN-12 Unauthorized vs Not Found], the denial convention the installer surface follows.
+* link:/funs/fun-17[FUN-17 Plugin Authorization], the token discipline this FUN extends.
+* link:/funs/fun-19[FUN-19 Plugin Definition Storage], the fetch this FUN authenticates.
+* link:/funs/fun-20[FUN-20 Marketplace APIs], the three surfaces this FUN adds a fourth to.
