@@ -204,11 +204,7 @@ func (p *EnvoyGatewayPlugin) isControllerHealthy(ctx context.Context) bool {
 	if err := p.k8sClient.Get(ctx, types.NamespacedName{Name: "envoy-gateway", Namespace: p.cfg.GatewayNamespace}, deploy); err != nil {
 		return false
 	}
-	status, ok := deploy.Object["status"].(map[string]any)
-	if !ok {
-		return false
-	}
-	available, _ := status["availableReplicas"].(float64)
+	available, _, _ := unstructured.NestedInt64(deploy.Object, "status", "availableReplicas")
 	return available > 0
 }
 

@@ -220,12 +220,7 @@ func (p *GatewayAPIPlugin) isIstiodHealthy(ctx context.Context) bool {
 		return false
 	}
 
-	status, ok := deploy.Object["status"].(map[string]any)
-	if !ok {
-		return false
-	}
-	// Unstructured JSON decodes numbers as float64.
-	available, _ := status["availableReplicas"].(float64)
+	available, _, _ := unstructured.NestedInt64(deploy.Object, "status", "availableReplicas")
 	return available > 0
 }
 
