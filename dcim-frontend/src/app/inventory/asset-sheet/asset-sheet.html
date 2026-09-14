@@ -1,0 +1,160 @@
+<nldd-sheet #assetSheet accessible-label="Asset details" placement="right">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="isEdit() ? 'Edit asset' : 'New asset'"
+      dismiss-text="Cancel"
+      (dismiss)="close()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (formErrorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="formErrorMessage()"></nldd-banner>
+      }
+      <!-- One field per row. Two columns saved height and cost every reader the
+           same question twice: which label belongs to which box. -->
+      <nldd-form>
+        <nldd-form-field label="Device">
+          <!-- Type to narrow a list of every product in the catalog. The device
+               is what the asset is, so it cannot change once the asset exists. -->
+
+          <nldd-combo-box
+            #deviceBox
+            [attr.value]="assetDeviceId()"
+            [attr.readonly]="form()?.id ? '' : null"
+            [attr.autofocus]="form()?.id ? null : ''"
+            [attr.invalid]="isFieldInvalid('device_catalog_id') ? '' : null"
+            unmet="error-device"
+            (change)="assetDeviceId.set($any($event).detail.value)"
+          >
+            <nldd-menu>
+              @for (entry of catalog(); track entry.id) {
+                <nldd-menu-item [attr.value]="entry.id" [attr.text]="entry.model"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+
+          <nldd-validation-list>
+            <nldd-validation-item id="error-device">
+              {{ fieldError('device_catalog_id') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Asset tag">
+          <nldd-text-field
+            #fAssetTag
+            [attr.autofocus]="form()?.id ? '' : null"
+            [attr.value]="form()?.assetTag ?? ''"
+            (keydown.enter)="save()"
+            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
+            unmet="error-asset-tag"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-asset-tag">
+              {{ fieldError('asset_tag') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <!-- Six states, all of them worth seeing: which one an asset is in is
+             the thing this form says, so it is not worth hiding behind a click. -->
+        <nldd-form-field label="Serial number">
+          <nldd-text-field
+            #fAssetSerial
+            [attr.value]="form()?.serialNumber ?? ''"
+            (keydown.enter)="save()"
+            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
+            unmet="error-asset-serial"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-asset-serial">
+              {{ fieldError('serial_number') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Warranty expiry">
+          <nldd-date-field
+            #fAssetWarranty
+            [attr.value]="form()?.warrantyExpiry ?? ''"
+          ></nldd-date-field>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <nldd-toggle-button-group type="radio" accessible-label="Status">
+            @for (s of statuses; track s.value) {
+              <nldd-toggle-button
+                [attr.value]="s.value"
+                [attr.text]="s.label"
+                [attr.selected]="assetStatus() === s.value ? '' : null"
+                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <!-- Where before which rack: every rack name in the company in one list
+             is a list nobody can read. Picking a place cuts it down to the racks
+             that stand there, and opens them. -->
+        <nldd-form-field label="Location">
+          @if (locations().length === 0) {
+            <nldd-form-field-help-text>
+              No racks available yet. Add a room, rack row, and rack to a data center first.
+            </nldd-form-field-help-text>
+          }
+          <nldd-toggle-button-group type="radio" accessible-label="Location">
+            @for (loc of locations(); track loc) {
+              <nldd-toggle-button
+                [attr.value]="loc"
+                [attr.text]="loc"
+                [attr.selected]="rackLocation() === loc ? '' : null"
+                (change)="onLocationToggle(loc, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <nldd-form-field label="Rack">
+          <nldd-combo-box
+            [attr.value]="assetRackId()"
+            (change)="assetRackId.set($any($event).detail.value)"
+          >
+            <nldd-menu>
+              @for (rack of racksAtLocation(); track rack.id) {
+                <nldd-menu-item [attr.value]="rack.id" [attr.text]="rack.name"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+        </nldd-form-field>
+        <nldd-form-field label="Rack unit">
+          <!-- A position in a rack, not a quantity you step: 1 to totalU, and
+               empty when the asset stands nowhere. A text field with the number
+               keyboard says that; a number field would open on 0. -->
+          <nldd-text-field
+            #fAssetRackUnit
+            keyboard="numeric"
+            [attr.value]="placement()?.unit ?? ''"
+            (keydown.enter)="save()"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Slot type">
+          <nldd-toggle-button-group type="radio" accessible-label="Slot type">
+            @for (st of slotTypes; track st.value) {
+              <nldd-toggle-button
+                [attr.value]="st.value"
+                [attr.text]="st.label"
+                [attr.selected]="assetSlotType() === st.value ? '' : null"
+                (change)="onSlotTypeToggle(st.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <nldd-form-field label="Notes">
+          <nldd-multi-line-text-field
+            #fAssetNotes
+            [attr.value]="form()?.notes ?? ''"
+          ></nldd-multi-line-text-field>
+        </nldd-form-field>
+        <!-- Under the form rather than docked at the bottom of the sheet: the
+             button belongs to the fields above it. -->
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

@@ -115,7 +115,10 @@
           >
         </div>
       </div>
-      <div class="px-4 pb-4" style="height: 200px">
+      <div
+        class="px-4 pb-4"
+        style="height: 200px"
+      >
         <canvas #volumeChart></canvas>
       </div>
     </div>
@@ -126,7 +129,10 @@
         <h2 class="font-semibold text-gray-900 dark:text-white">By severity</h2>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Log distribution</p>
       </div>
-      <div class="flex items-center justify-center px-4 pb-4" style="height: 240px">
+      <div
+        class="flex items-center justify-center px-4 pb-4"
+        style="height: 240px"
+      >
         <canvas #severityChart></canvas>
       </div>
     </div>
@@ -140,7 +146,10 @@
         <h2 class="font-semibold text-gray-900 dark:text-white">By namespace</h2>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Top 8 by log volume</p>
       </div>
-      <div class="px-4 pb-4" [style.height.px]="namespaceChartHeight()">
+      <div
+        class="px-4 pb-4"
+        [style.height.px]="namespaceChartHeight()"
+      >
         <canvas #namespaceChart></canvas>
       </div>
     </div>

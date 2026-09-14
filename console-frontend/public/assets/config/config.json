@@ -4,5 +4,6 @@
   "marketplaceApiUrl": "",
   "kubeApiProxyUrl": "",
   "pluginProxyUrl": "",
-  "consoleDemoUrl": ""
+  "consoleDemoUrl": "",
+  "marketplaceUrl": ""
 }

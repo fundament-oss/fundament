@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildTLSRouteBody } from './tlsroutes-form.ts';
 
-function renderForm(o: { name?: string; parent?: string; hostnames?: string; backend?: string; port?: string }): HTMLFormElement {
+function renderForm(o: {
+  name?: string;
+  parent?: string;
+  hostnames?: string;
+  backend?: string;
+  port?: string;
+}): HTMLFormElement {
   document.body.innerHTML = `
     <form id="form">
       <input id="name" value="${o.name ?? 'tls'}" />
@@ -16,13 +22,23 @@ function renderForm(o: { name?: string; parent?: string; hostnames?: string; bac
 
 describe('buildTLSRouteBody', () => {
   it('builds a v1alpha2 TLSRoute with SNI hostnames and one backend', () => {
-    const body = buildTLSRouteBody(renderForm({ name: 'tls', hostnames: 'secure.example.com', backend: 'secure', port: '8443' }), 'team-a');
+    const body = buildTLSRouteBody(
+      renderForm({
+        name: 'tls',
+        hostnames: 'secure.example.com',
+        backend: 'secure',
+        port: '8443',
+      }),
+      'team-a',
+    );
 
     expect(body.apiVersion).toBe('gateway.networking.k8s.io/v1alpha2');
     expect(body.kind).toBe('TLSRoute');
     expect(body.spec.parentRefs).toEqual([{ name: 'demo' }]);
     expect(body.spec.hostnames).toEqual(['secure.example.com']);
-    expect(body.spec.rules).toEqual([{ backendRefs: [{ name: 'secure', port: 8443 }] }]);
+    expect(body.spec.rules).toEqual([
+      { backendRefs: [{ name: 'secure', port: 8443 }] },
+    ]);
   });
 
   it('omits hostnames when none given', () => {

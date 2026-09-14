@@ -8,7 +8,6 @@ import { AssetService } from '../generated/v1/asset_pb';
 import { CatalogService } from '../generated/v1/catalog_pb';
 import { PhysicalConnectionService } from '../generated/v1/connection_pb';
 import {
-  LogicalDesignService,
   LogicalDeviceService,
   LogicalConnectionService,
   LogicalDeviceLayoutService,
@@ -42,7 +41,6 @@ function createClientToken<T extends DescService>(service: T) {
 
 export const ASSET_CLIENT = createClientToken(AssetService);
 export const CATALOG_CLIENT = createClientToken(CatalogService);
-export const DESIGN_CLIENT = createClientToken(LogicalDesignService);
 export const DEVICE_CLIENT = createClientToken(LogicalDeviceService);
 export const CONNECTION_CLIENT = createClientToken(LogicalConnectionService);
 export const LAYOUT_CLIENT = createClientToken(LogicalDeviceLayoutService);

@@ -3,7 +3,12 @@
 // validate → build → k8s.create → navigate flow. Each view supplies only its
 // resource ref, body builder, validation, and (optionally) extra field wiring.
 
-import { loadSdk, loadNlddDesignSystem, navigateToDetail, navigateBack } from './shared.ts';
+import {
+  loadSdk,
+  loadNlddDesignSystem,
+  navigateToDetail,
+  navigateBack,
+} from './shared.ts';
 import { namespaceFieldHtml, trimmedValue } from './form-helpers.ts';
 import type { NlddButton } from './nldd-design-system.ts';
 import type { InitContext, K8sRef } from './sdk.ts';
@@ -14,7 +19,10 @@ export interface CreateFormOptions {
   // The resource to create (group/version/resource); namespace is added per submit.
   resource: Omit<K8sRef, 'namespace'>;
   // Builds the CR body from the form and namespace; must include metadata.name.
-  buildBody: (form: ParentNode, namespace: string) => { metadata: { name: string } };
+  buildBody: (
+    form: ParentNode,
+    namespace: string,
+  ) => { metadata: { name: string } };
   // Returns false to block submit (missing/invalid required fields).
   validate: (form: ParentNode) => boolean;
   // Optional: wire extra toggles / dynamic UI after init (e.g. an HTTPS toggle).
@@ -25,8 +33,12 @@ export interface CreateFormOptions {
 // programmatically-inserted <option>s exist. Re-dispatch it once rendered.
 export function resyncDropdown(dropdown: HTMLElement | null): void {
   const apply = () =>
-    dropdown?.shadowRoot?.querySelector('slot')?.dispatchEvent(new Event('slotchange'));
-  (dropdown as (HTMLElement & { updateComplete?: Promise<unknown> }) | null)?.updateComplete?.then?.(apply);
+    dropdown?.shadowRoot
+      ?.querySelector('slot')
+      ?.dispatchEvent(new Event('slotchange'));
+  (
+    dropdown as (HTMLElement & { updateComplete?: Promise<unknown> }) | null
+  )?.updateComplete?.then?.(apply);
   requestAnimationFrame(apply);
 }
 
@@ -42,7 +54,9 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
   const errorBox = document.getElementById('error') as HTMLElement;
   const submitButton = document.getElementById('submit') as NlddButton;
 
-  document.getElementById('back')!.addEventListener('click', () => navigateBack());
+  document
+    .getElementById('back')!
+    .addEventListener('click', () => navigateBack());
 
   let ctx: InitContext;
   try {
@@ -85,11 +99,13 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
     submitButton.disabled = true;
     try {
       const body = opts.buildBody(form, namespace);
-      const created = await window.fundament.k8s.create<{ metadata?: { name?: string } }>(
-        { ...opts.resource, namespace },
-        body,
+      const created = await window.fundament.k8s.create<{
+        metadata?: { name?: string };
+      }>({ ...opts.resource, namespace }, body);
+      navigateToDetail(
+        created?.metadata?.name ?? body.metadata.name,
+        namespace,
       );
-      navigateToDetail(created?.metadata?.name ?? body.metadata.name, namespace);
     } catch (err) {
       errorBox.textContent = `Failed to create: ${err instanceof Error ? err.message : err}`;
       errorBox.hidden = false;

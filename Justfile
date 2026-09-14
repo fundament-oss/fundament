@@ -66,7 +66,7 @@ setup-certs:
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
     echo "Waiting for cert-manager webhook to be ready..."
-    # On Windows the path mkcert returns is mangled and the file cannot be opened. 
+    # On Windows the path mkcert returns is mangled and the file cannot be opened.
     # Normalise to forward slashes for Windows; a no-op on Linux and macOS.
     CAROOT="$(mkcert -CAROOT | tr '\\' '/')"
     for i in $(seq 1 12); do
@@ -80,12 +80,6 @@ setup-certs:
     done
 
 # --- Deployment commands ---
-
-# Update helm dependencies
-helm-deps:
-    helm dependency update deploy/charts/ingress-nginx
-    helm dependency update deploy/charts/db
-    helm dependency update deploy/charts/fundament
 
 # Deploy to local k3d cluster (development mode, keeps resources on exit)
 dev *flags:
@@ -232,8 +226,8 @@ logs:
 db-shell:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD=$(kubectl get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
-    kubectl exec -it -n fundament fundament-db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
+    PASSWORD=$(kubectl get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' |  {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    kubectl exec -it -n fundament db-1 -- env PGPASSWORD="$PASSWORD" psql -h localhost -U fun_operator -d fundament
 
 generate:
     cd db && trek generate --stdout
@@ -242,6 +236,7 @@ generate:
     cd console-frontend && bunx openapi-ts
     cd e2e && buf generate
     cd dcim-frontend && buf generate
+    cd marketplace-frontend && buf generate
     just fmt
 
 # Lint all Go code

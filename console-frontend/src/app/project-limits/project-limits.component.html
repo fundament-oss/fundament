@@ -1,48 +1,162 @@
-<div class="space-y-6">
-  @if (initialLoading()) {
-    <div class="py-8 text-center">
-      <p class="text-gray-600 dark:text-gray-300">Loading limits…</p>
-    </div>
-  } @else {
-    <div class="card">
-      <div class="card-header">
-        <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Default resource requests and limits applied to containers in all namespaces of this
-          project via a <span class="font-mono text-xs">LimitRange</span>. These values are used
-          when a workload does not specify its own resource constraints.
-        </p>
-      </div>
-
-      <div class="card-body-lg">
-        <nldd-form (submit)="save($event)">
-          <app-namespace-resource-defaults
-            [defaults]="namespaceDefaults()"
-            [(memoryLimited)]="memoryLimited"
-            [(memoryRequestMi)]="defaultMemoryRequestMi"
-            [(memoryLimitMi)]="defaultMemoryLimitMi"
-            [(cpuLimited)]="cpuLimited"
-            [(cpuRequestM)]="defaultCpuRequestM"
-            [(cpuLimitM)]="defaultCpuLimitM"
-          ></app-namespace-resource-defaults>
-
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <nldd-button
-              type="submit"
-              [disabled]="saving()"
-              [text]="saving() ? 'Saving…' : 'Save namespace defaults'"
-              variant="primary"
-            ></nldd-button>
-            <nldd-button
-              type="button"
-              (click)="resetNamespaceLimits()"
-              [disabled]="saving()"
-              text="Reset to defaults"
-              variant="secondary"
-            ></nldd-button>
-          </div>
-        </nldd-form>
-      </div>
-    </div>
-  }
-</div>
+<!-- Same outer layout as the other project pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Limits"
+    [attr.back-text]="pageNav.backText()"
+    (back)="pageNav.goTo('/projects/' + projectId())"
+    collapse-anchor="project-limits-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="project-limits-title"
+      size="2"
+    >
+      <h1>Limits</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-rich-text spacing="flat">
+      <p>
+        Default resource requests and limits for containers in every namespace of this project,
+        applied through a LimitRange. They are used when a workload does not set its own.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="24"></nldd-spacer>
+    @if (initialLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading limits..."
+      ></nldd-activity-indicator>
+    } @else {
+      <!-- What is stored, not a form: you come here to look, and a page full of
+           controls invites changes nobody meant to make. -->
+      @for (summary of summaries(); track summary.copy.name) {
+        <nldd-title size="4">
+          <h2>{{ summary.copy.title }}</h2>
+        </nldd-title>
+        @if (summary.mode !== 'unlimited') {
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>{{ stateText(summary.mode) }}</p>
+          </nldd-rich-text>
+        }
+        <nldd-spacer size="12"></nldd-spacer>
+        <!-- The row opens the editor, and the icon says so. One sheet for both
+             sections: they are saved together anyway. -->
+        <nldd-list
+          variant="box-tinted"
+          [attr.accessible-label]="summary.copy.title"
+        >
+          <nldd-list-item
+            button
+            (click)="openEdit()"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="summary.copy.requestName"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="valueText(summary.request, summary.copy.unit)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell
+              icon="edit"
+              size="20"
+            ></nldd-icon-cell>
+          </nldd-list-item>
+          <nldd-list-item
+            button
+            (click)="openEdit()"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="summary.copy.limitName"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="valueText(summary.limit, summary.copy.unit)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell
+              icon="edit"
+              size="20"
+            ></nldd-icon-cell>
+          </nldd-list-item>
+        </nldd-list>
+        @if (!$last) {
+          <nldd-spacer size="24"></nldd-spacer>
+        }
+      }
+    }
+  </nldd-simple-section>
+</nldd-page>
+<!-- Edit Limits Sheet -->
+<nldd-sheet
+  #editSheet
+  appSheetSync
+  [show]="showEdit()"
+  accessible-label="Edit limits"
+  placement="right"
+  (close)="showEdit.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit limits"
+      collapse-anchor="edit-limits-title"
+      dismiss-text="Cancel"
+      (dismiss)="showEdit.set(false)"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title
+        id="edit-limits-title"
+        size="3"
+      >
+        <h1>Edit limits</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- Here, not on the page behind it: this is where the changes are, and
+           closing the sheet now would lose them. -->
+      @if (saveError(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your changes are not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-form (submit)="save($event)">
+        <app-resource-limit-section
+          [copy]="MEMORY_SECTION"
+          [seed]="memorySeed()"
+          [(mode)]="draftMemoryMode"
+          [(request)]="draftMemoryRequestMi"
+          [(limit)]="draftMemoryLimitMi"
+        ></app-resource-limit-section>
+        <app-resource-limit-section
+          [copy]="CPU_SECTION"
+          [seed]="cpuSeed()"
+          [(mode)]="draftCpuMode"
+          [(request)]="draftCpuRequestM"
+          [(limit)]="draftCpuLimitM"
+        ></app-resource-limit-section>
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="save()"
+            text="Save namespace defaults"
+            [attr.loading]="saving() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

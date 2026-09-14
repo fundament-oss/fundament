@@ -12,6 +12,7 @@ import (
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
@@ -105,6 +106,19 @@ func (c *Client) orgInterceptor() connect.UnaryInterceptorFunc {
 			return next(ctx, req)
 		}
 	}
+}
+
+// Publications returns the marketplace registry's publishing client
+// (registry.v1). The registry is its own deployable behind its own host
+// (FUN-20), so its URL is passed rather than derived from apiEndpoint. The
+// same API-key-exchanged JWT works there: the registry validates the console
+// UserToken this client mints via ExchangeToken.
+func (c *Client) Publications(registryURL string) registryv1connect.PublicationServiceClient {
+	return registryv1connect.NewPublicationServiceClient(
+		c.httpClient,
+		registryURL,
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
+	)
 }
 
 // Organizations returns the organization service client.

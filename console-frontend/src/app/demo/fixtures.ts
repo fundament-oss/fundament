@@ -50,7 +50,9 @@ export const demoUser = create(UserSchema, {
 
 export const organization = create(OrganizationSchema, {
   id: ORG_ID,
-  name: 'Gemeente Fundament',
+  // The name is the machine-readable one the address goes by; the alias is the
+  // label people read.
+  name: 'gemeente-fundament',
   alias: 'fundament',
   created: daysAgo(420),
 });
@@ -67,7 +69,7 @@ export const organizationLimits = create(OrganizationLimitsSchema, {
 
 // --- Clusters -------------------------------------------------------------
 
-// Mutable so the add-cluster wizard's createCluster can append a new one.
+// Mutable so the new-cluster form's createCluster can append a new one.
 export const clusterSummaries = [
   create(ListClustersResponse_ClusterSummarySchema, {
     id: 'cl-production',
@@ -153,11 +155,11 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
 
 // --- Region catalog -------------------------------------------------------
 
-// Backs ClusterService.ListRegions, which the add-cluster wizard loads before it
+// Backs ClusterService.ListRegions, which the new-cluster form loads before it
 // renders (it shows an error instead of the form when the call fails) and which the
 // node pool pages use to fill the machine type dropdown.
 //
-// `local` must stay first: the wizard defaults to the first region, and it is the
+// `local` must stay first: the form defaults to the first region, and it is the
 // region the cluster fixtures above already use. Every machineType referenced by
 // nodePoolsByCluster must appear here, otherwise the node pool forms offer a list
 // that cannot reproduce the pools shown next to them.
@@ -293,6 +295,50 @@ export const projectMembersByProject = new Map([
       }),
     ],
   ],
+  // The count on a project comes from its own memberCount, so a project with a
+  // count and no members shows "2 members" over an empty list.
+  [
+    'pr-belastingen',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-4',
+        projectId: 'pr-belastingen',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(140),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-5',
+        projectId: 'pr-belastingen',
+        userId: 'user-omar',
+        userName: 'Omar El Amrani',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(20),
+      }),
+    ],
+  ],
+  [
+    'pr-burgerzaken-staging',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-6',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(60),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-7',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-sanne',
+        userName: 'Sanne Bakker',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(45),
+      }),
+    ],
+  ],
 ]);
 
 export const projectLimits = create(ProjectLimitsSchema, {
@@ -301,6 +347,122 @@ export const projectLimits = create(ProjectLimitsSchema, {
   defaultCpuRequestM: 250,
   defaultCpuLimitM: 500,
 });
+
+// The platform's starting values, hardcoded in organization-api's
+// limit_defaults.go. Handing back the saved limits instead would make every
+// project look like it is still on the platform's numbers.
+export const platformProjectLimits = create(ProjectLimitsSchema, {
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
+  defaultCpuLimitM: 500,
+});
+
+export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
+  maxNodesPerCluster: 10,
+  maxNodePoolsPerCluster: 5,
+  maxNodesPerNodePool: 5,
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
+  defaultCpuLimitM: 500,
+});
+
+// --- Metrics --------------------------------------------------------------
+
+// A demo needs charts with something in them, so the series are generated: a
+// smooth base with a daily rhythm and a little noise, deterministic per metric
+// so a reload shows the same picture.
+const sample = (index: number, base: number, swing: number, seed: number): number => {
+  const wave = Math.sin((index / 12 + seed) * Math.PI * 2) * swing;
+  const jitter = Math.sin(index * (1.7 + seed)) * swing * 0.25;
+  return Math.max(0, Number((base + wave + jitter).toFixed(2)));
+};
+
+/** `count` samples ending now, `stepSeconds` apart. */
+export const metricSeries = (
+  count: number,
+  stepSeconds: number,
+  base: number,
+  swing: number,
+  seed: number,
+  now: number,
+) =>
+  Array.from({ length: count }, (_, index) => ({
+    timestamp: new Date(now - (count - 1 - index) * stepSeconds * 1000),
+    value: sample(index, base, swing, seed),
+  }));
+
+export const namespaceMetrics = [
+  {
+    namespace: 'burgerzaken-prod',
+    cpuCores: 1.42,
+    memoryGib: 6.1,
+    pods: 14,
+    cpuRequests: 2,
+    cpuLimits: 4,
+    memoryRequestsGib: 8,
+    memoryLimitsGib: 16,
+    networkReceiveMbS: 1.8,
+    networkTransmitMbS: 0.9,
+  },
+  {
+    namespace: 'belastingen-prod',
+    cpuCores: 0.72,
+    memoryGib: 3.4,
+    pods: 8,
+    cpuRequests: 1,
+    cpuLimits: 2,
+    memoryRequestsGib: 4,
+    memoryLimitsGib: 8,
+    networkReceiveMbS: 0.6,
+    networkTransmitMbS: 0.4,
+  },
+  {
+    namespace: 'burgerzaken-staging',
+    cpuCores: 0.26,
+    memoryGib: 1.2,
+    pods: 6,
+    cpuRequests: 0.5,
+    cpuLimits: 1,
+    memoryRequestsGib: 2,
+    memoryLimitsGib: 4,
+    networkReceiveMbS: 0.2,
+    networkTransmitMbS: 0.1,
+  },
+];
+
+export const clusterUsage = [
+  {
+    clusterId: 'cl-production',
+    clusterName: 'production',
+    cpu: { used: 2.4, total: 8, unit: 'cores' },
+    memory: { used: 12.8, total: 32, unit: 'GiB' },
+    pods: { used: 28, total: 110, unit: 'pods' },
+  },
+  {
+    clusterId: 'cl-staging',
+    clusterName: 'staging',
+    cpu: { used: 0.9, total: 4, unit: 'cores' },
+    memory: { used: 3.6, total: 16, unit: 'GiB' },
+    pods: { used: 9, total: 55, unit: 'pods' },
+  },
+];
+
+export const nodeUsage = [
+  {
+    node: 'general-0',
+    cpu: { used: 1.1, total: 4, unit: 'cores' },
+    memory: { used: 6.2, total: 16, unit: 'GiB' },
+    pods: { used: 14, total: 55, unit: 'pods' },
+  },
+  {
+    node: 'general-1',
+    cpu: { used: 0.8, total: 4, unit: 'cores' },
+    memory: { used: 4.4, total: 16, unit: 'GiB' },
+    pods: { used: 9, total: 55, unit: 'pods' },
+  },
+];
 
 // --- Plugins --------------------------------------------------------------
 
@@ -610,6 +772,18 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
   },
 };
 
+/**
+ * The catalog name behind an installation name ("system--cert-manager" becomes
+ * "cert-manager"), or undefined when no definition claims it.
+ *
+ * Routes, the sidebar and the console's plugin services all address a plugin by
+ * its installation name; the fixtures here are keyed by catalog name, the way
+ * the real registry keys its definitions. Everything reading a fixture off a
+ * route parameter goes through this.
+ */
+export const catalogPluginName = (installationName: string): string | undefined =>
+  Object.values(pluginDefinitions).find((def) => def.installationName === installationName)?.name;
+
 const certificate = (
   name: string,
   namespace: string,
@@ -694,4 +868,300 @@ export const members = [
     status: 'active',
     created: daysAgo(30),
   }),
+];
+
+/**
+ * Log lines for the log explorer.
+ *
+ * Templates rather than finished entries: the transport stamps them when it
+ * answers, so they always fall inside the last hour and the time filter has
+ * something to select. `ago` is seconds before that moment.
+ */
+export interface DemoLogLine {
+  level: 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+  namespace: string;
+  pod: string;
+  container: string;
+  message: string;
+  ago: number;
+  fields?: Record<string, string>;
+}
+
+export const logLines: DemoLogLine[] = [
+  {
+    level: 'ERROR',
+    namespace: 'burgerzaken-prod',
+    pod: 'api-7d9c4f8b6-x2klm',
+    container: 'api',
+    message: 'connection refused: dial tcp 10.42.0.19:5432',
+    ago: 24,
+    fields: { component: 'db', attempt: '3', error: 'connection refused' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'burgerzaken-prod',
+    pod: 'api-7d9c4f8b6-x2klm',
+    container: 'api',
+    message: 'retrying in 2s (attempt 3 of 5)',
+    ago: 26,
+    fields: { component: 'db', backoff: '2s' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'api-7d9c4f8b6-x2klm',
+    container: 'api',
+    message: 'GET /api/v1/persons?page=2 200 in 41ms',
+    ago: 31,
+    fields: { method: 'GET', status: '200', duration_ms: '41' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'api-7d9c4f8b6-x2klm',
+    container: 'api',
+    message: 'GET /api/v1/persons/8821 200 in 12ms',
+    ago: 58,
+    fields: { method: 'GET', status: '200', duration_ms: '12' },
+  },
+  {
+    level: 'DEBUG',
+    namespace: 'burgerzaken-prod',
+    pod: 'api-7d9c4f8b6-x2klm',
+    container: 'api',
+    message: 'cache hit ratio 0.94 over 2m window',
+    ago: 96,
+    fields: { component: 'cache', ratio: '0.94' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'worker-5f7b9c-qq81t',
+    container: 'worker',
+    message: 'reconciled 14 namespaces in 812ms',
+    ago: 44,
+    fields: { component: 'reconciler', duration_ms: '812' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'worker-5f7b9c-qq81t',
+    container: 'worker',
+    message: 'queue drained, 0 jobs remaining',
+    ago: 140,
+    fields: { component: 'queue', remaining: '0' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'burgerzaken-prod',
+    pod: 'worker-5f7b9c-qq81t',
+    container: 'worker',
+    message: 'job person-export took 41s, over the 30s soft limit',
+    ago: 218,
+    fields: { component: 'queue', job: 'person-export', duration_s: '41' },
+  },
+  {
+    level: 'ERROR',
+    namespace: 'burgerzaken-prod',
+    pod: 'ingress-nginx-controller-6b4d9',
+    container: 'controller',
+    message:
+      'upstream timed out (110: Operation timed out) while reading response header from upstream, client: 10.42.0.1, server: console.fundament.dev, request: "GET /api/v1/clusters HTTP/2.0"',
+    ago: 63,
+    fields: { upstream: '10.42.0.19:8080', client: '10.42.0.1', status: '504' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'ingress-nginx-controller-6b4d9',
+    container: 'controller',
+    message: 'configuration reloaded, 12 servers, 34 locations',
+    ago: 410,
+    fields: { servers: '12', locations: '34' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-api-6c8d7f9b4-mn2pq',
+    container: 'api',
+    message: 'POST /api/v1/aanslagen 201 in 88ms',
+    ago: 71,
+    fields: { method: 'POST', status: '201', duration_ms: '88' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-api-6c8d7f9b4-mn2pq',
+    container: 'api',
+    message: 'request body of 4.2 MB is over the 2 MB advisory limit',
+    ago: 132,
+    fields: { size_mb: '4.2', limit_mb: '2' },
+  },
+  {
+    level: 'ERROR',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-api-6c8d7f9b4-mn2pq',
+    container: 'api',
+    message: 'panic recovered in handler: runtime error: index out of range [3] with length 3',
+    ago: 305,
+    fields: { handler: 'aanslagenHandler', recovered: 'true' },
+  },
+  {
+    level: 'DEBUG',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-api-6c8d7f9b4-mn2pq',
+    container: 'sidecar',
+    message: 'flushed 128 spans to the collector',
+    ago: 150,
+    fields: { component: 'tracing', spans: '128' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-worker-79b6d4c5f-kk4tz',
+    container: 'worker',
+    message: 'batch 2026-09 closed, 18422 records written',
+    ago: 520,
+    fields: { batch: '2026-09', records: '18422' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'cloudnativepg',
+    pod: 'burgerzaken-db-1',
+    container: 'postgres',
+    message: 'checkpoint complete: wrote 214 buffers (1.3%), 0 WAL files added',
+    ago: 88,
+    fields: { component: 'checkpointer', buffers: '214' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'cloudnativepg',
+    pod: 'burgerzaken-db-1',
+    container: 'postgres',
+    message: 'connection pool at 92 of 100, consider raising max_connections',
+    ago: 190,
+    fields: { used: '92', max: '100' },
+  },
+  {
+    level: 'ERROR',
+    namespace: 'cloudnativepg',
+    pod: 'burgerzaken-db-2',
+    container: 'postgres',
+    message: 'replication lag of 42s exceeds the 30s threshold',
+    ago: 240,
+    fields: { lag_s: '42', threshold_s: '30' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'cloudnativepg',
+    pod: 'burgerzaken-db-2',
+    container: 'postgres',
+    message: 'streaming replication resumed from 0/3A0001F8',
+    ago: 236,
+    fields: { lsn: '0/3A0001F8' },
+  },
+  {
+    level: 'DEBUG',
+    namespace: 'cloudnativepg',
+    pod: 'burgerzaken-db-1',
+    container: 'postgres',
+    message: 'autovacuum: table "public.persons", 1204 dead rows removed',
+    ago: 600,
+    fields: { table: 'public.persons', dead_rows: '1204' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'cert-manager',
+    pod: 'cert-manager-7f4b8c9d5-t8xkj',
+    container: 'cert-manager',
+    message: 'certificate console-fundament-dev renewed, valid until 2026-11-30',
+    ago: 780,
+    fields: { certificate: 'console-fundament-dev', issuer: 'letsencrypt' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'cert-manager',
+    pod: 'cert-manager-7f4b8c9d5-t8xkj',
+    container: 'cert-manager',
+    message: 'ACME order rate limit reached for letsencrypt, backing off for 15m',
+    ago: 900,
+    fields: { issuer: 'letsencrypt', backoff: '15m' },
+  },
+  {
+    level: 'ERROR',
+    namespace: 'istio-gateway',
+    pod: 'istio-ingressgateway-5d9f8b7c6-rr2wl',
+    container: 'istio-proxy',
+    message:
+      'no healthy upstream for cluster outbound|8080||api.burgerzaken-prod.svc.cluster.local',
+    ago: 118,
+    fields: { cluster: 'outbound|8080||api.burgerzaken-prod.svc.cluster.local', status: '503' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'istio-gateway',
+    pod: 'istio-ingressgateway-5d9f8b7c6-rr2wl',
+    container: 'istio-proxy',
+    message: 'listener 0.0.0.0:8443 updated, 3 filter chains',
+    ago: 460,
+    fields: { listener: '0.0.0.0:8443', chains: '3' },
+  },
+  {
+    level: 'DEBUG',
+    namespace: 'istio-gateway',
+    pod: 'istio-ingressgateway-5d9f8b7c6-rr2wl',
+    container: 'istio-proxy',
+    message: 'xds config accepted, version 2026-09-01T09:02:11Z',
+    ago: 1020,
+    fields: { component: 'xds' },
+  },
+  {
+    level: 'WARN',
+    namespace: 'burgerzaken-prod',
+    pod: 'plugin-operator-84ffb6c9d-7ttxq',
+    container: 'operator',
+    message:
+      'failed to reconcile PluginInstallation gemeente-fundament--postgres: admission webhook "validate.plugins.fundament.dev" denied the request: storageClass "fast-ssd" is not available on this cluster',
+    ago: 340,
+    fields: {
+      installation: 'gemeente-fundament--postgres',
+      webhook: 'validate.plugins.fundament.dev',
+    },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'plugin-operator-84ffb6c9d-7ttxq',
+    container: 'operator',
+    message: 'PluginInstallation gemeente-fundament--redis is Running',
+    ago: 700,
+    fields: { installation: 'gemeente-fundament--redis', phase: 'Running' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'burgerzaken-prod',
+    pod: 'plugin-operator-84ffb6c9d-7ttxq',
+    container: 'operator',
+    message: 'watching 4 PluginInstallations across 2 namespaces',
+    ago: 1400,
+    fields: { installations: '4', namespaces: '2' },
+  },
+  {
+    level: 'DEBUG',
+    namespace: 'belastingen-prod',
+    pod: 'aanslag-worker-79b6d4c5f-kk4tz',
+    container: 'worker',
+    message: 'leader election renewed, holder aanslag-worker-79b6d4c5f-kk4tz',
+    ago: 1600,
+    fields: { component: 'leaderelection' },
+  },
+  {
+    level: 'INFO',
+    namespace: 'cert-manager',
+    pod: 'cert-manager-7f4b8c9d5-t8xkj',
+    container: 'cert-manager',
+    message: 'started controller-runtime manager, 6 controllers registered',
+    ago: 2100,
+    fields: { controllers: '6' },
+  },
 ];

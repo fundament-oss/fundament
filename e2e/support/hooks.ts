@@ -1,4 +1,11 @@
-import { Before, After, BeforeAll, AfterAll, Status, setDefaultTimeout } from '@cucumber/cucumber';
+import {
+  Before,
+  After,
+  BeforeAll,
+  AfterAll,
+  Status,
+  setDefaultTimeout,
+} from '@cucumber/cucumber';
 import { Browser, chromium } from 'playwright';
 import { ICustomWorld } from './world.ts';
 import { APIKeyService } from './api/apikey-service.ts';
@@ -61,10 +68,16 @@ After(async function (this: ICustomWorld, { result }) {
 
 // API testing hooks for @api tagged scenarios
 Before({ tags: '@api' }, async function (this: ICustomWorld) {
-  this.organizationApiUrl = process.env.ORGANIZATION_API_URL || 'https://organization.fundament.localhost:8443';
-  this.authnApiUrl = process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
-  this.pluginProxyUrl = process.env.PLUGIN_PROXY_URL || 'https://plugin-proxy.fundament.localhost:8443';
-  this.consoleUrl = process.env.BASE_URL || 'https://console.fundament.localhost:8443';
+  this.organizationApiUrl =
+    process.env.ORGANIZATION_API_URL ||
+    'https://organization.fundament.localhost:8443';
+  this.authnApiUrl =
+    process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
+  this.pluginProxyUrl =
+    process.env.PLUGIN_PROXY_URL ||
+    'https://plugin-proxy.fundament.localhost:8443';
+  this.consoleUrl =
+    process.env.BASE_URL || 'https://console.fundament.localhost:8443';
   this.tokenService = new TokenService(this.authnApiUrl);
   this.createdApiKeys = new Map();
   this.createdApiKeysByUser = new Map();
@@ -81,8 +94,15 @@ After({ tags: '@api' }, async function (this: ICustomWorld) {
     if (apiKeys.size > 0) {
       try {
         // Authenticate as the user who created the keys
-        const { token, organizationId } = await authenticateForCleanup(this.authnApiUrl!, userEmail);
-        const service = new APIKeyService(this.organizationApiUrl!, token, organizationId);
+        const { token, organizationId } = await authenticateForCleanup(
+          this.authnApiUrl!,
+          userEmail,
+        );
+        const service = new APIKeyService(
+          this.organizationApiUrl!,
+          token,
+          organizationId,
+        );
         for (const [, apiKey] of apiKeys) {
           try {
             await service.deleteAPIKey(apiKey.id);
@@ -112,7 +132,10 @@ After({ tags: '@api' }, async function (this: ICustomWorld) {
  * Authenticate for cleanup purposes (separate from test flow).
  * Returns the auth token and the first organization ID from the JWT.
  */
-async function authenticateForCleanup(authnApiUrl: string, email: string): Promise<{ token: string; organizationId: string }> {
+async function authenticateForCleanup(
+  authnApiUrl: string,
+  email: string,
+): Promise<{ token: string; organizationId: string }> {
   const password = 'password';
   const response = await fetch(`${authnApiUrl}/login/password`, {
     method: 'POST',
@@ -124,7 +147,9 @@ async function authenticateForCleanup(authnApiUrl: string, email: string): Promi
   }
   const data = (await response.json()) as { access_token: string };
   const token = data.access_token;
-  const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+  const payload = JSON.parse(
+    Buffer.from(token.split('.')[1], 'base64url').toString(),
+  );
   const orgIds: string[] = payload.organization_ids ?? [];
   return { token, organizationId: orgIds[0] };
 }

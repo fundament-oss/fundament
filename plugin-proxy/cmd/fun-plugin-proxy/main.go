@@ -64,24 +64,28 @@ func run() error {
 		}
 	}
 
+	// OpenFGA backs the asset handler's can_view gate in every mode and, in
+	// real mode, doubles as the installation proxy's cluster authorizer.
+	openfgaStore, err := openfgaauthz.NewStore(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("openfga client: %w", err)
+	}
+
+	openfga := openfgaauthz.NewClient(openfgaStore)
+
+	// Probes use the internal port. The public readyz is reachable from the
+	// internet, so it makes no OpenFGA call.
 	publicMux := http.NewServeMux()
-	registerHealth(publicMux)
+	registerHealth(publicMux, nil, logger)
 
 	internalMux := http.NewServeMux()
-	registerHealth(internalMux)
+	registerHealth(internalMux, openfgaStore, logger)
 
 	// Static assets + strict CSP.
 	cfgCsp := &assets.CSPConfig{
 		ConnectSrc:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
 		FormAction:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
 		FrameAncestors: []string{cfg.ConsoleOrigin},
-	}
-
-	// OpenFGA backs the asset handler's can_view gate in every mode and, in
-	// real mode, doubles as the installation proxy's cluster authorizer.
-	openfga, err := openfgaauthz.New(cfg.OpenFGA)
-	if err != nil {
-		return fmt.Errorf("openfga client: %w", err)
 	}
 
 	var (
@@ -251,12 +255,32 @@ func run() error {
 	return runErr
 }
 
-func registerHealth(mux *http.ServeMux) {
+func registerHealth(mux *http.ServeMux, store *openfgaauthz.Store, logger *slog.Logger) {
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if store == nil {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		// The can_view gate runs in every mode, so an unresolved store means
+		// this pod cannot authorize any request.
+		if err := store.Healthy(ctx); err != nil {
+			logger.Error("readiness: openfga unavailable", "err", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("not ready"))
+
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})

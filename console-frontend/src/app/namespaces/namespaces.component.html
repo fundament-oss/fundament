@@ -1,236 +1,120 @@
-<!-- Error Message -->
-@if (errorMessage()) {
-  <div
-    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-  >
-    <nldd-icon
-      name="dismiss-circle"
-      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-    ></nldd-icon>
-    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-  </div>
-}
-
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h2 class="text-3xl font-semibold">Namespaces</h2>
-    <p class="mt-1 text-gray-600 dark:text-gray-400">Manage namespaces for this project</p>
-  </div>
-
-  <div class="p-6">
-    @if (namespaces().length === 0) {
-      <nldd-box>
-        <nldd-inline-dialog
-          class="card-body"
-          icon="brackets-ellipsis"
-          icon-color="secondary"
-          text="No namespaces belong to this project yet."
-        >
-          <nldd-button
-            slot="actions"
-            type="button"
-            (click)="openCreateNamespaceModal()"
-            text="Create namespace"
-            start-icon="plus-small"
-            variant="primary"
-          ></nldd-button>
-        </nldd-inline-dialog>
-      </nldd-box>
-    } @else {
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+<!-- Same outer layout as the other project pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Namespaces"
+    [attr.back-text]="pageNav.backText()"
+    (back)="pageNav.goTo('/projects/' + projectId())"
+    collapse-anchor="namespaces-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="namespaces-title"
+      size="2"
+    >
+      <h1>Namespaces</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-toolbar label="Namespace actions">
+      <nldd-toolbar-item slot="start">
         <nldd-button
           type="button"
-          (click)="openCreateNamespaceModal()"
-          text="Create namespace"
+          (click)="overlays.newNamespace.set(projectId())"
+          text="New namespace…"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
-        @if (selection.count() > 0) {
-          <nldd-button
-            type="button"
-            (click)="openBulkDeleteModal()"
-            [text]="'Delete selected (' + selection.count() + ')'"
-            start-icon="trash"
-            variant="destructive"
-            [disabled]="isBulkDeleting()"
-          ></nldd-button>
-        }
-      </div>
-
-      <div class="mb-2 flex items-center gap-3 px-3">
-        <nldd-checkbox-field
-          [checked]="selection.allSelected()"
-          [indeterminate]="selection.someSelected()"
-          accessible-label="Select all namespaces"
-          (change)="selection.toggleAll($any($event).detail.checked)"
-        ></nldd-checkbox-field>
-        <span class="text-sm text-gray-500 dark:text-gray-400">Select all</span>
-      </div>
-
-      <div class="space-y-3">
-        @for (namespace of namespaces(); track namespace.id) {
-          <div
-            class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
-          >
-            <div class="flex items-center gap-3">
-              <nldd-checkbox-field
-                [checked]="selection.has(namespace.id)"
-                [value]="namespace.id"
-                accessible-label="Select namespace {{ namespace.name }}"
-                (change)="selection.set(namespace.id, $any($event).detail.checked)"
-              ></nldd-checkbox-field>
-              <div>
-                <p class="font-mono text-sm">{{ namespace.name }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Created {{ formatDate(namespace.created) }}
-                </p>
-              </div>
-            </div>
-            <nldd-button
-              type="button"
-              (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
-              text="Delete"
-              start-icon="trash"
-              variant="destructive"
-              size="sm"
-            ></nldd-button>
-          </div>
-        }
-      </div>
-    }
-  </div>
-</div>
-
-<!-- Create Namespace Sheet -->
-<nldd-sheet
-  #createNamespaceSheet
-  appSheetSync
-  [show]="showCreateNamespaceModal()"
-  accessible-label="Create namespace"
-  placement="right"
-  width="480px"
-  (close)="showCreateNamespaceModal.set(false)"
->
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      text="Create namespace"
-      dismiss-text="Cancel"
-      (dismiss)="showCreateNamespaceModal.set(false)"
-    ></nldd-top-title-bar>
-
-    <nldd-simple-section>
-      @if (createErrorMessage()) {
-        <div
-          role="alert"
-          class="bg-danger-50 dark:bg-danger-950/30 mb-4 flex items-start gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-        >
-          <nldd-icon
-            name="dismiss-circle"
-            class="text-danger-500! dark:text-danger-400! mt-0.5 h-4.5 w-4.5 shrink-0"
-          ></nldd-icon>
-          <p class="text-danger-700 dark:text-danger-300">{{ createErrorMessage() }}</p>
-        </div>
-      }
-
-      <nldd-form
-        [formGroup]="namespaceForm"
-        (submit)="createNamespace($event)"
-        (keydown.enter)="createNamespace($event)"
+        <nldd-menu-item
+          slot="overflow"
+          icon="plus-small"
+          text="New namespace…"
+          (select)="overlays.newNamespace.set(projectId())"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+    <nldd-spacer size="16"></nldd-spacer>
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading namespaces..."
+      ></nldd-activity-indicator>
+    } @else if (namespaces().length === 0) {
+      <nldd-inline-dialog
+        icon="brackets-ellipsis"
+        icon-color="secondary"
+        text="No namespaces in this project yet"
+        supporting-text="A namespace is where the project's workloads actually run."
       >
-        <nldd-form-field label="Namespace name" class="mb-4">
-          <nldd-text-field
-            appAutofocus
-            id="namespaceName"
-            [value]="namespaceForm.get('name')?.value ?? ''"
-            placeholder="E.g. my-namespace"
-            [invalid]="isNameInvalid()"
-            error-message="namespace-name-error"
-            (input)="onNameInput($event)"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="namespace-name-error">
-            {{ getNameError() }}
-          </nldd-form-field-error-text>
-        </nldd-form-field>
-      </nldd-form>
-    </nldd-simple-section>
-
-    <div slot="footer" class="sheet-footer">
-      <nldd-button
-        type="button"
-        (click)="createNamespace()"
-        [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
-        [disabled]="isCreatingNamespace() || !namespaceForm.valid"
-        variant="primary"
-        width="full"
-      ></nldd-button>
-    </div>
-  </nldd-page>
-</nldd-sheet>
-
-<!-- Delete Namespace Modal -->
+        <nldd-button
+          slot="actions"
+          type="button"
+          (click)="overlays.newNamespace.set(projectId())"
+          text="New namespace…"
+          start-icon="plus-small"
+          variant="primary"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    } @else {
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Namespaces"
+      >
+        @for (namespace of namespaces(); track namespace.id) {
+          <!-- The whole row goes to the namespace: a real link, so it can be
+               shared and opened in a new tab, and the chevron says so. Deleting
+               lives in the sheet, with everything else about it. -->
+          <nldd-list-item
+            [attr.href]="pageNav.path('/projects/' + projectId() + '/namespaces/' + namespace.name)"
+            (click)="openNamespace($event, namespace.name)"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="namespace.name"
+              [attr.supporting-text]="'Created ' + formatDate(namespace.created)"
+            ></nldd-text-cell>
+            <!-- Too wide next to a name on a phone; the sheet has the detail
+                 anyway. -->
+            <nldd-spacer-cell
+              size="12"
+              hide-below="md"
+            ></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              hide-below="md"
+              [attr.text]="memberSummary(namespace.name)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell
+              icon="chevron-right"
+              size="20"
+              color="secondary"
+            ></nldd-icon-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    }
+  </nldd-simple-section>
+</nldd-page>
+<!-- Action Error Modal -->
 <nldd-modal-dialog
-  #deleteNamespaceDialog
+  #actionErrorDialog
   appDialogSync
-  [show]="showDeleteNamespaceModal()"
-  [attr.text]="'Delete namespace ' + pendingNamespaceName() + '?'"
-  supporting-text="This removes the namespace and every resource running in it. This cannot be undone."
-  accessible-label="Confirm namespace deletion"
+  [show]="!!errorMessage()"
+  text="Something went wrong"
+  [attr.supporting-text]="errorMessage()"
+  accessible-label="Action failed"
   variant="alert"
-  (open)="onDeleteNamespaceModalOpen()"
-  (close)="showDeleteNamespaceModal.set(false)"
+  (close)="errorMessage.set(null)"
 >
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteNamespaceModal.set(false)"
-    text="Keep namespace"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmDeleteNamespace()"
-    text="Delete namespace"
-    variant="destructive"
+    (click)="errorMessage.set(null)"
+    text="Close"
+    variant="primary"
   ></nldd-button>
 </nldd-modal-dialog>
-
-<!-- Bulk Delete Namespaces Modal -->
-<nldd-modal-dialog
-  #bulkDeleteDialog
-  appDialogSync
-  [show]="showBulkDeleteModal()"
-  [attr.text]="
-    'Delete ' + selection.count() + (selection.count() === 1 ? ' namespace?' : ' namespaces?')
-  "
-  supporting-text="This removes the selected namespaces and every resource running in them. This cannot be undone."
-  accessible-label="Confirm namespace deletion"
-  variant="alert"
-  (open)="onBulkDeleteModalOpen()"
-  (close)="showBulkDeleteModal.set(false)"
->
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="showBulkDeleteModal.set(false)"
-    [disabled]="isBulkDeleting()"
-    [text]="selection.count() === 1 ? 'Keep namespace' : 'Keep namespaces'"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmBulkDelete()"
-    [text]="
-      isBulkDeleting()
-        ? 'Deleting...'
-        : selection.count() === 1
-          ? 'Delete namespace'
-          : 'Delete namespaces'
-    "
-    [disabled]="isBulkDeleting()"
-    variant="destructive"
-  ></nldd-button>
-</nldd-modal-dialog>
+<router-outlet />

@@ -54,6 +54,42 @@ export function formatTimeAgo(date: Date | undefined): string {
   return `${diffYears} years ago`;
 }
 
+/** Date and time with the month abbreviated: "Aug 9, 2026 at 10:48 AM". For a
+ *  column of timestamps, where a full month name makes every row a different
+ *  width and the eye has nothing to line up on. */
+export function formatShortDateTime(
+  value: Timestamp | string | undefined,
+  fallback?: string,
+): string {
+  if (!value) return fallback ?? '';
+
+  try {
+    const date = typeof value === 'string' ? new Date(value) : timestampDate(value);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return fallback ?? '';
+  }
+}
+
+/** Just the clock time, for a timeline that already carries the date in its own
+ *  column. */
+export function formatTime(value: Timestamp | string | undefined, fallback?: string): string {
+  if (!value) return fallback ?? '';
+
+  try {
+    const date = typeof value === 'string' ? new Date(value) : timestampDate(value);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return fallback ?? '';
+  }
+}
+
 export function formatDateTime(value: Timestamp | string | undefined, fallback?: string): string {
   if (!value) return fallback ?? '';
 

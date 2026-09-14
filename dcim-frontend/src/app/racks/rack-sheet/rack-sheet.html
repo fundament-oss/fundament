@@ -1,0 +1,127 @@
+<nldd-sheet #rackSheet accessible-label="Rack details" placement="right">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="isEdit() ? 'Edit rack' : 'New rack'"
+      dismiss-text="Cancel"
+      (dismiss)="close()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (rackErrorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="rackErrorMessage()"></nldd-banner>
+      }
+      @if (form(); as rack) {
+        <nldd-form>
+          <!-- Where it stands, before what it is called. The API cannot move a
+               rack to another row, so an existing one does not ask. -->
+          @if (!rack.id) {
+            <!-- Where it stands, widest first: the data center you are looking
+                 at is the one it lands in, and picking another swaps the rows
+                 you can choose from. -->
+            <nldd-form-field label="Location">
+              <nldd-toggle-button-group type="radio" accessible-label="Location">
+                @for (dc of datacenters(); track dc.id) {
+                  <nldd-toggle-button
+                    [attr.value]="dc.id"
+                    [attr.text]="dc.name"
+                    [attr.selected]="formDcId() === dc.id ? '' : null"
+                    (change)="onFormDcToggle(dc.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+            </nldd-form-field>
+            <nldd-form-field label="Room">
+              <nldd-toggle-button-group type="radio" accessible-label="Room">
+                @for (room of formRooms(); track room.id) {
+                  <nldd-toggle-button
+                    [attr.value]="room.id"
+                    [attr.text]="room.name"
+                    [attr.selected]="formRoomId() === room.id ? '' : null"
+                    (change)="onFormRoomToggle(room.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+              @if (formRooms().length === 0) {
+                <nldd-validation-list>
+                  <nldd-validation-item hint id="error-no-rooms"
+                    >No rooms in this data center. Create one on the Data centers page
+                    first.</nldd-validation-item
+                  >
+                </nldd-validation-list>
+              }
+            </nldd-form-field>
+            <nldd-form-field label="Rack row">
+              <nldd-toggle-button-group
+                type="radio"
+                accessible-label="Rack row"
+                [attr.invalid]="isFieldInvalid('row_id') ? '' : null"
+                unmet="error-rack-row-id"
+              >
+                @for (row of rowsForFormRoom(); track row.id) {
+                  <nldd-toggle-button
+                    [attr.value]="row.id"
+                    [attr.text]="row.name"
+                    [attr.selected]="formRowId() === row.id ? '' : null"
+                    (change)="onFormRowToggle(row.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+              <nldd-validation-list>
+                <nldd-validation-item id="error-rack-row-id">{{
+                  fieldError('row_id')
+                }}</nldd-validation-item>
+              </nldd-validation-list>
+              @if (formRooms().length > 0 && rowsForFormRoom().length === 0) {
+                <nldd-validation-list>
+                  <nldd-validation-item hint id="error-no-rows"
+                    >No rack rows in this room. Create one on the Data centers page
+                    first.</nldd-validation-item
+                  >
+                </nldd-validation-list>
+              }
+            </nldd-form-field>
+          }
+          <!-- No autofocus: the name is the third field, and jumping there
+               skips the two above it. -->
+          <nldd-form-field label="Rack name">
+            <nldd-text-field
+              #fRackName
+              [attr.value]="rack.name ?? ''"
+              [attr.invalid]="isFieldInvalid('name') ? '' : null"
+              unmet="error-rack-name"
+              (keydown.enter)="save()"
+            ></nldd-text-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-name">{{
+                fieldError('name')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
+          </nldd-form-field>
+          <!-- Spin buttons here, and none on the rack unit of a device: this is
+               a value you nudge from a default (42U, 45U, 47U) between bounds
+               the buttons also mark, where a rack unit is one you name. -->
+          <nldd-form-field label="Height (U)">
+            <nldd-number-field
+              #fRackTotalU
+              [attr.value]="rack.totalU ?? 42"
+              min="1"
+              max="52"
+              full-width
+              [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
+              unmet="error-rack-total-u"
+              (keydown.enter)="save()"
+            ></nldd-number-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="error-rack-total-u">{{
+                fieldError('total_units')
+              }}</nldd-validation-item>
+            </nldd-validation-list>
+          </nldd-form-field>
+          <nldd-form-actions>
+            <nldd-button variant="primary" width="full" text="Save" (click)="save()"></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

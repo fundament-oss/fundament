@@ -19,7 +19,10 @@ export interface TCPRouteBody {
   };
 }
 
-export function buildTCPRouteBody(root: ParentNode, namespace: string): TCPRouteBody {
+export function buildTCPRouteBody(
+  root: ParentNode,
+  namespace: string,
+): TCPRouteBody {
   return {
     apiVersion: 'gateway.networking.k8s.io/v1alpha2',
     kind: 'TCPRoute',

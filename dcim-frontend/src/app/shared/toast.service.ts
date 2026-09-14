@@ -1,26 +1,55 @@
 import { Injectable, signal } from '@angular/core';
 
-// Drives the single app-wide <app-toast/> overlay (see ./toast.ts). Centralized
-// so every route shares one instance rendered at the app root, in the browser's
-// top layer — avoiding the stacking issues of a per-page fixed-position toast
-// getting hidden behind native <dialog>-based sheets/modals.
+/** What a message is: a failure stays until you dismiss it, the rest leaves. */
+export type NotificationVariant = 'success' | 'warning' | 'critical' | 'neutral';
+
+export interface AppNotification {
+  id: number;
+  variant: NotificationVariant;
+  text: string;
+}
+
+/**
+ * The app's messages, rendered once at the root by nldd-notification.
+ *
+ * The design system places a notification itself, in one shared region, and
+ * stacks several into a deck. So this holds the list and nothing else: no
+ * position, no timer. A `critical` one never leaves on its own, which is the
+ * point of it, and the others count down in the component.
+ */
 @Injectable({ providedIn: 'root' })
 export default class ToastService {
-  readonly message = signal<string | null>(null);
+  readonly notifications = signal<AppNotification[]>([]);
 
-  // Horizontal offset (px) from viewport center, added to the toast's
-  // default centering. Pages with a persistent sidebar (which the toast,
-  // rendered at the app root, has no layout knowledge of) can set this so
-  // the toast appears centered over their main content area instead.
-  readonly offsetPx = signal(0);
+  private nextId = 0;
 
-  private timeout: ReturnType<typeof setTimeout> | undefined;
+  /** A failure. It stays on screen until it is dismissed. */
+  error(text: string): void {
+    this.push('critical', text);
+  }
 
-  show(msg: string): void {
-    this.message.set(msg);
-    clearTimeout(this.timeout);
-    this.timeout = setTimeout(() => {
-      this.message.set(null);
-    }, 3000);
+  /** Something worked, and the result is not visible on its own. */
+  success(text: string): void {
+    this.push('success', text);
+  }
+
+  /** Half worked: what you asked for happened, the rest did not. */
+  warning(text: string): void {
+    this.push('warning', text);
+  }
+
+  /** Plain information. */
+  info(text: string): void {
+    this.push('neutral', text);
+  }
+
+  dismiss(id: number): void {
+    this.notifications.update((list) => list.filter((n) => n.id !== id));
+  }
+
+  private push(variant: NotificationVariant, text: string): void {
+    this.nextId += 1;
+    const id = this.nextId;
+    this.notifications.update((list) => [...list, { id, variant, text }]);
   }
 }

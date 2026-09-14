@@ -1,0 +1,350 @@
+<nldd-sheet
+  #namespaceSheet
+  appSheetSync
+  [show]="true"
+  accessible-label="Namespace"
+  placement="right"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <!-- In the roles step the bar carries the way back to the namespace, and
+         borrows that step's heading once it scrolls out of view. -->
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="
+        step() === 'roles'
+          ? editingMember()
+            ? 'Roles for ' + editingMember()!.member.userName
+            : 'Add member access'
+          : namespaceName()
+      "
+      [attr.back-text]="step() === 'roles' ? namespaceName() : null"
+      [attr.collapse-anchor]="step() === 'roles' ? 'roles-title' : 'namespace-title'"
+      dismiss-text="Close"
+      (back)="step.set('overview')"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (step() === 'roles') {
+        <nldd-title
+          id="roles-title"
+          size="3"
+        >
+          <h1>
+            {{
+              editingMember()
+                ? 'Roles for ' + editingMember()!.member.userName
+                : 'Add member access'
+            }}
+          </h1>
+        </nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-form
+          (submit)="saveRoles()"
+          (keydown.enter)="saveRoles($event)"
+        >
+          @if (!editingMemberId()) {
+            <nldd-form-field label="Members">
+              @if (candidates().length === 0) {
+                <nldd-inline-dialog
+                  icon="users"
+                  icon-color="secondary"
+                  text="Everyone in this project already has access"
+                  supporting-text="Add someone to the project first to give them a role here."
+                ></nldd-inline-dialog>
+              } @else {
+                <!-- Several at once, because the same roles usually go to more
+                     than one person. With one candidate left it is filled in
+                     already. -->
+                <nldd-token-field
+                  accessible-label="Members"
+                  [attr.values]="draftMemberIds().join(',')"
+                  [attr.invalid]="memberSelectionInvalid() ? '' : null"
+                  unmet="namespace-member-error"
+                  (change)="onMembersChange($event)"
+                >
+                  <nldd-menu accessible-label="Project members">
+                    @for (member of candidates(); track member.id) {
+                      <nldd-menu-item
+                        [attr.value]="member.id"
+                        [attr.text]="member.userName"
+                      ></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-token-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="namespace-member-error">
+                    @if (memberSelectionInvalid()) {
+                      Pick at least one member.
+                    }
+                  </nldd-validation-item>
+                </nldd-validation-list>
+              }
+            </nldd-form-field>
+          }
+          <nldd-form-field label="Roles">
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Roles"
+            >
+              @for (role of allRoles; track role) {
+                <nldd-list-item
+                  checkbox
+                  [attr.checked]="draftRoles().includes(role) ? '' : null"
+                  (click)="toggleDraftRole(role)"
+                >
+                  <nldd-cell width="fit-content">
+                    <nldd-checkbox
+                      decorative
+                      [attr.checked]="draftRoles().includes(role) ? '' : null"
+                    ></nldd-checkbox>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="role"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
+            <!-- Says who the roles land on: the field above takes several
+                 people at once and they all get this same set. -->
+            <nldd-form-field-help-text>
+              Everyone you add gets these roles, and without one they can see the namespace but do
+              nothing in it. You can change them per person later under Members.
+            </nldd-form-field-help-text>
+          </nldd-form-field>
+          <nldd-form-actions>
+            <!-- Never disabled: a disabled button says nothing about what is
+                 missing. Pressing it points at the field instead. -->
+            <nldd-button
+              type="button"
+              (click)="saveRoles()"
+              [attr.text]="editingMemberId() ? 'Save roles' : 'Add access'"
+              variant="primary"
+              width="full"
+            ></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      } @else if (isLoading()) {
+        <nldd-activity-indicator
+          show-text
+          text="Loading namespace..."
+        ></nldd-activity-indicator>
+      } @else if (found() === false) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Namespace not found"
+          supporting-text="It may have been deleted."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="onClose()"
+            text="Close"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else {
+        <nldd-title
+          id="namespace-title"
+          size="3"
+        >
+          <h1>{{ namespaceName() }}</h1>
+        </nldd-title>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Namespace details"
+        >
+          <!-- Names the project: the sheet can be opened from a link, with no
+               list behind it to say where you are. -->
+          <nldd-list-item>
+            <nldd-text-cell text="Project"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="projectName()"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Created"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="created()"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>Members</h2>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-toolbar label="Member access">
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              type="button"
+              (click)="addMember()"
+              text="Add member access…"
+              start-icon="plus-small"
+              variant="secondary"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="plus-small"
+              text="Add member access…"
+              (select)="addMember()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <nldd-spacer size="12"></nldd-spacer>
+        @if (members().length === 0) {
+          <!-- In a box: an inline dialog fills the column it is given, which is
+               right for a page's empty state and wrong for one block among
+               others. The box gives it a height of its own. -->
+          <nldd-box>
+            <nldd-container padding="16">
+              <nldd-inline-dialog
+                icon="users"
+                icon-color="secondary"
+                text="Nobody works in this namespace yet"
+                supporting-text="Project members can see it, but do nothing in it until they have a role."
+              ></nldd-inline-dialog>
+            </nldd-container>
+          </nldd-box>
+        } @else {
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="Member access"
+          >
+            @for (entry of members(); track entry.member.id) {
+              <nldd-list-item>
+                <!-- The roles read under the name, not opposite it: a handful
+                     of them wraps into a ragged right-aligned column. -->
+                <nldd-text-cell
+                  width="full"
+                  [attr.text]="entry.member.userName"
+                  [attr.supporting-text]="accessSummary(entry)"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-icon-button
+                    icon="more"
+                    size="sm"
+                    variant="secondary"
+                    popup-type="menu"
+                    [attr.accessible-label]="'Actions for ' + entry.member.userName"
+                  >
+                    <nldd-menu slot="popup">
+                      <!-- A grant that covers every namespace is not this
+                           namespace's to change: it is edited where it was
+                           given. -->
+                      @if (entry.viaAll) {
+                        <nldd-menu-item
+                          icon="user"
+                          text="Open member"
+                          [attr.href]="
+                            pageNav.path('/projects/' + projectId() + '/members/' + entry.member.id)
+                          "
+                          (select)="openMember($event, entry.member.id)"
+                        ></nldd-menu-item>
+                      } @else {
+                        <nldd-menu-item
+                          icon="edit"
+                          text="Edit roles"
+                          (select)="editRoles(entry)"
+                        ></nldd-menu-item>
+                        <nldd-menu-divider></nldd-menu-divider>
+                        <nldd-menu-item
+                          icon="delete"
+                          text="Remove from namespace"
+                          destructive
+                          (select)="pendingRemove.set(entry)"
+                        ></nldd-menu-item>
+                      }
+                    </nldd-menu>
+                  </nldd-icon-button>
+                </nldd-cell>
+              </nldd-list-item>
+            }
+          </nldd-list>
+        }
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-box background="critical">
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Delete {{ namespaceName() }}</h2>
+            </nldd-title>
+            <nldd-spacer size="8"></nldd-spacer>
+            <nldd-rich-text spacing="flat">
+              <p>This removes the namespace and every resource running in it.</p>
+            </nldd-rich-text>
+            <nldd-spacer size="16"></nldd-spacer>
+            <nldd-button
+              type="button"
+              (click)="showDeleteModal.set(true)"
+              text="Delete namespace"
+              start-icon="delete"
+              variant="destructive"
+            ></nldd-button>
+          </nldd-container>
+        </nldd-box>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+<!-- Remove Member Access Modal -->
+<nldd-modal-dialog
+  #removeAccessDialog
+  appDialogSync
+  [show]="!!pendingRemove()"
+  [attr.text]="removeAccessTitle()"
+  supporting-text="They keep their project role, but lose every role in this namespace."
+  accessible-label="Confirm access removal"
+  variant="alert"
+  (close)="pendingRemove.set(null)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="pendingRemove.set(null)"
+    text="Keep access"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemove()"
+    text="Remove access"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>
+<!-- Delete Namespace Modal -->
+<nldd-modal-dialog
+  #deleteNamespaceDialog
+  appDialogSync
+  [show]="showDeleteModal()"
+  [attr.text]="'Delete namespace ' + namespaceName() + '?'"
+  supporting-text="This removes the namespace and every resource running in it. This cannot be undone."
+  accessible-label="Confirm namespace deletion"
+  variant="alert"
+  (close)="showDeleteModal.set(false)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Keep namespace"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="deleteNamespace()"
+    text="Delete namespace"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>

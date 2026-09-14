@@ -16,6 +16,7 @@ import (
 
 	db "github.com/fundament-oss/fundament/authz-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/authz-worker/pkg/worker/handler"
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
@@ -51,6 +52,7 @@ type Worker struct {
 	queries *db.Queries
 	handler *handler.Handler
 	fga     *client.OpenFgaClient
+	store   *authz.Store
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -66,7 +68,7 @@ type Worker struct {
 }
 
 // New creates a new authz worker with sensible defaults.
-func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logger, cfg Config) *Worker {
+func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, store *authz.Store, logger *slog.Logger, cfg Config) *Worker {
 	cfg = applyDefaults(cfg)
 
 	hostname, _ := os.Hostname()
@@ -77,6 +79,7 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, logger),
 		fga:     fgaClient,
+		store:   store,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
@@ -179,15 +182,45 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	}
 }
 
-// verifyStore gates a drain on the store existing: OpenFGA's Write does not
-// check store existence, so writes to a wiped store falsely succeed. GetStore
-// bypasses the typesystem cache and sees the wipe.
+// verifyStore gates a drain on the store existing and holding a model.
+//
+// Write does not check store existence, so writes to a wiped store falsely
+// succeed; GetStore bypasses the typesystem cache and sees the wipe. Between
+// the provisioner's create and its model write, every write fails with
+// latest_authorization_model_not_found and burns retries until the rows are
+// marked failed for good, which nothing replays.
 func (w *Worker) verifyStore(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
 	defer cancel()
 
-	if _, err := w.fga.GetStore(checkCtx).Execute(); err != nil {
+	if err := w.store.Healthy(checkCtx); err != nil {
 		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	// Healthy resolves a store that is gone by name again, so writes follow a
+	// recreated store instead of the id this worker started with.
+	id, err := w.store.ID(checkCtx)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	if current, _ := w.fga.GetStoreId(); current != id {
+		if err := w.fga.SetStoreId(id); err != nil {
+			return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+		}
+
+		w.logger.Info("using OpenFGA store", "store_id", id)
+	}
+
+	// The SDK asks for one page of models, so a store with no model yields a
+	// nil model and no error.
+	model, err := w.fga.ReadLatestAuthorizationModel(checkCtx).Execute()
+	if err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	if model == nil || model.AuthorizationModel == nil {
+		return fmt.Errorf("%w: store has no authorization model yet", errStoreUnavailable)
 	}
 
 	return nil

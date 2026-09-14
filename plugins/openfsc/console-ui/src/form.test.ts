@@ -29,8 +29,8 @@ function renderForm(): HTMLFormElement {
       <nldd-text-field id="name" required maxlength="63"
         pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?"
         data-error="Use lowercase letters, digits and dashes."
-        error-message="name-error"></nldd-text-field>
-      <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+        unmet="name-error"></nldd-text-field>
+      <nldd-validation-list><nldd-validation-item id="name-error">Enter a valid name.</nldd-validation-item></nldd-validation-list>
 
       <div id="namespace-field"></div>
 
@@ -76,12 +76,18 @@ function renderForm(): HTMLFormElement {
 // components expose them whether or not the attribute was present. The form code
 // reads them as properties, so the harness must too.
 function upgrade(root: ParentNode): void {
-  root.querySelectorAll('nldd-text-field, nldd-checkbox-field').forEach((node) => {
-    const el = node as unknown as { value: string; checked: boolean; required: boolean };
-    el.value = node.getAttribute('value') ?? '';
-    el.checked = node.hasAttribute('checked');
-    el.required = node.hasAttribute('required');
-  });
+  root
+    .querySelectorAll('nldd-text-field, nldd-checkbox-field')
+    .forEach((node) => {
+      const el = node as unknown as {
+        value: string;
+        checked: boolean;
+        required: boolean;
+      };
+      el.value = node.getAttribute('value') ?? '';
+      el.checked = node.hasAttribute('checked');
+      el.required = node.hasAttribute('required');
+    });
 }
 
 // Sets a control's value the way a user typing into it would.
@@ -91,7 +97,9 @@ function setValue(form: HTMLFormElement, id: string, value: string): void {
 
 function check(form: HTMLFormElement, value: string): void {
   (
-    form.querySelector(`nldd-checkbox-field[value="${value}"]`) as unknown as { checked: boolean }
+    form.querySelector(`nldd-checkbox-field[value="${value}"]`) as unknown as {
+      checked: boolean;
+    }
   ).checked = true;
 }
 
@@ -103,7 +111,11 @@ function fillRequired(form: HTMLFormElement): void {
   setValue(form, 'pg-storageClass', 'local-path');
 }
 
-function addGatewayRow(form: HTMLFormElement, kind: 'inway' | 'outway', seq = 0): HTMLElement {
+function addGatewayRow(
+  form: HTMLFormElement,
+  kind: 'inway' | 'outway',
+  seq = 0,
+): HTMLElement {
   const row = document.createElement('div');
   row.className = 'plugin-row gateway-row';
   row.innerHTML = gatewayRowHtml(kind, seq);
@@ -124,31 +136,43 @@ describe('applyMode', () => {
     setValue(form, 'mode', 'Self');
     applyMode(form);
 
-    expect((form.querySelector('#external-fieldset') as HTMLElement).hidden).toBe(true);
-    form.querySelectorAll<NlddTextField>('[data-external-required]').forEach((el) => {
-      expect(el.required).toBe(false);
-    });
+    expect(
+      (form.querySelector('#external-fieldset') as HTMLElement).hidden,
+    ).toBe(true);
+    form
+      .querySelectorAll<NlddTextField>('[data-external-required]')
+      .forEach((el) => {
+        expect(el.required).toBe(false);
+      });
   });
 
   it('reveals the external fieldset and requires its fields in External mode', () => {
     setValue(form, 'mode', 'External');
     applyMode(form);
 
-    expect((form.querySelector('#external-fieldset') as HTMLElement).hidden).toBe(false);
-    form.querySelectorAll<NlddTextField>('[data-external-required]').forEach((el) => {
-      expect(el.required).toBe(true);
-    });
+    expect(
+      (form.querySelector('#external-fieldset') as HTMLElement).hidden,
+    ).toBe(false);
+    form
+      .querySelectorAll<NlddTextField>('[data-external-required]')
+      .forEach((el) => {
+        expect(el.required).toBe(true);
+      });
   });
 
   it('hides per-gateway certificate fields in Self mode and shows them in External', () => {
     addGatewayRow(form, 'inway');
 
     applyMode(form); // Self
-    expect((form.querySelector('.gw-cert-field') as HTMLElement).hidden).toBe(true);
+    expect((form.querySelector('.gw-cert-field') as HTMLElement).hidden).toBe(
+      true,
+    );
 
     setValue(form, 'mode', 'External');
     applyMode(form);
-    expect((form.querySelector('.gw-cert-field') as HTMLElement).hidden).toBe(false);
+    expect((form.querySelector('.gw-cert-field') as HTMLElement).hidden).toBe(
+      false,
+    );
   });
 });
 
@@ -173,8 +197,12 @@ describe('validateTextField', () => {
 
   it('anchors the pattern so a partial match is rejected', () => {
     // Unanchored, /https:\/\/.+/ would match anywhere in the string.
-    expect(validateTextField(field('pattern="https://.+"', 'ftp://x https://y'))).toBe(false);
-    expect(validateTextField(field('pattern="https://.+"', 'https://ok.example'))).toBe(true);
+    expect(
+      validateTextField(field('pattern="https://.+"', 'ftp://x https://y')),
+    ).toBe(false);
+    expect(
+      validateTextField(field('pattern="https://.+"', 'https://ok.example')),
+    ).toBe(true);
   });
 
   it('enforces maxlength', () => {
@@ -183,7 +211,9 @@ describe('validateTextField', () => {
   });
 
   it('enforces integer and min for number fields', () => {
-    expect(validateTextField(field('type="number" min="1"', '1.5'))).toBe(false);
+    expect(validateTextField(field('type="number" min="1"', '1.5'))).toBe(
+      false,
+    );
     expect(validateTextField(field('type="number" min="1"', '0'))).toBe(false);
     expect(validateTextField(field('type="number" min="1"', '3'))).toBe(true);
   });
@@ -199,19 +229,21 @@ describe('validateTextField', () => {
     expect(el.hasAttribute('invalid')).toBe(false);
   });
 
-  it('writes the data-error message into the linked error-text element', () => {
+  it('writes the data-error message into the linked validation item', () => {
     document.body.innerHTML = `
       <div>
         <nldd-text-field id="n" pattern="[a-z]+" data-error="Lowercase only."
-          error-message="n-error"></nldd-text-field>
-        <nldd-form-field-error-text id="n-error">placeholder</nldd-form-field-error-text>
+          unmet="n-error"></nldd-text-field>
+        <nldd-validation-list><nldd-validation-item id="n-error">placeholder</nldd-validation-item></nldd-validation-list>
       </div>`;
     upgrade(document.body);
     const el = document.querySelector('#n') as NlddTextField;
     el.value = 'NOPE';
 
     expect(validateTextField(el)).toBe(false);
-    expect(document.getElementById('n-error')!.textContent).toBe('Lowercase only.');
+    expect(document.getElementById('n-error')!.textContent).toBe(
+      'Lowercase only.',
+    );
   });
 });
 
@@ -328,8 +360,11 @@ describe('buildBody', () => {
     applyMode(form);
 
     const external = (body: unknown) =>
-      (body as { spec: { directory: { external: { trustAnchor: { key: string } } } } }).spec
-        .directory.external.trustAnchor.key;
+      (
+        body as {
+          spec: { directory: { external: { trustAnchor: { key: string } } } };
+        }
+      ).spec.directory.external.trustAnchor.key;
 
     expect(external(buildBody(form, 'fsc-demo'))).toBe('root.pem');
   });
@@ -350,7 +385,9 @@ describe('buildBody', () => {
     check(form, 'servicePublication');
     applyMode(form);
 
-    expect(buildBody(form, 'fsc-demo').spec.autoSignGrants).toEqual(['servicePublication']);
+    expect(buildBody(form, 'fsc-demo').spec.autoSignGrants).toEqual([
+      'servicePublication',
+    ]);
   });
 
   it('trims whitespace out of every value', () => {
@@ -369,7 +406,8 @@ describe('gatherGateways', () => {
   it('returns an inway with its self address', () => {
     const row = addGatewayRow(form, 'inway');
     (row.querySelector('.gw-name') as NlddTextField).value = 'default';
-    (row.querySelector('.gw-self') as NlddTextField).value = 'https://inway.example.com';
+    (row.querySelector('.gw-self') as NlddTextField).value =
+      'https://inway.example.com';
 
     expect(gatherGateways(form, 'inway', false)).toEqual([
       { name: 'default', selfAddress: 'https://inway.example.com' },
@@ -381,7 +419,9 @@ describe('gatherGateways', () => {
     const named = addGatewayRow(form, 'outway', 1);
     (named.querySelector('.gw-name') as NlddTextField).value = 'consumer';
 
-    expect(gatherGateways(form, 'outway', false)).toEqual([{ name: 'consumer' }]);
+    expect(gatherGateways(form, 'outway', false)).toEqual([
+      { name: 'consumer' },
+    ]);
   });
 
   it('omits the per-gateway certificate in Self mode, where it is not valid', () => {
@@ -430,7 +470,8 @@ describe('namespaceFieldHtml', () => {
     expect(trimmedValue(form, 'namespace')).toBe('team-a');
 
     field.innerHTML = namespaceFieldHtml([]);
-    (field.querySelector('#namespace') as unknown as { value: string }).value = 'typed-ns';
+    (field.querySelector('#namespace') as unknown as { value: string }).value =
+      'typed-ns';
     expect(trimmedValue(form, 'namespace')).toBe('typed-ns');
   });
 });

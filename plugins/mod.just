@@ -140,19 +140,20 @@ sandbox-catalog:
     echo "- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
     echo "  (matches pluginController.catalogApiUrl in plugins/sandbox/values.yaml)"
 
-# Build+push a plugin image, then publish its definition (with the pushed digest)
-# to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112),
-# FUNDAMENT_ORG_API_URL and FUNDAMENT_ORGANIZATION_ID; FUNDAMENT_TOKEN for the
-# authenticated (org-scoped) endpoint.
-# Extra flags pass through to publish, e.g.:
-#   just publish gateway-api/envoy-gateway --replace
-# (--replace republishes an existing pluginVersion, soft-deleting the old definition).
+# Build+push a plugin image, then publish its definition (with the pushed
+# digest) to marketplace-registry-api via `functl plugin publish` (FUN-20).
+# Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:
+# `functl auth login` once, `functl org set <org-id>` for the publishing
+# organization. The registry endpoint comes from functl's config
+# (registry_url / FUNCTL_REGISTRY_URL; mise sets it for this repo).
+# Extra flags pass through, e.g.:
+#   just publish gateway-api/envoy-gateway --create --submit
+# (--create reserves a missing listing; --submit opens the review round.
+# Versions are create-only — republishing means bumping metadata.version.)
 publish name *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     : "${PLUGIN_REGISTRY:?PLUGIN_REGISTRY is required (e.g. localhost:5112)}"
-    : "${FUNDAMENT_ORG_API_URL:?FUNDAMENT_ORG_API_URL is required}"
-    : "${FUNDAMENT_ORGANIZATION_ID:?FUNDAMENT_ORGANIZATION_ID is required}"
     # This Justfile runs recipes from plugins/, but the Docker build context, the
     # plugins/<name>/Dockerfile path, `go run ./plugins/...`, and publish's
     # plugins/<name>/definition.yaml read are all repo-root relative — run from root.
@@ -168,4 +169,4 @@ publish name *flags:
     # tokens in push output are layer/config digests, not the pushed manifest.
     digest=$(docker push "${repo}:${tag}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
     [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
-    go run ./plugins/cmd/plugin-publish --plugin '{{ name }}' --image "${repo}@${digest}" {{ flags }}
+    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}

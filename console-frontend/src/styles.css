@@ -98,16 +98,6 @@
   --font-mono: var(--primitives-font-family-monospace);
 }
 
-:root {
-  --primitives-font-size-100: theme('fontSize.base');
-
-  /* Custom focus ring, since the NLDD default is very dark */
-  --semantics-focus-ring-outline: none;
-  --semantics-focus-ring-box-shadow:
-    var(--semantics-surfaces-base-background-color) 0 0 0 2px,
-    var(--primitives-color-accent-200) 0 0 0 4px;
-}
-
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -117,43 +107,13 @@
    work, and at specificity (0,2,0) they outrank anything we could hang off
    html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
-/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
-::view-transition-group(root) {
-  @apply animate-[700ms_ease-out];
-}
-
-::view-transition-new(root) {
-  animation-name: reveal-light;
-  animation-fill-mode: both;
-}
-
-::view-transition-old(root),
-.dark::view-transition-old(root) {
-  @apply -z-10 animate-none;
-  animation-fill-mode: both;
-}
-
-.dark::view-transition-new(root) {
-  animation-name: reveal-dark;
-  animation-fill-mode: both;
-}
-
-@keyframes reveal-light {
-  from {
-    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
-  }
-  to {
-    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
-  }
-}
-
-@keyframes reveal-dark {
-  from {
-    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
-  }
-  to {
-    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
-  }
+/* Angular puts two elements in the main pane that are pure plumbing: the
+   router-outlet anchor, and the routed component wrapping its nldd-page. The
+   pane flex-grows every slotted child, so both would claim a share of the
+   height. `display: contents` takes them out of the layout and leaves the
+   nldd-page as the pane's own child — no visual styling involved. */
+nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
+  display: contents;
 }
 
 body {
@@ -166,143 +126,6 @@ input.ng-invalid.ng-dirty:not([type='email']), /* Exclude email inputs to avoid 
 input[type='email'].ng-invalid.ng-touched,
 input.validate-on-touch.ng-invalid.ng-touched {
   @apply border-rose-500 ring-rose-500 focus:border-rose-500;
-}
-
-/* Card styles */
-
-.card {
-  @apply rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950;
-}
-
-.card-header {
-  @apply border-b border-gray-100 px-6 py-4 dark:border-gray-900;
-}
-
-.card-body-lg {
-  @apply p-6;
-}
-
-.card-body {
-  @apply p-4;
-}
-
-.card-body-sm {
-  @apply p-3;
-}
-
-/* Action bar of an nldd-sheet, for the element in its `footer` slot. */
-
-.sheet-footer {
-  @apply border-t border-gray-200 px-6 py-4 dark:border-gray-800;
-}
-
-.live-dot {
-  @apply inline-block h-2 w-2 shrink-0 rounded-full bg-current;
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.35;
-    transform: scale(0.75);
-  }
-}
-
-.link {
-  @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
-}
-
-/* Radio option label styles */
-
-.radio-option {
-  @apply block cursor-pointer rounded-md border border-gray-200 px-3 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900;
-
-  &[checked] {
-    @apply border-accent-300 bg-accent-50 dark:border-accent-700 dark:bg-accent-950;
-  }
-}
-
-/* Tab styles */
-
-/* .tabs {
-  @apply mt-4 -mb-px flex space-x-2;
-}
-
-.tabs a,
-.tabs button {
-  @apply rounded-t-lg border border-gray-200 border-b-gray-200 px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:border-gray-800 dark:border-b-gray-800 dark:text-gray-400 dark:hover:text-gray-200;
-}
-
-.tabs a.active,
-.tabs button.active {
-  @apply border-b-white text-gray-700 dark:border-b-gray-950 dark:text-gray-200;
-} */
-
-/* Breadcrumb styles */
-
-.breadcrumb {
-  @apply -mt-2 mb-4 flex items-center space-x-2 text-gray-600 dark:text-gray-400;
-}
-
-.breadcrumb a {
-  @apply hover:text-blue-700 dark:hover:text-blue-300;
-}
-
-.breadcrumb .error-message {
-  @apply text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 cursor-pointer;
-}
-
-/* Navigation link styles */
-
-nldd-navigation-split-view {
-  --semantics-dividers-color: var(--color-gray-200);
-}
-
-.dark nldd-navigation-split-view {
-  --semantics-dividers-color: var(--color-gray-800);
-}
-
-.nav-link {
-  @apply ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
-}
-
-.nav-link.active {
-  @apply bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300;
-}
-
-/* Table styles */
-
-.table-container {
-  @apply overflow-x-auto rounded-md shadow ring-1 ring-gray-300 dark:ring-gray-700;
-}
-
-.table {
-  @apply min-w-full divide-y divide-gray-300 dark:divide-gray-700;
-}
-
-.table thead {
-  @apply bg-neutral-25 dark:bg-gray-800;
-}
-
-.table thead th {
-  @apply px-6 py-3.5 text-left font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400;
-}
-
-.table tbody {
-  @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950;
-}
-
-/* .table tbody tr {
-  @apply hover:bg-gray-50 dark:hover:bg-gray-900;
-} */
-
-.table tbody td {
-  @apply px-6 py-3 whitespace-nowrap dark:text-gray-300;
 }
 
 /* Date range picker styles, defined here since the 'accent' and 'neutral' colors are not available in the component styles */

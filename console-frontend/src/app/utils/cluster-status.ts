@@ -54,13 +54,13 @@ export function isTransitionalStatus(status: ClusterStatus): boolean {
 }
 
 /**
- * `color` for an `nldd-tag` representing this cluster status.
+ * `color` for the `nldd-badge` that shows this cluster status.
  *
  * Transitional states get their own Rijkskleur rather than `warning`: a cluster
  * that is provisioning or starting is not in trouble. `warning` and `critical`
  * are reserved for states that need attention.
  */
-export function getStatusTagColor(status: ClusterStatus): string {
+export function getStatusBadgeColor(status: ClusterStatus): string {
   const colors: Record<ClusterStatus, string> = {
     [ClusterStatus.PROVISIONING]: 'mintgroen',
     [ClusterStatus.STARTING]: 'hemelblauw',

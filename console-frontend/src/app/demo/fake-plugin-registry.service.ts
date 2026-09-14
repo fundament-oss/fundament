@@ -107,9 +107,7 @@ export default class FakePluginRegistryService implements Pick<
     // The fixtures index CRDs by plugin name, but callers address an
     // installation. Resolve through the fixture definitions rather than the
     // loaded set, so this stays usable before loadPlugins().
-    const pluginName = Object.values(fx.pluginDefinitions).find(
-      (def) => def.installationName === installationName,
-    )?.name;
+    const pluginName = fx.catalogPluginName(installationName);
     if (!pluginName) return undefined;
     return (fx.pluginCrds[pluginName] ?? []).find(
       (crd) => key === crd.plural || key === crd.kind || key === `${crd.plural}.${crd.group}`,

@@ -7,27 +7,50 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import PageNavService from '../page-nav.service';
+
+import '@nldd/design-system/badge';
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/card';
+import '@nldd/design-system/collection';
+import '@nldd/design-system/container';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/toolbar';
+import '@nldd/design-system/top-title-bar';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
+  imports: [RouterOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
 })
 export default class DashboardComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -40,12 +63,14 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   errorMessage = signal<string>('');
 
   // Expose utility functions for template
-  getStatusTagColor = getStatusTagColor;
+  getStatusBadgeColor = getStatusBadgeColor;
+
+  isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;
 
   constructor() {
-    this.titleService.setTitle('Dashboard');
+    this.titleService.setTitle('Clusters');
   }
 
   ngOnDestroy() {
@@ -80,7 +105,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
             !response.clusters.some((c) => c.id === prev.id),
         )
         .forEach((prev) => {
-          this.toastService.success(`Cluster '${prev.name}' has been deleted`);
+          this.notificationService.success(`Cluster '${prev.name}' has been deleted`);
         });
 
       const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));

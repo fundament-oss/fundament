@@ -18,6 +18,7 @@ import ReactFlow, {
 } from 'reactflow';
 import {
   Cable,
+  CABLE_STATUSES as SHARED_CABLE_STATUSES,
   CableStatus,
   CableType,
   CABLE_COLOR_HEX,
@@ -665,7 +666,10 @@ function Legend() {
         Legend
       </div>
       <LegendRow dash={false} opacity={1} label="Connected" />
-      <LegendRow dash={true} opacity={1} label="Planned" />
+      {/* Not one status but three: to order, ordered and ready to install are
+          all cables that are not in the rack yet, and the drawing cannot tell
+          them apart. So the line says what it knows. */}
+      <LegendRow dash={true} opacity={1} label="Not in place yet" />
       <LegendRow dash={false} opacity={0.3} label="Decommissioned" />
       <div
         style={{
@@ -725,11 +729,12 @@ function PortTypeLegendRow({ color, label }: { color: string; label: string }) {
 
 // ── Cable status context menu ─────────────────────────────────────────────────
 
-const CABLE_STATUSES: { value: CableStatus; label: string }[] = [
-  { value: 'connected', label: 'Connected' },
-  { value: 'planned', label: 'Planned' },
-  { value: 'decommissioned', label: 'Decommissioned' },
-];
+/** Every state before the cable is physically in place. */
+const PENDING_STATUSES = new Set<string>(['to-order', 'ordered', 'ready-to-install']);
+
+// The same list, in the same order, as everywhere else the statuses are
+// offered. See cable.model.
+const CABLE_STATUSES = SHARED_CABLE_STATUSES;
 
 interface ContextMenu {
   x: number;
@@ -997,7 +1002,9 @@ export function PatchMappingFlow({
           style: {
             stroke: cable.color ? CABLE_COLOR_HEX[cable.color] : '#94a3b8',
             strokeWidth: cable.id === selectedCableId ? 3 : 1.5,
-            strokeDasharray: cable.status === 'planned' ? '6 3' : undefined,
+            // Dashed for as long as the cable is not physically there, which is
+            // every state before connected.
+            strokeDasharray: PENDING_STATUSES.has(cable.status ?? '') ? '6 3' : undefined,
             opacity: cable.status === 'decommissioned' ? 0.3 : isConnected ? 1 : 0.15,
             transition: 'opacity 0.15s',
           },

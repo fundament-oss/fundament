@@ -53,6 +53,10 @@ export default defineConfig({
     }),
     starlight({
       title: 'Fundament Docs',
+      // Page first, site last, with the middle dot the design guidelines name:
+      // a browser full of tabs is read by its first words. Starlight's own
+      // default is a pipe.
+      titleDelimiter: '·',
       description:
         'Fundament documentation - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
       logo: {

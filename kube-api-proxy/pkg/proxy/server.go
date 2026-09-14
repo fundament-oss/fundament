@@ -37,6 +37,7 @@ type Server struct {
 	logger        *slog.Logger
 	authValidator *auth.Validator
 	authz         *authz.Client
+	store         *authz.Store
 	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
@@ -48,7 +49,7 @@ type Server struct {
 	serveUnauthedMockAssets bool
 }
 
-func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
+func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *authz.Store) (*Server, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
 	}
@@ -83,6 +84,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		logger:                  logger,
 		authValidator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
 		authz:                   authzClient,
+		store:                   store,
 		tokenCache:              tokenCache,
 		kubeHandler:             kubeHandler,
 		serveUnauthedMockAssets: serveUnauthedMockAssets,
@@ -119,7 +121,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		if err := s.authz.Healthy(ctx); err != nil {
+		if err := s.store.Healthy(ctx); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = w.Write([]byte("openfga: " + err.Error()))
 			return

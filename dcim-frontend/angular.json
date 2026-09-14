@@ -41,8 +41,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.25MB",
-                  "maximumError": "1.5MB"
+                  "maximumWarning": "1.75MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -64,6 +64,9 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "browser": "src/main.demo.ts"
             }
           },
           "defaultConfiguration": "production"
@@ -79,6 +82,9 @@
             },
             "development": {
               "buildTarget": "fundament-dcim:build:development"
+            },
+            "demo": {
+              "buildTarget": "fundament-dcim:build:development,demo"
             }
           },
           "defaultConfiguration": "development"

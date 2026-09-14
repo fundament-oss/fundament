@@ -14,6 +14,11 @@ COPY organization-api/pkg/proto/v1/ /organization-api/pkg/proto/v1/
 # Copy source files
 COPY console-frontend/ .
 
+# The walkthrough frames the marketplace demo bundle, which has to be same-origin,
+# so `build:demo` builds it from here and copies it into public/marketplace/. Only
+# the demo build reads this; the default build ignores it.
+COPY marketplace-frontend/ /marketplace-frontend/
+
 # Build the application. `build:demo` produces the walkthrough bundle (main.demo.ts,
 # in-memory mock data) that the console-demo deployment serves; it needs no config.json
 # and makes no backend calls.

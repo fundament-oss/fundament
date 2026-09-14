@@ -1,6 +1,7 @@
 // Demo-only in-memory ConnectRPC transport for the static walkthrough build.
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
+import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import {
   OrganizationService,
@@ -23,6 +24,8 @@ import {
   NamespaceService,
   ListClusterNamespacesResponseSchema,
   ListProjectNamespacesResponseSchema,
+  CreateNamespaceResponseSchema,
+  NamespaceSchema,
 } from '../../generated/v1/namespace_pb';
 import {
   ProjectService,
@@ -57,12 +60,63 @@ import {
   PublisherSchema,
   DocumentationLinkSchema as MarketplaceDocumentationLinkSchema,
 } from '../../generated/marketplace/v1/common_pb';
+import {
+  LogsService,
+  QueryLogsResponseSchema,
+  GetLogLabelsResponseSchema,
+  LogEntrySchema,
+  LogBackend,
+  type QueryLogsRequest,
+  type TailLogsRequest,
+  type GetLogLabelsRequest,
+} from '../../generated/v1/logs_pb';
 import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
+import {
+  MetricsService,
+  GetOrgWorkloadMetricsResponseSchema,
+  GetProjectWorkloadMetricsResponseSchema,
+  GetClusterWorkloadMetricsResponseSchema,
+  GetWorkloadTimeSeriesResponseSchema,
+  StreamWorkloadMetricsResponseSchema,
+} from '../../generated/v1/metrics_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import * as fx from './fixtures';
 
 // Artificial latency so the app's loading/skeleton states are visible while presenting.
 const LATENCY_MS = 260;
+/**
+ * The log fixtures are templates without a time of their own, so an entry is
+ * stamped as it is handed out: the demo then always has lines inside whatever
+ * range the page asks for, however long the tab has been open.
+ */
+function logEntry(line: fx.DemoLogLine, clusterId: string, at: Date) {
+  return create(LogEntrySchema, {
+    timestamp: timestampFromDate(at),
+    level: line.level,
+    cluster: clusterId,
+    namespace: line.namespace,
+    pod: line.pod,
+    container: line.container,
+    message: line.message,
+    fields: line.fields ?? {},
+  });
+}
+
+/** The same narrowing the backend would do, so the filter menus do something. */
+function logMatches(
+  line: fx.DemoLogLine,
+  filter: { namespace: string; pod: string; container: string; search: string; levels: string[] },
+): boolean {
+  if (filter.namespace && line.namespace !== filter.namespace) return false;
+  if (filter.pod && line.pod !== filter.pod) return false;
+  if (filter.container && line.container !== filter.container) return false;
+  if (filter.levels.length > 0 && !filter.levels.includes(line.level)) return false;
+  if (filter.search && !line.message.toLowerCase().includes(filter.search.toLowerCase())) {
+    return false;
+  }
+  return true;
+}
+
 const delay = (ms = LATENCY_MS) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -104,7 +158,7 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetOrganizationLimitsResponseSchema, {
           limits: fx.organizationLimits,
-          defaults: fx.organizationLimits,
+          defaults: fx.platformOrganizationLimits,
         });
       },
     });
@@ -138,10 +192,13 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetClusterActivityResponseSchema, { events: fx.clusterActivity });
       },
-      createCluster: async (req) => {
+      createCluster: async (req, ctx) => {
         await delay(500);
+        // Same as createNamespace: the caller polls until this header says the
+        // work is done, so without it the form sits on a cluster that exists.
+        ctx.responseHeader.set('Idempotency-Status', 'completed');
         const id = `cl-${req.name}`;
-        // Append so the cluster list reflects the wizard result on the next visit.
+        // Append so the cluster list reflects the form result on the next visit.
         if (!fx.clusterSummaries.some((c) => c.id === id)) {
           fx.clusterSummaries.push(
             create(ListClustersResponse_ClusterSummarySchema, {
@@ -181,6 +238,30 @@ export default function createDemoTransport(): Transport {
           namespaces: fx.namespaces.filter((n) => n.projectId === req.projectId),
         });
       },
+      createNamespace: async (req, ctx) => {
+        await delay();
+        // The caller polls until this header says the work is done (see
+        // withIdempotency). Without it a create in the demo never resolves and
+        // the sheet stays open on something that already happened.
+        ctx.responseHeader.set('Idempotency-Status', 'completed');
+        const id = `ns-${req.name}`;
+        // Append so the list shows what was just created, the way the cluster
+        // form does. The access handed out with it lives in the mock role
+        // bindings and needs the namespace to exist to be visible at all.
+        if (!fx.namespaces.some((n) => n.id === id)) {
+          const project = fx.projects.find((p) => p.id === req.projectId);
+          fx.namespaces.push(
+            create(NamespaceSchema, {
+              id,
+              name: req.name,
+              projectId: req.projectId,
+              clusterId: project?.clusterId ?? 'cl-production',
+              created: timestampFromDate(new Date()),
+            }),
+          );
+        }
+        return create(CreateNamespaceResponseSchema, { namespaceId: id });
+      },
     });
 
     router.service(ProjectService, {
@@ -213,7 +294,7 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetProjectLimitsResponseSchema, {
           limits: fx.projectLimits,
-          defaults: fx.projectLimits,
+          defaults: fx.platformProjectLimits,
         });
       },
     });
@@ -340,6 +421,137 @@ export default function createDemoTransport(): Transport {
             }),
           ),
         });
+      },
+    });
+
+    // Metrics, so the charts have something to draw. One snapshot per stream:
+    // the demo is about the shape of the page, not about watching it tick.
+    const timeSeries = (windowSeconds: number, stepSeconds: number) => {
+      const step = stepSeconds || 300;
+      const span = windowSeconds || 7 * 24 * 3600;
+      const count = Math.min(240, Math.max(12, Math.round(span / step)));
+      const now = Date.now();
+      const toSamples = (points: { timestamp: Date; value: number }[]) =>
+        points.map((point) => ({
+          timestamp: timestampFromDate(point.timestamp),
+          value: point.value,
+        }));
+      return create(GetWorkloadTimeSeriesResponseSchema, {
+        cpuCores: toSamples(fx.metricSeries(count, step, 2.4, 0.6, 0.1, now)),
+        memoryGib: toSamples(fx.metricSeries(count, step, 12.8, 2.4, 0.4, now)),
+        podCount: toSamples(fx.metricSeries(count, step, 28, 4, 0.7, now)),
+        networkReceiveMbS: toSamples(fx.metricSeries(count, step, 1.8, 0.7, 0.2, now)),
+        networkTransmitMbS: toSamples(fx.metricSeries(count, step, 0.9, 0.4, 0.9, now)),
+      });
+    };
+
+    const snapshot = (level: 'org' | 'cluster' | 'project', windowSeconds = 0, stepSeconds = 0) =>
+      create(StreamWorkloadMetricsResponseSchema, {
+        totals:
+          level === 'project'
+            ? {
+                cpu: { used: 1.4, total: 4, unit: 'cores' },
+                memory: { used: 6.1, total: 16, unit: 'GiB' },
+                pods: { used: 14, total: 55, unit: 'pods' },
+              }
+            : {
+                cpu: { used: 3.3, total: 12, unit: 'cores' },
+                memory: { used: 16.4, total: 48, unit: 'GiB' },
+                pods: { used: 37, total: 165, unit: 'pods' },
+              },
+        clusters: level === 'org' ? fx.clusterUsage : [],
+        nodes: level === 'cluster' ? fx.nodeUsage : [],
+        namespaces: level === 'project' ? fx.namespaceMetrics.slice(0, 1) : fx.namespaceMetrics,
+        timeSeries: timeSeries(windowSeconds, stepSeconds),
+        refreshedAt: timestampFromDate(new Date()),
+      });
+
+    router.service(MetricsService, {
+      getOrgWorkloadMetrics: async () => {
+        await delay(80);
+        return create(GetOrgWorkloadMetricsResponseSchema, {
+          clusters: fx.clusterUsage,
+          namespaces: fx.namespaceMetrics,
+        });
+      },
+      getClusterWorkloadMetrics: async () => {
+        await delay();
+        return create(GetClusterWorkloadMetricsResponseSchema, {
+          nodes: fx.nodeUsage,
+          namespaces: fx.namespaceMetrics,
+        });
+      },
+      getProjectWorkloadMetrics: async () => {
+        await delay();
+        return create(GetProjectWorkloadMetricsResponseSchema, {
+          namespaces: fx.namespaceMetrics.slice(0, 1),
+        });
+      },
+      getOrgWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      getClusterWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      getProjectWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      async *streamOrgWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('org', req.windowSeconds, req.stepSeconds);
+      },
+      async *streamClusterWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('cluster', req.windowSeconds, req.stepSeconds);
+      },
+      async *streamProjectWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('project', req.windowSeconds, req.stepSeconds);
+      },
+    });
+
+    router.service(LogsService, {
+      queryLogs: async (req: QueryLogsRequest) => {
+        await delay();
+        const now = Date.now();
+        const start = req.start ? Number(req.start.seconds) * 1000 : 0;
+        const end = req.end ? Number(req.end.seconds) * 1000 : now;
+        const entries = fx.logLines
+          .filter((line) => logMatches(line, req))
+          .map((line) => ({ line, at: now - line.ago * 1000 }))
+          .filter(({ at }) => at >= start && at <= end)
+          .sort((a, b) => b.at - a.at)
+          .slice(0, req.limit > 0 ? req.limit : fx.logLines.length)
+          .map(({ line, at }) => logEntry(line, req.clusterId, new Date(at)));
+        return create(QueryLogsResponseSchema, { entries, backend: LogBackend.LOKI });
+      },
+      getLogLabels: async (req: GetLogLabelsRequest) => {
+        await delay(60);
+        const inScope = fx.logLines.filter(
+          (line) => !req.namespace || line.namespace === req.namespace,
+        );
+        const unique = (values: string[]) => [...new Set(values)].sort();
+        return create(GetLogLabelsResponseSchema, {
+          namespaces: unique(fx.logLines.map((line) => line.namespace)),
+          pods: unique(inScope.map((line) => line.pod)),
+          containers: unique(inScope.map((line) => line.container)),
+          backend: LogBackend.LOKI,
+        });
+      },
+      // Live tail: a line every second or so, off the same set, so the stream
+      // button has something to stream. It stops when the page unsubscribes.
+      async *tailLogs(req: TailLogsRequest) {
+        const matching = fx.logLines.filter((line) => logMatches(line, req));
+        for (let i = 0; i < 500 && matching.length > 0; i += 1) {
+          // The wait is the pacing: each line is meant to land a second after
+          // the last one, so the awaits have to run in series.
+          // eslint-disable-next-line no-await-in-loop
+          await delay(900);
+          yield logEntry(matching[i % matching.length], req.clusterId, new Date());
+        }
       },
     });
 

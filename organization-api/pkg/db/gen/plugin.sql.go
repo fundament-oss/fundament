@@ -87,23 +87,31 @@ func (q *Queries) PluginCategoriesListByPluginID(ctx context.Context, arg Plugin
 const pluginDocumentationLinksList = `-- name: PluginDocumentationLinksList :many
 SELECT id, plugin_id, title, url_name, url
 FROM appstore.plugin_documentation_links
-WHERE plugin_id = $1
-ORDER BY title
+WHERE plugin_id = $1 AND deleted IS NULL
+ORDER BY position, title
 `
 
 type PluginDocumentationLinksListParams struct {
 	PluginID uuid.UUID
 }
 
-func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]AppstorePluginDocumentationLink, error) {
+type PluginDocumentationLinksListRow struct {
+	ID       uuid.UUID
+	PluginID uuid.UUID
+	Title    string
+	UrlName  string
+	Url      string
+}
+
+func (q *Queries) PluginDocumentationLinksList(ctx context.Context, arg PluginDocumentationLinksListParams) ([]PluginDocumentationLinksListRow, error) {
 	rows, err := q.db.Query(ctx, pluginDocumentationLinksList, arg.PluginID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AppstorePluginDocumentationLink
+	var items []PluginDocumentationLinksListRow
 	for rows.Next() {
-		var i AppstorePluginDocumentationLink
+		var i PluginDocumentationLinksListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.PluginID,

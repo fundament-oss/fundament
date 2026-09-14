@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import {
   AssetCategory as ProtoCategory,
   PortType,
@@ -20,6 +20,17 @@ import { CATALOG_CLIENT } from '../../connect/tokens';
 @Injectable({ providedIn: 'root' })
 export default class CatalogApiService {
   private readonly client = inject(CATALOG_CLIENT);
+
+  /**
+   * Counts the writes this session has made. A page that shows catalog data
+   * reads it and reloads when it moves, which is how a list learns about a
+   * product that was created from a sheet somewhere else.
+   */
+  readonly revision = signal(0);
+
+  markChanged(): void {
+    this.revision.update((n) => n + 1);
+  }
 
   // ── Mappers ───────────────────────────────────────────────────────────────
 
@@ -175,6 +186,7 @@ export default class CatalogApiService {
       id: entry.id,
       manufacturer: entry.manufacturer,
       model: entry.model,
+      partNumber: entry.partNumber ?? '',
       category: CatalogApiService.toProtoCategory(entry.category),
       specs: entry.specs,
     });

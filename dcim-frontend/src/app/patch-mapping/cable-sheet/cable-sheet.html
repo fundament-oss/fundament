@@ -1,0 +1,15 @@
+<nldd-sheet #cableSheet accessible-label="Cable details" placement="right">
+  <app-cable-form
+    [cable]="form()"
+    [dcId]="dcId()"
+    [datacenters]="datacenters()"
+    [allCables]="cables()"
+    [externalDevicePorts]="devicePorts()"
+    [devices]="devices()"
+    [serverError]="formError()"
+    (dcChange)="onDcChange($event)"
+    (save)="save($event)"
+    (cancelForm)="close()"
+    (portsUpdated)="onPortsUpdated($event)"
+  />
+</nldd-sheet>

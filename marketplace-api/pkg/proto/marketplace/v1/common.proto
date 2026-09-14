@@ -2,6 +2,7 @@ edition = "2023";
 
 package marketplace.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/go_features.proto";
 
 option features.(pb.go).api_level = API_OPAQUE;
@@ -65,12 +66,25 @@ message PluginPermission {
 message FeatureBlock {
   string title = 10;
   string body = 20;
+  // Server-assigned, and stable across an UpdatePlugin that carries it back,
+  // exactly like DocumentationLink.id. Numbered last rather than first because
+  // renumbering title and body would change the wire format catalog.v1 clients
+  // already speak.
+  string id = 30 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uuid: true}
+  ];
 }
 
 // appstore.plugin_documentation_links. url_name is the link text; title labels
 // the group it appears under.
 message DocumentationLink {
-  string id = 10;
+  // Server-assigned, and stable across an UpdatePlugin that carries it back.
+  // Empty means "a link that does not exist yet".
+  string id = 10 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uuid: true}
+  ];
   string title = 20;
   string url_name = 30;
   string url = 40;

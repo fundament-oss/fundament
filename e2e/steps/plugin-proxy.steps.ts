@@ -27,7 +27,10 @@ function state(world: ICustomWorld): PluginProxyState {
   return s;
 }
 
-async function captureResponse(world: ICustomWorld, response: Response): Promise<void> {
+async function captureResponse(
+  world: ICustomWorld,
+  response: Response,
+): Promise<void> {
   const s = state(world);
   s.response = response;
   s.body = await response.text();
@@ -44,38 +47,49 @@ function resolveUrls(world: ICustomWorld, text: string): string {
 
 // --- Given ---
 
-Given('I have a plugin token for the seeded installation', async function (this: ICustomWorld) {
-  const mint = await this.tokenService!.mintPluginToken(
-    this.authToken!,
-    SEEDED_CLUSTER_ID,
-    MOCK_INSTALLATION_ID,
-  );
-  state(this).pluginToken = mint.accessToken;
-});
+Given(
+  'I have a plugin token for the seeded installation',
+  async function (this: ICustomWorld) {
+    const mint = await this.tokenService!.mintPluginToken(
+      this.authToken!,
+      SEEDED_CLUSTER_ID,
+      MOCK_INSTALLATION_ID,
+    );
+    state(this).pluginToken = mint.accessToken;
+  },
+);
 
 // --- When ---
 
-When('I GET the asset {string}', async function (this: ICustomWorld, path: string) {
-  // The asset route is /clusters/{clusterID}/plugins/{name}/{version}/console/{path}
-  // and is gated by the console UserToken cookie + OpenFGA can_view. Send the
-  // authenticated user's token as the fundament_auth cookie (matches
-  // common/auth/auth.go ConsoleAuthCookieName). Malformed-path negative cases
-  // are rejected by parsePath before auth, so the cookie is harmless there.
-  const headers: Record<string, string> = {};
-  if (this.authToken) {
-    headers.Cookie = `fundament_auth=${this.authToken}`;
-  }
-  const response = await fetch(`${this.pluginProxyUrl}${resolveUrls(this, path)}`, {
-    redirect: 'manual',
-    headers,
-  });
-  await captureResponse(this, response);
-});
+When(
+  'I GET the asset {string}',
+  async function (this: ICustomWorld, path: string) {
+    // The asset route is /clusters/{clusterID}/plugins/{name}/{version}/console/{path}
+    // and is gated by the console UserToken cookie + OpenFGA can_view. Send the
+    // authenticated user's token as the fundament_auth cookie (matches
+    // common/auth/auth.go ConsoleAuthCookieName). Malformed-path negative cases
+    // are rejected by parsePath before auth, so the cookie is harmless there.
+    const headers: Record<string, string> = {};
+    if (this.authToken) {
+      headers.Cookie = `fundament_auth=${this.authToken}`;
+    }
+    const response = await fetch(
+      `${this.pluginProxyUrl}${resolveUrls(this, path)}`,
+      {
+        redirect: 'manual',
+        headers,
+      },
+    );
+    await captureResponse(this, response);
+  },
+);
 
 When(
   'I send a GET to the installation route {string} with no token',
   async function (this: ICustomWorld, path: string) {
-    const response = await fetch(`${this.pluginProxyUrl}${path}`, { redirect: 'manual' });
+    const response = await fetch(`${this.pluginProxyUrl}${path}`, {
+      redirect: 'manual',
+    });
     await captureResponse(this, response);
   },
 );
@@ -97,21 +111,30 @@ When(
 
 // --- Then ---
 
-Then('the response status should be {int}', function (this: ICustomWorld, want: number) {
-  const r = state(this).response;
-  expect(r, 'no response captured').toBeDefined();
-  expect(r!.status).toBe(want);
-});
+Then(
+  'the response status should be {int}',
+  function (this: ICustomWorld, want: number) {
+    const r = state(this).response;
+    expect(r, 'no response captured').toBeDefined();
+    expect(r!.status).toBe(want);
+  },
+);
 
-Then('the response status should not be in the 2xx range', function (this: ICustomWorld) {
-  const r = state(this).response;
-  expect(r, 'no response captured').toBeDefined();
-  expect(r!.status).toBeGreaterThanOrEqual(300);
-});
+Then(
+  'the response status should not be in the 2xx range',
+  function (this: ICustomWorld) {
+    const r = state(this).response;
+    expect(r, 'no response captured').toBeDefined();
+    expect(r!.status).toBeGreaterThanOrEqual(300);
+  },
+);
 
-Then('the response body should equal {string}', function (this: ICustomWorld, want: string) {
-  expect(state(this).body).toBe(want);
-});
+Then(
+  'the response body should equal {string}',
+  function (this: ICustomWorld, want: string) {
+    expect(state(this).body).toBe(want);
+  },
+);
 
 Then(
   'the {string} header should be {string}',

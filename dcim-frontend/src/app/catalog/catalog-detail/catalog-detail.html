@@ -1,372 +1,277 @@
-<main class="pb-6">
+<!-- The page a row in the catalog opens: what this product is, what it is made
+     of, and which machines in the racks are one. Everything you can do to it
+     stands in one toolbar under the title.
+     The back button is forced visible: the split view hides a pane's back button
+     on wide screens, but on a detail page it is the way up to the list, not a
+     pane affordance. -->
+<nldd-page sticky-header style="--context-back-button-display: flex">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="entry()?.model ?? 'Product'"
+    [attr.back-text]="backText"
+    collapse-anchor="product-title"
+    (back)="goToCatalog($event)"
+  ></nldd-top-title-bar>
   @if (entry(); as e) {
-    <!-- Page header -->
-    <div class="bg-white dark:bg-gray-950 border-b border-slate-200 dark:border-gray-800">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Breadcrumb -->
-        <nav aria-label="Breadcrumb" class="mb-3">
-          <ol class="flex items-center gap-1.5 text-sm text-slate-400 dark:text-gray-500">
-            <li>
-              <a
-                routerLink="/catalog"
-                class="hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
-                >Catalog</a
-              >
-            </li>
-            <li aria-hidden="true">/</li>
-            <li class="text-slate-500 dark:text-gray-400" aria-current="page">{{ e.model }}</li>
-          </ol>
-        </nav>
-
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div class="flex items-center gap-3 min-w-0">
-            <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400"
-              [attr.aria-label]="e.category"
-            >
-              <nldd-icon
-                [name]="categoryIcon(e.category)"
-                class="w-5 h-5"
-                aria-hidden="true"
-              ></nldd-icon>
-            </div>
-            <div class="min-w-0">
-              <h1 class="text-xl font-semibold text-slate-900 dark:text-white leading-tight">
-                {{ e.model }}
-              </h1>
-              <p class="text-sm text-slate-400 dark:text-gray-500 mt-0.5">{{ e.manufacturer }}</p>
-            </div>
-          </div>
+    <nldd-simple-section>
+      <nldd-title id="product-title" size="2">
+        <h1>
+          {{ e.model }}&ngsp;<nldd-tag
+            size="sm"
+            color="neutral"
+            [attr.text]="e.category"
+          ></nldd-tag>
+        </h1>
+        <p slot="subtitle">{{ e.manufacturer }}</p>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-toolbar label="Product actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="primary"
+            text="Edit product"
+            start-icon="pencil-on-square"
+            (click)="openEditEntry()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="pencil-on-square"
+            text="Edit product"
+            (select)="openEditEntry()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="20"></nldd-spacer>
+      <!-- No heading over this one: it is what the page is about. -->
+      <nldd-list variant="box-tinted" accessible-label="Product details">
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Manufacturer"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            horizontal-alignment="right"
+            [attr.text]="e.manufacturer"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Category"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="e.category"></nldd-text-cell>
+        </nldd-list-item>
+        @if (e.partNumber) {
+          <nldd-list-item>
+            <nldd-text-cell width="180px" text="Part number"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              horizontal-alignment="right"
+              [attr.text]="e.partNumber"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Catalog ID"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="e.id"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+      @if (specEntries(e.specs).length > 0) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="4">
+          <h2>Specifications</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list variant="box-tinted" accessible-label="Specifications">
+          @for (spec of specEntries(e.specs); track spec.key) {
+            <nldd-list-item>
+              <nldd-text-cell width="180px" [attr.text]="spec.key"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                horizontal-alignment="right"
+                [attr.text]="spec.value"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Ports</h2>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- The button that adds one sits with them: it acts on this section, not
+           on the product as a whole. -->
+      <nldd-toolbar label="Port actions">
+        <nldd-toolbar-item slot="start">
           <nldd-button
             variant="secondary"
-            size="sm"
-            text="Back to catalog"
-            start-icon="arrow-left"
-            href="/catalog"
+            text="Add port…"
+            start-icon="plus-small"
+            (click)="openCreatePortDef()"
           ></nldd-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
-        <!-- Left: specs + port defs + asset list -->
-        <div class="lg:col-span-2 flex flex-col gap-6">
-          <!-- Specs card -->
-          <section
-            aria-labelledby="specs-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
-              <h2 id="specs-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
-                Specifications
-              </h2>
-            </div>
-            <dl class="divide-y divide-slate-100 dark:divide-gray-800">
-              @for (spec of specEntries(e.specs); track spec.key) {
-                <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="text-sm text-slate-500 dark:text-gray-400">{{ spec.key }}</dt>
-                  <dd class="text-sm font-mono text-slate-800 dark:text-gray-100">
-                    {{ spec.value }}
-                  </dd>
-                </div>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- A list, not a table: what a port is fits in its name plus two tags,
+           and the numbers behind it read as one line rather than as columns that
+           are empty more often than not. The row itself does nothing: editing
+           and deleting both sit behind the button on the right, and a row that
+           picks one of them takes that choice out of your hands. Empty, the list
+           stays and says so inside its own box. -->
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Port definitions"
+        empty-text="No ports"
+        empty-supporting-text='Use "Add port" to define one.'
+      >
+        @for (pd of portDefs(); track pd.id) {
+          <nldd-list-item>
+            <!-- The type behind the name, in the same neutral tag a category
+                 wears in the catalog. &ngsp; is Angular's keep-this-space. -->
+            <nldd-text-cell
+              width="full"
+              min-width="140px"
+              [attr.supporting-text]="compatSummary(pd.id)"
+              >{{ pd.name }}&ngsp;<nldd-tag
+                size="sm"
+                color="neutral"
+                [attr.text]="portTypeLabel(pd.portType)"
+              ></nldd-tag>
+              @if (pd.mediaType) {
+                &ngsp;<nldd-tag size="sm" color="neutral" [attr.text]="pd.mediaType"></nldd-tag>
               }
-            </dl>
-          </section>
-
-          <!-- Port Definitions card -->
-          <section
-            aria-labelledby="ports-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div
-              class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between"
-            >
-              <h2 id="ports-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
-                Port Definitions
-              </h2>
-              <nldd-button
-                variant="primary"
-                text="Add port"
-                start-icon="plus-small"
-                size="xs"
-                (click)="openCreatePortDef()"
-              ></nldd-button>
-            </div>
-
-            <nldd-table
-              accessible-label="Port definitions"
-              columns="minmax(140px, 1fr) minmax(160px, 1fr) 100px 90px minmax(180px, 1.5fr) 64px"
-              md-columns="minmax(140px, 1fr) minmax(160px, 1fr) minmax(180px, 1.5fr) 64px"
-              sm-columns="minmax(140px, 1fr) minmax(160px, 1fr) minmax(180px, 1.5fr) 64px"
-              empty-text="No port definitions"
-              empty-supporting-text='Click "Add port" to define one.'
-            >
-              <nldd-table-row slot="header">
-                <nldd-text-cell text="**Name**"></nldd-text-cell>
-                <nldd-text-cell text="**Type**"></nldd-text-cell>
-                <nldd-text-cell text="**Speed**" hide-below="lg"></nldd-text-cell>
-                <nldd-text-cell text="**Power**" hide-below="lg"></nldd-text-cell>
-                <nldd-text-cell text="**Compatible with**"></nldd-text-cell>
-                <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-              </nldd-table-row>
-
-              @for (pd of portDefs(); track pd.id) {
-                <nldd-table-row>
-                  <nldd-text-cell class="font-mono" [attr.text]="pd.name"></nldd-text-cell>
-                  <nldd-text-cell
-                    color="secondary"
-                    [attr.text]="
-                      portTypeLabel(pd.portType) + (pd.mediaType ? ' · ' + pd.mediaType : '')
-                    "
-                  ></nldd-text-cell>
-                  <nldd-text-cell
-                    class="tabular-nums"
-                    color="secondary"
-                    hide-below="lg"
-                    [attr.text]="
-                      pd.speedGbps !== null && pd.speedGbps !== undefined
-                        ? pd.speedGbps + ' Gbps'
-                        : ''
-                    "
-                  ></nldd-text-cell>
-                  <nldd-text-cell
-                    class="tabular-nums"
-                    color="secondary"
-                    hide-below="lg"
-                    [attr.text]="
-                      pd.powerWatts !== null && pd.powerWatts !== undefined
-                        ? pd.powerWatts + ' W'
-                        : ''
-                    "
-                  ></nldd-text-cell>
-                  <nldd-cell width="full">
-                    <div class="flex flex-wrap gap-1 items-center">
-                      @for (compat of compatibilitiesForPortDef(pd.id); track compat.id) {
-                        <span
-                          class="inline-flex items-center gap-1 bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300 text-xs rounded-full px-2 py-0.5"
-                        >
-                          {{ compatLabel(compat) }}
-                          @if (compat.compatibleCatalogEntryId) {
-                            <button
-                              (click)="openDeleteCompat(compat)"
-                              class="text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                              [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
-                            >
-                              ×
-                            </button>
-                          }
-                        </span>
-                      }
-                      <nldd-icon-button
-                        icon="plus-small"
-                        variant="neutral-transparent"
-                        size="xs"
-                        text="Add compatibility"
-                        (click)="openAddCompatibility(pd.id)"
-                      ></nldd-icon-button>
-                    </div>
-                  </nldd-cell>
-                  <nldd-cell horizontal-alignment="right">
-                    <nldd-icon-button
-                      icon="ellipsis"
-                      variant="neutral-transparent"
-                      size="sm"
-                      expandable
-                      popup-type="menu"
-                      [attr.accessible-label]="'Actions for port ' + pd.name"
-                    >
-                      <nldd-menu slot="popup">
-                        <nldd-menu-item
-                          text="Edit"
-                          icon="pencil-on-square"
-                          (select)="openEditPortDef(pd)"
-                        ></nldd-menu-item>
-                        <nldd-menu-divider></nldd-menu-divider>
-                        <nldd-menu-item
-                          text="Delete"
-                          icon="trash"
-                          destructive
-                          (select)="openDeletePortDef(pd)"
-                        ></nldd-menu-item>
-                      </nldd-menu>
-                    </nldd-icon-button>
-                  </nldd-cell>
-                </nldd-table-row>
-              }
-            </nldd-table>
-          </section>
-
-          <!-- Assets list -->
-          @if (assets().length > 0) {
-            <section
-              aria-labelledby="assets-heading"
-              class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-            >
-              <div
-                class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between"
+            </nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="140px"
+              horizontal-alignment="right"
+              hide-below="560px"
+              [attr.text]="portRating(pd)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-icon-button
+                icon="ellipsis"
+                size="sm"
+                popup-type="menu"
+                [attr.accessible-label]="'Actions for port ' + pd.name"
               >
-                <h2
-                  id="assets-heading"
-                  class="text-sm font-semibold text-slate-900 dark:text-white"
-                >
-                  Assets
-                </h2>
-                <nldd-tag color="neutral" size="sm" [attr.text]="assets().length"></nldd-tag>
-              </div>
-              <ul
-                class="divide-y divide-slate-100 dark:divide-gray-800"
-                aria-label="Assets of this product model"
+                <nldd-menu slot="popup">
+                  <nldd-menu-item
+                    text="Edit"
+                    icon="pencil-on-square"
+                    (select)="openEditPortDef(pd)"
+                  ></nldd-menu-item>
+                  <nldd-menu-divider></nldd-menu-divider>
+                  <nldd-menu-item
+                    text="Delete"
+                    icon="trash"
+                    destructive
+                    (select)="openDeletePortDef(pd)"
+                  ></nldd-menu-item>
+                </nldd-menu>
+              </nldd-icon-button>
+            </nldd-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Assets</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- How many of this product are in the racks, and where they stand. The
+           four figures the summary card carried are one line here, above the
+           rows they count. -->
+      <nldd-text color="secondary">{{ assetSummary() }}</nldd-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      @if (assets().length > 0) {
+        <nldd-list variant="box-tinted" accessible-label="Assets of this product">
+          @for (asset of assets(); track asset.id) {
+            <!-- The same row as in the inventory list: category icon, name,
+                 supporting line, status, chevron. The name is the asset number
+                 rather than the model, because on this page every row is the
+                 same model and the sticker on the front is what tells them
+                 apart. -->
+            <nldd-list-item
+              [attr.href]="'/inventory/' + asset.id"
+              [attr.accessible-label]="'Open ' + asset.assetTag"
+              (click)="openAsset($event, asset.id)"
+            >
+              <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                min-width="140px"
+                [attr.text]="asset.assetTag"
+                [attr.supporting-text]="assetLocationLine(asset)"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell width="fit-content" horizontal-alignment="right" hide-below="440px"
+                ><nldd-badge decorative [attr.color]="statusTagColor(asset.status)"></nldd-badge
+                >&ngsp;{{ statusLabel(asset.status) }}</nldd-text-cell
               >
-                @for (asset of assets(); track asset.id) {
-                  <li>
-                    <a
-                      [routerLink]="['/inventory', asset.id]"
-                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
-                    >
-                      <div class="flex-1 min-w-0">
-                        <p
-                          class="text-sm font-medium text-indigo-600 dark:text-indigo-300 font-mono"
-                        >
-                          {{ asset.assetTag }}
-                        </p>
-                        @if (asset.datacenter || asset.rack) {
-                          <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
-                            {{ asset.datacenter }} · {{ asset.rack }}
-                          </p>
-                        }
-                      </div>
-                      <nldd-tag
-                        class="shrink-0"
-                        size="sm"
-                        [attr.color]="statusTagColor(asset.status)"
-                        [attr.text]="statusLabel(asset.status)"
-                      ></nldd-tag>
-                    </a>
-                  </li>
-                }
-              </ul>
-            </section>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell size="20" icon="chevron-right" color="secondary"></nldd-icon-cell>
+            </nldd-list-item>
           }
-        </div>
-
-        <!-- Right: summary stats + product info -->
-        <div class="flex flex-col gap-6">
-          <section
-            aria-labelledby="summary-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
-              <h2 id="summary-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
-                Inventory Summary
-              </h2>
-            </div>
-            <div class="divide-y divide-slate-100 dark:divide-gray-800">
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Total assets</span>
-                <span class="text-sm font-semibold text-slate-900 dark:text-white">{{
-                  assets().length
-                }}</span>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Deployed</span>
-                <span class="text-sm font-semibold text-teal-600 dark:text-teal-300">{{
-                  deployedCount()
-                }}</span>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Available</span>
-                <span class="text-sm font-semibold text-green-600 dark:text-green-300">{{
-                  availableCount()
-                }}</span>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Issues</span>
-                <span
-                  class="text-sm font-semibold"
-                  [class]="
-                    issuesCount() > 0
-                      ? 'text-amber-600 dark:text-amber-300'
-                      : 'text-slate-400 dark:text-gray-500'
-                  "
-                  >{{ issuesCount() }}</span
-                >
-              </div>
-            </div>
-          </section>
-
-          <section
-            aria-labelledby="catalog-meta-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
-              <h2
-                id="catalog-meta-heading"
-                class="text-sm font-semibold text-slate-900 dark:text-white"
-              >
-                Product Info
-              </h2>
-            </div>
-            <div class="divide-y divide-slate-100 dark:divide-gray-800">
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Catalog ID</span>
-                <span class="text-sm font-mono text-slate-700 dark:text-gray-300">{{ e.id }}</span>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Category</span>
-                <nldd-tag
-                  color="neutral"
-                  size="sm"
-                  [attr.icon]="categoryIcon(e.category)"
-                  [attr.text]="e.category"
-                ></nldd-tag>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Manufacturer</span>
-                <span class="text-sm text-slate-700 dark:text-gray-300">{{ e.manufacturer }}</span>
-              </div>
-              <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500 dark:text-gray-400">Port definitions</span>
-                <span class="text-sm font-semibold text-slate-900 dark:text-white">{{
-                  portDefs().length
-                }}</span>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+        </nldd-list>
+      }
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Deleting a product takes its ports with it and leaves the assets
+           built on it without a catalog entry, so it does not belong next to
+           Edit. It waits at the end of the page. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Delete {{ e.model }}</h2>
+          </nldd-title>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>
+              Deleting this product removes its port definitions as well. This cannot be undone.
+            </p>
+          </nldd-rich-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Delete product"
+            start-icon="delete"
+            (click)="openDeleteEntry()"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    </nldd-simple-section>
   } @else if (entryLoaded()) {
-    <!-- Not found -->
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col items-center justify-center py-24 text-center">
-        <div
-          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-4"
-        >
-          <nldd-icon name="rectangle-stack" class="w-8 h-8" aria-hidden="true"></nldd-icon>
-        </div>
-        <h1 class="text-lg font-semibold text-slate-800 dark:text-gray-100">Product not found</h1>
-        <p class="mt-1 text-sm text-slate-400 dark:text-gray-500 max-w-xs">
-          No catalog entry with ID <span class="font-mono">{{ catalogId() }}</span> exists.
-        </p>
+    <!-- Nothing to show is not an empty page with a heading: the message takes
+         the room the product would have had. -->
+    <nldd-simple-section height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog
+        icon="slash-circle"
+        text="Product not found"
+        [attr.supporting-text]="'No catalog entry with id ' + catalogId() + ' exists.'"
+      >
         <nldd-button
-          class="mt-5"
+          slot="actions"
           variant="primary"
           text="Back to catalog"
           start-icon="arrow-left"
           href="/catalog"
         ></nldd-button>
-      </div>
-    </div>
+      </nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing found" until the answer is in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
+    </nldd-simple-section>
   }
-</main>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      PORT DEFINITION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #portSheet accessible-label="Port definition details" placement="right" width="400px">
-  <nldd-page sticky-header sticky-footer>
+<nldd-sheet #portSheet accessible-label="Port definition details" placement="right">
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editPortDef()?.id ? 'Edit Port' : 'New Port'"
@@ -375,93 +280,127 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="formErrorMessage()"></nldd-banner>
       }
-      <nldd-form-field label="Port name">
-        <nldd-text-field
-          #fPortName
-          autofocus
-          [attr.value]="editPortDef()?.name ?? ''"
-          placeholder="E.g. nic0"
-          (keydown.enter)="savePortDef()"
-          [attr.invalid]="isFieldInvalid('name') ? '' : null"
-          error-message="error-port-name"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-port-name">{{
-          fieldError('name')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Port type">
-        <nldd-dropdown [attr.invalid]="isFieldInvalid('port_type') ? true : null">
-          <select
-            [ngModel]="portType()"
-            (ngModelChange)="portType.set($event)"
-            [attr.aria-invalid]="isFieldInvalid('port_type') ? 'true' : null"
+      <!-- One field per line in a form: the two numbers stood side by side in a
+           grid of their own, which is the one place the fields did not line up
+           with the rest. -->
+      <nldd-form>
+        <nldd-form-field label="Port name">
+          <nldd-text-field
+            #fPortName
+            autofocus
+            [attr.value]="editPortDef()?.name ?? ''"
+            (keydown.enter)="savePortDef()"
+            [attr.invalid]="isFieldInvalid('name') ? '' : null"
+            unmet="error-port-name"
+          ></nldd-text-field>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-name">
+              {{ fieldError('name') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <!-- Six types and three directions, all of them short: buttons show the
+             whole choice where a dropdown hides it behind a click. -->
+        <nldd-form-field label="Port type">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Port type"
+            [attr.invalid]="isFieldInvalid('port_type') ? '' : null"
+            unmet="error-port-type"
           >
-            <option value="">— Select a port type —</option>
             @for (t of PORT_TYPES; track t.value) {
-              <option [value]="t.value">{{ t.label }}</option>
+              <nldd-toggle-button
+                [attr.value]="t.value"
+                [attr.text]="t.label"
+                [attr.selected]="portType() === t.value ? '' : null"
+                (change)="onPortTypeToggle(t.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
             }
-          </select>
-        </nldd-dropdown>
-        <nldd-form-field-error-text id="error-port-type">{{
-          fieldError('port_type')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Direction">
-        <nldd-dropdown [attr.invalid]="isFieldInvalid('direction') ? true : null">
-          <select
-            [ngModel]="portDirection()"
-            (ngModelChange)="portDirection.set($event)"
-            [attr.aria-invalid]="isFieldInvalid('direction') ? 'true' : null"
+          </nldd-toggle-button-group>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-type">
+              {{ fieldError('port_type') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Direction">
+          <nldd-toggle-button-group
+            type="radio"
+            accessible-label="Direction"
+            [attr.invalid]="isFieldInvalid('direction') ? '' : null"
+            unmet="error-port-direction"
           >
             @for (d of PORT_DIRECTIONS; track d.value) {
-              <option [value]="d.value">{{ d.label }}</option>
+              <nldd-toggle-button
+                [attr.value]="d.value"
+                [attr.text]="d.label"
+                [attr.selected]="portDirection() === d.value ? '' : null"
+                (change)="onPortDirectionToggle(d.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
             }
-          </select>
-        </nldd-dropdown>
-        <nldd-form-field-error-text id="error-port-direction">{{
-          fieldError('direction')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Media type" [optional]="true">
-        <nldd-text-field
-          #fPortMedia
-          [attr.value]="editPortDef()?.mediaType ?? ''"
-          placeholder="E.g. SFP+, QSFP28, IEC C13"
-          (keydown.enter)="savePortDef()"
-        ></nldd-text-field>
-      </nldd-form-field>
-      <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Speed (Gbps)">
+          </nldd-toggle-button-group>
+          <nldd-validation-list>
+            <nldd-validation-item id="error-port-direction">
+              {{ fieldError('direction') }}
+            </nldd-validation-item>
+          </nldd-validation-list>
+        </nldd-form-field>
+        <nldd-form-field label="Media type" [optional]="true">
+          <nldd-text-field
+            #fPortMedia
+            [attr.value]="editPortDef()?.mediaType ?? ''"
+            (keydown.enter)="savePortDef()"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Speed (Gbps)" [optional]="true">
           <nldd-number-field
             #fPortSpeed
             [attr.value]="editPortDef()?.speedGbps ?? ''"
             min="0"
-            placeholder="optional"
             full-width
             (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
-        <nldd-form-field label="Power (W)">
+        <nldd-form-field label="Power (W)" [optional]="true">
           <nldd-number-field
             #fPortPower
             [attr.value]="editPortDef()?.powerWatts ?? ''"
             min="0"
-            placeholder="optional"
             full-width
             (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
-      </div>
+        <!-- What may be plugged into this port. It belongs to the port, so it
+             belongs in the port's own form, on a new port as much as on an
+             existing one: the compatibilities are written right after the port
+             itself, on save. Last of the fields, because a field under it reads
+             as being about the product you just picked. -->
+        <nldd-form-field label="Compatible with" [optional]="true">
+          <nldd-token-field
+            [values]="portCompatIds()"
+            accessible-label="Compatible products"
+            placeholder="Add product"
+            (change)="onCompatibilitiesChange($any($event).detail.values)"
+          >
+            <nldd-menu>
+              @for (entry of compatOptions(); track entry.id) {
+                <nldd-menu-item [attr.value]="entry.id" [attr.text]="entry.model"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-token-field>
+        </nldd-form-field>
+        <nldd-form-actions>
+          <nldd-button
+            variant="primary"
+            width="full"
+            text="Save"
+            (click)="savePortDef()"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
     </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button variant="primary" text="Save" width="full" (click)="savePortDef()"></nldd-button>
-    </div>
   </nldd-page>
 </nldd-sheet>
 
@@ -469,6 +408,7 @@
      PORT DEFINITION DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #portModal
   (close)="cancelDeletePortDef()"
   [attr.text]="'Delete port ' + (deletePortDef()?.name ?? '') + '?'"
@@ -477,7 +417,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep port"
     (click)="cancelDeletePortDef()"
   ></nldd-button>
@@ -490,86 +430,36 @@
 </nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
-     ADD COMPATIBILITY SHEET
+     CATALOG ENTRY EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #compatSheet accessible-label="Add port compatibility" placement="right" width="400px">
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      text="Add port compatibility"
-      dismiss-text="Cancel"
-      (dismiss)="cancelAddCompatibility()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
-      }
-      <p class="text-sm text-slate-500 dark:text-gray-400 mb-3">
-        Select a catalog entry compatible with port
-        <span class="font-medium text-slate-700 dark:text-gray-300">{{
-          portDefName(addCompatPortDefId() ?? '')
-        }}</span
-        >.
-      </p>
-      <nldd-form-field label="Compatible product">
-        <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-             can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
-        <!-- eslint-disable @angular-eslint/template/no-autofocus -->
-        <nldd-dropdown>
-          <select
-            autofocus
-            [value]="compatEntryId()"
-            (change)="compatEntryId.set($any($event.target).value)"
-          >
-            <option value="">— Select a product —</option>
-            @for (entry of availableCompatEntries(); track entry.id) {
-              <option [value]="entry.id">{{ entry.model }}</option>
-            }
-          </select>
-        </nldd-dropdown>
-        <!-- eslint-enable @angular-eslint/template/no-autofocus -->
-      </nldd-form-field>
-    </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button
-        variant="primary"
-        text="Add"
-        width="full"
-        [attr.disabled]="compatEntryId() ? null : ''"
-        (click)="confirmAddCompatibility()"
-      ></nldd-button>
-    </div>
-  </nldd-page>
-</nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
-     DELETE COMPATIBILITY MODAL
+     CATALOG ENTRY DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
-  #compatDeleteModal
-  (close)="cancelDeleteCompat()"
-  [attr.text]="
-    'Remove compatibility with ' +
-    compatibleEntryName(deleteCompat()?.compatibleCatalogEntryId ?? '') +
-    '?'
-  "
-  supporting-text="These two products will no longer be marked as compatible. You can add the compatibility again later."
-  accessible-label="Confirm compatibility removal"
+  variant="alert"
+  #entryModal
+  (close)="cancelDeleteEntry()"
+  [attr.text]="'Delete product ' + (deleteEntry()?.model ?? '') + '?'"
+  supporting-text="This removes the product from the catalog. Existing assets are not affected."
+  accessible-label="Confirm product deletion"
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Keep compatibility"
-    (click)="cancelDeleteCompat()"
+    variant="primary"
+    text="Keep product"
+    (click)="cancelDeleteEntry()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
-    text="Remove compatibility"
-    (click)="confirmDeleteCompat()"
+    text="Delete product"
+    (click)="confirmDeleteEntry()"
   ></nldd-button>
 </nldd-modal-dialog>
+
+<!-- The menu of the section, the same one the list shows: opening a product
+     replaces the list beside it, not the way to another category. -->
+<ng-template #secondaryNav>
+  <app-catalog-nav></app-catalog-nav>
+</ng-template>

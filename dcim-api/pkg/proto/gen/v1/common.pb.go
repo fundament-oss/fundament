@@ -599,28 +599,43 @@ func (x CableType) Number() protoreflect.EnumNumber {
 }
 
 // CableStatus aligns with dcim.physical_connections status check constraint.
+//
+// Where a cable is on its way to existing, and each value names what has to
+// happen next: buy it, wait for it, go and fit it. PLANNED used to sit where
+// TO_ORDER is now and answered none of those. It only said the cable was not
+// there yet, which left "have we bought this" unanswerable. It keeps number 10,
+// so every row that was planned is now to order: the earliest of the three, and
+// the only one that claims nothing on somebody's behalf.
+//
+// A cable that is drawn but not decided on has no status at all (UNSPECIFIED).
 type CableStatus int32
 
 const (
-	CableStatus_CABLE_STATUS_UNSPECIFIED    CableStatus = 0
-	CableStatus_CABLE_STATUS_PLANNED        CableStatus = 10
-	CableStatus_CABLE_STATUS_CONNECTED      CableStatus = 20
-	CableStatus_CABLE_STATUS_DECOMMISSIONED CableStatus = 30
+	CableStatus_CABLE_STATUS_UNSPECIFIED      CableStatus = 0
+	CableStatus_CABLE_STATUS_TO_ORDER         CableStatus = 10
+	CableStatus_CABLE_STATUS_ORDERED          CableStatus = 12
+	CableStatus_CABLE_STATUS_READY_TO_INSTALL CableStatus = 14
+	CableStatus_CABLE_STATUS_CONNECTED        CableStatus = 20
+	CableStatus_CABLE_STATUS_DECOMMISSIONED   CableStatus = 30
 )
 
 // Enum value maps for CableStatus.
 var (
 	CableStatus_name = map[int32]string{
 		0:  "CABLE_STATUS_UNSPECIFIED",
-		10: "CABLE_STATUS_PLANNED",
+		10: "CABLE_STATUS_TO_ORDER",
+		12: "CABLE_STATUS_ORDERED",
+		14: "CABLE_STATUS_READY_TO_INSTALL",
 		20: "CABLE_STATUS_CONNECTED",
 		30: "CABLE_STATUS_DECOMMISSIONED",
 	}
 	CableStatus_value = map[string]int32{
-		"CABLE_STATUS_UNSPECIFIED":    0,
-		"CABLE_STATUS_PLANNED":        10,
-		"CABLE_STATUS_CONNECTED":      20,
-		"CABLE_STATUS_DECOMMISSIONED": 30,
+		"CABLE_STATUS_UNSPECIFIED":      0,
+		"CABLE_STATUS_TO_ORDER":         10,
+		"CABLE_STATUS_ORDERED":          12,
+		"CABLE_STATUS_READY_TO_INSTALL": 14,
+		"CABLE_STATUS_CONNECTED":        20,
+		"CABLE_STATUS_DECOMMISSIONED":   30,
 	}
 )
 
@@ -970,11 +985,13 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x10CABLE_TYPE_POWER\x10d\x12\x16\n" +
 	"\x12CABLE_TYPE_CONSOLE\x10n\x12\x12\n" +
 	"\x0eCABLE_TYPE_USB\x10x\x12\x15\n" +
-	"\x10CABLE_TYPE_OTHER\x10\x82\x01*\x82\x01\n" +
+	"\x10CABLE_TYPE_OTHER\x10\x82\x01*\xc0\x01\n" +
 	"\vCableStatus\x12\x1c\n" +
-	"\x18CABLE_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14CABLE_STATUS_PLANNED\x10\n" +
-	"\x12\x1a\n" +
+	"\x18CABLE_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15CABLE_STATUS_TO_ORDER\x10\n" +
+	"\x12\x18\n" +
+	"\x14CABLE_STATUS_ORDERED\x10\f\x12!\n" +
+	"\x1dCABLE_STATUS_READY_TO_INSTALL\x10\x0e\x12\x1a\n" +
 	"\x16CABLE_STATUS_CONNECTED\x10\x14\x12\x1f\n" +
 	"\x1bCABLE_STATUS_DECOMMISSIONED\x10\x1e*\x97\x02\n" +
 	"\n" +

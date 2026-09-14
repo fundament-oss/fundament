@@ -28,7 +28,7 @@ const KEYS_ASIDE = loc(
 );
 
 /**
- * Walks the cluster wizard: types a name into step 1, then carries on through
+ * Walks the cluster form: types a name into step 1, then carries on through
  * step 2 to the summary. Step 2 (node pools) starts out valid — it seeds one
  * pool with a generated name, the first machine type and a 1–3 autoscale range —
  * so submitting its form as-is lands on the summary. The summary is where the
@@ -60,19 +60,23 @@ const installedPluginDrive: DriveStep[] = [{ emit: PLUGIN_INSTALLS_ENSURE_EVENT 
  * reshuffled (a grid rewritten to container queries, a `space-y-2` list turned
  * into `flex gap-2`) without anyone realising the walkthrough hung on them.
  * `querySelector` returns the first match, which is the first catalog card —
- * cert-manager, which fixtures.ts deliberately lists first. Inside the modal the
- * first `nldd-checkbox-field` under `install-clusters` is a per-cluster box; the
- * "select all" checkbox sits outside that list, so exactly one cluster is ticked.
- * The reset event first clears any earlier install, so the slide can be replayed.
+ * cert-manager, which fixtures.ts deliberately lists first, and inside the sheet
+ * the first cluster row. Its install button opens the versions that stand ready;
+ * that menu is the point of the slide, so it is left up for a moment before a
+ * version is picked out of it. The reset event first clears any earlier install,
+ * so the slide can be replayed.
  */
 const installPluginDrive: DriveStep[] = [
   { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },
   { click: '[data-tour="plugin-install"]' },
   { wait: 1000 },
-  { set: '[data-tour="install-clusters"] nldd-checkbox-field', check: true },
-  { wait: 800 },
+  // The install button opens a menu of the versions on offer. That menu is the
+  // point of the slide, so it stays up for a moment before a version is picked
+  // out of it.
   { click: '[data-tour="install-confirm"]' },
+  { wait: 1600 },
+  { click: '[data-tour="install-confirm"] nldd-menu nldd-menu-item' },
 ];
 
 const closing = (nl: string, en: string): Slide => ({
@@ -142,7 +146,7 @@ const intro: Tour = {
           'On the right is the real console, running on sample data.',
         ),
       ],
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'cluster-detail',
@@ -189,11 +193,11 @@ const intro: Tour = {
       skippable: true,
     },
     {
-      id: 'add-cluster',
+      id: 'new-cluster',
       title: loc('Een nieuw cluster aanmaken', 'Creating a new cluster'),
       lead: loc(
-        'De wizard vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
-        'The wizard fills itself in: watch the cluster name being typed.',
+        'Het formulier vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
+        'The form fills itself in: watch the cluster name being typed.',
       ),
       bullets: [
         loc(
@@ -202,7 +206,7 @@ const intro: Tour = {
         ),
         loc('Daarna node pools en een samenvatting.', 'Then node pools and a summary.'),
       ],
-      route: '/clusters/add',
+      route: '/clusters/new',
       drive: addClusterDrive,
     },
     {
@@ -218,7 +222,7 @@ const intro: Tour = {
           'Each project shows its cluster, its namespaces and its members.',
         ),
       ],
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'project-members',
@@ -293,7 +297,11 @@ const intro: Tour = {
           'The plugin brings its own menu along; the team has nothing to set up.',
         ),
       ],
-      route: '/projects/pr-burgerzaken',
+      // The slide is about the sidebar, but the project's own address carries no
+      // page, so the pane beside it would read "No selection" — an empty box on
+      // screen while the menu is being talked about. The project overview is the
+      // quietest real page there is, so it sits there instead.
+      route: '/projects/pr-burgerzaken/general',
       drive: installedPluginDrive,
     },
     {
@@ -313,8 +321,11 @@ const intro: Tour = {
           'Your team manages its certificates without kubectl or a separate dashboard.',
         ),
       ],
-      // The menu links to the CRD by `plural.group`, so the route carries that too.
-      route: '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io',
+      // `:pluginName` is the installation name — "<organization>--<plugin>", what
+      // the sidebar links to — not the catalog name, and the CRD is addressed by
+      // `plural.group`, so the route carries both exactly as the menu builds them.
+      route:
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io',
       drive: installedPluginDrive,
     },
     {
@@ -338,7 +349,7 @@ const intro: Tour = {
       // it the console falls back to matching the object by name, which is what the
       // list links to here anyway.
       route:
-        '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
+        '/projects/pr-burgerzaken/plugin-resources/system--cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
       drive: installedPluginDrive,
     },
     closing(
@@ -401,7 +412,7 @@ const developer: Tour = {
           'A project bundles your namespaces, your teammates and your limits.',
         ),
       ],
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'project',
@@ -410,7 +421,7 @@ const developer: Tour = {
         'Alles wat je team nodig heeft, op één plek.',
         'Everything your team needs, in one place.',
       ),
-      route: '/projects/pr-burgerzaken',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'namespaces',
@@ -529,7 +540,7 @@ const platformEngineer: Tour = {
         'Status, regio, projecten en node pools van de hele organisatie.',
         'Status, region, projects and node pools across the whole organisation.',
       ),
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'cluster-detail',
@@ -572,7 +583,7 @@ const platformEngineer: Tour = {
       skippable: true,
     },
     {
-      id: 'add-cluster',
+      id: 'new-cluster',
       title: loc('Een nieuw cluster', 'A new cluster'),
       lead: loc(
         'Een acceptatiecluster erbij: naam, regio en versie. Kijk hoe de naam wordt ingetypt.',
@@ -584,11 +595,11 @@ const platformEngineer: Tour = {
           'Then node pools and a summary, and the platform reconciles the rest.',
         ),
         loc(
-          'Elk cluster komt uit dezelfde wizard, dus elk cluster ziet er hetzelfde uit.',
-          'Every cluster comes out of the same wizard, so every cluster looks the same.',
+          'Elk cluster komt uit hetzelfde formulier, dus elk cluster ziet er hetzelfde uit.',
+          'Every cluster comes out of the same form, so every cluster looks the same.',
         ),
       ],
-      route: '/clusters/add',
+      route: '/clusters/new',
       drive: addClusterDrive,
     },
     {
@@ -688,7 +699,7 @@ const securityOfficer: Tour = {
           'When someone leaves, you revoke it in one place.',
         ),
       ],
-      route: '/organization/members',
+      route: '/members',
     },
     {
       id: 'activity',
@@ -716,7 +727,7 @@ const securityOfficer: Tour = {
         'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
         'Maximum nodes and default resource limits apply across the whole organisation.',
       ),
-      route: '/organization/limits',
+      route: '/limits',
       skippable: true,
     },
     {
@@ -831,7 +842,7 @@ const policyMaker: Tour = {
       bullets: [
         loc('Geen schaduw-IT: je ziet waar wat draait.', 'No shadow IT: you see what runs where.'),
       ],
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'projects',
@@ -840,7 +851,7 @@ const policyMaker: Tour = {
         'Elk project is een team met een eigen plek op het platform.',
         'Each project is a team with its own place on the platform.',
       ),
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'plugins',

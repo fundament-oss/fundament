@@ -25,13 +25,18 @@ externalUrls:
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
-  console: "" # e.g., https://app.example.com
+  console: "" # e.g., https://app.example.com (empty makes the marketplace's "Install plugin" button explain the hand-off instead of linking to it)
   consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
-  marketplace: "" # e.g., https://marketplace-api.example.com (catalog; reached from plugin clusters)
+  marketplace: "" # e.g., https://marketplace.example.com (storefront; empty points the console's "View full details" button at its own plugin page)
+  marketplaceRegistry: "" # e.g., https://marketplace-registry.example.com (developer portal frontend)
+  marketplaceAdmin: "" # e.g., https://marketplace-admin.example.com (review backoffice frontend; restricted host)
+  marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
+  marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
+  marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
 # Container images
@@ -45,21 +50,33 @@ images:
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
   kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
-  openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
+  openfgaBootstrap: ghcr.io/fundament-oss/fundament/openfga-bootstrap:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
   pluginProxy: ghcr.io/fundament-oss/fundament/plugin-proxy:latest
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
+  marketplaceFrontend: ghcr.io/fundament-oss/fundament/marketplace-frontend:latest
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
+  marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
+  marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
+  # Same source as marketplaceFrontend, built for the other two audiences
+  # (BUILD_SCRIPT=build:registry / build:admin), like consoleDemoFrontend.
+  marketplaceRegistryFrontend: ghcr.io/fundament-oss/fundament/marketplace-registry-frontend:latest
+  marketplaceAdminFrontend: ghcr.io/fundament-oss/fundament/marketplace-admin-frontend:latest
 
 # Database (CloudNativePG)
+# Destroys data on every deploy. Refused unless resetDatabasesInNamespace names
+# the namespace this release targets, so a values file carried into another
+# environment fails to render.
+development:
+  resetDatabasesInNamespace: ""
+  insertTestData: false
+
 db:
   enabled: true
   instances: 1
   storageSize: 1Gi
-  reset: false
-  insertTestData: false
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
 
 # Authentication API
@@ -192,6 +209,52 @@ docsFrontend:
     hostnames: []
     #  - docs.example.com
 
+# Marketplace frontend (public storefront, publishing and review surfaces).
+# Server-rendered (Node), so it reads its three API base URLs from
+# externalUrls.marketplace*Api at runtime and renders the public storefront
+# itself; the developer and backoffice areas stay client-rendered.
+marketplaceFrontend:
+  enabled: false
+  replicas: 1
+  # Base URLs the server-side renderer uses for its own API calls. In-cluster
+  # addresses (e.g. http://marketplace-catalog-api), so rendering a page does not
+  # leave the cluster and come back in through the gateway. Empty falls back to
+  # the public URL from externalUrls.
+  internalApiUrls:
+    catalog: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - marketplace.example.com
+
+# Developer portal frontend: the same image as marketplaceFrontend, built for
+# the publishing audience (BUILD_SCRIPT=build:registry; FUN-20).
+marketplaceRegistryFrontend:
+  enabled: false
+  replicas: 1
+  internalApiUrls:
+    registry: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Review backoffice frontend: the same image built for the reviewer audience
+# (BUILD_SCRIPT=build:admin). Deploy on the restricted admin host, like the
+# admin API it fronts.
+marketplaceAdminFrontend:
+  enabled: false
+  replicas: 1
+  internalApiUrls:
+    admin: ""
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:
   enabled: false
@@ -222,12 +285,13 @@ pluginController:
   # to the catalog; a controller in another cluster needs an externally reachable
   # URL (FUN-19) — see plugins/sandbox/values.yaml.
   catalogApiUrl: ""
-  # shootImage: plugin-controller image for shoot clusters, provisioned onto
-  # every ready shoot by cluster-worker (with externalUrls.marketplace as the
-  # catalog URL). Must be pullable from shoot nodes — production registries
-  # qualify, local dev registries do not. Empty disables shoot provisioning —
-  # it does not uninstall machinery already on shoots (see cluster-worker/README.md).
-  shootImage: ""
+  # Provision plugin machinery (PluginInstallation CRD + images.pluginController)
+  # onto every ready shoot via cluster-worker, with
+  # externalUrls.marketplaceCatalogApi as the catalog URL. images.pluginController
+  # must be pullable from shoot nodes — production registries qualify, local dev
+  # registries do not. Disabling does not uninstall machinery already on shoots
+  # (see cluster-worker/README.md).
+  provisionShoots: false
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.
@@ -305,6 +369,26 @@ dcimFrontend:
 
 # Marketplace Catalog API
 marketplaceCatalogApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Marketplace Registry API
+marketplaceRegistryApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Marketplace Admin API (the Fundament review backoffice)
+marketplaceAdminApi:
   enabled: false
   replicas: 1
   logLevel: info

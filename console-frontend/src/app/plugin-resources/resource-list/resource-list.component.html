@@ -1,168 +1,173 @@
-@if (errorMessage()) {
-  <div class="bg-danger-50 dark:bg-danger-900/20 mb-6 flex items-center rounded-md p-4">
-    <p class="text-danger-800 dark:text-danger-200 font-medium">{{ errorMessage() }}</p>
-  </div>
-}
-
 @if (customUIUrl()) {
   <!-- Custom list UIs (iframe) render their own "Add" affordance and request
-       create navigation via the plugin:create message. -->
-  <app-plugin-iframe
-    [src]="customUIUrl()!"
-    [pluginName]="pluginName()"
-    [pluginVersion]="installationVersion()"
-    [installationId]="installationId()"
-    [crdKind]="crdDef()!.kind"
-    view="list"
-    [clusterId]="clusterContext.selectedClusterId()!"
-  />
+       create navigation via the plugin:create message. Outside the section: the
+       plugin draws its own screen and wants the whole pane for it. -->
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="kindLabel()"
+      [attr.back-text]="pageNav.backText()"
+      (back)="pageNav.goTo(backPath())"
+    ></nldd-top-title-bar>
+    <app-plugin-iframe
+      [src]="customUIUrl()!"
+      [pluginName]="pluginName()"
+      [pluginVersion]="installationVersion()"
+      [installationId]="installationId()"
+      [crdKind]="crdDef()!.kind"
+      view="list"
+      [clusterId]="clusterContext.selectedClusterId()!"
+    />
+  </nldd-page>
 } @else {
-  @if (canCreate()) {
-    <div class="mb-4 flex justify-end">
-      <nldd-button
-        [routerLink]="createLink"
-        text="Create"
-        start-icon="plus"
-        variant="primary"
-      ></nldd-button>
-    </div>
-  }
-  <div class="card">
-    <div class="card-header">
-      <h1 class="text-3xl font-semibold">{{ kindLabel() }}</h1>
+  <!-- Same outer layout as the other project pages: the pane owns the back
+       button, so the page does not force one. -->
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="kindLabel()"
+      [attr.back-text]="pageNav.backText()"
+      (back)="pageNav.goTo(backPath())"
+      collapse-anchor="resource-list-title"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (errorMessage()) {
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-title
+        id="resource-list-title"
+        size="2"
+      >
+        <h1>{{ kindLabel() }}</h1>
+      </nldd-title>
+      @if (canCreate()) {
+        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-toolbar [attr.label]="kindLabel() + ' actions'">
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              [routerLink]="createLink"
+              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              start-icon="plus-small"
+              variant="primary"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="plus-small"
+              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              [routerLink]="createLink"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+      }
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- Standing explanation, the same shape as on the other pages: what the
+           plugin says about itself, not a notice about something that happened. -->
       @if (plugin()?.description) {
-        <p class="mt-1 text-gray-600 dark:text-gray-300">
-          {{ plugin()?.description }}
-        </p>
+        <nldd-rich-text spacing="flat">
+          <p>{{ plugin()?.description }}</p>
+        </nldd-rich-text>
+        <nldd-spacer size="24"></nldd-spacer>
       }
-    </div>
-
-    <div class="p-6">
       @if (isLoading() || clusterContext.isLoadingClusters()) {
-        <div class="py-8 text-center">
-          <span
-            class="border-accent-500 inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-          ></span>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Loading…</p>
-        </div>
-      } @else {
-        <!-- Table -->
-        @if (resources().length > 0) {
-          <nldd-table
-            [attr.accessible-label]="kindLabel()"
-            [attr.columns]="tableColumns()"
-            [attr.md-columns]="tableMdColumns()"
-            [attr.sm-columns]="tableMdColumns()"
-          >
-            <nldd-table-row slot="header">
-              <nldd-text-cell text="**Name**"></nldd-text-cell>
-              @for (col of columns(); track col.name) {
-                <nldd-text-cell
-                  [attr.text]="'**' + col.name + '**'"
-                  [attr.hide-below]="isDroppedWhenNarrow(col) ? 'lg' : null"
-                ></nldd-text-cell>
-              }
-              <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-            </nldd-table-row>
-
-            @for (resource of resources(); track resource.metadata.uid) {
-              <nldd-table-row>
-                <nldd-cell width="full" vertical-alignment="top">
-                  <div class="py-2">
-                    <a
-                      [routerLink]="detailLink(resource)"
-                      [queryParams]="detailQueryParams(resource)"
-                      class="font-medium hover:underline"
-                      >{{ resource.metadata.name }}</a
-                    >
-                    @if (resource.metadata.namespace) {
-                      <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
-                        {{ resource.metadata.namespace }}
-                      </div>
+        <nldd-activity-indicator
+          show-text
+          [attr.text]="'Loading ' + kindLabel().toLowerCase() + '...'"
+        ></nldd-activity-indicator>
+      } @else if (resources().length > 0) {
+        <!-- A card per resource rather than a table: how many columns a plugin
+             ships is its own business, and in a card every value keeps its label
+             beside it however many there turn out to be. -->
+        <nldd-collection
+          layout="grid"
+          item-width="280px"
+        >
+          @for (resource of resources(); track resource.metadata.uid) {
+            <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
+            <nldd-card background="tinted">
+              <nldd-container padding="16">
+                <nldd-title size="4">
+                  <h2>{{ resource.metadata.name }}</h2>
+                  @if (conditionColumn(); as col) {
+                    @if (conditionBadge(col.name, formatCell(resource, col)); as badge) {
+                      <nldd-badge
+                        slot="end"
+                        [attr.color]="badge.color"
+                        [attr.text]="badge.text"
+                      ></nldd-badge>
                     }
-                  </div>
-                </nldd-cell>
-                @for (col of columns(); track col.name) {
-                  <nldd-text-cell
-                    [attr.text]="formatCell(resource, col)"
-                    [attr.hide-below]="isDroppedWhenNarrow(col) ? 'lg' : null"
-                  ></nldd-text-cell>
-                }
-                <nldd-cell horizontal-alignment="right">
-                  <nldd-icon-button
-                    icon="ellipsis"
-                    size="sm"
-                    variant="neutral-transparent"
-                    expandable
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + resource.metadata.name"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- href, not routerLink: the item's anchor lives in its shadow DOM,
-                           out of routerLink's reach. onDetailClick routes the plain clicks. -->
-                      <nldd-menu-item
-                        text="View"
-                        icon="eye"
-                        [attr.href]="detailHref(resource)"
-                        (click)="onDetailClick($event, resource)"
-                      ></nldd-menu-item>
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Delete"
-                        icon="trash"
-                        destructive
-                        (select)="openDelete(resource)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
-              </nldd-table-row>
-            }
-          </nldd-table>
-        }
-
-        <!-- Empty State -->
-        @if (resources().length === 0) {
-          @if (clusterContext.clusters().length === 0) {
-            <nldd-box>
-              <nldd-inline-dialog
-                class="card-body"
-                icon="ship-wheel"
-                icon-color="secondary"
-                text="No clusters found"
+                  }
+                </nldd-title>
+                <nldd-spacer size="16"></nldd-spacer>
+                <nldd-list variant="simple">
+                  @if (resource.metadata.namespace) {
+                    <nldd-list-item size="sm">
+                      <nldd-text-cell text="Namespace"></nldd-text-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-text-cell
+                        width="fit-content"
+                        horizontal-alignment="right"
+                        [attr.text]="resource.metadata.namespace"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
+                  @for (col of detailColumns(); track col.name) {
+                    <nldd-list-item size="sm">
+                      <nldd-text-cell [attr.text]="col.name"></nldd-text-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-text-cell
+                        width="fit-content"
+                        horizontal-alignment="right"
+                        [attr.text]="formatCell(resource, col)"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
+                </nldd-list>
+              </nldd-container>
+              <!-- In the footer slot rather than the body: the card keeps that
+                   slot at the bottom, so the buttons line up across a row of
+                   cards however tall each one's list turns out. -->
+              <nldd-container
+                slot="footer"
+                padding-inline="16"
+                padding-bottom="16"
               >
+                <!-- href, not routerLink: the anchor lives in the link's shadow
+                     DOM, out of routerLink's reach. -->
                 <nldd-button
-                  routerLink="/clusters/add"
-                  slot="actions"
-                  text="Add cluster"
-                  start-icon="plus-small"
+                  [attr.href]="detailHref(resource)"
+                  text="View details"
                   variant="primary"
+                  (click)="onDetailClick($event, resource)"
                 ></nldd-button>
-              </nldd-inline-dialog>
-            </nldd-box>
-          } @else {
-            <nldd-box>
-              <nldd-inline-dialog
-                class="card-body"
-                icon="cylinder-split-slash"
-                icon-color="secondary"
-                [text]="'No ' + kindLabel().toLowerCase() + ' found'"
-              >
-              </nldd-inline-dialog>
-            </nldd-box>
+              </nldd-container>
+            </nldd-card>
           }
-        }
+        </nldd-collection>
+      } @else if (clusterContext.clusters().length === 0) {
+        <nldd-inline-dialog
+          icon="kubernetes"
+          icon-color="secondary"
+          text="No clusters found"
+        >
+          <nldd-button
+            [routerLink]="pageNav.path('/clusters/new')"
+            slot="actions"
+            text="New cluster…"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else {
+        <nldd-inline-dialog
+          icon="cylinder-split-slash"
+          icon-color="secondary"
+          [text]="'No ' + kindLabel().toLowerCase() + ' found'"
+        ></nldd-inline-dialog>
       }
-    </div>
-  </div>
-
-  <app-resource-delete-modal
-    [show]="pendingDelete() !== null"
-    [resourceKind]="crdDef()?.kind ?? ''"
-    [resourceName]="pendingDelete()?.metadata?.name ?? ''"
-    [deleting]="deleting()"
-    [errorMessage]="deleteError()"
-    (confirm)="confirmDelete()"
-    (dismiss)="closeDelete()"
-  />
+    </nldd-simple-section>
+  </nldd-page>
 }

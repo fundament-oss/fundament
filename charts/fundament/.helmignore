@@ -16,3 +16,6 @@
 .idea/
 *.tmproj
 .vscode/
+
+# CI input for the PR preview environment, not part of the chart.
+pr-overlay.yaml

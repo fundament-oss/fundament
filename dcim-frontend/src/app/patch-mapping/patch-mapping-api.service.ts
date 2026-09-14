@@ -90,8 +90,12 @@ export default class PatchMappingApiService {
 
   static cableStatusToProto(s: CableStatus | undefined): ProtoCableStatus {
     switch (s) {
-      case 'planned':
-        return ProtoCableStatus.PLANNED;
+      case 'to-order':
+        return ProtoCableStatus.TO_ORDER;
+      case 'ordered':
+        return ProtoCableStatus.ORDERED;
+      case 'ready-to-install':
+        return ProtoCableStatus.READY_TO_INSTALL;
       case 'connected':
         return ProtoCableStatus.CONNECTED;
       case 'decommissioned':
@@ -103,8 +107,12 @@ export default class PatchMappingApiService {
 
   static cableStatusFromProto(s: ProtoCableStatus): CableStatus | undefined {
     switch (s) {
-      case ProtoCableStatus.PLANNED:
-        return 'planned';
+      case ProtoCableStatus.TO_ORDER:
+        return 'to-order';
+      case ProtoCableStatus.ORDERED:
+        return 'ordered';
+      case ProtoCableStatus.READY_TO_INSTALL:
+        return 'ready-to-install';
       case ProtoCableStatus.CONNECTED:
         return 'connected';
       case ProtoCableStatus.DECOMMISSIONED:

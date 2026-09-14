@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func TestObjectConstructors(t *testing.T) {
@@ -220,17 +221,14 @@ func TestEvaluations_ValidSemantics(t *testing.T) {
 	}
 }
 
-func TestNew_InvalidConfig(t *testing.T) {
-	// Test that New returns an error for invalid configuration
+func TestNewStore_InvalidConfig(t *testing.T) {
 	cfg := Config{
-		APIURL:  "", // Empty URL should cause an error
-		StoreID: "",
+		APIURL:    "", // Empty URL should cause an error
+		StoreName: "fundament",
 	}
 
-	_, err := New(cfg)
-	if err == nil {
-		t.Fatal("expected error for empty API URL, got nil")
-	}
+	_, err := NewStore(cfg)
+	require.Error(t, err)
 }
 
 func TestDecision_DefaultsToFalse(t *testing.T) {

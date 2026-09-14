@@ -5,6 +5,12 @@ metadata:
 
 # Build configuration for all images
 build:
+  # Tag by short commit sha. Skaffold defaults to `git describe --tags`, which
+  # anchors on rolling release tags like terraform-provider-latest.
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+
   # Local build settings - load directly into k3d (no registry needed)
   local:
     useBuildkit: true
@@ -55,10 +61,10 @@ build:
       docker:
         dockerfile: kube-api-proxy/Dockerfile
 
-    - image: openfga-setup
-      context: openfga/setup
+    - image: openfga-bootstrap
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: openfga/bootstrap/Dockerfile
 
     - image: plugin-controller
       context: .
@@ -85,10 +91,47 @@ build:
       docker:
         dockerfile: plugin-proxy/Dockerfile
 
+    # Keep new artifacts at the end: the hotreload profile below patches
+    # artifacts by positional index, so inserting above repoints another
+    # service's Dockerfile.
+    - image: marketplace-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+
     - image: marketplace-catalog-api
       context: .
       docker:
-        dockerfile: marketplace-api/Dockerfile
+        dockerfile: marketplace-catalog-api/Dockerfile
+
+    - image: marketplace-registry-api
+      context: .
+      docker:
+        dockerfile: marketplace-registry-api/Dockerfile
+
+    - image: marketplace-admin-api
+      context: .
+      docker:
+        dockerfile: marketplace-admin-api/Dockerfile
+
+    # The storefront image built for the other two audiences (FUN-20). The
+    # hotreload profile swaps the dockerfile by index; START_SCRIPT is consumed
+    # by the hotreload image and ignored (unconsumed ARG) by the production one.
+    - image: marketplace-registry-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+        buildArgs:
+          BUILD_SCRIPT: build:registry
+          START_SCRIPT: start:registry
+
+    - image: marketplace-admin-frontend
+      context: .
+      docker:
+        dockerfile: marketplace-frontend/Dockerfile
+        buildArgs:
+          BUILD_SCRIPT: build:admin
+          START_SCRIPT: start:admin
 
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
@@ -110,13 +153,18 @@ deploy:
           images.docsFrontend: "{{.IMAGE_FULLY_QUALIFIED_docs_frontend}}"
           images.authzWorker: "{{.IMAGE_FULLY_QUALIFIED_authz_worker}}"
           images.kubeApiProxy: "{{.IMAGE_FULLY_QUALIFIED_kube_api_proxy}}"
-          images.openfgaSetup: "{{.IMAGE_FULLY_QUALIFIED_openfga_setup}}"
+          images.openfgaBootstrap: "{{.IMAGE_FULLY_QUALIFIED_openfga_bootstrap}}"
           images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
           images.dcimApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_api}}"
           images.dcimFrontend: "{{.IMAGE_FULLY_QUALIFIED_dcim_frontend}}"
           images.dcimAuthnApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_authn_api}}"
           images.pluginProxy: "{{.IMAGE_FULLY_QUALIFIED_plugin_proxy}}"
+          images.marketplaceFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_frontend}}"
           images.marketplaceCatalogApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_catalog_api}}"
+          images.marketplaceRegistryApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_api}}"
+          images.marketplaceAdminApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_api}}"
+          images.marketplaceRegistryFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_frontend}}"
+          images.marketplaceAdminFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_frontend}}"
 
 profiles:
   - name: env-local
@@ -243,9 +291,39 @@ profiles:
         value: {}
       - op: replace
         path: /build/artifacts/14/docker/dockerfile
-        value: marketplace-api/hotreload/Dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/14/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/15/docker/dockerfile
+        value: marketplace-catalog-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/15/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/16/docker/dockerfile
+        value: marketplace-registry-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/16/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/17/docker/dockerfile
+        value: marketplace-admin-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/17/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/18/docker/dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/18/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/19/docker/dockerfile
+        value: marketplace-frontend/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/19/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

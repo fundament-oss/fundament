@@ -60,20 +60,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # The package names are fixed, so replacing assets on the live release
-          # (gh release upload --clobber) would expose a mix of old and new
-          # packages while uploading, and a failed upload would leave it that
-          # way. Instead, upload everything to a draft release while the current
-          # one stays live, then swap: move the tag, delete the old release and
-          # publish the draft. The swap itself is two API calls, in which the
-          # download URLs 404; a downloader never sees a mix. Any failure before
-          # the swap leaves the current release untouched.
-          #
-          # While the draft and the published release share the tag, gh's
-          # tag-addressed release commands may resolve to either of them, so the
-          # draft is only ever addressed by id.
-          TAG=terraform-provider-latest
-          NOTES="Rolling build of the Fundament OpenTofu/Terraform provider from the latest push to master.
+          # Move the rolling tag to the current commit.
+          git tag -f terraform-provider-latest
+          git push -f origin terraform-provider-latest
+
+          if ! gh release view terraform-provider-latest > /dev/null 2>&1; then
+            gh release create terraform-provider-latest \
+              --prerelease \
+              --title "terraform-provider (rolling)" \
+              --notes "placeholder"
+          fi
+
+          gh release edit terraform-provider-latest \
+            --prerelease \
+            --title "terraform-provider (rolling)" \
+            --notes "Rolling build of the Fundament OpenTofu/Terraform provider from the latest push to master.
 
           - Provider version: \`${PROVIDER_VERSION}\`
           - Build: \`${VERSION}\`
@@ -81,35 +82,11 @@ jobs:
 
           See terraform-provider/README.md for install instructions."
 
-          OLD_ID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq .id 2>/dev/null || true)
-
-          NEW_ID=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/releases" \
-            -f tag_name="$TAG" \
-            -f target_commitish="$GITHUB_SHA" \
-            -f name="terraform-provider (rolling)" \
-            -f body="$NOTES" \
-            -F draft=true \
-            -F prerelease=true \
-            --jq .id)
-          trap 'gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}" || true' ERR
-
-          for f in dist/*.zip "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS"; do
-            gh api -X POST \
-              -H "Content-Type: application/octet-stream" \
-              "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}/assets?name=$(basename "$f")" \
-              --input "$f" > /dev/null
-          done
-          echo "Draft release ${NEW_ID} assets:"
-          gh api "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}/assets" --jq '.[] | "  \(.name) \(.size)"'
-
-          # Swap. Publishing does not move an existing tag, so move it here.
-          git tag -f "$TAG"
-          git push -f origin "$TAG"
-          if [ -n "$OLD_ID" ]; then
-            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${OLD_ID}"
-          fi
-          trap - ERR
-          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${NEW_ID}" \
-            -F draft=false \
-            -F prerelease=true \
-            -f make_latest=false > /dev/null
+          # Package names are fixed, so the assets are replaced in place.
+          gh release upload terraform-provider-latest \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_amd64.zip" \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_linux_arm64.zip" \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_darwin_arm64.zip" \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_windows_amd64.zip" \
+            "dist/terraform-provider-fundament_${PROVIDER_VERSION}_SHA256SUMS" \
+            --clobber

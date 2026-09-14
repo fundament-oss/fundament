@@ -74,7 +74,7 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 	// Update every attribute to a different value. Update fields use explicit
 	// presence, so the builder takes pointers.
 	updatedType := dcimv1.CableType_CABLE_TYPE_DAC
-	updatedStatus := dcimv1.CableStatus_CABLE_STATUS_PLANNED
+	updatedStatus := dcimv1.CableStatus_CABLE_STATUS_TO_ORDER
 	updatedColor := dcimv1.CableColor_CABLE_COLOR_TEAL
 	updatedLabel := "spine-uplink"
 	_, err = client.UpdatePhysicalConnection(context.Background(),
@@ -96,7 +96,7 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 	conn = getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_DAC, conn.GetCableType())
-	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_PLANNED, conn.GetStatus())
+	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_TO_ORDER, conn.GetStatus())
 	assert.Equal(t, dcimv1.CableColor_CABLE_COLOR_TEAL, conn.GetColor())
 	assert.Equal(t, "spine-uplink", conn.GetLabel())
 }

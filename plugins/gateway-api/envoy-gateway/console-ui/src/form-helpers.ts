@@ -25,7 +25,9 @@ export function listValue(root: ParentNode, id: string): string[] {
 // supplies them, else a free-text field (org-level route).
 export function namespaceFieldHtml(namespaces?: string[]): string {
   if (namespaces && namespaces.length > 0) {
-    const options = namespaces.map((n) => `<option value="${n}">${n}</option>`).join('');
+    const options = namespaces
+      .map((n) => `<option value="${n}">${n}</option>`)
+      .join('');
     return `<nldd-form-field label="Namespace"><nldd-dropdown><select id="namespace" name="namespace" aria-label="Namespace">${options}</select></nldd-dropdown></nldd-form-field>`;
   }
   return `<nldd-form-field label="Namespace"><nldd-text-field id="namespace" name="namespace" required placeholder="default"></nldd-text-field></nldd-form-field>`;
@@ -55,7 +57,12 @@ export interface BackendRef {
 
 // Builds a single backendRef from `#backend-name` and `#backend-port`.
 export function buildBackendRefs(root: ParentNode): BackendRef[] {
-  return [{ name: trimmedValue(root, 'backend-name'), port: Number(trimmedValue(root, 'backend-port')) }];
+  return [
+    {
+      name: trimmedValue(root, 'backend-name'),
+      port: Number(trimmedValue(root, 'backend-port')),
+    },
+  ];
 }
 
 export interface TargetRef {
@@ -87,5 +94,8 @@ export function validateRoute(root: ParentNode): boolean {
 
 // Common validity checks reused by policy forms: a name and a target name.
 export function validatePolicy(root: ParentNode): boolean {
-  return Boolean(trimmedValue(root, 'name')) && Boolean(trimmedValue(root, 'target-name'));
+  return (
+    Boolean(trimmedValue(root, 'name')) &&
+    Boolean(trimmedValue(root, 'target-name'))
+  );
 }

@@ -24,6 +24,10 @@ import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namesp
 import type { ParsedCrd } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
+import '@nldd/design-system/banner';
+import '@nldd/design-system/button';
+import '@nldd/design-system/inline-dialog';
+
 @Component({
   selector: 'app-resource-create',
   imports: [RouterLink, PluginIframeComponent],

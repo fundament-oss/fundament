@@ -24,8 +24,14 @@ const authGuard: CanActivateFn = async (route, state) => {
     await apiService.getUserInfo();
     return true;
   } catch {
-    // Refresh failed - not authenticated, store return URL and redirect to login
-    localStorage.setItem('returnUrl', state.url);
+    // Refresh failed - not authenticated, store return URL and redirect to
+    // login. The bare root names no page in particular, so there is nothing to
+    // come back to: logging in from there lands on the default page instead.
+    if (state.url === '/') {
+      localStorage.removeItem('returnUrl');
+    } else {
+      localStorage.setItem('returnUrl', state.url);
+    }
 
     router.navigate(['/login']);
     return false;

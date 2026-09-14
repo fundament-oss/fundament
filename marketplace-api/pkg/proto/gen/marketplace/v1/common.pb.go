@@ -7,6 +7,7 @@
 package marketplacev1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
@@ -428,6 +429,7 @@ type FeatureBlock struct {
 	state            protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Title string                 `protobuf:"bytes,10,opt,name=title"`
 	xxx_hidden_Body  string                 `protobuf:"bytes,20,opt,name=body"`
+	xxx_hidden_Id    string                 `protobuf:"bytes,30,opt,name=id"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -471,6 +473,13 @@ func (x *FeatureBlock) GetBody() string {
 	return ""
 }
 
+func (x *FeatureBlock) GetId() string {
+	if x != nil {
+		return x.xxx_hidden_Id
+	}
+	return ""
+}
+
 func (x *FeatureBlock) SetTitle(v string) {
 	x.xxx_hidden_Title = v
 }
@@ -479,11 +488,20 @@ func (x *FeatureBlock) SetBody(v string) {
 	x.xxx_hidden_Body = v
 }
 
+func (x *FeatureBlock) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
 type FeatureBlock_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Title string
 	Body  string
+	// Server-assigned, and stable across an UpdatePlugin that carries it back,
+	// exactly like DocumentationLink.id. Numbered last rather than first because
+	// renumbering title and body would change the wire format catalog.v1 clients
+	// already speak.
+	Id string
 }
 
 func (b0 FeatureBlock_builder) Build() *FeatureBlock {
@@ -492,6 +510,7 @@ func (b0 FeatureBlock_builder) Build() *FeatureBlock {
 	_, _ = b, x
 	x.xxx_hidden_Title = b.Title
 	x.xxx_hidden_Body = b.Body
+	x.xxx_hidden_Id = b.Id
 	return m0
 }
 
@@ -579,6 +598,8 @@ func (x *DocumentationLink) SetUrl(v string) {
 type DocumentationLink_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Server-assigned, and stable across an UpdatePlugin that carries it back.
+	// Empty means "a link that does not exist yet".
 	Id      string
 	Title   string
 	UrlName string
@@ -600,7 +621,7 @@ var File_marketplace_v1_common_proto protoreflect.FileDescriptor
 
 const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x1bmarketplace/v1/common.proto\x12\x0emarketplace.v1\x1a!google/protobuf/go_features.proto\".\n" +
+	"\x1bmarketplace/v1/common.proto\x12\x0emarketplace.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\".\n" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -620,14 +641,15 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"\x10PluginPermission\x12\x1a\n" +
 	"\bresource\x18\n" +
 	" \x01(\tR\bresource\x12\x16\n" +
-	"\x06access\x18\x14 \x01(\tR\x06access\"8\n" +
+	"\x06access\x18\x14 \x01(\tR\x06access\"U\n" +
 	"\fFeatureBlock\x12\x14\n" +
 	"\x05title\x18\n" +
 	" \x01(\tR\x05title\x12\x12\n" +
-	"\x04body\x18\x14 \x01(\tR\x04body\"f\n" +
-	"\x11DocumentationLink\x12\x0e\n" +
+	"\x04body\x18\x14 \x01(\tR\x04body\x12\x1b\n" +
+	"\x02id\x18\x1e \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x02id\"s\n" +
+	"\x11DocumentationLink\x12\x1b\n" +
 	"\x02id\x18\n" +
-	" \x01(\tR\x02id\x12\x14\n" +
+	" \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\x02id\x12\x14\n" +
 	"\x05title\x18\x14 \x01(\tR\x05title\x12\x19\n" +
 	"\burl_name\x18\x1e \x01(\tR\aurlName\x12\x10\n" +
 	"\x03url\x18( \x01(\tR\x03url*\xfb\x01\n" +

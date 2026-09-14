@@ -1,6 +1,9 @@
 import {
   Component,
   inject,
+  Input,
+  Output,
+  EventEmitter,
   OnInit,
   signal,
   computed,
@@ -12,17 +15,36 @@ import { firstValueFrom } from 'rxjs';
 import { AUTHN, ORGANIZATION } from '../../connect/tokens';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import type { Organization } from '../../generated/v1/organization_pb';
-import { TitleService } from '../title.service';
+import SheetSyncDirective from '../sheet-sync.directive';
+
+import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/button';
+import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/page';
+import '@nldd/design-system/rich-text';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/spacer';
+import '@nldd/design-system/spacer-cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/title';
+import '@nldd/design-system/top-title-bar';
 
 @Component({
   selector: 'app-profile',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, SheetSyncDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class ProfileComponent implements OnInit {
-  private titleService = inject(TitleService);
+  /** Owned by the shell: the sheet opens over whatever page you were on, so
+   *  that page is not unmounted and is still there when you close it. */
+  @Input() show = false;
+
+  @Output() closed = new EventEmitter<void>();
 
   private authnClient = inject(AUTHN);
 
@@ -41,10 +63,6 @@ export default class ProfileComponent implements OnInit {
     if (orgs.length === 0) return '';
     return orgs.map((o) => o.alias).join(', ');
   });
-
-  constructor() {
-    this.titleService.setTitle('Profile');
-  }
 
   async ngOnInit() {
     await this.loadUserInfo();
@@ -67,5 +85,11 @@ export default class ProfileComponent implements OnInit {
       );
       this.isLoading.set(false);
     }
+  }
+
+  /** Back to what was behind it. A direct link has nothing to go back to, so
+   *  that lands on the app's own empty state. */
+  onClose(): void {
+    this.closed.emit();
   }
 }

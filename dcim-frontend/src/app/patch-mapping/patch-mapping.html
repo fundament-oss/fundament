@@ -1,158 +1,141 @@
 <!-- ══════════════════════════════════════════════════════════════
-     PAGE HEADER
+     CABLE LIST (this section's page)
      ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
->
-  <div class="flex-1 min-w-0">
-    <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
-      Patch mapping
-    </h1>
-  </div>
-
-  <!-- View toggle -->
-  <nldd-segmented-control
-    [value]="activeView()"
-    size="sm"
-    type="radio"
-    variant="text"
-    (change)="activeView.set($any($event).detail.value)"
-  >
-    <nldd-segmented-control-item value="list" text="Cables"></nldd-segmented-control-item>
-    <nldd-segmented-control-item value="topology" text="Topology"></nldd-segmented-control-item>
-  </nldd-segmented-control>
-
-  <!-- Shopping list button (only when there are planned cables) -->
-  @if (plannedCount() > 0) {
-    <div class="relative">
-      <nldd-button
-        variant="secondary"
-        text="Shopping list"
-        start-icon="check-list"
-        size="sm"
-        (click)="shoppingListOpen.set(true)"
-        aria-label="View shopping list of planned cables"
-      ></nldd-button>
-      <span
-        class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold px-1 pointer-events-none"
-        aria-hidden="true"
-        >{{ plannedCount() }}</span
-      >
-    </div>
-  }
-
-  <nldd-button
-    variant="primary"
-    text="Add cable"
-    start-icon="plus-small"
-    size="sm"
-    (click)="openAddCable()"
-    aria-label="Add a new cable"
-  ></nldd-button>
-</div>
+<!-- The list carries the page: its own header, its own title, its own toolbar.
+     What the buttons in that toolbar do lives here, because the cables, the
+     shopping list and the topology are this component's data. -->
+<app-cable-list
+  class="contents"
+  [cables]="dcCables()"
+  [dcId]="selectedDcId()"
+  [sites]="sites()"
+  (editCable)="openEditCable($event)"
+  (deleteCable)="openDeleteCable($event)"
+  (dcSelected)="selectDc($event)"
+  (addCable)="openAddCable($event)"
+  (cableStatusChanged)="updateCableStatus($event)"
+  (showShoppingList)="openShoppingList()"
+  (showTopology)="openTopology()"
+/>
 
 <!-- ══════════════════════════════════════════════════════════════
-     MAIN CONTENT (list or topology)
+     TOPOLOGY SHEET
      ══════════════════════════════════════════════════════════════ -->
-<div [class]="activeView() === 'topology' ? 'flex-1 min-h-0 flex flex-col' : 'flex flex-col'">
-  @if (activeView() === 'list') {
-    <app-cable-list
-      class="flex flex-col"
-      [cables]="dcCables()"
-      [dcId]="selectedDcId()"
-      [sites]="sites()"
-      (editCable)="openEditCable($event)"
-      (deleteCable)="openDeleteCable($event)"
-      (dcSelected)="selectDc($event)"
-    />
-  } @else {
-    <!-- Topology filter bar -->
-    <div
-      class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 flex items-center gap-3"
-      aria-label="Topology filters"
-    >
-      <span class="text-xs font-medium text-slate-500 dark:text-gray-400">Filter:</span>
-
-      <nldd-segmented-control
-        [value]="topologyStatusFilter()"
-        size="sm"
-        type="radio"
-        variant="text"
-        (change)="topologyStatusFilter.set($any($event).detail.value)"
-        aria-label="Filter by status"
-      >
-        <nldd-segmented-control-item value="" text="All"></nldd-segmented-control-item>
-        @for (s of CABLE_STATUSES; track s.value) {
-          <nldd-segmented-control-item
-            [attr.value]="s.value"
-            [attr.text]="s.label"
-          ></nldd-segmented-control-item>
+<!-- The topology is a second way of looking at the same cables, not a second
+     page: it opens over the list and closes back onto it. A bottom sheet gives
+     the canvas the full width it needs and says it is temporary. -->
+<nldd-sheet
+  #topologySheet
+  accessible-label="Cable topology"
+  placement="bottom"
+  (close)="topologyOpen.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Topology"
+      dismiss-text="Close"
+      (dismiss)="topologyOpen.set(false)"
+    ></nldd-top-title-bar>
+    <!-- One bar for everything you can set about the drawing: which hall, which
+         states, which kinds. A container rather than a section, because this is
+         a strip of controls over a canvas and not a piece of the page. -->
+    <nldd-container padding-inline="16" padding-block="8">
+      <nldd-toolbar label="Topology">
+        <!-- Which hall is drawn. The list can show every location at once, a
+             drawing cannot: two data centers on one canvas are two islands, not
+             a floor. So the topology picks one, the way the shopping list
+             does. -->
+        @if (sites().length > 1) {
+          <nldd-toolbar-item slot="start">
+            <nldd-toggle-button-group type="radio" accessible-label="Data center">
+              @for (dc of sites(); track dc.id) {
+                <nldd-toggle-button
+                  [attr.value]="dc.id"
+                  [attr.text]="dc.name"
+                  [attr.selected]="topologyDcId() === dc.id ? '' : null"
+                  (change)="onTopologyDcToggle(dc.id, $any($event).detail.selected)"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+          </nldd-toolbar-item>
         }
-      </nldd-segmented-control>
-
-      <div class="flex items-center gap-1.5">
-        <label
-          for="topo-type-filter"
-          class="text-xs font-medium text-slate-500 dark:text-gray-400 whitespace-nowrap"
-          >Type</label
-        >
-        <nldd-dropdown size="sm">
-          <select
-            id="topo-type-filter"
-            (change)="topologyTypeFilter.set($any($event.target).value)"
+        <!-- The two filters as menus rather than as a row of buttons: six states
+             and thirteen kinds is a wall of choices next to a location you can
+             count on one hand, and the button says which one is on. At the far
+             end, away from where you stand: the hall is what the drawing is of,
+             the filters are what you leave out of it.
+             No clear button either. "All states" and "All types" are the first
+             item of their own menu, so putting the reset back is where you set
+             it in the first place. -->
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="secondary"
+            expandable
+            popup-type="menu"
+            [attr.text]="topologyStatusLabel()"
           >
-            <option value="" [selected]="topologyTypeFilter() === ''">All types</option>
-            @for (t of CABLE_TYPES; track t) {
-              <option [value]="t" [selected]="topologyTypeFilter() === t">
-                {{ CABLE_TYPE_LABEL[t] }}
-              </option>
-            }
-          </select>
-        </nldd-dropdown>
-      </div>
-
-      @if (topologyStatusFilter() || topologyTypeFilter()) {
-        <nldd-button
-          variant="secondary"
-          text="Clear"
-          size="sm"
-          (click)="topologyStatusFilter.set(''); topologyTypeFilter.set('')"
-        ></nldd-button>
-      }
-    </div>
-
+            <nldd-menu slot="popup" accessible-label="Filter by status">
+              <nldd-menu-item
+                type="radio"
+                text="All states"
+                [attr.selected]="topologyStatusFilter() === '' ? '' : null"
+                (select)="topologyStatusFilter.set('')"
+              ></nldd-menu-item>
+              @for (s of CABLE_STATUSES; track s.value) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="s.label"
+                  [attr.selected]="topologyStatusFilter() === s.value ? '' : null"
+                  (select)="topologyStatusFilter.set(s.value)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="secondary"
+            expandable
+            popup-type="menu"
+            [attr.text]="topologyTypeLabel()"
+          >
+            <nldd-menu slot="popup" accessible-label="Filter by type">
+              <nldd-menu-item
+                type="radio"
+                text="All types"
+                [attr.selected]="topologyTypeFilter() === '' ? '' : null"
+                (select)="topologyTypeFilter.set('')"
+              ></nldd-menu-item>
+              @for (t of CABLE_TYPES; track t) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="CABLE_TYPE_LABEL[t]"
+                  [attr.selected]="topologyTypeFilter() === t ? '' : null"
+                  (select)="topologyTypeFilter.set(t)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+    </nldd-container>
+    <!-- Full bleed: the canvas is the content, so it takes the sheet's width and
+         whatever height is left under the filters. -->
     <app-patch-mapping-flow
       class="block w-full flex-1 min-h-0"
-      [cables]="dcCables()"
+      [cables]="topologyCables()"
       [devicePorts]="localDevicePorts()"
       [devices]="dcDevices()"
       [selectedCableId]="editCable()?.id ?? null"
-      [dcId]="selectedDcId()"
+      [dcId]="topologyDcId()"
       [filterStatus]="topologyStatusFilter()"
       [filterType]="topologyTypeFilter()"
       (cableSelected)="openEditCableById($event)"
       (connectionMade)="openAddCableFromConnection($event)"
       (cableStatusChanged)="updateCableStatus($event)"
     />
-  }
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
-     ADD / EDIT CABLE SHEET
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #cableSheet accessible-label="Cable details" placement="right" width="480px">
-  <app-cable-form
-    [cable]="editCable()"
-    [dcId]="selectedDcId()"
-    [allCables]="dcCables()"
-    [externalDevicePorts]="localDevicePorts()"
-    [devices]="dcDevices()"
-    [serverError]="cableFormError()"
-    (save)="saveFromForm($event)"
-    (cancelForm)="closeForm()"
-    (cableDelete)="openDeleteCable($event)"
-    (portsUpdated)="onPortsUpdated($event)"
-  />
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -162,16 +145,16 @@
   #shoppingSheet
   accessible-label="Shopping list"
   placement="right"
-  width="480px"
   (close)="shoppingListOpen.set(false)"
 >
-  <app-shopping-list [cables]="plannedCables()" [dcLabel]="selectedDcLabel()" />
+  <app-shopping-list [cables]="orderCables()" [sites]="sites()" />
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
      DELETE CABLE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #deleteModal
   (close)="cancelDelete()"
   [attr.text]="
@@ -188,7 +171,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep cable"
     (click)="cancelDelete()"
   ></nldd-button>

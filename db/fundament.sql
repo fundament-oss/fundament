@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -171,12 +171,12 @@ ALTER TABLE tenant.namespaces ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF NEW.deleted IS NOT NULL AND EXISTS (
@@ -200,12 +200,12 @@ ALTER FUNCTION tenant.clusters_tr_verify_deleted() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.node_pool_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     INSERT INTO tenant.cluster_outbox (node_pool_id, event, source)
@@ -230,12 +230,12 @@ ALTER FUNCTION tenant.node_pool_outbox_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.node_pool_region_match_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF NEW.region_machine_type_id IS NOT NULL THEN
@@ -259,12 +259,12 @@ ALTER FUNCTION tenant.node_pool_region_match_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.namespace_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
@@ -291,12 +291,12 @@ ALTER FUNCTION tenant.namespace_outbox_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.organization_limits_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Node-cap branch: re-apply each active cluster's shoot spec. A deleted
@@ -364,12 +364,12 @@ ALTER FUNCTION tenant.organization_limits_outbox_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.project_limits_outbox_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- A deleted change only matters when the row carries default values in
@@ -411,12 +411,12 @@ ALTER FUNCTION tenant.project_limits_outbox_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT'
@@ -445,12 +445,12 @@ ALTER FUNCTION tenant.cluster_outbox_cluster_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_organization_user_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
@@ -477,12 +477,12 @@ ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_ow
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
@@ -509,12 +509,12 @@ ALTER FUNCTION tenant.cluster_outbox_project_member_trigger() OWNER TO fun_owner
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_notify ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     PERFORM pg_notify('cluster_outbox', '');
@@ -530,12 +530,12 @@ ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 DECLARE
     resolved_cluster_id uuid;
@@ -571,12 +571,12 @@ ALTER FUNCTION tenant.cluster_outbox_update_cluster_status() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT NULLIF(current_setting('app.current_user_id', true), '')::uuid
 $function$;
@@ -589,12 +589,12 @@ ALTER FUNCTION authn.current_user_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.current_organization_id ()
 	RETURNS uuid
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT NULLIF(current_setting('app.current_organization_id', true), '')::uuid
 $function$;
@@ -607,12 +607,12 @@ ALTER FUNCTION authn.current_organization_id() OWNER TO fun_fundament_api;
 CREATE OR REPLACE FUNCTION authn.is_project_in_organization (IN p_project_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.projects
@@ -630,12 +630,12 @@ ALTER FUNCTION authn.is_project_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_cluster_in_organization (IN p_cluster_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.clusters
@@ -652,12 +652,12 @@ ALTER FUNCTION authn.is_cluster_in_organization(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION authn.is_organization_member (IN p_organization_id uuid)
 	RETURNS boolean
 	LANGUAGE sql
-	STABLE
+	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL SAFE
 	COST 1
-	AS
+	AS 
 $function$
 SELECT EXISTS (
     SELECT 1 FROM tenant.organizations_users
@@ -675,12 +675,12 @@ ALTER FUNCTION authn.is_organization_member(uuid) OWNER TO fun_authz;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_verify_deleted ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
 	IF NEW.deleted IS NOT NULL AND EXISTS (
@@ -704,12 +704,12 @@ ALTER FUNCTION tenant.projects_tr_verify_deleted() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.project_members_tr_protect_last_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 DECLARE
     admin_count integer;
@@ -744,12 +744,12 @@ ALTER FUNCTION tenant.project_members_tr_protect_last_admin() OWNER TO postgres;
 CREATE OR REPLACE FUNCTION tenant.projects_tr_require_admin ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     IF NOT EXISTS (
@@ -832,12 +832,12 @@ CREATE POLICY api_keys_organization_policy ON authn.api_keys
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
 	RETURNS authn.api_keys
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS
+	AS 
 $function$
 DECLARE
 	result authn.api_keys;
@@ -860,12 +860,12 @@ ALTER FUNCTION authn.api_key_get_by_hash(bytea) OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authn.api_key_update_last_used (IN p_id uuid)
 	RETURNS void
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
-	AS
+	AS 
 $function$
 BEGIN
 	UPDATE authn.api_keys SET last_used = NOW() WHERE id = p_id;
@@ -972,7 +972,7 @@ ALTER TABLE tenant.clusters ENABLE ROW LEVEL SECURITY;
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER INSERT OR UPDATE
 	ON tenant.clusters
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.clusters_tr_verify_deleted();
 -- ddl-end --
@@ -1068,6 +1068,7 @@ CREATE TABLE appstore.plugins (
 	image text NOT NULL DEFAULT '',
 	license text NOT NULL DEFAULT '',
 	visibility text NOT NULL DEFAULT 'public',
+	updated timestamptz NOT NULL DEFAULT now(),
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
@@ -1082,20 +1083,13 @@ COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plu
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
 -- ddl-end --
-COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Nothing writes this until the registry API lands.';
+COMMENT ON COLUMN appstore.plugins.visibility IS E'RESTRICTED listings are hidden from the public catalog entirely. Written by the registry API''s UpdatePlugin.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugins.updated IS E'Set by the application on every UpdatePlugin; there is no trigger.';
 -- ddl-end --
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE appstore.plugins ENABLE ROW LEVEL SECURITY;
--- ddl-end --
-
--- object: plugins_select_all | type: POLICY --
--- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
-CREATE POLICY plugins_select_all ON appstore.plugins
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_fundament_api
-	USING (true);
 -- ddl-end --
 
 -- object: plugins_insert_owner | type: POLICY --
@@ -1117,6 +1111,16 @@ CREATE POLICY plugins_update_owner ON appstore.plugins
 	WITH CHECK (organization_id = authn.current_organization_id());
 -- ddl-end --
 
+-- object: plugins_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_all_registry ON appstore.plugins CASCADE;
+CREATE POLICY plugins_all_registry ON appstore.plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (organization_id = authn.current_organization_id())
+	WITH CHECK (organization_id = authn.current_organization_id());
+-- ddl-end --
+
 -- object: appstore.plugin_definitions | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.plugin_definitions CASCADE;
 CREATE TABLE appstore.plugin_definitions (
@@ -1125,6 +1129,7 @@ CREATE TABLE appstore.plugin_definitions (
 	plugin_version text NOT NULL,
 	manifest bytea NOT NULL,
 	hash text NOT NULL,
+	image text NOT NULL DEFAULT '',
 	status text NOT NULL DEFAULT 'draft',
 	published timestamptz,
 	release_notes text NOT NULL DEFAULT '',
@@ -1134,6 +1139,8 @@ CREATE TABLE appstore.plugin_definitions (
 	CONSTRAINT plugin_definitions_pk PRIMARY KEY (id),
 	CONSTRAINT plugin_definitions_ck_status CHECK (status IN ('draft', 'pending', 'changes_requested', 'approved', 'rejected', 'withdrawn'))
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_definitions.image IS E'Denormalized from the manifest at write time so lists never parse YAML; the pinned manifest stays the source of truth.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugin_definitions.published IS E'Null until the version is live. The public catalog''s entire visibility predicate.';
 -- ddl-end --
@@ -1252,6 +1259,82 @@ USING btree
 	published
 )
 WHERE (published IS NOT NULL AND deleted IS NULL);
+-- ddl-end --
+
+-- object: appstore.submissions | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.submissions CASCADE;
+CREATE TABLE appstore.submissions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_definition_id uuid NOT NULL,
+	submitter_user_id uuid NOT NULL,
+	reviewer_user_id uuid,
+	rejection_reason text,
+	feedback text NOT NULL DEFAULT '',
+	submitted timestamptz NOT NULL DEFAULT now(),
+	reviewed timestamptz,
+	closed timestamptz,
+	deleted timestamptz,
+	CONSTRAINT submissions_pk PRIMARY KEY (id),
+	CONSTRAINT submissions_ck_rejection_reason CHECK (rejection_reason IS NULL OR rejection_reason IN ('incomplete_metadata', 'duplicate', 'security_concerns', 'naming_guidelines', 'out_of_scope', 'other')),
+	CONSTRAINT submissions_ck_reviewed CHECK ((reviewed IS NULL) = (reviewer_user_id IS NULL)),
+	CONSTRAINT submissions_ck_closed CHECK (reviewed IS NULL OR closed IS NOT NULL)
+);
+-- ddl-end --
+COMMENT ON TABLE appstore.submissions IS E'One review round for one plugin version. The version''s own status column stays authoritative; this table records who submitted, who decided, when and why.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.reviewer_user_id IS E'Which store reviewers authenticate against is undecided, so this carries no foreign key.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.submitted IS E'A submission is created by being submitted, so this is also its creation timestamp and there is no separate created column.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.submissions.closed IS E'Set by any terminal outcome. A withdrawal closes a round without a reviewer, which is why this is separate from reviewed.';
+-- ddl-end --
+ALTER TABLE appstore.submissions OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.submissions ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: submissions_uq_open | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.submissions_uq_open CASCADE;
+CREATE UNIQUE INDEX submissions_uq_open ON appstore.submissions
+USING btree
+(
+	plugin_definition_id
+)
+WHERE (closed IS NULL AND deleted IS NULL);
+-- ddl-end --
+
+-- object: submissions_idx_plugin_definition_id | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.submissions_idx_plugin_definition_id CASCADE;
+CREATE INDEX submissions_idx_plugin_definition_id ON appstore.submissions
+USING btree
+(
+	plugin_definition_id
+);
+-- ddl-end --
+
+-- object: appstore.plugin_allowed_organizations | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_allowed_organizations CASCADE;
+CREATE TABLE appstore.plugin_allowed_organizations (
+	plugin_id uuid NOT NULL,
+	organization_id uuid NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT plugin_allowed_organizations_pk PRIMARY KEY (plugin_id,organization_id)
+);
+-- ddl-end --
+COMMENT ON TABLE appstore.plugin_allowed_organizations IS E'Organizations permitted to install a RESTRICTED listing. A pure association table, replaced wholesale by UpdatePlugin, so it carries no deleted column.';
+-- ddl-end --
+ALTER TABLE appstore.plugin_allowed_organizations OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_allowed_organizations ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_idx_organization_id | type: INDEX --
+-- DROP INDEX IF EXISTS appstore.plugin_allowed_organizations_idx_organization_id CASCADE;
+CREATE INDEX plugin_allowed_organizations_idx_organization_id ON appstore.plugin_allowed_organizations
+USING btree
+(
+	organization_id
+);
 -- ddl-end --
 
 -- object: appstore.presets | type: TABLE --
@@ -1416,8 +1499,14 @@ CREATE TABLE appstore.plugin_documentation_links (
 	title text NOT NULL,
 	url_name text NOT NULL,
 	url text NOT NULL,
+	"position" integer NOT NULL DEFAULT 0,
+	deleted timestamptz,
 	CONSTRAINT plugin_documentation_links_pk PRIMARY KEY (id)
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_documentation_links."position" IS E'Render order within a listing, matching appstore.plugin_features.position.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugin_documentation_links.deleted IS E'UpdatePlugin replaces links wholesale; a dropped link is soft-deleted rather than removed, per the project-wide rule.';
 -- ddl-end --
 ALTER TABLE appstore.plugin_documentation_links OWNER TO fun_owner;
 -- ddl-end --
@@ -1442,10 +1531,163 @@ CREATE POLICY plugin_documentation_links_select_catalog ON appstore.plugin_docum
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id));
 -- ddl-end --
 
+-- object: plugin_definitions_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_all_registry ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_all_registry ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: submissions_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS submissions_all_registry ON appstore.submissions CASCADE;
+CREATE POLICY submissions_all_registry ON appstore.submissions
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugin_definitions JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id WHERE appstore.plugin_definitions.id = appstore.submissions.plugin_definition_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_features_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_features_all_registry ON appstore.plugin_features CASCADE;
+CREATE POLICY plugin_features_all_registry ON appstore.plugin_features
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_documentation_links_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_documentation_links_all_registry ON appstore.plugin_documentation_links CASCADE;
+CREATE POLICY plugin_documentation_links_all_registry ON appstore.plugin_documentation_links
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugins_tags_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_all_registry ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_all_registry ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: categories_plugins_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_all_registry ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_all_registry ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_all_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_allowed_organizations_all_registry ON appstore.plugin_allowed_organizations CASCADE;
+CREATE POLICY plugin_allowed_organizations_all_registry ON appstore.plugin_allowed_organizations
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_marketplace_registry_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()))
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugins_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_admin ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_admin ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_definitions_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_select_admin ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_select_admin ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_definitions_update_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_update_admin ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_update_admin ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_marketplace_admin_api
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: submissions_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS submissions_select_admin ON appstore.submissions CASCADE;
+CREATE POLICY submissions_select_admin ON appstore.submissions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: submissions_update_admin | type: POLICY --
+-- DROP POLICY IF EXISTS submissions_update_admin ON appstore.submissions CASCADE;
+CREATE POLICY submissions_update_admin ON appstore.submissions
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_marketplace_admin_api
+	USING (true)
+	WITH CHECK (true);
+-- ddl-end --
+
+-- object: plugins_tags_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_tags_select_admin ON appstore.plugins_tags CASCADE;
+CREATE POLICY plugins_tags_select_admin ON appstore.plugins_tags
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: categories_plugins_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS categories_plugins_select_admin ON appstore.categories_plugins CASCADE;
+CREATE POLICY categories_plugins_select_admin ON appstore.categories_plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_select_api | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations CASCADE;
+CREATE POLICY plugin_allowed_organizations_select_api ON appstore.plugin_allowed_organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: plugins_select_all | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_all ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (visibility = 'public' OR organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
 -- object: require_admin | type: TRIGGER --
 -- require_admin ON tenant.projects CASCADE;
 CREATE CONSTRAINT TRIGGER require_admin
-	AFTER INSERT
+	AFTER INSERT 
 	ON tenant.projects
 	DEFERRABLE INITIALLY DEFERRED
 	FOR EACH ROW
@@ -1457,7 +1699,7 @@ CREATE CONSTRAINT TRIGGER require_admin
 CREATE CONSTRAINT TRIGGER verify_deleted
 	AFTER UPDATE
 	ON tenant.projects
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.projects_tr_verify_deleted();
 -- ddl-end --
@@ -1614,6 +1856,15 @@ CREATE POLICY organizations_select_catalog ON tenant.organizations
 	FOR SELECT
 	TO fun_marketplace_catalog_api
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public'));
+-- ddl-end --
+
+-- object: organizations_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_admin ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_admin ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL));
 -- ddl-end --
 
 -- object: organization_limits_organization_policy | type: POLICY --
@@ -1844,12 +2095,12 @@ WHERE (processed IS NULL);
 CREATE OR REPLACE FUNCTION authz.projects_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1869,12 +2120,12 @@ ALTER FUNCTION authz.projects_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.project_members_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1894,12 +2145,12 @@ ALTER FUNCTION authz.project_members_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.clusters_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1919,12 +2170,12 @@ ALTER FUNCTION authz.clusters_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.node_pools_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1944,12 +2195,12 @@ ALTER FUNCTION authz.node_pools_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.namespaces_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -1969,12 +2220,12 @@ ALTER FUNCTION authz.namespaces_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.api_keys_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
@@ -1994,12 +2245,12 @@ ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.plugins_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
@@ -2019,12 +2270,12 @@ ALTER FUNCTION authz.plugins_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.organizations_users_sync_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     -- Only insert into outbox if this is an INSERT or if data actually changed
@@ -2044,12 +2295,12 @@ ALTER FUNCTION authz.organizations_users_sync_trigger() OWNER TO fun_owner;
 CREATE OR REPLACE FUNCTION authz.outbox_notify_trigger ()
 	RETURNS trigger
 	LANGUAGE plpgsql
-	VOLATILE
+	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY INVOKER
 	PARALLEL UNSAFE
 	COST 1
-	AS
+	AS 
 $function$
 BEGIN
     PERFORM pg_notify('authz_outbox', '');
@@ -2110,7 +2361,7 @@ CREATE OR REPLACE TRIGGER node_pool_outbox
 CREATE CONSTRAINT TRIGGER region_match
 	AFTER INSERT OR UPDATE
 	ON tenant.node_pools
-	NOT DEFERRABLE
+	NOT DEFERRABLE 
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.node_pool_region_match_trigger();
 -- ddl-end --
@@ -2182,7 +2433,7 @@ CREATE OR REPLACE TRIGGER plugins_outbox
 -- object: outbox_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS outbox_notify ON authz.outbox CASCADE;
 CREATE OR REPLACE TRIGGER outbox_notify
-	AFTER INSERT
+	AFTER INSERT 
 	ON authz.outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.outbox_notify_trigger();
@@ -2200,7 +2451,7 @@ CREATE OR REPLACE TRIGGER cluster_outbox_cluster
 -- object: cluster_outbox_notify | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS cluster_outbox_notify ON tenant.cluster_outbox CASCADE;
 CREATE OR REPLACE TRIGGER cluster_outbox_notify
-	AFTER INSERT
+	AFTER INSERT 
 	ON tenant.cluster_outbox
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_notify();
@@ -2718,7 +2969,7 @@ CREATE TABLE dcim.physical_connections (
 	deleted timestamptz,
 	CONSTRAINT physical_connections_pk PRIMARY KEY (id),
 	CONSTRAINT physical_connections_ck_cable_type CHECK (cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')),
-	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('planned','connected','decommissioned')),
+	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('to_order','ordered','ready_to_install','connected','decommissioned')),
 	CONSTRAINT physical_connections_ck_color CHECK (color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white'))
 );
 -- ddl-end --
@@ -2759,21 +3010,41 @@ CREATE TABLE dcim.tasks (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	title text NOT NULL,
 	description text,
-	status text NOT NULL DEFAULT 'ready',
-	priority text NOT NULL DEFAULT 'medium',
-	category text NOT NULL DEFAULT 'other',
+	status text NOT NULL DEFAULT 'todo',
+	priority text NOT NULL DEFAULT 'none',
 	assignee_id uuid,
 	due_date timestamptz,
 	location text,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	blocked_reason text,
 	CONSTRAINT tasks_pk PRIMARY KEY (id),
-	CONSTRAINT tasks_ck_status CHECK (status IN ('ready','in_progress','review','blocked','done')),
-	CONSTRAINT tasks_ck_priority CHECK (priority IN ('low','medium','high','critical')),
-	CONSTRAINT tasks_ck_category CHECK (category IN ('hardware','network','cooling','power','security','other'))
+	CONSTRAINT tasks_ck_status CHECK (status IN ('todo','doing','done')),
+	CONSTRAINT tasks_ck_priority CHECK (priority IN ('none','low','medium','high','urgent'))
 );
 -- ddl-end --
 ALTER TABLE dcim.tasks OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.task_tags | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.task_tags CASCADE;
+CREATE TABLE dcim.task_tags (
+	task_id uuid NOT NULL,
+	tag text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT task_tags_pk PRIMARY KEY (task_id,tag)
+);
+-- ddl-end --
+ALTER TABLE dcim.task_tags OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: task_tags_ix_tag | type: INDEX --
+-- DROP INDEX IF EXISTS dcim.task_tags_ix_tag CASCADE;
+CREATE INDEX task_tags_ix_tag ON dcim.task_tags
+USING btree
+(
+	tag
+);
 -- ddl-end --
 
 -- object: dcim.task_steps | type: TABLE --
@@ -2954,6 +3225,34 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE appstore.plugin_features DROP CONSTRAINT IF EXISTS plugin_features_fk_plugin CASCADE;
 ALTER TABLE appstore.plugin_features ADD CONSTRAINT plugin_features_fk_plugin FOREIGN KEY (plugin_id)
 REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: submissions_fk_submitter_user | type: CONSTRAINT --
+-- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_submitter_user CASCADE;
+ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_submitter_user FOREIGN KEY (submitter_user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: submissions_fk_plugin_definition | type: CONSTRAINT --
+-- ALTER TABLE appstore.submissions DROP CONSTRAINT IF EXISTS submissions_fk_plugin_definition CASCADE;
+ALTER TABLE appstore.submissions ADD CONSTRAINT submissions_fk_plugin_definition FOREIGN KEY (plugin_definition_id)
+REFERENCES appstore.plugin_definitions (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_allowed_organizations DROP CONSTRAINT IF EXISTS plugin_allowed_organizations_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_allowed_organizations ADD CONSTRAINT plugin_allowed_organizations_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugin_allowed_organizations_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_allowed_organizations DROP CONSTRAINT IF EXISTS plugin_allowed_organizations_fk_organization CASCADE;
+ALTER TABLE appstore.plugin_allowed_organizations ADD CONSTRAINT plugin_allowed_organizations_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -3461,6 +3760,13 @@ REFERENCES dcim.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: task_tags_fk_task | type: CONSTRAINT --
+-- ALTER TABLE dcim.task_tags DROP CONSTRAINT IF EXISTS task_tags_fk_task CASCADE;
+ALTER TABLE dcim.task_tags ADD CONSTRAINT task_tags_fk_task FOREIGN KEY (task_id)
+REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE CASCADE ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: dcim_task_steps_fk_task | type: CONSTRAINT --
 -- ALTER TABLE dcim.task_steps DROP CONSTRAINT IF EXISTS dcim_task_steps_fk_task CASCADE;
 ALTER TABLE dcim.task_steps ADD CONSTRAINT dcim_task_steps_fk_task FOREIGN KEY (task_id)
@@ -3711,6 +4017,14 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_raw_036b663d7a | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE appstore.plugins
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_91e308bb11 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_allowed_organizations
    TO fun_fundament_api;
 
 -- ddl-end --
@@ -4276,6 +4590,14 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
+-- object: grant_rad_e7c9971b5d | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE dcim.task_tags
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
 -- object: grant_r_e071340f9f | type: PERMISSION --
 GRANT SELECT
    ON TABLE dcim.users
@@ -4392,6 +4714,302 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE appstore.preset_plugins
    TO fun_marketplace_catalog_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_5bbfd58279" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_cdf2d83602" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authn
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_58b7ef10c5" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA authz
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_d6c0a87ef1 | type: PERMISSION --
+GRANT INSERT
+   ON TABLE authz.outbox
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_04e3e3c135 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugins
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_ra_9d426cee08 | type: PERMISSION --
+GRANT SELECT,INSERT
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_88f4e8e148 | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_fc29c55d90 | type: PERMISSION --
+GRANT UPDATE(deleted)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_3148141987 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_2ea3dd2a4e | type: PERMISSION --
+GRANT INSERT(plugin_definition_id)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_31b595f1a1 | type: PERMISSION --
+GRANT INSERT(submitter_user_id)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_bb41bdda39 | type: PERMISSION --
+GRANT UPDATE(closed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_27b9f47f46 | type: PERMISSION --
+GRANT UPDATE(deleted)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b5e07e3db2 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_features
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_58e0ba59de | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_documentation_links
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_0cb5215905 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_cac5c95b57 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_rad_a8c38567c0 | type: PERMISSION --
+GRANT SELECT,INSERT,DELETE
+   ON TABLE appstore.plugin_allowed_organizations
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_ra_478b81c02e | type: PERMISSION --
+GRANT SELECT,INSERT
+   ON TABLE appstore.tags
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_c0d2d103bf | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_06186b41ac" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_1ef32a10b1" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_2c220bdfe0 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_55abf03dc9 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_1828d4a177 | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_e7370906e9 | type: PERMISSION --
+GRANT UPDATE(published)
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_f165ddaba3 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_9153607b55 | type: PERMISSION --
+GRANT UPDATE(reviewer_user_id)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_1066fc42d8 | type: PERMISSION --
+GRANT UPDATE(reviewed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_bf2e75bd96 | type: PERMISSION --
+GRANT UPDATE(closed)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_32d8da87e3 | type: PERMISSION --
+GRANT UPDATE(rejection_reason)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_w_6a8ec3d2b0 | type: PERMISSION --
+GRANT UPDATE(feedback)
+   ON TABLE appstore.submissions
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_eda1398348 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_df7e1a526f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.tags
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_ad567998bf | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_297c355a5c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_b6d3ca0302 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_marketplace_admin_api;
 
 -- ddl-end --
 

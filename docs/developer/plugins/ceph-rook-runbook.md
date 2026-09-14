@@ -214,12 +214,19 @@ One `admin`/`accepted` row is what you need. If it is missing, re-run the migrat
 
 ```bash
 export PLUGIN_REGISTRY=localhost:5112
-export FUNDAMENT_ORG_API_URL=https://organization.fundament.localhost:8443
-export FUNDAMENT_ORGANIZATION_ID=019b4000-0000-7000-8000-000000000000   # seeded "system" org
-export FUNDAMENT_TOKEN=...      # a token for platform-admin@fundament.io — required
 
-just plugin-publish storage/ceph-rook
+# Publishing goes through `functl plugin publish` (marketplace-registry-api).
+# One-time setup: authenticate and select the publishing organization.
+functl auth login
+functl org set 019b4000-0000-7000-8000-000000000000   # seeded "system" org
+
+just plugin-publish storage/ceph-rook --create
 ```
+
+The registry endpoint comes from functl's config (`registry_url`, or
+`FUNCTL_REGISTRY_URL`, which mise sets for this repo). `--create` reserves the
+listing on the first publish; versions are create-only, so republishing means
+bumping `metadata.version` in the definition.
 
 Authorization also depends on two OpenFGA tuples, written by the authz-worker from the
 database outbox. If publishing fails with a permission error while the SQL above looks
@@ -237,18 +244,16 @@ Expect `plugin:…011 owner organization:…000` and `organization:…000 admin 
 Expected last line — **copy the hash, phase 4 needs it**:
 
 ```
-published plugin=ceph-rook version=v0.1.0 hash=sha256:... id=... definition_id=...
+published plugin=ceph-rook version=v0.1.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
 ```
 
-Republishing the same `v0.1.0` needs `--replace`, which soft-deletes the previous
-definition:
+Versions are create-only on the registry — an approved version's hash is a
+consent record — so there is no `--replace`. To publish the same content again,
+bump `metadata.version` in `definition.yaml` (a `-dev` prerelease suffix works)
+and re-run the publish.
 
-```bash
-just plugin-publish storage/ceph-rook --replace
-```
-
-If it fails with `no catalog entry for "ceph-rook"`, the seed did not reach the database —
-go back and re-run the migrations job.
+If it fails with `no listing named "ceph-rook"`, pass `--create` to reserve the
+listing, seeded from the definition's metadata.
 
 ## Phase 4 · Install
 

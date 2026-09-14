@@ -18,3 +18,8 @@
 # Generated proto version — written by generate-proto-version.js (runs via the
 # prebuild/prestart hooks, and in the Docker image build). Regenerated, not source.
 /src/proto-version.gen.ts
+
+# Generated marketplace demo bundle — built from ../marketplace-frontend by
+# `bun scripts/build-marketplace-demo.ts` (runs via the prebuild:demo/prestart:demo
+# hooks, and in the Docker image build). The walkthrough frames it at /marketplace/.
+/public/marketplace

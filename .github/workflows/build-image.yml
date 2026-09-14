@@ -45,6 +45,7 @@ jobs:
         run: echo "ref_name=$(echo '${{ github.ref_name }}' | tr '/' '-')" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
@@ -52,3 +53,20 @@ jobs:
           build-args: ${{ inputs.build-args }}
           push: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
           tags: ${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:latest,${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:${{ github.sha }}-${{ steps.sanitize.outputs.ref_name }}-${{ github.run_number }}
+
+      # publish-chart stamps the chart with digests rather than tags, and matrix
+      # jobs cannot aggregate outputs - so each build leaves its digest as an
+      # artifact for the chart job to collect.
+      - name: Record digest
+        if: steps.build.outputs.digest != ''
+        run: |
+          mkdir -p digest
+          echo '${{ steps.build.outputs.digest }}' > "digest/${{ inputs.image-name }}"
+
+      - name: Upload digest
+        if: steps.build.outputs.digest != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ inputs.image-name }}
+          path: digest/
+          retention-days: 1

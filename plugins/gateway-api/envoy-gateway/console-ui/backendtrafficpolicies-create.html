@@ -13,10 +13,23 @@
         <div class="plugin-error" id="error" hidden></div>
 
         <nldd-form-field label="Name">
-          <nldd-text-field id="name" name="name" required maxlength="63"
-            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="rate-limit" error-message="name-error"></nldd-text-field>
-          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
-          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+          <nldd-text-field
+            id="name"
+            name="name"
+            required
+            maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+            placeholder="rate-limit"
+            unmet="name-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text
+            >Lowercase letters, digits and dashes.</nldd-form-field-help-text
+          >
+          <nldd-validation-list>
+            <nldd-validation-item id="name-error"
+              >Enter a valid name.</nldd-validation-item
+            >
+          </nldd-validation-list>
         </nldd-form-field>
 
         <div id="namespace-field"></div>
@@ -25,7 +38,11 @@
           <legend class="plugin-legend">Attach to (targetRef)</legend>
           <nldd-form-field label="Kind">
             <nldd-dropdown>
-              <select id="target-kind" name="target-kind" aria-label="Target kind">
+              <select
+                id="target-kind"
+                name="target-kind"
+                aria-label="Target kind"
+              >
                 <option value="Gateway">Gateway</option>
                 <option value="HTTPRoute">HTTPRoute</option>
                 <option value="GRPCRoute">GRPCRoute</option>
@@ -33,8 +50,18 @@
             </nldd-dropdown>
           </nldd-form-field>
           <nldd-form-field label="Name">
-            <nldd-text-field id="target-name" name="target-name" required placeholder="demo" error-message="target-name-error"></nldd-text-field>
-            <nldd-form-field-error-text id="target-name-error">This field is required.</nldd-form-field-error-text>
+            <nldd-text-field
+              id="target-name"
+              name="target-name"
+              required
+              placeholder="demo"
+              unmet="target-name-error"
+            ></nldd-text-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="target-name-error"
+                >This field is required.</nldd-validation-item
+              >
+            </nldd-validation-list>
           </nldd-form-field>
         </fieldset>
 
@@ -42,8 +69,16 @@
           <legend class="plugin-legend">Local rate limit (optional)</legend>
           <div class="plugin-row">
             <nldd-form-field label="Requests" style="flex: 0 0 10rem">
-              <nldd-text-field id="rate-requests" name="rate-requests" type="number" min="1" placeholder="100"></nldd-text-field>
-              <nldd-form-field-help-text>Leave blank for no rate limit.</nldd-form-field-help-text>
+              <nldd-text-field
+                id="rate-requests"
+                name="rate-requests"
+                type="number"
+                min="1"
+                placeholder="100"
+              ></nldd-text-field>
+              <nldd-form-field-help-text
+                >Leave blank for no rate limit.</nldd-form-field-help-text
+              >
             </nldd-form-field>
             <nldd-form-field label="Per" style="flex: 0 0 10rem">
               <nldd-dropdown>
@@ -58,8 +93,18 @@
         </fieldset>
 
         <div class="plugin-actions">
-          <nldd-button id="submit" type="button" variant="primary" text="Create BackendTrafficPolicy"></nldd-button>
-          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+          <nldd-button
+            id="submit"
+            type="button"
+            variant="primary"
+            text="Create BackendTrafficPolicy"
+          ></nldd-button>
+          <nldd-button
+            id="back"
+            type="button"
+            variant="secondary"
+            text="Back"
+          ></nldd-button>
         </div>
       </form>
     </div>

@@ -49,7 +49,25 @@ export type CableType =
   | 'usb'
   | 'other';
 
-export type CableStatus = 'planned' | 'connected' | 'decommissioned';
+/**
+ * How far a cable is towards existing. Each value names what has to happen next:
+ * buy it, wait for it, go and fit it.
+ *
+ * A cable that is drawn but not decided on has no status at all, which is what
+ * an unset status already meant.
+ */
+export type CableStatus =
+  'to-order' | 'ordered' | 'ready-to-install' | 'connected' | 'decommissioned';
+
+/** In the order a cable passes through them, which is the order they are shown
+ *  in wherever all of them are offered. */
+export const CABLE_STATUSES: { value: CableStatus; label: string }[] = [
+  { value: 'to-order', label: 'To order' },
+  { value: 'ordered', label: 'Ordered' },
+  { value: 'ready-to-install', label: 'Ready to install' },
+  { value: 'connected', label: 'Connected' },
+  { value: 'decommissioned', label: 'Decommissioned' },
+];
 
 export type CableColor =
   | 'dark-grey'
@@ -88,6 +106,21 @@ export interface Cable {
 }
 
 // ── Color palette ─────────────────────────────────────────────────────────────
+
+/** The colour as a word, because a colour on its own is not something everyone
+ *  can read. */
+export const CABLE_COLOR_LABEL: Record<CableColor, string> = {
+  'dark-grey': 'Dark grey',
+  'light-grey': 'Light grey',
+  red: 'Red',
+  green: 'Green',
+  blue: 'Blue',
+  yellow: 'Yellow',
+  purple: 'Purple',
+  orange: 'Orange',
+  teal: 'Teal',
+  white: 'White',
+};
 
 export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   'dark-grey': '#374151',
@@ -137,14 +170,21 @@ export const CABLE_TYPE_LABEL: Record<CableType, string> = {
 };
 
 export const CABLE_STATUS_LABEL: Record<CableStatus, string> = {
-  planned: 'Planned',
+  'to-order': 'To order',
+  ordered: 'Ordered',
+  'ready-to-install': 'Ready to install',
   connected: 'Connected',
   decommissioned: 'Decommissioned',
 };
 
 /** `color` for an `nldd-tag` per cable status. */
 export const CABLE_STATUS_TAG_COLOR: Record<CableStatus, string> = {
-  planned: 'lichtblauw',
+  // Critical is this system's primary attention, on the one state that is
+  // asking somebody for something. Warning while it is under way, accent once
+  // it is lying there and the next move is yours.
+  'to-order': 'critical',
+  ordered: 'warning',
+  'ready-to-install': 'accent',
   connected: 'success',
   decommissioned: 'neutral',
 };

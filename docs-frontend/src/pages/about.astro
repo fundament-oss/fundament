@@ -3,83 +3,51 @@ import Layout from '../layouts/Landing.astro';
 ---
 
 <Layout
-  title="About - Fundament"
+  title="About · Fundament"
   description="About Fundament — an open-source Autonomous Private Cloud platform built by Digilab for self-hosted Kubernetes infrastructure."
 >
-  <section class="about-hero">
-    <h1 class="about-hero-title">About Fundament</h1>
-    <p class="about-hero-body">
-      Fundament is software for running an Autonomous Private Cloud. It is designed to provide
-      organizations with a minimal, reliable foundation for running modern applications. Unlike
-      traditional platforms that bundle every service by default, Fundament is basic at its core
-      &mdash; delivering only the essential infrastructure and orchestration layers &mdash; while
-      allowing each tenant to extend their environment with exactly the services and tools they
-      need.
-    </p>
-    <p class="about-hero-body">
-      On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling
-      developers to build, deploy, and operate applications with speed and confidence. Its API-first
-      design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for
-      organizations that want cloud capabilities on their own terms; secure, reliable, and without
-      unnecessary complexity.
-    </p>
-  </section>
+  <nldd-simple-section width="800px">
+    <nldd-rich-text>
+      <h1>About Fundament</h1>
+      <p>
+        Fundament is software for running an Autonomous Private Cloud. It is designed to provide
+        organizations with a minimal, reliable foundation for running modern applications. Unlike
+        traditional platforms that bundle every service by default, Fundament is basic at its core
+        &mdash; delivering only the essential infrastructure and orchestration layers &mdash; while
+        allowing each tenant to extend their environment with exactly the services and tools they
+        need.
+      </p>
+      <p>
+        On top of this foundation, Fundament serves as an internal developer platform (IDP):
+        enabling developers to build, deploy, and operate applications with speed and confidence.
+        Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make
+        it suitable for organizations that want cloud capabilities on their own terms; secure,
+        reliable, and without unnecessary complexity.
+      </p>
 
-  <div class="about-section">
-    <div class="about-section-inner">
-      <h2 class="about-section-title">Project status</h2>
-      <p class="about-section-subtitle">Concept &amp; Development</p>
-      <p class="about-section-body">
+      <h2>Project status</h2>
+      <p><strong>Concept &amp; Development</strong></p>
+      <p>
         The focus of the project is currently on research and ideation. Some initial PoC
         applications may be built to give shape to ideas and to provide early feedback from testing
         users.
       </p>
-    </div>
-  </div>
 
-  <div class="about-section">
-    <div class="about-section-inner">
-      <h2 class="about-section-title">Organization</h2>
-      <p class="about-section-body">
-        Fundament is being developed by <a href="https://digilab.overheid.nl/" target="_blank"
-          >Digilab</a
+      <h2>Organization</h2>
+      <p>
+        Fundament is being developed by <a
+          href="https://digilab.overheid.nl/"
+          target="_blank"
+          rel="noopener noreferrer">Digilab</a
         >. Digilab is a technical innovation team and testing environment initiated by the Dutch
         government to facilitate secure, responsible, and standardized data sharing across public
         sector organizations.
       </p>
-    </div>
-  </div>
+    </nldd-rich-text>
+  </nldd-simple-section>
 </Layout>
 
-<style is:global>
-  @reference "../styles/global.css";
-
-  .about-hero {
-    @apply py-primitives-space-64 px-primitives-space-32 mx-auto max-w-200;
-  }
-  .about-hero-title {
-    @apply text-display-2 font-display mb-primitives-space-24 text-content m-0 font-medium tracking-[-0.02em];
-  }
-  .about-hero-body {
-    @apply text-body-lg font-body text-content mb-primitives-space-16 m-0 max-w-180 font-normal;
-  }
-  .about-hero-body:last-child {
-    @apply mb-0;
-  }
-
-  .about-section {
-    @apply border-dividers border-t;
-  }
-  .about-section-inner {
-    @apply py-primitives-space-48 px-primitives-space-32 mx-auto max-w-200;
-  }
-  .about-section-title {
-    @apply text-display-4 font-display text-accent-600 mb-primitives-space-8 m-0 font-medium tracking-[-0.01em];
-  }
-  .about-section-subtitle {
-    @apply text-body-lg font-body text-content mb-primitives-space-8 m-0 font-medium;
-  }
-  .about-section-body {
-    @apply text-body-lg font-body text-content m-0 max-w-180 font-normal;
-  }
-</style>
+<script>
+  import '@nldd/design-system/simple-section';
+  import '@nldd/design-system/rich-text';
+</script>

@@ -30,6 +30,7 @@ const (
 	ActionCanCreateApikey    ActionName = "can_create_apikey"
 	ActionCanListApikeys     ActionName = "can_list_apikeys"
 	ActionCanCreateCluster   ActionName = "can_create_cluster"
+	ActionCanCreatePlugin    ActionName = "can_create_plugin"
 	ActionCanListClusters    ActionName = "can_list_clusters"
 	ActionCanInviteMember    ActionName = "can_invite_member"
 	ActionCanEditMember      ActionName = "can_edit_member"
@@ -231,6 +232,11 @@ func CanListApikeys() Action {
 // CanCreateCluster creates an Action for the can_create_cluster relation.
 func CanCreateCluster() Action {
 	return Action{Name: ActionCanCreateCluster}
+}
+
+// CanCreatePlugin creates an Action for the can_create_plugin relation.
+func CanCreatePlugin() Action {
+	return Action{Name: ActionCanCreatePlugin}
 }
 
 // CanListClusters creates an Action for the can_list_clusters relation.

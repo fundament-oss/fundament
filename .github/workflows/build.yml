@@ -96,12 +96,15 @@ jobs:
           - image-name: kube-api-proxy
             dockerfile: kube-api-proxy/Dockerfile
             context: "."
+          - image-name: plugin-controller
+            dockerfile: plugin-controller/Dockerfile
+            context: "."
           - image-name: plugin-proxy
             dockerfile: plugin-proxy/Dockerfile
             context: "."
-          - image-name: openfga-setup
-            dockerfile: openfga/setup/Dockerfile
-            context: openfga/setup
+          - image-name: openfga-bootstrap
+            dockerfile: openfga/bootstrap/Dockerfile
+            context: "."
           - image-name: docs-frontend
             dockerfile: docs-frontend/Dockerfile
             context: "."
@@ -111,6 +114,9 @@ jobs:
           - image-name: dcim-frontend
             dockerfile: dcim-frontend/Dockerfile
             context: "."
+          - image-name: marketplace-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
           - image-name: dcim-authn-api
             dockerfile: dcim-authn-api/Dockerfile
             context: "."
@@ -118,8 +124,24 @@ jobs:
             dockerfile: openfsc-operator/Dockerfile
             context: "."
           - image-name: marketplace-catalog-api
-            dockerfile: marketplace-api/Dockerfile
+            dockerfile: marketplace-catalog-api/Dockerfile
             context: "."
+          - image-name: marketplace-registry-api
+            dockerfile: marketplace-registry-api/Dockerfile
+            context: "."
+          - image-name: marketplace-admin-api
+            dockerfile: marketplace-admin-api/Dockerfile
+            context: "."
+          # Same image source as marketplace-frontend, built for the developer
+          # and reviewer audiences (FUN-20), like console-demo-frontend.
+          - image-name: marketplace-registry-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:registry
+          - image-name: marketplace-admin-frontend
+            dockerfile: marketplace-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:admin
     permissions:
       contents: read
       packages: write
@@ -130,6 +152,117 @@ jobs:
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
       build-args: ${{ matrix.build-args }}
+
+  # Packages the chart with every image digest stamped into values.yaml, so one
+  # version string names the chart and the exact images it deploys.
+  #
+  # This lives in build.yml rather than its own workflow because
+  # github.run_number is per workflow file: sharing it with `build` is what
+  # makes chart 0.1.0-master.<n> and image tag <sha>-master-<n> the same build.
+  # `needs: build` also cannot cross workflow files, and a version that can
+  # outlive a failed image build does not identify anything.
+  #
+  # Master charts go to charts/, PR builds to charts-pr/. They must not share a
+  # repository: semver compares prerelease identifiers as ASCII, so
+  # 0.1.0-pr417.2345 sorts ABOVE 0.1.0-master.2363, and anything tracking a
+  # version range on master would silently pull a PR build.
+  publish-chart:
+    needs: [gate, build]
+    if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      chart_version: ${{ steps.version.outputs.chart_version }}
+      chart_repo: ${{ steps.version.outputs.chart_repo }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jdx/mise-action@v3
+
+      - name: Compute chart version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            CHART_VERSION="0.1.0-master.${{ github.run_number }}"
+            CHART_REPO="${IMAGE_PREFIX}/charts"
+          else
+            CHART_VERSION="0.1.0-pr${PR_NUMBER}.${{ github.run_number }}"
+            CHART_REPO="${IMAGE_PREFIX}/charts-pr"
+          fi
+          {
+            echo "CHART_VERSION=${CHART_VERSION}"
+            echo "CHART_REPO=${CHART_REPO}"
+          } >> "$GITHUB_ENV"
+          {
+            echo "chart_version=${CHART_VERSION}"
+            echo "chart_repo=${CHART_REPO}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Stamped in the CI workspace and never committed. The chart in git keeps
+      # its :latest defaults, which is what leaves skaffold and every consumer
+      # that reads charts/fundament straight from the repo unaffected.
+      #
+      # The revision annotation is what makes a version resolvable back to a
+      # commit (`helm show chart`); without it 0.1.0-master.2366 names a build
+      # nobody can diff.
+      - name: Collect image digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+
+      - name: Stamp the chart
+        run: |
+          V="$CHART_VERSION" SHA="${{ github.sha }}" mise exec -- yq -i '
+            .version = strenv(V) |
+            .appVersion = strenv(V) |
+            .annotations."org.opencontainers.image.revision" = strenv(SHA) |
+            .annotations."org.opencontainers.image.source" = "https://github.com/fundament-oss/fundament"
+          ' charts/fundament/Chart.yaml
+          V="$CHART_VERSION" mise exec -- yq -i '.deploymentVersion = strenv(V)' charts/fundament/values.yaml
+
+          # By digest, not tag: a tag can be repointed after review, a digest
+          # cannot. The image name is the last path segment of the ref, which is
+          # what build-image.yml named the artifact after. A missing digest fails
+          # the build - every image in `images:` must have a build in the matrix.
+          for key in $(mise exec -- yq -r '.images | keys | .[]' charts/fundament/values.yaml); do
+            ref=$(mise exec -- yq -r ".images.\"$key\"" charts/fundament/values.yaml)
+            repo=${ref%:*}
+            file="digests/${repo##*/}"
+            if [ ! -s "$file" ]; then
+              echo "no digest for images.$key ($ref)" >&2
+              exit 1
+            fi
+            KEY="$key" VAL="${repo}@$(cat "$file")" mise exec -- \
+              yq -i '.images[strenv(KEY)] = strenv(VAL)' charts/fundament/values.yaml
+          done
+          mise exec -- yq '.images' charts/fundament/values.yaml
+
+      - name: Lint and package
+        run: |
+          mise exec -- helm lint charts/fundament
+          mise exec -- helm package charts/fundament --destination dist
+
+      - name: Verify the package
+        run: |
+          TGZ="dist/fundament-${CHART_VERSION}.tgz"
+          # Every image must be digest-pinned. A tag survives review and can be
+          # repointed afterwards; on this registry :latest is rewritten by every
+          # pull_request build.
+          if mise exec -- helm show values "$TGZ" | mise exec -- yq -r '.images[]' | grep -v '@sha256:'; then
+            echo "ERROR: the packaged chart has image references that are not digests" >&2
+            exit 1
+          fi
+          mise exec -- helm show chart "$TGZ"
+
+      - name: Push
+        run: |
+          echo '${{ secrets.GITHUB_TOKEN }}' | mise exec -- helm registry login ghcr.io \
+            --username '${{ github.actor }}' --password-stdin
+          mise exec -- helm push "dist/fundament-${CHART_VERSION}.tgz" "oci://${CHART_REPO}"
 
   deploy:
     needs: [gate, build]
@@ -233,7 +366,12 @@ jobs:
             | DCIM | https://dcim.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM API | https://dcim-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM Auth | https://dcim-authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Marketplace Catalog API | https://marketplace-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace | https://marketplace.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Registry API | https://marketplace-registry-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
@@ -294,13 +432,10 @@ jobs:
             **4. OpenFGA / authorization config**
 
             ```bash
-            # organization-api and kube-api-proxy readiness depend on OpenFGA.
-            kubectl -n $NS get configmap openfga-config -o yaml
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c setup
+            # The store and model are created by a Job. Consumers resolve the
+            # store by name and report themselves unready until they can.
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga-bootstrap -c bootstrap
             kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
-
-            # If consumers are still using an old store/model ID after setup patched openfga-config:
-            kubectl -n $NS rollout restart deployment/organization-api deployment/kube-api-proxy
             ```
 
             **5. DB & migrations**
@@ -311,13 +446,10 @@ jobs:
 
             # Migrations run as a Job named db-migrations-<helm-revision>, with a
             # 5m TTL after success. If the Job is gone, migrations almost
-            # certainly succeeded.
+            # certainly succeeded. When the release resets, the same container
+            # clears the OpenFGA tuples first.
             kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
             kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
-
-            # OpenFGA blocks on that Job before migrating its schema. If openfga
-            # is stuck in Init, this is why:
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c wait-for-reset
             ```
 
             **6. Routes & TLS**
