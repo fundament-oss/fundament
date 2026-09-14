@@ -1,0 +1,25 @@
+package main
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
+)
+
+func TestPluginImplementsInterfaces(t *testing.T) {
+	t.Parallel()
+	plugin := New{{.GoType}}Plugin()
+
+	var _ pluginruntime.Plugin = plugin
+{{- if .IsHelm}}
+	var _ pluginruntime.Installer = plugin
+	var _ pluginruntime.Reconciler = plugin
+{{- end}}
+{{- if .HasConsole}}
+	var _ pluginruntime.ConsoleProvider = plugin
+{{- end}}
+
+	assert.NotNil(t, plugin)
+}

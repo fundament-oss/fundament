@@ -104,3 +104,77 @@ spec:
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "spec.image")
 }
+
+func TestParseSourceDefinition_AcceptsMissingImage(t *testing.T) {
+	// The authored source template has no image; publish injects the digest.
+	def, err := ParseSourceDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  permissions:
+    rbac: []
+`))
+	require.NoError(t, err)
+	assert.Equal(t, "cert-manager", def.Metadata.Name)
+	assert.Empty(t, def.Spec.Image)
+}
+
+func TestParseSourceDefinition_RejectsMutableTag(t *testing.T) {
+	// An image that IS present must still be digest-pinned, so a hand-written
+	// mutable tag fails here rather than at publish time.
+	_, err := ParseSourceDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+spec:
+  image: quay.io/jetstack/cert-manager-controller:v1.17.2
+  permissions:
+    rbac: []
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "digest reference")
+}
+
+func TestParseSourceDefinition_StillValidatesEnvelope(t *testing.T) {
+	for name, manifest := range map[string]string{
+		"apiVersion": `apiVersion: fundament.io/v2
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+spec:
+  permissions:
+    rbac: []
+`,
+		"kind": `apiVersion: fundament.io/v1
+kind: Plugin
+metadata:
+  name: cert-manager
+spec:
+  permissions:
+    rbac: []
+`,
+		"metadata.name": `apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  version: v1.0.0
+spec:
+  permissions:
+    rbac: []
+`,
+		"unknown field": `apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+spec:
+  permissionz:
+    rbac: []
+`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseSourceDefinition([]byte(manifest))
+			require.Error(t, err)
+		})
+	}
+}

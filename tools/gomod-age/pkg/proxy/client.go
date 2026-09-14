@@ -12,18 +12,47 @@ import (
 	"unicode"
 )
 
-// Client queries Go module proxies for version metadata.
-type Client struct {
-	httpClient *http.Client
+const (
+	// defaultTimeout bounds a single request. The public proxy is occasionally
+	// slow to send headers, so this is generous rather than tight.
+	defaultTimeout = 20 * time.Second
+	// defaultMaxAttempts is the number of tries per proxy, including the first.
+	defaultMaxAttempts = 3
+	// defaultRetryDelay is the base backoff, doubled after each failed attempt.
+	defaultRetryDelay = 500 * time.Millisecond
+)
+
+// Options configures a Client. Zero values fall back to defaults.
+type Options struct {
+	HTTPClient  *http.Client
+	MaxAttempts int
+	RetryDelay  time.Duration
 }
 
-// NewClient creates a proxy client with the given HTTP client.
-// If httpClient is nil, a default client with 10s timeout is used.
-func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 10 * time.Second}
+// Client queries Go module proxies for version metadata.
+type Client struct {
+	httpClient  *http.Client
+	maxAttempts int
+	retryDelay  time.Duration
+}
+
+// NewClient creates a proxy client from opts, filling in defaults.
+func NewClient(opts Options) *Client {
+	c := &Client{
+		httpClient:  opts.HTTPClient,
+		maxAttempts: opts.MaxAttempts,
+		retryDelay:  opts.RetryDelay,
 	}
-	return &Client{httpClient: httpClient}
+	if c.httpClient == nil {
+		c.httpClient = &http.Client{Timeout: defaultTimeout}
+	}
+	if c.maxAttempts < 1 {
+		c.maxAttempts = defaultMaxAttempts
+	}
+	if c.retryDelay <= 0 {
+		c.retryDelay = defaultRetryDelay
+	}
+	return c
 }
 
 type versionInfo struct {
@@ -41,7 +70,7 @@ func (c *Client) GetVersionTime(ctx context.Context, proxyURL, module, version s
 			break
 		}
 
-		t, err := c.queryProxy(ctx, p.url, module, version)
+		t, err := c.queryProxyWithRetry(ctx, p.url, module, version)
 		if err == nil {
 			return t, nil
 		}
@@ -60,6 +89,39 @@ func (c *Client) GetVersionTime(ctx context.Context, proxyURL, module, version s
 	return time.Time{}, fmt.Errorf("no proxy available for %s@%s", module, version)
 }
 
+// queryProxyWithRetry retries transient failures (network errors, timeouts,
+// 429 and 5xx) with exponential backoff. A single slow response from the
+// public proxy should not fail an entire CI run.
+func (c *Client) queryProxyWithRetry(ctx context.Context, baseURL, module, version string) (time.Time, error) {
+	delay := c.retryDelay
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		t, err := c.queryProxy(ctx, baseURL, module, version)
+		if err == nil {
+			return t, nil
+		}
+		lastErr = err
+
+		if attempt >= c.maxAttempts || !isRetryable(err) {
+			break
+		}
+
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return time.Time{}, lastErr
+		case <-timer.C:
+		}
+		delay *= 2
+	}
+
+	if c.maxAttempts > 1 && isRetryable(lastErr) {
+		return time.Time{}, fmt.Errorf("after %d attempts: %w", c.maxAttempts, lastErr)
+	}
+	return time.Time{}, lastErr
+}
+
 func (c *Client) queryProxy(ctx context.Context, baseURL, module, version string) (time.Time, error) {
 	encodedPath := EncodePath(module)
 	encodedVersion := EncodePath(version)
@@ -72,7 +134,12 @@ func (c *Client) queryProxy(ctx context.Context, baseURL, module, version string
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("querying proxy: %w", err)
+		// A cancelled caller context is final; anything else is a transient
+		// transport failure worth another try.
+		if ctx.Err() != nil {
+			return time.Time{}, fmt.Errorf("querying proxy: %w", err)
+		}
+		return time.Time{}, &retryableError{err: fmt.Errorf("querying proxy: %w", err)}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -81,7 +148,11 @@ func (c *Client) queryProxy(ctx context.Context, baseURL, module, version string
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return time.Time{}, fmt.Errorf("proxy returned HTTP %d for %s@%s", resp.StatusCode, module, version)
+		err := fmt.Errorf("proxy returned HTTP %d for %s@%s", resp.StatusCode, module, version)
+		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError {
+			return time.Time{}, &retryableError{err: err}
+		}
+		return time.Time{}, err
 	}
 
 	var info versionInfo
@@ -110,6 +181,19 @@ func (e *NotFoundError) Error() string {
 func isNotFound(err error) bool {
 	var nfe *NotFoundError
 	return errors.As(err, &nfe)
+}
+
+// retryableError marks a failure that may succeed on a later attempt.
+type retryableError struct {
+	err error
+}
+
+func (e *retryableError) Error() string { return e.err.Error() }
+func (e *retryableError) Unwrap() error { return e.err }
+
+func isRetryable(err error) bool {
+	var re *retryableError
+	return errors.As(err, &re)
 }
 
 type proxyEntry struct {

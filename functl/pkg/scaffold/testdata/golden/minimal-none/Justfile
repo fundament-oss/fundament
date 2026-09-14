@@ -1,0 +1,29 @@
+# Demo
+#
+# Requires just (https://just.systems) and Go.
+# Run `just` or `just --list` to see every recipe.
+
+image := env("IMAGE", "demo-plugin")
+
+_default:
+    @just --list
+
+# Build the plugin binary
+build:
+    go build -o demo-plugin .
+
+# Run the tests
+test:
+    go test ./... -count=1
+
+# Lint, if golangci-lint is installed
+lint:
+    @command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
+
+# Build the container image, e.g. `just docker v1.0.0`
+docker tag="dev":
+    docker build -t {{ image }}:{{ tag }} .
+
+# Remove build output
+clean:
+    rm -f demo-plugin

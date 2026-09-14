@@ -1,0 +1,34 @@
+# Demo
+#
+# Requires just (https://just.systems) and Go, plus bun for the console UI.
+# Run `just` or `just --list` to see every recipe.
+
+image := env("IMAGE", "demo-plugin")
+
+_default:
+    @just --list
+
+# Build the plugin binary. The Go build embeds console/, so the UI is built first.
+build: console
+    go build -o demo-plugin .
+
+# Build the console UI into console/
+console:
+    cd console-ui && bun install && bun run build
+
+# Run the tests
+test:
+    go test ./... -count=1
+
+# Lint, if golangci-lint is installed
+lint:
+    @command -v golangci-lint >/dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
+
+# Build the container image, e.g. `just docker v1.0.0`
+docker tag="dev":
+    docker build -t {{ image }}:{{ tag }} .
+
+# Remove build output
+clean:
+    rm -f demo-plugin
+    rm -rf console console-ui/node_modules

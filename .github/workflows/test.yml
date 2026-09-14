@@ -162,11 +162,12 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Build and vet
+      - name: Build, vet and test
         working-directory: functl
         run: |
           go build ./...
           go vet ./...
+          go test ./... -count=1
 
   dcim-api:
     runs-on: ubuntu-24.04

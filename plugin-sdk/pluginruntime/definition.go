@@ -163,6 +163,25 @@ type StatusValue struct {
 // image (the image-free source definition.yaml is a template, not a valid
 // definition, until publish injects the image).
 func ParseDefinition(data []byte) (PluginDefinition, error) {
+	return parseDefinition(data, true)
+}
+
+// ParseSourceDefinition decodes and validates an *authored* definition.yaml: the
+// image-free source manifest a plugin author edits and commits, before publish
+// injects the pushed image digest. It applies every check ParseDefinition does
+// except requiring spec.image to be present. An image that IS present is still
+// required to be a digest reference, so a hand-pinned mutable tag is rejected
+// here rather than at publish time.
+//
+// Use ParseDefinition for anything that consumes a published manifest: the digest
+// pin is what binds the manifest hash to the exact code that runs, so dropping
+// that requirement is only ever correct for a manifest that has not been
+// published yet.
+func ParseSourceDefinition(data []byte) (PluginDefinition, error) {
+	return parseDefinition(data, false)
+}
+
+func parseDefinition(data []byte, requireImage bool) (PluginDefinition, error) {
 	var def PluginDefinition
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
@@ -178,10 +197,10 @@ func ParseDefinition(data []byte) (PluginDefinition, error) {
 	if def.Metadata.Name == "" {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field metadata.name")
 	}
-	if def.Spec.Image == "" {
+	if def.Spec.Image == "" && requireImage {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field spec.image")
 	}
-	if !imageDigestRefRegex.MatchString(def.Spec.Image) {
+	if def.Spec.Image != "" && !imageDigestRefRegex.MatchString(def.Spec.Image) {
 		return PluginDefinition{}, fmt.Errorf("spec.image %q must be a digest reference (repo@sha256:<64 hex chars>), not a mutable tag", def.Spec.Image)
 	}
 	if !validImagePullPolicies[def.Spec.ImagePullPolicy] {

@@ -1,0 +1,18 @@
+package main
+
+import (
+	"embed"
+	"net/http"
+
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/console"
+)
+
+//go:embed console/*
+var consoleFiles embed.FS
+
+// ConsoleAssets serves the plugin's console UI, which the runtime mounts at
+// /console/. These pages are committed source, not build output, so
+// console.RequireHTML is unnecessary here.
+func (p *DemoPlugin) ConsoleAssets() http.FileSystem {
+	return console.NewFileSystem(consoleFiles, "console")
+}
