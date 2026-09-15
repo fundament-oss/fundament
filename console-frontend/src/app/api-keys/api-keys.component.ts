@@ -10,7 +10,10 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  effect,
+  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +30,8 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
+import AuthnApiService from '../authn-api.service';
+import OrganizationContextService from '../organization-context.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -146,6 +151,37 @@ export default class ApiKeysComponent implements OnInit {
   createdToken = signal<string | null>(null);
 
   createdTokenPrefix = signal<string | null>(null);
+
+  private currentUser = toSignal(inject(AuthnApiService).currentUser$);
+
+  private organizationContext = inject(OrganizationContextService);
+
+  /** Whose keys this sheet holds: the user and the organization they were for. */
+  private owner: string | undefined;
+
+  constructor() {
+    // The sheet stays mounted for the whole session, through a logout and the
+    // next login. A token created by one user must not greet the next, and
+    // neither may their list of keys, so a change of either drops it all.
+    effect(() => {
+      const owner = `${this.currentUser()?.id ?? ''}/${this.organizationContext.currentOrganizationId() ?? ''}`;
+      untracked(() => {
+        if (this.owner !== undefined && this.owner !== owner) this.resetState();
+        this.owner = owner;
+      });
+    });
+  }
+
+  private resetState() {
+    this.dismissToken();
+    this.cancelCreating();
+    this.apiKeys.set([]);
+    this.error.set(null);
+    this.showRevokeModal.set(false);
+    this.showDeleteModal.set(false);
+    this.pendingKeyId.set(null);
+    this.pendingKeyName.set(null);
+  }
 
   async ngOnInit() {
     await this.loadApiKeys();
