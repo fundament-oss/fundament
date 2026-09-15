@@ -11,13 +11,20 @@ import (
 // Prefix for the objects a StoragePool derives. Pool names are operator-chosen
 // and StorageClasses are cluster-scoped, so an unprefixed name could collide with
 // — and then garbage-collect — something like k3d's "local-path". The prefix
-// reduces collisions; ownedByPool is what prevents damage.
+// reduces collisions; ownedBy is what prevents damage.
 const derivedNamePrefix = "ceph-"
 
 // DerivedName names both the CephBlockPool and the StorageClass, so status can
 // report a single name.
 func DerivedName(poolName string) string {
 	return derivedNamePrefix + poolName
+}
+
+// FilesystemDerivedName names a FileStorage's CephFilesystem and StorageClass.
+// A distinct prefix from DerivedName so same-named CRs of different kinds
+// cannot derive colliding cluster-scoped objects.
+func FilesystemDerivedName(name string) string {
+	return "cephfs-" + name
 }
 
 // ClaimOwner returns the StoragePool entitled to a disk when more than one lists
@@ -72,15 +79,15 @@ func BuildClaimIndex(pools []v1alpha1.StoragePool) map[string]string {
 	return index
 }
 
-// ownedByPool reports whether refs contain a controller reference to pool. Every
-// write to a derived object is gated on this: adopting an object we do not own
-// would also mean deleting it when the pool goes away.
-func ownedByPool(refs []metav1.OwnerReference, pool *v1alpha1.StoragePool) bool {
+// ownedBy reports whether refs contain a controller reference to owner of the
+// given kind. Every write to a derived object is gated on this: adopting an
+// object we do not own would also mean deleting it when the owner goes away.
+func ownedBy(refs []metav1.OwnerReference, kind string, owner metav1.Object) bool {
 	for _, ref := range refs {
 		if ref.Controller == nil || !*ref.Controller {
 			continue
 		}
-		if ref.Kind == "StoragePool" && ref.Name == pool.Name && ref.UID == pool.UID {
+		if ref.Kind == kind && ref.Name == owner.GetName() && ref.UID == owner.GetUID() {
 			return true
 		}
 	}

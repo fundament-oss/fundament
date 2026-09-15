@@ -5,6 +5,7 @@ import {
   errorRow,
   wireRowLinks,
   navigateToCreate,
+  humanizeBytes,
 } from './_shared.js';
 
 await loadSdk();
@@ -22,7 +23,7 @@ try {
   });
 
   if (!items || items.length === 0) {
-    tbody.innerHTML = emptyRow(6, 'No storage pools.');
+    tbody.innerHTML = emptyRow(5, 'No storage pools.');
   } else {
     tbody.innerHTML = items
       .map((item) => {
@@ -32,9 +33,8 @@ try {
           <tr data-name="${escapeHtml(name)}">
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
             <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
-            <td>${escapeHtml(status.storageClassName ?? '—')}</td>
-            <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
-            <td>${escapeHtml(status.failureDomain ?? '—')}</td>
+            <td>${escapeHtml(String(status.selectedDiskCount ?? '—'))}</td>
+            <td>${escapeHtml(humanizeBytes(status.rawCapacityBytes ?? 0))}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
       })
@@ -42,5 +42,5 @@ try {
     wireRowLinks(tbody);
   }
 } catch (err) {
-  tbody.innerHTML = errorRow(6, err);
+  tbody.innerHTML = errorRow(5, err);
 }

@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
@@ -37,7 +37,7 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, clientgoscheme.AddToScheme(s))
 	require.NoError(t, apiextensionsv1.AddToScheme(s))
 	require.NoError(t, v1alpha1.AddToScheme(s))
-	for _, kind := range []string{"CephCluster", "CephBlockPool"} {
+	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem"} {
 		gvk := schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}
 		s.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 		listGVK := gvk
@@ -52,12 +52,12 @@ func newFakeClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(testScheme(t)).
 		WithObjects(objs...).
-		WithStatusSubresource(&v1alpha1.StoragePool{}, &v1alpha1.Disk{}).
+		WithStatusSubresource(&v1alpha1.StoragePool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}, &v1alpha1.FileStorage{}).
 		Build()
 }
 
-func newReconciler(c client.Client, s *runtime.Scheme) *StoragePoolReconciler {
-	return &StoragePoolReconciler{Client: c, ClusterNamespace: testNamespace, RookNamespace: testNamespace, Scheme: s}
+func newReconciler(c client.Client) *StoragePoolReconciler {
+	return &StoragePoolReconciler{Client: c, ClusterNamespace: testNamespace}
 }
 
 func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Disk {
@@ -72,7 +72,6 @@ func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Dis
 
 func testPool(name string, created time.Time, disks ...string) *v1alpha1.StoragePool {
 	p := poolAt(name, created, disks...)
-	p.Spec.Replication = "auto"
 	return &p
 }
 
@@ -124,11 +123,11 @@ func cephClusterDevices(t *testing.T, c client.Client) map[string][]string {
 	return out
 }
 
-// Happy path: prefixed derived objects, disks folded into the CephCluster, and
-// the pool's own selection reported in status.
-func TestReconcileCreatesDerivedObjects(t *testing.T) {
+// Happy path: disks folded into the CephCluster, and the pool's own selection
+// reported in status. StoragePoolReconciler derives no StorageClass or
+// CephBlockPool of its own -- a consumer kind does that over the shared OSDs.
+func TestReconcileContributesDisks(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	now := time.Now()
 	c := newFakeClient(t,
 		cephCluster(),
@@ -136,24 +135,10 @@ func TestReconcileCreatesDerivedObjects(t *testing.T) {
 		testDisk("node-b-1", "node-b", "/dev/sdb", 200, true),
 		testPool("pool", now, "node-a-1", "node-b-1"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
-
-	var sc storagev1.StorageClass
-	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-pool"}, &sc))
-	assert.Equal(t, "rook-ceph.rbd.csi.ceph.com", sc.Provisioner)
-	assert.Equal(t, "ceph-pool", sc.Parameters["pool"])
-	require.Len(t, sc.OwnerReferences, 1)
-	assert.Equal(t, "pool", sc.OwnerReferences[0].Name)
-	assert.True(t, *sc.OwnerReferences[0].Controller, "cascade delete needs a controller ref")
-
-	cbp := &unstructured.Unstructured{}
-	cbp.SetAPIVersion(cephAPIVersion)
-	cbp.SetKind("CephBlockPool")
-	require.NoError(t, c.Get(context.Background(),
-		types.NamespacedName{Namespace: testNamespace, Name: "ceph-pool"}, cbp))
 
 	assert.Equal(t, map[string][]string{
 		"node-a": {"/dev/sdb"},
@@ -161,73 +146,64 @@ func TestReconcileCreatesDerivedObjects(t *testing.T) {
 	}, cephClusterDevices(t, c))
 
 	pool := getPool(t, c, "pool")
-	assert.Equal(t, v1alpha1.PhaseProvisioning, pool.Status.Phase)
-	assert.Equal(t, "ceph-pool", pool.Status.StorageClassName)
+	assert.Equal(t, v1alpha1.PhaseReady, pool.Status.Phase)
 	assert.Equal(t, 2, pool.Status.SelectedDiskCount)
 	assert.Equal(t, int64(300), pool.Status.RawCapacityBytes)
-	assert.Equal(t, 2, pool.Status.Replicas)
-	assert.Equal(t, "host", pool.Status.FailureDomain)
 }
 
-// Adopting a StorageClass we do not own would delete it with the pool.
-func TestReconcileRefusesToAdoptForeignStorageClass(t *testing.T) {
+// Ready means "this pool's disks are recorded in the shared Ceph cluster".
+// Without the singleton CephCluster nothing was recorded, so the pool must not
+// report Ready.
+func TestReconcileDegradedWithoutCephCluster(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
-	foreign := &storagev1.StorageClass{
-		ObjectMeta:  metav1.ObjectMeta{Name: "ceph-pool"},
-		Provisioner: "rancher.io/local-path",
-	}
 	c := newFakeClient(t,
-		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "node-a-1"),
-		foreign,
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not owned by this StoragePool")
-
-	var sc storagev1.StorageClass
-	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-pool"}, &sc))
-	assert.Equal(t, "rancher.io/local-path", sc.Provisioner)
-	assert.Empty(t, sc.OwnerReferences)
+	require.NoError(t, err)
 
 	pool := getPool(t, c, "pool")
 	assert.Equal(t, v1alpha1.PhaseDegraded, pool.Status.Phase)
-	assert.Contains(t, pool.Status.Message, "not owned by this StoragePool")
+	assert.Contains(t, pool.Status.Message, "CephCluster")
+	assert.Equal(t, 1, pool.Status.SelectedDiskCount,
+		"selection resolved; only the contribution is pending")
+	assert.Zero(t, pool.Status.RawCapacityBytes, "nothing was contributed yet")
+	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonCephClusterMissing, cond.Reason)
 }
 
-// Same rule for Rook's own CephBlockPools in that namespace.
-func TestReconcileRefusesToAdoptForeignBlockPool(t *testing.T) {
+// When the CephCluster appears later (its watch enqueues every pool), the next
+// reconcile records the disks and flips the pool to Ready.
+func TestReconcileRecoversWhenCephClusterAppears(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
-	foreign := &unstructured.Unstructured{}
-	foreign.SetAPIVersion(cephAPIVersion)
-	foreign.SetKind("CephBlockPool")
-	foreign.SetName("ceph-pool")
-	foreign.SetNamespace(testNamespace)
-
 	c := newFakeClient(t,
-		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "node-a-1"),
-		foreign,
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CephBlockPool")
-	assert.Contains(t, err.Error(), "not owned by this StoragePool")
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
+
+	require.NoError(t, c.Create(context.Background(), cephCluster()))
+
+	_, err = reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
+	assert.Equal(t, v1alpha1.PhaseReady, getPool(t, c, "pool").Status.Phase)
 }
 
 // A disk listed by two pools belongs to the older one; the younger pool skips
 // it rather than double-counting the same device.
 func TestReconcileSkipsDisksClaimedByAnotherPool(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	early := time.Now().Add(-time.Hour)
 	c := newFakeClient(t,
 		cephCluster(),
@@ -236,7 +212,7 @@ func TestReconcileSkipsDisksClaimedByAnotherPool(t *testing.T) {
 		testPool("older", early, "shared"),
 		testPool("newer", early.Add(time.Minute), "shared", "own"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "newer")
 	require.NoError(t, err)
@@ -256,13 +232,12 @@ func TestReconcileSkipsDisksClaimedByAnotherPool(t *testing.T) {
 // subsequent reconcile.
 func TestReconcileKeepsUnavailableDisksInUse(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("in-use", "node-a", "/dev/sdb", 100, false),
 		testPool("pool", time.Now(), "in-use"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -273,13 +248,12 @@ func TestReconcileKeepsUnavailableDisksInUse(t *testing.T) {
 
 func TestReconcileReportsMissingDisks(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("present", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "present", "vanished"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -294,7 +268,6 @@ func TestReconcileReportsMissingDisks(t *testing.T) {
 // gets no event of its own.
 func TestReconcileRecomputesUnionAfterPoolDeletion(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	now := time.Now()
 	c := newFakeClient(t,
 		cephCluster(),
@@ -303,7 +276,7 @@ func TestReconcileRecomputesUnionAfterPoolDeletion(t *testing.T) {
 		testPool("keep", now, "a"),
 		testPool("drop", now, "b"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "keep")
 	require.NoError(t, err)
@@ -325,7 +298,6 @@ func TestReconcileRecomputesUnionAfterPoolDeletion(t *testing.T) {
 // A pool that is terminating has already released its disks.
 func TestReconcileDropsTerminatingPoolFromUnion(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	now := time.Now()
 
 	terminating := testPool("going", now, "b")
@@ -338,7 +310,7 @@ func TestReconcileDropsTerminatingPoolFromUnion(t *testing.T) {
 		testPool("keep", now, "a"),
 		terminating,
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	require.NoError(t, c.Delete(context.Background(), terminating))
 
@@ -351,7 +323,6 @@ func TestReconcileDropsTerminatingPoolFromUnion(t *testing.T) {
 // The same physical device reachable through two pools must appear once.
 func TestReconcileDeduplicatesSharedDisksInUnion(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	now := time.Now()
 	c := newFakeClient(t,
 		cephCluster(),
@@ -359,7 +330,7 @@ func TestReconcileDeduplicatesSharedDisksInUnion(t *testing.T) {
 		testPool("first", now, "shared"),
 		testPool("second", now.Add(time.Minute), "shared"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "first")
 	require.NoError(t, err)
@@ -367,48 +338,16 @@ func TestReconcileDeduplicatesSharedDisksInUnion(t *testing.T) {
 	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
 }
 
-// A Ready CephBlockPool stops the 30s provisioning requeue.
-func TestReconcileReadyWhenBlockPoolReady(t *testing.T) {
-	t.Parallel()
-	s := testScheme(t)
-	c := newFakeClient(t,
-		cephCluster(),
-		testDisk("a", "node-a", "/dev/sdb", 100, true),
-		testPool("pool", time.Now(), "a"),
-	)
-	r := newReconciler(c, s)
-
-	res, err := reconcilePool(t, r, "pool")
-	require.NoError(t, err)
-	assert.Equal(t, provisioningRequeue, res.RequeueAfter)
-	assert.Equal(t, v1alpha1.PhaseProvisioning, getPool(t, c, "pool").Status.Phase)
-
-	cbp := &unstructured.Unstructured{}
-	cbp.SetAPIVersion(cephAPIVersion)
-	cbp.SetKind("CephBlockPool")
-	require.NoError(t, c.Get(context.Background(),
-		types.NamespacedName{Namespace: testNamespace, Name: "ceph-pool"}, cbp))
-	require.NoError(t, unstructured.SetNestedField(cbp.Object, "Ready", "status", "phase"))
-	require.NoError(t, c.Update(context.Background(), cbp))
-
-	res, err = reconcilePool(t, r, "pool")
-	require.NoError(t, err)
-	assert.Zero(t, res.RequeueAfter, "a Ready pool does not need re-checking")
-	assert.Equal(t, v1alpha1.PhaseReady, getPool(t, c, "pool").Status.Phase)
-}
-
-// Reconciling twice must be a no-op, not a rejected update: every field the
-// StorageClass renders is immutable, so a second pass that tried to rewrite
-// them would fail forever.
+// Reconciling twice must be a no-op, not a rejected update: writeStatus's
+// DeepEqual guard must recognise an unchanged status.
 func TestReconcileIsIdempotent(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	for i := range 3 {
 		_, err := reconcilePool(t, r, "pool")
@@ -416,54 +355,8 @@ func TestReconcileIsIdempotent(t *testing.T) {
 	}
 
 	pool := getPool(t, c, "pool")
-	assert.Equal(t, v1alpha1.PhaseProvisioning, pool.Status.Phase)
+	assert.Equal(t, v1alpha1.PhaseReady, pool.Status.Phase)
 	assert.Empty(t, pool.Status.Message)
-}
-
-func TestImmutableStorageClassDrift(t *testing.T) {
-	t.Parallel()
-	desired := RenderStorageClass("ceph-pool", testNamespace, "ceph-pool", testNamespace)
-
-	assert.Empty(t, immutableStorageClassDrift(desired.DeepCopy(), desired))
-
-	changed := desired.DeepCopy()
-	changed.Provisioner = "other.csi.example.com"
-	changed.Parameters = map[string]string{"pool": "different"}
-	assert.Equal(t, []string{"parameters", "provisioner"}, immutableStorageClassDrift(changed, desired))
-
-	// allowVolumeExpansion is the one field Kubernetes lets us update.
-	expandable := desired.DeepCopy()
-	expandable.AllowVolumeExpansion = ptr(false)
-	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
-}
-
-// Drift on an immutable field must be reported, not retried into a permanent
-// API rejection.
-func TestReconcileReportsImmutableStorageClassDrift(t *testing.T) {
-	t.Parallel()
-	s := testScheme(t)
-	pool := testPool("pool", time.Now(), "a")
-
-	yes := true
-	stale := RenderStorageClass("ceph-pool", "a-different-namespace", "ceph-pool", testNamespace)
-	stale.OwnerReferences = []metav1.OwnerReference{{
-		APIVersion: v1alpha1.GroupVersion.String(), Kind: "StoragePool",
-		Name: pool.Name, UID: pool.UID, Controller: &yes,
-	}}
-
-	c := newFakeClient(t,
-		cephCluster(),
-		testDisk("a", "node-a", "/dev/sdb", 100, true),
-		pool,
-		stale,
-	)
-	r := newReconciler(c, s)
-
-	_, err := reconcilePool(t, r, "pool")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "immutable field(s) parameters")
-	assert.Contains(t, err.Error(), "Delete the StorageClass")
-	assert.Equal(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
 }
 
 // A disk repeated in spec.disks must not be counted twice: selectedDiskCount
@@ -472,13 +365,12 @@ func TestReconcileReportsImmutableStorageClassDrift(t *testing.T) {
 // that marker existed -- but it bites silently.
 func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a", "a", "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -493,7 +385,6 @@ func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
 // entry, or Rook would be handed the same device twice.
 func TestReconcileDeduplicatesUnionByStablePath(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 
 	byID := func(name, node, kernelPath, stable string) *v1alpha1.Disk {
 		d := testDisk(name, node, kernelPath, 100, true)
@@ -508,7 +399,7 @@ func TestReconcileDeduplicatesUnionByStablePath(t *testing.T) {
 		byID("b", "node-a", "/dev/sdc", "/dev/disk/by-id/wwn-0xABC"),
 		testPool("pool", time.Now(), "a", "b"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -521,7 +412,6 @@ func TestReconcileDeduplicatesUnionByStablePath(t *testing.T) {
 // a kernel rename would otherwise take the OSD's device out of the cluster.
 func TestReconcileWritesStablePathsIntoCephCluster(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	stable := testDisk("a", "node-a", "/dev/sdb", 100, true)
 	stable.Status.StablePath = "/dev/disk/by-id/wwn-0xABC"
 
@@ -531,7 +421,7 @@ func TestReconcileWritesStablePathsIntoCephCluster(t *testing.T) {
 		testDisk("b", "node-a", "/dev/loop0p1", 100, true), // no stable path
 		testPool("pool", time.Now(), "a", "b"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -541,69 +431,16 @@ func TestReconcileWritesStablePathsIntoCephCluster(t *testing.T) {
 	}, cephClusterDevices(t, c))
 }
 
-// Neither an adoption conflict nor immutable drift can clear without operator
-// action, so requeueing them only burns backoff and fills the log. The pool is
-// left Degraded and waits for the watch event that actually fixes it.
-func TestUnresolvableConflictsAreTerminal(t *testing.T) {
-	t.Parallel()
-	s := testScheme(t)
-	yes := true
-
-	t.Run("foreign StorageClass", func(t *testing.T) {
-		t.Parallel()
-		foreign := RenderStorageClass("ceph-pool", testNamespace, "ceph-pool", testNamespace)
-		c := newFakeClient(t,
-			cephCluster(),
-			testDisk("a", "node-a", "/dev/sdb", 100, true),
-			testPool("pool", time.Now(), "a"),
-			foreign,
-		)
-		_, err := reconcilePool(t, newReconciler(c, s), "pool")
-		require.Error(t, err)
-		assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
-			"refusing to adopt a foreign object is not retryable")
-	})
-
-	t.Run("immutable drift", func(t *testing.T) {
-		t.Parallel()
-		pool := testPool("pool", time.Now(), "a")
-		stale := RenderStorageClass("ceph-pool", "a-different-namespace", "ceph-pool", testNamespace)
-		stale.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion: v1alpha1.GroupVersion.String(), Kind: "StoragePool",
-			Name: pool.Name, UID: pool.UID, Controller: &yes,
-		}}
-		c := newFakeClient(t,
-			cephCluster(),
-			testDisk("a", "node-a", "/dev/sdb", 100, true),
-			pool,
-			stale,
-		)
-		_, err := reconcilePool(t, newReconciler(c, s), "pool")
-		require.Error(t, err)
-		assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
-			"the API server will refuse this update every time")
-	})
-
-	// A transient failure must stay retryable, or a blip would strand the pool.
-	t.Run("a missing disk is not terminal", func(t *testing.T) {
-		t.Parallel()
-		c := newFakeClient(t, cephCluster(), testPool("pool", time.Now(), "gone"))
-		_, err := reconcilePool(t, newReconciler(c, s), "pool")
-		require.NoError(t, err, "a missing disk is reported in status, not as an error")
-	})
-}
-
 // Every Disk event fans out to every pool, with identical status almost every
 // time. Rewriting would bump resourceVersion and wake every watcher.
 func TestReconcileDoesNotRewriteUnchangedStatus(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.NoError(t, err)
@@ -617,49 +454,21 @@ func TestReconcileDoesNotRewriteUnchangedStatus(t *testing.T) {
 		"a reconcile that changes nothing must not write")
 }
 
-// Ceph places replicas across every OSD in the cluster, so sizing off the pool's
-// own disks would hand a single-disk pool replicas=1 on a three-node cluster.
-func TestReconcileSizesReplicationOnClusterNodesNotPoolDisks(t *testing.T) {
-	t.Parallel()
-	s := testScheme(t)
-	now := time.Now()
-	c := newFakeClient(t,
-		cephCluster(),
-		testDisk("a", "node-a", "/dev/sdb", 100, true),
-		testDisk("b", "node-b", "/dev/sdb", 100, true),
-		testDisk("c", "node-c", "/dev/sdb", 100, true),
-		// "big" spans all three nodes; "small" names a single disk on one node.
-		testPool("big", now, "a", "b"),
-		testPool("small", now.Add(time.Minute), "c"),
-	)
-	r := newReconciler(c, s)
-
-	require.NoError(t, firstErr(reconcilePool(t, r, "big")))
-	require.NoError(t, firstErr(reconcilePool(t, r, "small")))
-
-	small := getPool(t, c, "small").Status
-	assert.Equal(t, 3, small.Replicas, "three nodes contribute disks to the cluster")
-	assert.Equal(t, "host", small.FailureDomain)
-	// The selection reporting still describes only this pool's own contribution.
-	assert.Equal(t, 1, small.SelectedDiskCount)
-	assert.Equal(t, int64(100), small.RawCapacityBytes)
-}
-
 // A pool over zero disks used to sit in Provisioning forever behind a
 // CephBlockPool with no OSDs and a StorageClass that left every PVC Pending.
+// A missing disk resolves the same way (selected count zero): reported in
+// status, never as a reconcile error that would strand the pool on a blip.
 func TestReconcileEmptyPoolIsDegradedAndCreatesNothing(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now()))
 
-	_, err := reconcilePool(t, newReconciler(c, s), "pool")
+	_, err := reconcilePool(t, newReconciler(c), "pool")
 	require.NoError(t, err, "an empty pool is an operator problem, not a reconcile failure")
 
 	status := getPool(t, c, "pool").Status
 	assert.Equal(t, v1alpha1.PhaseDegraded, status.Phase)
 	assert.Contains(t, status.Message, "add disks to spec.disks",
 		"an empty spec.disks produces no skip notes, so the message must be explicit")
-	assert.Zero(t, status.Replicas)
 	assert.Zero(t, status.SelectedDiskCount)
 
 	var sc storagev1.StorageClass
@@ -677,10 +486,9 @@ func TestReconcileEmptyPoolIsDegradedAndCreatesNothing(t *testing.T) {
 // Same dead end as naming none, but the failed names have to be reported.
 func TestReconcileEmptyPoolNamesTheMissingDisks(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now(), "ghost"))
 
-	_, err := reconcilePool(t, newReconciler(c, s), "pool")
+	_, err := reconcilePool(t, newReconciler(c), "pool")
 	require.NoError(t, err)
 
 	status := getPool(t, c, "pool").Status
@@ -691,13 +499,12 @@ func TestReconcileEmptyPoolNamesTheMissingDisks(t *testing.T) {
 // The previous Ready status must not be left standing.
 func TestReconcileEmptyingALivePoolDegradesIt(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 	require.NotEqual(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
 
@@ -714,13 +521,12 @@ func TestReconcileEmptyingALivePoolDegradesIt(t *testing.T) {
 // CephCluster. An identical write still costs a round-trip.
 func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 
 	cc := &unstructured.Unstructured{}
@@ -739,14 +545,17 @@ func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
 
 func firstErr(_ ctrl.Result, err error) error { return err }
 
-// Owns() resolves the watched type's GVK through apiutil at builder time, which
-// is the one thing about an unstructured stub that can fail — and it would fail
-// at manager start, not here, so it is worth pinning.
-func TestCephBlockPoolStubResolvesGVK(t *testing.T) {
+// Owns() and Watches() resolve a watched type's GVK through apiutil at builder
+// time, which is the one thing about an unstructured stub that can fail — and
+// it would fail at manager start, not here, so it is worth pinning for every
+// kind the controllers register.
+func TestRookStubsResolveGVK(t *testing.T) {
 	t.Parallel()
-	gvk, err := apiutil.GVKForObject(cephBlockPoolStub(), testScheme(t))
-	require.NoError(t, err)
-	assert.Equal(t, schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: "CephBlockPool"}, gvk)
+	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem"} {
+		gvk, err := apiutil.GVKForObject(rookStub(kind), testScheme(t))
+		require.NoError(t, err)
+		assert.Equal(t, schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}, gvk)
+	}
 }
 
 // readyCondition returns the pool's Ready condition, failing if it is absent.
@@ -757,40 +566,21 @@ func readyCondition(t *testing.T, pool *v1alpha1.StoragePool) metav1.Condition {
 	return *cond
 }
 
-// markBlockPoolReady flips the derived CephBlockPool's status.phase to Ready,
-// which is the only thing blockPoolPhase reads.
-func markBlockPoolReady(t *testing.T, c client.Client, derived string) {
-	t.Helper()
-	cbp := &unstructured.Unstructured{}
-	cbp.SetAPIVersion(cephAPIVersion)
-	cbp.SetKind("CephBlockPool")
-	require.NoError(t, c.Get(context.Background(),
-		types.NamespacedName{Namespace: testNamespace, Name: derived}, cbp))
-	require.NoError(t, unstructured.SetNestedField(cbp.Object, "Ready", "status", "phase"))
-	require.NoError(t, c.Update(context.Background(), cbp))
-}
-
 // phase alone cannot say whether the controller has seen the current spec.
 // `kubectl wait --for=condition=Ready` and a Flux/Argo health check read this.
+// Unlike the old CephBlockPool-backed pipeline, a pool with usable disks goes
+// Ready on its very first reconcile: there is no derived object left to wait on.
 func TestReconcileTracksReadyCondition(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 	cond := readyCondition(t, getPool(t, c, "pool"))
-	assert.Equal(t, metav1.ConditionFalse, cond.Status)
-	assert.Equal(t, v1alpha1.ReasonProvisioning, cond.Reason)
-
-	markBlockPoolReady(t, c, "ceph-pool")
-	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
-
-	cond = readyCondition(t, getPool(t, c, "pool"))
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
 	assert.Equal(t, v1alpha1.ReasonReady, cond.Reason)
 }
@@ -799,7 +589,6 @@ func TestReconcileTracksReadyCondition(t *testing.T) {
 // status: observedGeneration is what separates current from stale.
 func TestReconcileRecordsObservedGeneration(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	// The fake client does not maintain metadata.generation, so the test sets it
 	// the way the API server would on a spec write.
 	pool := testPool("pool", time.Now(), "a")
@@ -810,7 +599,7 @@ func TestReconcileRecordsObservedGeneration(t *testing.T) {
 		testDisk("b", "node-b", "/dev/sdb", 100, true),
 		pool,
 	)
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 
 	assert.EqualValues(t, 3, getPool(t, c, "pool").Status.ObservedGeneration)
@@ -831,9 +620,8 @@ func TestReconcileRecordsObservedGeneration(t *testing.T) {
 // The one condition an operator acts on: there is nothing to build a pool from.
 func TestReconcileEmptyPoolConditionNamesTheCause(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now()))
-	r := newReconciler(c, s)
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 
 	cond := readyCondition(t, getPool(t, c, "pool"))
@@ -843,22 +631,25 @@ func TestReconcileEmptyPoolConditionNamesTheCause(t *testing.T) {
 }
 
 // setDegraded runs on the error path, where the reconcile returns before
-// building a status. The condition still has to carry the cause.
+// building a status. The condition still has to carry the cause. Adoption
+// refusal moved out with applyOwnedRookObject/applyOwnedStorageClass (Task 4), so the
+// error is forced here by failing the CephCluster update instead.
 func TestReconcileErrorConditionCarriesTheCause(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
-	foreign := &unstructured.Unstructured{}
-	foreign.SetAPIVersion(cephAPIVersion)
-	foreign.SetKind("CephBlockPool")
-	foreign.SetName("ceph-pool")
-	foreign.SetNamespace(testNamespace)
-	c := newFakeClient(t,
-		cephCluster(),
-		testDisk("a", "node-a", "/dev/sdb", 100, true),
-		testPool("pool", time.Now(), "a"),
-		foreign,
-	)
-	r := newReconciler(c, s)
+	c := fake.NewClientBuilder().
+		WithScheme(testScheme(t)).
+		WithObjects(cephCluster(), testDisk("a", "node-a", "/dev/sdb", 100, true), testPool("pool", time.Now(), "a")).
+		WithStatusSubresource(&v1alpha1.StoragePool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if obj.GetObjectKind().GroupVersionKind().Kind == "CephCluster" {
+					return errors.New("boom")
+				}
+				return c.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := newReconciler(c)
 
 	_, err := reconcilePool(t, r, "pool")
 	require.Error(t, err)
@@ -866,7 +657,7 @@ func TestReconcileErrorConditionCarriesTheCause(t *testing.T) {
 	cond := readyCondition(t, getPool(t, c, "pool"))
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
 	assert.Equal(t, v1alpha1.ReasonReconcileError, cond.Reason)
-	assert.Contains(t, cond.Message, "not owned by this StoragePool")
+	assert.Contains(t, cond.Message, "boom")
 }
 
 // SetStatusCondition only resets lastTransitionTime when the status flips. If it
@@ -874,15 +665,12 @@ func TestReconcileErrorConditionCarriesTheCause(t *testing.T) {
 // every Disk event in the cluster would write every pool.
 func TestReconcileKeepsLastTransitionTimeWhileReady(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
-	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
-	markBlockPoolReady(t, c, "ceph-pool")
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 
 	first := readyCondition(t, getPool(t, c, "pool")).LastTransitionTime
@@ -903,15 +691,12 @@ func TestReconcileKeepsLastTransitionTimeWhileReady(t *testing.T) {
 // message-only change would then never reach the API server.
 func TestWriteStatusPersistsConditionOnlyChange(t *testing.T) {
 	t.Parallel()
-	s := testScheme(t)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("a", "node-a", "/dev/sdb", 100, true),
 		testPool("pool", time.Now(), "a"),
 	)
-	r := newReconciler(c, s)
-	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
-	markBlockPoolReady(t, c, "ceph-pool")
+	r := newReconciler(c)
 	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
 
 	pool := getPool(t, c, "pool")

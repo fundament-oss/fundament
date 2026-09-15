@@ -2,21 +2,19 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// StoragePoolSpec is the operator's desired block storage.
+// StoragePoolSpec is the operator's disk contribution to the shared Ceph
+// cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
+// StorageClasses.
 type StoragePoolSpec struct {
 	// Disks are the names of Disk objects to consume as OSDs. listType=set so the
 	// API server rejects a repeat, which would be double-counted in status.
 	// +optional
 	// +listType=set
 	Disks []string `json:"disks,omitempty"`
-	// Replication selects replica count; "auto" derives it from node count.
-	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
-	// +kubebuilder:default=auto
-	Replication string `json:"replication,omitempty"`
 }
 
-// Pool phases. Provisioning and Ready track the backing CephBlockPool; Degraded
-// means the pool needs operator action.
+// Pool phases. PhaseProvisioning is used by consumer kinds only; StoragePool
+// itself is Ready or Degraded.
 const (
 	PhaseProvisioning = "Provisioning"
 	PhaseReady        = "Ready"
@@ -32,14 +30,18 @@ const ConditionReady = "Ready"
 // Reasons for ConditionReady. Kubernetes requires a reason on every condition,
 // and it is the machine-readable half: message is prose, reason is matchable.
 const (
-	// ReasonReady: the derived CephBlockPool reports Ready.
+	// ReasonReady: the derived Rook object is Ready (StoragePool: the pool's
+	// disk contribution is in order).
 	ReasonReady = "Ready"
-	// ReasonProvisioning: the CephBlockPool exists (or is being created) but has
-	// not reported Ready yet.
+	// ReasonProvisioning: the derived object exists (or is being created) but
+	// has not reported Ready yet.
 	ReasonProvisioning = "Provisioning"
 	// ReasonNoUsableDisks: spec.disks resolved to nothing, so there is no OSD to
 	// build a pool on.
 	ReasonNoUsableDisks = "NoUsableDisks"
+	// ReasonCephClusterMissing: the singleton CephCluster does not exist, so the
+	// pool's disks are not recorded anywhere yet.
+	ReasonCephClusterMissing = "CephClusterMissing"
 	// ReasonReconcileError: the reconcile itself failed; message carries the error.
 	ReasonReconcileError = "ReconcileError"
 )
@@ -47,15 +49,9 @@ const (
 // StoragePoolStatus is the observed state.
 //
 // Every field describes this pool's contribution to one shared Ceph cluster, not
-// storage that belongs to it: all pools feed a single OSD set, and the derived
-// CephBlockPool has no CRUSH rule confining it to spec.disks.
+// storage that belongs to it: all pools feed a single OSD set.
 type StoragePoolStatus struct {
-	Phase            string `json:"phase,omitempty"`
-	StorageClassName string `json:"storageClassName,omitempty"`
-	// Sized against the nodes contributing disks to the whole cluster, since that
-	// is what bounds where Ceph can place a replica.
-	Replicas      int    `json:"replicas,omitempty"`
-	FailureDomain string `json:"failureDomain,omitempty"`
+	Phase string `json:"phase,omitempty"`
 	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
 	// how many OSDs are running: Rook creates those asynchronously, and removing a
 	// disk from spec never removes its OSD (that needs a Ceph purge).
@@ -83,7 +79,6 @@ type StoragePoolStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
-// +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
 type StoragePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

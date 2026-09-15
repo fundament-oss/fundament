@@ -13,7 +13,8 @@ import (
 // "osd", so single-node clusters still provision.
 //
 // nodeCount is cluster-wide, not per-pool: a CephBlockPool has no CRUSH rule
-// confining it to one pool's disks. See the call site in reconcilePool.
+// confining it to one pool's disks. See the call sites in the BlockStorage and
+// FileStorage reconcilers.
 func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain, message string) {
 	nodes := nodeCount
 	if nodes < 1 {
