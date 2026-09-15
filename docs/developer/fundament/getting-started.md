@@ -84,12 +84,12 @@ See [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/bl
 
 ## Edit the docs
 
+Under `just dev-hotreload`, <https://docs.fundament.localhost:8443> shows edits to existing pages in `docs/` within seconds. Without the cluster:
+
 ```shell
 just docs-dev     # dev server on http://localhost:4321
 just docs-build   # production build, fails on broken links
 ```
-
-The docs site in the cluster (https://docs.fundament.localhost:8443) does not show edits to `docs/`; preview them with `just docs-dev`.
 
 ## Remove
 
