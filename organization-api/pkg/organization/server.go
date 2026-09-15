@@ -15,6 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/organization-api/pkg/catrust"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
@@ -33,7 +34,7 @@ type Config struct {
 	MockLogsClient          *logs.MockClient
 	PrometheusURL           string // Prometheus URL for metrics; "mock" uses generated data
 	LogsURL                 string // Logs backend selector: "mock", "per-shoot", or a global Loki-API URL
-	PrometheusCAFile        string // PEM bundle trusted for Prometheus/Plutono/ingress TLS (e.g. Gardener seed CAs in local dev)
+	PrometheusCAFile        string // extra PEM bundle for seed-ingress TLS, on top of each shoot's own CA
 	KubeAPIProxyURL         string // Browser-facing kube-api-proxy URL (embedded in kubeconfigs handed to users)
 	KubeAPIProxyInternalURL string // kube-api-proxy URL for org-api's own server-side calls; falls back to KubeAPIProxyURL
 	GardenerClient          gardener.Client
@@ -81,18 +82,16 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		gardenerClient = gardener.NoopClient{}
 	}
 
-	// One CA bundle covers every seed-ingress upstream (per-shoot Prometheus
-	// and Plutono/Vali share the same ingress certificates).
-	var promOpts []prom.Option
-	var logsOpts []logs.Option
-	if cfg.PrometheusCAFile != "" {
-		transport, err := prom.TransportWithCA(cfg.PrometheusCAFile)
-		if err != nil {
-			return nil, fmt.Errorf("load prometheus CA bundle: %w", err)
-		}
-		promOpts = append(promOpts, prom.WithTransport(transport))
-		logsOpts = append(logsOpts, logs.WithTransport(transport))
+	// Trust is resolved per shoot inside the two caches; PrometheusCAFile is
+	// one extra anchor (seed-wide wildcard certs).
+	trust, err := catrust.New(cfg.PrometheusCAFile)
+	if err != nil {
+		return nil, fmt.Errorf("load observability CA bundle: %w", err)
 	}
+	// The global-URL override has no shoot, so it gets the base anchors only.
+	globalTransport := trust.TransportFor(nil)
+	promOpts := []prom.Option{prom.WithTransport(globalTransport)}
+	logsOpts := []logs.Option{logs.WithTransport(globalTransport)}
 
 	s := &Server{
 		logger:         logger,
@@ -109,8 +108,8 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		promOpts:       promOpts,
 		logsOpts:       logsOpts,
 		gardener:       gardenerClient,
-		perShoot:       newPerShootClients(gardenerClient, logger, promOpts...),
-		perShootLogs:   newPerShootLogs(gardenerClient, logger, logsOpts...),
+		perShoot:       newPerShootClients(gardenerClient, logger, trust),
+		perShootLogs:   newPerShootLogs(gardenerClient, logger, trust),
 	}
 
 	for _, opt := range opts {

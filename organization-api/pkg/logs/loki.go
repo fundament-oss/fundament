@@ -47,8 +47,7 @@ type LokiClient struct {
 // Option configures a LokiClient.
 type Option func(*LokiClient)
 
-// WithTransport replaces the HTTP transport, e.g. to trust a private CA for
-// the seed ingress (the same bundle the per-shoot Prometheus client uses).
+// WithTransport replaces the HTTP transport, e.g. one trusting a shoot's own CA.
 func WithTransport(rt http.RoundTripper) Option {
 	return func(c *LokiClient) {
 		c.httpClient.Transport = rt
