@@ -120,7 +120,8 @@
       </nldd-inline-dialog>
     }
   </nldd-simple-section>
-  <!-- The new-cluster form is a child route, so it renders as a sheet over
-       this list instead of replacing it. -->
-  <router-outlet />
 </nldd-page>
+<!-- The new-cluster form is a child route, so it renders as a sheet over this
+     list instead of replacing it. Outside the page: a section only fills the
+     page while it is the last child. -->
+<router-outlet />
