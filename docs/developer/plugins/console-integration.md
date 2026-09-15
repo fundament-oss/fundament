@@ -298,15 +298,16 @@ Both modes expose the same external surface:
   only path forwarded to the cluster handler. Paths outside that allowlist
   return 404.
 - `/livez`, `/readyz` — health probes.
-- Plugin console asset paths (`/clusters/{id}/api/v1/namespaces/plugin-{installationName}/services/http:plugin:8080/proxy/console/...`)
-  are treated as **public** static assets: the auth/authz check is skipped
-  because the sandboxed iframe runs with an opaque origin and cannot send the
-  JWT cookie anyway. The assets themselves carry no secrets — they are
-  HTML/JS templates.
 
-All other paths run the full pipeline: JWT validation → OpenFGA `can_view` on
-the cluster → (real mode) per-user SA-token exchange → proxy to the cluster
-handler.
+Every cluster API request runs the full pipeline: JWT validation → OpenFGA
+`can_view` on the cluster → (real mode) per-user SA-token exchange → proxy to
+the cluster handler.
+
+Plugin console assets (the HTML, JS and CSS a plugin iframe loads) are not
+served by kube-api-proxy in either mode. plugin-proxy serves them same-origin
+at `/clusters/{clusterID}/plugins/{name}/{version}/console/{path}`, fetching
+them from the plugin pod through the cluster's API-server service proxy
+(FUN-17).
 
 ### Mock mode
 
@@ -323,18 +324,11 @@ instead of talking to a cluster:
   UI and any state written through the proxy.
 - **Plugin metadata RPC**: `GetDefinition` calls are answered with hardcoded
   definition JSON. The real plugin binary is not running.
-- **Console assets**: served from the local filesystem at
-  `${MOCK_PLUGIN_TEMPLATES_DIR}/{pluginName}/console/{asset}` (default
-  `./plugins`). The request URL carries the *installation* name, so the mock
-  strips leading `<organization>-` segments until a directory matches — two
-  organizations publishing the same plugin share these assets. Responses include `Cache-Control: no-store` so iframe
-  reloads always pick up edits — refresh the browser and your edits to
-  `plugins/cert-manager/console/certificates-list.html` are live. CORS is
-  overridden to `Access-Control-Allow-Origin: *` (necessary because the
-  sandboxed iframe's `Origin: null` is not on the proxy's normal
-  allowlist).
-- **No Gardener, no OpenFGA, no SA tokens**. JWT validation still runs on
-  non-asset paths.
+- **Console assets**: not served here (see above). In mock mode plugin-proxy
+  answers every asset request with a bare `mock asset` page, unless it has a
+  plugin sandbox kubeconfig, in which case it fetches the real assets from
+  the sandbox cluster.
+- **No Gardener, no OpenFGA, no SA tokens**. JWT validation still runs.
 
 ### Real mode
 
@@ -353,17 +347,16 @@ Real mode wires up the full production stack:
   cluster in OpenFGA. The plugin's own `allowedResources` is a second layer
   enforced client-side in the Console — the real authorization gate is the
   shoot's RBAC on the user's SA, which is what ultimately answers `403`.
-- **Console assets**: instead of reading from disk, the proxy forwards the
-  `/proxy/console/...` request to the plugin pod's HTTP server (port 8080).
-  The plugin's `ConsoleProvider.ConsoleAssets()` serves the embedded
-  `console/` filesystem from inside the binary.
 
 ### Implications
 
-For **frontend iteration** on a plugin's UI (HTML/CSS/JS edits), prefer mock
-mode. The on-disk asset serving with `Cache-Control: no-store` plus the
-fixture data gives you a tight reload loop without a running cluster.
-Anything that writes state will, however, vanish on restart.
+For **frontend iteration** on a plugin's UI (HTML/CSS/JS edits), work in the
+plugin's own preview loop rather than through the Console. For OpenFSC,
+`just openfsc console-dev` runs the Vite dev server with HMR against a live
+cluster, and `just openfsc console-preview` serves the built pages. In mock
+mode the Console's plugin iframes show plugin-proxy's stub pages unless it has
+a plugin sandbox cluster to fetch the real assets from, and anything that
+writes state vanishes on restart.
 
 For **plugin runtime work** (install logic, RBAC, Helm steps, status
 reporting), use real mode. It is the only mode where the plugin's own
@@ -423,15 +416,15 @@ full path in both modes:
 
 1. **Mock mode** — `just dev` from the repo root. Open the Console, switch
    to a cluster that has the cert-manager plugin mock installed, and
-   navigate to the Certificates list. In browser devtools:
-   - Confirm the iframe loads (the asset comes from the kube-api-proxy with
-     `Cache-Control: no-store`).
+   navigate to the Certificates list. Without a plugin sandbox cluster the
+   iframe shows plugin-proxy's `mock asset` page: that confirms the Console
+   loads the iframe from plugin-proxy, but the page sends no protocol
+   messages. With a sandbox cluster, in browser devtools:
+   - Confirm the iframe loads the plugin's page from plugin-proxy.
    - In the Console window, observe `plugin:ready` arriving from the iframe
      and the Console responding with `fundament:init`.
    - Click a row, confirm `plugin:navigate` followed by the detail view's
      `plugin:k8s:get` and a `fundament:k8s:result` with `ok: true`.
-   - Edit `plugins/cert-manager/console/certificates-list.html`, refresh
-     the browser, confirm the edit is live without rebuilding.
 
 2. **Real mode** — `just dev -p local-gardener`. Install a real
    `PluginInstallation` against a shoot, wait for `status.phase = Running`,

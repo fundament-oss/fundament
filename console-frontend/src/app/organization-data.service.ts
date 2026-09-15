@@ -194,8 +194,8 @@ export class OrganizationDataService {
     }
     if (!this.loadProjectsPromise) {
       this.loadProjectsPromise = this.doLoadProjects()
-        .then(() => {
-          this.projectsLoaded.set(true);
+        .then((loaded) => {
+          if (loaded) this.projectsLoaded.set(true);
         })
         .finally(() => {
           this.loadProjectsPromise = null;
@@ -211,9 +211,11 @@ export class OrganizationDataService {
     return this.loadProjectsAndNamespaces();
   }
 
-  private async doLoadProjects() {
+  /** Resolves false when the organization itself is not in yet: there was
+   *  nothing to load, so the projects must not count as loaded. */
+  private async doLoadProjects(): Promise<boolean> {
     const orgData = this.organizations()[0];
-    if (!orgData) return;
+    if (!orgData) return false;
 
     this.loading.set(true);
     try {
@@ -242,6 +244,7 @@ export class OrganizationDataService {
       this.organizations.update((orgs) =>
         orgs.map((org) => (org.id === orgData.id ? { ...org, clusters: clustersData } : org)),
       );
+      return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading project data:', error);

@@ -217,38 +217,34 @@ export default class App implements OnInit {
 
   constructor() {
     // The projects are part of the organization's navigation now, so they load
-    // with the organization rather than when one of them is opened.
+    // with the organization rather than when one of them is opened. A navigation
+    // can select the organization before its clusters are in, so this waits for
+    // those too: projects are listed per cluster.
     effect(() => {
-      if (!this.selectedOrgId()) return;
+      if (!this.selectedOrgId() || !this.organizationDataService.clustersLoaded()) return;
       untracked(() => {
         this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       });
     });
 
+    // Follows the project's cluster, not only the URL: opening or refreshing a
+    // project URL directly gets here before the organization's projects are in,
+    // so the cluster resolves later and has to bring the plugins with it.
     effect(() => {
       const projectId = this.activeProjectId();
+      const clusterId = this.activeProjectClusterId();
 
-      if (projectId) {
-        untracked(() => this.loadPluginsForProject(projectId));
+      if (projectId && clusterId) {
+        untracked(() => this.loadPluginsForCluster(clusterId));
       } else {
         untracked(() => this.pluginRegistry.reset());
       }
     });
   }
 
-  private async loadPluginsForProject(projectId: string): Promise<void> {
+  private async loadPluginsForCluster(clusterId: string): Promise<void> {
     this.pluginRegistry.reset();
-    await this.organizationDataService.loadProjectsAndNamespaces().catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('Unexpected error while loading projects and namespaces: ', err);
-    });
-    const projectData = this.organizationDataService.getProjectById(projectId);
-
-    if (!projectData) return;
-
-    const clusterId = projectData.cluster.id;
     this.clusterContext.onClusterChange(clusterId);
-
     await this.pluginRegistry.loadPlugins(clusterId);
   }
 
@@ -725,6 +721,13 @@ export default class App implements OnInit {
   activeProjectId = computed(
     () => withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1] ?? null,
   );
+
+  /** The cluster the active project runs on, or null until the organization's
+   *  projects have loaded. */
+  activeProjectClusterId = computed(() => {
+    const id = this.activeProjectId();
+    return id ? (this.organizationDataService.getProjectById(id)?.cluster.id ?? null) : null;
+  });
 
   /** Every project in the organization, for the primary sidebar. Carries the
    *  status of the cluster it runs on, so one glance over the list tells you
