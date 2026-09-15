@@ -126,27 +126,20 @@ template starts from the least privilege that can work: the three rules Helm
 itself cannot install a release without (namespaces, its release Secrets, and
 Pods for `--wait`). Everything a chart might additionally create -- Deployments,
 Services, ServiceAccounts, ConfigMaps, CRDs, RBAC -- is there as commented-out
-rules, so you add what your chart needs instead of trimming a role that can
-already do everything.
+rules: uncomment what your chart needs.
 
 `customComponents` maps a CRD kind to the HTML files your plugin ships under
 `console/`. It is optional: any menu entry without a custom component renders the
 console's generated read-only list and detail views from the CRD schema, so add
 `customComponents` only for kinds that need write actions or a bespoke layout.
-`allowedResources` is the allowlist the console host enforces on every
-`fundament.k8s.list` / `.get` call the plugin makes — see
-[Custom UI](custom-ui) and [Console integration](console-integration) for the
-full story.
+`allowedResources` lists the resources the plugin's pages read. Page calls are authorized by the user's and the plugin's RBAC (`permissions.rbac`): [Custom UI](custom-ui#fetching-data).
 
 `menu`, `customComponents`, `allowedResources` and the files under `console/`
 are one contract with nothing to enforce it at build time. The generated
 `definition_test.go` checks that every file named in `customComponents` is
 actually embedded; the rest is on you, so change them together.
 
-There is deliberately **no `spec.image`**. Publishing builds the image, resolves
-the pushed manifest digest and injects it, so a published definition always pins
-immutable code and its hash binds that exact code. A manifest that names a
-mutable tag is rejected.
+`definition.yaml` has **no `spec.image`**: `functl plugin publish --image=<repo>@sha256:<digest>` injects the pushed digest, so a published definition pins immutable code and its hash binds that code. A manifest that names a mutable tag is rejected.
 
 ## Implement the plugin
 
@@ -162,11 +155,11 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
-type MyPlugin struct{}
+type MyPluginPlugin struct{}
 
-func NewMyPlugin() *MyPlugin { return &MyPlugin{} }
+func NewMyPluginPlugin() *MyPluginPlugin { return &MyPluginPlugin{} }
 
-func (p *MyPlugin) Start(ctx context.Context, host pluginruntime.Host) error {
+func (p *MyPluginPlugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	host.ReportStatus(pluginruntime.PluginStatus{
 		Phase:   pluginruntime.PhaseInstalling,
 		Message: "setting up",
@@ -184,12 +177,12 @@ func (p *MyPlugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	return nil
 }
 
-func (p *MyPlugin) Shutdown(_ context.Context) error {
+func (p *MyPluginPlugin) Shutdown(_ context.Context) error {
 	return nil
 }
 
 func main() {
-	pluginruntime.Run(NewMyPlugin())
+	pluginruntime.Run(NewMyPluginPlugin())
 }
 ```
 
@@ -220,19 +213,16 @@ import (
 //go:embed console/*
 var consoleFiles embed.FS
 
-func (p *MyPlugin) ConsoleAssets() http.FileSystem {
+func (p *MyPluginPlugin) ConsoleAssets() http.FileSystem {
 	return console.NewFileSystem(consoleFiles, "console")
 }
 ```
 
 Put one HTML file per `customComponents` entry under `console/` (e.g.
 `console/myresources-list.html`, `console/myresources-detail.html`).
-See [Custom UI](custom-ui) for what those pages need to do and
-[Example: cert-manager](example-cert-manager) for a worked layout.
+See [Custom UI](custom-ui) for what those pages need to do and [`plugins/cert-manager/console/`](https://github.com/fundament-oss/fundament/tree/master/plugins/cert-manager/console) for a working set.
 
-If `console/` is *build output* rather than committed source — which it is with
-`--console=vite` — pass `console.RequireHTML()` as well, so a binary built
-without running the UI build fails at startup instead of serving a blank iframe.
+With `--console=vite`, `console/` is build output: pass `console.RequireHTML()` as well, so a binary built without the UI build fails at startup.
 
 ## Build a container image
 
@@ -245,72 +235,16 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /my-plugin .
+RUN CGO_ENABLED=0 go build -o /my-plugin-plugin .
 
 FROM alpine:3.21
 # Add any CLI tools your plugin needs; the helm template installs helm here.
-COPY --from=build /my-plugin /usr/local/bin/my-plugin
+COPY --from=build /my-plugin-plugin /usr/local/bin/my-plugin-plugin
 COPY definition.yaml /app/definition.yaml
 WORKDIR /app
-ENTRYPOINT ["my-plugin"]
+ENTRYPOINT ["my-plugin-plugin"]
 ```
 
-The first-party plugins under `plugins/` differ here: they build with the
-monorepo root as the context, because they live inside it.
+## Publish and install
 
-## Install it
-
-A plugin is installed by creating a `PluginInstallation` that pins a *published*
-definition by name, version and hash:
-
-```yaml
-apiVersion: plugins.fundament.io/v1
-kind: PluginInstallation
-metadata:
-  name: acme--my-plugin
-spec:
-  definitionRef:
-    organizationName: acme
-    pluginName: my-plugin
-    pluginVersion: v1.0.0
-    definitionHash: sha256:...
-  config:
-    SOME_SETTING: value
-```
-
-`metadata.name` must equal `<organizationName>--<pluginName>` — a plugin's
-identity is that pair, not the plugin name alone (see
-[FUN-17](/funs/fun-17#plugin-identity-and-naming)).
-
-The image is **not** part of the CR: the controller fetches the definition from
-organization-api, checks its hash against `definitionHash`, and takes the image
-from there. `spec.config` entries are injected into the plugin as `FUNP_*`
-environment variables.
-
-Publishing a **standalone** plugin is not supported yet. Today definitions are
-published from inside the monorepo with `just plugins publish <dir>`, which
-requires the plugin to live under `plugins/` and to have a catalog entry in the
-appstore.
-
-## Metadata API
-
-Every plugin exposes a ConnectRPC service that the controller consumes:
-
-```protobuf
-service PluginMetadataService {
-  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
-  rpc RequestUninstall(RequestUninstallRequest) returns (RequestUninstallResponse);
-}
-```
-
-| Consumer          | Method             | Purpose                                                    |
-| ----------------- | ------------------ | ---------------------------------------------------------- |
-| Plugin Controller | `GetStatus`        | Poll phase, message, version → write to CR `.status`        |
-| Plugin            | `RequestUninstall` | Ask the platform to tear the plugin down                    |
-
-Plugin definitions are served to the console by organization-api, not by the
-plugin pod.
-
-## Plugin sandbox
-
-A self-contained development environment for plugin development. See [`plugins/README.md`](https://github.com/fundament-oss/fundament/blob/master/plugins/README.md) for setup instructions and available commands.
+Publish the image and definition, install the plugin and check it in the console: [Testing plugins locally](testing-plugins-locally).

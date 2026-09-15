@@ -99,7 +99,6 @@ go test ./openfsc-operator/...   # unit + render tests; envtest CEL suite
                                  #  go run sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.23 use)
 ```
 
-End-to-end happens in the plugin sandbox (`plugins/`): `just openfsc
-operator-push`, `just plugin-install openfsc`, `just openfsc test`. External
-mode is covered by validation and values tests only; a full two-group
+End-to-end runs in the plugin sandbox: [OpenFSC plugin, Sandbox flow](../plugins/openfsc/README.md#sandbox-flow).
+External mode is covered by validation and values tests only; a full two-group
 federation test needs a second group and is out of scope here.

@@ -73,6 +73,44 @@ spec:
           - get
           - list
           - watch
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install --create-namespace --wait` for istio-base,
+      # istiod and istio-ingressgateway (charts 1.26.0). These rules cover Helm's release
+      # storage and what those charts create: Istio CRDs, webhooks, the istiod and gateway
+      # Deployments with their HPA and PDB, ServiceAccounts, Services, ConfigMaps and RBAC.
+      - apiGroups: [""]
+        resources: ["secrets", "serviceaccounts", "services", "configmaps"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["namespaces"] # helm --create-namespace
+        verbs: ["get", "list", "watch", "create"]
+      - apiGroups: [""]
+        resources: ["pods"] # helm --wait readiness polling
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets"] # helm --wait polls the Deployments' ReplicaSets
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["autoscaling"]
+        resources: ["horizontalpodautoscalers"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["policy"]
+        resources: ["poddisruptionbudgets"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apiextensions.k8s.io"]
+        resources: ["customresourcedefinitions"] # Istio CRDs from istio-base
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["admissionregistration.k8s.io"]
+        resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterroles", "roles"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "bind", "escalate"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterrolebindings", "rolebindings"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   menu:
     project:
       - crd: gateways.gateway.networking.k8s.io

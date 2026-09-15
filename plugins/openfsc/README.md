@@ -74,16 +74,16 @@ test enforces this); bump the two together.
 
 ## Sandbox flow
 
-From `plugins/` (see `plugins/README.md` for cluster setup):
+After steps 1–3 of [Testing plugins locally](../../docs/developer/plugins/testing-plugins-locally.md), from the repository root:
 
-```shell
-just openfsc operator-push    # build the operator image, record it in .sandbox-config
-just plugin-install openfsc   # prerequisites + operator (picks up .sandbox-config)
-just openfsc test             # sample FSCInstallation (Self mode + gateways) reaches Active
-just openfsc console-preview  # view the console pages against the live cluster
-just openfsc console-dev      # same, with Vite HMR while editing console-ui/
-just openfsc test-cleanup     # remove the sample installation
-```
+1. `just plugins openfsc operator-push`: builds `openfsc-operator/` and prints `OPERATOR_IMAGE: <ref>`. The published operator image is amd64 only.
+2. `PLUGIN_REGISTRY=localhost:5112 just plugins publish openfsc`
+3. Install `system--openfsc` (step 5) with `spec.config` `OPERATOR_IMAGE: <ref>`. The plugin deploys the operator only when its release is absent: a new ref needs uninstall and install.
+4. `just plugins openfsc test`: sample FSCInstallation `demo` in `fsc-demo` reaches Active; the one-per-namespace guard holds.
+5. `just plugins openfsc console-preview` or `console-dev`: the console pages against the sandbox, without publishing. Both need an FSCInstallation.
+6. `just plugins openfsc test-cleanup`
+
+The console create form needs an existing namespace in the sandbox: local projects have no namespaces, so the form asks for a name and the console does not create it.
 
 `console-preview` builds the shared `/plugin-ui/` bundle
 (`plugin-sdk.{js,css}` + `nldd.{js,css}`, the same assets prod serves) and the

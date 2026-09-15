@@ -8,14 +8,14 @@ typecheck:
 ui-test:
     cd console-ui && bun install && bun run test
 
-# Verify the install: PluginInstallation Running, the eg GatewayClass Accepted,
-# and a sample Gateway is programmed by the controller.
+# A Gateway gets an address only while no other LoadBalancer Service holds its port on the sandbox node.
+# Verify the install: PluginInstallation Running, GatewayClass eg Accepted, sample Gateway Programmed
 test:
     #!/usr/bin/env bash
     set -euo pipefail
     k="kubectl --context {{ kube_context }}"
-    echo "Waiting for PluginInstallation/gateway-api-envoy to be Running (first install pulls images)..."
-    $k wait --for=jsonpath='{.status.phase}'=Running plugininstallation/gateway-api-envoy --timeout=600s
+    echo "Waiting for PluginInstallation/system--gateway-api-envoy to be Running (first install pulls images)..."
+    $k wait --for=jsonpath='{.status.phase}'=Running plugininstallation/system--gateway-api-envoy --timeout=600s
     echo "Waiting for the eg GatewayClass to be Accepted..."
     $k wait --for=jsonpath='{.status.conditions[?(@.type=="Accepted")].status}'=True gatewayclass/eg --timeout=120s
     echo "Creating a sample Gateway..."

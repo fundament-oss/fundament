@@ -17,6 +17,7 @@ import (
 	"helm.sh/helm/v4/pkg/chart/loader/archive"
 	chart "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/kube"
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	"helm.sh/helm/v4/pkg/storage/driver"
 	"helm.sh/helm/v4/pkg/strvals"
@@ -118,6 +119,10 @@ func (c *Client) List(prefix string) ([]ReleaseInfo, error) {
 // UpgradeInstall installs the chart as the named release, or upgrades it when
 // it already exists (the SDK equivalent of `helm upgrade --install`, without
 // --wait: the reconciler tracks readiness instead of blocking a worker).
+//
+// Helm v4 fails install, upgrade and uninstall with "wait strategy not set"
+// unless WaitStrategy is set. HookOnlyStrategy keeps Helm v3's behaviour
+// without --wait: chart hooks are awaited, the release's resources are not.
 func (c *Client) UpgradeInstall(ctx context.Context, release string, chrt *chart.Chart, values map[string]any) error {
 	cfg, err := c.config()
 	if err != nil {
@@ -133,6 +138,7 @@ func (c *Client) UpgradeInstall(ctx context.Context, release string, chrt *chart
 		// Never create the namespace: releases land in the installation's own
 		// namespace, which exists by definition and belongs to the team.
 		install.CreateNamespace = false
+		install.WaitStrategy = kube.HookOnlyStrategy
 		if _, err := install.RunWithContext(ctx, chrt, values); err != nil {
 			return fmt.Errorf("helm install %s: %w", release, err)
 		}
@@ -143,6 +149,7 @@ func (c *Client) UpgradeInstall(ctx context.Context, release string, chrt *chart
 	}
 	upgrade := action.NewUpgrade(cfg)
 	upgrade.Namespace = c.namespace
+	upgrade.WaitStrategy = kube.HookOnlyStrategy
 	if _, err := upgrade.RunWithContext(ctx, release, chrt, values); err != nil {
 		return fmt.Errorf("helm upgrade %s: %w", release, err)
 	}
@@ -156,6 +163,8 @@ func (c *Client) Uninstall(release string) error {
 		return err
 	}
 	uninstall := action.NewUninstall(cfg)
+	// Helm v4 requires a strategy here too; see UpgradeInstall.
+	uninstall.WaitStrategy = kube.HookOnlyStrategy
 	if _, err := uninstall.Run(release); err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 		return fmt.Errorf("helm uninstall %s: %w", release, err)
 	}

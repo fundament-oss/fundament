@@ -22,14 +22,8 @@ spec:
       # Pull container images (and the cert-manager/CloudNativePG charts) from
       # public registries during install.
       - internet_access
-    # NOTE: this rbac block is informational metadata only — the plugin-controller
-    # does not turn it into a Role. The plugin's real permissions come from the
-    # built-in `admin` ClusterRole bound in its namespace plus any ClusterRoles the
-    # PluginInstallation requests. Install bootstraps cluster-scoped operators
-    # (cert-manager, CloudNativePG, openfsc-operator — CRDs, ClusterRoles), so it
-    # effectively needs cluster-admin. The rules below document the steady-state
-    # resources the plugin itself touches; everything else is reconciled by the
-    # openfsc-operator under its own scoped ClusterRole (see openfsc-operator/chart).
+    # plugin-controller turns this block into the plugin's ClusterRole: the plugin
+    # can only do what is listed here.
     rbac:
       - apiGroups: ["openfsc.fundament.io"]
         resources: ["fscinstallations"]
@@ -43,6 +37,36 @@ spec:
         resources: ["services", "serviceaccounts", "secrets", "configmaps"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install --create-namespace --wait` for cert-manager
+      # v1.17.2, CloudNativePG 0.24.0 and the vendored openfsc-operator chart. These rules
+      # cover Helm's release storage and what those charts create: CRDs, webhooks,
+      # controller Deployments, the cert-manager startup Job, ServiceAccounts, Services,
+      # ConfigMaps and RBAC.
+      - apiGroups: [""]
+        resources: ["namespaces"] # helm --create-namespace
+        verbs: ["get", "list", "watch", "create"]
+      - apiGroups: [""]
+        resources: ["pods"] # helm --wait readiness polling
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets"] # helm --wait polls the Deployments' ReplicaSets
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["batch"]
+        resources: ["jobs"] # cert-manager startupapicheck Job
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apiextensions.k8s.io"]
+        resources: ["customresourcedefinitions"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["admissionregistration.k8s.io"]
+        resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterroles", "roles"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "bind", "escalate"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterrolebindings", "rolebindings"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   crds:
     - fscinstallations.openfsc.fundament.io
 

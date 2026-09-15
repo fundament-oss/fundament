@@ -4,199 +4,150 @@ sidebar:
   order: 6
 ---
 
-How a Fundament plugin renders inside the Console: the iframe boundary, the
-postMessage SDK, the Kubernetes-call broker, and the role of the kube-api-proxy
-in mock and real mode.
+How a Fundament plugin renders inside the Console: discovery, the iframe boundary, the postMessage SDK, and the Kubernetes call path through kube-api-proxy in mock, sandbox and real mode. Design: [FUN-17 Plugin Authorization](/funs/fun-17).
 
-This document is the architecture reference for anyone working on the
-Console-plugin boundary. For a plugin author's how-to, start with
-[Writing a plugin](writing-a-plugin) and [Custom UI](custom-ui). For the
-container lifecycle (controller, RBAC, install/uninstall), see the
-[Plugins overview](.).
+This document is the architecture reference for anyone working on the Console-plugin boundary. For a plugin author's how-to, start with [Writing a plugin](writing-a-plugin) and [Custom UI](custom-ui). For the container lifecycle (controller, RBAC, install/uninstall), see the [Plugins overview](.).
 
 ## Overview
 
-Four moving parts collaborate to render a plugin's UI in the Console:
+- **Console frontend** (`console-frontend/`): the host Angular app. Discovers installed plugins, renders the sidebar and routes, mounts plugin iframes and mints PluginTokens for them.
+- **Plugin SDK** (`console-frontend/src/plugin-sdk/`): `plugin-sdk.js` and `plugin-sdk.css`, loaded by plugin pages. Handles the postMessage protocol, the PluginToken and Kubernetes calls.
+- **plugin-proxy** (`plugin-proxy/`): serves plugin pages and the SDK on its own origin.
+- **authn-api** (`authn-api/`): mints PluginTokens.
+- **kube-api-proxy** (`kube-api-proxy/`): the gateway for every cluster request, from the console and from plugin pages. Runs in mock, sandbox or real mode.
+- **Plugin runtime** (`plugin-sdk/pluginruntime/`): the Go framework each plugin embeds. Serves the plugin's metadata API and its embedded `console/` assets.
 
-- **Console frontend** (`console-frontend/`) — the host Angular app. Discovers
-  installed plugins, renders the sidebar, mounts plugin iframes, and brokers
-  Kubernetes API calls.
-- **Plugin SDK** (`console-frontend/src/plugin-sdk/`) — a tiny TypeScript
-  library compiled to `plugin-sdk.js` / `plugin-sdk.css` and served by the
-  Console at `/plugin-ui/`. Plugins load it inside their iframe to talk to the
-  host.
-- **kube-api-proxy** (`kube-api-proxy/`) — the gateway every cluster request
-  goes through. Has a **mock** mode (in-memory fixtures, used for local dev)
-  and a **real** mode (Gardener-managed shoots, used in staging/prod).
-- **Plugin runtime** (`plugin-sdk/pluginruntime/`) — the Go framework each
-  plugin embeds. Serves its `PluginMetadataService` and its embedded
-  `console/` HTML/JS/CSS assets.
+```
+ browser
+ ┌──────────────────────────────────────────────────────────────┐
+ │ console origin                  plugin-proxy origin          │
+ │ ┌──────────────────┐ postMessage ┌──────────────────────────┐│
+ │ │ console-frontend │◄───────────►│ iframe: console/*.html   ││
+ │ └────┬────────┬────┘             │ + /plugins/sdk/v1/ SDK   ││
+ │      │        │                  └──────┬─────────────┬─────┘│
+ └──────┼────────┼─────────────────────────┼─────────────┼──────┘
+        │        │                         │             │
+        ▼        ▼                         ▼             ▼
+ organization-api  kube-api-proxy ◄──────────── k8s.* calls
+ (definitions)     (installations)     plugin-proxy (pages, SDK)
+                        │                      │
+                        ▼                      ▼
+                     cluster ◄──────────── plugin pod (/console/)
+```
 
-The plugin's UI never runs on the Console's origin and never gets the Console
-user's cookies. Everything crosses the iframe boundary as `postMessage` calls,
-and every Kubernetes read is brokered by the Console host on behalf of the
-logged-in user.
+Plugin pages run on the plugin-proxy origin and never see the Console user's cookies. They call kube-api-proxy with a PluginToken: the user, acting through one plugin installation.
 
 ## Discovery and registration
 
-When the Console boots for a cluster, `PluginRegistryService.loadPlugins()`:
-
-1. Fetches the cluster's `PluginInstallation` list:
-   `GET /clusters/{clusterId}/apis/plugins.fundament.io/v1/plugininstallations`.
-2. Keeps only items whose `status.phase === 'Running' && status.ready`.
-3. For each running plugin, calls the plugin's
-   `PluginMetadataService.GetDefinition` Connect RPC through the Kubernetes
-   apiserver service proxy:
-   `GET /clusters/{clusterId}/api/v1/namespaces/plugin-{installationName}/services/http:plugin:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
-   where `{installationName}` is the CR's `metadata.name`
-   (`<organizationName>--<pluginName>`) — not the bare catalog name. The Service
-   is constant-named `plugin`; only the namespace varies.
-4. Stores the parsed definitions in a signal that the sidebar and routes
-   subscribe to.
+1. The console lists the cluster's installations: `GET <kube-api-proxy>/clusters/<cluster-id>/apis/plugins.fundament.io/v1/plugininstallations`.
+2. It keeps installations with `status.phase` `Running` and `status.ready`.
+3. For each, it fetches the definition from organization-api: `organization.v1.PluginService/GetPluginDefinition` with organization, plugin and version.
+4. `menu` entries appear in the sidebar under the plugin's display name.
 
 The definition advertises:
 
-- `menu` — which CRDs appear at organization and project level.
-- `customComponents` — a `Kind` → `{ list?, detail? }` map of relative paths
-  (e.g. `Certificate` → `certificates-list.html`). Optional: any CRD without an
-  entry falls back to the generated read-only UI described below.
-- `allowedResources` — the Kubernetes resources the plugin's iframe may read,
-  with explicit verbs (`get`, `list`). This is the authoritative list the host
-  enforces on every K8s broker call.
-- `crds` — the CRDs the plugin manages.
+- `menu`: which CRDs appear at organization and project level.
+- `customComponents`: a `Kind` → `{ list?, detail?, create? }` map of files under `console/`. Kinds without an entry get the generated UI.
+- `permissions.rbac`: the plugin's ServiceAccount RBAC, which also limits the plugin's page calls.
+- `allowedResources`: the resources the plugin's pages read.
+- `crds`: the CRDs the plugin manages.
+
+:::caution[TODO]
+Nothing checks `allowedResources`: the console loads it into its plugin registry, and kube-api-proxy does not read it. Enforce it or remove it from the definition.
+:::
 
 ## Routing and rendering
 
-The plugin routes live under `/plugin-resources/` (also mirrored under
-`/projects/:id/plugin-resources/`):
+The plugin routes live under `plugin-resources/`, at organization level and under `projects/:id/`:
 
 | Route | Component |
 | --- | --- |
-| `/plugin-resources/:pluginName/:resourceKind` | `ResourceListComponent` |
-| `/plugin-resources/:pluginName/:resourceKind/:resourceId` | `ResourceDetailComponent` |
+| `plugin-resources/:pluginName/:resourceKind` | `ResourceListComponent` |
+| `plugin-resources/:pluginName/:resourceKind/create` | `ResourceCreateComponent` |
+| `plugin-resources/:pluginName/:resourceKind/:resourceId` | `ResourceDetailComponent` |
 
-Each component looks up the matching `customComponents.<Kind>.list` or
-`.detail` entry in the plugin definition. If present, it builds the iframe URL
-and mounts the iframe component pointed at it. If absent, it renders the
-generated fallback view instead.
+- `:pluginName` is the PluginInstallation's `metadata.name` (`<organizationName>--<pluginName>`); `:resourceKind` is `<plural>.<group>`.
+- Each component looks up `customComponents.<Kind>.list`, `.detail` or `.create`. If present, it mounts the plugin iframe; if absent, it renders the generated view.
+- The list shows a create action only when the kind has a `create` component.
 
 ### Generated fallback UI
 
-When a plugin provides no `customComponents` entry for a CRD kind, the console
-renders a generated, **read-only** view from the CRD's OpenAPI v3 schema (loaded
-from `apiextensions.k8s.io/v1/customresourcedefinitions`):
+When a plugin provides no `customComponents` entry for a CRD kind, the console renders a generated view from the CRD's OpenAPI v3 schema (loaded from `apiextensions.k8s.io/v1/customresourcedefinitions`):
 
-- **List** — a table whose columns come from the CRD's
-  `additionalPrinterColumns` (falling back to Name + Age), with a row per object
-  and a link to the detail view.
-- **Detail** — object metadata, the `spec` fields rendered from the schema, and
-  a `status` section (including a conditions table when present).
+- **List**: a table whose columns come from the CRD's `additionalPrinterColumns` (falling back to Name + Age), with a row per object and a link to the detail view.
+- **Detail**: object metadata, the `spec` fields rendered from the schema, a `status` section (including a conditions table when present), and a delete action.
 
-The generated UI is read-only: it never creates, edits, or deletes resources.
-Reach for a custom UI (above) when you need write actions or a bespoke layout.
+The generated UI does not create or edit resources. Ship a custom UI for write actions or a bespoke layout.
 
 ## The iframe boundary
 
 ### URL construction
 
-The console turns the relative path from `customComponents` into the
-iframe `src`:
+The console turns the file from `customComponents` into the iframe `src`:
 
 ```
-{kubeApiProxyUrl}/clusters/{clusterId}
-  /api/v1/namespaces/plugin-{installationName}
-  /services/http:plugin:8080
-  /proxy/console/{file}?host={consoleOrigin}
+https://<plugin-proxy>/clusters/<cluster-id>/plugins/<installation-name>/<version>/console/<file>
 ```
 
-`{installationName}` is the PluginInstallation's `metadata.name`
-(`<organizationName>--<pluginName>`). Two organizations may publish a plugin
-with the same name, so the bare plugin name does not identify an installation
-— and for a name too long for a DNS label the namespace is truncated and
-hashed, so read it from `status.namespace` rather than reassembling it.
-
-Two things to note:
-
-- The asset is fetched through the kube-api-proxy and then through the
-  apiserver's service proxy — never directly from the plugin's pod. In real
-  mode that means the apiserver tunnels to the plugin's HTTP server (port
-  8080, `/console/<file>`); in mock mode the kube-api-proxy serves the file
-  from disk and never talks to a pod.
-- `host={consoleOrigin}` is appended so the iframe can load the SDK
-  (`plugin-sdk.js`/`.css`) from the Console origin. The iframe itself lives
-  on the kube-api-proxy origin and has no other way to learn where to fetch
-  the SDK from.
-
-Absolute paths and paths starting with `/plugin-ui/` are passed through
-unchanged.
+- plugin-proxy checks the user's access to the cluster, confirms the installed version, and fetches the file from the plugin pod through the cluster's API-server service proxy (`/api/v1/namespaces/<plugin-namespace>/services/<service>/proxy/console/<file>`).
+- The response carries `Content-Security-Policy` ([Custom UI](custom-ui#content-security-policy)) and `Cache-Control: private, max-age=31536000, immutable`: a version's assets never change.
 
 ### Sandbox
 
-The iframe is created with `sandbox="allow-scripts"` and nothing else.
-`allow-same-origin` is **deliberately** omitted, which has two consequences
-plugin authors must keep in mind:
+The iframe is created with `sandbox="allow-scripts allow-same-origin allow-forms"`.
 
-1. The iframe runs with an opaque origin. It cannot send Console cookies or
-   read the Console's storage. It also cannot do its own credentialed `fetch`
-   against the kube-api-proxy.
-2. All cluster data must therefore flow through the host-mediated broker
-   (`plugin:k8s:list` / `plugin:k8s:get`). This is the security boundary: the
-   host validates every request against `allowedResources` before forwarding.
+- `allow-same-origin` is required: the page runs on the plugin-proxy origin, a different site from the console. The CSP's `script-src 'self'` needs a real origin to resolve, and postMessage target-origin pinning needs a checkable origin at both ends.
+- The same-origin policy between sites still blocks access to the console's document, and the user's HttpOnly cookie stays unreachable.
+- `allow-forms` serves create pages whose submits stay in the frame. `allow-top-navigation` and `allow-popups` are not granted.
 
 ## The postMessage protocol
 
-The reference SDK takes care of most messages automatically.
+The SDK sends and handles most messages itself.
 
 ### Plugin → host
 
 | Type | When | Payload | Sent by SDK |
 | --- | --- | --- | --- |
-| `plugin:ready` | Immediately after the SDK loads. | _(none)_ | Yes — auto. |
-| `plugin:resize` | Content height changes (debounced 50 ms; tracked via `ResizeObserver`). | `{ height: number }` | Yes — auto. |
-| `plugin:navigate` | Plugin wants Console to navigate to another resource. | `{ name: string, namespace?: string }` | No — call from your code. |
-| `plugin:k8s:list` | `fundament.k8s.list(args)` is called. | `{ requestId, group, version, resource, namespace? }` | Yes — via SDK. |
-| `plugin:k8s:get` | `fundament.k8s.get(args)` is called. | `{ requestId, group, version, resource, name, namespace? }` | Yes — via SDK. |
+| `plugin:ready` | The SDK script loads | none | Yes |
+| `plugin:resize` | Content height changes (debounced 50 ms, `ResizeObserver`) | `{ height }` | Yes |
+| `plugin:request-token-refresh` | A call returned 401 | none | Yes |
+| `plugin:navigate` | Open another resource | `{ name, namespace? }` | No: call from your code |
+| `plugin:create` | Open the create route | | No |
+| `plugin:navigate-back` | Back to the list | | No |
 
 ### Host → plugin
 
 | Type | When | Payload |
 | --- | --- | --- |
-| `fundament:init` | After `plugin:ready` arrives. First message; carries everything the plugin needs to render. | `{ theme, pluginName, crdKind, view, resource? }` |
-| `fundament:theme-changed` | User toggles the Console theme. Watched via a `MutationObserver` on `<html>` class. | `{ theme: 'light' \| 'dark' }` |
-| `fundament:k8s:result` | Reply to a `plugin:k8s:list` or `plugin:k8s:get`. Matched by `requestId`. | Success: `{ requestId, ok: true, items?, item? }`. Error: `{ requestId, ok: false, error, status? }`. |
+| `fundament:init` | After `plugin:ready`; first message | Init payload, see below |
+| `fundament:theme-changed` | User toggles the Console theme | `{ theme: 'light' \| 'dark' }` |
+| `fundament:token-refreshed` | The console minted a new PluginToken | `{ token, tokenExpiresAt }` |
+| `fundament:auth-failed` | Minting keeps failing | `{ reason: 'mint_failed' \| 'unauthorized' \| 'revoked' }` |
 
 ### Init payload fields
 
 | Field | Description |
 | --- | --- |
-| `theme` | `'light'` or `'dark'`; the SDK applies it as a class on `<body>` automatically. |
-| `pluginName` | The installed plugin's name. |
-| `crdKind` | The CRD kind being rendered (e.g. `Certificate`). |
-| `view` | `'list'` or `'detail'`. |
-| `resource` | Only on detail views: `{ name, namespace? }`. |
+| `protocolVersion` | `1`; the SDK ignores other versions |
+| `theme` | `'light'` or `'dark'`; the SDK sets it as a class on `<body>` |
+| `pluginName` | The installed plugin's name |
+| `crdKind` | The CRD kind being rendered |
+| `view` | `'list'`, `'detail'` or `'create'` |
+| `resource` | Detail views: `{ name, namespace? }` |
+| `namespaces` | Create views in a project: the project's namespaces |
+| `kubeApiProxyUrl`, `clusterId` | Base for Kubernetes calls |
+| `token`, `tokenExpiresAt` | The PluginToken |
 
 ### Origin pinning
 
-The SDK posts `plugin:ready` with target origin `*` (the host origin is not
-yet known). On the **first** incoming message — which must be
-`fundament:init` — the SDK captures `event.origin` and refuses any further
-message whose origin doesn't match. After that, the SDK targets the
-captured origin on outbound messages.
+The SDK accepts messages only from `window.parent`. The first accepted message must be `fundament:init`; the SDK pins its origin and drops any later message from another origin. Outbound messages that carry nothing sensitive use `'*'` until init arrives; `plugin:request-token-refresh` is sent only to the pinned origin.
 
 ### Request lifecycle
 
-`fundament.k8s.list` / `fundament.k8s.get` generate a `requestId`, post the
-`plugin:k8s:*` message, and return a promise. The promise resolves when the
-matching `fundament:k8s:result` arrives, rejects with `SdkError` if `ok:
-false`, and rejects with `code: 'timeout'` after **10 seconds**.
-
-The host validates each request against the plugin's own `allowedResources`
-before forwarding:
-
-- Allowed → host `fetch`es the kube-api-proxy with the user's session cookie
-  and forwards the result.
-- Not allowed → host replies `{ ok: false, error: 'forbidden' }` and logs a
-  warning; the SDK rejects with `SdkError('forbidden', ...)`.
+- A call waits up to 20 s for a token, then fails.
+- Each request is aborted after 30 s and rejects with `SdkError('timeout')`.
+- On 401 the SDK drops the token, sends `plugin:request-token-refresh` and retries once; a second 401 rejects with `SdkError('unauthorized')`.
+- 403 rejects with `SdkError('forbidden')`, other HTTP errors with `SdkError('http')` carrying the Kubernetes `Status` message, network errors with `SdkError('transport')`.
 
 ## The SDK surface
 
@@ -205,51 +156,42 @@ The SDK sets a single global, `window.fundament`:
 ```ts
 interface FundamentSdk {
   init: Promise<InitContext>;
+  readonly parentOrigin: string | null;
+  getToken(): Promise<string>;
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   k8s: {
     list<T>(args: { group; version; resource; namespace? }): Promise<{ items: T[] }>;
-    get<T>(args:  { group; version; resource; name; namespace? }): Promise<T>;
+    get<T>(args: { group; version; resource; name; namespace? }): Promise<T>;
+    create<T>(args: { group; version; resource; namespace? }, body: unknown): Promise<T>;
+    patch<T>(args: { group; version; resource; name; namespace? }, body: unknown): Promise<T>; // merge patch
+    delete<T>(args: { group; version; resource; name; namespace? }): Promise<T>;
   };
   onThemeChange(cb: (theme: 'light' | 'dark') => void): () => void;
 }
 ```
 
-The SDK also does these things on its own so plugins don't have to:
+The SDK also, on its own:
 
-- Applies `light`/`dark` as a class on `<body>` on `fundament:init` and on
-  every `fundament:theme-changed`.
-- Reports `plugin:resize` after stylesheets finish loading, and on every
-  `ResizeObserver` callback (debounced 50 ms).
-- Pins the parent origin on the first message and validates all subsequent
-  messages.
+- Applies `light`/`dark` as a class on `<body>` on `fundament:init` and on every `fundament:theme-changed`.
+- Reports `plugin:resize` once stylesheets have loaded and on every `ResizeObserver` callback.
+- Pins the parent origin and attaches and refreshes the PluginToken.
 
-The console serves the compiled bundle at the stable path
-`/plugin-ui/plugin-sdk.js` (and `.css`).
+plugin-proxy serves the bundle at `/plugins/sdk/v1/plugin-sdk.js` (and `.css`); the Console serves the same files at `/plugin-ui/`.
 
 ## How a plugin loads the SDK
 
-Because the iframe is sandboxed and lives on the kube-api-proxy origin, it
-can't statically link to `/plugin-ui/plugin-sdk.js` — that path is on the
-Console origin. The Console solves this by appending `?host={consoleOrigin}`
-to the iframe URL; plugin pages read it and inject `<script>` / `<link>` tags
-themselves.
-
-The cert-manager plugin's `_shared.js` is the reference implementation:
+The page CSP allows scripts and styles only from the page's own origin, so pages load the SDK from plugin-proxy at `/plugins/sdk/v1/`. The cert-manager plugin's `_shared.js` is the reference implementation:
 
 ```js
-export function hostOrigin() {
-  return new URLSearchParams(location.search).get('host') ?? '';
-}
-
 export function loadSdk() {
-  const host = hostOrigin();
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = `${host}/plugin-ui/plugin-sdk.css`;
+  link.href = '/plugins/sdk/v1/plugin-sdk.css';
   document.head.appendChild(link);
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `${host}/plugin-ui/plugin-sdk.js`;
+    script.src = '/plugins/sdk/v1/plugin-sdk.js';
     script.onload = () => resolve(window.fundament);
     script.onerror = () => reject(new Error('failed to load plugin-sdk.js'));
     document.head.appendChild(script);
@@ -257,181 +199,101 @@ export function loadSdk() {
 }
 ```
 
-Every cert-manager template starts with `await loadSdk(); await fundament.init;`
-and then fetches its data through `fundament.k8s.list` / `.get`.
+Every cert-manager page script starts with `await loadSdk(); await fundament.init;` and then fetches its data through `fundament.k8s.list` / `.get`.
 
 ## Kubernetes call path
 
-Putting the pieces together for a `fundament.k8s.list({ group: 'cert-manager.io',
-version: 'v1', resource: 'certificates' })` call from inside the iframe:
+For a `fundament.k8s.list({ group: 'cert-manager.io', version: 'v1', resource: 'certificates' })` call from inside the iframe:
 
-1. SDK posts `plugin:k8s:list { requestId, group, version, resource }` to
-   `window.parent`.
-2. The console validates the request against the plugin's
-   `allowedResources` (group + version + resource + verb `list`).
-3. If allowed, the console builds
-   `{kubeApiProxyUrl}/clusters/{clusterId}/apis/{group}/{version}/{resource}`
-   (or `/api/{version}/...` for core resources, plus `/namespaces/{ns}` when
-   namespaced) and fetches it with the user's session cookie.
-4. The kube-api-proxy authenticates the request (JWT cookie), checks
-   `can_view` on the cluster via OpenFGA, exchanges that for a 15-minute
-   ServiceAccount token (real mode) or skips straight to the in-memory store
-   (mock mode), and returns the response.
-5. The host posts `fundament:k8s:result { requestId, ok: true, items }` back
-   to the iframe. The SDK matches `requestId`, resolves the promise.
+1. The console mints a PluginToken for the user and the installation (authn-api `MintPluginToken`: 15 minutes, `aud=fundament-plugin`) and sends it in `fundament:init`.
+2. The SDK builds `<kubeApiProxyUrl>/clusters/<cluster-id>/apis/<group>/<version>/[namespaces/<ns>/]<resource>` (`/api/<version>/…` for core resources) and calls it with `Authorization: Bearer <PluginToken>`.
+3. kube-api-proxy checks, in order:
+   1. the token
+   2. the cluster in the token matches the path
+   3. OpenFGA `can_view` on the cluster
+   4. a SubjectAccessReview for the user's ServiceAccount `fundament-system/fundament-<user-id>`
+4. It forwards the call with a token for the plugin's ServiceAccount: the cluster's RBAC from `permissions.rbac` decides. The effective permission is the intersection of the user's and the plugin's.
+5. It logs a `plugin gateway request` with user, installation, plugin, version, definition hash and decision.
+6. The SDK resolves the promise with the response, or rejects with an `SdkError`.
 
-The plugin's iframe never sees the user's JWT and never talks directly to the
-kube-api-proxy. Everything runs as the **user**, with the user's RBAC — the
-plugin's own ServiceAccount is irrelevant to UI reads.
+:::caution[TODO]
+The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds its transport from the sandbox kubeconfig, and that kubeconfig's admin client certificate authenticates the call before the plugin's Bearer token. Page calls get the admin's access. Until this is fixed, check a plugin's RBAC with `kubectl --context k3d-fundament-plugin auth can-i <verb> <resource> --as=system:serviceaccount:plugin-<installation-name>:plugin`.
+:::
 
-## kube-api-proxy: mock vs real
-
-The proxy supports two modes selected at startup by the
-`KUBE_API_PROXY_MODE` env var (default `mock`). Real mode additionally
-requires `GARDENER_KUBECONFIG`.
+## kube-api-proxy: mock, sandbox and real
 
 ### Shared behavior
 
-Both modes expose the same external surface:
-
-- `/clusters/{clusterID}/{api|apis|openapi/...}` — Kubernetes API proxy, the
-  only path forwarded to the cluster handler. Paths outside that allowlist
-  return 404.
-- `/livez`, `/readyz` — health probes.
-
-Every cluster API request runs the full pipeline: JWT validation → OpenFGA
-`can_view` on the cluster → (real mode) per-user SA-token exchange → proxy to
-the cluster handler.
-
-Plugin console assets (the HTML, JS and CSS a plugin iframe loads) are not
-served by kube-api-proxy in either mode. plugin-proxy serves them same-origin
-at `/clusters/{clusterID}/plugins/{name}/{version}/console/{path}`, fetching
-them from the plugin pod through the cluster's API-server service proxy
-(FUN-17).
+- `/clusters/<cluster-id>/{api|apis|openapi|version}/…` is forwarded to the cluster handler; other roots return 404.
+- A PluginToken takes the gateway path above.
+- A UserToken or the console's cookie takes the user path: token validation, OpenFGA `can_view` on the cluster, then the call is forwarded.
+- Plugin pages are never served here, in any mode: plugin-proxy serves them (see [URL construction](#url-construction)).
 
 ### Mock mode
 
-In mock mode the proxy answers Kubernetes calls from hardcoded fixtures
-instead of talking to a cluster:
+`KUBE_API_PROXY_MODE=mock` (default) answers from fixtures:
 
-- **Resources**: hardcoded JSON for cert-manager, CloudNativePG, and the
-  demo plugin. `GET` requests for those groups/versions/resources return
-  the fixture; everything else returns an empty list.
-- **`PluginInstallation` CRUD**: supports `GET`, `POST`, `DELETE` on
-  `/apis/plugins.fundament.io/v1/plugininstallations`. State is held
-  in-memory, partitioned per cluster ID.
-- **Persistence**: none. Restart loses all installations created through the
-  UI and any state written through the proxy.
-- **Plugin metadata RPC**: `GetDefinition` calls are answered with hardcoded
-  definition JSON. The real plugin binary is not running.
-- **Console assets**: not served here (see above). In mock mode plugin-proxy
-  answers every asset request with a bare `mock asset` page, unless it has a
-  plugin sandbox kubeconfig, in which case it fetches the real assets from
-  the sandbox cluster.
-- **No Gardener, no OpenFGA, no SA tokens**. JWT validation still runs.
+- **Resources**: cert-manager (Certificates, CertificateRequests, Issuers, ClusterIssuers), CloudNativePG (Databases, Backups, Subscriptions), `demo.fundament.io` DemoItems and OpenFSC FSCInstallations (including create).
+- **PluginInstallations**: `GET`, `POST` and `DELETE`, held in memory per cluster. A restart loses them.
+- **PluginToken path**: the user SubjectAccessReview allows all, and the plugin ServiceAccount token is a placeholder.
+- **Plugin pages**: without a sandbox cluster, plugin-proxy answers every page request with a bare `mock asset` page, which sends no protocol messages.
+
+### Sandbox mode
+
+`just plugin-sandbox-kubeconfig` sets `PLUGIN_SANDBOX_KUBECONFIG`, which switches mock mode to the `k3d-fundament-plugin` cluster:
+
+- **User path**: forwarded with the sandbox kubeconfig's credentials.
+- **PluginToken path**: SubjectAccessReview for the user against the sandbox, then the plugin ServiceAccount token (see the TODO under [Kubernetes call path](#kubernetes-call-path)).
 
 ### Real mode
 
-Real mode wires up the full production stack:
+`KUBE_API_PROXY_MODE=real` with `GARDENER_KUBECONFIG`:
 
-- **Cluster discovery**: shoots are looked up in the Gardener hub by label
-  `fundament.io/cluster-id={clusterID}`. The admin kubeconfig is fetched
-  on-demand and cached with singleflight deduplication; entries refresh at
-  70 % of TTL.
-- **Per-user authentication**: each request, the proxy fetches a 15-minute
-  ServiceAccount token for `fundament-{userID}` in the
-  `fundament-system` namespace via the Kubernetes TokenRequest API. Tokens
-  are cached per `(userID, clusterID)` and proactively refreshed at 80 % of
-  TTL; a 401 from the shoot triggers a forced refresh.
-- **Authorization**: every cluster API call requires `can_view` on the
-  cluster in OpenFGA. The plugin's own `allowedResources` is a second layer
-  enforced client-side in the Console — the real authorization gate is the
-  shoot's RBAC on the user's SA, which is what ultimately answers `403`.
+- **Clusters**: the proxy fetches each shoot's admin kubeconfig from Gardener, caches it and refreshes it at 70 % of its TTL.
+- **User path**: each request uses a token for the user's ServiceAccount `fundament-system/fundament-<user-id>`, requested through the TokenRequest API, cached per user and cluster, refreshed at 80 % of its TTL, with concurrent requests deduplicated. Before the ServiceAccount exists the proxy answers `503 service account sync pending`.
+- **PluginToken path**: SubjectAccessReview for the user on the shoot, then the plugin ServiceAccount token.
 
 ### Implications
 
-For **frontend iteration** on a plugin's UI (HTML/CSS/JS edits), work in the
-plugin's own preview loop rather than through the Console. For OpenFSC,
-`just openfsc console-dev` runs the Vite dev server with HMR against a live
-cluster, and `just openfsc console-preview` serves the built pages. In mock
-mode the Console's plugin iframes show plugin-proxy's stub pages unless it has
-a plugin sandbox cluster to fetch the real assets from, and anything that
-writes state vanishes on restart.
-
-For **plugin runtime work** (install logic, RBAC, Helm steps, status
-reporting), use real mode. It is the only mode where the plugin's own
-container is actually running, where RBAC is genuinely enforced, and where
-the metadata RPC is answered by the plugin instead of a hardcoded fixture.
-
-For **end-to-end tests** that depend on persistence or cross-pod
-interaction, only real mode is meaningful.
+- **Console work without a cluster**: mock mode; the fixtures cover the resources above.
+- **Plugin runtime and plugin pages**: sandbox mode. The plugin's own container runs, its pages load from plugin-proxy, and the metadata API is answered by the plugin.
+- **Plugin page iteration**: the plugin's own preview loop, not the console. For OpenFSC, `just openfsc console-dev` runs the Vite dev server with HMR against a live cluster, and `just openfsc console-preview` serves the built pages.
+- **Shoot clusters and per-user ServiceAccounts**: real mode only.
 
 ### Local dev shortcuts
 
 ```bash
-just dev                    # mock mode (default)
-just dev -p local-gardener  # real mode against a local Gardener
+just dev-hotreload              # mock mode
+just plugin-sandbox-kubeconfig  # sandbox mode, see Local development
+just dev -p local-gardener      # real mode against a local Gardener
 ```
-
-The hot-reload dev image rebuilds and restarts the binary on every Go
-source change; the debug variant additionally runs Delve on `:2345`.
 
 ## Plugin author's quick guide
 
-Once you understand the boundary above, writing a plugin's Console
-integration is mostly four steps. See
-[Writing a plugin](writing-a-plugin) and [Custom UI](custom-ui) for the full
-guides; this is the short version that ties Console integration together.
-
-1. **Declare it in `definition.yaml`**. Map your custom HTML files to CRD
-   kinds in `spec.customComponents`, and list the Kubernetes resources your
-   UI may read in `spec.allowedResources` (group + version + resource +
-   verbs). Anything not listed will return `forbidden` from the broker.
-2. **Embed the assets**. Put your HTML/JS/CSS under `console/` in the plugin
-   module, embed it with `//go:embed console`, and return it from
-   `ConsoleAssets()`:
+1. **Declare it in `definition.yaml`**: map your HTML files to CRD kinds in `spec.customComponents`, and give the plugin the RBAC its pages need in `spec.permissions.rbac`.
+2. **Embed the assets**: put your HTML/JS/CSS under `console/` and return them from `ConsoleAssets()`:
 
    ```go
-   //go:embed console
-   var consoleFS embed.FS
+   //go:embed console/*
+   var consoleFiles embed.FS
 
-   func (p *Plugin) ConsoleAssets() http.FileSystem {
-       return console.MustNewFileSystem(consoleFS)
+   func (p *MyPluginPlugin) ConsoleAssets() http.FileSystem {
+       return console.NewFileSystem(consoleFiles, "console")
    }
    ```
 
-3. **Load the SDK from the host origin**. In each HTML page, read the
-   `?host=` query parameter and inject `<script src="${host}/plugin-ui/plugin-sdk.js">`
-   plus the matching stylesheet. Copy the `loadSdk()` helper from the
-   cert-manager plugin's `_shared.js` as a starting point.
-4. **Render**. `await fundament.init` to get context, call
-   `fundament.k8s.list` / `.get` for data, and post
-   `plugin:navigate` to follow a row into a detail view. See
-   [Example: cert-manager](example-cert-manager) for a worked example.
+3. **Load the SDK from plugin-proxy**: `/plugins/sdk/v1/plugin-sdk.js` and `.css`, with a `.js` module per page: the CSP blocks inline scripts. Copy `loadSdk()` from the cert-manager plugin's `_shared.js`.
+4. **Render**: `await fundament.init` for the context, call `fundament.k8s.*` for data, and post `plugin:navigate` to open a detail view.
 
 ## Verifying the integration end-to-end
 
-When changing anything on the Console-plugin boundary, walk through the
-full path in both modes:
+When changing anything on the Console-plugin boundary, walk through the full path in sandbox mode:
 
-1. **Mock mode** — `just dev` from the repo root. Open the Console, switch
-   to a cluster that has the cert-manager plugin mock installed, and
-   navigate to the Certificates list. Without a plugin sandbox cluster the
-   iframe shows plugin-proxy's `mock asset` page: that confirms the Console
-   loads the iframe from plugin-proxy, but the page sends no protocol
-   messages. With a sandbox cluster, in browser devtools:
-   - Confirm the iframe loads the plugin's page from plugin-proxy.
-   - In the Console window, observe `plugin:ready` arriving from the iframe
-     and the Console responding with `fundament:init`.
-   - Click a row, confirm `plugin:navigate` followed by the detail view's
-     `plugin:k8s:get` and a `fundament:k8s:result` with `ok: true`.
-
-2. **Real mode** — `just dev -p local-gardener`. Install a real
-   `PluginInstallation` against a shoot, wait for `status.phase = Running`,
-   and repeat the trace above. Same protocol messages, but data now comes
-   from the shoot's apiserver via the per-user SA token.
-
-3. **Authorization spot-check** — temporarily remove an entry from a
-   plugin's `allowedResources`, redeploy, and confirm the SDK call rejects
-   with `SdkError('forbidden', ...)` and the host logs
-   `[PluginIframe] rejected list request not in allowlist`.
+1. Install a plugin with custom pages as in [Testing plugins locally](testing-plugins-locally), then open a project with a cluster and open the plugin's section.
+2. In browser devtools:
+   - The iframe `src` is on plugin-proxy and carries the installation name and version; the response has the plugin CSP.
+   - The iframe posts `plugin:ready` and the console answers with `fundament:init`.
+   - Data requests go to kube-api-proxy with `Authorization: Bearer`.
+   - Clicking a row posts `plugin:navigate` and the detail view loads.
+3. `kubectl --context k3d-fundament -n fundament logs deploy/kube-api-proxy` shows a `plugin gateway request` per call with its decision.
+4. **Authorization spot-check**: call a resource outside the plugin's `permissions.rbac`. The call should reject with `SdkError('forbidden')`; in the sandbox it succeeds until the TODO under [Kubernetes call path](#kubernetes-call-path) is fixed.
