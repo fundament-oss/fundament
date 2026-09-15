@@ -1,0 +1,57 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 21
+:state: discussion
+
+= FUN-21 Post-quantum posture of the group CA
+
+== Introduction
+
+A review of the cryptography used across Fundament turned up a decade-long RSA-4096 self-signed certificate authority: the OpenFSC federation's "group CA", created in `openfsc-operator/internal/controller/coreresources.go` for every `DirectoryModeSelf` installation. This FUN records what's actually at risk from that CA, why RSA-4096 doesn't help against a quantum attacker, why we didn't just switch it to a post-quantum algorithm, and what we did instead.
+
+== What's actually at risk
+
+Cryptography that could be broken by a quantum computer running Shor's algorithm, such as RSA, ECDH, ECDSA, and EdDSA, is a fundamentally different risk category from cryptography that's merely weakened by Grover's algorithm. Grover only gives a quadratic speedup against symmetric-key primitives and hash functions, roughly halving their effective security level; a 256-bit key still leaves well over 100 bits of quantum-resistant security. Shor, by contrast, completely breaks the discrete-log and factoring problems that RSA and elliptic-curve cryptography rely on, independent of key size.
+
+That means the HS256-HMAC JWT signing used across `authn-api`, `dcim-authn-api`, `common/auth`, and `plugin-sdk`; the SHA-256 API-token hashing in `common/apitoken`; and the HKDF-SHA256 session-key derivation in `dcim-authn-api/pkg/dcimauthn/session.go` are all symmetric or hash-based, and none of them need a post-quantum migration. There's nothing to fix there.
+
+The two places in the repo that use RSA/ECDSA are both `cert-manager`-driven:
+
+* The OpenFSC group CA, RSA-4096, self-signed, 10-year duration, 1-year renewal window. Everything the CA signs (the Manager's group certificate, every gateway's group certificate) inherits RSA for the CA's entire lifetime.
+* The ephemeral PR-preview TLS certificate (`charts/fundament/pr-overlay.yaml`), ECDSA P-256, issued by `letsencrypt-prod`, effectively ~90 days.
+
+The PR-preview certificate is deliberately out of scope here: it protects a non-production preview environment, expires in months, and gets a fresh key on every renewal (`private-key-rotation-policy: Always`). The group CA is the one that matters. It's the longest-lived RSA artifact in the repo, and it's a real production trust root for OpenFSC federation.
+
+One thing worth stating explicitly, because it's a natural but wrong intuition: RSA-4096 instead of RSA-2048 does *not* make this CA more quantum-resistant. Shor's algorithm breaks RSA of any key size once a sufficiently large quantum computer exists; a bigger key only raises the bar for classical brute force. The choice of 4096 reflects classical security margin, not any quantum consideration.
+
+== Why not just switch to ML-DSA
+
+ML-DSA (FIPS 204, standardized by NIST in August 2024) is the natural replacement for RSA/ECDSA signatures, and production-capable implementations already exist (e.g. Bouncy Castle, FIPS 140-3 certified, or Cloudflare's CIRCL library for Go). The obvious question is why we didn't just point the group CA at it. We looked into this concretely rather than assuming, and it's blocked at three levels:
+
+. **cert-manager's `Certificate` CRD doesn't support it.** `privateKey.algorithm` is a kubebuilder-validated enum of exactly `RSA`, `ECDSA`, and `Ed25519` (checked against cert-manager's own source, `pkg/apis/certmanager/v1/types_certificate.go`). Requesting `ML-DSA-65` fails Kubernetes admission before cert-manager's controller even runs.
+. **Bringing our own ML-DSA CA key doesn't route around it.** cert-manager's internal signing code type-switches on the CA private key's Go type (`rsa.PrivateKey` / `ecdsa.PrivateKey` / `ed25519.PrivateKey`) to pick a signature algorithm. An ML-DSA key matches none of those cases, so cert-manager cannot countersign anything with it, root or leaf.
+. **Scoping a hand-rolled ML-DSA CA down to just the root cert doesn't work either.** `openfsc-operator/internal/controller/certs.go`'s `gatewayCertResources()` reuses the same `groupIssuer` ("fsc-group") to sign a certificate for every inway/outway gateway, created and deleted dynamically as gateways come and go, with readiness driven by cert-manager's `Ready` condition (`ensureGatewayCerts`, `deleteGatewayCerts`). A real ML-DSA migration means replacing cert-manager's role for that entire ongoing issuance loop with a custom Go signing controller. That means CSR handling, secret lifecycle, readiness reporting, and renewal, all of which cert-manager currently gives us for free.
+
+That third point is the one that matters: this isn't a config change, it's building and operating a small PKI controller. A bug there risks federation mTLS availability across every installation. That's real, valuable follow-up work, but it deserves its own design discussion and its own FUN, not a rider on a crypto-hygiene pass.
+
+It's also worth noting that a future migration wouldn't just be "point cert-manager at ML-DSA" even if the tooling gap above were solved. The AIVD/CWI/TNO _PQC Migration Handbook_ (2nd edition, December 2024) recommends deploying ML-KEM and ML-DSA in hybrid mode, combined with a well-established elliptic-curve primitive, so that an implementation bug or a future cryptanalytic advance in lattice-based schemes doesn't immediately break the CA. Hybrid mode is exactly the case cert-manager's `PrivateKeyAlgorithm` enum has no room for: it's `RSA`, `ECDSA`, or `Ed25519`, one algorithm, not a combination. So the custom Go controller in the follow-up item below isn't just replacing the algorithm, it needs to support a hybrid CA key from day one.
+
+== What we did instead
+
+Since the algorithm can't move today, we shrank the blast radius of staying on RSA: the group CA's `duration` went from 10 years (`87600h`) to 3 years (`26280h`), with `renewBefore` tightened from 1 year to 90 days (`2160h`) to match. Three years is roughly in line with typical enterprise root-CA rotation practice, and it forces a periodic checkpoint to reassess PQC tooling readiness instead of quietly committing to RSA-4096 through 2036.
+
+This is also a reasonable answer against the handbook's own migration-timing test, Mosca's inequality: a migration is safe if `X + Y < Z`, where `X` is how long an asset must stay secure, `Y` is how long migrating it takes, and `Z` is how long until a cryptographically relevant quantum computer exists. The handbook cites a 2023 expert survey (Mosca and Piani) on the probability of a quantum computer breaking RSA-2048, summarizing it as: a conservative estimate puts that event around 2040, a less conservative one around 2030. Either way, `Z` sits beyond 2029, when the group CA's `renewBefore` window opens next. That's not a claim that 3 years is itself the "correct" quantum-safe duration, RSA of any size stays broken once such a computer exists, but it confirms shortening the lifetime buys real headroom rather than a false sense of progress.
+
+We deliberately didn't go shorter than 3 years in this pass. `DirectoryModeExternal` peers trust this CA via an out-of-band-distributed trust anchor (see `corevalues.go`), and there's currently no automated way to redistribute a rotated root CA to those peers. Shortening the lifetime further would make root rotation disruptive for them until that mechanism exists.
+
+== Follow-up work
+
+* **Trust-anchor rotation automation** for `DirectoryModeExternal` peers, needed before the CA's duration can be shortened further.
+* **A real ML-DSA migration for the group-CA subsystem**, a custom Go controller (candidate library: Cloudflare's CIRCL, which already implements ML-DSA) replacing cert-manager for the group CA's signing, secret lifecycle, and renewal. Per the PQC Migration Handbook, this should deploy ML-DSA in hybrid with ECDSA or EdDSA, at the strongest parameter set (ML-DSA-87, NIST security level 5) where feasible, with ML-DSA-65 (level 3) as the acceptable fallback. Scoped, worth doing, and deserves its own `prediscussion` FUN and design review before implementation starts.
+* **JWT signing consolidation** across the four independent HS256 implementations (`authn-api`, `dcim-authn-api`, `common/auth`, `plugin-sdk`), crypto-agility hygiene, not a PQC fix, since HMAC-SHA256 doesn't need migration.
+
+== References
+
+* AIVD, CWI, TNO. https://publications.tno.nl/publication/34643386/fXcPVHsX/TNO-2024-pqc-en.pdf[_The PQC Migration Handbook: Guidelines for Migrating to Post-Quantum Cryptography_], Revised and Extended Second Edition, December 2024. Source for the hybrid-deployment recommendation, the ML-DSA parameter-set guidance, and the Mosca's-inequality migration-timing framework cited above.
