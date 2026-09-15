@@ -62,7 +62,7 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 	// Try invited user by email
 	if claims.Email != "" {
 		invitedUser, err := s.queries.UserGetByEmail(ctx, db.UserGetByEmailParams{
-			Email: pgtype.Text{String: claims.Email, Valid: true},
+			Email: claims.Email,
 		})
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Error("failed to check for invited user", "error", err)

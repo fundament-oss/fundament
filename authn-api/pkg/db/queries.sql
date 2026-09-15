@@ -27,10 +27,15 @@ FROM tenant.users
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: UserGetByEmail :one
--- Get a user by email who has no external_ref (pending invitation)
+-- Get a user by email who has no external_ref (pending invitation).
+-- The address is matched case-insensitively: the spelling someone was invited
+-- at and the spelling their identity provider reports are the same address, and
+-- missing each other here would sign the invited person in as a stranger and
+-- start a new organization for them.
 SELECT id, name, external_ref, email, created
 FROM tenant.users
-WHERE email = $1 AND external_ref IS NULL AND deleted IS NULL
+WHERE lower(email) = lower(@email::text) AND external_ref IS NULL AND deleted IS NULL
+ORDER BY created
 LIMIT 1;
 
 -- name: UserSetExternalRef :exec

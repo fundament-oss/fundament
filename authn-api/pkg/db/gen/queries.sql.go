@@ -176,12 +176,13 @@ func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCre
 const userGetByEmail = `-- name: UserGetByEmail :one
 SELECT id, name, external_ref, email, created
 FROM tenant.users
-WHERE email = $1 AND external_ref IS NULL AND deleted IS NULL
+WHERE lower(email) = lower($1::text) AND external_ref IS NULL AND deleted IS NULL
+ORDER BY created
 LIMIT 1
 `
 
 type UserGetByEmailParams struct {
-	Email pgtype.Text
+	Email string
 }
 
 type UserGetByEmailRow struct {
@@ -192,7 +193,11 @@ type UserGetByEmailRow struct {
 	Created     pgtype.Timestamptz
 }
 
-// Get a user by email who has no external_ref (pending invitation)
+// Get a user by email who has no external_ref (pending invitation).
+// The address is matched case-insensitively: the spelling someone was invited
+// at and the spelling their identity provider reports are the same address, and
+// missing each other here would sign the invited person in as a stranger and
+// start a new organization for them.
 func (q *Queries) UserGetByEmail(ctx context.Context, arg UserGetByEmailParams) (UserGetByEmailRow, error) {
 	row := q.db.QueryRow(ctx, userGetByEmail, arg.Email)
 	var i UserGetByEmailRow
