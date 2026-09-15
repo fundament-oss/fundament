@@ -4,6 +4,7 @@ import type { default as shikiHighlighter } from './shiki-highlighter.js';
 import { fileURLToPath } from 'node:url';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
+import { umamiScriptAttrs } from './src/analytics';
 import linksValidator from './src/links-validator';
 import sidebarMetaPlugin from './src/sidebar-meta-plugin';
 
@@ -101,6 +102,10 @@ export default defineConfig({
             rel: 'manifest',
             href: '/site.webmanifest',
           },
+        },
+        {
+          tag: 'script',
+          attrs: umamiScriptAttrs,
         },
       ],
       components: {
