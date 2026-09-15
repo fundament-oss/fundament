@@ -229,12 +229,13 @@ function main() {
   if (!watch) return;
 
   let last = fingerprint(source);
+  // A file skaffold writes or deletes mid-scan makes fingerprint or sync throw; the next tick retries.
   setInterval(() => {
-    const current = fingerprint(source);
-    if (current === last) return;
-    last = current;
     try {
+      const current = fingerprint(source);
+      if (current === last) return;
       sync(source);
+      last = current;
     } catch (err) {
       process.stderr.write(`sync failed: ${err.message}\n`);
     }
