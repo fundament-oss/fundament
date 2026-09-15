@@ -3,7 +3,9 @@
  * Sync the repo's `docs/` tree into the Astro content collection and rewrite
  * links that are written for GitHub so they also work on the site.
  *
- * Usage: node scripts/sync-docs.mjs [--source <dir>]
+ * Usage: node scripts/sync-docs.mjs [--source <dir>] [--watch]
+ *
+ * --watch syncs again whenever a file under the source changes.
  *
  * Layout produced (all of it gitignored):
  *
@@ -114,17 +116,20 @@ const CODE_SEGMENTS = {
 
 function parseArgs(argv) {
   let source = resolve(root, '..', 'docs');
+  let watch = false;
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--source') {
       const value = argv[i + 1];
       if (!value) throw new Error('--source requires a directory');
       source = resolve(value);
       i += 1;
+    } else if (argv[i] === '--watch') {
+      watch = true;
     } else {
       throw new Error(`unknown argument: ${argv[i]}`);
     }
   }
-  return { source };
+  return { source, watch };
 }
 
 /** Hidden files are never content: .DS_Store, editor swap files and the like. */
@@ -176,12 +181,25 @@ function rewriteDir(dir, ext) {
   return rewritten;
 }
 
-function main() {
-  const { source } = parseArgs(process.argv.slice(2));
-  if (!statSync(source, { throwIfNoEntry: false })?.isDirectory()) {
-    throw new Error(`source directory not found: ${source}`);
-  }
+/** Path, size and modification time of every file under `dir`; changes when any file does. */
+function fingerprint(dir) {
+  const parts = [];
+  const visit = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+      } else {
+        const { size, mtimeMs } = statSync(path);
+        parts.push(`${path}:${size}:${mtimeMs}`);
+      }
+    }
+  };
+  visit(dir);
+  return parts.join('\n');
+}
 
+function sync(source) {
   for (const [name, dest] of Object.entries(LIFTED)) {
     const from = join(source, name);
     if (!statSync(from, { throwIfNoEntry: false })?.isDirectory()) {
@@ -199,6 +217,29 @@ function main() {
     rewriteDir(join(root, LIFTED.funs), '.adoc');
 
   process.stdout.write(`synced docs from ${source} (${rewritten} files rewritten)\n`);
+}
+
+function main() {
+  const { source, watch } = parseArgs(process.argv.slice(2));
+  if (!statSync(source, { throwIfNoEntry: false })?.isDirectory()) {
+    throw new Error(`source directory not found: ${source}`);
+  }
+
+  sync(source);
+  if (!watch) return;
+
+  let last = fingerprint(source);
+  // A file skaffold writes or deletes mid-scan makes fingerprint or sync throw; the next tick retries.
+  setInterval(() => {
+    try {
+      const current = fingerprint(source);
+      if (current === last) return;
+      sync(source);
+      last = current;
+    } catch (err) {
+      process.stderr.write(`sync failed: ${err.message}\n`);
+    }
+  }, 1000);
 }
 
 main();

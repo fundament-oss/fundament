@@ -26,9 +26,6 @@ charts/fundament/values-gardener-local.yaml
 # Dev dependencies (cloned repos, generated kubeconfigs)
 .dev/
 
-# Sandbox plugin config recorded by recipes like `just openfsc::operator-push`
-plugins/*/.sandbox-config
-
 # Angular's build cache. Each app ignores its own /.angular/cache, but a build
 # run from the repo root writes one here instead, outside every one of those.
 .angular/cache/

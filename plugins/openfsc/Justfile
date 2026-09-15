@@ -1,30 +1,28 @@
 kube_context := env("kube_context", "k3d-fundament-plugin")
 registry_port := "5112"
 
-# `just plugin-install openfsc` turns the recorded ref into
-# PluginInstallation.spec.config (→ FUNP_OPERATOR_IMAGE), so run this first to
-# deploy the locally-built operator instead of the published image.
+# The published operator image is amd64 only; on arm64 it crashes. Set the printed ref as
+# PluginInstallation spec.config OPERATOR_IMAGE before the first install: the plugin
+# deploys the operator only when its release is absent.
 
 # Build and push the openfsc-operator image for the sandbox cluster
 operator-push:
     #!/usr/bin/env bash
     set -euo pipefail
-    tag=$(git describe --always --dirty)
-    image="localhost:{{ registry_port }}/openfsc-operator:${tag}"
-    docker build -t "${image}" -f ../../openfsc-operator/Dockerfile ../..
+    docker build -t openfsc-operator:local -f ../../openfsc-operator/Dockerfile ../..
+    # A new tag per build: the operator Deployment pulls IfNotPresent.
+    image="localhost:{{ registry_port }}/openfsc-operator:$(git describe --always --dirty)-$(docker images -q openfsc-operator:local)"
+    docker tag openfsc-operator:local "${image}"
     docker push "${image}"
-    echo "OPERATOR_IMAGE=${image}" > .sandbox-config
-    echo "wrote .sandbox-config: OPERATOR_IMAGE=${image}"
-
-# Prereqs: `just openfsc::operator-push`, then `just plugin-install openfsc`.
+    echo "OPERATOR_IMAGE: ${image}"
 
 # Verify the OpenFSC install: PluginInstallation Running + sample FSCInstallation Active
 test:
     #!/usr/bin/env bash
     set -euo pipefail
     k="kubectl --context {{ kube_context }}"
-    echo "Waiting for PluginInstallation/openfsc to be Running (first install pulls many images)..."
-    $k wait --for=jsonpath='{.status.phase}'=Running plugininstallation/openfsc --timeout=900s
+    echo "Waiting for PluginInstallation/system--openfsc to be Running (first install pulls many images)..."
+    $k wait --for=jsonpath='{.status.phase}'=Running plugininstallation/system--openfsc --timeout=900s
     echo "Creating the fsc-demo namespace and the sample FSCInstallation..."
     $k create namespace fsc-demo --dry-run=client -o yaml | $k apply -f -
     $k apply -f ../../openfsc-operator/config/samples/openfsc_v1_fscinstallation.yaml
@@ -53,15 +51,14 @@ test:
     $k get fscinstallations -A
     $k -n fsc-demo get pods,deploy
 
-# Remove the sample FSCInstallation and its namespace (the operator's
-# finalizer tears down the releases; cert-manager, CloudNativePG and the
-# operator stay)
+# The operator's finalizer tears down the releases; cert-manager, CloudNativePG and the operator stay.
+# Remove the sample FSCInstallation and its namespace
 test-cleanup:
     kubectl --context {{ kube_context }} delete fscinstallation/demo -n fsc-demo --ignore-not-found
     kubectl --context {{ kube_context }} delete namespace fsc-demo --ignore-not-found
 
-# Preview the BUILT console UI against the running cluster (live CR data via
-# kubectl, no Console host needed); prereq: an FSCInstallation exists
+# Live CR data via kubectl, no Console host needed; needs an FSCInstallation.
+# Preview the built console UI against the sandbox
 console-preview port="4319":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -71,10 +68,10 @@ console-preview port="4319":
     (cd console-ui && bun install && bun run build)
     PORT={{ port }} kube_context={{ kube_context }} bun scripts/console-preview/serve.js
 
-# Develop the console UI with Vite HMR. Runs the console-preview backend (stand-in
-# SDK + /api/* + the shared /plugin-ui bundle) and the Vite dev server, which
-# proxies to it (see console-ui/vite.config.ts). Open the printed Vite URL +
-# /fscinstallations-list.html. prereq: an FSCInstallation exists
+# Runs the console-preview backend (stand-in SDK + /api/* + the shared /plugin-ui bundle) and
+# the Vite dev server, which proxies to it (see console-ui/vite.config.ts). Open the printed
+# Vite URL + /fscinstallations-list.html; needs an FSCInstallation.
+# Develop the console UI with Vite HMR against the sandbox
 console-dev port="4319" vite_port="5173":
     #!/usr/bin/env bash
     set -euo pipefail

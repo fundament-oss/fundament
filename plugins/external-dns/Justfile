@@ -1,6 +1,6 @@
 kube_context := env("kube_context", "k3d-fundament-plugin")
 
-# Apply test DNSEndpoint resource to verify external-dns works
+# Apply a test DNSEndpoint. external-dns writes records only with DNS provider credentials.
 test:
     kubectl --context {{ kube_context }} apply -f test-resources.yaml
     @echo "DNSEndpoint created. Checking status..."

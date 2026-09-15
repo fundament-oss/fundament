@@ -138,7 +138,7 @@ dex:
 pluginController:
   enabled: true
   logLevel: debug
-  # `just plugin-install` sets an empty definitionHash; allow it locally.
+  # Lets plugin-controller skip the definitionHash check. Never enable in production.
   allowUnpinnedHash: true
 
 pluginProxy:

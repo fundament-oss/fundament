@@ -7,7 +7,7 @@ sidebar:
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
 
-To write one, start with the scaffolder rather than a blank directory:
+To write one, start with the scaffolder:
 
 ```shell
 functl plugin create my-plugin
@@ -17,6 +17,8 @@ It generates a buildable project with its manifest, Dockerfile and optionally a
 console UI, and needs no Fundament account. See
 [Writing a plugin](/docs/developer/plugins/writing-a-plugin).
 
+To run one against the local platform, follow [Testing plugins locally](/docs/developer/plugins/testing-plugins-locally).
+
 ## System overview
 
 ```
@@ -25,7 +27,7 @@ console UI, and needs no Fundament account. See
   │                                                                          │
   │  PluginInstallation CRs (cluster-scoped)                                 │
   │  ┌──────────────────────┐                                                │
-  │  │ system--cert-manager │                                                │
+  │  │ <org>--<plugin>      │                                                │
   │  │ acme--another-plugin │                                                │
   │  └──────────┬───────────┘                                                │
   │             │                                                            │
@@ -43,7 +45,7 @@ console UI, and needs no Fundament account. See
   │                                           │ creates                      │
   │               ┌───────────────────────────┼─────────────────────┐        │
   │               ▼                           ▼                     ▼        │
-  │  plugin-system--cert-manager  plugin-acme--another-plugin  plugin-...    │
+  │  plugin-<org>--<plugin>       plugin-acme--another-plugin  plugin-...    │
   │  ┌───────────────────────┐  ┌───────────────────────┐                    │
   │  │ SA + RoleBinding      │  │ SA + RoleBinding      │                    │
   │  │ Deployment + Service  │  │ Deployment + Service  │                    │
@@ -69,7 +71,6 @@ The runtime provides all the boilerplate so plugin authors only implement busine
 
 ```go
 type Plugin interface {
-    Definition() PluginDefinition   // Static metadata (from definition.yaml)
     Start(ctx context.Context, host Host) error  // Main logic, block until ctx cancelled
     Shutdown(ctx context.Context) error          // Graceful cleanup
 }
@@ -110,7 +111,7 @@ When a plugin binary calls `pluginruntime.Run(plugin)`, the SDK:
         ├─ Start HTTP server on :8080
         │   ├─ GET /livez ───────── Liveness probe (always 200)
         │   ├─ GET /readyz ───────── Readiness probe (200 after ReportReady())
-        │   ├─ ConnectRPC ─────────── PluginMetadataService (status + definition)
+        │   ├─ ConnectRPC ─────────── PluginMetadataService
         │   └─ GET /console/ ──────── Static UI assets (if ConsoleProvider)
         │
         ├─ Call plugin.Start(ctx, host)
@@ -185,7 +186,7 @@ return pluginerrors.NewPermanent(fmt.Errorf("invalid configuration: %w", err))
 
 ### SDK helpers
 
-The SDK provides optional helpers that plugins can use. Plugins are free to choose their own installation and management approach — these helpers are conveniences, not requirements.
+The SDK provides optional helpers that plugins can use. Plugins choose their own installation and management approach; the helpers are conveniences.
 
 | Helper | Purpose |
 |--------|---------|
@@ -194,6 +195,24 @@ The SDK provides optional helpers that plugins can use. Plugins are free to choo
 | `helpers/controllerruntime` | Scaffold a controller-runtime manager |
 | `console` | Convert embedded FS to `http.FileSystem` for console assets |
 | `auth` | JWT validation middleware for Connect RPC interceptors |
+
+### Metadata API
+
+Every plugin exposes a ConnectRPC service that the controller consumes:
+
+```protobuf
+service PluginMetadataService {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc RequestUninstall(RequestUninstallRequest) returns (RequestUninstallResponse);
+}
+```
+
+| Consumer          | Method             | Purpose                                                    |
+| ----------------- | ------------------ | ---------------------------------------------------------- |
+| Plugin Controller | `GetStatus`        | Poll phase, message, version → write to CR `.status`        |
+| Plugin            | `RequestUninstall` | Ask the platform to tear the plugin down                    |
+
+Plugin definitions are served to the console by organization-api.
 
 ## Plugin Controller
 
@@ -205,20 +224,19 @@ The controller watches `PluginInstallation` CRs.
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: system--cert-manager
+  name: <organizationName>--<pluginName>
 spec:
   definitionRef:
-    organizationName: system
-    pluginName: cert-manager
-    pluginVersion: v1.17.2
-    definitionHash: sha256:...
-  config:                # Optional: extra env vars (injected with FUNP_ prefix)
-    LOG_LEVEL: debug     # → becomes FUNP_LOG_LEVEL in the container
+    organizationName: <organizationName>
+    pluginName: <pluginName>
+    pluginVersion: "<version>"
+    definitionHash: "<hash printed by publish>"   # includes the sha256: prefix
+  config:                      # Optional: extra env vars (injected with FUNP_ prefix)
+    LOG_LEVEL: debug           # → becomes FUNP_LOG_LEVEL in the container
 ```
 
-A plugin's identity is the pair `(organizationName, pluginName)`, and
-`metadata.name` must equal `<organizationName>--<pluginName>` — see
-[FUN-17](/funs/fun-17#plugin-identity-and-naming) for why.
+- `metadata.name` must equal `<organizationName>--<pluginName>`; the controller sets any other name to Failed ([FUN-17](/funs/fun-17#plugin-identity-and-naming)).
+- The controller fetches the definition from marketplace-catalog-api, checks it against `definitionHash` and runs the image named in it.
 
 ### What the controller creates
 
@@ -236,9 +254,7 @@ For each `PluginInstallation`, the controller creates:
      bound to the plugin ServiceAccount via a ClusterRoleBinding
 ```
 
-Every namespace-scoped child is named `plugin` — not `plugin-<installationName>`
-— because the namespace already disambiguates installations; see
-[FUN-17](/funs/fun-17#plugin-identity-and-naming).
+Every namespace-scoped child is named `plugin`; the namespace disambiguates installations ([FUN-17](/funs/fun-17#plugin-identity-and-naming)).
 
 ### RBAC model
 

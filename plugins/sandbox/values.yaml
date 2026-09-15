@@ -34,7 +34,7 @@ ingress:
 pluginController:
   enabled: true
   logLevel: debug
-  # `just plugin-install` sets an empty definitionHash; allow it in the sandbox.
+  # Lets plugin-controller skip the definitionHash check. Never enable in production.
   allowUnpinnedHash: true
   # The sandbox cluster is network-isolated from marketplace-catalog-api (which
   # lives in the management cluster). `just plugins sandbox-catalog` bridges the

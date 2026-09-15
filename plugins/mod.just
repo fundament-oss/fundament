@@ -1,4 +1,5 @@
 mod cert-manager
+mod external-dns
 mod openfsc
 mod envoy-gateway 'gateway-api/envoy-gateway'
 mod ceph-rook 'storage/ceph-rook'
@@ -12,8 +13,9 @@ export kube_context := "k3d-" + cluster
 # Off by default: they expose the host's devices.
 storage_volumes := "--volume /dev:/dev@server:0 --volume /run/udev:/run/udev:ro@server:0"
 
+# Recipes run in plugins/, which has no justfile: a bare `just <recipe>` resolves the root Justfile.
 _default:
-    @just --list
+    @just --list plugins
 
 # --- Cluster commands ---
 
@@ -25,24 +27,25 @@ cluster-create:
 cluster-create-storage:
     k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
 
-# Start the cluster (creates if it doesn't exist), clearing any leftover cordon.
 # uncordon is a no-op unless storage disks were ever attached.
+# Start the cluster (creates if it doesn't exist), clearing any leftover cordon
 cluster-start:
-    @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
+    @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just plugins cluster-create
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
 
-# Stop the cluster, evicting Ceph consumers first. drain fails on purpose while a
-# volume is still mapped, because stopping then wedges the Docker host — so do not
-# add a `-` prefix here.
+# drain fails on purpose while a volume is still mapped, because stopping then wedges
+# the Docker host — so do not add a `-` prefix here.
+# Stop the cluster, evicting Ceph consumers first
 cluster-stop:
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}
 
-# Delete the local K3D cluster and registry
+# Delete the local K3D cluster, its registry and the sandbox-catalog relay
 cluster-delete:
     -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
+    @docker rm -f fun-catalog-relay > /dev/null 2>&1 || true
 
 # Loop-backed block devices for a storage plugin; run without arguments for usage
 storage-disks *args:
@@ -68,9 +71,6 @@ undeploy:
 
 # To install a plugin, publish its definition with `publish` (below), then
 # reference the published pluginVersion/definitionHash from a PluginInstallation.
-# The old `plugin-install` recipe is gone: it set spec.image (the CRD now sources
-# the image from the published definition, not the CR) and pinned a git-describe
-# pluginVersion that no stored definition is keyed under.
 
 # Delete a PluginInstallation CR (installation = metadata.name, e.g. system--cert-manager)
 uninstall installation:
@@ -91,11 +91,9 @@ status:
     kubectl --context {{ kube_context }} get plugininstallations
 
 
-# Wire the sandbox plugin-controller (k3d-fundament-plugin) to marketplace-catalog-api in
-# the management cluster (k3d-fundament) so it can fetch PluginDefinitions (FUN-19).
-# Local dev only: the two k3d clusters are network-isolated. We expose the catalog
-# as a NodePort in the management cluster and run a small relay container on the
-# management cluster's docker network that publishes a host port; the sandbox
+# Local dev only: the two k3d clusters are network-isolated (FUN-19). We expose the
+# catalog as a NodePort in the management cluster and run a small relay container on
+# the management cluster's docker network that publishes a host port; the sandbox
 # controller reaches it via host.k3d.internal (pluginController.catalogApiUrl
 # in plugins/sandbox/values.yaml is http://host.k3d.internal:38080).
 #
@@ -103,6 +101,7 @@ status:
 # multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
 # which stops plugins pulling their images. Only the relay container is bridged.
 # Re-run this after recreating either cluster (the node IP is resolved fresh).
+# Wire the sandbox plugin-controller to marketplace-catalog-api in k3d-fundament
 sandbox-catalog:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -140,16 +139,16 @@ sandbox-catalog:
     echo "- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
     echo "  (matches pluginController.catalogApiUrl in plugins/sandbox/values.yaml)"
 
-# Build+push a plugin image, then publish its definition (with the pushed
-# digest) to marketplace-registry-api via `functl plugin publish` (FUN-20).
-# Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:
+# Publishes the pushed digest to marketplace-registry-api via `functl plugin publish`
+# (FUN-20). Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:
 # `functl auth login` once, `functl org set <org-id>` for the publishing
 # organization. The registry endpoint comes from functl's config
 # (registry_url / FUNCTL_REGISTRY_URL; mise sets it for this repo).
 # Extra flags pass through, e.g.:
-#   just publish gateway-api/envoy-gateway --create --submit
+#   just plugins publish gateway-api/envoy-gateway --create --submit
 # (--create reserves a missing listing; --submit opens the review round.
 # Versions are create-only — republishing means bumping metadata.version.)
+# Build and push a plugin image, then publish its definition
 publish name *flags:
     #!/usr/bin/env bash
     set -euo pipefail

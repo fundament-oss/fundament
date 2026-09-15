@@ -7,48 +7,27 @@ sidebar:
 
 ## Prerequisites
 
-- [Mise](https://mise.jdx.dev)
-- [Just](https://just.systems)
-- [Docker](https://www.docker.com)
-- `certutil` (part of NSS tools). Required for `mkcert` to install the CA into system trust stores
+- [Mise](https://mise.jdx.dev): installs the pinned `just`, `k3d`, `kubectl`, `helm`, `skaffold`, `mkcert`, `go` and `bun` from `mise.toml`
+- [Docker](https://www.docker.com) with at least 16 GiB of memory; 24 GiB recommended when you also run the plugin sandbox
+- `certutil` (NSS tools), which `mkcert` needs to install the local CA:
 
-### Installing certutil
+| OS | Install |
+|---|---|
+| macOS | `brew install nss` |
+| Debian/Ubuntu | `apt install libnss3-tools` |
+| Fedora/RHEL | `dnf install nss-tools` |
+| Arch | `pacman -S nss` |
 
-**macOS:**
+### macOS
 
-```shell
-brew install nss
-```
-
-**Debian/Ubuntu:**
-
-```shell
-apt install libnss3-tools
-```
-
-**Fedora/RHEL:**
-
-```shell
-dnf install nss-tools
-```
-
-**Arch:**
-
-```shell
-pacman -S nss
-```
-
-## MacOS
-
-On macOS, the default shared memory limits are too low for PostgreSQL.
-For embedded-postgres, create/edit `/etc/sysctl.conf`:
+The default shared memory limits are too low for PostgreSQL. For embedded-postgres, create/edit `/etc/sysctl.conf`:
 
 ```
 kern.sysv.shmall=65536
 kern.sysv.shmmax=16777216
 ```
 
-## Windows
+### Windows
 
 Use PowerShell 7 (`winget install Microsoft.PowerShell`); `mise activate` depends on a hook it does not have on Windows PowerShell 5.1, where it silently fails to populate `PATH`.
 Check your powershell version with `$PSVersionTable.PSVersion`.
@@ -67,7 +46,7 @@ Use Edge or Chrome for the console: `mkcert` cannot install its CA into Firefox 
 
 If `just dev` leaves pods in `ImagePullBackOff`, run `just dev --default-repo=localhost:5111`; Skaffold's k3d registry auto-detection can override the `SKAFFOLD_DEFAULT_REPO` the recipe sets.
 
-## Installation
+## Install the tools
 
 ```shell
 mise trust
@@ -76,20 +55,49 @@ mise install
 
 Run `mise install` without arguments; naming a tool, as in `mise install go`, rewrites that tool's pinned version in `mise.toml` to `latest`.
 
-## Run cluster
+## Run the platform
 
 ```shell
 just cluster-start
-just dev
+just dev-hotreload
 ```
 
-## Console frontend
+- `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and switches the kubectl context to it.
+- `dev-hotreload` builds and deploys every service, then stays attached.
+  - Edits to existing files are synced into the running containers.
+  - Adding, moving or deleting a file rebuilds the image and redeploys.
+- Every deploy resets the databases to the test data.
+- `Ctrl-C` stops watching; the deployment keeps running.
 
-The Console frontend should now be available at https://console.fundament.localhost:8443/. See
-[`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md)
-for linting, formatting and the other frontend commands.
+To check the production images (the Dockerfiles CI builds), run `just dev` once and stop it with `Ctrl-C`: it rebuilds and redeploys on every file change.
 
-## Storage
+## Open the console
 
-Working on the `ceph-rook` plugin needs raw block devices, which a k3d node does not have.
-See [Block devices for k3d](./k3d-block-devices.md).
+<https://console.fundament.localhost:8443>
+
+| User | Password | Organization |
+|---|---|---|
+| `alice@acme-corp.com` | `password` | `acme-corp`, with cluster `acme-cluster` |
+| `platform-admin@fundament.io` | `password` | `system`, which owns the first-party plugins |
+
+See [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md) for the frontend commands.
+
+## Edit the docs
+
+Under `just dev-hotreload`, <https://docs.fundament.localhost:8443> shows edits to existing pages in `docs/` within seconds. Without the cluster:
+
+```shell
+just docs-dev     # dev server on http://localhost:4321
+just docs-build   # production build, fails on broken links
+```
+
+## Remove
+
+```shell
+just cluster-delete
+```
+
+## Next
+
+- [Plugins](/docs/developer/plugins): write a plugin, run it locally
+- [Block devices for k3d](./k3d-block-devices.md): storage plugin work
