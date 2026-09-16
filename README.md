@@ -30,3 +30,5 @@ The contents of this repository are copyrighted by *The Fundament Authors*
 
 - **Source code** is licensed under the [GNU Affero General Public License (AGPL)](https://www.gnu.org/licenses/agpl-3.0.html), unless otherwise stated.
 - **Documentation** (including Markdown, D2 and similar files) is licensed under [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/).
+
+THIS SHOULD NOT BE MERGED
