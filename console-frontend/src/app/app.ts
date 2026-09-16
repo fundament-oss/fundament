@@ -751,6 +751,16 @@ export default class App implements OnInit {
     );
   });
 
+  /** The sidebar's projects section, also with no projects yet so its "New
+   *  project" button is there for the first one. Not before the projects have
+   *  loaded, or it flashes empty, and not without a cluster to put one on. */
+  showProjectsSection = computed(
+    () =>
+      this.organizationProjects().length > 0 ||
+      (this.organizationDataService.projectsLoaded() &&
+        this.organizationDataService.clusterSummaries().length > 0),
+  );
+
   /** The project whose menu fills the secondary sidebar. */
   activeProject = computed(() => {
     const id = this.activeProjectId();

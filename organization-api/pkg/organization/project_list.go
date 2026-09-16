@@ -19,7 +19,10 @@ func (s *Server) ListProjects(
 ) (*organizationv1.ListProjectsResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
+	// With retry: the console lists projects right after creating a cluster or
+	// a project, before the cluster's authz tuple may have synced (see
+	// checkPermissionWithRetry).
+	if err := s.checkPermissionWithRetry(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
 

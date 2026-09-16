@@ -219,36 +219,50 @@ export class OrganizationDataService {
 
     this.loading.set(true);
     try {
-      const clustersData: ClusterData[] = await Promise.all(
-        orgData.clusters.map(async (cluster) => {
-          const projectsResponse = await firstValueFrom(
+      // Settled per cluster: one cluster the user cannot list yet (its authz
+      // tuple may still be syncing right after it was created) must not hide
+      // the projects of all the others. That cluster keeps what it had.
+      const results = await Promise.allSettled(
+        orgData.clusters.map((cluster) =>
+          firstValueFrom(
             this.projectClient.listProjects(
               create(ListProjectsRequestSchema, { clusterId: cluster.id }),
             ),
-          );
-
-          return {
-            id: cluster.id,
-            name: cluster.name,
-            projects: projectsResponse.projects.map((project) => ({
-              id: project.id,
-              name: project.name,
-              alias: project.alias,
-              namespaceCount: project.namespaceCount,
-              memberCount: project.memberCount,
-            })),
-          };
-        }),
+          ),
+        ),
       );
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        // eslint-disable-next-line no-console
+        console.error(
+          'Error loading project data:',
+          failures.map((failure) => failure.reason),
+        );
+        if (failures.length === results.length) throw failures[0].reason;
+      }
+
+      const clustersData: ClusterData[] = orgData.clusters.map((cluster, i) => {
+        const result = results[i];
+        if (result.status === 'rejected') return cluster;
+
+        return {
+          id: cluster.id,
+          name: cluster.name,
+          projects: result.value.projects.map((project) => ({
+            id: project.id,
+            name: project.name,
+            alias: project.alias,
+            namespaceCount: project.namespaceCount,
+            memberCount: project.memberCount,
+          })),
+        };
+      });
 
       this.organizations.update((orgs) =>
         orgs.map((org) => (org.id === orgData.id ? { ...org, clusters: clustersData } : org)),
       );
       return true;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error loading project data:', error);
-      throw error;
     } finally {
       this.loading.set(false);
     }
