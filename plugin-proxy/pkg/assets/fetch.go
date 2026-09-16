@@ -2,7 +2,7 @@ package assets
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -143,7 +143,16 @@ func (f *PodFetcher) installedVersion(ctx context.Context, transport http.RoundT
 			} `json:"definitionRef"`
 		} `json:"spec"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxCRSize)).Decode(&cr); err != nil {
+	// Read one byte past the cap so a body that is exactly at the limit can be
+	// told apart from one that continues beyond it.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxCRSize+1))
+	if err != nil {
+		return "", fmt.Errorf("read PluginInstallation: %w", err)
+	}
+	if len(body) > maxCRSize {
+		return "", fmt.Errorf("get PluginInstallation: body exceeds %d bytes", maxCRSize)
+	}
+	if err := json.Unmarshal(body, &cr); err != nil {
 		return "", fmt.Errorf("decode PluginInstallation: %w", err)
 	}
 

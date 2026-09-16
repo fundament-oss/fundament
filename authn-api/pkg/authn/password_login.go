@@ -1,16 +1,21 @@
 package authn
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"net/http"
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 )
 
+// maxLoginBodyBytes caps a login request body. The decoder reads the body to
+// EOF to reject trailing data, and the endpoint is unauthenticated, so an
+// unbounded body would let any client keep a handler busy for free.
+const maxLoginBodyBytes = 64 << 10
+
 // HandlePasswordLogin handles direct password-based authentication.
 func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 	var req authnhttp.PasswordLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(http.MaxBytesReader(w, r.Body, maxLoginBodyBytes), &req); err != nil {
 		s.writeErrorJSON(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
