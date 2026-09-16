@@ -28,9 +28,7 @@ import type { ProjectMember } from '../../generated/v1/project_pb';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
-import '@nldd/design-system/badge';
 import '@nldd/design-system/button';
-import '@nldd/design-system/cell';
 import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';

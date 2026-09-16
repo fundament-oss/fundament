@@ -117,13 +117,13 @@
             <!-- The namespace is real, the people in it are mock role bindings:
                  the field label takes no markup, so the badge goes here. -->
             <nldd-form-field-help-text>
+              Only project members can be added to a project namespace.&ngsp;
               <nldd-badge
-                color="warning"
+                color="hemelblauw"
                 size="sm"
                 text="Mock"
                 accessible-label="Mock data, members are not saved yet"
-              ></nldd-badge
-              >&ngsp; Only project members can be added to a project namespace.
+              ></nldd-badge>
               @if (coveredMemberCount() > 0) {
                 {{
                   coveredMemberCount() === 1
@@ -168,7 +168,7 @@
                  people at once and they all get this same set. -->
             <nldd-form-field-help-text>
               <nldd-badge
-                color="warning"
+                color="hemelblauw"
                 size="sm"
                 text="Mock"
                 accessible-label="Mock data, roles are not saved yet"
