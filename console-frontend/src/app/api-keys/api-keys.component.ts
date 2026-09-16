@@ -163,11 +163,27 @@ export default class ApiKeysComponent implements OnInit {
     // The sheet stays mounted for the whole session, through a logout and the
     // next login. A token created by one user must not greet the next, and
     // neither may their list of keys, so a change of either drops it all.
+    //
+    // Only once both halves are known, though. Opening /<org>/api-keys directly
+    // builds the sheet before the organization has been resolved, so the first
+    // owner would read as "no organization" and the id arriving would look like
+    // a change — emptying the list the sheet had just fetched.
     effect(() => {
-      const owner = `${this.currentUser()?.id ?? ''}/${this.organizationContext.currentOrganizationId() ?? ''}`;
+      const userId = this.currentUser()?.id;
+      const organizationId = this.organizationContext.currentOrganizationId();
+      if (!userId || !organizationId) return;
+
+      const owner = `${userId}/${organizationId}`;
       untracked(() => {
-        if (this.owner !== undefined && this.owner !== owner) this.resetState();
+        if (this.owner === undefined || this.owner === owner) {
+          this.owner = owner;
+          return;
+        }
         this.owner = owner;
+        this.resetState();
+        // Reopening refetches, but a sheet that is open right now stays open and
+        // would go on showing the empty state it was just left with.
+        if (this.isOpen) this.loadApiKeys();
       });
     });
   }

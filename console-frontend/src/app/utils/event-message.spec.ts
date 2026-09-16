@@ -58,4 +58,28 @@ describe('formatEventMessage', () => {
   it('keeps JSON without a message or code as it is', () => {
     expect(formatEventMessage('labels {"env":"prod"}')).toBe('labels {"env":"prod"}');
   });
+
+  it('ignores a code that is not a status code', () => {
+    expect(formatEventMessage('rpc failed: {"code":7,"message":"forbidden"}')).toBe(
+      'rpc failed: forbidden',
+    );
+  });
+
+  it('takes a status code given as a string', () => {
+    expect(formatEventMessage('{"status":"503","message":"unavailable"}')).toBe(
+      'unavailable (status 503)',
+    );
+  });
+
+  it('leaves a payload that merely has a reason alone', () => {
+    expect(formatEventMessage('Successfully reconciled {"reason":"created","name":"x"}')).toBe(
+      'Successfully reconciled {"reason":"created","name":"x"}',
+    );
+  });
+
+  it('reads the reason of a Kubernetes Status, which carries a code', () => {
+    expect(formatEventMessage('{"kind":"Status","reason":"NotFound","code":404}')).toBe(
+      'NotFound (status 404)',
+    );
+  });
 });

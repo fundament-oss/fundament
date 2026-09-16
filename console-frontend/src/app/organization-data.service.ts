@@ -211,8 +211,11 @@ export class OrganizationDataService {
     return this.loadProjectsAndNamespaces();
   }
 
-  /** Resolves false when the organization itself is not in yet: there was
-   *  nothing to load, so the projects must not count as loaded. */
+  /** Resolves false when there is nothing to count as loaded: the organization
+   *  itself is not in yet, or a cluster's list failed. A cluster that failed
+   *  keeps whatever it had and must be asked again, so a partial result must
+   *  not latch `projectsLoaded` — a project on that cluster would stay
+   *  unresolvable for the rest of the session. */
   private async doLoadProjects(): Promise<boolean> {
     const orgData = this.organizations()[0];
     if (!orgData) return false;
@@ -262,7 +265,7 @@ export class OrganizationDataService {
       this.organizations.update((orgs) =>
         orgs.map((org) => (org.id === orgData.id ? { ...org, clusters: clustersData } : org)),
       );
-      return true;
+      return failures.length === 0;
     } finally {
       this.loading.set(false);
     }

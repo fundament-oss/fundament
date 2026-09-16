@@ -19,10 +19,14 @@ func (s *Server) ListProjects(
 ) (*organizationv1.ListProjectsResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
-	// With retry: the console lists projects right after creating a cluster or
-	// a project, before the cluster's authz tuple may have synced (see
-	// checkPermissionWithRetry).
-	if err := s.checkPermissionWithRetry(ctx, authz.CanListProjects(), authz.Cluster(clusterID)); err != nil {
+	// With a short retry: the console lists projects right after creating a
+	// cluster or a project, before the cluster's authz tuple may have synced
+	// (see checkPermissionWithRetry). Short because this is a read on every page
+	// load, once per cluster, and a denial that is not sync lag would otherwise
+	// keep the whole sidebar waiting; the console lists again on the next visit.
+	if err := s.checkPermissionWithBudget(
+		ctx, authz.CanListProjects(), authz.Cluster(clusterID), authzRetryReadBudget,
+	); err != nil {
 		return nil, err
 	}
 

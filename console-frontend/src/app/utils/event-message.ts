@@ -11,8 +11,18 @@ const MESSAGE_KEYS = [
   'title',
 ];
 
+/** The ones only an error body may be read through. Kubernetes' Status says
+ *  `reason`, cloud errors say `description` or `title` — but so does any
+ *  ordinary payload that happens to be in the message, and collapsing that to a
+ *  single one of its fields would throw the rest of it away. A status code is
+ *  what tells the two apart, so these count only once one has been found. */
+const ERROR_ONLY_MESSAGE_KEYS = new Set(['description', 'reason', 'title']);
+
+const messageKeysFor = (hasCode: boolean): string[] =>
+  hasCode ? MESSAGE_KEYS : MESSAGE_KEYS.filter((key) => !ERROR_ONLY_MESSAGE_KEYS.has(key));
+
 /** Keys that hold a status code. `status` comes last: Kubernetes uses it for
- *  "Failure", so only a numeric value counts. */
+ *  "Failure", so only a value that reads as a status code counts. */
 const CODE_KEYS = ['statuscode', 'status_code', 'httpstatus', 'code', 'status'];
 
 /** Nested error bodies are rare past two levels; the cap only stops a
@@ -67,24 +77,38 @@ const lookup = (body: JsonRecord, keys: string[]): unknown[] => {
 const firstFound = <T>(values: unknown[], pick: (value: unknown) => T | undefined): T | undefined =>
   values.reduce<T | undefined>((found, value) => found ?? pick(value), undefined);
 
+/** A status code is three digits. Anything else under `code` belongs to some
+ *  other numbering — a gRPC code, an error catalogue — and reads as nonsense
+ *  next to the word "status". */
+const asStatusCode = (value: unknown): string | undefined => {
+  const code = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
+  if (typeof code === 'number' && Number.isInteger(code) && code >= 100 && code <= 599) {
+    return String(code);
+  }
+  return undefined;
+};
+
 const findCode = (body: JsonRecord): string | undefined =>
-  firstFound(lookup(body, CODE_KEYS), (value) => {
-    if (typeof value === 'number' || (typeof value === 'string' && /^\d{3}$/.test(value))) {
-      return String(value);
-    }
-    return isRecord(value) ? findCode(value) : undefined;
-  }) ??
+  firstFound(
+    lookup(body, CODE_KEYS),
+    (value) => asStatusCode(value) ?? (isRecord(value) ? findCode(value) : undefined),
+  ) ??
   // `{"error":{"code":403,...}}` keeps the code next to the message it wraps.
   firstFound(lookup(body, MESSAGE_KEYS), (value) =>
     isRecord(value) ? findCode(value) : undefined,
   );
 
-const findMessage = (body: JsonRecord, depth: number, format: Format): string | undefined => {
-  const direct = firstFound(lookup(body, MESSAGE_KEYS), (value) => {
+const findMessage = (
+  body: JsonRecord,
+  keys: string[],
+  depth: number,
+  format: Format,
+): string | undefined => {
+  const direct = firstFound(lookup(body, keys), (value) => {
     if (typeof value === 'string' && value.trim()) {
       return format(value, depth + 1);
     }
-    return isRecord(value) ? findMessage(value, depth, format) : undefined;
+    return isRecord(value) ? findMessage(value, keys, depth, format) : undefined;
   });
   if (direct) {
     return direct;
@@ -99,7 +123,7 @@ const findMessage = (body: JsonRecord, depth: number, format: Format): string | 
       if (typeof item === 'string') {
         return item;
       }
-      return isRecord(item) ? findMessage(item, depth, format) : undefined;
+      return isRecord(item) ? findMessage(item, keys, depth, format) : undefined;
     })
     .filter((message): message is string => !!message);
   return messages.length > 0 ? messages.join('; ') : undefined;
@@ -136,8 +160,10 @@ const formatEventMessage = (raw: string, depth = 0): string => {
     return text;
   }
 
-  const message = findMessage(body, depth, formatEventMessage);
+  // The code comes first: it is what says this is an error body at all, and so
+  // which keys may be read as its message.
   const code = findCode(body);
+  const message = findMessage(body, messageKeysFor(!!code), depth, formatEventMessage);
   if (!message && !code) {
     return text;
   }
