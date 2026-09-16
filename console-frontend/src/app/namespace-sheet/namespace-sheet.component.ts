@@ -157,6 +157,24 @@ export default class NamespaceSheetComponent implements OnInit {
 
   private allMembers = signal<ProjectMember[]>([]);
 
+  /** Adding, with nobody left to add. The step says so instead of offering a
+   *  form that has no one to save the roles against. */
+  noCandidates = computed(() => !this.editingMemberId() && this.candidates().length === 0);
+
+  /** A project without members is a different story from one where they all have
+   *  access already, and only the second one is about this namespace. */
+  noCandidatesText = computed(() =>
+    this.allMembers().length === 0
+      ? 'This project has no members yet'
+      : 'Everyone in this project already has access',
+  );
+
+  noCandidatesSupportingText = computed(() =>
+    this.allMembers().length === 0
+      ? 'Add someone to the project first to give them a role here.'
+      : 'Change what someone may do here from the member list, or add someone to the project first.',
+  );
+
   editingMember = computed(() =>
     this.members().find((entry) => entry.member.id === this.editingMemberId()),
   );

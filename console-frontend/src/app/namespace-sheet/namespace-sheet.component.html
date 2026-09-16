@@ -46,20 +46,38 @@
           </h1>
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
-        <nldd-form
-          (submit)="saveRoles()"
-          (keydown.enter)="saveRoles($event)"
-        >
-          @if (!editingMemberId()) {
-            <nldd-form-field label="Members">
-              @if (candidates().length === 0) {
-                <nldd-inline-dialog
-                  icon="users"
-                  icon-color="secondary"
-                  text="Everyone in this project already has access"
-                  supporting-text="Add someone to the project first to give them a role here."
-                ></nldd-inline-dialog>
-              } @else {
+        @if (noCandidates()) {
+          <!-- Nobody left to add, so there is no form to show: roles with no one
+               to give them to cannot be saved, and a button that does nothing
+               explains nothing. The way on is the project's member list. -->
+          <nldd-inline-dialog
+            icon="users"
+            icon-color="secondary"
+            [attr.text]="noCandidatesText()"
+            [attr.supporting-text]="noCandidatesSupportingText()"
+          >
+            <nldd-button
+              slot="actions"
+              [attr.href]="pageNav.path('/projects/' + projectId() + '/members')"
+              (click)="pageNav.navigate($event, '/projects/' + projectId() + '/members')"
+              text="Project members"
+              variant="primary"
+            ></nldd-button>
+            <nldd-button
+              slot="actions"
+              type="button"
+              (click)="step.set('overview')"
+              text="Back to namespace"
+              variant="secondary"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        } @else {
+          <nldd-form
+            (submit)="saveRoles()"
+            (keydown.enter)="saveRoles($event)"
+          >
+            @if (!editingMemberId()) {
+              <nldd-form-field label="Members">
                 <!-- Several at once, because the same roles usually go to more
                      than one person. With one candidate left it is filled in
                      already. -->
@@ -86,53 +104,53 @@
                     }
                   </nldd-validation-item>
                 </nldd-validation-list>
-              }
-            </nldd-form-field>
-          }
-          <nldd-form-field label="Roles">
-            <nldd-list
-              variant="box-tinted"
-              accessible-label="Roles"
-            >
-              @for (role of allRoles; track role) {
-                <nldd-list-item
-                  checkbox
-                  [attr.checked]="draftRoles().includes(role) ? '' : null"
-                  (click)="toggleDraftRole(role)"
-                >
-                  <nldd-cell width="fit-content">
-                    <nldd-checkbox
-                      decorative
-                      [attr.checked]="draftRoles().includes(role) ? '' : null"
-                    ></nldd-checkbox>
-                  </nldd-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell
-                    width="full"
-                    [attr.text]="role"
-                  ></nldd-text-cell>
-                </nldd-list-item>
-              }
-            </nldd-list>
-            <!-- Says who the roles land on: the field above takes several
+              </nldd-form-field>
+            }
+            <nldd-form-field label="Roles">
+              <nldd-list
+                variant="box-tinted"
+                accessible-label="Roles"
+              >
+                @for (role of allRoles; track role) {
+                  <nldd-list-item
+                    checkbox
+                    [attr.checked]="draftRoles().includes(role) ? '' : null"
+                    (click)="toggleDraftRole(role)"
+                  >
+                    <nldd-cell width="fit-content">
+                      <nldd-checkbox
+                        decorative
+                        [attr.checked]="draftRoles().includes(role) ? '' : null"
+                      ></nldd-checkbox>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-text-cell
+                      width="full"
+                      [attr.text]="role"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+              <!-- Says who the roles land on: the field above takes several
                  people at once and they all get this same set. -->
-            <nldd-form-field-help-text>
-              Everyone you add gets these roles, and without one they can see the namespace but do
-              nothing in it. You can change them per person later under Members.
-            </nldd-form-field-help-text>
-          </nldd-form-field>
-          <nldd-form-actions>
-            <!-- Never disabled: a disabled button says nothing about what is
+              <nldd-form-field-help-text>
+                Everyone you add gets these roles, and without one they can see the namespace but do
+                nothing in it. You can change them per person later under Members.
+              </nldd-form-field-help-text>
+            </nldd-form-field>
+            <nldd-form-actions>
+              <!-- Never disabled: a disabled button says nothing about what is
                  missing. Pressing it points at the field instead. -->
-            <nldd-button
-              type="button"
-              (click)="saveRoles()"
-              [attr.text]="editingMemberId() ? 'Save roles' : 'Add access'"
-              variant="primary"
-              width="full"
-            ></nldd-button>
-          </nldd-form-actions>
-        </nldd-form>
+              <nldd-button
+                type="button"
+                (click)="saveRoles()"
+                [attr.text]="editingMemberId() ? 'Save roles' : 'Add access'"
+                variant="primary"
+                width="full"
+              ></nldd-button>
+            </nldd-form-actions>
+          </nldd-form>
+        }
       } @else if (isLoading()) {
         <nldd-activity-indicator
           show-text
