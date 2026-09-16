@@ -304,7 +304,17 @@
         }
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-title size="4">
-          <h2>Namespaces</h2>
+          <!-- Roles have no API yet (see utils/mock-role-bindings.ts): say so,
+               so nobody mistakes a grant here for a real one. -->
+          <h2>
+            Namespaces&ngsp;
+            <nldd-badge
+              color="warning"
+              size="sm"
+              text="Mock"
+              accessible-label="Mock data, role bindings are not saved yet"
+            ></nldd-badge>
+          </h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
         <nldd-toolbar label="Namespace access">

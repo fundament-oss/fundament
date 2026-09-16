@@ -24,6 +24,7 @@ import '@nldd/design-system/token-field';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/badge';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';

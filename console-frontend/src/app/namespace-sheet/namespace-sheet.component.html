@@ -35,7 +35,14 @@
               editingMember()
                 ? 'Roles for ' + editingMember()!.member.userName
                 : 'Add member access'
-            }}
+            }}&ngsp;
+            <!-- Roles have no API yet (see utils/mock-role-bindings.ts). -->
+            <nldd-badge
+              color="warning"
+              size="sm"
+              text="Mock"
+              accessible-label="Mock data, roles are not saved yet"
+            ></nldd-badge>
           </h1>
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
@@ -180,7 +187,16 @@
         </nldd-list>
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-title size="4">
-          <h2>Members</h2>
+          <!-- Who works here comes from the mock role bindings, not the API. -->
+          <h2>
+            Members&ngsp;
+            <nldd-badge
+              color="warning"
+              size="sm"
+              text="Mock"
+              accessible-label="Mock data, roles are not saved yet"
+            ></nldd-badge>
+          </h2>
         </nldd-title>
         <nldd-spacer size="12"></nldd-spacer>
         <nldd-toolbar label="Member access">

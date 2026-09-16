@@ -28,6 +28,7 @@ import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import '@nldd/design-system/token-field';
 
+import '@nldd/design-system/badge';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
