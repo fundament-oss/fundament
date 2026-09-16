@@ -29,7 +29,7 @@ require (
 	github.com/openfga/api/proto v0.0.0-20260319214821-f153694bfc20
 	github.com/openfga/go-sdk v0.7.5
 	github.com/openfga/language/pkg/go v0.2.1
-	github.com/openfga/openfga v1.18.0
+	github.com/openfga/openfga v1.18.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/svrana/go-connect-middleware v0.0.0-20240215015008-5a7d29fe9fed
