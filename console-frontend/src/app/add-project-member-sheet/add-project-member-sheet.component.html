@@ -111,22 +111,24 @@
           </nldd-form-field>
           <!-- Optional, and here rather than only in the member sheet: giving
                someone a place to work is part of putting them in the project. -->
-          <!-- A heading of its own instead of the field label: the label takes
-               plain text only, and the badge belongs next to it. Without a label
-               the supporting label would sit above the heading, so what it and
-               the optional tag said moved to the help text. -->
+          <!-- The header is our own (see .form-field-header in styles.css): the
+               field label takes plain text only, and the badge belongs next to it. -->
           <nldd-form-field>
-            <nldd-title size="6">
-              <h2>
-                Namespace access&ngsp;
+            <div class="form-field-header">
+              <span class="form-field-header__label">
+                Namespace access
                 <nldd-badge
                   color="hemelblauw"
                   size="sm"
                   text="Mock"
                   accessible-label="Mock data, namespace access is not saved yet"
                 ></nldd-badge>
-              </h2>
-            </nldd-title>
+                <span class="form-field-header__optional">Optional</span>
+              </span>
+              <span class="form-field-header__supporting-label"
+                >You can also arrange this later.</span
+              >
+            </div>
             <nldd-list
               variant="box-tinted"
               accessible-label="Namespaces"
@@ -192,8 +194,7 @@
             <!-- Access is a mock role binding; only a new namespace is created
                  for real. -->
             <nldd-form-field-help-text>
-              Optional, you can also arrange this later. Access is not saved yet, but a new
-              namespace is created.
+              Access is not saved yet, but a new namespace is created.
             </nldd-form-field-help-text>
           </nldd-form-field>
           @if (draftNamespaces().includes(NEW_NAMESPACE)) {

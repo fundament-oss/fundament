@@ -131,21 +131,21 @@
              empty role list next to an empty member field reads as a step you
              skipped rather than one that does not apply yet. -->
         @if (draftMemberIds().length > 0) {
-          <!-- A heading of its own instead of the field label: the label takes
-               plain text only, and the badge belongs next to it. The list
-               below carries the accessible name. -->
+          <!-- The header is our own (see .form-field-header in styles.css): the
+               field label takes plain text only, and the badge belongs next to
+               it. The list below carries the accessible name. -->
           <nldd-form-field>
-            <nldd-title size="6">
-              <h2>
-                Roles&ngsp;
+            <div class="form-field-header">
+              <span class="form-field-header__label">
+                Roles
                 <nldd-badge
                   color="hemelblauw"
                   size="sm"
                   text="Mock"
                   accessible-label="Mock data, roles are not saved yet"
                 ></nldd-badge>
-              </h2>
-            </nldd-title>
+              </span>
+            </div>
             <nldd-list
               variant="box-tinted"
               accessible-label="Roles"
