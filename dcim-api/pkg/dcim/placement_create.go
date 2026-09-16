@@ -50,8 +50,7 @@ func (s *Server) CreatePlacement(
 
 	id, err := s.queries.PlacementCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintDcimPlacementsFkAsset:
 				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("asset not found"))

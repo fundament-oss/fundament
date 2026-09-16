@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"sort"
 	"strings"
@@ -110,9 +111,7 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 	if dst == nil {
 		dst = make(map[string]string, len(src))
 	}
-	for k, v := range src {
-		dst[k] = v
-	}
+	maps.Copy(dst, src)
 	return dst
 }
 

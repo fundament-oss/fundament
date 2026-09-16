@@ -445,3 +445,24 @@ jobs:
         working-directory: docs-frontend
         run: bun run build
 
+
+  go-fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go mod download
+
+      # Fails when a go fix modernizer still has something to rewrite; run
+      # `just fix` locally to apply it. omitzero and embedlit are opted out on
+      # purpose: the first changes JSON behaviour, the second collapses
+      # `ObjectMeta: metav1.ObjectMeta{...}` into promoted-field keys, which
+      # we keep explicit.
+      - name: Check go fix modernizers
+        run: go fix -diff -omitzero=false -embedlit=false ./...

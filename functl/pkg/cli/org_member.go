@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/fundament-oss/fundament/functl/pkg/client"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -186,7 +185,7 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 // findOrgMember resolves an org member from a user ID.
 func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Member, error) {
 	resp, err := apiClient.Members().GetMember(context.Background(), organizationv1.GetMemberRequest_builder{
-		UserId: proto.String(userID),
+		UserId: new(userID),
 	}.Build())
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {

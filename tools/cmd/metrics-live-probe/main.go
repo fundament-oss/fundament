@@ -139,13 +139,13 @@ func main() {
 	startT := time.Now()
 	errs := 0
 	done := make(chan error, 21)
-	for i := 0; i < 21; i++ {
+	for range 21 {
 		go func() {
 			_, err := client.Query(ctx, `sum(kube_node_status_capacity{resource="cpu"})`, now)
 			done <- err
 		}()
 	}
-	for i := 0; i < 21; i++ {
+	for range 21 {
 		if err := <-done; err != nil {
 			errs++
 		}

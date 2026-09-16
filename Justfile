@@ -247,6 +247,10 @@ generate:
 lint:
     golangci-lint run --new-from-rev $(git rev-parse origin/master) ./...
 
+# Apply the go fix modernizers; CI runs the same command with -diff
+fix:
+    go fix -omitzero=false -embedlit=false ./...
+
 # Run funops against the local development instance/database
 funops *args:
     #!/usr/bin/env bash

@@ -79,7 +79,7 @@ func TestClaimOwnerIgnoresDeletingPools(t *testing.T) {
 	early := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	deleting := poolAt("old", early, "disk-1")
-	deleting.DeletionTimestamp = ptr(metav1.NewTime(early.Add(time.Minute)))
+	deleting.DeletionTimestamp = new(metav1.NewTime(early.Add(time.Minute)))
 	deleting.Finalizers = []string{"test/keep-visible"}
 
 	live := poolAt("new", early.Add(time.Hour), "disk-1")
@@ -135,5 +135,3 @@ func TestOwnedByPool(t *testing.T) {
 		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &no,
 	}}, &pool))
 }
-
-func ptr[T any](v T) *T { return &v }

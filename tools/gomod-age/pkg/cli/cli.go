@@ -55,7 +55,7 @@ func (c *CLI) Run(ctx context.Context, env *Env) int {
 
 	// Append CLI ignore patterns to config
 	if c.Ignore != "" {
-		for _, p := range strings.Split(c.Ignore, ",") {
+		for p := range strings.SplitSeq(c.Ignore, ",") {
 			if trimmed := strings.TrimSpace(p); trimmed != "" {
 				cfg.Ignore = append(cfg.Ignore, trimmed)
 			}
@@ -64,7 +64,7 @@ func (c *CLI) Run(ctx context.Context, env *Env) int {
 
 	// Auto-add GOPRIVATE to ignore list
 	if goprivate := os.Getenv("GOPRIVATE"); goprivate != "" {
-		for _, p := range strings.Split(goprivate, ",") {
+		for p := range strings.SplitSeq(goprivate, ",") {
 			if trimmed := strings.TrimSpace(p); trimmed != "" {
 				cfg.Ignore = append(cfg.Ignore, trimmed)
 			}

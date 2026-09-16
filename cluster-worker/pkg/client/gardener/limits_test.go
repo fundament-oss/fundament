@@ -132,7 +132,7 @@ func TestValidateNodeLimits(t *testing.T) {
 		{
 			name:   "no pools counts as one default worker",
 			pools:  nil,
-			limits: NodeLimits{MaxNodePoolsPerCluster: ptr.To[int32](1), MaxNodesPerCluster: ptr.To(defaultWorkerMaximum)},
+			limits: NodeLimits{MaxNodePoolsPerCluster: new(int32(1)), MaxNodesPerCluster: new(defaultWorkerMaximum)},
 		},
 		{
 			name:    "no pools default worker over the cluster cap fails",

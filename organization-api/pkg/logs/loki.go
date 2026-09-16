@@ -223,7 +223,7 @@ func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent
 				}
 				failures = 0
 				// Emit oldest-first so the UI appends in chronological order.
-				for i := len(entries) - 1; i >= 0; i-- {
+				for i := range slices.Backward(entries) {
 					e := entries[i]
 					if !e.Timestamp.After(last) {
 						continue

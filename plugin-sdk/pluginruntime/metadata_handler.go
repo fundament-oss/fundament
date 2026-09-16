@@ -9,8 +9,6 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 // metadataHandler implements the PluginMetadataService Connect RPC service
 // using pluginruntime types directly (no intermediate conversion types).
 type metadataHandler struct {
@@ -31,8 +29,8 @@ func NewMetadataHandler(statusFn func() PluginStatus, uninstallFn func(context.C
 func (h *metadataHandler) GetStatus(_ context.Context, _ *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
 	status := h.getStatus()
 	return &pb.GetStatusResponse{
-		Phase:   ptr(string(status.Phase)),
-		Message: ptr(status.Message),
+		Phase:   new(string(status.Phase)),
+		Message: new(status.Message),
 	}, nil
 }
 

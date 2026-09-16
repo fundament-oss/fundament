@@ -242,7 +242,7 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 
 	// Try creating organization with name, retry with suffix on conflict
 	var organization db.OrganizationCreateRow
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := range 10 {
 		candidateName := orgName
 		if attempt > 0 {
 			suffix := fmt.Sprintf("-%d", attempt+1)
