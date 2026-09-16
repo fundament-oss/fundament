@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -676,6 +677,20 @@ func (r *RealClient) buildNetworking() *gardencorev1beta1.Networking {
 	return n
 }
 
+// defaultMachineDrainTimeout is how long Gardener drains a node before the
+// machine is deleted forcefully. Gardener's own default is 2h, which stalls
+// rolling updates and scale-downs on a pod that refuses to evict; 15m bounds
+// that wait while still giving graceful workloads room to move.
+const defaultMachineDrainTimeout = 15 * time.Minute
+
+// machineControllerManagerSettings returns the per-worker machine-controller-manager
+// settings. A fresh value is returned per call so no two workers share a pointer.
+func machineControllerManagerSettings() *gardencorev1beta1.MachineControllerManagerSettings {
+	return &gardencorev1beta1.MachineControllerManagerSettings{
+		MachineDrainTimeout: &metav1.Duration{Duration: defaultMachineDrainTimeout},
+	}
+}
+
 // buildWorkers converts node pools to Gardener worker groups and enforces the
 // organization node caps: per-pool maxima are clamped in place and the
 // aggregate caps fail the build. Every path that constructs workers goes
@@ -711,6 +726,8 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.W
 				Maximum:        defaultWorkerMaximum,
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
+
+				MachineControllerManagerSettings: machineControllerManagerSettings(),
 			},
 		}
 		clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
@@ -749,6 +766,8 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.W
 			Maximum:        np.AutoscaleMax,
 			MaxSurge:       &maxSurge,
 			MaxUnavailable: &maxUnavailable,
+
+			MachineControllerManagerSettings: machineControllerManagerSettings(),
 		}
 		if np.Zone != "" {
 			workers[i].Zones = []string{np.Zone}
