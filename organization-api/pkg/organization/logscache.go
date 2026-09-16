@@ -113,7 +113,7 @@ type perShootLogsClient struct {
 func (p *perShootLogsClient) Backend() logs.Backend { return logs.BackendLoki }
 
 func (p *perShootLogsClient) Query(ctx context.Context, params *logs.QueryParams) ([]logs.Entry, error) {
-	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) ([]logs.Entry, error) {
+	return p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStaleResolution, func(inner logs.Client) ([]logs.Entry, error) {
 		return inner.Query(ctx, params)
 	})
 }
@@ -125,7 +125,7 @@ func (p *perShootLogsClient) Query(ctx context.Context, params *logs.QueryParams
 // re-resolved, and a fresh inner tail spliced onto the same output channel, so
 // credential rotation heals mid-stream instead of ending the tail.
 func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams) (<-chan logs.TailEvent, error) {
-	inner, err := callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) (<-chan logs.TailEvent, error) {
+	inner, err := p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStaleResolution, func(inner logs.Client) (<-chan logs.TailEvent, error) {
 		return inner.Tail(ctx, params)
 	})
 	if err != nil {
@@ -189,13 +189,13 @@ func (*perShootLogsClient) forward(ctx context.Context, out chan<- logs.TailEven
 }
 
 func (p *perShootLogsClient) Histogram(ctx context.Context, params *logs.HistogramParams) (logs.Histogram, error) {
-	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) (logs.Histogram, error) {
+	return p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStaleResolution, func(inner logs.Client) (logs.Histogram, error) {
 		return inner.Histogram(ctx, params)
 	})
 }
 
 func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (logs.Labels, error) {
-	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStaleResolution, func(inner logs.Client) (logs.Labels, error) {
+	return p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStaleResolution, func(inner logs.Client) (logs.Labels, error) {
 		return inner.Labels(ctx, clusterID, namespace, start, end)
 	})
 }
