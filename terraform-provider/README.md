@@ -5,7 +5,7 @@ This OpenTofu provider allows you to interact with the Fundament organization AP
 ## Requirements
 
 - [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.11
-- [Go](https://golang.org/doc/install) >= 1.26 (for building from source)
+- [Go](https://golang.org/doc/install) >= 1.27 (for building from source)
 - A running Fundament instance
 
 ## Installation

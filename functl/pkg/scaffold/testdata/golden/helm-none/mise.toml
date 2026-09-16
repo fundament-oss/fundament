@@ -1,5 +1,5 @@
 # Tool versions for this plugin, managed with mise (https://mise.jdx.dev).
 # `mise install` gets every tool below at the pinned version.
 [tools]
-go = "1.26.6"
+go = "1.27.1"
 just = "1.42.4"
