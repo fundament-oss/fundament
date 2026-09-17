@@ -70,3 +70,9 @@ jobs:
           name: digest-${{ inputs.image-name }}
           path: digest/
           retention-days: 1
+
+      # A plugin definition is published against this digest (functl plugin publish --image).
+      - name: Report the reference
+        if: steps.build.outputs.digest != ''
+        run: |
+          echo '`${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}@${{ steps.build.outputs.digest }}`' >> "$GITHUB_STEP_SUMMARY"
