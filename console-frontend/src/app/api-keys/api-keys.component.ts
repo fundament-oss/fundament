@@ -10,7 +10,10 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  effect,
+  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +30,8 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
+import AuthnApiService from '../authn-api.service';
+import OrganizationContextService from '../organization-context.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -146,6 +151,53 @@ export default class ApiKeysComponent implements OnInit {
   createdToken = signal<string | null>(null);
 
   createdTokenPrefix = signal<string | null>(null);
+
+  private currentUser = toSignal(inject(AuthnApiService).currentUser$);
+
+  private organizationContext = inject(OrganizationContextService);
+
+  /** Whose keys this sheet holds: the user and the organization they were for. */
+  private owner: string | undefined;
+
+  constructor() {
+    // The sheet stays mounted for the whole session, through a logout and the
+    // next login. A token created by one user must not greet the next, and
+    // neither may their list of keys, so a change of either drops it all.
+    //
+    // Only once both halves are known, though. Opening /<org>/api-keys directly
+    // builds the sheet before the organization has been resolved, so the first
+    // owner would read as "no organization" and the id arriving would look like
+    // a change — emptying the list the sheet had just fetched.
+    effect(() => {
+      const userId = this.currentUser()?.id;
+      const organizationId = this.organizationContext.currentOrganizationId();
+      if (!userId || !organizationId) return;
+
+      const owner = `${userId}/${organizationId}`;
+      untracked(() => {
+        if (this.owner === undefined || this.owner === owner) {
+          this.owner = owner;
+          return;
+        }
+        this.owner = owner;
+        this.resetState();
+        // Reopening refetches, but a sheet that is open right now stays open and
+        // would go on showing the empty state it was just left with.
+        if (this.isOpen) this.loadApiKeys();
+      });
+    });
+  }
+
+  private resetState() {
+    this.dismissToken();
+    this.cancelCreating();
+    this.apiKeys.set([]);
+    this.error.set(null);
+    this.showRevokeModal.set(false);
+    this.showDeleteModal.set(false);
+    this.pendingKeyId.set(null);
+    this.pendingKeyName.set(null);
+  }
 
   async ngOnInit() {
     await this.loadApiKeys();

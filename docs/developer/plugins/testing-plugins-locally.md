@@ -138,7 +138,7 @@ NAME                     PLUGIN     ORGANIZATION   PHASE     READY
 <organization>--<name>   <name>     <organization> Running   true
 ```
 
-In the console, log in as a member of an organization with a cluster (`alice@acme-corp.com`) and open the project **from the sidebar**: the plugin's section appears under its display name. Opening a project URL directly shows no plugin sections.
+In the console, log in as a member of an organization with a cluster (`alice@acme-corp.com`) and open the project: the plugin's section appears under its display name.
 
 ## First-party plugins
 
@@ -204,7 +204,7 @@ just plugins cert-manager test
 - `publish` prints `published plugin=cert-manager version=1.17.2 hash=sha256:…`; the listing exists, so no `--create`.
 - `status` shows `system--cert-manager   cert-manager   system   Running   true`; `test` ends with `test-cert   True   test-cert-tls`.
 - `just plugins logs system--cert-manager` streams the plugin log: `cert-manager is running`.
-- In the console as `alice@acme-corp.com`: **acme-project** (from the sidebar) → **Cert Manager** → **Certificates** lists `test-cert` in `fundament`, Ready.
+- In the console as `alice@acme-corp.com`: **acme-project** → **Cert Manager** → **Certificates** lists `test-cert` in `fundament`, Ready.
 
 Remove:
 

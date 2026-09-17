@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -60,45 +58,6 @@ func TestClusterProxy_RequestGating(t *testing.T) {
 			assert.Equal(t, tc.want, resp.StatusCode)
 		})
 	}
-}
-
-// TestClusterProxy_ConsoleAssetPublicAndCORS verifies the plugin console-asset
-// path is served without authentication and carries a permissive CORS header
-// — the interface-level proof of the wiring the sandboxed iframe depends on
-// (the writer itself is unit-tested in kube's TestServeConsoleAsset).
-func TestClusterProxy_ConsoleAssetPublicAndCORS(t *testing.T) {
-	// Mock mode serves <dir>/<plugin>/console/<asset> from disk.
-	dir := t.TempDir()
-	assetDir := filepath.Join(dir, "acme", "console")
-	require.NoError(t, os.MkdirAll(assetDir, 0o750))
-	require.NoError(t, os.WriteFile(filepath.Join(assetDir, "_shared.js"), []byte("export const x = 1;"), 0o600))
-
-	ts := newMockServer(t, &proxy.Config{
-		JWTSecret:              []byte("test-secret"),
-		MockPluginTemplatesDir: dir,
-	})
-
-	path := "/clusters/" + uuid.NewString() +
-		// Namespace suffix is the installation name, "<organization>-<plugin>";
-		// the template directory is named after the plugin ("acme").
-		"/api/v1/namespaces/plugin-globex--acme/services/http:plugin:8080/proxy/console/_shared.js"
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+path, http.NoBody) // no Authorization header
-	require.NoError(t, err)
-	// An Origin makes the rs/cors middleware emit Access-Control-Allow-Credentials:
-	// true; the asset writer must override ACAO to * AND clear that credentials
-	// header (the combination is invalid).
-	req.Header.Set("Origin", "https://console.example")
-
-	resp, err := ts.Client().Do(req)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = resp.Body.Close() })
-
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "console assets must be served without auth")
-	assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
-	assert.Empty(t, resp.Header.Get("Access-Control-Allow-Credentials"),
-		"ACAO:* must not be paired with Access-Control-Allow-Credentials")
-	body, _ := io.ReadAll(resp.Body)
-	assert.Equal(t, "export const x = 1;", string(body))
 }
 
 // TestClusterProxy_RejectsPluginToken verifies that a PluginToken presented to

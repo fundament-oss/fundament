@@ -31,6 +31,7 @@ import {
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import '@nldd/design-system/combo-box';
 
+import '@nldd/design-system/badge';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/checkbox';

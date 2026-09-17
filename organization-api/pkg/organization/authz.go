@@ -14,6 +14,12 @@ const (
 	authzRetryInitialBackoff = 100 * time.Millisecond
 	authzRetryMaxBackoff     = 2 * time.Second
 	authzRetryBudget         = 8 * time.Second
+
+	// Reads are fired on every page load, one per cluster, and the console
+	// shows nothing until they all come back. A denial that is not sync lag
+	// must not hold that up, so a read waits a fraction of what a create does
+	// and leaves the rest to the caller asking again.
+	authzRetryReadBudget = 1 * time.Second
 )
 
 // checkPermission performs an OpenFGA authorization check for the current user.
@@ -57,7 +63,18 @@ func (s *Server) checkPermission(ctx context.Context, action authz.Action, resou
 // return immediately, and a genuinely unauthorized user fails once the budget is
 // exhausted.
 func (s *Server) checkPermissionWithRetry(ctx context.Context, action authz.Action, resource authz.Object) error {
-	deadline := time.Now().Add(authzRetryBudget)
+	return s.checkPermissionWithBudget(ctx, action, resource, authzRetryBudget)
+}
+
+// checkPermissionWithBudget is checkPermissionWithRetry with the time it may
+// spend waiting for the tuple to show up spelled out by the caller.
+func (s *Server) checkPermissionWithBudget(
+	ctx context.Context,
+	action authz.Action,
+	resource authz.Object,
+	budget time.Duration,
+) error {
+	deadline := time.Now().Add(budget)
 	backoff := authzRetryInitialBackoff
 
 	for {

@@ -55,6 +55,7 @@ import {
   formatTime as formatTimeUtil,
 } from '../utils/date-format';
 import { formatUsageValue, getUsagePercentage } from '../utils/usage';
+import formatEventMessage from '../utils/event-message';
 import '@nldd/design-system/multi-line-text-field';
 
 import '@nldd/design-system/activity-indicator';
@@ -189,7 +190,7 @@ const getEventTypeColor = (eventType: string): string =>
 
 const getEventDetails = (event: ClusterEvent): string => {
   if (event.message) {
-    return event.message;
+    return formatEventMessage(event.message);
   }
   if (event.syncAction) {
     return `Action: ${event.syncAction}`;
@@ -839,6 +840,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   pluginIconName = getPluginIconName;
 
   getEventDetails = getEventDetails;
+
+  formatEventMessage = formatEventMessage;
 
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 

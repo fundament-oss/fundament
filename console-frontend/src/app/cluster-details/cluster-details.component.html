@@ -194,7 +194,7 @@
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
-                    [attr.text]="clusterData.syncState.shootMessage"
+                    [attr.text]="formatEventMessage(clusterData.syncState.shootMessage)"
                   ></nldd-text-cell>
                 </nldd-list-item>
               }
@@ -206,7 +206,7 @@
                     color="critical"
                     width="fit-content"
                     horizontal-alignment="right"
-                    [attr.text]="clusterData.syncState.outboxError"
+                    [attr.text]="formatEventMessage(clusterData.syncState.outboxError)"
                   ></nldd-text-cell>
                 </nldd-list-item>
               }

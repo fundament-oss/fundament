@@ -187,3 +187,31 @@ html.presenting-full {
 nldd-text-cell:not([min-width]) {
   min-width: min-content;
 }
+
+/* A form-field header of our own, for when the label needs more than text (a
+   badge beside it): nldd-form-field's `label` is a plain string rendered in its
+   shadow tree. Leave `label` off the field and put this first in its slot; the
+   rules copy the field's own header, label, optional and supporting-label
+   styles, and the margin stands in for the gap between header and main. */
+.form-field-header {
+  display: flex;
+  flex-direction: column;
+  margin-block-end: var(--primitives-space-4);
+}
+
+.form-field-header__label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--primitives-space-4);
+  align-items: baseline;
+  color: var(--semantics-content-color);
+  font: var(--primitives-font-body-md-regular-flat);
+  text-wrap: pretty;
+}
+
+.form-field-header__optional,
+.form-field-header__supporting-label {
+  color: var(--semantics-content-secondary-color);
+  font: var(--primitives-font-body-xs-regular-tight);
+  text-wrap: pretty;
+}
