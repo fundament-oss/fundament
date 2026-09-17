@@ -3,8 +3,10 @@ package gardener
 import (
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -111,4 +113,42 @@ func TestBuildShootSpec_LegacyClusterUsesProviderDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "metal", shoot.Spec.CloudProfile.Name)
 	require.Equal(t, "local", shoot.Spec.Region)
+}
+
+// Every worker group carries the 15m machine drain timeout, on both the
+// default-worker path and the node-pool path, and no two pools share the
+// settings pointer.
+func TestBuildWorkers_MachineDrainTimeout(t *testing.T) {
+	r := testClient(NewProviderConfig())
+
+	t.Run("default worker", func(t *testing.T) {
+		workers, err := r.buildWorkers(testCluster())
+		require.NoError(t, err)
+		require.Len(t, workers, 1)
+
+		mcm := workers[0].MachineControllerManagerSettings
+		require.NotNil(t, mcm)
+		require.NotNil(t, mcm.MachineDrainTimeout)
+		assert.Equal(t, 15*time.Minute, mcm.MachineDrainTimeout.Duration)
+	})
+
+	t.Run("node pools", func(t *testing.T) {
+		cluster := testCluster()
+		cluster.NodePools = []NodePool{
+			{Name: "pool-a", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 2},
+			{Name: "pool-b", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 2},
+		}
+
+		workers, err := r.buildWorkers(cluster)
+		require.NoError(t, err)
+		require.Len(t, workers, 2)
+
+		for _, w := range workers {
+			mcm := w.MachineControllerManagerSettings
+			require.NotNil(t, mcm, "worker %s", w.Name)
+			require.NotNil(t, mcm.MachineDrainTimeout, "worker %s", w.Name)
+			assert.Equal(t, 15*time.Minute, mcm.MachineDrainTimeout.Duration, "worker %s", w.Name)
+		}
+		assert.NotSame(t, workers[0].MachineControllerManagerSettings, workers[1].MachineControllerManagerSettings)
+	})
 }
