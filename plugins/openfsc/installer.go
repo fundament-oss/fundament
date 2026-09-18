@@ -103,11 +103,11 @@ func (i *installer) installOperator(ctx context.Context) error {
 // splitImageRef splits an image reference on the last colon after the last
 // slash, so registry ports (localhost:5112/...) stay in the repository.
 func splitImageRef(ref string) (repository, tag string) {
-	idx := strings.LastIndex(ref, ":")
-	if idx == -1 || strings.Contains(ref[idx:], "/") {
+	repository, tag, found := strings.CutLast(ref, ":")
+	if !found || strings.Contains(tag, "/") {
 		return ref, ""
 	}
-	return ref[:idx], ref[idx+1:]
+	return repository, tag
 }
 
 // uninstall removes the openfsc-operator release, but refuses while

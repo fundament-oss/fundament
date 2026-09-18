@@ -90,13 +90,13 @@ type perShootClient struct {
 }
 
 func (p *perShootClient) Query(ctx context.Context, query string, t time.Time) ([]prom.Sample, error) {
-	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStalePromResolution, func(inner prom.Client) ([]prom.Sample, error) {
+	return p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStalePromResolution, func(inner prom.Client) ([]prom.Sample, error) {
 		return inner.Query(ctx, query, t)
 	})
 }
 
 func (p *perShootClient) QueryRange(ctx context.Context, query string, start, end time.Time, step time.Duration) ([]prom.TimeSeries, error) {
-	return callWithReResolveOnce(ctx, p.cache.cache, p.clusterID, isStalePromResolution, func(inner prom.Client) ([]prom.TimeSeries, error) {
+	return p.cache.cache.callWithReResolveOnce(ctx, p.clusterID, isStalePromResolution, func(inner prom.Client) ([]prom.TimeSeries, error) {
 		return inner.QueryRange(ctx, query, start, end, step)
 	})
 }

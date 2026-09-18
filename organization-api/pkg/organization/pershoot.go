@@ -176,9 +176,8 @@ func (c *perShootCache[T]) tryInvalidate(clusterID uuid.UUID) bool {
 // callWithReResolveOnce runs call against the cached client; when isStale(err)
 // it invalidates, re-resolves, and retries once. The original error is
 // returned if the retry is rate-limited or re-resolution fails.
-func callWithReResolveOnce[T, R any](
+func (c *perShootCache[T]) callWithReResolveOnce[R any](
 	ctx context.Context,
-	c *perShootCache[T],
 	clusterID uuid.UUID,
 	isStale func(error) bool,
 	call func(T) (R, error),
