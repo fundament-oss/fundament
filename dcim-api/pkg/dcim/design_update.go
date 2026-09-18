@@ -41,8 +41,7 @@ func (s *Server) UpdateDesign(
 
 	rowsAffected, err := s.queries.LogicalDesignUpdate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintLogicalDesignsUqName:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("design with this name already exists"))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -565,9 +566,7 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 	}
 	// Operator-supplied annotations (e.g. metal's cluster.metal-stack.io/tenant,
 	// required by the provider-metal admission validator).
-	for k, v := range r.provider.ShootAnnotations {
-		annotations[k] = v
-	}
+	maps.Copy(annotations, r.provider.ShootAnnotations)
 	if r.provider.Type == "local" {
 		annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "15"
 		annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "15"

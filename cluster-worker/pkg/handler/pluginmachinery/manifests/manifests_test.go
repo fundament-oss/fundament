@@ -34,7 +34,7 @@ func TestClusterRoleRulesMatchChart(t *testing.T) {
 	require.NoError(t, err)
 
 	var clusterRoleDoc string
-	for _, doc := range strings.Split(string(content), "\n---") {
+	for doc := range strings.SplitSeq(string(content), "\n---") {
 		if strings.Contains(doc, "kind: ClusterRole\n") {
 			clusterRoleDoc = doc
 			break

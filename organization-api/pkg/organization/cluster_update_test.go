@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func Test_Cluster_Update_Unauthenticated(t *testing.T) {
@@ -21,7 +20,7 @@ func Test_Cluster_Update_Unauthenticated(t *testing.T) {
 
 	_, err := client.UpdateCluster(context.Background(), organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         uuid.New().String(),
-		KubernetesVersion: proto.String("1.29"),
+		KubernetesVersion: new("1.29"),
 	}.Build())
 
 	var connectErr *connect.Error
@@ -63,7 +62,7 @@ func Test_Cluster_Update(t *testing.T) {
 
 	updateReq := organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         clusterID,
-		KubernetesVersion: proto.String("1.29"),
+		KubernetesVersion: new("1.29"),
 	}.Build()
 	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
 	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
@@ -104,7 +103,7 @@ func Test_Cluster_Update_NotFound(t *testing.T) {
 
 	req := organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         uuid.New().String(),
-		KubernetesVersion: proto.String("1.29"),
+		KubernetesVersion: new("1.29"),
 	}.Build()
 	ctx, callInfo := connect.NewClientContext(context.Background())
 	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)

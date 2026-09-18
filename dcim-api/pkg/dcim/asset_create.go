@@ -56,8 +56,7 @@ func (s *Server) CreateAsset(
 
 	id, err := s.queries.AssetCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintDcimAssetsFkDeviceCatalog:
 				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("device catalog entry not found"))

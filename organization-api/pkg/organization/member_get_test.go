@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func Test_Member_Get_Unauthenticated(t *testing.T) {
@@ -21,7 +20,7 @@ func Test_Member_Get_Unauthenticated(t *testing.T) {
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
 	_, err := client.GetMember(context.Background(), organizationv1.GetMemberRequest_builder{
-		Id: proto.String(uuid.New().String()),
+		Id: new(uuid.New().String()),
 	}.Build())
 
 	var connectErr *connect.Error
@@ -79,26 +78,26 @@ func Test_Member_Get(t *testing.T) {
 	}{
 		"by_id_not_found": {
 			Request: organizationv1.GetMemberRequest_builder{
-				Id: proto.String(uuid.New().String()),
+				Id: new(uuid.New().String()),
 			}.Build(),
 			WantCode: connect.CodeNotFound,
 			WantErr:  true,
 		},
 		"by_user_id_not_found": {
 			Request: organizationv1.GetMemberRequest_builder{
-				UserId: proto.String(uuid.New().String()),
+				UserId: new(uuid.New().String()),
 			}.Build(),
 			WantCode: connect.CodeNotFound,
 			WantErr:  true,
 		},
 		"by_id_happy_flow": {
 			Request: organizationv1.GetMemberRequest_builder{
-				Id: proto.String(targetMemberID),
+				Id: new(targetMemberID),
 			}.Build(),
 		},
 		"by_user_id_happy_flow": {
 			Request: organizationv1.GetMemberRequest_builder{
-				UserId: proto.String(targetUserID.String()),
+				UserId: new(targetUserID.String()),
 			}.Build(),
 		},
 	}

@@ -206,7 +206,7 @@ func TestPluginGateway_AuditsOnErrorPaths(t *testing.T) {
 	}
 	decisionOf := func(t *testing.T, buf *bytes.Buffer) string {
 		t.Helper()
-		for _, raw := range bytes.Split(bytes.TrimSpace(buf.Bytes()), []byte("\n")) {
+		for raw := range bytes.SplitSeq(bytes.TrimSpace(buf.Bytes()), []byte("\n")) {
 			var line map[string]any
 			if err := json.Unmarshal(raw, &line); err != nil {
 				continue

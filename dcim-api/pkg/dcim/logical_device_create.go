@@ -40,8 +40,7 @@ func (s *Server) CreateDevice(
 
 	id, err := s.queries.LogicalDeviceCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintLogicalDevicesUqDesignLabel:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("device with this label already exists in this design"))

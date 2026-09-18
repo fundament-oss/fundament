@@ -138,10 +138,7 @@ type mockNode struct {
 func mockClusterNodes(cl ClusterInfo) []mockNode {
 	var result []mockNode
 	for _, pool := range cl.NodePools {
-		count := int(pool.AutoscaleMin+pool.AutoscaleMax) / 2
-		if count < 1 {
-			count = 1
-		}
+		count := max(int(pool.AutoscaleMin+pool.AutoscaleMax)/2, 1)
 		for i := range count {
 			result = append(result, mockNode{
 				clusterName: cl.Name,
@@ -514,7 +511,7 @@ func mockHasGroupBy(q, label string) bool {
 	if m == nil {
 		return false
 	}
-	for _, f := range strings.Split(m[1], ",") {
+	for f := range strings.SplitSeq(m[1], ",") {
 		if strings.TrimSpace(f) == label {
 			return true
 		}

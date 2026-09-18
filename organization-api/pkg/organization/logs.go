@@ -491,8 +491,7 @@ func classifyLogError(err error) logErrorKind {
 		return logErrorCaller
 	}
 
-	var statusErr *logs.StatusError
-	if errors.As(err, &statusErr) {
+	if statusErr, ok := errors.AsType[*logs.StatusError](err); ok {
 		switch statusErr.StatusCode {
 		case http.StatusBadRequest, http.StatusUnprocessableEntity:
 			return logErrorCaller
@@ -506,8 +505,7 @@ func classifyLogError(err error) logErrorKind {
 		}
 	}
 
-	var urlErr *url.Error
-	if errors.As(err, &urlErr) {
+	if _, ok := errors.AsType[*url.Error](err); ok {
 		return logErrorEnvironmental
 	}
 

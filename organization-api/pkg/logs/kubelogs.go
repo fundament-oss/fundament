@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -207,9 +208,7 @@ func (c *KubeClient) openLogStream(ctx context.Context, p *QueryParams, follow b
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	for name, values := range c.auth {
-		req.Header[name] = values
-	}
+	maps.Copy(req.Header, c.auth)
 
 	client := c.httpClient
 	if follow {

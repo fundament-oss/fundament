@@ -221,7 +221,7 @@ func parseProxyChain(goproxy string) []proxyEntry {
 
 	hasPipe := strings.Contains(goproxy, "|")
 	var entries []proxyEntry
-	for _, pipePart := range strings.Split(goproxy, "|") {
+	for pipePart := range strings.SplitSeq(goproxy, "|") {
 		commaParts := strings.Split(pipePart, ",")
 		for i, part := range commaParts {
 			part = strings.TrimSpace(part)

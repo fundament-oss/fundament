@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func Test_InviteMember_Unauthenticated(t *testing.T) {
@@ -204,7 +203,7 @@ func Test_InviteMember_ExistingUser_DifferentlyCapitalisedEmail(t *testing.T) {
 	memberClient := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
 	member, err := memberClient.GetMember(ctx, organizationv1.GetMemberRequest_builder{
-		Id: proto.String(res.GetInvitationId()),
+		Id: new(res.GetInvitationId()),
 	}.Build())
 	require.NoError(t, err)
 

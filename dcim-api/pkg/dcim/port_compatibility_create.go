@@ -31,8 +31,7 @@ func (s *Server) CreatePortCompatibility(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("compatible catalog entry not found"))
 		}
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintDcimPortCompatibilitiesFkPortDefinition:
 				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("port definition not found"))

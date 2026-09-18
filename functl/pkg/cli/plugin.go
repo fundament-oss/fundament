@@ -124,7 +124,7 @@ func (c *PluginCreateCmd) tidy(opts *scaffold.Options) bool {
 	}
 
 	fmt.Fprintf(os.Stderr, "\nwarning: 'go mod tidy' failed, so the project has no go.sum and will not build yet:\n\n")
-	for _, line := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimRight(string(out), "\n"), "\n") {
 		fmt.Fprintf(os.Stderr, "    %s\n", line)
 	}
 

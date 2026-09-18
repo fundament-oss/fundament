@@ -15,10 +15,7 @@ import (
 // nodeCount is cluster-wide, not per-pool: a CephBlockPool has no CRUSH rule
 // confining it to one pool's disks. See the call site in reconcilePool.
 func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain, message string) {
-	nodes := nodeCount
-	if nodes < 1 {
-		nodes = 1
-	}
+	nodes := max(nodeCount, 1)
 
 	switch want, err := strconv.Atoi(requested); {
 	case requested == "" || requested == "auto":

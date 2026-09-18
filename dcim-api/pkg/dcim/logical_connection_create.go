@@ -39,8 +39,7 @@ func (s *Server) CreateConnection(
 
 	id, err := s.queries.LogicalConnectionCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintDcimLogicalConnectionsFkDesign:
 				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("design not found"))

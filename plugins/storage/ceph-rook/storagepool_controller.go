@@ -448,11 +448,11 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) (
 // storageNodesToInterface converts []map[string]any to []interface{} as
 // required by unstructured.SetNestedSlice. Each inner map element is also
 // converted because the slice element type must be interface{}, not map[string]any.
-func storageNodesToInterface(nodes []map[string]any) []interface{} {
+func storageNodesToInterface(nodes []map[string]any) []any {
 	if nodes == nil {
-		return []interface{}{}
+		return []any{}
 	}
-	result := make([]interface{}, len(nodes))
+	result := make([]any, len(nodes))
 	for i, node := range nodes {
 		result[i] = mapAnyToInterface(node)
 	}
@@ -462,12 +462,12 @@ func storageNodesToInterface(nodes []map[string]any) []interface{} {
 // mapAnyToInterface recursively converts map[string]any (and any nested
 // []map[string]any) to map[string]interface{} / []interface{} so that
 // unstructured.SetNestedSlice accepts the value.
-func mapAnyToInterface(m map[string]any) map[string]interface{} {
-	out := make(map[string]interface{}, len(m))
+func mapAnyToInterface(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
 	for k, v := range m {
 		switch val := v.(type) {
 		case []map[string]any:
-			iface := make([]interface{}, len(val))
+			iface := make([]any, len(val))
 			for i, item := range val {
 				iface[i] = mapAnyToInterface(item)
 			}
