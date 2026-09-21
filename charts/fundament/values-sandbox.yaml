@@ -18,11 +18,9 @@ externalUrls:
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.projects.digilab.network
   marketplaceRegistry: https://marketplace-registry.fundament.projects.digilab.network
   marketplaceRegistryApi: https://marketplace-registry-api.fundament.projects.digilab.network
-  # marketplace{Admin,AdminApi} are left unset: the review backoffice runs on a
-  # restricted host and is not part of this sandbox. Leaving marketplaceAdmin
-  # empty is what keeps the portal from linking at a backoffice that is not
-  # there, so do not set it without also enabling marketplaceAdminFrontend.
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
+  marketplaceAdmin: https://marketplace-admin.fundament.projects.digilab.network
+  marketplaceAdminApi: https://marketplace-admin-api.fundament.projects.digilab.network
+  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://marketplace-admin.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
   enabled: true
@@ -203,6 +201,14 @@ marketplaceRegistryFrontend:
   internalApiUrls:
     registry: http://marketplace-registry-api:8080
 
+# Review backoffice: the same image built for the reviewing audience (FUN-20).
+# Reviewers sign in through DCIM, so this stays behind the staff host.
+marketplaceAdminFrontend:
+  enabled: true
+  replicas: 2
+  internalApiUrls:
+    admin: http://marketplace-admin-api:8080
+
 # Anonymous storefront API: the console's plugins page reads catalog.v1 from it.
 marketplaceCatalogApi:
   enabled: true
@@ -211,6 +217,11 @@ marketplaceCatalogApi:
 # Authenticated publishing surface behind the developer portal: validates the
 # developer's UserToken from authn-api.
 marketplaceRegistryApi:
+  enabled: true
+  replicas: 2
+
+# Review backoffice API: validates the reviewer's DCIM token (staff IDP).
+marketplaceAdminApi:
   enabled: true
   replicas: 2
 
