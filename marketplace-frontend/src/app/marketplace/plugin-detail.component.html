@@ -62,7 +62,7 @@
     <div class="min-w-0 flex-1 space-y-8">
       <section>
         <h2 class="mb-2 text-xl font-semibold">About</h2>
-        <p class="max-w-3xl text-gray-700 dark:text-gray-300">{{ plugin.description }}</p>
+        <app-markdown [source]="plugin.description" />
       </section>
 
       @if (plugin.features.length > 0) {
@@ -82,23 +82,57 @@
       <!-- Permissions -->
       <section>
         <h2 class="mb-1 text-xl font-semibold">Permissions</h2>
-        <p class="mb-4 text-gray-600 dark:text-gray-300">
-          Once installed, {{ plugin.displayName }} is granted the following access to your cluster.
-        </p>
-        <nldd-card class="block">
-          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
-            @for (permission of plugin.permissions; track permission.resource) {
-              <li class="flex items-center justify-between px-6 py-3">
-                <span class="font-medium">
-                  {{ permission.resource }}
-                </span>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{
-                  permission.access
-                }}</span>
-              </li>
+        @if (permissionGroups().length > 0) {
+          <p class="mb-4 text-gray-600 dark:text-gray-300">
+            Once installed, {{ plugin.displayName }} is granted the following access to your
+            cluster.
+          </p>
+          @if (grantsEverything()) {
+            <div class="bg-danger-50 dark:bg-danger-950 mb-4 flex gap-3 rounded-md p-4">
+              <nldd-icon
+                name="exclamation-triangle"
+                class="text-danger-700 dark:text-danger-300 mt-0.5 h-4 w-4 shrink-0"
+              ></nldd-icon>
+              <p class="text-danger-800 dark:text-danger-200">
+                This plugin asks for access to every resource in your cluster, which amounts to full
+                administrator rights.
+              </p>
+            </div>
+          }
+          <div class="space-y-4">
+            @for (group of permissionGroups(); track group.access) {
+              <nldd-card class="block">
+                <h3 class="border-b border-gray-100 px-6 py-3 font-semibold dark:border-gray-800">
+                  {{ group.heading }}
+                  <span class="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">
+                    {{ group.resources.length }}
+                  </span>
+                </h3>
+                <ul class="grid gap-x-6 px-6 py-2 sm:grid-cols-2">
+                  @for (resource of group.resources; track resource.name) {
+                    <li class="py-2">
+                      <div class="flex flex-wrap items-baseline gap-x-2">
+                        <span class="font-medium">{{ resource.label }}</span>
+                        <code class="font-mono text-xs text-gray-500 dark:text-gray-400">{{
+                          resource.name
+                        }}</code>
+                      </div>
+                      @if (resource.description) {
+                        <p class="text-sm text-gray-600 dark:text-gray-300">
+                          {{ resource.description }}
+                        </p>
+                      }
+                    </li>
+                  }
+                </ul>
+              </nldd-card>
             }
-          </ul>
-        </nldd-card>
+          </div>
+        } @else {
+          <p class="text-gray-600 dark:text-gray-300">
+            {{ plugin.displayName }} does not ask for any access to your cluster.
+          </p>
+        }
       </section>
     </div>
 

@@ -29,9 +29,10 @@ export interface DocumentationLink {
 }
 
 export interface PluginPermission {
-  // Human-readable resource group, e.g. "Certificates" or "Networking".
+  // One RBAC rule's Kubernetes resource names joined with ", ", e.g.
+  // "certificates, issuers". permissions.ts turns them into readable labels.
   resource: string;
-  // Short description of what the plugin does with it.
+  // "Read" or "Read and write".
   access: string;
 }
 

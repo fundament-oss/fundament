@@ -217,6 +217,73 @@ body {
   @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
 }
 
+/* Rendered markdown (app-markdown). No typography plugin, so the elements
+   marked emits are styled here. Headings arrive already shifted below the
+   section heading that wraps them. */
+
+.markdown {
+  @apply max-w-3xl leading-relaxed text-gray-700 dark:text-gray-300;
+}
+
+.markdown > div > :first-child {
+  @apply mt-0;
+}
+
+.markdown h2,
+.markdown h3 {
+  @apply mt-6 mb-2 text-lg font-semibold text-gray-900 dark:text-white;
+}
+
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  @apply mt-5 mb-2 font-semibold text-gray-900 dark:text-white;
+}
+
+.markdown p {
+  @apply my-3;
+}
+
+.markdown ul {
+  @apply my-3 list-disc space-y-1 pl-6;
+}
+
+.markdown ol {
+  @apply my-3 list-decimal space-y-1 pl-6;
+}
+
+.markdown li::marker {
+  @apply text-gray-400;
+}
+
+.markdown strong {
+  @apply font-semibold text-gray-900 dark:text-white;
+}
+
+.markdown a {
+  @apply text-blue-600 underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300;
+}
+
+.markdown code {
+  @apply rounded bg-gray-100 px-1 py-0.5 font-mono text-sm dark:bg-gray-800;
+}
+
+.markdown pre {
+  @apply my-3 overflow-x-auto rounded-md bg-gray-100 p-4 dark:bg-gray-800;
+}
+
+.markdown pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown blockquote {
+  @apply my-3 border-l-4 border-gray-200 pl-4 text-gray-600 dark:border-gray-700 dark:text-gray-400;
+}
+
+.markdown hr {
+  @apply my-6 border-gray-200 dark:border-gray-700;
+}
+
 /* Table styles */
 
 .table-container {

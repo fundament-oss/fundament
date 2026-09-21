@@ -220,13 +220,34 @@ const DETAILS: Record<
   }
 > = {
   'cert-manager': {
-    description:
-      'Automated TLS certificate management for Kubernetes. Vraagt certificaten aan, vernieuwt ze op tijd, en levert ze als secret aan je workloads. Je team beheert zijn certificaten als gewone resources in de console, zonder kubectl en zonder apart dashboard.',
+    // Markdown, like the descriptions publishers write.
+    description: [
+      '## Overzicht',
+      '',
+      'Automated TLS certificate management for Kubernetes. Vraagt certificaten aan, vernieuwt ze op tijd, en levert ze als secret aan je workloads.',
+      '',
+      '## Toepassingen',
+      '',
+      '- **HTTPS** voor webapplicaties, zonder handwerk',
+      '- Certificaten beheren als gewone resources in de console, zonder `kubectl`',
+      '',
+      'Zie de [documentatie](https://cert-manager.io/docs/) voor meer.',
+    ].join('\n'),
     capabilities: ['internet_access', 'cluster_wide'],
+    // Shaped like the catalog API's projection of definition.yaml: one row per
+    // RBAC rule, resource names joined with ", ".
     permissions: [
-      { resource: 'Certificates', access: 'Lezen en schrijven' },
-      { resource: 'Secrets', access: 'Aanmaken en bijwerken' },
-      { resource: 'Ingresses', access: 'Alleen lezen' },
+      {
+        resource: 'certificates, issuers, clusterissuers, certificaterequests',
+        access: 'Read and write',
+      },
+      { resource: 'orders, challenges', access: 'Read' },
+      { resource: 'secrets, serviceaccounts, services, configmaps', access: 'Read and write' },
+      { resource: 'pods', access: 'Read' },
+      {
+        resource: 'validatingwebhookconfigurations, mutatingwebhookconfigurations',
+        access: 'Read and write',
+      },
     ],
     features: [
       {
@@ -252,19 +273,28 @@ const DETAILS: Record<
       'Federated Service Connectivity (FSC) voor teams. Installeert de openfsc-operator; elk team declareert een FSCInstallation in zijn eigen namespace om daar een OpenFSC-peer te draaien.',
     capabilities: ['internet_access'],
     permissions: [
-      { resource: 'FSCInstallations', access: 'Lezen en schrijven' },
-      { resource: 'Services', access: 'Alleen lezen' },
+      { resource: 'fscinstallations', access: 'Read and write' },
+      { resource: 'services', access: 'Read' },
     ],
   },
   'istio-gateway': {
     description:
       'Gateway API-implementatie op basis van Istio. Beheert Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes en TLSRoutes voor het verkeer je cluster in.',
-    permissions: [{ resource: 'Gateways en routes', access: 'Lezen en schrijven' }],
+    permissions: [
+      { resource: 'gateways, httproutes, grpcroutes, tcproutes, tlsroutes', access: 'Read' },
+      {
+        resource: 'gateways/status, httproutes/status, grpcroutes/status',
+        access: 'Read and write',
+      },
+    ],
   },
   'sealed-secrets': {
     description:
       'Versleutelt secrets zo dat alleen de controller in het cluster ze kan lezen. Daardoor kan de versleutelde versie gewoon mee in je repository.',
-    permissions: [{ resource: 'Secrets', access: 'Aanmaken en bijwerken' }],
+    permissions: [
+      { resource: 'sealedsecrets', access: 'Read and write' },
+      { resource: 'secrets', access: 'Read and write' },
+    ],
   },
   grafana: {
     description:
