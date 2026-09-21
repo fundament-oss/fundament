@@ -6,13 +6,14 @@ import PluginInstallationService from '../plugin-installation/plugin-installatio
 import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { NotificationService } from '../notification.service';
-import { CLUSTER, CATALOG } from '../../connect/tokens';
+import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
   PluginSummarySchema,
   CatalogService,
   type PluginSummary,
 } from '../../generated/catalog/v1/catalog_pb';
+import { InstallService } from '../../generated/install/v1/install_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterService,
@@ -71,11 +72,16 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
       {
         provide: CATALOG,
         useValue: {
-          listPlugins: () => of({ plugins }),
           listCategories: () => of({ categories: [] }),
-          listPublishers: () => of({ publishers }),
           listPresets: () => of({ presets: [] }),
-          // Latest first, as the catalog returns them.
+        } as unknown as ObservableClient<typeof CatalogService>,
+      },
+      {
+        // Listings and versions come from install.v1 as the organization (FUN-22).
+        provide: INSTALL,
+        useValue: {
+          listPlugins: () => of({ plugins }),
+          // Latest first, as install.v1 returns them.
           listPluginVersions: () =>
             of({
               versions: [
@@ -83,7 +89,8 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
                 { version: '1.16.0', definitionHash: 'sha256:old' },
               ],
             }),
-        } as unknown as ObservableClient<typeof CatalogService>,
+          listPublishers: () => of({ publishers }),
+        } as unknown as ObservableClient<typeof InstallService>,
       },
       {
         provide: CLUSTER,

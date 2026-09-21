@@ -11,6 +11,7 @@ import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
 import {
   AUTHN_TRANSPORT,
+  INSTALL_TRANSPORT,
   MARKETPLACE_TRANSPORT,
   ORGANIZATION_TRANSPORT,
 } from '../connect/connect.module';
@@ -30,6 +31,24 @@ const handleVersionMismatch = (serverVersion: string) => {
     versionMismatch$.next(true);
   }
 };
+
+// The fetch every organization-scoped surface shares: the HTTP-only
+// authentication cookie, plus the Fun-Organization header once an
+// organization is selected. onResponse lets a surface inspect the response.
+const organizationFetch =
+  (injector: Injector, onResponse?: (response: Response) => void): typeof fetch =>
+  async (input, init) => {
+    const orgId = runInInjectionContext(injector, () =>
+      inject(OrganizationContextService).currentOrganizationId(),
+    );
+    const headers = new Headers(init?.headers);
+    if (orgId) {
+      headers.set('Fun-Organization', orgId);
+    }
+    const response = await fetch(input, { ...init, headers, credentials: 'include' });
+    onResponse?.(response);
+    return response;
+  };
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -65,41 +84,35 @@ export const appConfig: ApplicationConfig = {
         return createConnectTransport({ baseUrl: configService.getConfig().marketplaceApiUrl });
       },
     },
-    // Provide the Organization transport
+    // Provide the Install transport: install.v1 on the marketplace host, but
+    // credentialed and organization-scoped like organization-api (FUN-22).
+    // No API-version check: EXPECTED_API_VERSION hashes organization-api's
+    // protos, not install.v1's.
+    {
+      provide: INSTALL_TRANSPORT,
+      useFactory: (injector: Injector) => {
+        const configService = inject(ConfigService);
+        return createConnectTransport({
+          baseUrl: configService.getConfig().marketplaceApiUrl,
+          fetch: organizationFetch(injector),
+        });
+      },
+      deps: [Injector],
+    },
+    // Provide the Organization transport, which also checks the API version
+    // the server reports against the protos this console was built with.
     {
       provide: ORGANIZATION_TRANSPORT,
       useFactory: (injector: Injector) => {
         const configService = inject(ConfigService);
-        const config = configService.getConfig();
         return createConnectTransport({
-          baseUrl: config.organizationApiUrl,
-          fetch: async (input, init) => {
-            // Get the current organization ID from the context service
-            const orgId = runInInjectionContext(injector, () => {
-              const contextService = inject(OrganizationContextService);
-              return contextService.currentOrganizationId();
-            });
-
-            // Add the Fun-Organization header if we have an organization selected
-            const headers = new Headers(init?.headers);
-            if (orgId) {
-              headers.set('Fun-Organization', orgId);
-            }
-
-            const response = await fetch(input, {
-              ...init,
-              headers,
-              credentials: 'include',
-            });
-
-            // Check API version from response header
+          baseUrl: configService.getConfig().organizationApiUrl,
+          fetch: organizationFetch(injector, (response) => {
             const serverVersion = response.headers.get('X-API-Version');
             if (serverVersion) {
               handleVersionMismatch(serverVersion);
             }
-
-            return response;
-          },
+          }),
         });
       },
       deps: [Injector],

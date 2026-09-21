@@ -10,11 +10,13 @@ import { MemberService } from '../generated/v1/member_pb';
 import { InviteService } from '../generated/v1/invite_pb';
 import { APIKeyService } from '../generated/v1/apikey_pb';
 import { CatalogService } from '../generated/catalog/v1/catalog_pb';
+import { InstallService } from '../generated/install/v1/install_pb';
 import {
   createClientToken,
   AUTHN_TRANSPORT,
   ORGANIZATION_TRANSPORT,
   MARKETPLACE_TRANSPORT,
+  INSTALL_TRANSPORT,
 } from './connect.module';
 
 // Create an injection token for the Authn service client
@@ -56,3 +58,8 @@ export const LOGS = createClientToken(LogsService, ORGANIZATION_TRANSPORT);
 // The storefront: browsing, plugin detail and published versions. Anonymous, so
 // it goes over its own transport rather than the organization one.
 export const CATALOG = createClientToken(CatalogService, MARKETPLACE_TRANSPORT);
+
+// The installer's view of the marketplace: what the current organization may
+// install, including RESTRICTED listings it is allow-listed for (FUN-22).
+// Credentialed, so the install flow and the plugin detail page use this.
+export const INSTALL = createClientToken(InstallService, INSTALL_TRANSPORT);
