@@ -157,8 +157,9 @@ jobs:
       context: ${{ matrix.context }}
       build-args: ${{ matrix.build-args }}
 
-  # Plugins ship outside the chart and outside the preview environments, so
-  # publish-chart and preview-label must not depend on this job.
+  # Plugins ship outside the chart and the previews, so publish-chart and
+  # preview-label must not depend on this job. A PR build only checks that each
+  # Dockerfile builds; master builds push the images.
   build-plugins:
     needs: gate
     if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
@@ -186,6 +187,7 @@ jobs:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
       context: "."
+      push-image: ${{ github.ref == 'refs/heads/master' }}
 
   # Packages the chart with every image digest stamped into values.yaml, so one
   # version string names the chart and the exact images it deploys.

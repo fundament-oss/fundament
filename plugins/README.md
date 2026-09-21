@@ -41,9 +41,9 @@ plugins/
 
 ## Images
 
-CI builds every plugin here as `ghcr.io/fundament-oss/fundament/<metadata.name>-plugin`
-(`linux/amd64`) on each master build and non-draft PR, and prints the digest-pinned
-reference in the run summary for `functl plugin publish --image`.
+CI builds every plugin here on master builds and on PRs that get a preview environment,
+and pushes `ghcr.io/fundament-oss/fundament/<metadata.name>-plugin:<sha>-master-<run>`
+(`linux/amd64`) from master only.
 
 `just plugins publish` builds its own image, for the local sandbox registry.
 
