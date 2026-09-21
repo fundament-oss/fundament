@@ -9,11 +9,12 @@ import SessionService from './session.service';
  * Without this, an anonymous visitor reached the portal and every
  * organization-scoped RPC came back `[unauthenticated] no authorization header
  * or auth cookie found`, because nothing had ever started a session. The portal
- * does not own one: it sends the visitor to authn-api, which sets the console's
- * cookie on the parent domain and redirects back here.
+ * does not own one: it sends the visitor to a login that sets the console's
+ * cookie on the parent domain and comes back here (SessionService.loginUrl
+ * picks which).
  *
- * `window.location` rather than the router: the login lives on another origin,
- * so it is a page load and not a navigation this app can make.
+ * `window.location` rather than the router: every login lives on another
+ * origin, so it is a page load and not a navigation this app can make.
  */
 const authGuard: CanActivateFn = async (_route, state) => {
   const session = inject(SessionService);
@@ -51,9 +52,7 @@ const authGuard: CanActivateFn = async (_route, state) => {
   // the address bar still holds the page the visitor is leaving.
   // prepareExternalUrl puts back whatever the deployment's base href strips
   // off, which the router URL does not carry.
-  session.redirectToLogin(
-    new URL(location.prepareExternalUrl(state.url), window.location.origin).href,
-  );
+  session.redirectToLogin(location.prepareExternalUrl(state.url));
   return false;
 };
 

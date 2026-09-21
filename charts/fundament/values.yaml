@@ -32,7 +32,7 @@ externalUrls:
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
   marketplace: "" # e.g., https://marketplace.example.com (storefront; empty points the console's "View full details" button at its own plugin page)
-  marketplaceRegistry: "" # e.g., https://marketplace-registry.example.com (developer portal frontend)
+  marketplaceRegistry: "" # e.g., https://marketplace-registry.example.com (developer portal frontend; also where the console's login sends a visitor back to)
   marketplaceAdmin: "" # e.g., https://marketplace-admin.example.com (review backoffice frontend; restricted host)
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com

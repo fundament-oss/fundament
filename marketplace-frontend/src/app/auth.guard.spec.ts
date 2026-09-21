@@ -13,6 +13,7 @@ import {
 import { AUTHN_CLIENT } from '../connect/authn';
 
 const AUTHN_API_URL = 'https://authn.fundament.localhost:8443';
+const CONSOLE_URL = 'https://console.fundament.localhost:8443';
 
 type SessionOutcome = { user: { organizationIds: string[] } | undefined } | 'unauthenticated';
 
@@ -82,7 +83,7 @@ describe('authGuard', () => {
     const result = await runGuard({ authnApiUrl: AUTHN_API_URL }, 'unauthenticated');
 
     expect(result.allowed).toBe(false);
-    expect(result.redirectedTo).toBe(`${window.location.origin}/manage`);
+    expect(result.redirectedTo).toBe('/manage');
   });
 
   // A session whose token carries no user is no session at all.
@@ -90,7 +91,7 @@ describe('authGuard', () => {
     const result = await runGuard({ authnApiUrl: AUTHN_API_URL }, { user: undefined });
 
     expect(result.allowed).toBe(false);
-    expect(result.redirectedTo).toBe(`${window.location.origin}/manage`);
+    expect(result.redirectedTo).toBe('/manage');
   });
 
   // The demo bundle answers the portal from fixtures and has nothing to sign
@@ -129,30 +130,53 @@ describe('authGuard', () => {
   it('returns to a route under the deployment base href', async () => {
     const result = await runGuard({ authnApiUrl: AUTHN_API_URL }, 'unauthenticated', '/portal/');
 
-    expect(result.redirectedTo).toBe(`${window.location.origin}/portal/manage`);
+    expect(result.redirectedTo).toBe('/portal/manage');
   });
 });
 
 describe('SessionService.loginUrl', () => {
-  it('points at authn-api with the return URL encoded', async () => {
+  async function loginUrl(config: Partial<AppConfiguration>, path: string): Promise<string> {
     TestBed.configureTestingModule({
       providers: [
         {
           provide: CONFIG_LOADER,
-          useValue: async () => ({ ...EMPTY_CONFIGURATION, authnApiUrl: `${AUTHN_API_URL}/` }),
+          useValue: async () => ({ ...EMPTY_CONFIGURATION, ...config }),
         },
         { provide: AUTHN_CLIENT, useValue: {} },
       ],
     });
     await TestBed.inject(ConfigService).loadConfig();
 
-    const url = TestBed.inject(SessionService).loginUrl(
-      'https://marketplace-registry.fundament.localhost:8443/manage',
+    return TestBed.inject(SessionService).loginUrl(path);
+  }
+
+  // The console owns the only password form; it resolves where to come back
+  // to from the app name against its own configuration, so no URL of ours
+  // needs to be trusted on its side.
+  it('hands off to the console when there is one', async () => {
+    const url = await loginUrl({ authnApiUrl: AUTHN_API_URL, consoleUrl: CONSOLE_URL }, '/manage');
+
+    expect(url).toBe(`${CONSOLE_URL}/login?app=marketplace-registry&path=%2Fmanage`);
+  });
+
+  // A console URL with a path of its own still names the login at its root.
+  it('puts the login at the console root', async () => {
+    const url = await loginUrl(
+      { authnApiUrl: AUTHN_API_URL, consoleUrl: `${CONSOLE_URL}/organizations/acme` },
+      '/manage',
     );
+
+    expect(url).toBe(`${CONSOLE_URL}/login?app=marketplace-registry&path=%2Fmanage`);
+  });
+
+  // No console deployed here, so the OIDC login answers instead and needs an
+  // absolute return_to.
+  it('falls back to authn with the return URL encoded', async () => {
+    const url = await loginUrl({ authnApiUrl: `${AUTHN_API_URL}/` }, '/manage');
 
     // The trailing slash on the configured URL is not doubled up.
     expect(url).toBe(
-      `${AUTHN_API_URL}/login?return_to=https%3A%2F%2Fmarketplace-registry.fundament.localhost%3A8443%2Fmanage`,
+      `${AUTHN_API_URL}/login?return_to=${encodeURIComponent(`${window.location.origin}/manage`)}`,
     );
   });
 });

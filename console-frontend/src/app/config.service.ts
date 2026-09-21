@@ -19,6 +19,13 @@ export interface AppConfiguration {
    * button falls back to the console's own plugin page when this is empty.
    */
   marketplaceUrl?: string;
+  /**
+   * Public URL of the marketplace developer portal. Optional, and not a link
+   * the console shows: it is where the login page sends a visitor back to
+   * after they signed in for the portal (see login/login-handoff.ts). Empty
+   * means no portal hands off to this console, and such a request is ignored.
+   */
+  developerUrl?: string;
 }
 
 @Injectable({

@@ -5,5 +5,6 @@
   "kubeApiProxyUrl": "",
   "pluginProxyUrl": "",
   "consoleDemoUrl": "",
-  "marketplaceUrl": ""
+  "marketplaceUrl": "",
+  "developerUrl": ""
 }

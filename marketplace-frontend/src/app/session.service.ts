@@ -41,8 +41,9 @@ function writeLoginAttempt(attempted: boolean): void {
  * `fundament_auth` cookie, set by authn-api on the parent domain, which the
  * browser therefore sends to the portal's own APIs as well —
  * marketplace-registry-api validates exactly that cookie, issuer and audience.
- * So "signing in" here means sending the visitor to authn-api's OIDC login with
- * a `return_to`, and reading the session back out of `GetUserInfo`.
+ * So "signing in" here means sending the visitor to a login that sets that
+ * cookie — the console's own page where there is a console, dex's otherwise
+ * (see loginUrl) — and reading the session back out of `GetUserInfo`.
  *
  * There is deliberately no refresh attempt when `GetUserInfo` says no. The
  * cookie *is* the access token, and `/refresh` runs the same validator over the
@@ -83,12 +84,33 @@ export default class SessionService {
   }
 
   /**
-   * Where to send the browser to sign in. authn-api runs the OIDC round trip,
-   * sets the cookie on the parent domain and redirects back to `returnTo`,
-   * which it only honours for an origin the deployment serves.
+   * Where to send the browser to sign in, given a path in this app to come
+   * back to.
+   *
+   * The console's login page when this deployment has one. The portal borrows
+   * the console's session rather than minting its own, so the console owns the
+   * only password form in the product, and a second one here would be a second
+   * place to later add rate limiting, lockout or a password reset. The console
+   * is named an app rather than handed a URL, so that it resolves where to
+   * return to against its own configuration instead of carrying an allowlist
+   * (see its login/login-handoff.ts).
+   *
+   * Failing that, authn-api's OIDC login, which is dex's own page. It only
+   * honours a `return_to` for an origin the deployment serves, so the portal's
+   * origin has to be on authn's CORS list, which it needs regardless.
    */
-  loginUrl(returnTo: string): string {
-    const base = (this.configService.getConfig().authnApiUrl ?? '').replace(/\/+$/, '');
+  loginUrl(path: string): string {
+    const config = this.configService.getConfig();
+
+    if (config.consoleUrl) {
+      const url = new URL('/login', config.consoleUrl);
+      url.searchParams.set('app', 'marketplace-registry');
+      url.searchParams.set('path', path);
+      return url.href;
+    }
+
+    const base = (config.authnApiUrl ?? '').replace(/\/+$/, '');
+    const returnTo = new URL(path, window.location.origin).href;
     return `${base}/login?return_to=${encodeURIComponent(returnTo)}`;
   }
 
@@ -110,14 +132,15 @@ export default class SessionService {
   }
 
   /**
-   * Leaves for the login. A page load and not a router navigation: authn-api
-   * is another origin. It lives here rather than in the guard so that what the
-   * guard decides can be tested without a real browser leaving the page.
+   * Leaves for the login. A page load and not a router navigation: whichever
+   * login answers, it is on another origin. It lives here rather than in the
+   * guard so that what the guard decides can be tested without a real browser
+   * leaving the page.
    */
-  redirectToLogin(returnTo: string): void {
+  redirectToLogin(path: string): void {
     this.triedLogin = true;
     writeLoginAttempt(true);
-    window.location.assign(this.loginUrl(returnTo));
+    window.location.assign(this.loginUrl(path));
   }
 
   private async load(): Promise<User | null> {

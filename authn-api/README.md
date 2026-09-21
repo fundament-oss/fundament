@@ -33,9 +33,11 @@ Proto definition: `proto/authn/v1/authn.proto`
 
 `/login` takes an optional `return_to`, and the callback sends the browser there
 instead of `FRONTEND_URL`. That is how a surface other than the console starts a
-login and lands the visitor back where they were — the marketplace developer
-portal does it, and the cookie is set on `COOKIE_DOMAIN`, so it reaches every
-Fundament host under that domain.
+login and lands the visitor back where they were, with the cookie set on
+`COOKIE_DOMAIN` so it reaches every Fundament host under that domain. The
+marketplace developer portal uses it where no console is deployed; where one is,
+it sends the visitor to the console's own login page instead, which signs in
+through `/login/password` and needs no `return_to`.
 
 A `return_to` is only honoured when its origin is one this deployment serves:
 `CORS_ALLOWED_ORIGINS` plus `FRONTEND_URL`. Anything else is refused with 400,

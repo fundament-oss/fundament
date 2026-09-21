@@ -8,10 +8,12 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
+import { ConfigService } from '../config.service';
+import { Handoff, resolveHandoff } from './login-handoff';
 import { HOME } from '../address';
 import '@nldd/design-system/password-field';
 
@@ -38,6 +40,10 @@ import '@nldd/design-system/validation-list';
  */
 const DEFAULT_ROUTE = HOME;
 
+/** What the page says when the visitor came here of their own accord. */
+const DEFAULT_DESCRIPTION =
+  'The platform your team manages its Kubernetes clusters and projects with.';
+
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, AutofocusDirective],
@@ -55,7 +61,18 @@ export default class LoginComponent implements OnInit {
 
   private apiService = inject(AuthnApiService);
 
+  private route = inject(ActivatedRoute);
+
+  private configService = inject(ConfigService);
+
   private fb = inject(FormBuilder);
+
+  /**
+   * The surface that sent the visitor here, when one did (see login-handoff).
+   * Read once: it comes off the address this page was opened at, which does
+   * not change while the page is up.
+   */
+  private readonly handoff: Handoff | null;
 
   loginForm!: FormGroup;
 
@@ -67,7 +84,22 @@ export default class LoginComponent implements OnInit {
 
   isLoading = signal(false);
 
+  /**
+   * The line under the heading, which says who this login is for. Not a
+   * signal: the address the page was opened at decides it, so it is settled
+   * before the first render and never changes.
+   */
+  readonly description: string;
+
   constructor() {
+    const params = this.route.snapshot.queryParamMap;
+    this.handoff = resolveHandoff(
+      params.get('app'),
+      params.get('path'),
+      this.configService.getConfig(),
+    );
+    this.description = this.handoff?.description ?? DEFAULT_DESCRIPTION;
+
     this.titleService.setTitle('Log in');
     this.titleService.setDescription(
       'Log in - Fundament: Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
@@ -106,8 +138,10 @@ export default class LoginComponent implements OnInit {
   async ngOnInit() {
     // Check if user is already authenticated (check state first to avoid unnecessary API call)
     if (this.apiService.isAuthenticated()) {
-      // User already authenticated, redirect to the default page
-      this.router.navigateByUrl(DEFAULT_ROUTE);
+      // Already signed in, so there is nothing to ask. Somebody arriving from
+      // another surface still has to be sent back there rather than dropped on
+      // the console's own default page.
+      this.leave();
     }
   }
 
@@ -128,14 +162,27 @@ export default class LoginComponent implements OnInit {
     try {
       const { email, password } = this.loginForm.value;
       await this.apiService.login(email, password);
-      // Login successful, redirect to the return URL or dashboard
-      const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
-      localStorage.removeItem('returnUrl');
-
-      this.router.navigateByUrl(returnUrl);
+      this.leave();
     } catch (err) {
       this.error.set(err instanceof Error ? `Login failed: ${err.message}` : 'Login failed');
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Where a session takes the visitor. Another surface's is a page load and
+   * not a navigation: it is a different origin, and it owns the cookie this
+   * console just set on the parent domain rather than a route in this app.
+   */
+  private leave() {
+    if (this.handoff) {
+      window.location.assign(this.handoff.url);
+      return;
+    }
+
+    const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
+    localStorage.removeItem('returnUrl');
+
+    this.router.navigateByUrl(returnUrl);
   }
 }
