@@ -41,9 +41,9 @@ plugins/
 
 ## Images
 
-CI builds every plugin here on master builds and on PRs that get a preview environment,
-and pushes `ghcr.io/fundament-oss/fundament/<metadata.name>-plugin:<sha>-master-<run>`
-(`linux/amd64`) from master only.
+CI builds every plugin here on every PR and master build, and pushes
+`ghcr.io/fundament-oss/fundament/<metadata.name>-plugin:<sha>-master-<run>` (`linux/amd64`)
+from master only.
 
 `just plugins publish` builds its own image, for the local sandbox registry.
 

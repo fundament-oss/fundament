@@ -1,3 +1,32 @@
+# Build: container images, the chart that pins them, and a preview environment per PR.
+#
+#   gate ─┬─ build ─── publish-chart ─── preview-label ─── environment-ready ─┬─ terraform-acc-tests
+#         │                                                                   └─ e2e-tests
+#         ├─ build-plugins
+#         └─ preview-unlabel
+#
+#   build              service images → ghcr.io/<owner>/fundament/<name>
+#   build-plugins      plugin images  → ghcr.io/<owner>/fundament/<name>-plugin
+#   publish-chart      chart pinning build's digests → charts/ (master) or charts-pr/ (PR)
+#   preview-label      adds the flux-preview label → flux-operator installs the PR's chart
+#   environment-ready  waits until the preview runs this commit
+#   preview-unlabel    removes the label → flux-operator removes the preview
+#
+# What happens per event. A PR row covers opening, pushing to and reopening the PR.
+#
+# | Event                           | Build | Push services | Push plugins | Chart      | Preview env + e2e |
+# |---------------------------------|-------|---------------|--------------|------------|-------------------|
+# | merge to master                 | yes   | yes, :latest  | yes, :latest | charts/    | -                 |
+# | PR against master               | yes   | yes           | -            | charts-pr/ | deploy + test     |
+# | ... labelled no-preview-env     | yes   | -             | -            | -          | -                 |
+# | stacked PR (base not master)    | yes   | -             | -            | -          | -                 |
+# | stacked PR retargeted to master | yes   | yes           | -            | charts-pr/ | deploy + test     |
+# | no-preview-env removed          | yes   | yes           | -            | charts-pr/ | deploy + test     |
+# | no-preview-env added            | -     | -             | -            | -          | tear down         |
+# | other label, title or body edit | -     | -             | -            | -          | -                 |
+# | PR against master closed        | -     | -             | -            | -          | tear down         |
+#
+# On a PR, image tags and the chart revision name the merge commit, not the PR head.
 name: Build
 
 on:
@@ -9,16 +38,23 @@ on:
       - synchronize
       - reopened
       - closed
-      - ready_for_review
-      - converted_to_draft
       - labeled
       - unlabeled
-    branches: [master]
+      - edited
 
 concurrency:
-  # A label event other than no-preview-env gets a group of its own, so it never
-  # cancels a running build.
-  group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}${{ contains(fromJSON('["labeled","unlabeled"]'), github.event.action) && github.event.label.name != 'no-preview-env' && format('-{0}', github.run_id) || '' }}
+  # A new push to a PR cancels that PR's running build; merges to master queue
+  # instead. Events that change nothing (adding or removing a label other than
+  # no-preview-env, editing the title or description) must not cancel a build,
+  # so they get a group of their own: the group is named per PR, or per branch
+  # on master, with the run id appended for those events.
+  group: >-
+    ${{ format('build-{0}{1}',
+      github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref,
+      (((github.event.action == 'labeled' || github.event.action == 'unlabeled') && github.event.label.name != 'no-preview-env')
+        || (github.event.action == 'edited' && !github.event.changes.base))
+        && format('-{0}', github.run_id)
+        || '') }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -32,44 +68,98 @@ jobs:
   gate:
     runs-on: ubuntu-24.04
     outputs:
+      is_master: ${{ steps.check.outputs.is_master }}
+      should_build: ${{ steps.check.outputs.should_build }}
       should_deploy: ${{ steps.check.outputs.should_deploy }}
+      should_publish_chart: ${{ steps.check.outputs.should_publish_chart }}
       should_teardown: ${{ steps.check.outputs.should_teardown }}
     steps:
       - id: check
         env:
           EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
           ACTION: ${{ github.event.action }}
-          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          # The PR's own base: in a GitHub stack, github.base_ref names the stack's base.
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PREVIOUS_BASE_REF: ${{ github.event.changes.base.ref.from }}
           LABEL_NAME: ${{ github.event.label.name }}
           HAS_SKIP_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'no-preview-env') }}
         run: |
+          is_master=false
+          should_build=false
           should_deploy=false
+          should_publish_chart=false
           should_teardown=false
 
+          if [ "$REF" = "refs/heads/master" ]; then
+            is_master=true
+          fi
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
+            targets_master=false
+            if [ "$BASE_REF" = "master" ]; then
+              targets_master=true
+            fi
+
             case "$ACTION" in
-              closed|converted_to_draft)
-                should_teardown=true
+              opened|reopened|synchronize)
+                # New code: build it; against master and without no-preview-env, preview it.
+                should_build=true
+                if [ "$targets_master" = "true" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
+                  should_deploy=true
+                fi
+                ;;
+              edited)
+                # Base branch changed: build; preview it when it now targets master, tear
+                # the preview down when it left master. A title or description edit does nothing.
+                if [ -n "$PREVIOUS_BASE_REF" ]; then
+                  should_build=true
+                  if [ "$targets_master" = "true" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
+                    should_deploy=true
+                  elif [ "$PREVIOUS_BASE_REF" = "master" ]; then
+                    should_teardown=true
+                  fi
+                fi
+                ;;
+              unlabeled)
+                # no-preview-env removed from a PR against master: build and preview it.
+                if [ "$LABEL_NAME" = "no-preview-env" ] && [ "$targets_master" = "true" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
+                  should_build=true
+                  should_deploy=true
+                fi
                 ;;
               labeled)
-                [ "$LABEL_NAME" = "no-preview-env" ] && should_teardown=true
+                # no-preview-env added to a PR against master: tear its preview down.
+                if [ "$LABEL_NAME" = "no-preview-env" ] && [ "$targets_master" = "true" ]; then
+                  should_teardown=true
+                fi
                 ;;
-              opened|reopened|synchronize|ready_for_review|unlabeled)
-                if [ "$ACTION" = "unlabeled" ] && [ "$LABEL_NAME" != "no-preview-env" ]; then
-                  :
-                elif [ "$IS_DRAFT" = "false" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
-                  should_deploy=true
+              closed)
+                # PR against master closed or merged: tear its preview down.
+                if [ "$targets_master" = "true" ]; then
+                  should_teardown=true
                 fi
                 ;;
             esac
           fi
 
-          echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
-          echo "should_teardown=$should_teardown" >> "$GITHUB_OUTPUT"
+          # Services are pushed only for a chart: on master, or when a preview deploys.
+          if [ "$is_master" = "true" ] || [ "$should_deploy" = "true" ]; then
+            should_build=true
+            should_publish_chart=true
+          fi
+
+          {
+            echo "is_master=$is_master"
+            echo "should_build=$should_build"
+            echo "should_deploy=$should_deploy"
+            echo "should_publish_chart=$should_publish_chart"
+            echo "should_teardown=$should_teardown"
+          } >> "$GITHUB_OUTPUT"
 
   build:
     needs: gate
-    if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
+    if: needs.gate.outputs.should_build == 'true'
     strategy:
       matrix:
         include:
@@ -156,13 +246,14 @@ jobs:
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
       build-args: ${{ matrix.build-args }}
+      push-image: ${{ needs.gate.outputs.should_publish_chart == 'true' }}
 
   # Plugins ship outside the chart and the previews, so publish-chart and
   # preview-label must not depend on this job. A PR build only checks that each
   # Dockerfile builds; master builds push the images.
   build-plugins:
     needs: gate
-    if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
+    if: needs.gate.outputs.should_build == 'true'
     strategy:
       matrix:
         include:
@@ -187,7 +278,7 @@ jobs:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
       context: "."
-      push-image: ${{ github.ref == 'refs/heads/master' }}
+      push-image: ${{ needs.gate.outputs.is_master == 'true' }}
 
   # Packages the chart with every image digest stamped into values.yaml, so one
   # version string names the chart and the exact images it deploys.
@@ -204,7 +295,7 @@ jobs:
   # version range on master would silently pull a PR build.
   publish-chart:
     needs: [gate, build]
-    if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
+    if: needs.gate.outputs.should_publish_chart == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -219,8 +310,10 @@ jobs:
 
       - name: Compute chart version
         id: version
+        env:
+          IS_MASTER: ${{ needs.gate.outputs.is_master }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$IS_MASTER" = "true" ]; then
             CHART_VERSION="0.1.0-master.${{ github.run_number }}"
             CHART_REPO="${IMAGE_PREFIX}/charts"
           else
