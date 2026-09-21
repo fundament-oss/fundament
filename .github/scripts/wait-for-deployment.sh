@@ -2,9 +2,9 @@
 #
 # Block until the PR environment is actually serving the commit under test.
 #
-# The deploy job only pushes a commit to the Flux repo; the rollout happens
-# minutes later, and the PR hostnames keep answering from the previous release
-# until it does. So this waits on two things, in order:
+# flux-operator rolls out a newly published chart minutes after publish-chart,
+# and the PR hostnames keep answering from the previous release until it does.
+# So this waits on two things, in order:
 #
 #   1. /version reports the expected release, not the last one.
 #
@@ -14,7 +14,7 @@
 #      unbroken streak is what keeps us out of the destructive window.
 #
 # Usage: wait-for-deployment.sh <organization-api-url> <expected-version>
-#   e.g. wait-for-deployment.sh https://organization.pr349.example.com abc-br-42
+#   e.g. wait-for-deployment.sh https://organization.pr349.example.com 0.1.0-pr349.2563
 #
 # Tunables are env-overridable so the script can be tested against a stub.
 
@@ -23,8 +23,9 @@ set -uo pipefail
 ORG_API="${1:?organization-api url required}"
 EXPECTED_VERSION="${2:?expected version required}"
 
-# Phase 1 budget: Flux has to notice the overlay commit, reconcile the
-# HelmRelease, and pull images. 60 x 15s = 15 minutes.
+# Phase 1 budget: the provider has to list the PR, the HelmChart has to pick up
+# the new version, and helm-controller has to upgrade and pull images.
+# 60 x 15s = 15 minutes.
 VERSION_ATTEMPTS="${VERSION_ATTEMPTS:-60}"
 VERSION_INTERVAL="${VERSION_INTERVAL:-15}"
 

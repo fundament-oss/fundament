@@ -16,11 +16,13 @@ on:
     branches: [master]
 
 concurrency:
-  group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}
+  # A label event other than no-preview-env gets a group of its own, so it never
+  # cancels a running build.
+  group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref }}${{ contains(fromJSON('["labeled","unlabeled"]'), github.event.action) && github.event.label.name != 'no-preview-env' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  DOMAIN: fundament.digilab.reviews
+  DOMAIN: preview.fundament.digilab.reviews
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/fundament
   PR_NUMBER: ${{ github.event.number }}
 
@@ -53,7 +55,9 @@ jobs:
                 [ "$LABEL_NAME" = "no-preview-env" ] && should_teardown=true
                 ;;
               opened|reopened|synchronize|ready_for_review|unlabeled)
-                if [ "$IS_DRAFT" = "false" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
+                if [ "$ACTION" = "unlabeled" ] && [ "$LABEL_NAME" != "no-preview-env" ]; then
+                  :
+                elif [ "$IS_DRAFT" = "false" ] && [ "$HAS_SKIP_LABEL" = "false" ]; then
                   should_deploy=true
                 fi
                 ;;
@@ -154,7 +158,7 @@ jobs:
       build-args: ${{ matrix.build-args }}
 
   # Plugins ship outside the chart and outside the preview environments, so
-  # publish-chart and deploy must not depend on this job.
+  # publish-chart and preview-label must not depend on this job.
   build-plugins:
     needs: gate
     if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
@@ -294,89 +298,19 @@ jobs:
             --username '${{ github.actor }}' --password-stdin
           mise exec -- helm push "dist/fundament-${CHART_VERSION}.tgz" "oci://${CHART_REPO}"
 
-  deploy:
-    needs: [gate, build]
-    if: needs.gate.outputs.should_deploy == 'true'
+  # flux-operator on digikluster previews every open PR labelled flux-preview. Fork PRs are
+  # skipped: their runs cannot publish the chart or write labels.
+  preview-label:
+    needs: [gate, publish-chart]
+    if: needs.gate.outputs.should_deploy == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
       pull-requests: write
-    outputs:
-      image_tag: ${{ steps.image_tag.outputs.image_tag }}
-    env:
-      PR_BRANCH: ${{ github.event.pull_request.head.ref }}
-      JWT_SECRET: ${{ secrets.PR_JWT_SECRET }}
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Compute image tag
-        id: image_tag
-        run: |
-          REF_NAME=$(echo '${{ github.ref_name }}' | tr '/' '-')
-          IMAGE_TAG="${{ github.sha }}-${REF_NAME}-${{ github.run_number }}"
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
-          # Exported so the test jobs can wait for this release specifically.
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
-      - name: Clone Flux repo
-        run: |
-          git clone --depth 1 "https://oauth2:${{ secrets.GITLAB_TOKEN }}@${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}.git" flux-repo
-          cd flux-repo
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Generate PR overlay
-        run: |
-          PR_DIR="flux-repo/apps/fundament/overlays/pr/pr-${PR_NUMBER}"
-          mkdir -p "$PR_DIR"
-
-          export PR_NUM="$PR_NUMBER"
-          export PR_BRANCH="$PR_BRANCH"
-          export DOMAIN="$DOMAIN"
-          export IMAGE_PREFIX="$IMAGE_PREFIX"
-          export IMAGE_TAG="$IMAGE_TAG"
-          export JWT_SECRET="$JWT_SECRET"
-
-          # Generate resources.yaml from the template in the repo.
-          # Only the listed variables are substituted; dollar signs in bcrypt hashes are left intact.
-          envsubst '${PR_NUM} ${PR_BRANCH} ${DOMAIN} ${IMAGE_PREFIX} ${IMAGE_TAG} ${JWT_SECRET}' \
-            < charts/fundament/pr-overlay.yaml \
-            > "$PR_DIR/resources.yaml"
-
-      - name: Update kustomization.yaml
-        run: |
-          cd flux-repo
-          KUSTOMIZATION="apps/fundament/overlays/pr/kustomization.yaml"
-
-          # Create base kustomization if it doesn't exist
-          if [ ! -f "$KUSTOMIZATION" ]; then
-            mkdir -p "$(dirname "$KUSTOMIZATION")"
-            cat > "$KUSTOMIZATION" << 'EOF'
-          apiVersion: kustomize.config.k8s.io/v1beta1
-          kind: Kustomization
-          resources:
-          EOF
-          fi
-
-          # Add PR resource entry if not already present
-          PR_ENTRY="pr-${PR_NUMBER}/resources.yaml"
-          if ! grep -q "$PR_ENTRY" "$KUSTOMIZATION"; then
-            echo "  - $PR_ENTRY" >> "$KUSTOMIZATION"
-          fi
-
-      - name: Commit and push
-        run: |
-          cd flux-repo
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "deploy: PR #${PR_NUMBER} environment
-
-          Commit: ${IMAGE_TAG}
-          Branch: ${PR_BRANCH}"
-            git push
-          fi
+      - name: Label for a preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label flux-preview
 
       - name: Post PR comment
         uses: marocchino/sticky-pull-request-comment@v2
@@ -403,10 +337,10 @@ jobs:
             | Marketplace Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
-            **Commit:** `${{ env.IMAGE_TAG }}`
-            **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`
+            **Chart:** `${{ needs.publish-chart.outputs.chart_version }}`
+            **Namespace:** `tn-fundament-preview-${{ env.PR_NUMBER }}`
 
-            > Environment will be ready once Flux reconciles (~5 min after images are built).
+            > flux-operator picks up the `flux-preview` label within a minute; the install takes a few more.
 
             <details>
             <summary>Test credentials (all passwords: <code>password</code>)</summary>
@@ -420,86 +354,14 @@ jobs:
             - grace@initech.com (Initech)
             </details>
 
-            <details>
-            <summary>Debugging this environment</summary>
-
-            Kubeconfig and pinniped setup: see the [deployment and infra docs](https://gitlab.com/digilab.overheid.nl/miscellaneous/team-documentation/-/blob/main/deployment-and-infra.md).
-
-            **1. Connect**
-
-            ```bash
-            export KUBECONFIG=~/.kube/pinniped_digikluster.yaml
-            export NS=tn-fundament-pr-${{ env.PR_NUMBER }}
-            kubectl -n $NS get pods
-            ```
-
-            **2. Flux reconciliation**
-
-            ```bash
-            kubectl -n $NS get helmrelease,gitrepository
-            kubectl -n $NS describe helmrelease fundament
-            kubectl -n $NS describe gitrepository fundament   # auth / branch / commit issues surface here
-
-            # Force a retry
-            kubectl -n $NS annotate --overwrite helmrelease/fundament \
-              reconcile.fluxcd.io/requestedAt="$(date +%s)"
-            ```
-
-            **3. Pod / app state**
-
-            ```bash
-            kubectl -n $NS get pods
-            kubectl -n $NS get events --sort-by=.lastTimestamp
-            kubectl -n $NS describe pod <pod>   # readiness probes, env refs, and pod events
-            kubectl -n $NS logs <pod>
-            kubectl -n $NS logs <pod> --previous   # if the pod crashed
-
-            # Narrow to a single service (app.kubernetes.io/name = authn-api, organization-api,
-            # console-frontend, docs-frontend, cluster-worker, authz-worker, kube-api-proxy, dex, openfga)
-            kubectl -n $NS get pods -l app.kubernetes.io/name=organization-api
-            ```
-
-            **4. OpenFGA / authorization config**
-
-            ```bash
-            # The store and model are created by a Job. Consumers resolve the
-            # store by name and report themselves unready until they can.
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga-bootstrap -c bootstrap
-            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
-            ```
-
-            **5. DB & migrations**
-
-            ```bash
-            kubectl -n $NS get cluster.postgresql.cnpg.io/db
-            kubectl -n $NS describe cluster.postgresql.cnpg.io/db
-
-            # Migrations run as a Job named db-migrations-<helm-revision>, with a
-            # 5m TTL after success. If the Job is gone, migrations almost
-            # certainly succeeded. When the release resets, the same container
-            # clears the OpenFGA tuples first.
-            kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
-            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
-            ```
-
-            **6. Routes & TLS**
-
-            ```bash
-            kubectl -n $NS get httproutes
-            kubectl -n istio-gateway get certificate tn-fundament-pr-${{ env.PR_NUMBER }}-wildcard-tls
-            ```
-
-            **7. Nothing deployed at all?**
-
-            If the namespace is missing, the PR overlay never reached the cluster. Check the [PR overlay in the Flux repo](https://${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}/-/tree/master/apps/fundament/overlays/pr/pr-${{ env.PR_NUMBER }}) — if it's not there, the CI push to the Flux repo failed; if it is, the cluster-level Flux reconciliation is stuck.
-            </details>
+            How previews work and how to debug one: [preview environments](https://github.com/fundament-oss/fundament/blob/master/docs/developer/fundament/preview-environments.md).
 
   # Owns the wait for Flux to roll out this commit, so the test jobs below start
   # against a settled environment instead of each polling for it themselves.
   # A failure here means the deployment never landed — the tests are skipped
   # rather than reporting it as a test failure.
   environment-ready:
-    needs: deploy
+    needs: [publish-chart, preview-label]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -510,7 +372,7 @@ jobs:
         run: |
           .github/scripts/wait-for-deployment.sh \
             "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
-            "${{ needs.deploy.outputs.image_tag }}"
+            "${{ needs.publish-chart.outputs.chart_version }}"
 
   terraform-acc-tests:
     needs: environment-ready
@@ -571,44 +433,17 @@ jobs:
           name: e2e-reports
           path: e2e/reports/
 
-  teardown:
+  preview-unlabel:
     needs: gate
-    if: needs.gate.outputs.should_teardown == 'true'
+    if: needs.gate.outputs.should_teardown == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
-      - name: Clone Flux repo
-        run: |
-          git clone --depth 1 "https://oauth2:${{ secrets.GITLAB_TOKEN }}@${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}.git" flux-repo
-          cd flux-repo
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Remove PR overlay
-        run: |
-          cd flux-repo
-          PR_DIR="apps/fundament/overlays/pr/pr-${PR_NUMBER}"
-
-          # Remove PR directory
-          rm -rf "$PR_DIR"
-
-          # Remove entry from kustomization.yaml
-          KUSTOMIZATION="apps/fundament/overlays/pr/kustomization.yaml"
-          if [ -f "$KUSTOMIZATION" ]; then
-            sed -i "\|pr-${PR_NUMBER}/resources.yaml|d" "$KUSTOMIZATION"
-          fi
-
-      - name: Commit and push
-        run: |
-          cd flux-repo
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "teardown: PR #${PR_NUMBER} environment"
-            git push
-          fi
+      - name: Remove the preview label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label flux-preview
 
       - name: Update PR comment
         uses: marocchino/sticky-pull-request-comment@v2
