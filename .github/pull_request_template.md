@@ -1,4 +1,6 @@
-<!-- One or two sentences: what this changes, and why it's needed. -->
+## Why this change is needed
+
+<!-- One or two sentences: the problem or goal behind this change. -->
 
 ## What changed
 
