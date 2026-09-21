@@ -1182,7 +1182,7 @@ CREATE POLICY plugin_definitions_select_catalog ON appstore.plugin_definitions
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_catalog_api
-	USING (deleted IS NULL);
+	USING (deleted IS NULL AND published IS NOT NULL);
 -- ddl-end --
 
 -- object: plugins_select_catalog | type: POLICY --

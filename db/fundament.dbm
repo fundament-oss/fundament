@@ -1474,7 +1474,7 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugin_definitions_select_catalog" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL]]> </expression>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND published IS NOT NULL]]> </expression>
 </policy>
 
 <policy name="plugins_select_catalog" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
