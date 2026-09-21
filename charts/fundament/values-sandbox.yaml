@@ -16,8 +16,6 @@ externalUrls:
   dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
   marketplace: https://marketplace.fundament.projects.digilab.network
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.projects.digilab.network
-  # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
-  # have no implementation yet (FUN-20 defers them).
   corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
@@ -191,6 +189,30 @@ marketplaceFrontend:
 
 # Anonymous storefront API: the console's plugins page reads catalog.v1 from it.
 marketplaceCatalogApi:
+  enabled: true
+  replicas: 2
+
+# Developer portal and review backoffice: the storefront image built for the other two
+# audiences (FUN-20).
+marketplaceRegistryFrontend:
+  enabled: true
+  replicas: 2
+  internalApiUrls:
+    registry: http://marketplace-registry-api:8080
+
+marketplaceAdminFrontend:
+  enabled: true
+  replicas: 2
+  internalApiUrls:
+    admin: http://marketplace-admin-api:8080
+
+# Authenticated publishing surface: validates the developer's UserToken.
+marketplaceRegistryApi:
+  enabled: true
+  replicas: 2
+
+# Review backoffice API: validates the reviewer's DCIM token (staff IDP).
+marketplaceAdminApi:
   enabled: true
   replicas: 2
 
