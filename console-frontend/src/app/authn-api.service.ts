@@ -33,16 +33,13 @@ export default class AuthnApiService {
     });
   }
 
+  // No `return_to`: password login answers with the token as JSON and sets the
+  // cookie, it never redirects, so the caller stays on the page and routes
+  // itself. Only the OIDC `/login` takes one.
   async login(email: string, password: string): Promise<void> {
-    const returnUrl = `${window.location.origin}/`;
-
     const { error } = await handlePasswordLogin({
       client: this.restClient,
-      body: {
-        email,
-        password,
-        return_to: returnUrl,
-      },
+      body: { email, password },
     });
 
     if (error) {

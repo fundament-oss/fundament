@@ -64,6 +64,13 @@ the OIDC round trip, sets the cookie and redirects back. It only honours a
 authn's `CORS_ALLOWED_ORIGINS` — which it needs regardless, to call
 `GetUserInfo` with the cookie attached.
 
+The hand-off is attempted once per tab. If the browser comes back from the
+login and `GetUserInfo` still says there is no session, the guard lets the
+navigation through and leaves the API's own error to surface, rather than
+sending the visitor round again: `GetUserInfo` failing does not distinguish
+"not signed in" from "authn did not answer", and a second pass would loop the
+tab silently, because dex re-approves the session it just minted every time.
+
 Two configuration knobs that have to agree for this to work: `authnApiUrl` in
 the deployment's `config.json` (a build without it has no session surface, which
 is how the storefront and the demo bundle opt out), and the portal's origin on

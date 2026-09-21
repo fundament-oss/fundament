@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { APP_BASE_HREF, LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import authGuard from './auth.guard';
 import SessionService from './session.service';
@@ -18,9 +19,15 @@ type SessionOutcome = { user: { organizationIds: string[] } | undefined } | 'una
 async function runGuard(
   config: Partial<AppConfiguration>,
   outcome: SessionOutcome,
+  baseHref = '/',
 ): Promise<{ allowed: boolean; redirectedTo?: string }> {
   TestBed.configureTestingModule({
     providers: [
+      // The real strategy, not the location mocks: the mock's
+      // prepareExternalUrl ignores APP_BASE_HREF, which is the thing under
+      // test here.
+      { provide: LocationStrategy, useClass: PathLocationStrategy },
+      { provide: APP_BASE_HREF, useValue: baseHref },
       { provide: CONFIG_LOADER, useValue: async () => ({ ...EMPTY_CONFIGURATION, ...config }) },
       {
         provide: AUTHN_CLIENT,
@@ -57,6 +64,10 @@ async function runGuard(
 }
 
 describe('authGuard', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
   it('lets a signed-in visitor through', async () => {
     const result = await runGuard(
       { authnApiUrl: AUTHN_API_URL },
@@ -89,6 +100,36 @@ describe('authGuard', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.redirectedTo).toBeUndefined();
+  });
+
+  // Coming back from the login still without a session means sending the
+  // visitor again would do the same thing. Letting the navigation through
+  // surfaces the API's own error instead of looping the tab.
+  it('does not send a visitor to the login twice', async () => {
+    sessionStorage.setItem('marketplace_login_attempted', '1');
+
+    const result = await runGuard({ authnApiUrl: AUTHN_API_URL }, 'unauthenticated');
+
+    expect(result.allowed).toBe(true);
+    expect(result.redirectedTo).toBeUndefined();
+  });
+
+  // A session that resolves clears the flag, so a later expiry can send the
+  // visitor to the login again rather than being written off as a loop.
+  it('clears the earlier attempt once a session resolves', async () => {
+    sessionStorage.setItem('marketplace_login_attempted', '1');
+
+    await runGuard({ authnApiUrl: AUTHN_API_URL }, { user: { organizationIds: ['org'] } });
+
+    expect(sessionStorage.getItem('marketplace_login_attempted')).toBeNull();
+  });
+
+  // The router URL carries no base href, so a portal served under a subpath
+  // has to have it put back or the visitor returns to the wrong page.
+  it('returns to a route under the deployment base href', async () => {
+    const result = await runGuard({ authnApiUrl: AUTHN_API_URL }, 'unauthenticated', '/portal/');
+
+    expect(result.redirectedTo).toBe(`${window.location.origin}/portal/manage`);
   });
 });
 

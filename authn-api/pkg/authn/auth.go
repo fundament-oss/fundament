@@ -42,7 +42,8 @@ type Config struct {
 	CookieSecure bool
 	FrontendURL  string
 	// AllowedReturnOrigins are the origins a login's `return_to` may name.
-	// See return_to.go for why the list is the CORS origins.
+	// New normalizes them once; read the result off the server rather than
+	// this field. See return_to.go for why the list is the CORS origins.
 	AllowedReturnOrigins []string
 }
 
@@ -65,6 +66,10 @@ type AuthnServer struct {
 	cookieBuilder       *auth.CookieBuilder
 	authz               authzEvaluator
 	pluginInstallations PluginInstallationLookup
+	// allowedReturnOrigins is Config.AllowedReturnOrigins normalized once, at
+	// startup, so a configured origin that cannot be parsed is reported then
+	// rather than silently never matching. See return_to.go.
+	allowedReturnOrigins []string
 }
 
 // New creates a new AuthnServer.
@@ -81,6 +86,8 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		cookieBuilder:       auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
 		authz:               authzClient,
 		pluginInstallations: pluginInstallations,
+
+		allowedReturnOrigins: normalizeReturnOrigins(logger, cfg.AllowedReturnOrigins),
 	}, nil
 }
 

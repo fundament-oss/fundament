@@ -57,10 +57,6 @@ export type PasswordLoginRequest = {
      * User's password
      */
     password: string;
-    /**
-     * Optional URL to redirect to after successful login
-     */
-    return_to?: string;
 };
 
 export type StatusResponse = {

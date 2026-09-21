@@ -1,6 +1,7 @@
 package authn
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,18 +14,29 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 )
 
-func allowlistServer() *AuthnServer {
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+// serverWithAllowlist builds the server the way New does, so the tests run
+// against the same normalized allowlist production does.
+func serverWithAllowlist(frontendURL string, allowed ...string) *AuthnServer {
+	logger := discardLogger()
+
 	return &AuthnServer{
-		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		config: &Config{
-			FrontendURL: "https://console.fundament.localhost:8443",
-			AllowedReturnOrigins: []string{
-				"https://console.fundament.localhost:8443",
-				"https://marketplace-registry.fundament.localhost:8443",
-				"http://localhost:4200",
-			},
-		},
+		logger:               logger,
+		config:               &Config{FrontendURL: frontendURL, AllowedReturnOrigins: allowed},
+		allowedReturnOrigins: normalizeReturnOrigins(logger, allowed),
 	}
+}
+
+func allowlistServer() *AuthnServer {
+	return serverWithAllowlist(
+		"https://console.fundament.localhost:8443",
+		"https://console.fundament.localhost:8443",
+		"https://marketplace-registry.fundament.localhost:8443",
+		"http://localhost:4200",
+	)
 }
 
 func TestReturnToAllowed(t *testing.T) {
@@ -61,13 +73,10 @@ func TestReturnToAllowed(t *testing.T) {
 // A default port and no port name the same origin, so a return URL that spells
 // one out still matches a configured origin that does not, and the reverse.
 func TestReturnToAllowed_DefaultPorts(t *testing.T) {
-	server := &AuthnServer{
-		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		config: &Config{AllowedReturnOrigins: []string{
-			"https://console.example.com",
-			"http://portal.example.com:80",
-		}},
-	}
+	server := serverWithAllowlist("",
+		"https://console.example.com",
+		"http://portal.example.com:80",
+	)
 
 	assert.True(t, server.isSafeReturnTo("https://console.example.com:443/manage"))
 	assert.True(t, server.isSafeReturnTo("http://portal.example.com/manage"))
@@ -117,4 +126,35 @@ func TestGetRedirectURL(t *testing.T) {
 	assert.Equal(t, server.config.FrontendURL, server.getRedirectURL(emptyState))
 
 	assert.Equal(t, server.config.FrontendURL, server.getRedirectURL("not-a-state"))
+}
+
+// A configured origin that cannot be parsed can never match, so it is dropped
+// at startup and said out loud there — the login it refuses only logs the
+// caller's return_to, which points at the wrong thing.
+func TestNormalizeReturnOrigins_ReportsUnusableEntries(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+
+	origins := normalizeReturnOrigins(logger, []string{
+		"https://console.example.com:443",
+		"",
+		"console.example.com",
+		"HTTPS://Console.Example.com",
+	})
+
+	// The scheme-less entry is gone, the empty one is the trailing comma of a
+	// comma-separated variable, and the two spellings of the console fold into
+	// one origin.
+	assert.Equal(t, []string{"https://console.example.com"}, origins)
+	assert.Contains(t, logs.String(), "console.example.com")
+	assert.Contains(t, logs.String(), "not an absolute http(s) URL")
+}
+
+func TestNormalizeReturnOrigins_ReportsAnEmptyAllowlist(t *testing.T) {
+	var logs bytes.Buffer
+
+	origins := normalizeReturnOrigins(slog.New(slog.NewTextHandler(&logs, nil)), []string{"", "nope"})
+
+	assert.Empty(t, origins)
+	assert.Contains(t, logs.String(), "no usable allowed return origins")
 }

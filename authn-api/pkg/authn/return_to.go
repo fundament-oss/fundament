@@ -1,7 +1,9 @@
 package authn
 
 import (
+	"log/slog"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -52,6 +54,42 @@ func normalizeOrigin(raw string) (string, bool) {
 	return scheme + "://" + host, true
 }
 
+// normalizeReturnOrigins folds the configured allowlist into the comparable
+// form isSafeReturnTo matches against, once at startup rather than on every
+// login.
+//
+// An entry that is not an absolute http(s) URL can never match anything, so it
+// is dropped — and logged, because the symptom is otherwise a 400 at login
+// whose only line names the caller's return_to and says nothing about the
+// configuration that refused it. An empty entry is the trailing comma in a
+// comma-separated environment variable and is not worth a line.
+func normalizeReturnOrigins(logger *slog.Logger, configured []string) []string {
+	origins := make([]string, 0, len(configured))
+
+	for _, entry := range configured {
+		if strings.TrimSpace(entry) == "" {
+			continue
+		}
+
+		origin, ok := normalizeOrigin(entry)
+		if !ok {
+			logger.Error("ignoring allowed return origin that is not an absolute http(s) URL",
+				"origin", entry)
+			continue
+		}
+
+		if !slices.Contains(origins, origin) {
+			origins = append(origins, origin)
+		}
+	}
+
+	if len(origins) == 0 {
+		logger.Error("no usable allowed return origins: every login naming a return_to will be refused")
+	}
+
+	return origins
+}
+
 // isSafeReturnTo reports whether returnTo is a trusted post-login redirect
 // target. It is dcim-authn-api's check of the same name, widened from the one
 // configured frontend to a list, because the console is not the only surface
@@ -62,12 +100,5 @@ func (s *AuthnServer) isSafeReturnTo(returnTo string) bool {
 		return false
 	}
 
-	for _, allowed := range s.config.AllowedReturnOrigins {
-		allowedOrigin, ok := normalizeOrigin(allowed)
-		if ok && allowedOrigin == origin {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(s.allowedReturnOrigins, origin)
 }

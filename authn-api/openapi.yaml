@@ -318,10 +318,6 @@ components:
           type: string
           format: password
           description: User's password
-        return_to:
-          type: string
-          format: uri
-          description: Optional URL to redirect to after successful login
 
     StatusResponse:
       type: object

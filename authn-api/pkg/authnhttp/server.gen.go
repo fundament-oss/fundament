@@ -34,9 +34,6 @@ type PasswordLoginRequest struct {
 
 	// Password User's password
 	Password string `json:"password"`
-
-	// ReturnTo Optional URL to redirect to after successful login
-	ReturnTo *string `json:"return_to,omitempty"`
 }
 
 // RefreshResponse defines model for RefreshResponse.

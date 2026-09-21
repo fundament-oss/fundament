@@ -1,5 +1,5 @@
 import { PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Location, isPlatformBrowser } from '@angular/common';
 import { CanActivateFn } from '@angular/router';
 import SessionService from './session.service';
 
@@ -17,6 +17,7 @@ import SessionService from './session.service';
  */
 const authGuard: CanActivateFn = async (_route, state) => {
   const session = inject(SessionService);
+  const location = inject(Location);
 
   // Nothing to sign in against: the demo bundle answers the portal from
   // in-memory fixtures, and a deployment may not have an authn URL wired up
@@ -37,9 +38,22 @@ const authGuard: CanActivateFn = async (_route, state) => {
     return true;
   }
 
+  // Already been round the login once this tab and come back with no session,
+  // so sending the visitor again would only do the same thing (see
+  // SessionService.hasTriedLogin). Let the navigation through instead and let
+  // the API's own error say what is wrong, which is what the portal did before
+  // there was a guard at all.
+  if (session.hasTriedLogin()) {
+    return true;
+  }
+
   // The route being activated, not window.location: on an in-app navigation
   // the address bar still holds the page the visitor is leaving.
-  session.redirectToLogin(new URL(state.url, window.location.origin).href);
+  // prepareExternalUrl puts back whatever the deployment's base href strips
+  // off, which the router URL does not carry.
+  session.redirectToLogin(
+    new URL(location.prepareExternalUrl(state.url), window.location.origin).href,
+  );
   return false;
 };
 
