@@ -16,9 +16,13 @@ externalUrls:
   dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
   marketplace: https://marketplace.fundament.projects.digilab.network
   marketplaceCatalogApi: https://marketplace-catalog-api.fundament.projects.digilab.network
-  # marketplace{Registry,Admin}Api are left unset: those two marketplace APIs
-  # have no implementation yet (FUN-20 defers them).
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
+  marketplaceRegistry: https://marketplace-registry.fundament.projects.digilab.network
+  marketplaceRegistryApi: https://marketplace-registry-api.fundament.projects.digilab.network
+  # marketplace{Admin,AdminApi} are left unset: the review backoffice runs on a
+  # restricted host and is not part of this sandbox. Leaving marketplaceAdmin
+  # empty is what keeps the portal from linking at a backoffice that is not
+  # there, so do not set it without also enabling marketplaceAdminFrontend.
+  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
   enabled: true
@@ -189,8 +193,24 @@ marketplaceFrontend:
   internalApiUrls:
     catalog: http://marketplace-catalog-api:8080
 
+# Developer portal: the same image as marketplaceFrontend built for the
+# publishing audience (FUN-20). It holds the "Build a plugin" page the
+# storefront hands off to; without it, externalUrls.marketplaceRegistry is
+# empty and the storefront hides that hand-off altogether.
+marketplaceRegistryFrontend:
+  enabled: true
+  replicas: 2
+  internalApiUrls:
+    registry: http://marketplace-registry-api:8080
+
 # Anonymous storefront API: the console's plugins page reads catalog.v1 from it.
 marketplaceCatalogApi:
+  enabled: true
+  replicas: 2
+
+# Authenticated publishing surface behind the developer portal: validates the
+# developer's UserToken from authn-api.
+marketplaceRegistryApi:
   enabled: true
   replicas: 2
 

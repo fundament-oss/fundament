@@ -34,6 +34,11 @@ export default class MarketplaceIndexComponent implements OnInit {
   // when that area is not deployed, which hides the link.
   protected developerUrl = inject(ConfigService).getConfig().developerUrl ?? '';
 
+  // The demo bundle has no portal URL but does carry the manage routes, so
+  // its call to action links internally. Neither means no portal exists in
+  // this environment and the whole panel is dropped.
+  protected bundledDeveloperArea = inject(ConfigService).hasBundledDeveloperArea();
+
   private service = inject(MarketplaceService);
 
   private route = inject(ActivatedRoute);

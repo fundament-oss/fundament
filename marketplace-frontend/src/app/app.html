@@ -35,8 +35,10 @@
 
     <nav class="ml-auto flex items-center gap-2" aria-label="Primary">
       @if (variant === 'catalog') {
-        <!-- href in the split deployment, routerLink when no portal URL is
-             configured — the demo bundle carries the manage routes itself. -->
+        <!-- href in the split deployment, routerLink in the demo bundle, which
+             carries the manage routes itself. Nothing when neither applies:
+             this build's route table has no manage routes, so the links would
+             only hit its `**` wildcard and land back on the home page. -->
         @if (developerUrl) {
           <a [href]="developerUrl + '/manage/create'">
             <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
@@ -44,7 +46,7 @@
           <a [href]="developerUrl + '/manage'">
             <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
           </a>
-        } @else {
+        } @else if (bundledDeveloperArea) {
           <nldd-button
             routerLink="/manage/create"
             text="Build a plugin"
@@ -100,7 +102,7 @@
     @if (variant === 'catalog') {
       @if (developerUrl) {
         <a [href]="developerUrl + '/manage/create'" class="link">Build a plugin</a>
-      } @else {
+      } @else if (bundledDeveloperArea) {
         <a routerLink="/manage/create" class="link">Build a plugin</a>
       }
     }

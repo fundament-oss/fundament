@@ -285,60 +285,64 @@
           }
         </section>
 
-        <!-- Build-a-plugin call to action -->
-        <section
-          class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
-        >
-          <div
-            class="pointer-events-none absolute inset-0 text-white/6"
-            style="
-              background-image: radial-gradient(currentColor 1px, transparent 1px);
-              background-size: 22px 22px;
-            "
-            aria-hidden="true"
-          ></div>
-          <div
-            class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
-            aria-hidden="true"
-          ></div>
-          <div
-            class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
+        <!-- The publishing call to action, shown only where a developer
+             portal is actually reachable: its own deployment (FUN-20), or
+             the demo bundle's own manage routes. -->
+        @if (developerUrl || bundledDeveloperArea) {
+          <section
+            class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
           >
-            <div class="max-w-xl">
-              <!-- This panel stays dark in both themes, so the accent shade has to be
-                   flipped back in dark mode to keep reading as a light-on-dark blue. -->
-              <p
-                class="text-accent-300 dark:text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase"
-              >
-                For platform teams
-              </p>
-              <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
-                Build a plugin for every Fundament cluster
-              </h2>
-              <p class="mt-3 text-gray-300">
-                Package your operator once and publish it to the marketplace, so any team can
-                install it in a single click.
-              </p>
+            <div
+              class="pointer-events-none absolute inset-0 text-white/6"
+              style="
+                background-image: radial-gradient(currentColor 1px, transparent 1px);
+                background-size: 22px 22px;
+              "
+              aria-hidden="true"
+            ></div>
+            <div
+              class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
+              aria-hidden="true"
+            ></div>
+            <div
+              class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="max-w-xl">
+                <!-- This panel stays dark in both themes, so the accent shade has to be
+                     flipped back in dark mode to keep reading as a light-on-dark blue. -->
+                <p
+                  class="text-accent-300 dark:text-accent-700 text-xs font-semibold tracking-[0.14em] uppercase"
+                >
+                  For platform teams
+                </p>
+                <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
+                  Build a plugin for every Fundament cluster
+                </h2>
+                <p class="mt-3 text-gray-300">
+                  Package your operator once and publish it to the marketplace, so any team can
+                  install it in a single click.
+                </p>
+              </div>
+              @if (developerUrl) {
+                <a [href]="developerUrl + '/manage/create'" class="shrink-0">
+                  <nldd-button
+                    text="Build a plugin"
+                    end-icon="arrow-right"
+                    variant="primary"
+                  ></nldd-button>
+                </a>
+              } @else {
+                <a routerLink="/manage/create" class="shrink-0">
+                  <nldd-button
+                    text="Build a plugin"
+                    end-icon="arrow-right"
+                    variant="primary"
+                  ></nldd-button>
+                </a>
+              }
             </div>
-            @if (developerUrl) {
-              <a [href]="developerUrl + '/manage/create'" class="shrink-0">
-                <nldd-button
-                  text="Build a plugin"
-                  end-icon="arrow-right"
-                  variant="primary"
-                ></nldd-button>
-              </a>
-            } @else {
-              <a routerLink="/manage/create" class="shrink-0">
-                <nldd-button
-                  text="Build a plugin"
-                  end-icon="arrow-right"
-                  variant="primary"
-                ></nldd-button>
-              </a>
-            }
-          </div>
-        </section>
+          </section>
+        }
       }
     </div>
   </div>

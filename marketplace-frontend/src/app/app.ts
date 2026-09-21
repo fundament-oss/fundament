@@ -55,6 +55,12 @@ export default class App {
 
   protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
 
+  // Fallback for the publishing hand-off when no portal URL is configured:
+  // true only in the demo bundle, which carries the manage routes itself.
+  // Both false means no portal is deployed here and the links are dropped
+  // rather than pointing at a route this build does not have.
+  protected readonly bundledDeveloperArea = this.configService.hasBundledDeveloperArea();
+
   protected readonly storefrontUrl = this.configService.getConfig().storefrontUrl ?? '';
 
   // The organization the developer portal acts for; the picker only shows
