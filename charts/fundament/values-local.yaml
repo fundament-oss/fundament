@@ -41,6 +41,9 @@ authnApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  # Verify sandbox plugin-controller tokens against k3d-fundament-plugin.
+  # Same Secret plugin-proxy uses — created by: just plugin-sandbox-kubeconfig
+  sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
 
 organizationApi:
   enabled: true

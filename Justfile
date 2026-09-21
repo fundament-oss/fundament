@@ -198,11 +198,11 @@ plugin-sandbox-kubeconfig:
          WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" \
         || echo "  (could not reach the database — the console will still show provisioning)" >&2
 
-    # Both consumers read the Secret only at startup, and Reloader does not reliably pick
+    # All three consumers read the Secret only at startup, and Reloader does not reliably pick
     # this one up, so restart them here rather than leave a Secret that has no effect.
-    echo "- restarting plugin-proxy and kube-api-proxy to pick the Secret up"
+    echo "- restarting plugin-proxy, kube-api-proxy and authn-api to pick the Secret up"
     kubectl --context k3d-fundament -n fundament rollout restart \
-        deployment/plugin-proxy deployment/kube-api-proxy > /dev/null
+        deployment/plugin-proxy deployment/kube-api-proxy deployment/authn-api > /dev/null
     kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
 
     # Confirm the new pod actually switched off the in-memory mock. `rollout status`

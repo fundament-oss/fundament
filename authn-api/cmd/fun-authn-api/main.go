@@ -48,6 +48,19 @@ type config struct {
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
 	PluginProxyURL     string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8081"`
+
+	// Shoot workload token verification (FUN-22). GARDENER_MODE and
+	// GARDENER_KUBECONFIG follow the other services; the sandbox kubeconfig is
+	// the Secret plugin-proxy and kube-api-proxy also mount; SHOOT_VERIFIER_MODE
+	// "mock" replaces the cluster with an HMAC stand-in for tests.
+	GardenerMode                string `env:"GARDENER_MODE" envDefault:"mock"`
+	GardenerKubeconfig          string `env:"GARDENER_KUBECONFIG"`
+	PluginSandboxKubeconfig     string `env:"PLUGIN_SANDBOX_KUBECONFIG"`
+	ShootVerifierMode           string `env:"SHOOT_VERIFIER_MODE" envDefault:"auto"`
+	MockShootSecret             string `env:"MOCK_SHOOT_SECRET" envDefault:"mock-shoot-secret"` // authn.DefaultMockShootSecret
+	MockShootSecretAllowDefault bool   `env:"MOCK_SHOOT_SECRET_ALLOW_DEFAULT" envDefault:"false"`
+	LocalClusterID              string `env:"LOCAL_CLUSTER_ID" envDefault:"019b4000-2000-7000-8000-000000000001"`
+	LocalOrganizationID         string `env:"LOCAL_ORGANIZATION_ID" envDefault:"019b4000-0000-7000-8000-000000000001"`
 }
 
 func main() {
@@ -166,7 +179,21 @@ func run() error {
 		&http.Client{Timeout: 10 * time.Second}, cfg.PluginProxyURL)
 	pluginInstallations := authn.NewPluginProxyLookup(pluginProxyClient)
 
-	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, authzClient, pluginInstallations)
+	shootVerifier, err := authn.NewShootVerifier(logger, &authn.ShootVerifierConfig{
+		Mode:                    cfg.ShootVerifierMode,
+		GardenerMode:            cfg.GardenerMode,
+		GardenerKubeconfig:      cfg.GardenerKubeconfig,
+		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
+		MockSecret:              cfg.MockShootSecret,
+		AllowDefaultMockSecret:  cfg.MockShootSecretAllowDefault,
+		LocalClusterID:          cfg.LocalClusterID,
+		LocalOrganizationID:     cfg.LocalOrganizationID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create shoot token verifier: %w", err)
+	}
+
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, authzClient, pluginInstallations, shootVerifier)
 	if err != nil {
 		return fmt.Errorf("failed to create authn api: %w", err)
 	}

@@ -91,3 +91,7 @@ Optional with defaults:
 - `PLUGIN_PROXY_INTERNAL_URL` (http://plugin-proxy:8081) - plugin-proxy internal RPC URL, called by `MintPluginToken`
 - `COOKIE_DOMAIN` (fundament.localhost)
 - `COOKIE_SECURE` (false)
+- `GARDENER_MODE` (mock) / `GARDENER_KUBECONFIG` - real mode verifies shoot workload tokens by TokenReview through Gardener (FUN-22)
+- `PLUGIN_SANDBOX_KUBECONFIG` - kubeconfig of the local plugin sandbox cluster; when set and present, TokenReview runs there (without it and without Gardener or mock, every exchange is denied)
+- `SHOOT_VERIFIER_MODE` (auto) - `mock` accepts HMAC mock tokens (`MOCK_SHOOT_SECRET`, default `mock-shoot-secret`) for the seeded cluster; tests only
+- `LOCAL_CLUSTER_ID` / `LOCAL_ORGANIZATION_ID` - the one cluster the sandbox and mock verifiers answer for (default: seeded acme-corp cluster)

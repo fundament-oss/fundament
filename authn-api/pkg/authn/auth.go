@@ -17,6 +17,7 @@ import (
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/authn-api/pkg/shootverify"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -66,6 +67,7 @@ type AuthnServer struct {
 	cookieBuilder       *auth.CookieBuilder
 	authz               authzEvaluator
 	pluginInstallations PluginInstallationLookup
+	shootVerifier       shootverify.Verifier
 	// allowedReturnOrigins is Config.AllowedReturnOrigins normalized once, at
 	// startup, so a configured origin that cannot be parsed is reported then
 	// rather than silently never matching. See return_to.go.
@@ -73,7 +75,7 @@ type AuthnServer struct {
 }
 
 // New creates a new AuthnServer.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup) (*AuthnServer, error) {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup, shootVerifier shootverify.Verifier) (*AuthnServer, error) {
 	return &AuthnServer{
 		config:              cfg,
 		logger:              logger,
@@ -88,6 +90,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		pluginInstallations: pluginInstallations,
 
 		allowedReturnOrigins: auth.NewReturnOrigins(logger, cfg.AllowedReturnOrigins),
+		shootVerifier:        shootVerifier,
 	}, nil
 }
 

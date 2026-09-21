@@ -84,6 +84,23 @@ authnApi:
   enabled: true
   replicas: 1
   logLevel: info
+  # Shoot workload token verification (FUN-22): "auto" picks TokenReview via
+  # Gardener (clusterWorker.gardenerKubeconfigSecret), else the plugin sandbox
+  # kubeconfig below, else denies every exchange; "mock" accepts HMAC mock
+  # tokens for the seeded cluster (tests and PR environments only).
+  shootVerifierMode: auto
+  # mockShootSecret: the HMAC key the mock verifier accepts. Empty keeps the
+  # binary's default, which is public: authn-api refuses to start with it in
+  # mock mode unless mockShootSecretAllowDefault is set. The cucumber suite
+  # reads MOCK_SHOOT_SECRET to match.
+  mockShootSecret: ""
+  # mockShootSecretAllowDefault: accept the public default secret in mock mode.
+  # Only where the seeded test accounts are public too (previews): a forged
+  # token then reads exactly what those logins already can.
+  mockShootSecretAllowDefault: false
+  # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets the local
+  # plugin sandbox cluster (same Secret plugin-proxy and kube-api-proxy use).
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
