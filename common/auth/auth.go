@@ -27,13 +27,16 @@ const (
 )
 
 // TokenType is the value carried in the JWT `aud` claim. It distinguishes
-// user tokens from plugin tokens so that services can refuse the wrong kind
+// user, plugin and workload tokens so that services can refuse the wrong kind
 // at validation time.
 type TokenType = string
 
 const (
 	TokenTypeUser   TokenType = "fundament-user"
 	TokenTypePlugin TokenType = "fundament-plugin"
+	// TokenTypeWorkload marks a WorkloadToken: a workload on one cluster (FUN-22).
+	// Parsed only by ParseWorkloadToken, never by Validator.
+	TokenTypeWorkload TokenType = "fundament-workload" //nolint:gosec // audience label, not a credential
 )
 
 // Claims represents the JWT claims used across fundament services.
