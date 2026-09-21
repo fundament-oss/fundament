@@ -39,10 +39,19 @@ plugins/
 | [OpenFSC](openfsc/README.md) | `openfsc` | `openfsc` |
 | [Ceph Storage (Rook)](../docs/developer/plugins/example-ceph-rook.md) | `storage/ceph-rook` | `ceph-rook` |
 
+## Images
+
+CI builds every plugin here as `ghcr.io/fundament-oss/fundament/<metadata.name>-plugin`
+(`linux/amd64`) on each master build and non-draft PR, and prints the digest-pinned
+reference in the run summary for `functl plugin publish --image`.
+
+`just plugins publish` builds its own image, for the local sandbox registry.
+
 ## Adding a first-party plugin
 
 1. A directory under `plugins/` with the files from [Layout](#layout).
 2. `permissions.rbac` covers everything the plugin creates outside its own namespace, including Helm's release storage (Secrets): [RBAC model](../docs/developer/plugins/index.md#rbac-model).
 3. `mod <module> '<path>'` in `mod.just`.
-4. A README with its flow.
-5. The first publish with `--create`, or a listing in `db/seed/0101-appstore-catalog.sql`.
+4. A `build-plugins` matrix entry in `.github/workflows/build.yml`.
+5. A README with its flow.
+6. The first publish with `--create`, or a listing in `db/seed/0101-appstore-catalog.sql`.

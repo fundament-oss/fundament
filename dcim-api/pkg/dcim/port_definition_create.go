@@ -41,8 +41,7 @@ func (s *Server) CreatePortDefinition(
 
 	id, err := s.queries.PortDefinitionCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintPortDefinitionsUqCatalogName:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("port definition with this name already exists for this catalog entry"))

@@ -51,8 +51,7 @@ func (s *Server) UpdateAsset(
 
 	rowsAffected, err := s.queries.AssetUpdate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintAssetsUqSerialNumber:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("asset with this serial number already exists"))

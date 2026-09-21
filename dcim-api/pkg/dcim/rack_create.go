@@ -27,8 +27,7 @@ func (s *Server) CreateRack(
 
 	id, err := s.queries.RackCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintRacksUqRackRowName:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("rack with this name already exists in this rack row"))

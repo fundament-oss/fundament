@@ -309,7 +309,6 @@ func (s *Server) GetOrgWorkloadMetrics(
 	g.SetLimit(10)
 
 	for i, cl := range clusters {
-		i, cl := i, cl
 		g.Go(func() error {
 			r := &results[i]
 			r.id = cl.ID.String()
@@ -463,7 +462,6 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 	g.SetLimit(10)
 
 	for i, cl := range clusters {
-		i, cl := i, cl
 		g.Go(func() error {
 			r := &results[i]
 

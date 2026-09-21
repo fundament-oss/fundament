@@ -63,7 +63,7 @@ func validateCRD(crd string) error {
 	if !dnsLabelRegex.MatchString(plural) {
 		return fmt.Errorf("crd %q has an invalid resource plural %q (must be a lowercase DNS label)", crd, plural)
 	}
-	for _, part := range strings.Split(group, ".") {
+	for part := range strings.SplitSeq(group, ".") {
 		if !dnsLabelRegex.MatchString(part) {
 			return fmt.Errorf("crd %q has an invalid API group %q (must be a lowercase DNS subdomain)", crd, group)
 		}

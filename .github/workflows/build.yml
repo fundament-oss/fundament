@@ -153,6 +153,36 @@ jobs:
       context: ${{ matrix.context }}
       build-args: ${{ matrix.build-args }}
 
+  # Plugins ship outside the chart and outside the preview environments, so
+  # publish-chart and deploy must not depend on this job.
+  build-plugins:
+    needs: gate
+    if: github.event_name == 'push' || needs.gate.outputs.should_deploy == 'true'
+    strategy:
+      matrix:
+        include:
+          - image-name: cert-manager-plugin
+            dockerfile: plugins/cert-manager/Dockerfile
+          - image-name: external-dns-plugin
+            dockerfile: plugins/external-dns/Dockerfile
+          - image-name: gateway-api-envoy-plugin
+            dockerfile: plugins/gateway-api/envoy-gateway/Dockerfile
+          - image-name: gateway-api-istio-plugin
+            dockerfile: plugins/gateway-api/istio/Dockerfile
+          - image-name: openfsc-plugin
+            dockerfile: plugins/openfsc/Dockerfile
+          - image-name: ceph-rook-plugin
+            dockerfile: plugins/storage/ceph-rook/Dockerfile
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-image.yml
+    secrets: inherit
+    with:
+      image-name: ${{ matrix.image-name }}
+      dockerfile: ${{ matrix.dockerfile }}
+      context: "."
+
   # Packages the chart with every image digest stamped into values.yaml, so one
   # version string names the chart and the exact images it deploys.
   #

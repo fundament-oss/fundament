@@ -433,7 +433,7 @@ func TestImmutableStorageClassDrift(t *testing.T) {
 
 	// allowVolumeExpansion is the one field Kubernetes lets us update.
 	expandable := desired.DeepCopy()
-	expandable.AllowVolumeExpansion = ptr(false)
+	expandable.AllowVolumeExpansion = new(false)
 	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
 }
 

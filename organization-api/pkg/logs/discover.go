@@ -47,8 +47,7 @@ func DiscoverValiProxyBase(ctx context.Context, plutonoURL, username, password s
 		if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusUnauthorized {
 			return "", fmt.Errorf("probe datasource id %d: %w", id, err)
 		}
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) {
+		if _, ok := errors.AsType[*url.Error](err); ok {
 			// Transport-level errors (DNS, TLS, refused) won't improve for
 			// higher ids — the ingress itself is unreachable.
 			return "", fmt.Errorf("probe datasource id %d: %w", id, err)

@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func Test_Member_Update_Unauthenticated(t *testing.T) {
@@ -122,7 +121,7 @@ func Test_Member_Update(t *testing.T) {
 			require.NoError(t, err)
 
 			getReq := organizationv1.GetMemberRequest_builder{
-				Id: proto.String(tc.id),
+				Id: new(tc.id),
 			}.Build()
 			getCtx, getCallInfo := connect.NewClientContext(context.Background())
 			getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)

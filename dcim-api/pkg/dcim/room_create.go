@@ -30,8 +30,7 @@ func (s *Server) CreateRoom(
 
 	id, err := s.queries.RoomCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.ConstraintName {
 			case dbconst.ConstraintRoomsUqSiteName:
 				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("room with this name already exists in this site"))

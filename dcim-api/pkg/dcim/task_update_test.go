@@ -300,7 +300,7 @@ func TestTaskService_UpdateTask_UnknownAssignee(t *testing.T) {
 	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:         taskID,
-			AssigneeId: ptr(validUUID),
+			AssigneeId: new(validUUID),
 		}).Build(),
 	)
 	requireCode(t, err, connect.CodeNotFound)
@@ -318,7 +318,7 @@ func TestTaskService_CreateTask_UnknownAssignee(t *testing.T) {
 			Status:     dcimv1.TaskStatus_TASK_STATUS_TODO,
 			Priority:   dcimv1.TaskPriority_TASK_PRIORITY_LOW,
 			Tags:       []string{"hardware"},
-			AssigneeId: ptr(validUUID),
+			AssigneeId: new(validUUID),
 		}).Build(),
 	)
 	requireCode(t, err, connect.CodeNotFound)
@@ -354,7 +354,7 @@ func TestTaskService_UpdateTask_Errors(t *testing.T) {
 			"invalid_assignee_id",
 			(&dcimv1.UpdateTaskRequest_builder{
 				Id:         validUUID,
-				AssigneeId: ptr(invalidUUID),
+				AssigneeId: new(invalidUUID),
 			}).Build(),
 			connect.CodeInvalidArgument,
 		},
@@ -367,5 +367,3 @@ func TestTaskService_UpdateTask_Errors(t *testing.T) {
 		})
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

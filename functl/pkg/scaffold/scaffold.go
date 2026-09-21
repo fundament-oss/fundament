@@ -50,7 +50,7 @@ const (
 
 // GoVersion is the Go toolchain a scaffolded project asks for. It is rendered
 // into both go.mod and mise.toml, so the two cannot drift apart.
-const GoVersion = "1.26.6"
+const GoVersion = "1.27.1"
 
 // Licenses are the SPDX identifiers whose full text is embedded, i.e. the ones
 // `functl plugin create` can write a complete LICENSE file for. Any other

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,11 +34,8 @@ func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
 		if !pool.DeletionTimestamp.IsZero() {
 			continue
 		}
-		for _, d := range pool.Spec.Disks {
-			if d == diskName {
-				claimants = append(claimants, pool)
-				break
-			}
+		if slices.Contains(pool.Spec.Disks, diskName) {
+			claimants = append(claimants, pool)
 		}
 	}
 	if len(claimants) == 0 {

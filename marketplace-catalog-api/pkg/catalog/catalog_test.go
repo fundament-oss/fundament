@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/catalog"
@@ -355,7 +354,7 @@ func TestGetPluginDefinitionReturnsManifestAndHash(t *testing.T) {
 	})
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
 	require.NoError(t, err)
 
 	assert.Equal(t, testManifest, string(resp.GetManifest()), "the stored bytes must come back verbatim")
@@ -370,7 +369,7 @@ func TestGetPluginDefinitionServesUnpublishedVersion(t *testing.T) {
 	seedVersion(t, env, id, "2.0.0", false)
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "2.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "2.0.0"}.Build())
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, resp.GetManifest())
@@ -384,7 +383,7 @@ func TestGetPluginDefinitionHidesRestrictedPlugin(t *testing.T) {
 	id := seedPlugin(t, env, seedOptions{Name: "definition-restricted", Visibility: "restricted", Published: true})
 
 	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
 	require.Error(t, err)
 
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
@@ -395,7 +394,7 @@ func TestGetPluginDefinitionHidesSoftDeletedPlugin(t *testing.T) {
 	id := seedPlugin(t, env, seedOptions{Name: "definition-deleted", Visibility: "public", Published: true, Deleted: true})
 
 	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
-		catalogv1.GetPluginDefinitionRequest_builder{PluginId: proto.String(id.String()), Version: "1.0.0"}.Build())
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
 	require.Error(t, err)
 
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))

@@ -55,7 +55,7 @@ var byIDPreference = []string{
 // when the device has none (loop devices, some virtual disks).
 func byIDPath(devLinks string) string {
 	best, bestRank := "", len(byIDPreference)
-	for _, link := range strings.Fields(devLinks) {
+	for link := range strings.FieldsSeq(devLinks) {
 		if !strings.HasPrefix(link, byIDDir) {
 			continue
 		}
