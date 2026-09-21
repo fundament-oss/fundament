@@ -155,9 +155,9 @@ export default class InviteMemberSheetComponent {
       this.createdPermission.set(permission);
       this.step.set('created');
       // Said at the moment it happens, not on the way out of the sheet: the
-      // notification region is promoted into the top layer, so it is seen over
-      // the sheet (see NotificationService.raiseRegion). Inviting several people
-      // in a row that way gets a confirmation each, naming who it was.
+      // design system carries the notification region into the open sheet, so
+      // it is seen over it. Inviting several people in a row that way gets a
+      // confirmation each, naming who it was.
       this.notificationService.success(`'${email}' invited as ${permission}`);
       // The list of members is a page of its own, and it may well be the page
       // behind this sheet, so it hears about the invitation from here.
