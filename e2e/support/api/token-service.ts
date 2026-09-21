@@ -8,10 +8,15 @@ import { createServiceClient, ConnectRpcError } from './client.ts';
 import {
   TokenService as TokenServiceDesc,
   type ExchangeTokenResponse,
+  type ExchangeWorkloadTokenResponse,
   type MintPluginTokenResponse,
 } from '../generated/authn/v1/authn_pb.ts';
 
-export type { ExchangeTokenResponse, MintPluginTokenResponse };
+export type {
+  ExchangeTokenResponse,
+  ExchangeWorkloadTokenResponse,
+  MintPluginTokenResponse,
+};
 
 export class TokenService {
   constructor(private baseUrl: string) {}
@@ -63,4 +68,29 @@ export class TokenService {
       throw err;
     }
   }
+
+  /**
+   * Exchange a shoot workload's projected ServiceAccount token for a
+   * WorkloadToken (aud=fundament-workload) bound to the named cluster.
+   */
+  async exchangeWorkloadToken(
+    credential: string,
+    clusterId: string,
+  ): Promise<ExchangeWorkloadTokenResponse> {
+    const client: Client<typeof TokenServiceDesc> = createServiceClient(
+      TokenServiceDesc,
+      this.baseUrl,
+      credential,
+    );
+
+    try {
+      return await client.exchangeWorkloadToken({ clusterId });
+    } catch (err) {
+      if (err instanceof ConnectError) {
+        throw ConnectRpcError.fromConnectError(err);
+      }
+      throw err;
+    }
+  }
 }
+

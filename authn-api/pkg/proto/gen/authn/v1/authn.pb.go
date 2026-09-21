@@ -551,6 +551,156 @@ func (b0 MintPluginTokenResponse_builder) Build() *MintPluginTokenResponse {
 	return m0
 }
 
+// ExchangeWorkloadToken request - names the cluster the workload runs on. The
+// projected ServiceAccount token is taken from the Authorization header.
+type ExchangeWorkloadTokenRequest struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ExchangeWorkloadTokenRequest) Reset() {
+	*x = ExchangeWorkloadTokenRequest{}
+	mi := &file_authn_v1_authn_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeWorkloadTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeWorkloadTokenRequest) ProtoMessage() {}
+
+func (x *ExchangeWorkloadTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ExchangeWorkloadTokenRequest) GetClusterId() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterId
+	}
+	return ""
+}
+
+func (x *ExchangeWorkloadTokenRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+type ExchangeWorkloadTokenRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// The fundament cluster UUID (FUNDAMENT_CLUSTER_ID on the workload).
+	ClusterId string
+}
+
+func (b0 ExchangeWorkloadTokenRequest_builder) Build() *ExchangeWorkloadTokenRequest {
+	m0 := &ExchangeWorkloadTokenRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	return m0
+}
+
+// ExchangeWorkloadToken response
+type ExchangeWorkloadTokenResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AccessToken string                 `protobuf:"bytes,10,opt,name=access_token,json=accessToken"`
+	xxx_hidden_TokenType   string                 `protobuf:"bytes,20,opt,name=token_type,json=tokenType"`
+	xxx_hidden_ExpiresIn   int64                  `protobuf:"varint,30,opt,name=expires_in,json=expiresIn"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ExchangeWorkloadTokenResponse) Reset() {
+	*x = ExchangeWorkloadTokenResponse{}
+	mi := &file_authn_v1_authn_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeWorkloadTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeWorkloadTokenResponse) ProtoMessage() {}
+
+func (x *ExchangeWorkloadTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ExchangeWorkloadTokenResponse) GetAccessToken() string {
+	if x != nil {
+		return x.xxx_hidden_AccessToken
+	}
+	return ""
+}
+
+func (x *ExchangeWorkloadTokenResponse) GetTokenType() string {
+	if x != nil {
+		return x.xxx_hidden_TokenType
+	}
+	return ""
+}
+
+func (x *ExchangeWorkloadTokenResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.xxx_hidden_ExpiresIn
+	}
+	return 0
+}
+
+func (x *ExchangeWorkloadTokenResponse) SetAccessToken(v string) {
+	x.xxx_hidden_AccessToken = v
+}
+
+func (x *ExchangeWorkloadTokenResponse) SetTokenType(v string) {
+	x.xxx_hidden_TokenType = v
+}
+
+func (x *ExchangeWorkloadTokenResponse) SetExpiresIn(v int64) {
+	x.xxx_hidden_ExpiresIn = v
+}
+
+type ExchangeWorkloadTokenResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// JWT access token (aud=fundament-workload) for the installer surface.
+	AccessToken string
+	// Token type (always "Bearer")
+	TokenType string
+	// Seconds until token expires (at most 15 minutes, never past the
+	// presented ServiceAccount token's expiry; exchange again to refresh)
+	ExpiresIn int64
+}
+
+func (b0 ExchangeWorkloadTokenResponse_builder) Build() *ExchangeWorkloadTokenResponse {
+	m0 := &ExchangeWorkloadTokenResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_AccessToken = b.AccessToken
+	x.xxx_hidden_TokenType = b.TokenType
+	x.xxx_hidden_ExpiresIn = b.ExpiresIn
+	return m0
+}
+
 var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
@@ -586,33 +736,49 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
 	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
 	"\n" +
+	"expires_in\x18\x1e \x01(\x03R\texpiresIn\"G\n" +
+	"\x1cExchangeWorkloadTokenRequest\x12'\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\x80\x01\n" +
+	"\x1dExchangeWorkloadTokenResponse\x12!\n" +
+	"\faccess_token\x18\n" +
+	" \x01(\tR\vaccessToken\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
+	"\n" +
 	"expires_in\x18\x1e \x01(\x03R\texpiresIn2Z\n" +
 	"\fAuthnService\x12J\n" +
-	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2\xb8\x01\n" +
+	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2\xa2\x02\n" +
 	"\fTokenService\x12P\n" +
 	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponse\x12V\n" +
-	"\x0fMintPluginToken\x12 .authn.v1.MintPluginTokenRequest\x1a!.authn.v1.MintPluginTokenResponseBWZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0fMintPluginToken\x12 .authn.v1.MintPluginTokenRequest\x1a!.authn.v1.MintPluginTokenResponse\x12h\n" +
+	"\x15ExchangeWorkloadToken\x12&.authn.v1.ExchangeWorkloadTokenRequest\x1a'.authn.v1.ExchangeWorkloadTokenResponseBWZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_authn_v1_authn_proto_goTypes = []any{
-	(*GetUserInfoRequest)(nil),      // 0: authn.v1.GetUserInfoRequest
-	(*GetUserInfoResponse)(nil),     // 1: authn.v1.GetUserInfoResponse
-	(*User)(nil),                    // 2: authn.v1.User
-	(*ExchangeTokenRequest)(nil),    // 3: authn.v1.ExchangeTokenRequest
-	(*ExchangeTokenResponse)(nil),   // 4: authn.v1.ExchangeTokenResponse
-	(*MintPluginTokenRequest)(nil),  // 5: authn.v1.MintPluginTokenRequest
-	(*MintPluginTokenResponse)(nil), // 6: authn.v1.MintPluginTokenResponse
+	(*GetUserInfoRequest)(nil),            // 0: authn.v1.GetUserInfoRequest
+	(*GetUserInfoResponse)(nil),           // 1: authn.v1.GetUserInfoResponse
+	(*User)(nil),                          // 2: authn.v1.User
+	(*ExchangeTokenRequest)(nil),          // 3: authn.v1.ExchangeTokenRequest
+	(*ExchangeTokenResponse)(nil),         // 4: authn.v1.ExchangeTokenResponse
+	(*MintPluginTokenRequest)(nil),        // 5: authn.v1.MintPluginTokenRequest
+	(*MintPluginTokenResponse)(nil),       // 6: authn.v1.MintPluginTokenResponse
+	(*ExchangeWorkloadTokenRequest)(nil),  // 7: authn.v1.ExchangeWorkloadTokenRequest
+	(*ExchangeWorkloadTokenResponse)(nil), // 8: authn.v1.ExchangeWorkloadTokenResponse
 }
 var file_authn_v1_authn_proto_depIdxs = []int32{
 	2, // 0: authn.v1.GetUserInfoResponse.user:type_name -> authn.v1.User
 	0, // 1: authn.v1.AuthnService.GetUserInfo:input_type -> authn.v1.GetUserInfoRequest
 	3, // 2: authn.v1.TokenService.ExchangeToken:input_type -> authn.v1.ExchangeTokenRequest
 	5, // 3: authn.v1.TokenService.MintPluginToken:input_type -> authn.v1.MintPluginTokenRequest
-	1, // 4: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
-	4, // 5: authn.v1.TokenService.ExchangeToken:output_type -> authn.v1.ExchangeTokenResponse
-	6, // 6: authn.v1.TokenService.MintPluginToken:output_type -> authn.v1.MintPluginTokenResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	7, // 4: authn.v1.TokenService.ExchangeWorkloadToken:input_type -> authn.v1.ExchangeWorkloadTokenRequest
+	1, // 5: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
+	4, // 6: authn.v1.TokenService.ExchangeToken:output_type -> authn.v1.ExchangeTokenResponse
+	6, // 7: authn.v1.TokenService.MintPluginToken:output_type -> authn.v1.MintPluginTokenResponse
+	8, // 8: authn.v1.TokenService.ExchangeWorkloadToken:output_type -> authn.v1.ExchangeWorkloadTokenResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -629,7 +795,7 @@ func file_authn_v1_authn_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authn_v1_authn_proto_rawDesc), len(file_authn_v1_authn_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

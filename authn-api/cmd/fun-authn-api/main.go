@@ -24,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/authn-api/pkg/authn"
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
@@ -61,6 +62,11 @@ type config struct {
 	MockShootSecretAllowDefault bool   `env:"MOCK_SHOOT_SECRET_ALLOW_DEFAULT" envDefault:"false"`
 	LocalClusterID              string `env:"LOCAL_CLUSTER_ID" envDefault:"019b4000-2000-7000-8000-000000000001"`
 	LocalOrganizationID         string `env:"LOCAL_ORGANIZATION_ID" envDefault:"019b4000-0000-7000-8000-000000000001"`
+	// LocalPluginControllerSubject is the plugin sandbox controller's
+	// ServiceAccount (the chart installed there as release "fundament" in
+	// namespace "fundament"); shoots always present the fixed
+	// system:serviceaccount:fundament-system:plugin-controller.
+	LocalPluginControllerSubject string `env:"LOCAL_PLUGIN_CONTROLLER_SUBJECT" envDefault:"system:serviceaccount:fundament:fundament-plugin-controller"`
 }
 
 func main() {
@@ -161,6 +167,17 @@ func run() error {
 	sessionStore := authn.NewSessionStore([]byte(cfg.JWTSecret))
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
+	shootVerifierCfg := &authn.ShootVerifierConfig{
+		Mode:                    cfg.ShootVerifierMode,
+		GardenerMode:            cfg.GardenerMode,
+		GardenerKubeconfig:      cfg.GardenerKubeconfig,
+		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
+		MockSecret:              cfg.MockShootSecret,
+		AllowDefaultMockSecret:  cfg.MockShootSecretAllowDefault,
+		LocalClusterID:          cfg.LocalClusterID,
+		LocalOrganizationID:     cfg.LocalOrganizationID,
+	}
+
 	authnCfg := &authn.Config{
 		TokenExpiry:  cfg.TokenExpiry,
 		JWTSecret:    []byte(cfg.JWTSecret),
@@ -174,21 +191,17 @@ func run() error {
 		// deployment spelled it out.
 		AllowedReturnOrigins: append([]string{cfg.FrontendURL}, cfg.CORSAllowedOrigins...),
 	}
+	if !shootVerifierCfg.UsesGardener() {
+		authnCfg.WorkloadSubjects = map[string]string{
+			cfg.LocalPluginControllerSubject: auth.WorkloadPluginController,
+		}
+	}
 
 	pluginProxyClient := pluginproxyv1connect.NewPluginInstallationServiceClient(
 		&http.Client{Timeout: 10 * time.Second}, cfg.PluginProxyURL)
 	pluginInstallations := authn.NewPluginProxyLookup(pluginProxyClient)
 
-	shootVerifier, err := authn.NewShootVerifier(logger, &authn.ShootVerifierConfig{
-		Mode:                    cfg.ShootVerifierMode,
-		GardenerMode:            cfg.GardenerMode,
-		GardenerKubeconfig:      cfg.GardenerKubeconfig,
-		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
-		MockSecret:              cfg.MockShootSecret,
-		AllowDefaultMockSecret:  cfg.MockShootSecretAllowDefault,
-		LocalClusterID:          cfg.LocalClusterID,
-		LocalOrganizationID:     cfg.LocalOrganizationID,
-	})
+	shootVerifier, err := authn.NewShootVerifier(logger, shootVerifierCfg)
 	if err != nil {
 		return fmt.Errorf("failed to create shoot token verifier: %w", err)
 	}

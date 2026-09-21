@@ -67,6 +67,9 @@ This is a Go authentication service using:
 
 **RPC (Connect):**
 - `GetUserInfo` - Returns user info from valid JWT
+- `TokenService/ExchangeToken` - API key → UserToken (15 min)
+- `TokenService/MintPluginToken` - UserToken → PluginToken bound to a plugin installation
+- `TokenService/ExchangeWorkloadToken` - projected ServiceAccount token of a shoot workload → WorkloadToken (`aud=fundament-workload`, ≤ 15 min), verified by TokenReview against the named cluster (FUN-22)
 
 ### Proto and Database Code Generation
 
@@ -95,3 +98,4 @@ Optional with defaults:
 - `PLUGIN_SANDBOX_KUBECONFIG` - kubeconfig of the local plugin sandbox cluster; when set and present, TokenReview runs there (without it and without Gardener or mock, every exchange is denied)
 - `SHOOT_VERIFIER_MODE` (auto) - `mock` accepts HMAC mock tokens (`MOCK_SHOOT_SECRET`, default `mock-shoot-secret`) for the seeded cluster; tests only
 - `LOCAL_CLUSTER_ID` / `LOCAL_ORGANIZATION_ID` - the one cluster the sandbox and mock verifiers answer for (default: seeded acme-corp cluster)
+- `LOCAL_PLUGIN_CONTROLLER_SUBJECT` (system:serviceaccount:fundament:fundament-plugin-controller) - the plugin sandbox controller's ServiceAccount, allow-listed next to the fixed shoot one except in real Gardener mode
