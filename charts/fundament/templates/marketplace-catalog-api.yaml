@@ -30,6 +30,16 @@ spec:
                 secretKeyRef:
                   name: db-fun-marketplace-catalog-api
                   key: uri
+            # install.v1 (FUN-22) reads as the tenant-aware install role and
+            # verifies WorkloadTokens and UserTokens with the shared JWT secret.
+            - name: INSTALL_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-fun-marketplace-install-api
+                  key: uri
+            {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
+            - name: INSTALL_CORS_ALLOWED_ORIGINS
+              value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.console }}
             - name: LOG_LEVEL
               value: {{ .Values.marketplaceCatalogApi.logLevel }}
             {{- if $.Values.deploymentVersion }}

@@ -56,3 +56,44 @@ func (q *Queries) PublisherList(ctx context.Context) ([]PublisherListRow, error)
 	}
 	return items, nil
 }
+
+const publisherListInstallable = `-- name: PublisherListInstallable :many
+SELECT tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
+FROM tenant.organizations
+WHERE EXISTS (
+  SELECT 1
+  FROM appstore.plugins
+  WHERE appstore.plugins.organization_id = tenant.organizations.id
+)
+ORDER BY tenant.organizations.alias, tenant.organizations.name
+`
+
+type PublisherListInstallableRow struct {
+	ID    uuid.UUID
+	Name  string
+	Alias string
+}
+
+// install.v1's publishers: every organization owning a listing the caller may
+// install, including its own drafts. Row-level security on appstore.plugins
+// decides which listings those are, exactly as for install.v1 ListPlugins, so
+// every listed plugin's publisher resolves to a name.
+func (q *Queries) PublisherListInstallable(ctx context.Context) ([]PublisherListInstallableRow, error) {
+	rows, err := q.db.Query(ctx, publisherListInstallable)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PublisherListInstallableRow
+	for rows.Next() {
+		var i PublisherListInstallableRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Alias); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

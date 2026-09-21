@@ -15,6 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1/catalogv1connect"
+	_ "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/install/v1" // registers install.v1 descriptors for reflection
 )
 
 type Server struct {
@@ -24,12 +25,19 @@ type Server struct {
 	handler http.Handler
 }
 
-func New(logger *slog.Logger, database *psqldb.DB, corsAllowedOrigins []string) *Server {
-	s := &Server{
+// NewService returns the read handlers over the given pool without an HTTP
+// handler. install.v1 serves the same RPCs through a pool connected as the
+// tenant-aware install role (FUN-22); the policies, not the code, differ.
+func NewService(logger *slog.Logger, database *psqldb.DB) *Server {
+	return &Server{
 		logger:  logger,
 		db:      database,
 		queries: db.New(database.Pool),
 	}
+}
+
+func New(logger *slog.Logger, database *psqldb.DB, corsAllowedOrigins []string) *Server {
+	s := NewService(logger, database)
 
 	mux := http.NewServeMux()
 
@@ -49,7 +57,9 @@ func New(logger *slog.Logger, database *psqldb.DB, corsAllowedOrigins []string) 
 
 	mux.Handle(catalogv1connect.NewCatalogServiceHandler(s, interceptors))
 
-	reflector := grpcreflect.NewStaticReflector("catalog.v1.CatalogService")
+	// install.v1 is served from this binary too (see pkg/install) and shares the
+	// reflection endpoint: descriptors come from the global registry.
+	reflector := grpcreflect.NewStaticReflector("catalog.v1.CatalogService", "install.v1.InstallService")
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 

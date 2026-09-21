@@ -1219,7 +1219,7 @@ ALTER TABLE appstore.plugin_labels ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plugin_labels_select_catalog ON appstore.plugin_labels
 	AS PERMISSIVE
 	FOR SELECT
-	TO fun_marketplace_catalog_api
+	TO fun_marketplace_catalog_api, fun_marketplace_install_api
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id));
 -- ddl-end --
 
@@ -1246,7 +1246,7 @@ ALTER TABLE appstore.plugin_features ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plugin_features_select_catalog ON appstore.plugin_features
 	AS PERMISSIVE
 	FOR SELECT
-	TO fun_marketplace_catalog_api
+	TO fun_marketplace_catalog_api, fun_marketplace_install_api
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id));
 -- ddl-end --
 
@@ -1406,7 +1406,7 @@ CREATE POLICY plugins_tags_all_api ON appstore.plugins_tags
 CREATE POLICY plugins_tags_select_catalog ON appstore.plugins_tags
 	AS PERMISSIVE
 	FOR SELECT
-	TO fun_marketplace_catalog_api
+	TO fun_marketplace_catalog_api, fun_marketplace_install_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id));
 -- ddl-end --
 
@@ -1487,7 +1487,7 @@ CREATE POLICY categories_plugins_all_api ON appstore.categories_plugins
 CREATE POLICY categories_plugins_select_catalog ON appstore.categories_plugins
 	AS PERMISSIVE
 	FOR SELECT
-	TO fun_marketplace_catalog_api
+	TO fun_marketplace_catalog_api, fun_marketplace_install_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id));
 -- ddl-end --
 
@@ -1527,7 +1527,7 @@ CREATE POLICY plugin_documentation_links_all_api ON appstore.plugin_documentatio
 CREATE POLICY plugin_documentation_links_select_catalog ON appstore.plugin_documentation_links
 	AS PERMISSIVE
 	FOR SELECT
-	TO fun_marketplace_catalog_api
+	TO fun_marketplace_catalog_api, fun_marketplace_install_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id));
 -- ddl-end --
 
@@ -1675,6 +1675,15 @@ CREATE POLICY plugin_allowed_organizations_select_api ON appstore.plugin_allowed
 	USING (organization_id = authn.current_organization_id());
 -- ddl-end --
 
+-- object: plugin_allowed_organizations_select_install | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_allowed_organizations_select_install ON appstore.plugin_allowed_organizations CASCADE;
+CREATE POLICY plugin_allowed_organizations_select_install ON appstore.plugin_allowed_organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_install_api
+	USING (appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id());
+-- ddl-end --
+
 -- object: plugins_select_all | type: POLICY --
 -- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
 CREATE POLICY plugins_select_all ON appstore.plugins
@@ -1682,6 +1691,24 @@ CREATE POLICY plugins_select_all ON appstore.plugins
 	FOR SELECT
 	TO fun_fundament_api
 	USING (visibility = 'public' OR organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugins_select_install | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_install ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_install ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_install_api
+	USING (appstore.plugins.deleted IS NULL AND (appstore.plugins.visibility = 'public' OR appstore.plugins.organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id())));
+-- ddl-end --
+
+-- object: plugin_definitions_select_install | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_select_install ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_select_install ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_install_api
+	USING (appstore.plugin_definitions.deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.deleted IS NULL AND (appstore.plugin_definitions.published IS NOT NULL OR appstore.plugins.organization_id = authn.current_organization_id())));
 -- ddl-end --
 
 -- object: require_admin | type: TRIGGER --
@@ -1856,6 +1883,15 @@ CREATE POLICY organizations_select_catalog ON tenant.organizations
 	FOR SELECT
 	TO fun_marketplace_catalog_api
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public'));
+-- ddl-end --
+
+-- object: organizations_select_install | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_install ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_install ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_install_api
+	USING (tenant.organizations.deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL));
 -- ddl-end --
 
 -- object: organizations_select_admin | type: POLICY --
@@ -5010,6 +5046,110 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.organizations
    TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_96a91fdbd5" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA appstore
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_bd73dce444" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_88c05f497f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d5f33741a9 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_definitions
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_ebe677d42c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_allowed_organizations
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_44a483cb74 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_labels
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_83640e916f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_features
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_884eaf4227 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_documentation_links
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d18a121757 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.tags
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_84433ab19d | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins_tags
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_cd29837d32 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_547fcea073 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.categories_plugins
+   TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_85608fa31c | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_marketplace_install_api;
 
 -- ddl-end --
 

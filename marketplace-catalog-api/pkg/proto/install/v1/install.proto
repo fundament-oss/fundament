@@ -1,0 +1,44 @@
+edition = "2023";
+
+package install.v1;
+
+import "catalog/v1/catalog.proto";
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/install/v1;installv1";
+
+// InstallService is the installer's view of the marketplace (FUN-22): what an
+// organization may install, read as that organization. It mirrors the
+// storefront's read RPCs and reuses their messages, but runs through the
+// fun_marketplace_install_api role, whose policies add tenancy: PUBLIC
+// listings, the organization's own listings, and RESTRICTED listings the
+// organization is allow-listed for; every version of an own listing, only
+// published versions of everyone else's.
+//
+// Two credentials are accepted: a WorkloadToken minted for the
+// plugin-controller of one of the organization's clusters, whose organization
+// claim selects the tenant (the Fun-Organization header is rejected); or a
+// UserToken plus the Fun-Organization header naming one of the user's
+// organizations (the console's install flow).
+//
+// Served from the marketplace-catalog-api binary on the same host as
+// catalog.v1, under its own path and CORS policy.
+service InstallService {
+  // Installable listings. Filters as in catalog.v1.
+  rpc ListPlugins(catalog.v1.ListPluginsRequest) returns (catalog.v1.ListPluginsResponse);
+  // Fetch an installable listing by id.
+  rpc GetPlugin(catalog.v1.GetPluginRequest) returns (catalog.v1.GetPluginResponse);
+  // Published version history, latest first.
+  rpc ListPluginVersions(catalog.v1.ListPluginVersionsRequest) returns (catalog.v1.ListPluginVersionsResponse);
+  // Verbatim manifest for one version, plus the hash an install pins against.
+  // Unpublished versions are reachable only for the caller's own listings.
+  // NotFound for everything the caller may not see.
+  rpc GetPluginDefinition(catalog.v1.GetPluginDefinitionRequest) returns (catalog.v1.GetPluginDefinitionResponse);
+  // The organizations owning an installable listing, so that every listing
+  // ListPlugins returns resolves to a publisher name. Installs are addressed
+  // by organization name, and the storefront's ListPublishers does not know
+  // restricted or draft-only publishers.
+  rpc ListPublishers(catalog.v1.ListPublishersRequest) returns (catalog.v1.ListPublishersResponse);
+}
