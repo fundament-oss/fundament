@@ -87,8 +87,17 @@ func (s *AuthnServer) getRedirectURL(state string) string {
 		s.logger.Warn("failed to parse state for return_to", "error", err)
 		return s.config.FrontendURL
 	}
-	if stateData.ReturnTo != "" {
-		return stateData.ReturnTo
+	if stateData.ReturnTo == "" {
+		return s.config.FrontendURL
 	}
-	return s.config.FrontendURL
+	// Checked again on the way out, not only in HandleLogin: the state is a
+	// bearer of the return URL, and the allowlist may have been narrowed since
+	// it was minted. Unlike at login time this falls back rather than
+	// erroring — the visitor has authenticated by now, so stranding them on an
+	// error page would cost them the session they just established.
+	if !s.isSafeReturnTo(stateData.ReturnTo) {
+		s.logger.Warn("ignoring return_to outside the allowlist", "return_to", stateData.ReturnTo)
+		return s.config.FrontendURL
+	}
+	return stateData.ReturnTo
 }

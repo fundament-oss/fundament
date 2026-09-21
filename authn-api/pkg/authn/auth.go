@@ -41,6 +41,9 @@ type Config struct {
 	CookieDomain string
 	CookieSecure bool
 	FrontendURL  string
+	// AllowedReturnOrigins are the origins a login's `return_to` may name.
+	// See return_to.go for why the list is the CORS origins.
+	AllowedReturnOrigins []string
 }
 
 // authzEvaluator is the subset of authz.Client used by handlers — extracted

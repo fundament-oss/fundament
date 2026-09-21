@@ -49,6 +49,28 @@ Things to keep in mind when working on server-rendered routes:
   and why hydration is configured with `withNoIncrementalHydration()`: the event
   replay it would otherwise enable ships two inline scripts.
 
+## Signing in
+
+The developer portal has no session of its own. The console's `fundament_auth`
+cookie is set by `authn-api` on the parent domain (`COOKIE_DOMAIN`), so the
+browser sends it to the portal's APIs too, and `marketplace-registry-api`
+validates exactly that cookie, issuer and audience.
+
+So signing in is a hand-off: [`src/app/auth.guard.ts`](src/app/auth.guard.ts)
+asks `authn.v1 GetUserInfo` whether there is a session, and if there is not it
+sends the browser to `authnApiUrl/login?return_to=<this route>`. `authn-api` runs
+the OIDC round trip, sets the cookie and redirects back. It only honours a
+`return_to` whose origin it serves, so the portal's own origin has to be in
+authn's `CORS_ALLOWED_ORIGINS` — which it needs regardless, to call
+`GetUserInfo` with the cookie attached.
+
+Two configuration knobs that have to agree for this to work: `authnApiUrl` in
+the deployment's `config.json` (a build without it has no session surface, which
+is how the storefront and the demo bundle opt out), and the portal's origin on
+authn's CORS list. The review backoffice is deliberately not part of this:
+reviewers are Fundament staff and authenticate against `dcim-authn-api`
+(FUN-20).
+
 ## Development
 
 ```sh

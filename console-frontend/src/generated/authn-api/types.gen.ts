@@ -79,7 +79,11 @@ export type HandleLoginData = {
     path?: never;
     query?: {
         /**
-         * URL to redirect to after successful login
+         * Absolute URL to redirect to after successful login. Its origin must be
+         * one this deployment serves (the CORS origin list plus FRONTEND_URL),
+         * so that a login cannot be used as an open redirect; anything else is
+         * refused with 400. Omitted means FRONTEND_URL.
+         *
          */
         return_to?: string;
     };
@@ -87,6 +91,10 @@ export type HandleLoginData = {
 };
 
 export type HandleLoginErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorResponse;
     /**
      * Internal server error
      */
