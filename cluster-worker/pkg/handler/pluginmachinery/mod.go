@@ -30,7 +30,7 @@ import (
 )
 
 // Config holds the environment-level inputs of the shoot-side
-// plugin-controller. ControllerImage and CatalogAPIURL have no sane
+// plugin-controller. ControllerImage, CatalogAPIURL and AuthnAPIURL have no sane
 // defaults (they are deployment-specific); when either is empty the handler
 // no-ops, so environments without plugin support (mock Gardener, PR previews)
 // keep working without extra configuration.
@@ -39,6 +39,9 @@ type Config struct {
 	ControllerImage string `env:"CONTROLLER_IMAGE"`
 	// CatalogAPIURL is the externally routable marketplace-catalog-api base URL.
 	CatalogAPIURL string `env:"MARKETPLACE_CATALOG_API_URL"`
+	// AuthnAPIURL is the externally routable authn-api base URL the controller
+	// exchanges its projected token at (FUN-22).
+	AuthnAPIURL string `env:"AUTHN_API_URL"`
 	// AllowUnpinnedHash disables definition-hash verification on the shoot-side
 	// controller. Local dev only; never enable for production shoots.
 	AllowUnpinnedHash bool `env:"ALLOW_UNPINNED_HASH"`
@@ -48,7 +51,7 @@ type Config struct {
 
 // Enabled reports whether the handler has the config it needs to provision.
 func (c Config) Enabled() bool {
-	return c.ControllerImage != "" && c.CatalogAPIURL != ""
+	return c.ControllerImage != "" && c.CatalogAPIURL != "" && c.AuthnAPIURL != ""
 }
 
 // Handler provisions the plugin machinery onto ready shoots.
@@ -156,6 +159,7 @@ func (h *Handler) provision(ctx context.Context, clusterID uuid.UUID) error {
 		ClusterID:         clusterID.String(),
 		OrganizationID:    row.OrganizationID.String(),
 		CatalogAPIURL:     h.cfg.CatalogAPIURL,
+		AuthnAPIURL:       h.cfg.AuthnAPIURL,
 		AllowUnpinnedHash: h.cfg.AllowUnpinnedHash,
 		LogLevel:          h.cfg.LogLevel,
 	}
@@ -197,6 +201,6 @@ func (h *Handler) provision(ctx context.Context, clusterID uuid.UUID) error {
 func (h *Handler) logDisabled() {
 	h.logDisabledOnce.Do(func() {
 		h.logger.Info("plugin machinery provisioning disabled",
-			"reason", "PLUGIN_CONTROLLER_IMAGE and/or PLUGIN_MARKETPLACE_CATALOG_API_URL not set")
+			"reason", "PLUGIN_CONTROLLER_IMAGE, PLUGIN_MARKETPLACE_CATALOG_API_URL and/or PLUGIN_AUTHN_API_URL not set")
 	})
 }

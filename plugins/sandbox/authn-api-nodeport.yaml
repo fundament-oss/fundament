@@ -1,0 +1,23 @@
+# NodePort exposing authn-api's port so the plugin-controller in the
+# network-isolated sandbox cluster (k3d-fundament-plugin) can exchange its
+# projected ServiceAccount token for a WorkloadToken (FUN-22). Applied by
+# `just plugins sandbox-catalog`, next to the marketplace-catalog-api NodePort.
+#
+# Local dev only: production reaches authn-api over its normal external URL.
+apiVersion: v1
+kind: Service
+metadata:
+  name: authn-api-sandbox-np
+  namespace: fundament
+  labels:
+    fundament.io/purpose: sandbox-plugin-controller-egress
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: fundament-authn-api
+    app.kubernetes.io/name: authn-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30081

@@ -27,6 +27,7 @@ func newPluginMachineryHandler(t *testing.T, db *testDB, shootAccess shoot.Shoot
 	cfg := pluginmachinery.Config{
 		ControllerImage: testControllerImage,
 		CatalogAPIURL:   "https://api.fundament.example.com",
+		AuthnAPIURL:     "https://authn.fundament.example.com",
 	}
 	return pluginmachinery.New(db.workerPool, shootAccess, cfg, logger)
 }
@@ -76,6 +77,7 @@ func TestPluginMachinerySyncProvisionsEverything(t *testing.T) {
 	assert.Equal(t, clusterID.String(), env["FUNDAMENT_CLUSTER_ID"])
 	assert.Equal(t, acmeCorpOrgID.String(), env["FUNDAMENT_ORGANIZATION_ID"])
 	assert.Equal(t, "https://api.fundament.example.com", env["MARKETPLACE_CATALOG_API_URL"])
+	assert.Equal(t, "https://authn.fundament.example.com", env["FUNDAMENT_AUTHN_API_URL"])
 	assert.NotContains(t, env, "PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH")
 }
 

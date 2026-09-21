@@ -42,13 +42,13 @@ cluster-start:
 cluster-stop:
     k3d cluster stop fundament
 
-# The sandbox-catalog relay and the plugin serverlb (attached by plugin-sandbox-kubeconfig) stay on
+# The sandbox-catalog relays and the plugin serverlb (attached by plugin-sandbox-kubeconfig) stay on
 # k3d-fundament and block its removal.
 # Delete the local k3d cluster and registry
 cluster-delete:
     k3d cluster delete fundament
     @k3d registry delete registry.localhost 2>/dev/null || true
-    @docker rm -f fun-catalog-relay > /dev/null 2>&1 || true
+    @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
     @docker network disconnect -f k3d-fundament k3d-fundament-plugin-serverlb > /dev/null 2>&1 || true
     @docker network rm k3d-fundament 2>/dev/null || true
 

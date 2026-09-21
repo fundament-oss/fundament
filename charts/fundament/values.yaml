@@ -302,6 +302,21 @@ pluginController:
   # to the catalog; a controller in another cluster needs an externally reachable
   # URL (FUN-19) — see plugins/sandbox/values.yaml.
   catalogApiUrl: ""
+  # authnApiUrl: base URL the plugin-controller exchanges its projected
+  # ServiceAccount token at (FUN-22). Defaults to the in-cluster
+  # http://authn-api:8080; a controller in another cluster needs an externally
+  # reachable URL — see plugins/sandbox/values.yaml.
+  authnApiUrl: ""
+  # clusterId: the tenant.clusters id this controller acts as. authn-api
+  # verifies the projected token against that cluster and takes the
+  # organization from its row, so it must be a real id: plugins/sandbox/
+  # values.yaml sets the seeded acme-corp cluster. Required whenever the
+  # controller is enabled: the chart refuses to render without it.
+  clusterId: ""
+  # organizationId: the organization that owns clusterId (tenant.clusters.
+  # organization_id). Required together with clusterId; the sandbox verifier
+  # reports it, and the exchange refuses a mismatch.
+  organizationId: ""
   # Provision plugin machinery (PluginInstallation CRD + images.pluginController)
   # onto every ready shoot via cluster-worker, with
   # externalUrls.marketplaceCatalogApi as the catalog URL. images.pluginController

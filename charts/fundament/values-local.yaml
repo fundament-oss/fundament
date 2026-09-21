@@ -138,8 +138,10 @@ dex:
       username: Platform Admin
       userID: "019b4000-1000-7000-8000-000000000008"
 
+# plugin-controller runs on shoots (cluster-worker provisions it) and in the
+# plugin sandbox (plugins/sandbox/values.yaml), not in this cluster. These
+# settings reach shoot controllers through cluster-worker.
 pluginController:
-  enabled: true
   logLevel: debug
   # Lets plugin-controller skip the definitionHash check. Never enable in production.
   allowUnpinnedHash: true
