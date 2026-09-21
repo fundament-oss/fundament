@@ -291,6 +291,13 @@ Every namespace-scoped child is named `plugin`; the namespace disambiguates inst
            ▼
   Add finalizer ──► Create Namespace ──► Create SA
            │
+           ├──► Fetch the pinned PluginDefinition from install.v1
+           │    (marketplace-catalog-api), authenticated as this cluster:
+           │    the projected ServiceAccount token at
+           │    /var/run/secrets/fundament/token is exchanged at authn-api
+           │    (FUNDAMENT_AUTHN_API_URL) for a WorkloadToken bound to
+           │    FUNDAMENT_CLUSTER_ID — see FUN-22. Verified against the
+           │    pinned hash and cached by hash.
            ├──► Create RoleBinding (→ admin)
            ├──► Create ClusterRole/ClusterRoleBinding (from the pinned definition)
            ├──► Create Deployment
