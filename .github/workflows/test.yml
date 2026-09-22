@@ -117,6 +117,12 @@ jobs:
 
   common:
     runs-on: ubuntu-24.04
+    # Its own database root, holding one data directory per package under
+    # common/ that starts a postmaster. The cache below is keyed on it, so the
+    # path here and the one the tests use have to be the same: a mismatch is
+    # silent, and only shows up as a Maven download on every single run.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-common
     steps:
       - uses: actions/checkout@v5
 
@@ -135,7 +141,7 @@ jobs:
       - name: Cache embedded PostgreSQL
         uses: actions/cache@v5
         with:
-          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}-common
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
           key: embedded-pg-common-${{ runner.os }}
 
       - name: Install dependencies
