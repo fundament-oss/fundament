@@ -11,7 +11,14 @@ import (
 
 // ErrNoActiveOrganization is returned when a command requires an active
 // organization but none is configured.
-var ErrNoActiveOrganization = errors.New("no active organization: pass --org=<org-id> or run 'functl org set <org-id>' to select one")
+var ErrNoActiveOrganization = errors.New("no active organization: run 'functl org list' to see your organizations, then pass --org=<org-id> or run 'functl org set <org-id>' to select one")
+
+// NoOrganizationsHint explains to a user who is not a member of any
+// organization what to do next. Users cannot create organizations themselves:
+// a Fundament operator assigns them to one, so the only thing to do is ask.
+const NoOrganizationsHint = "You are not a member of any organization yet.\n" +
+	"Organizations are set up by the Fundament operators. Ask your operator to add you to one,\n" +
+	"then sign in again (or run 'functl auth status' to check)."
 
 // CLI defines the root command-line interface structure.
 type CLI struct {
