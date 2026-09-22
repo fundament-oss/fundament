@@ -23,4 +23,5 @@ WHERE name = $1;
 -- name: OrganizationGetIDByName :one
 SELECT id
 FROM tenant.organizations
-WHERE name = $1;
+WHERE name = $1
+  AND deleted IS NULL;

@@ -4,131 +4,156 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
-	"github.com/jackc/pgerrcode"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
 // UserCmd groups user-related commands.
 type UserCmd struct {
-	Create UserCreateCmd `cmd:"" help:"Create a new user."`
-	List   UserListCmd   `cmd:"" help:"List users in an organization."`
-	Delete UserDeleteCmd `cmd:"" help:"Delete a user."`
+	Create UserCreateCmd `cmd:"" help:"Register a user by email ahead of their first sign-in."`
+	List   UserListCmd   `cmd:"" help:"List users and the organizations they belong to."`
 }
 
-// UserCreateCmd creates a new user.
+// UserCreateCmd registers a user by email before they have signed in.
+// Signing in never creates an organization, so this is how an operator gets a
+// user into an organization before that person shows up: register the address,
+// then 'funops organization member add'. The authn-api links the row to the
+// identity provider account on the first sign-in at this address.
 type UserCreateCmd struct {
-	Identifier  string `arg:"" help:"User identifier: <organization>/<user>." required:""`
-	ExternalRef string `help:"External reference for the user." required:""`
+	Email string `arg:"" help:"Email address the user will sign in with." required:""`
+	Name  string `help:"Display name. Defaults to the email address; replaced by the identity provider's name at first sign-in."`
 }
 
-// UserListCmd lists users in an organization.
+// UserListCmd lists users.
 type UserListCmd struct {
-	Organization string `arg:"" help:"Organization name." required:""`
+	Organization        string `help:"Only users that belong to this organization (by name)."`
+	WithoutOrganization bool   `help:"Only users that belong to no organization at all."`
 }
 
-// UserDeleteCmd deletes a user.
-type UserDeleteCmd struct {
-	Identifier string `arg:"" help:"User identifier: <organization>/<user>." required:""`
+// userRef is what a command accepts to name a user: a user ID or an email
+// address. Names are not unique and are what the identity provider says they
+// are, so they cannot be used to address a user.
+type userRef struct {
+	id    uuid.UUID
+	email string
 }
 
-// parseUserIdentifier splits "<organization>/<user>" into its parts.
-func parseUserIdentifier(identifier string) (organization, user string, err error) {
-	parts := strings.SplitN(identifier, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("invalid user identifier '%s': expected format <organization>/<user>", identifier)
+// parseUserRef reads "<user-id>|<email>". A UUID is a user ID; anything with an
+// @ is an email address.
+func parseUserRef(ref string) (userRef, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return userRef{}, errors.New("user is required: pass a user ID or an email address")
 	}
-	return parts[0], parts[1], nil
+	if id, err := uuid.Parse(ref); err == nil {
+		return userRef{id: id}, nil
+	}
+	if strings.Contains(ref, "@") {
+		return userRef{email: ref}, nil
+	}
+	return userRef{}, fmt.Errorf("invalid user %q: expected a user ID or an email address", ref)
+}
+
+// userRow is the shape every lookup returns, so callers do not care whether the
+// user was named by ID or by email.
+type userRow struct {
+	ID          uuid.UUID
+	Name        string
+	Email       string
+	ExternalRef string
+}
+
+// lookupUser resolves a userRef to an existing user, or pgx.ErrNoRows.
+func lookupUser(ctx context.Context, queries *db.Queries, ref userRef) (userRow, error) {
+	if ref.email == "" {
+		u, err := queries.UserGetByID(ctx, db.UserGetByIDParams{ID: ref.id})
+		if err != nil {
+			return userRow{}, fmt.Errorf("getting user by id: %w", err)
+		}
+		return userRow{ID: u.ID, Name: u.Name, Email: u.Email.String, ExternalRef: u.ExternalRef.String}, nil
+	}
+	u, err := queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: ref.email})
+	if err != nil {
+		return userRow{}, fmt.Errorf("finding user by email: %w", err)
+	}
+	return userRow{ID: u.ID, Name: u.Name, Email: u.Email.String, ExternalRef: u.ExternalRef.String}, nil
 }
 
 // Run executes the user create command.
 func (c *UserCreateCmd) Run(ctx *Context) error {
-	org, user, err := parseUserIdentifier(c.Identifier)
-	if err != nil {
-		return err
+	if !strings.Contains(c.Email, "@") {
+		return fmt.Errorf("invalid email address %q", c.Email)
 	}
 
-	ctx.Logger.Debug("creating user", "organization", org, "user", user, "external_ref", c.ExternalRef)
+	name := c.Name
+	if name == "" {
+		name = c.Email
+	}
 
-	// Create the user record
+	ctx.Logger.Debug("creating user", "email", c.Email, "name", name)
+
+	existing, err := ctx.Queries.UserFindByEmail(context.Background(), db.UserFindByEmailParams{Email: c.Email})
+	if err == nil {
+		return fmt.Errorf("user with email %q already exists: %s", c.Email, existing.ID)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("failed to look up user: %w", err)
+	}
+
 	u, err := ctx.Queries.UserCreate(context.Background(), db.UserCreateParams{
-		Name:        user,
-		ExternalRef: c.ExternalRef,
+		Name:  name,
+		Email: c.Email,
 	})
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
-			return fmt.Errorf("user '%s' already exists", c.Identifier)
-		}
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	_, err = ctx.Queries.UserCreateMembership(context.Background(), db.UserCreateMembershipParams{
-		UserID:           u.ID,
-		Permission:       dbconst.OrganizationsUserPermission_Viewer,
-		Status:           dbconst.OrganizationsUserStatus_Accepted,
-		OrganizationName: org,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("organization %q not found", org)
-		}
-		return fmt.Errorf("failed to create membership: %w", err)
-	}
+	ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", c.Email, "id", u.ID.String())
 
-	ctx.Logger.Debug("user created", "id", u.ID.String())
-
-	return outputUserCreate(ctx.Output, &u)
+	return outputUserCreate(ctx.Output, u.ID)
 }
 
 // Run executes the user list command.
 func (c *UserListCmd) Run(ctx *Context) error {
-	ctx.Logger.Debug("listing users", "organization", c.Organization)
-
-	orgID, err := ctx.Queries.OrganizationGetIDByName(context.Background(), db.OrganizationGetIDByNameParams{
-		Name: c.Organization,
-	})
-	if err != nil {
-		return fmt.Errorf("organization '%s' not found", c.Organization)
+	if c.Organization != "" && c.WithoutOrganization {
+		return errors.New("--organization and --without-organization cannot be combined")
 	}
 
-	users, err := ctx.Queries.UserList(context.Background(), db.UserListParams{OrganizationID: orgID})
+	ctx.Logger.Debug("listing users", "organization", c.Organization, "without_organization", c.WithoutOrganization)
+
+	if c.Organization != "" {
+		if _, err := ctx.Queries.OrganizationGetIDByName(context.Background(), db.OrganizationGetIDByNameParams{Name: c.Organization}); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("organization %q not found", c.Organization)
+			}
+			return fmt.Errorf("failed to look up organization: %w", err)
+		}
+	}
+
+	users, err := ctx.Queries.UserList(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to list users: %w", err)
 	}
 
+	users = slices.DeleteFunc(users, func(u db.UserListRow) bool {
+		switch {
+		case c.WithoutOrganization:
+			return len(u.OrganizationNames) != 0
+		case c.Organization != "":
+			return !slices.Contains(u.OrganizationNames, c.Organization)
+		default:
+			return false
+		}
+	})
+
 	ctx.Logger.Debug("users listed", "count", len(users))
 
-	return outputUserList(ctx.Output, c.Organization, users)
-}
-
-// Run executes the user delete command.
-func (c *UserDeleteCmd) Run(ctx *Context) error {
-	org, user, err := parseUserIdentifier(c.Identifier)
-	if err != nil {
-		return err
-	}
-
-	ctx.Logger.Debug("deleting user", "organization", org, "user", user)
-
-	rowsAffected, err := ctx.Queries.UserDelete(context.Background(), db.UserDeleteParams{
-		OrganizationName: org,
-		UserName:         user,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-	if rowsAffected != 1 {
-		return fmt.Errorf("user '%s' not found", c.Identifier)
-	}
-
-	ctx.Logger.Info("deleted user", "identifier", c.Identifier)
-
-	return nil
+	return outputUserList(ctx.Output, users)
 }
 
 // userCreateOutput is the JSON output structure for user create.
@@ -138,53 +163,75 @@ type userCreateOutput struct {
 
 // userOutput is the JSON output structure for a user.
 type userOutput struct {
-	ID          string `json:"id"`
-	Identifier  string `json:"identifier"`
-	ExternalRef string `json:"external_ref"`
-	Created     string `json:"created"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Email         string   `json:"email"`
+	ExternalRef   string   `json:"external_ref"`
+	Organizations []string `json:"organizations"`
+	Created       string   `json:"created"`
 }
 
-func outputUserCreate(format OutputFormat, u *db.UserCreateRow) error {
+func outputUserCreate(format OutputFormat, id uuid.UUID) error {
 	switch format {
 	case OutputJSON:
 		return PrintJSON(userCreateOutput{
-			ID: u.ID.String(),
+			ID: id.String(),
 		})
 	case OutputTable:
-		fmt.Println(u.ID.String())
+		fmt.Println(id.String())
 		return nil
 	default:
 		panic(fmt.Sprintf("unknown output format: %s", format))
 	}
 }
 
-func outputUserList(format OutputFormat, organization string, users []db.UserListRow) error {
+func outputUserList(format OutputFormat, users []db.UserListRow) error {
 	switch format {
 	case OutputJSON:
 		output := make([]userOutput, len(users))
 		for i, u := range users {
 			output[i] = userOutput{
-				ID:          u.ID.String(),
-				Identifier:  organization + "/" + u.Name,
-				ExternalRef: u.ExternalRef.String,
-				Created:     u.Created.Time.Format(TimeFormat),
+				ID:            u.ID.String(),
+				Name:          u.Name,
+				Email:         u.Email.String,
+				ExternalRef:   u.ExternalRef.String,
+				Organizations: u.OrganizationNames,
+				Created:       u.Created.Time.Format(TimeFormat),
 			}
 		}
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ID\tIDENTIFIER\tEXTERNAL_REF\tCREATED")
-		for _, u := range users {
-			fmt.Fprintf(w, "%s\t%s/%s\t%s\t%s\n",
-				u.ID.String(),
-				organization,
-				u.Name,
-				u.ExternalRef.String,
-				u.Created.Time.Format(TimeFormat),
-			)
+		if _, err := fmt.Fprintln(w, "ID\tNAME\tEMAIL\tEXTERNAL_REF\tORGANIZATIONS\tCREATED"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
 		}
-		return w.Flush()
+		for i := range users {
+			u := &users[i]
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+				u.ID.String(),
+				u.Name,
+				u.Email.String,
+				u.ExternalRef.String,
+				formatOrganizationNames(u.OrganizationNames),
+				u.Created.Time.Format(TimeFormat),
+			); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
+		}
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
 	default:
 		panic(fmt.Sprintf("unknown output format: %s", format))
 	}
+}
+
+// formatOrganizationNames renders a user's organizations for the table; a user
+// without any is the case operators look for, so it says so in words.
+func formatOrganizationNames(names []string) string {
+	if len(names) == 0 {
+		return "(none)"
+	}
+	return strings.Join(names, ",")
 }

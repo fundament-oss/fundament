@@ -12,7 +12,7 @@ type CLI struct {
 	Debug  bool         `help:"Enable debug logging."`
 	Output OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 
-	Organization OrganizationCmd `cmd:"" help:"Manage organizations."`
+	Organization OrganizationCmd `cmd:"" help:"Manage organizations and their members."`
 	User         UserCmd         `cmd:"" help:"Manage users."`
 }
 

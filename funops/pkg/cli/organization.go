@@ -15,6 +15,7 @@ type OrganizationCmd struct {
 	Create OrganizationCreateCmd `cmd:"" help:"Create a new organization."`
 	List   OrganizationListCmd   `cmd:"" help:"List all organizations."`
 	Delete OrganizationDeleteCmd `cmd:"" help:"Delete an organization."`
+	Member OrganizationMemberCmd `cmd:"" help:"Manage organization members."`
 }
 
 // OrganizationCreateCmd creates a new organization.

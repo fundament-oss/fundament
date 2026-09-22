@@ -8,160 +8,167 @@ package db
 import (
 	"context"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const userCreate = `-- name: UserCreate :one
-INSERT INTO tenant.users (
-  name,
-  external_ref
-)
+INSERT INTO tenant.users (name, email)
 VALUES ($1::text, $2::text)
 RETURNING
   id,
   name,
   external_ref,
+  email,
   created
 `
 
 type UserCreateParams struct {
-	Name        string
-	ExternalRef string
+	Name  string
+	Email string
 }
 
 type UserCreateRow struct {
 	ID          uuid.UUID
 	Name        string
 	ExternalRef pgtype.Text
+	Email       pgtype.Text
 	Created     pgtype.Timestamptz
 }
 
+// Registers a user by email ahead of their first sign-in. external_ref stays
+// NULL until the authn-api claims the row when someone signs in at this
+// address, at which point any memberships assigned here are already theirs.
 func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCreateRow, error) {
-	row := q.db.QueryRow(ctx, userCreate, arg.Name, arg.ExternalRef)
+	row := q.db.QueryRow(ctx, userCreate, arg.Name, arg.Email)
 	var i UserCreateRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.ExternalRef,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
 }
 
-const userCreateMembership = `-- name: UserCreateMembership :one
-INSERT INTO tenant.organizations_users (
-  organization_id,
-  user_id,
-  permission,
-  status
-)
+const userFindByEmail = `-- name: UserFindByEmail :one
 SELECT
-    organizations.id,
-    $1,
-    $2,
-    $3
-FROM tenant.organizations
-WHERE organizations.name = $4::text
-RETURNING
   id,
-  organization_id,
-  user_id,
-  permission,
-  status,
+  name,
+  external_ref,
+  email,
   created
+FROM tenant.users
+WHERE lower(email) = lower($1::text)
+  AND deleted IS NULL
+ORDER BY external_ref IS NULL, created
+LIMIT 1
 `
 
-type UserCreateMembershipParams struct {
-	UserID           uuid.UUID
-	Permission       dbconst.OrganizationsUserPermission
-	Status           dbconst.OrganizationsUserStatus
-	OrganizationName string
+type UserFindByEmailParams struct {
+	Email string
 }
 
-type UserCreateMembershipRow struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
-	Status         dbconst.OrganizationsUserStatus
-	Created        pgtype.Timestamptz
+type UserFindByEmailRow struct {
+	ID          uuid.UUID
+	Name        string
+	ExternalRef pgtype.Text
+	Email       pgtype.Text
+	Created     pgtype.Timestamptz
 }
 
-// Creates a membership for a user in an organization (by organization name)
-func (q *Queries) UserCreateMembership(ctx context.Context, arg UserCreateMembershipParams) (UserCreateMembershipRow, error) {
-	row := q.db.QueryRow(ctx, userCreateMembership,
-		arg.UserID,
-		arg.Permission,
-		arg.Status,
-		arg.OrganizationName,
-	)
-	var i UserCreateMembershipRow
+// Matched case-insensitively, the way the authn-api and the invite flow match
+// it. An account somebody has signed in to comes before a registration still
+// waiting to be claimed.
+func (q *Queries) UserFindByEmail(ctx context.Context, arg UserFindByEmailParams) (UserFindByEmailRow, error) {
+	row := q.db.QueryRow(ctx, userFindByEmail, arg.Email)
+	var i UserFindByEmailRow
 	err := row.Scan(
 		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.Permission,
-		&i.Status,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Email,
 		&i.Created,
 	)
 	return i, err
 }
 
-const userDelete = `-- name: UserDelete :execrows
-UPDATE tenant.organizations_users
-SET deleted = NOW()
-FROM tenant.organizations, tenant.users
-WHERE
-    organizations_users.organization_id = organizations.id
-    AND organizations_users.user_id = users.id
-    AND organizations.name = $1::text
-    AND users.name = $2::text
-    AND organizations_users.deleted IS NULL
+const userGetByID = `-- name: UserGetByID :one
+SELECT
+  id,
+  name,
+  external_ref,
+  email,
+  created
+FROM tenant.users
+WHERE id = $1
+  AND deleted IS NULL
 `
 
-type UserDeleteParams struct {
-	OrganizationName string
-	UserName         string
+type UserGetByIDParams struct {
+	ID uuid.UUID
 }
 
-func (q *Queries) UserDelete(ctx context.Context, arg UserDeleteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, userDelete, arg.OrganizationName, arg.UserName)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+type UserGetByIDRow struct {
+	ID          uuid.UUID
+	Name        string
+	ExternalRef pgtype.Text
+	Email       pgtype.Text
+	Created     pgtype.Timestamptz
+}
+
+func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
+	var i UserGetByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ExternalRef,
+		&i.Email,
+		&i.Created,
+	)
+	return i, err
 }
 
 const userList = `-- name: UserList :many
 SELECT
-    users.id,
-    users.name,
-    users.external_ref,
-    users.created
+  users.id,
+  users.name,
+  users.external_ref,
+  users.email,
+  users.created,
+  COALESCE(
+    array_agg(organizations.name ORDER BY organizations.name)
+      FILTER (WHERE organizations.id IS NOT NULL),
+    '{}'
+  )::text[] AS organization_names
 FROM tenant.users
-INNER JOIN tenant.organizations_users
-    ON organizations_users.user_id = users.id
-WHERE organizations_users.organization_id = $1
-    AND organizations_users.deleted IS NULL
-    AND users.deleted IS NULL
+LEFT JOIN tenant.organizations_users
+  ON organizations_users.user_id = users.id
+  AND organizations_users.deleted IS NULL
+  AND organizations_users.status IN ('pending', 'accepted')
+LEFT JOIN tenant.organizations
+  ON organizations.id = organizations_users.organization_id
+  AND organizations.deleted IS NULL
+WHERE users.deleted IS NULL
+GROUP BY users.id
 ORDER BY users.created DESC
 `
 
-type UserListParams struct {
-	OrganizationID uuid.UUID
-}
-
 type UserListRow struct {
-	ID          uuid.UUID
-	Name        string
-	ExternalRef pgtype.Text
-	Created     pgtype.Timestamptz
+	ID                uuid.UUID
+	Name              string
+	ExternalRef       pgtype.Text
+	Email             pgtype.Text
+	Created           pgtype.Timestamptz
+	OrganizationNames []string
 }
 
-func (q *Queries) UserList(ctx context.Context, arg UserListParams) ([]UserListRow, error) {
-	rows, err := q.db.Query(ctx, userList, arg.OrganizationID)
+// Every user, with the names of the organizations they belong to or are
+// invited to. Users without any such organization have an empty array.
+func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
+	rows, err := q.db.Query(ctx, userList)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +180,9 @@ func (q *Queries) UserList(ctx context.Context, arg UserListParams) ([]UserListR
 			&i.ID,
 			&i.Name,
 			&i.ExternalRef,
+			&i.Email,
 			&i.Created,
+			&i.OrganizationNames,
 		); err != nil {
 			return nil, err
 		}
