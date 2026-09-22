@@ -23,10 +23,6 @@ type Config struct {
 	CORSAllowedOrigins []string
 	Mode               string // "mock" (default) or "real"
 	GardenerClient     *gardener.Client
-	// MockPluginTemplatesDir is the on-disk root from which `/proxy/console/*`
-	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
-	// Ignored in "real" mode.
-	MockPluginTemplatesDir string
 	// PluginSandboxKubeconfig, when set in mock mode, replaces MockClient with
 	// a proxy that forwards every request to a locally-running plugin sandbox
 	// cluster identified by the kubeconfig at this path. Ignored otherwise.
@@ -42,11 +38,6 @@ type Server struct {
 	kubeHandler   http.Handler
 	handler       http.Handler
 	pluginGateway *pluginGateway
-	// serveUnauthedMockAssets enables the unauthenticated plugin-console-asset
-	// branch in handleClusterProxy. Only true for the pure-mock in-memory file
-	// server (local dev), never for the sandbox/real credentialed proxies — so
-	// the auth bypass can never reach a live cluster's credentials.
-	serveUnauthedMockAssets bool
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *authz.Store) (*Server, error) {
@@ -56,7 +47,6 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 
 	var kubeHandler http.Handler
 	var tokenCache *tokenpkg.Cache
-	var serveUnauthedMockAssets bool
 	switch cfg.Mode {
 	case "real":
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
@@ -71,23 +61,19 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 			logger.Info("mock mode: proxying kube API requests to plugin sandbox cluster",
 				"kubeconfig", cfg.PluginSandboxKubeconfig)
 		} else {
-			// Pure-mock: the in-memory client serves plugin console assets from
-			// disk, so the unauthenticated asset branch is safe to enable.
-			kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
-			serveUnauthedMockAssets = true
+			kubeHandler = &kube.MockClient{}
 		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
 
 	s := &Server{
-		logger:                  logger,
-		authValidator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		authz:                   authzClient,
-		store:                   store,
-		tokenCache:              tokenCache,
-		kubeHandler:             kubeHandler,
-		serveUnauthedMockAssets: serveUnauthedMockAssets,
+		logger:        logger,
+		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
+		authz:         authzClient,
+		store:         store,
+		tokenCache:    tokenCache,
+		kubeHandler:   kubeHandler,
 	}
 
 	pluginSA, err := newPluginSAResolver(cfg, logger)

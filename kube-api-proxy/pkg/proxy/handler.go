@@ -44,27 +44,10 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rewrite the URL to the forwarded path so downstream handlers (and the
-	// public-asset check below) see the canonical Kubernetes API path.
+	// Rewrite the URL to the forwarded path so downstream handlers see the
+	// canonical Kubernetes API path.
 	r.URL.Path = "/" + path
 	r.URL.RawPath = ""
-
-	// TODO(FUN-17): plugin console assets now served by plugin-proxy (Plan C);
-	// this branch is superseded — remove once Plan C/E land.
-	//
-	// Plugin console assets are public static UI files served straight from
-	// disk by the in-memory mock client (local dev). The auth/authz check is
-	// skipped because those files expose no user-specific data and carry no
-	// credentials. serveUnauthedMockAssets is only set for that pure-mock file
-	// server (see New): the sandbox and real proxies forward to a live apiserver
-	// with admin/SA credentials, so skipping auth there would hand an
-	// unauthenticated caller credentialed cluster access. In every other mode
-	// this falls through to the normal token/cookie auth path below.
-	if s.serveUnauthedMockAssets && kube.IsPluginConsoleAssetPath(r.URL.Path) {
-		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
-		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
-		return
-	}
 
 	// Dispatch on token type. UserToken is the browser/user path (unchanged).
 	// PluginToken is the FUN-17 gateway path: per-request SAR against the user,

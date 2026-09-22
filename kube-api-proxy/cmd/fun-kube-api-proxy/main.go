@@ -22,14 +22,13 @@ import (
 )
 
 type config struct {
-	OpenFGA                authz.Config
-	JWTSecret              string     `env:"JWT_SECRET,required,notEmpty"`
-	ListenAddr             string     `env:"LISTEN_ADDR" envDefault:":8081"`
-	LogLevel               slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins     []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode          string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
-	GardenerKubeconfig     string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
-	MockPluginTemplatesDir string     `env:"MOCK_PLUGIN_TEMPLATES_DIR" envDefault:"./plugins"`
+	OpenFGA            authz.Config
+	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty"`
+	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8081"`
+	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
+	KubeProxyMode      string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	GardenerKubeconfig string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 
 	// PluginSandboxKubeconfig is a filesystem path to a kubeconfig for a
 	// locally-running plugin sandbox cluster (typically the same secret
@@ -97,7 +96,6 @@ func run() error {
 		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
 		Mode:                    cfg.KubeProxyMode,
 		GardenerClient:          gardenerClient,
-		MockPluginTemplatesDir:  cfg.MockPluginTemplatesDir,
 		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
 	}, authzClient, authzStore)
 	if err != nil {

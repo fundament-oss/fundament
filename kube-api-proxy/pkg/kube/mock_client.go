@@ -3,13 +3,9 @@ package kube
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -22,11 +18,6 @@ type MockClient struct {
 	installByCluster map[string][]map[string]any
 	fscByCluster     map[string][]map[string]any
 	seq              int
-
-	// PluginTemplatesDir is the on-disk root from which `/proxy/console/<file>`
-	// requests are served in mock mode. Layout: <dir>/<pluginName>/console/<file>.
-	// Empty disables the console asset handler (returns 404 for those paths).
-	PluginTemplatesDir string
 }
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
@@ -264,14 +255,6 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 
 // ServeHTTP implements http.Handler so MockClient can be used in place of MultiClusterProxy.
 func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Console asset paths are handled separately so we can stream files from
-	// disk and set the right Content-Type per extension. They are matched
-	// before falling through to the JSON-only Do() handler.
-	if pluginName, asset, ok := pluginConsoleAsset(r.URL.Path); ok {
-		m.serveConsoleAsset(w, r, pluginName, asset)
-		return
-	}
-
 	path := r.URL.Path
 	if r.URL.RawQuery != "" {
 		path = path + "?" + r.URL.RawQuery
@@ -287,68 +270,6 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_, _ = io.Copy(w, body)
-}
-
-// pluginTemplateDir maps an installation name to its directory under
-// PluginTemplatesDir, whose entries are named after the *plugin* (plugins/ in
-// the repo). The installation name is "<organizationName>--<pluginName>" and
-// neither half may contain a double dash, so the split is exact. Two
-// organizations publishing the same plugin name therefore share the mock's
-// assets, which is the right trade for a dev mock.
-func (m *MockClient) pluginTemplateDir(installationName string) (string, bool) {
-	_, pluginName, ok := strings.Cut(installationName, "--")
-	if !ok {
-		return "", false
-	}
-	//nolint:gosec // pluginName is a suffix of a value pluginConsoleAsset constrained to [a-z0-9-]+, so it cannot traverse
-	info, err := os.Stat(filepath.Join(m.PluginTemplatesDir, pluginName))
-	if err != nil || !info.IsDir() {
-		return "", false
-	}
-	return pluginName, true
-}
-
-// serveConsoleAsset serves a static file from PluginTemplatesDir for paths of
-// the form /api/v1/namespaces/plugin-<installation>/services/http:plugin:8080/proxy/console/<asset>.
-// In real mode the same path is answered by the plugin pod's embedded console FS.
-func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, installationName, asset string) {
-	if m.PluginTemplatesDir == "" {
-		http.Error(w, `{"message":"plugin templates directory not configured"}`, http.StatusNotFound)
-		return
-	}
-	if asset == "" || strings.Contains(asset, "..") {
-		http.Error(w, `{"message":"invalid asset path"}`, http.StatusBadRequest)
-		return
-	}
-
-	pluginName, ok := m.pluginTemplateDir(installationName)
-	if !ok {
-		http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
-		return
-	}
-
-	full := filepath.Join(m.PluginTemplatesDir, pluginName, "console", filepath.FromSlash(asset))
-	data, err := os.ReadFile(full) //nolint:gosec // pluginName is an existing directory under PluginTemplatesDir; ".." is rejected above.
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
-			return
-		}
-		http.Error(w, `{"message":"failed to read asset"}`, http.StatusInternalServerError)
-		return
-	}
-
-	contentType := mime.TypeByExtension(filepath.Ext(asset))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-	w.Header().Set("Content-Type", contentType)
-	SetPluginConsoleAssetCORS(w.Header())
-	// Mock mode serves edits live from disk; disable caching so iframe reloads
-	// always pick up the latest template without manual cache-busting.
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
 }
 
 const mockEmptyList = `{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":""},"items":[]}`
@@ -443,59 +364,4 @@ func resourceGetResponse(listJSON, name, namespace string, r func(string) io.Rea
 		return 200, r(string(b)), nil
 	}
 	return 404, r(`{"message":"not found"}`), nil
-}
-
-// IsPluginConsoleAssetPath reports whether path is a request for a plugin
-// console asset. Such requests serve static plugin UI files (HTML/JS/CSS)
-// and are treated as public — the sandboxed iframe that loads them cannot
-// send credentials, and the assets themselves expose no user-specific data.
-func IsPluginConsoleAssetPath(path string) bool {
-	_, _, ok := pluginConsoleAsset(path)
-	return ok
-}
-
-// pluginConsoleAsset matches `/api/v1/namespaces/plugin-<installation>/services/http:plugin:8080/proxy/console/<asset>`
-// and returns the namespace's installation suffix and the trailing asset path.
-// The Service is constant-named, so only the namespace varies.
-func pluginConsoleAsset(path string) (installationName, asset string, ok bool) {
-	const (
-		nsPrefix = "/api/v1/namespaces/plugin-"
-		svcMid   = "/services/http:plugin:8080/proxy/console/"
-	)
-	if !strings.HasPrefix(path, nsPrefix) {
-		return "", "", false
-	}
-	afterNS := path[len(nsPrefix):]
-	slash := strings.Index(afterNS, "/")
-	if slash <= 0 {
-		return "", "", false
-	}
-	installationName = afterNS[:slash]
-	// The name indexes a directory below, so constrain it to the DNS-1123 label
-	// charset a real namespace suffix uses — that also rules out ".." and any
-	// separator escaping PluginTemplatesDir.
-	if !isDNS1123LabelChars(installationName) {
-		return "", "", false
-	}
-	rest := afterNS[slash:]
-
-	if !strings.HasPrefix(rest, svcMid) {
-		return "", "", false
-	}
-	asset = rest[len(svcMid):]
-	return installationName, asset, true
-}
-
-// isDNS1123LabelChars reports whether s is a non-empty string of lowercase
-// alphanumerics and '-'.
-func isDNS1123LabelChars(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, c := range s {
-		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
-			return false
-		}
-	}
-	return true
 }

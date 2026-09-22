@@ -4,13 +4,15 @@ import {
   Input,
   Output,
   EventEmitter,
-  OnInit,
   signal,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  effect,
+  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
@@ -27,6 +29,8 @@ import {
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
 import { NotificationService } from '../notification.service';
+import AuthnApiService from '../authn-api.service';
+import OrganizationContextService from '../organization-context.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -88,7 +92,7 @@ const isRevoked = (timestamp: Timestamp | undefined): boolean => timestamp !== u
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './api-keys.component.html',
 })
-export default class ApiKeysComponent implements OnInit {
+export default class ApiKeysComponent {
   /** Owned by the shell: the sheet opens over whatever page you were on, so
    *  that page is not unmounted and is still there when you close it. */
   @Input()
@@ -99,7 +103,12 @@ export default class ApiKeysComponent implements OnInit {
     // made or revoked elsewhere would otherwise be missing from the list. An
     // empty cache is the case that needs it most — no keys yet, or a first load
     // that failed — so the reopen refetches whatever the list currently holds.
-    if (open && !wasOpen) this.loadApiKeys();
+    //
+    // Only once the owner is known, though: the list is the organization's, and
+    // a call made before the organization has been resolved carries no
+    // organization header and is refused. The very first fetch is left to the
+    // effect below, which runs as soon as both halves of the owner are in.
+    if (open && !wasOpen && this.owner !== undefined) this.loadApiKeys();
   }
 
   get show(): boolean {
@@ -118,7 +127,10 @@ export default class ApiKeysComponent implements OnInit {
 
   apiKeys = signal<APIKey[]>([]);
 
-  loading = signal(false);
+  /** Starts true: the sheet is built for an open, and the first fetch may have
+   *  to wait for the organization, so the list is pending from the first paint
+   *  rather than briefly reading as "no keys yet". */
+  loading = signal(true);
 
   error = signal<string | null>(null);
 
@@ -147,8 +159,56 @@ export default class ApiKeysComponent implements OnInit {
 
   createdTokenPrefix = signal<string | null>(null);
 
-  async ngOnInit() {
-    await this.loadApiKeys();
+  private currentUser = toSignal(inject(AuthnApiService).currentUser$);
+
+  private organizationContext = inject(OrganizationContextService);
+
+  /** Whose keys this sheet holds: the user and the organization they were for. */
+  private owner: string | undefined;
+
+  constructor() {
+    // The sheet stays mounted for the whole session, through a logout and the
+    // next login. A token created by one user must not greet the next, and
+    // neither may their list of keys, so a change of either drops it all.
+    //
+    // Only once both halves are known, though. Opening /<org>/api-keys directly
+    // builds the sheet before the organization has been resolved, so the first
+    // owner would read as "no organization" and the id arriving would look like
+    // a change — emptying the list the sheet had just fetched.
+    effect(() => {
+      const userId = this.currentUser()?.id;
+      const organizationId = this.organizationContext.currentOrganizationId();
+      if (!userId || !organizationId) return;
+
+      const owner = `${userId}/${organizationId}`;
+      untracked(() => {
+        if (this.owner === undefined || this.owner === owner) {
+          const firstOwner = this.owner === undefined;
+          this.owner = owner;
+          // Opening /<org>/api-keys directly builds the sheet before the
+          // organization has been resolved, so the open it was built for could
+          // not fetch yet. This is the moment it can.
+          if (firstOwner && this.isOpen) this.loadApiKeys();
+          return;
+        }
+        this.owner = owner;
+        this.resetState();
+        // Reopening refetches, but a sheet that is open right now stays open and
+        // would go on showing the empty state it was just left with.
+        if (this.isOpen) this.loadApiKeys();
+      });
+    });
+  }
+
+  private resetState() {
+    this.dismissToken();
+    this.cancelCreating();
+    this.apiKeys.set([]);
+    this.error.set(null);
+    this.showRevokeModal.set(false);
+    this.showDeleteModal.set(false);
+    this.pendingKeyId.set(null);
+    this.pendingKeyName.set(null);
   }
 
   async loadApiKeys() {

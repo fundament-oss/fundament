@@ -271,8 +271,9 @@ export default class ProjectDetailComponent implements OnInit {
       this.showDeleteModal.set(false);
       this.notificationService.success(`Project '${currentProject.name}' deleted`);
 
-      // Reload project data to update the selector modal
-      await this.organizationDataService.reloadProjectsAndNamespaces();
+      // Reload project data to update the sidebar. The project is gone by now,
+      // so a failed reload is not a failed delete.
+      await this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {});
 
       this.pageNav.goTo('/');
     } catch (err) {

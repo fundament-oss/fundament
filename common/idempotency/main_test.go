@@ -23,18 +23,26 @@ import (
 
 const testDBPort = 45327
 
+// instanceDir names this package's data directory inside the cache root. It
+// sits under the root rather than beside it, so the directory CI restores is
+// the root itself and a second package under common/ can bring its own
+// postmaster without needing a cache entry of its own.
+const instanceDir = "fundament-test-pg-idempotency"
+
 func TestMain(m *testing.M) {
-	cacheDir := os.Getenv("FUNDAMENT_TEST_CACHE_DIR")
-	if cacheDir == "" {
+	// The environment variable is the cache root CI restores, not the data
+	// directory itself.
+	cacheRoot := os.Getenv("FUNDAMENT_TEST_CACHE_DIR")
+	if cacheRoot == "" {
 		userCache, err := os.UserCacheDir()
 		if err != nil {
 			log.Fatalf("failed to determine user cache directory: %v", err)
 		}
 
-		cacheDir = filepath.Join(userCache, "fundament-test-pg-idempotency")
-	} else {
-		cacheDir += "-idempotency"
+		cacheRoot = userCache
 	}
+
+	cacheDir := filepath.Join(cacheRoot, instanceDir)
 
 	err := os.MkdirAll(cacheDir, 0o750) //nolint:gosec // test helper, paths are not user-controlled
 	if err != nil {
