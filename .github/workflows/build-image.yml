@@ -40,9 +40,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sanitize ref name
-        id: sanitize
-        run: echo "ref_name=$(echo '${{ github.ref_name }}' | tr '/' '-')" >> $GITHUB_OUTPUT
+      - name: Tags
+        id: tags
+        env:
+          IMAGE: ${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          tags="$IMAGE:$GITHUB_SHA-${GITHUB_REF_NAME//\//-}-$GITHUB_RUN_NUMBER"
+          if [ "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH" ]; then
+            tags="$tags,$IMAGE:latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         id: build
@@ -52,7 +60,7 @@ jobs:
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
           push: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-          tags: ${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:latest,${{ env.IMAGE_PREFIX }}/${{ inputs.image-name }}:${{ github.sha }}-${{ steps.sanitize.outputs.ref_name }}-${{ github.run_number }}
+          tags: ${{ steps.tags.outputs.tags }}
 
       # publish-chart stamps the chart with digests rather than tags, and matrix
       # jobs cannot aggregate outputs - so each build leaves its digest as an

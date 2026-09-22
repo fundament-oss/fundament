@@ -283,9 +283,7 @@ jobs:
       - name: Verify the package
         run: |
           TGZ="dist/fundament-${CHART_VERSION}.tgz"
-          # Every image must be digest-pinned. A tag survives review and can be
-          # repointed afterwards; on this registry :latest is rewritten by every
-          # pull_request build.
+          # Every image must be digest-pinned.
           if mise exec -- helm show values "$TGZ" | mise exec -- yq -r '.images[]' | grep -v '@sha256:'; then
             echo "ERROR: the packaged chart has image references that are not digests" >&2
             exit 1
