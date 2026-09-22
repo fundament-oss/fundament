@@ -64,6 +64,10 @@ func (c *AuthLoginCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Printf("Logged in as %s\n", resp.GetUser().GetName())
+	if len(resp.GetUser().GetOrganizationIds()) == 0 {
+		fmt.Println()
+		fmt.Println(NoOrganizationsHint)
+	}
 	return nil
 }
 
@@ -108,8 +112,19 @@ func (c *AuthStatusCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Authenticated", "yes")
 	PrintKeyValue(w, "User ID", user.GetId())
 	PrintKeyValue(w, "User Name", user.GetName())
-	PrintKeyValue(w, "Organization IDs", user.GetOrganizationIds())
-	return w.Flush()
+	if len(user.GetOrganizationIds()) == 0 {
+		PrintKeyValue(w, "Organization IDs", "none")
+	} else {
+		PrintKeyValue(w, "Organization IDs", user.GetOrganizationIds())
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flushing output: %w", err)
+	}
+	if len(user.GetOrganizationIds()) == 0 {
+		fmt.Println()
+		fmt.Println(NoOrganizationsHint)
+	}
+	return nil
 }
 
 // AuthLogoutCmd handles the logout command.
