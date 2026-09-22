@@ -68,78 +68,6 @@ func (q *Queries) APIKeyUpdateLastUsed(ctx context.Context, arg APIKeyUpdateLast
 	return err
 }
 
-const organizationCreate = `-- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name, alias)
-VALUES ($1, $2)
-RETURNING id, name, alias, created
-`
-
-type OrganizationCreateParams struct {
-	Name  string
-	Alias string
-}
-
-type OrganizationCreateRow struct {
-	ID      uuid.UUID
-	Name    string
-	Alias   string
-	Created pgtype.Timestamptz
-}
-
-func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
-	row := q.db.QueryRow(ctx, organizationCreate, arg.Name, arg.Alias)
-	var i OrganizationCreateRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Alias,
-		&i.Created,
-	)
-	return i, err
-}
-
-const organizationUserCreate = `-- name: OrganizationUserCreate :one
-INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
-VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, user_id, permission, status, created
-`
-
-type OrganizationUserCreateParams struct {
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
-	Status         dbconst.OrganizationsUserStatus
-}
-
-type OrganizationUserCreateRow struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
-	Status         dbconst.OrganizationsUserStatus
-	Created        pgtype.Timestamptz
-}
-
-// Creates a membership for a user in an organization
-func (q *Queries) OrganizationUserCreate(ctx context.Context, arg OrganizationUserCreateParams) (OrganizationUserCreateRow, error) {
-	row := q.db.QueryRow(ctx, organizationUserCreate,
-		arg.OrganizationID,
-		arg.UserID,
-		arg.Permission,
-		arg.Status,
-	)
-	var i OrganizationUserCreateRow
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.Permission,
-		&i.Status,
-		&i.Created,
-	)
-	return i, err
-}
-
 const userCreate = `-- name: UserCreate :one
 INSERT INTO tenant.users (name, external_ref, email)
 VALUES ($1, $2, $3)
@@ -195,9 +123,9 @@ type UserGetByEmailRow struct {
 
 // Get a user by email who has no external_ref (pending invitation).
 // The address is matched case-insensitively: the spelling someone was invited
-// at and the spelling their identity provider reports are the same address, and
-// missing each other here would sign the invited person in as a stranger and
-// start a new organization for them.
+// at (or registered at by an operator) and the spelling their identity provider
+// reports are the same address, and missing each other here would sign the
+// invited person in as a stranger without any of their memberships.
 func (q *Queries) UserGetByEmail(ctx context.Context, arg UserGetByEmailParams) (UserGetByEmailRow, error) {
 	row := q.db.QueryRow(ctx, userGetByEmail, arg.Email)
 	var i UserGetByEmailRow

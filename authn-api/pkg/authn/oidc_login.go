@@ -4,16 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
@@ -73,7 +70,7 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 		}
 	}
 
-	// Create new user with new organization
+	// First login of an unknown user: register them without an organization
 	return s.handleNewUser(ctx, claims, loginMethod)
 }
 
@@ -175,131 +172,26 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 	return u, accessToken, nil
 }
 
-// toName converts an alias into a valid organization name.
-// Rules: lowercase, replace non-alphanumeric with hyphens, collapse consecutive hyphens,
-// strip leading/trailing hyphens, prepend "org-" if starts with digit, ensure min 2 chars.
-func toName(alias string) string {
-	// Lowercase
-	s := strings.ToLower(alias)
-
-	// Replace non-alphanumeric with hyphens
-	var result strings.Builder
-	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('-')
-		}
-	}
-	s = result.String()
-
-	// Collapse consecutive hyphens
-	for strings.Contains(s, "--") {
-		s = strings.ReplaceAll(s, "--", "-")
-	}
-
-	// Strip leading/trailing hyphens
-	s = strings.Trim(s, "-")
-
-	// Prepend "org-" if starts with digit
-	if len(s) > 0 && s[0] >= '0' && s[0] <= '9' {
-		s = "org-" + s
-	}
-
-	// Ensure minimum 2 chars (constraint requires at least 2: start [a-z] + end [a-z0-9])
-	if len(s) < 2 {
-		s = "org-x"
-	}
-
-	// Truncate to reasonable max (63 chars, common DNS label limit)
-	if len(s) > 63 {
-		s = s[:63]
-	}
-
-	// Don't end with hyphen (violates constraint ^[a-z][a-z0-9-]*[a-z0-9]$)
-	s = strings.TrimRight(s, "-")
-
-	return s
-}
-
-// handleNewUser creates a new organization and user for first-time registration.
+// handleNewUser registers a first-time user. The user starts without any
+// organization membership: organizations are not self-service, an operator
+// assigns users to them through funops (before or after this first login).
+// Memberships assigned later reach the session on the next token refresh.
 func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
-	alias := claims.Name
-	if alias == "" {
-		alias = claims.Email
-	}
-
-	orgName := toName(alias)
-
-	tx, err := s.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
-	}
-
-	defer rollback.Rollback(ctx, tx, s.logger)
-
-	qtx := s.queries.WithTx(tx)
-
-	// Try creating organization with name, retry with suffix on conflict
-	var organization db.OrganizationCreateRow
-	for attempt := range 10 {
-		candidateName := orgName
-		if attempt > 0 {
-			suffix := fmt.Sprintf("-%d", attempt+1)
-			base := orgName
-			if len(base)+len(suffix) > 63 {
-				base = strings.TrimRight(base[:63-len(suffix)], "-")
-			}
-			candidateName = base + suffix
-		}
-		organization, err = qtx.OrganizationCreate(ctx, db.OrganizationCreateParams{
-			Name:  candidateName,
-			Alias: alias,
-		})
-		if err == nil {
-			break
-		}
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintOrganizationsUqName {
-			continue
-		}
-		s.logger.Error("failed to create organization", "error", err)
-		return nil, "", fmt.Errorf("creating organization: %w", err)
-	}
-	if err != nil {
-		s.logger.Error("failed to create organization after retries", "error", err)
-		return nil, "", fmt.Errorf("creating organization: name conflict after retries: %w", err)
-	}
-
 	params := db.UserUpsertParams{
 		Name:        claims.Name,
 		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
 		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
 	}
 
-	row, err := qtx.UserUpsert(ctx, params)
+	row, err := s.queries.UserUpsert(ctx, params)
 	if err != nil {
 		s.logger.Error("failed to upsert user", "error", err)
 		return nil, "", fmt.Errorf("creating user: %w", err)
 	}
 
-	_, err = qtx.OrganizationUserCreate(ctx, db.OrganizationUserCreateParams{
-		OrganizationID: organization.ID,
-		UserID:         row.ID,
-		Permission:     dbconst.OrganizationsUserPermission_Admin,
-		Status:         dbconst.OrganizationsUserStatus_Accepted,
-	})
-	if err != nil {
-		s.logger.Error("failed to create organization membership", "error", err)
-		return nil, "", fmt.Errorf("creating organization membership: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
-	}
-
 	u := &user{
 		ID:              row.ID,
-		OrganizationIDs: []uuid.UUID{organization.ID},
+		OrganizationIDs: []uuid.UUID{},
 		Name:            row.Name,
 		ExternalRef:     row.ExternalRef.String,
 	}
@@ -310,11 +202,11 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 		return nil, "", fmt.Errorf("generating JWT: %w", err)
 	}
 
-	s.logger.Info("new user registered",
+	s.logger.Info("new user registered without organization",
 		"login_method", loginMethod,
 		"user_id", u.ID,
-		"organization_id", organization.ID,
 		"name", u.Name,
+		"email", claims.Email,
 	)
 
 	return u, accessToken, nil
