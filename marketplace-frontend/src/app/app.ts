@@ -20,6 +20,7 @@ import '@nldd/design-system/dropdown';
 import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/inline-dialog';
 import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
 import { ToastService } from './toast.service';
@@ -30,7 +31,7 @@ import { VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, FundamentLogoIconComponent],
+  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, FundamentLogoIconComponent],
   host: {
     class: 'flex min-h-dvh flex-col',
   },
