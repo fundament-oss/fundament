@@ -23,16 +23,16 @@ spec:
       - internet_access
     rbac:
       # --- Fundament storage resources this plugin reconciles ---
-      # storagepools/finalizers: the API server requires update on the owner's
+      # diskpools/finalizers: the API server requires update on the owner's
       # finalizers before accepting an owner ref with blockOwnerDeletion=true.
       - apiGroups:
-          - storage.fundament.io
+          - ceph.fundament.io
         resources:
           - disks
           - disks/status
-          - storagepools
-          - storagepools/status
-          - storagepools/finalizers
+          - diskpools
+          - diskpools/status
+          - diskpools/finalizers
           - blockstorages
           - blockstorages/status
           - blockstorages/finalizers
@@ -87,7 +87,7 @@ spec:
           - get
           - list
           - watch
-      # --- CRD management: apply own storage.fundament.io CRDs at install time ---
+      # --- CRD management: apply own ceph.fundament.io CRDs at install time ---
       - apiGroups:
           - apiextensions.k8s.io
         resources:
@@ -117,32 +117,32 @@ spec:
         verbs: ["*"]
   menu:
     project:
-      - crd: storagepools.storage.fundament.io
+      - crd: diskpools.ceph.fundament.io
         list: true
         detail: true
         icon: file-box
-      - crd: blockstorages.storage.fundament.io
+      - crd: blockstorages.ceph.fundament.io
         list: true
         detail: true
         icon: circle-stack
-      - crd: filestorages.storage.fundament.io
+      - crd: filestorages.ceph.fundament.io
         list: true
         detail: true
         icon: folder-open
-      - crd: disks.storage.fundament.io
+      - crd: disks.ceph.fundament.io
         list: true
         detail: true
         icon: server-stack
   crds:
-    - disks.storage.fundament.io
-    - storagepools.storage.fundament.io
-    - blockstorages.storage.fundament.io
-    - filestorages.storage.fundament.io
+    - disks.ceph.fundament.io
+    - diskpools.ceph.fundament.io
+    - blockstorages.ceph.fundament.io
+    - filestorages.ceph.fundament.io
   customComponents:
-    StoragePool:
-      list: storagepools-list.html
-      detail: storagepools-detail.html
-      create: storagepools-create.html
+    DiskPool:
+      list: diskpools-list.html
+      detail: diskpools-detail.html
+      create: diskpools-create.html
     Disk:
       list: disks-list.html
       detail: disks-detail.html
@@ -155,7 +155,7 @@ spec:
       detail: filestorages-detail.html
       create: filestorages-create.html
   uiHints:
-    storagepools.storage.fundament.io:
+    diskpools.ceph.fundament.io:
       statusMapping:
         jsonPath: ".status.phase"
         values:
@@ -165,7 +165,7 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
-    blockstorages.storage.fundament.io:
+    blockstorages.ceph.fundament.io:
       statusMapping:
         jsonPath: ".status.phase"
         values:
@@ -178,7 +178,7 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
-    filestorages.storage.fundament.io:
+    filestorages.ceph.fundament.io:
       statusMapping:
         jsonPath: ".status.phase"
         values:
@@ -198,19 +198,19 @@ spec:
   # No delete: the console offers no delete, because the guard for it would have
   # to be server-side to mean anything. No update: the edit form merge-patches.
   allowedResources:
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
       resource: disks
       verbs: [list, get]
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
-      resource: storagepools
+      resource: diskpools
       verbs: [list, get, create, patch]
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
       resource: blockstorages
       verbs: [list, get, create, patch]
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
       resource: filestorages
       verbs: [list, get, create, patch]

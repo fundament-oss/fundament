@@ -42,7 +42,7 @@ type consumer interface {
 
 // ConsumerReconciler reconciles one consumer kind into its derived Rook object
 // and StorageClass over the shared OSD set. It never writes CephCluster
-// spec.storage.nodes; StoragePoolReconciler owns that. The kind-specific
+// spec.storage.nodes; DiskPoolReconciler owns that. The kind-specific
 // pieces (names, renderers) come in via the New*Reconciler constructors.
 type ConsumerReconciler[T consumer] struct {
 	Client           client.Client
@@ -102,11 +102,11 @@ func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 		Owns(&storagev1.StorageClass{}).
 		Owns(rookStub(r.rookKind)).
 		// No predicate on Disk: its changes arrive via the status subresource,
-		// which a generation filter would drop. StoragePool matters only through
+		// which a generation filter would drop. DiskPool matters only through
 		// spec.disks, and the predicate keeps every pool status write from
 		// re-enqueueing every consumer.
 		Watches(&v1alpha1.Disk{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers)).
-		Watches(&v1alpha1.StoragePool{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers),
+		Watches(&v1alpha1.DiskPool{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		// Owns only sees objects carrying our ownerRef. These watches cover
 		// foreign same-named objects, whose removal is notOursError's
@@ -119,7 +119,7 @@ func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 	return nil
 }
 
-// toAllConsumers maps Disk and StoragePool events to every consumer of this
+// toAllConsumers maps Disk and DiskPool events to every consumer of this
 // kind: either can change the contributing node count and therefore
 // replication.
 func (r *ConsumerReconciler[T]) toAllConsumers(ctx context.Context, _ client.Object) []reconcile.Request {
@@ -179,13 +179,13 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 
 	// Without OSDs the derived Rook object never provisions and its
 	// StorageClass leaves every PVC Pending. Report instead of creating; the
-	// StoragePool watch wakes us when capacity appears.
+	// DiskPool watch wakes us when capacity appears. The derived fields
+	// (storageClassName, replicas, failureDomain) are left as they are: the
+	// StorageClass and Rook object still exist and still serve volumes.
 	if len(union) == 0 {
 		status := *obj.ConsumerStatus()
 		status.Phase = v1alpha1.PhaseDegraded
-		status.StorageClassName, status.FailureDomain = "", ""
-		status.Replicas = 0
-		status.Message = "no OSDs: create a StoragePool with disks first"
+		status.Message = "no DiskPool contributes disks"
 		return ctrl.Result{}, r.writeStatus(ctx, obj, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
 			Reason:  v1alpha1.ReasonNoOSDs,

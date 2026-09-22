@@ -17,13 +17,13 @@ document.getElementById('create-btn').addEventListener('click', () => navigateTo
 
 try {
   const { items } = await fundament.k8s.list({
-    group: 'storage.fundament.io',
+    group: 'ceph.fundament.io',
     version: 'v1alpha1',
-    resource: 'storagepools',
+    resource: 'diskpools',
   });
 
   if (!items || items.length === 0) {
-    tbody.innerHTML = emptyRow(5, 'No storage pools.');
+    tbody.innerHTML = emptyRow(5, 'No disk pools.');
   } else {
     tbody.innerHTML = items
       .map((item) => {

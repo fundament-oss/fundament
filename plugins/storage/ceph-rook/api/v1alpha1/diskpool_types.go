@@ -2,10 +2,10 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// StoragePoolSpec is the operator's disk contribution to the shared Ceph
+// DiskPoolSpec is the operator's disk contribution to the shared Ceph
 // cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
 // StorageClasses.
-type StoragePoolSpec struct {
+type DiskPoolSpec struct {
 	// Disks are the names of Disk objects to consume as OSDs. listType=set so the
 	// API server rejects a repeat, which would be double-counted in status.
 	// +optional
@@ -13,7 +13,7 @@ type StoragePoolSpec struct {
 	Disks []string `json:"disks,omitempty"`
 }
 
-// Pool phases. PhaseProvisioning is used by consumer kinds only; StoragePool
+// Pool phases. PhaseProvisioning is used by consumer kinds only; DiskPool
 // itself is Ready or Degraded.
 const (
 	PhaseProvisioning = "Provisioning"
@@ -21,7 +21,7 @@ const (
 	PhaseDegraded     = "Degraded"
 )
 
-// ConditionReady is the one condition every StoragePool carries. Paired with
+// ConditionReady is the one condition every DiskPool carries. Paired with
 // status.observedGeneration it is what `kubectl wait --for=condition=Ready` and
 // a Flux/Argo health check read; phase alone cannot say whether the controller
 // has seen the current spec.
@@ -30,7 +30,7 @@ const ConditionReady = "Ready"
 // Reasons for ConditionReady. Kubernetes requires a reason on every condition,
 // and it is the machine-readable half: message is prose, reason is matchable.
 const (
-	// ReasonReady: the derived Rook object is Ready (StoragePool: the pool's
+	// ReasonReady: the derived Rook object is Ready (DiskPool: the pool's
 	// disk contribution is in order).
 	ReasonReady = "Ready"
 	// ReasonProvisioning: the derived object exists (or is being created) but
@@ -46,11 +46,11 @@ const (
 	ReasonReconcileError = "ReconcileError"
 )
 
-// StoragePoolStatus is the observed state.
+// DiskPoolStatus is the observed state.
 //
 // Every field describes this pool's contribution to one shared Ceph cluster, not
 // storage that belongs to it: all pools feed a single OSD set.
-type StoragePoolStatus struct {
+type DiskPoolStatus struct {
 	Phase string `json:"phase,omitempty"`
 	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
 	// how many OSDs are running: Rook creates those asynchronously, and removing a
@@ -79,18 +79,18 @@ type StoragePoolStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
-type StoragePool struct {
+type DiskPool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              StoragePoolSpec   `json:"spec,omitempty"`
-	Status            StoragePoolStatus `json:"status,omitempty"`
+	Spec              DiskPoolSpec   `json:"spec,omitempty"`
+	Status            DiskPoolStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-type StoragePoolList struct {
+type DiskPoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []StoragePool `json:"items"`
+	Items           []DiskPool `json:"items"`
 }
 
-func init() { SchemeBuilder.Register(&StoragePool{}, &StoragePoolList{}) }
+func init() { SchemeBuilder.Register(&DiskPool{}, &DiskPoolList{}) }

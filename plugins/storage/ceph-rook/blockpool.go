@@ -4,7 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// RenderCephBlockPool builds the CephBlockPool for a StoragePool.
+// RenderCephBlockPool builds the CephBlockPool for a DiskPool.
 func RenderCephBlockPool(namespace, name string, replicas int, failureDomain string) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}
 

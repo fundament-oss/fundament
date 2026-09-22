@@ -20,7 +20,7 @@ import {
   wireSubmit,
 } from './_shared.js';
 
-const GROUP_VERSION = { group: 'storage.fundament.io', version: 'v1alpha1' };
+const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
 
 export const BLOCKSTORAGE = {
   resource: 'blockstorages',
@@ -31,7 +31,7 @@ export const BLOCKSTORAGE = {
   storageClassPrefix: 'ceph-',
   detailHint: "Volumes are placed across all of the shared Ceph cluster's disks.",
   createIntro: `Block storage provides ReadWriteOnce volumes over the shared Ceph cluster's disks.
-    It needs at least one StoragePool contributing disks; without one it stays Degraded.`,
+    It needs at least one DiskPool contributing disks; without one it stays Degraded.`,
   metadataServers: false,
 };
 
@@ -44,7 +44,7 @@ export const FILESTORAGE = {
   storageClassPrefix: 'cephfs-',
   detailHint: 'Volumes can be mounted by many pods across nodes.',
   createIntro: `File storage provides shared ReadWriteMany volumes over the shared Ceph cluster's disks —
-    many pods on many nodes can mount the same volume. It needs at least one StoragePool
+    many pods on many nodes can mount the same volume. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
   metadataServers: true,
 };
@@ -249,7 +249,7 @@ export async function consumerCreatePage(cfg) {
       await fundament.k8s.create(
         { ...GROUP_VERSION, resource: cfg.resource },
         {
-          apiVersion: 'storage.fundament.io/v1alpha1',
+          apiVersion: 'ceph.fundament.io/v1alpha1',
           kind: cfg.kind,
           metadata: { name },
           spec: specFrom(cfg, form),

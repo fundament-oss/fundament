@@ -26,7 +26,7 @@ function claimText(status) {
 
 try {
   const { items } = await fundament.k8s.list({
-    group: 'storage.fundament.io',
+    group: 'ceph.fundament.io',
     version: 'v1alpha1',
     resource: 'disks',
   });

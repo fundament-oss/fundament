@@ -9,6 +9,6 @@ func (s *ConsumerStatus) SetObservedGeneration(g int64)      { s.ObservedGenerat
 func (s *ConsumerStatus) ConditionsRef() *[]metav1.Condition { return &s.Conditions }
 func (s *ConsumerStatus) SetDegraded(message string)         { s.Phase, s.Message = PhaseDegraded, message }
 
-func (s *StoragePoolStatus) SetObservedGeneration(g int64)      { s.ObservedGeneration = g }
-func (s *StoragePoolStatus) ConditionsRef() *[]metav1.Condition { return &s.Conditions }
-func (s *StoragePoolStatus) SetDegraded(message string)         { s.Phase, s.Message = PhaseDegraded, message }
+func (s *DiskPoolStatus) SetObservedGeneration(g int64)      { s.ObservedGeneration = g }
+func (s *DiskPoolStatus) ConditionsRef() *[]metav1.Condition { return &s.Conditions }
+func (s *DiskPoolStatus) SetDegraded(message string)         { s.Phase, s.Message = PhaseDegraded, message }

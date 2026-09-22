@@ -29,9 +29,12 @@ func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace str
 		// The csi.storage.k8s.io/*-secret-name keys name the Rook-managed Secrets
 		// the CSI driver looks up; no credential is in this file.
 		Parameters: map[string]string{ //nolint:gosec // G101: CSI parameter names, not credentials
-			"clusterID":     clusterNamespace,
-			"pool":          blockPoolName,
-			"imageFeatures": "layering",
+			"clusterID": clusterNamespace,
+			"pool":      blockPoolName,
+			// The full krbd feature set; kernels >= 5.4 support all of these.
+			// StorageClass parameters are immutable, so widening later would
+			// mean recreating the class.
+			"imageFeatures": "layering,exclusive-lock,object-map,fast-diff,deep-flatten",
 			"csi.storage.k8s.io/provisioner-secret-name":            "rook-csi-rbd-provisioner",
 			"csi.storage.k8s.io/provisioner-secret-namespace":       clusterNamespace,
 			"csi.storage.k8s.io/node-stage-secret-name":             "rook-csi-rbd-node",

@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // FileStorageSpec asks for a shared (ReadWriteMany) CephFS StorageClass over
-// the shared OSD set. FileStorage brings no disks; StoragePools do that.
+// the shared OSD set. FileStorage brings no disks; DiskPools do that.
 type FileStorageSpec struct {
 	// Replication selects replica count for both the metadata and data pool;
 	// "auto" derives it from node count.
@@ -25,11 +25,16 @@ type FileStorageSpec struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
+// Rook labels the MDS deployment rook_file_system=cephfs-<name>; label values
+// cap at 63 characters, so a longer name would fail only after the
+// CephFilesystem exists.
+// +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 56",message="name must be at most 56 characters: Rook derives a cephfs-<name> label capped at 63"
 type FileStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              FileStorageSpec `json:"spec,omitempty"`
-	Status            ConsumerStatus  `json:"status,omitempty"`
+	// +kubebuilder:default={}
+	Spec   FileStorageSpec `json:"spec,omitempty"`
+	Status ConsumerStatus  `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

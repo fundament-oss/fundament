@@ -37,14 +37,14 @@ const (
 )
 
 var fundamentCRDNames = []string{
-	"disks.storage.fundament.io",
-	"storagepools.storage.fundament.io",
-	"blockstorages.storage.fundament.io",
-	"filestorages.storage.fundament.io",
+	"disks.ceph.fundament.io",
+	"diskpools.ceph.fundament.io",
+	"blockstorages.ceph.fundament.io",
+	"filestorages.ceph.fundament.io",
 }
 
 // rookCRDNames are the Rook kinds the manager starts informers for. The
-// CephBlockPool watch in StoragePoolReconciler.SetupWithManager syncs its cache
+// CephBlockPool watch in DiskPoolReconciler.SetupWithManager syncs its cache
 // at manager start, so a CRD the chart has applied but the API server has not
 // established yet fails the sync and takes the whole manager down.
 var rookCRDNames = []string{
@@ -135,7 +135,7 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 
 // bootstrapCephCluster creates the singleton CephCluster if absent. An existing
 // one is left alone: install runs on every plugin start, and overwriting would
-// clobber the spec.storage that StoragePoolReconciler maintains.
+// clobber the spec.storage that DiskPoolReconciler maintains.
 func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg *Config) error {
 	desired := BootstrapCephCluster(namespace, cfg)
 

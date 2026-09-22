@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // BlockStorageSpec asks for an RBD StorageClass over the shared OSD set.
-// BlockStorage brings no disks; StoragePools do that.
+// BlockStorage brings no disks; DiskPools do that.
 type BlockStorageSpec struct {
 	// Replication selects replica count; "auto" derives it from node count.
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"

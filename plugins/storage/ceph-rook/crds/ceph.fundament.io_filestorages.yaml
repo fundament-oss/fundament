@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: filestorages.storage.fundament.io
+  name: filestorages.ceph.fundament.io
 spec:
-  group: storage.fundament.io
+  group: ceph.fundament.io
   names:
     kind: FileStorage
     listKind: FileStorageList
@@ -27,6 +27,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: |-
+          Rook labels the MDS deployment rook_file_system=cephfs-<name>; label values
+          cap at 63 characters, so a longer name would fail only after the
+          CephFilesystem exists.
         properties:
           apiVersion:
             description: |-
@@ -46,9 +50,10 @@ spec:
           metadata:
             type: object
           spec:
+            default: {}
             description: |-
               FileStorageSpec asks for a shared (ReadWriteMany) CephFS StorageClass over
-              the shared OSD set. FileStorage brings no disks; StoragePools do that.
+              the shared OSD set. FileStorage brings no disks; DiskPools do that.
             properties:
               metadataServers:
                 default: 1
@@ -157,6 +162,10 @@ spec:
                 type: string
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: 'name must be at most 56 characters: Rook derives a cephfs-<name>
+            label capped at 63'
+          rule: size(self.metadata.name) <= 56
     served: true
     storage: true
     subresources:

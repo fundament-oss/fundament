@@ -94,7 +94,7 @@ func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 	assert.Equal(t, "host", got.Status.FailureDomain)
 }
 
-// No StoragePool contributes disks: Degraded, nothing created.
+// No DiskPool contributes disks: Degraded, nothing created.
 func TestFileStorageDegradedWithoutOSDs(t *testing.T) {
 	t.Parallel()
 	c := newFakeClient(t, cephCluster(), testFileStorage())
@@ -109,7 +109,7 @@ func TestFileStorageDegradedWithoutOSDs(t *testing.T) {
 
 	got := getFile(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, got.Status.Phase)
-	assert.Contains(t, got.Status.Message, "create a StoragePool")
+	assert.Contains(t, got.Status.Message, "no DiskPool contributes disks")
 	cond := meta.FindStatusCondition(got.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
 	assert.Equal(t, v1alpha1.ReasonNoOSDs, cond.Reason)

@@ -11,14 +11,14 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// diskUnion resolves every live StoragePool's disks into one deduplicated
+// diskUnion resolves every live DiskPool's disks into one deduplicated
 // list: the disks behind every OSD in the cluster. reconcileCephClusterNodes
 // writes it into the CephCluster; consumer reconcilers size replication on it.
 // Shared so the two can never disagree.
 func diskUnion(ctx context.Context, c client.Client) ([]v1alpha1.DiskStatus, error) {
-	var pools v1alpha1.StoragePoolList
+	var pools v1alpha1.DiskPoolList
 	if err := c.List(ctx, &pools); err != nil {
-		return nil, fmt.Errorf("list StoragePools: %w", err)
+		return nil, fmt.Errorf("list DiskPools: %w", err)
 	}
 
 	// Deduplicate by (node, device ref) so a disk listed in multiple pools --

@@ -11,13 +11,13 @@ let loadError = null;
 
 try {
   const { items } = await fundament.k8s.list({
-    group: 'storage.fundament.io',
+    group: 'ceph.fundament.io',
     version: 'v1alpha1',
     resource: 'disks',
   });
 
   // Only unclaimed, available disks. The DiskInventory reconciler re-runs on
-  // StoragePool changes, so a disk another pool just took drops out. null
+  // DiskPool changes, so a disk another pool just took drops out. null
   // because no pool exists yet at create time.
   availableDisks = selectableDisks(items, null);
 } catch (err) {
@@ -32,12 +32,12 @@ if (loadError) {
   content.innerHTML = `
     <p class="plugin-text">
       No disks to offer. A disk appears here once it has been discovered, is not claimed by
-      another StoragePool, and the node's last probe found nothing on it. That probe can lag,
+      another DiskPool, and the node's last probe found nothing on it. That probe can lag,
       so a disk missing from this list is not necessarily in use — check
       <code>kubectl get disks</code> for what each one reports.
     </p>
     <div class="plugin-actions">
-      <button type="button" class="plugin-button-secondary" id="back-btn">Back to Storage Pools</button>
+      <button type="button" class="plugin-button-secondary" id="back-btn">Back to Disk Pools</button>
     </div>
   `;
   document.getElementById('back-btn').addEventListener('click', () => navigateBack());
@@ -46,9 +46,9 @@ if (loadError) {
 
   content.innerHTML = `
     <p class="plugin-text">
-      <strong>Recommendation:</strong> create a single StoragePool per cluster. All pools feed
-      one shared Ceph cluster and their data is placed across every disk in it, so a second
-      pool gives you another StorageClass — not isolated or tiered storage.
+      <strong>Recommendation:</strong> create a single DiskPool per cluster. All pools feed
+      one shared Ceph cluster and data is placed across every disk in it, so a second pool
+      only contributes more disks — not isolated or tiered storage.
     </p>
 
     <form id="create-form" class="plugin-form" novalidate>
@@ -74,7 +74,7 @@ if (loadError) {
       </div>
 
       <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create StoragePool</button>
+        <button id="submit-btn" type="submit" class="plugin-button">Create DiskPool</button>
         <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
       </div>
     </form>
@@ -98,7 +98,7 @@ if (loadError) {
     const nameInput = form.querySelector('[name="name"]');
     const name = nameInput.value.trim();
     if (!name) {
-      showError('Please enter a name for the StoragePool.');
+      showError('Please enter a name for the DiskPool.');
       nameInput.focus();
       return;
     }
@@ -119,19 +119,19 @@ if (loadError) {
 
     try {
       await fundament.k8s.create(
-        { group: 'storage.fundament.io', version: 'v1alpha1', resource: 'storagepools' },
+        { group: 'ceph.fundament.io', version: 'v1alpha1', resource: 'diskpools' },
         {
-          apiVersion: 'storage.fundament.io/v1alpha1',
-          kind: 'StoragePool',
+          apiVersion: 'ceph.fundament.io/v1alpha1',
+          kind: 'DiskPool',
           metadata: { name },
           spec: { disks: checkedDisks },
         },
       );
       navigateToDetail(name);
     } catch (err) {
-      showError(`Failed to create StoragePool: ${err?.message ?? err}`);
+      showError(`Failed to create DiskPool: ${err?.message ?? err}`);
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Create StoragePool';
+      submitBtn.textContent = 'Create DiskPool';
     }
   });
 }

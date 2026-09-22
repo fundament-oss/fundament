@@ -49,7 +49,7 @@ func getBlock(t *testing.T, c client.Client) *v1alpha1.BlockStorage {
 }
 
 // Happy path: derived CephBlockPool + StorageClass, replication sized on the
-// StoragePool union's node count, status populated.
+// DiskPool union's node count, status populated.
 func TestBlockStorageCreatesDerivedObjects(t *testing.T) {
 	t.Parallel()
 	c := newFakeClient(t,
@@ -88,7 +88,7 @@ func TestBlockStorageCreatesDerivedObjects(t *testing.T) {
 	assert.Equal(t, "host", bs.Status.FailureDomain)
 }
 
-// No StoragePool contributes disks: Degraded, nothing created.
+// No DiskPool contributes disks: Degraded, nothing created.
 func TestBlockStorageDegradedWithoutOSDs(t *testing.T) {
 	t.Parallel()
 	c := newFakeClient(t, cephCluster(), testBlockStorage("fast"))
@@ -103,7 +103,7 @@ func TestBlockStorageDegradedWithoutOSDs(t *testing.T) {
 
 	bs := getBlock(t, c)
 	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
-	assert.Contains(t, bs.Status.Message, "create a StoragePool")
+	assert.Contains(t, bs.Status.Message, "no DiskPool contributes disks")
 	cond := meta.FindStatusCondition(bs.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)

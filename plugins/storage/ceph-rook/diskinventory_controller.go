@@ -33,7 +33,7 @@ type DiskInventoryReconciler struct {
 
 // SetupWithManager registers the reconciler with the manager.
 //
-// StoragePools are watched too, mapped back to every discovery ConfigMap, because
+// DiskPools are watched too, mapped back to every discovery ConfigMap, because
 // a pool changes which disks are claimed and claimedBy is what the console's
 // picker filters on. Without it a disk stays "unclaimed" in the UI until the
 // discovery daemon rewrites its ConfigMap (default 60m) -- long enough to hand
@@ -49,7 +49,7 @@ func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.ConfigMap{}, builder.WithPredicates(discoverPredicate)).
 		Watches(
-			&v1alpha1.StoragePool{},
+			&v1alpha1.DiskPool{},
 			handler.EnqueueRequestsFromMapFunc(r.poolToDiscoveryConfigMaps),
 		).
 		Complete(r); err != nil {
@@ -61,7 +61,7 @@ func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 // discoverAppLabel is what rook-discover labels its per-node ConfigMaps with.
 const discoverAppLabel = "rook-discover"
 
-// poolToDiscoveryConfigMaps maps a StoragePool event onto every discovery
+// poolToDiscoveryConfigMaps maps a DiskPool event onto every discovery
 // ConfigMap, so every node's claimedBy is recomputed.
 func (r *DiskInventoryReconciler) poolToDiscoveryConfigMaps(ctx context.Context, _ client.Object) []reconcile.Request {
 	var cms corev1.ConfigMapList
@@ -141,12 +141,12 @@ func nodeFromConfigMap(name string, labels map[string]string) string {
 	return strings.TrimPrefix(name, "local-device-")
 }
 
-// buildClaimedByIndex maps disk name to the StoragePool entitled to it. Uses
-// BuildClaimIndex, so the inventory and the StoragePool reconciler always agree.
+// buildClaimedByIndex maps disk name to the DiskPool entitled to it. Uses
+// BuildClaimIndex, so the inventory and the DiskPool reconciler always agree.
 func (r *DiskInventoryReconciler) buildClaimedByIndex(ctx context.Context) (map[string]string, error) {
-	var pools v1alpha1.StoragePoolList
+	var pools v1alpha1.DiskPoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
-		return nil, fmt.Errorf("list StoragePools: %w", err)
+		return nil, fmt.Errorf("list DiskPools: %w", err)
 	}
 	return BuildClaimIndex(pools.Items), nil
 }

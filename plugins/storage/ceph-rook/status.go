@@ -17,7 +17,7 @@ import (
 )
 
 // statusView is what the shared writer manages on a status struct;
-// *ConsumerStatus and *StoragePoolStatus implement it.
+// *ConsumerStatus and *DiskPoolStatus implement it.
 type statusView interface {
 	SetObservedGeneration(int64)
 	ConditionsRef() *[]metav1.Condition

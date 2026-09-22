@@ -2,7 +2,7 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// ReasonNoOSDs: no StoragePool contributes usable disks, so there is nothing
+// ReasonNoOSDs: no DiskPool contributes usable disks, so there is nothing
 // to place data on. Consumer kinds (BlockStorage, FileStorage) share it.
 const ReasonNoOSDs = "NoOSDs"
 

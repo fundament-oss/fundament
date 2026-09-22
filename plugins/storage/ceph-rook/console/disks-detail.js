@@ -11,7 +11,7 @@ if (!ctx.resource?.name) {
 } else {
   try {
     const item = await fundament.k8s.get({
-      group: 'storage.fundament.io',
+      group: 'ceph.fundament.io',
       version: 'v1alpha1',
       resource: 'disks',
       name: ctx.resource.name,
@@ -35,13 +35,13 @@ if (!ctx.resource?.name) {
     ];
 
     // Text, not a link: plugin:navigate resolves within the current kind, so a
-    // hop to a StoragePool would route to disks/<poolname>.
+    // hop to a DiskPool would route to disks/<poolname>.
     //
     // "Reported empty" rather than "Available": the flag is a node probe that
     // has been observed stale for hours while the device ran an OSD, so it is
     // reported as the observation it is and never as permission to take the disk.
     const allocation = [
-      ['Claimed by', s.claimedBy || 'not claimed by any StoragePool'],
+      ['Claimed by', s.claimedBy || 'not claimed by any DiskPool'],
       ['Filesystem found', s.filesystem || 'none reported by the last probe'],
       ['Reported empty', s.available ? 'yes — last node probe found nothing on it' : 'no'],
     ];

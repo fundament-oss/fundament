@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: storagepools.storage.fundament.io
+  name: diskpools.ceph.fundament.io
 spec:
-  group: storage.fundament.io
+  group: ceph.fundament.io
   names:
-    kind: StoragePool
-    listKind: StoragePoolList
-    plural: storagepools
-    singular: storagepool
+    kind: DiskPool
+    listKind: DiskPoolList
+    plural: diskpools
+    singular: diskpool
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -44,7 +44,7 @@ spec:
             type: object
           spec:
             description: |-
-              StoragePoolSpec is the operator's disk contribution to the shared Ceph
+              DiskPoolSpec is the operator's disk contribution to the shared Ceph
               cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
               StorageClasses.
             properties:
@@ -59,7 +59,7 @@ spec:
             type: object
           status:
             description: |-
-              StoragePoolStatus is the observed state.
+              DiskPoolStatus is the observed state.
 
               Every field describes this pool's contribution to one shared Ceph cluster, not
               storage that belongs to it: all pools feed a single OSD set.

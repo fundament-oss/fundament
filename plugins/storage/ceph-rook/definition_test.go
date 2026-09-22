@@ -32,16 +32,16 @@ func TestDefinition(t *testing.T) {
 
 	assert.Equal(t, "ceph-rook", def.Metadata.Name)
 
-	t.Run("allowedResources/storagepools", func(t *testing.T) {
+	t.Run("allowedResources/diskpools", func(t *testing.T) {
 		t.Parallel()
 		var found *pluginruntime.AllowedResource
 		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "storagepools" {
+			if def.Spec.AllowedResources[i].Resource == "diskpools" {
 				found = &def.Spec.AllowedResources[i]
 				break
 			}
 		}
-		require.NotNil(t, found, "allowedResources must contain storagepools")
+		require.NotNil(t, found, "allowedResources must contain diskpools")
 		// patch, not update: the edit form merge-patches. No delete: the console
 		// offers none, since the bound-volume guard it would need can only be
 		// meaningful server-side.
@@ -135,18 +135,21 @@ func TestDefinition(t *testing.T) {
 	})
 }
 
-// The console deliberately offers no way to delete a StoragePool. The guard
+// The console deliberately offers no way to delete a DiskPool. The guard
 // against deleting one whose StorageClass still has volumes bound ran in the
 // browser, while the API accepted the same delete from kubectl, Flux or any
 // other client — a guard in one client that reads as a platform guarantee. The
 // button belongs back only once that check is server-side, so this test fails
 // if it returns before then.
-func TestConsoleOffersNoStoragePoolDelete(t *testing.T) {
+func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 	t.Parallel()
 	for _, path := range []string{
-		"console/storagepools-detail.html",
-		"console/storagepools-detail.js",
-		"console/storagepools-list.js",
+		"console/diskpools-detail.html",
+		"console/diskpools-detail.js",
+		"console/diskpools-list.js",
+		// The blockstorages-*/filestorages-* files are thin wrappers; the page
+		// code they share lives in consumer-pages.js.
+		"console/consumer-pages.js",
 		"console/blockstorages-detail.js",
 		"console/blockstorages-list.js",
 		"console/filestorages-detail.js",
@@ -154,7 +157,7 @@ func TestConsoleOffersNoStoragePoolDelete(t *testing.T) {
 	} {
 		src, err := os.ReadFile(path)
 		require.NoError(t, err)
-		assert.NotContains(t, string(src), "k8s.delete", "%s must not delete a StoragePool", path)
+		assert.NotContains(t, string(src), "k8s.delete", "%s must not delete a DiskPool", path)
 		assert.NotContains(t, string(src), "delete-btn", "%s must not offer a delete button", path)
 	}
 }
@@ -169,7 +172,7 @@ func TestPluginServesConsoleAssets(t *testing.T) {
 	provider, ok := any(plugin).(pluginruntime.ConsoleProvider)
 	require.True(t, ok, "Plugin must implement pluginruntime.ConsoleProvider")
 
-	f, err := provider.ConsoleAssets().Open("/storagepools-list.html")
+	f, err := provider.ConsoleAssets().Open("/diskpools-list.html")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
 }

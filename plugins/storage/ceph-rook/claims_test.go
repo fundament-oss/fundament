@@ -11,14 +11,14 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-func poolAt(name string, created time.Time, disks ...string) v1alpha1.StoragePool {
-	return v1alpha1.StoragePool{
+func poolAt(name string, created time.Time, disks ...string) v1alpha1.DiskPool {
+	return v1alpha1.DiskPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              name,
 			UID:               types.UID("uid-" + name),
 			CreationTimestamp: metav1.NewTime(created),
 		},
-		Spec: v1alpha1.StoragePoolSpec{Disks: disks},
+		Spec: v1alpha1.DiskPoolSpec{Disks: disks},
 	}
 }
 
@@ -36,31 +36,31 @@ func TestClaimOwner(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		pools []v1alpha1.StoragePool
+		pools []v1alpha1.DiskPool
 		disk  string
 		want  string
 	}{
 		{
 			name:  "unclaimed disk has no owner",
-			pools: []v1alpha1.StoragePool{poolAt("a", early, "disk-1")},
+			pools: []v1alpha1.DiskPool{poolAt("a", early, "disk-1")},
 			disk:  "disk-2",
 			want:  "",
 		},
 		{
 			name:  "single claimant wins",
-			pools: []v1alpha1.StoragePool{poolAt("a", early, "disk-1")},
+			pools: []v1alpha1.DiskPool{poolAt("a", early, "disk-1")},
 			disk:  "disk-1",
 			want:  "a",
 		},
 		{
 			name:  "oldest pool wins regardless of list order",
-			pools: []v1alpha1.StoragePool{poolAt("zeta", late, "disk-1"), poolAt("alpha", early, "disk-1")},
+			pools: []v1alpha1.DiskPool{poolAt("zeta", late, "disk-1"), poolAt("alpha", early, "disk-1")},
 			disk:  "disk-1",
 			want:  "alpha",
 		},
 		{
 			name:  "equal timestamps fall back to lexicographic name",
-			pools: []v1alpha1.StoragePool{poolAt("zeta", early, "disk-1"), poolAt("alpha", early, "disk-1")},
+			pools: []v1alpha1.DiskPool{poolAt("zeta", early, "disk-1"), poolAt("alpha", early, "disk-1")},
 			disk:  "disk-1",
 			want:  "alpha",
 		},
@@ -84,14 +84,14 @@ func TestClaimOwnerIgnoresDeletingPools(t *testing.T) {
 
 	live := poolAt("new", early.Add(time.Hour), "disk-1")
 
-	assert.Equal(t, "new", ClaimOwner([]v1alpha1.StoragePool{deleting, live}, "disk-1"))
-	assert.Empty(t, ClaimOwner([]v1alpha1.StoragePool{deleting}, "disk-1"))
+	assert.Equal(t, "new", ClaimOwner([]v1alpha1.DiskPool{deleting, live}, "disk-1"))
+	assert.Empty(t, ClaimOwner([]v1alpha1.DiskPool{deleting}, "disk-1"))
 }
 
 func TestBuildClaimIndexAgreesWithClaimOwner(t *testing.T) {
 	t.Parallel()
 	early := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	pools := []v1alpha1.StoragePool{
+	pools := []v1alpha1.DiskPool{
 		poolAt("zeta", early.Add(time.Hour), "disk-1", "disk-3"),
 		poolAt("alpha", early, "disk-1", "disk-2"),
 	}
@@ -116,24 +116,24 @@ func TestOwnedBy(t *testing.T) {
 	pool := poolAt("mine", time.Now())
 	yes, no := true, false
 
-	assert.False(t, ownedBy(nil, "StoragePool", &pool), "no owner refs means not ours")
+	assert.False(t, ownedBy(nil, "DiskPool", &pool), "no owner refs means not ours")
 	assert.True(t, ownedBy([]metav1.OwnerReference{{
-		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &yes,
-	}}, "StoragePool", &pool))
+		Kind: "DiskPool", Name: "mine", UID: pool.UID, Controller: &yes,
+	}}, "DiskPool", &pool))
 
 	// A recreated pool has a new UID; the old refs are not ours.
 	assert.False(t, ownedBy([]metav1.OwnerReference{{
-		Kind: "StoragePool", Name: "mine", UID: "stale-uid", Controller: &yes,
-	}}, "StoragePool", &pool))
+		Kind: "DiskPool", Name: "mine", UID: "stale-uid", Controller: &yes,
+	}}, "DiskPool", &pool))
 
 	assert.False(t, ownedBy([]metav1.OwnerReference{{
-		Kind: "StoragePool", Name: "other", UID: "uid-other", Controller: &yes,
-	}}, "StoragePool", &pool))
+		Kind: "DiskPool", Name: "other", UID: "uid-other", Controller: &yes,
+	}}, "DiskPool", &pool))
 
 	// A non-controller reference is not ownership.
 	assert.False(t, ownedBy([]metav1.OwnerReference{{
-		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &no,
-	}}, "StoragePool", &pool))
+		Kind: "DiskPool", Name: "mine", UID: pool.UID, Controller: &no,
+	}}, "DiskPool", &pool))
 }
 
 func TestFilesystemDerivedNameIsPrefixed(t *testing.T) {
@@ -147,8 +147,8 @@ func TestOwnedByChecksKind(t *testing.T) {
 	pool.UID = "uid-1"
 	isController := true
 	refs := []metav1.OwnerReference{{
-		Kind: "StoragePool", Name: "mine", UID: "uid-1", Controller: &isController,
+		Kind: "DiskPool", Name: "mine", UID: "uid-1", Controller: &isController,
 	}}
-	assert.True(t, ownedBy(refs, "StoragePool", &pool))
+	assert.True(t, ownedBy(refs, "DiskPool", &pool))
 	assert.False(t, ownedBy(refs, "BlockStorage", &pool), "same name+UID under another kind is not ours")
 }

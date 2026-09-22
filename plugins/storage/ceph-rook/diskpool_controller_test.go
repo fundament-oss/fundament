@@ -52,12 +52,12 @@ func newFakeClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(testScheme(t)).
 		WithObjects(objs...).
-		WithStatusSubresource(&v1alpha1.StoragePool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}, &v1alpha1.FileStorage{}).
+		WithStatusSubresource(&v1alpha1.DiskPool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}, &v1alpha1.FileStorage{}).
 		Build()
 }
 
-func newReconciler(c client.Client) *StoragePoolReconciler {
-	return &StoragePoolReconciler{Client: c, ClusterNamespace: testNamespace}
+func newReconciler(c client.Client) *DiskPoolReconciler {
+	return &DiskPoolReconciler{Client: c, ClusterNamespace: testNamespace}
 }
 
 func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Disk {
@@ -70,7 +70,7 @@ func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Dis
 	}
 }
 
-func testPool(name string, created time.Time, disks ...string) *v1alpha1.StoragePool {
+func testPool(name string, created time.Time, disks ...string) *v1alpha1.DiskPool {
 	p := poolAt(name, created, disks...)
 	return &p
 }
@@ -85,16 +85,16 @@ func cephCluster() *unstructured.Unstructured {
 	return u
 }
 
-func reconcilePool(t *testing.T, r *StoragePoolReconciler, name string) (ctrl.Result, error) {
+func reconcilePool(t *testing.T, r *DiskPoolReconciler, name string) (ctrl.Result, error) {
 	t.Helper()
 	return r.Reconcile(context.Background(), ctrl.Request{
 		NamespacedName: types.NamespacedName{Name: name},
 	})
 }
 
-func getPool(t *testing.T, c client.Client, name string) *v1alpha1.StoragePool {
+func getPool(t *testing.T, c client.Client, name string) *v1alpha1.DiskPool {
 	t.Helper()
-	var pool v1alpha1.StoragePool
+	var pool v1alpha1.DiskPool
 	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: name}, &pool))
 	return &pool
 }
@@ -124,7 +124,7 @@ func cephClusterDevices(t *testing.T, c client.Client) map[string][]string {
 }
 
 // Happy path: disks folded into the CephCluster, and the pool's own selection
-// reported in status. StoragePoolReconciler derives no StorageClass or
+// reported in status. DiskPoolReconciler derives no StorageClass or
 // CephBlockPool of its own -- a consumer kind does that over the shared OSDs.
 func TestReconcileContributesDisks(t *testing.T) {
 	t.Parallel()
@@ -559,10 +559,10 @@ func TestRookStubsResolveGVK(t *testing.T) {
 }
 
 // readyCondition returns the pool's Ready condition, failing if it is absent.
-func readyCondition(t *testing.T, pool *v1alpha1.StoragePool) metav1.Condition {
+func readyCondition(t *testing.T, pool *v1alpha1.DiskPool) metav1.Condition {
 	t.Helper()
 	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
-	require.NotNil(t, cond, "StoragePool %s has no %s condition", pool.Name, v1alpha1.ConditionReady)
+	require.NotNil(t, cond, "DiskPool %s has no %s condition", pool.Name, v1alpha1.ConditionReady)
 	return *cond
 }
 
@@ -639,7 +639,7 @@ func TestReconcileErrorConditionCarriesTheCause(t *testing.T) {
 	c := fake.NewClientBuilder().
 		WithScheme(testScheme(t)).
 		WithObjects(cephCluster(), testDisk("a", "node-a", "/dev/sdb", 100, true), testPool("pool", time.Now(), "a")).
-		WithStatusSubresource(&v1alpha1.StoragePool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}).
+		WithStatusSubresource(&v1alpha1.DiskPool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 				if obj.GetObjectKind().GroupVersionKind().Kind == "CephCluster" {

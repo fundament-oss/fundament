@@ -9,13 +9,13 @@ const heading = document.getElementById('heading');
 const actions = document.getElementById('actions');
 
 const RESOURCE = {
-  group: 'storage.fundament.io',
+  group: 'ceph.fundament.io',
   version: 'v1alpha1',
-  resource: 'storagepools',
+  resource: 'diskpools',
 };
 
 const RESOURCE_DISKS = {
-  group: 'storage.fundament.io',
+  group: 'ceph.fundament.io',
   version: 'v1alpha1',
   resource: 'disks',
 };
@@ -70,10 +70,10 @@ function renderReadOnly(item, byName) {
     <h2 class="plugin-heading">Status</h2>
     ${renderDefList(pairs)}
     <p class="plugin-hint">
-      Every storage pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
-      turn that capacity into StorageClasses. Volumes provisioned through this pool are placed
-      across all of the cluster's disks, not only the ones listed below, so the raw size above
-      is this pool's contribution rather than its capacity. Use
+      Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
+      turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
+      are placed across all of the cluster's disks, not only the ones listed below, so the raw
+      size above is this pool's contribution rather than its capacity. Use
       <code>ceph df</code> for actual free space.
     </p>
     <h2 class="plugin-heading">Contributed Disks</h2>
@@ -84,7 +84,7 @@ function renderReadOnly(item, byName) {
 async function showDetail() {
   try {
     const item = await fundament.k8s.get({ ...RESOURCE, name });
-    heading.textContent = `Storage Pool · ${item.metadata?.name ?? name}`;
+    heading.textContent = `Disk Pool · ${item.metadata?.name ?? name}`;
     content.innerHTML = renderReadOnly(item, await diskIndex());
     actions.hidden = false;
     // .onclick, not addEventListener: this button lives outside #content and
@@ -195,7 +195,7 @@ async function showEdit(item) {
 }
 
 if (!name) {
-  content.textContent = 'No storage pool selected.';
+  content.textContent = 'No disk pool selected.';
 } else {
   await showDetail();
 }

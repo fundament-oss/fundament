@@ -116,12 +116,12 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		return fmt.Errorf("setup disk inventory reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
-	if err := (&StoragePoolReconciler{
+	if err := (&DiskPoolReconciler{
 		Client:           mgr.GetClient(),
 		ClusterNamespace: p.cfg.ClusterNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
-		return fmt.Errorf("setup storagepool reconciler: %w", pluginerrors.NewPermanent(err))
+		return fmt.Errorf("setup diskpool reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
 	if err := NewBlockStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace).SetupWithManager(mgr); err != nil {

@@ -21,49 +21,49 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// StoragePoolReconciler reconciles StoragePool disk contributions into the
+// DiskPoolReconciler reconciles DiskPool disk contributions into the
 // singleton CephCluster's spec.storage.nodes. It owns no derived objects;
 // consumer kinds (e.g. BlockStorage) derive StorageClasses from the shared OSD
 // set this produces.
-type StoragePoolReconciler struct {
+type DiskPoolReconciler struct {
 	Client client.Client
 	// ClusterNamespace is where the CephCluster lives.
 	ClusterNamespace string
 }
 
 // SetupWithManager registers the controller with the manager. It watches
-// StoragePool (the primary resource), maps Disk changes to all StoragePools so
+// DiskPool (the primary resource), maps Disk changes to all DiskPools so
 // that a disk becoming available or unavailable triggers reconciliation of
 // every pool, and maps CephCluster changes the same way so a pool reconciled
 // before the singleton existed contributes its disks the moment it appears.
-func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
+func (r *DiskPoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.StoragePool{}).
+		For(&v1alpha1.DiskPool{}).
 		// No predicate: Disk changes arrive via the status subresource, which a
 		// generation filter would drop.
 		Watches(
 			&v1alpha1.Disk{},
-			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
+			handler.EnqueueRequestsFromMapFunc(r.toAllDiskPools),
 		).
 		// Only spec changes matter here; without the predicate Rook's ~1/min
 		// status heartbeat would fan out to a reconcile of every pool.
 		Watches(
 			rookStub("CephCluster"),
-			handler.EnqueueRequestsFromMapFunc(r.toAllStoragePools),
+			handler.EnqueueRequestsFromMapFunc(r.toAllDiskPools),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r); err != nil {
-		return fmt.Errorf("register StoragePool controller: %w", err)
+		return fmt.Errorf("register DiskPool controller: %w", err)
 	}
 	return nil
 }
 
-// toAllStoragePools maps a Disk or CephCluster event to reconcile.Requests for
-// every StoragePool: a disk changing availability can shift any pool's
+// toAllDiskPools maps a Disk or CephCluster event to reconcile.Requests for
+// every DiskPool: a disk changing availability can shift any pool's
 // selection, and a CephCluster appearing means every pool's disks must be
 // recorded in it.
-func (r *StoragePoolReconciler) toAllStoragePools(ctx context.Context, _ client.Object) []reconcile.Request {
-	var pools v1alpha1.StoragePoolList
+func (r *DiskPoolReconciler) toAllDiskPools(ctx context.Context, _ client.Object) []reconcile.Request {
+	var pools v1alpha1.DiskPoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
 		// Return empty; the reconciler will retry on the next event.
 		return nil
@@ -78,9 +78,9 @@ func (r *StoragePoolReconciler) toAllStoragePools(ctx context.Context, _ client.
 }
 
 // Reconcile implements reconcile.Reconciler.
-func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Step 1: Fetch the StoragePool (cluster-scoped, no namespace).
-	var pool v1alpha1.StoragePool
+func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Step 1: Fetch the DiskPool (cluster-scoped, no namespace).
+	var pool v1alpha1.DiskPool
 	if err := r.Client.Get(ctx, req.NamespacedName, &pool); err != nil {
 		if apierrors.IsNotFound(err) {
 			// The pool is gone. The CephCluster is not owned by any pool, so its
@@ -89,18 +89,18 @@ func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			// delivers the delete event after the cache has dropped the object,
 			// so the List below no longer returns it.
 			if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
-				return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes after deleting StoragePool %s: %w", req.Name, err)
+				return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes after deleting DiskPool %s: %w", req.Name, err)
 			}
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("get StoragePool %s: %w", req.Name, err)
+		return ctrl.Result{}, fmt.Errorf("get DiskPool %s: %w", req.Name, err)
 	}
 
 	// A pool being deleted has already released its claims; recompute the union
 	// without it and rely on owner-reference GC for the rest.
 	if !pool.DeletionTimestamp.IsZero() {
 		if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
-			return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes while deleting StoragePool %s: %w", pool.Name, err)
+			return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes while deleting DiskPool %s: %w", pool.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -115,13 +115,13 @@ func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return result, nil
 }
 
-// reconcilePool does the work for a live StoragePool.
-func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.StoragePool) (ctrl.Result, error) {
+// reconcilePool does the work for a live DiskPool.
+func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.DiskPool) (ctrl.Result, error) {
 	// Step 2: Resolve this pool's spec.disks. This is its contribution to the
 	// shared OSD set, and what selectedDiskCount/rawCapacityBytes report.
 	selected, notes, err := r.resolveDisks(ctx, pool)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("resolve disks for StoragePool %s: %w", pool.Name, err)
+		return ctrl.Result{}, fmt.Errorf("resolve disks for DiskPool %s: %w", pool.Name, err)
 	}
 
 	// Step 3: Set the singleton CephCluster's spec.storage.nodes to the union of
@@ -133,7 +133,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 
 	// A pool over zero disks contributes nothing to the cluster. Report it
 	// instead of writing a Ready status that describes no capacity; the Disk and
-	// StoragePool watches will wake us when it can be fixed.
+	// DiskPool watches will wake us when it can be fixed.
 	if len(selected) == 0 {
 		status := pool.Status
 		status.Phase = v1alpha1.PhaseDegraded
@@ -177,7 +177,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 	if ready.Message == "" {
 		ready.Message = "disks contributed to the shared Ceph cluster"
 	}
-	return ctrl.Result{}, r.writeStatus(ctx, pool, &v1alpha1.StoragePoolStatus{
+	return ctrl.Result{}, r.writeStatus(ctx, pool, &v1alpha1.DiskPoolStatus{
 		Phase:             v1alpha1.PhaseReady,
 		SelectedDiskCount: len(selected),
 		RawCapacityBytes:  rawCapacity,
@@ -187,7 +187,7 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 
 // emptyPoolMessage explains why a pool resolved no disks. An empty spec.disks
 // produces no notes, which would otherwise leave the message blank.
-func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
+func emptyPoolMessage(pool *v1alpha1.DiskPool, notes []string) string {
 	if len(notes) > 0 {
 		return "no usable disks: " + strings.Join(notes, "; ")
 	}
@@ -197,28 +197,28 @@ func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
 	return "no usable disks"
 }
 
-// statusWriter builds the shared writer (see status.go) for StoragePool.
-func (r *StoragePoolReconciler) statusWriter() statusWriter[*v1alpha1.StoragePool, v1alpha1.StoragePoolStatus, *v1alpha1.StoragePoolStatus] {
-	return statusWriter[*v1alpha1.StoragePool, v1alpha1.StoragePoolStatus, *v1alpha1.StoragePoolStatus]{
+// statusWriter builds the shared writer (see status.go) for DiskPool.
+func (r *DiskPoolReconciler) statusWriter() statusWriter[*v1alpha1.DiskPool, v1alpha1.DiskPoolStatus, *v1alpha1.DiskPoolStatus] {
+	return statusWriter[*v1alpha1.DiskPool, v1alpha1.DiskPoolStatus, *v1alpha1.DiskPoolStatus]{
 		client:    r.Client,
-		kind:      "StoragePool",
-		newObject: func() *v1alpha1.StoragePool { return &v1alpha1.StoragePool{} },
-		statusOf:  func(p *v1alpha1.StoragePool) *v1alpha1.StoragePoolStatus { return &p.Status },
+		kind:      "DiskPool",
+		newObject: func() *v1alpha1.DiskPool { return &v1alpha1.DiskPool{} },
+		statusOf:  func(p *v1alpha1.DiskPool) *v1alpha1.DiskPoolStatus { return &p.Status },
 	}
 }
 
-func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status *v1alpha1.StoragePoolStatus, ready *metav1.Condition) error {
+func (r *DiskPoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.DiskPool, status *v1alpha1.DiskPoolStatus, ready *metav1.Condition) error {
 	return r.statusWriter().write(ctx, pool.Name, status, ready)
 }
 
-func (r *StoragePoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.StoragePool, cause error) {
+func (r *DiskPoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.DiskPool, cause error) {
 	r.statusWriter().setDegraded(ctx, pool, cause)
 }
 
 // resolveDisks fetches DiskStatus for each disk this pool selects, and returns
 // human-readable notes for anything it had to skip.
 //
-// Disks that do not exist are skipped. Disks another StoragePool has a stronger
+// Disks that do not exist are skipped. Disks another DiskPool has a stronger
 // claim to are skipped too — silently feeding them into this pool would put the
 // same device in two pools' capacity accounting. Any other error (e.g. a
 // transient API failure) is returned so the caller can requeue, rather than
@@ -227,10 +227,10 @@ func (r *StoragePoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.
 // A disk reporting available=false is NOT skipped: once Ceph consumes a device
 // it stops looking empty, so dropping unavailable disks would pull live OSDs
 // out of the CephCluster on the next reconcile.
-func (r *StoragePoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1.StoragePool) ([]v1alpha1.DiskStatus, []string, error) {
-	var pools v1alpha1.StoragePoolList
+func (r *DiskPoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1.DiskPool) ([]v1alpha1.DiskStatus, []string, error) {
+	var pools v1alpha1.DiskPoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
-		return nil, nil, fmt.Errorf("list StoragePools: %w", err)
+		return nil, nil, fmt.Errorf("list DiskPools: %w", err)
 	}
 
 	var (
@@ -275,10 +275,10 @@ func (r *StoragePoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1
 }
 
 // reconcileCephClusterNodes loads the singleton CephCluster and sets
-// spec.storage.nodes to the union of all live StoragePools' disks. It reports
+// spec.storage.nodes to the union of all live DiskPools' disks. It reports
 // whether the CephCluster exists: when it does not, nothing was recorded and
 // the caller must not present the pool as contributed.
-func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
+func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
 	union, err := diskUnion(ctx, r.Client)
 	if err != nil {
 		return false, err
@@ -348,7 +348,7 @@ func mapAnyToInterface(m map[string]any) map[string]any {
 	return out
 }
 
-// controllerRef builds a controller OwnerReference to a storage.fundament.io
+// controllerRef builds a controller OwnerReference to a ceph.fundament.io
 // object. Built manually rather than via controllerutil so it can be attached
 // to unstructured Rook objects whose GVK is not in the scheme.
 func controllerRef(owner metav1.Object, kind string) metav1.OwnerReference {

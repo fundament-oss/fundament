@@ -9,7 +9,7 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// Prefix for the objects a StoragePool derives. Pool names are operator-chosen
+// Prefix for the objects a DiskPool derives. Pool names are operator-chosen
 // and StorageClasses are cluster-scoped, so an unprefixed name could collide with
 // — and then garbage-collect — something like k3d's "local-path". The prefix
 // reduces collisions; ownedBy is what prevents damage.
@@ -28,14 +28,14 @@ func FilesystemDerivedName(name string) string {
 	return "cephfs-" + name
 }
 
-// ClaimOwner returns the StoragePool entitled to a disk when more than one lists
+// ClaimOwner returns the DiskPool entitled to a disk when more than one lists
 // it, or "" when no live pool claims it.
 //
-// Decided from the StoragePool list, not Disk.status.claimedBy, which lags.
+// Decided from the DiskPool list, not Disk.status.claimedBy, which lags.
 // Oldest pool wins; ties break on name so two controllers agree. Pools being
 // deleted release their claims immediately.
-func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
-	var claimants []*v1alpha1.StoragePool
+func ClaimOwner(pools []v1alpha1.DiskPool, diskName string) string {
+	var claimants []*v1alpha1.DiskPool
 	for i := range pools {
 		pool := &pools[i]
 		if !pool.DeletionTimestamp.IsZero() {
@@ -58,9 +58,9 @@ func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
 	return claimants[0].Name
 }
 
-// BuildClaimIndex maps each claimed disk to its owning StoragePool using
+// BuildClaimIndex maps each claimed disk to its owning DiskPool using
 // ClaimOwner's precedence. It populates Disk.status.claimedBy.
-func BuildClaimIndex(pools []v1alpha1.StoragePool) map[string]string {
+func BuildClaimIndex(pools []v1alpha1.DiskPool) map[string]string {
 	index := make(map[string]string)
 	for i := range pools {
 		pool := &pools[i]

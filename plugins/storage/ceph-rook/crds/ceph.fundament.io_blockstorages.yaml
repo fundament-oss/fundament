@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: blockstorages.storage.fundament.io
+  name: blockstorages.ceph.fundament.io
 spec:
-  group: storage.fundament.io
+  group: ceph.fundament.io
   names:
     kind: BlockStorage
     listKind: BlockStorageList
@@ -48,7 +48,7 @@ spec:
           spec:
             description: |-
               BlockStorageSpec asks for an RBD StorageClass over the shared OSD set.
-              BlockStorage brings no disks; StoragePools do that.
+              BlockStorage brings no disks; DiskPools do that.
             properties:
               replication:
                 default: auto

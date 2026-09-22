@@ -81,7 +81,7 @@ func TestParseDiscoveredDevicesSurvivesKernelRename(t *testing.T) {
 	assert.Equal(t, DeviceRef(&first[0]), DeviceRef(&second[0]),
 		"the CephCluster device entry must not move with it")
 	assert.Equal(t, DiskName("node-1", DeviceKey(&first[0])), DiskName("node-1", DeviceKey(&second[0])),
-		"a renamed Disk CR would drop out of every StoragePool listing it")
+		"a renamed Disk CR would drop out of every DiskPool listing it")
 }
 
 func TestByIDPath(t *testing.T) {
@@ -246,7 +246,7 @@ func TestDiskNameSeparatesNodesThatSanitiseAlike(t *testing.T) {
 	assert.True(t, strings.HasPrefix(dashed, "worker-1-"))
 }
 
-// A renamed Disk silently drops out of every StoragePool listing it.
+// A renamed Disk silently drops out of every DiskPool listing it.
 func TestDiskNameStableForSameNodeAndKey(t *testing.T) {
 	assert.Equal(t,
 		DiskName("worker-1", "path:/dev/sdb"),
