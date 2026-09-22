@@ -10,7 +10,7 @@ On top of this foundation, Fundament serves as an internal developer platform (I
 
 **Preparing phase 1 production**
 
-The current PoC environment is being used for tests with users. A [Fieldlab](https://digilab.overheid.nl/) with a multi-user, multi-day test is planned for 23–25 November 2026. Scaling up towards a first production environment with a number of launching customers is in preparation.
+The current PoC environment is being used for tests with users. A [Fieldlab](https://fieldlab2026.projects.digilab.network/) with a multi-user, multi-day test is planned for 23–25 November 2026. Scaling up towards a first production environment with a number of launching customers is in preparation.
 
 A broader architecture document, Het Ontwerp, that describes the context, goals and starting points of the NDS Cloud design is currently in [public review](https://www.digitaleoverheid.nl/nieuws-nds/nds-cloud-mijlpaal-publicatie-van-het-ontwerp/) (in Dutch). The NDS Cloud design has its own architecture decision records, separate from the [Architecture Decision Records](docs/adr/README.adoc) in this repository but largely compatible with them.
 
