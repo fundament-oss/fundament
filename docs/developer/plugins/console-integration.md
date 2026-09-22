@@ -53,8 +53,7 @@ The definition advertises:
 - `crds`: the CRDs the plugin manages.
 
 :::caution[TODO]
-- Nothing checks `allowedResources`: the console loads it into its plugin registry, and kube-api-proxy does not read it. Enforce it or remove it from the definition.
-- Plugin sections load only when a project is opened from the sidebar. Opening or refreshing a project URL directly shows none.
+Nothing checks `allowedResources`: the console loads it into its plugin registry, and kube-api-proxy does not read it. Enforce it or remove it from the definition.
 :::
 
 ## Routing and rendering
@@ -228,6 +227,7 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 - `/clusters/<cluster-id>/{api|apis|openapi|version}/…` is forwarded to the cluster handler; other roots return 404.
 - A PluginToken takes the gateway path above.
 - A UserToken or the console's cookie takes the user path: token validation, OpenFGA `can_view` on the cluster, then the call is forwarded.
+- Plugin pages are never served here, in any mode: plugin-proxy serves them (see [URL construction](#url-construction)).
 
 ### Mock mode
 
@@ -236,10 +236,7 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 - **Resources**: cert-manager (Certificates, CertificateRequests, Issuers, ClusterIssuers), CloudNativePG (Databases, Backups, Subscriptions), `demo.fundament.io` DemoItems and OpenFSC FSCInstallations (including create).
 - **PluginInstallations**: `GET`, `POST` and `DELETE`, held in memory per cluster. A restart loses them.
 - **PluginToken path**: the user SubjectAccessReview allows all, and the plugin ServiceAccount token is a placeholder.
-
-:::caution[TODO]
-Mock mode still serves `/proxy/console/<file>` from `MOCK_PLUGIN_TEMPLATES_DIR` without authentication. The console loads plugin pages from plugin-proxy, so this path is unused: remove it.
-:::
+- **Plugin pages**: without a sandbox cluster, plugin-proxy answers every page request with a bare `mock asset` page, which sends no protocol messages.
 
 ### Sandbox mode
 
@@ -260,6 +257,7 @@ Mock mode still serves `/proxy/console/<file>` from `MOCK_PLUGIN_TEMPLATES_DIR` 
 
 - **Console work without a cluster**: mock mode; the fixtures cover the resources above.
 - **Plugin runtime and plugin pages**: sandbox mode. The plugin's own container runs, its pages load from plugin-proxy, and the metadata API is answered by the plugin.
+- **Plugin page iteration**: the plugin's own preview loop, not the console. For OpenFSC, `just openfsc console-dev` runs the Vite dev server with HMR against a live cluster, and `just openfsc console-preview` serves the built pages.
 - **Shoot clusters and per-user ServiceAccounts**: real mode only.
 
 ### Local dev shortcuts
@@ -291,7 +289,7 @@ just dev -p local-gardener      # real mode against a local Gardener
 
 When changing anything on the Console-plugin boundary, walk through the full path in sandbox mode:
 
-1. Install a plugin with custom pages as in [Testing plugins locally](testing-plugins-locally), then open a project with a cluster from the sidebar and open the plugin's section.
+1. Install a plugin with custom pages as in [Testing plugins locally](testing-plugins-locally), then open a project with a cluster and open the plugin's section.
 2. In browser devtools:
    - The iframe `src` is on plugin-proxy and carries the installation name and version; the response has the plugin CSP.
    - The iframe posts `plugin:ready` and the console answers with `fundament:init`.

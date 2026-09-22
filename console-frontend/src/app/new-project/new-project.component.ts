@@ -162,8 +162,9 @@ export default class NewProjectComponent implements OnInit {
         `Project '${this.projectForm.value.name}' created successfully`,
       );
 
-      // Reload project data to update the selector modal and breadcrumbs
-      await this.organizationDataService.reloadProjectsAndNamespaces();
+      // Reload project data to update the sidebar and breadcrumbs. The project
+      // exists by now, so a failed reload is not a failed create.
+      await this.organizationDataService.reloadProjectsAndNamespaces().catch(() => {});
 
       this.closed.emit();
       this.pageNav.goTo(`/projects/${response.projectId}`);

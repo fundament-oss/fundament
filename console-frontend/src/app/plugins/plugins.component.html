@@ -224,6 +224,63 @@
       ></nldd-icon-button>
     </div>
 
+    <!-- Before the section, though it renders below it: the slot places it, and
+         a section only fills the page while it is the last child. -->
+    @if (sheetPlugin(); as plugin) {
+      <div
+        slot="footer"
+        class="flex flex-col gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+      >
+        @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
+          <nldd-button
+            (click)="onInstallPlugin(plugin)"
+            type="button"
+            text="Installed"
+            start-icon="check-mark"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        } @else {
+          <nldd-button
+            (click)="onInstallPlugin(plugin)"
+            type="button"
+            text="Install"
+            start-icon="cloud-arrow-down"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        }
+        <!-- The full listing (description, features, permissions) lives in the
+             marketplace; the console's own plugin page is the fallback for
+             environments where no marketplace is deployed.
+             A new tab, because the marketplace is a different app: the console
+             keeps the cluster context the visitor was working in, and in the
+             demo the walkthrough is not navigated out from under itself.
+             nldd-button adds rel="noopener noreferrer" and the "opens in new
+             tab" announcement on its own. The fallback below is an internal
+             route, so it stays in this tab. -->
+        @if (marketplacePluginUrl(plugin); as marketplaceUrl) {
+          <nldd-button
+            [attr.href]="marketplaceUrl"
+            target="_blank"
+            text="View full details"
+            start-icon="square-arrow-right-top"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        } @else {
+          <nldd-button
+            [attr.href]="pageNav.path('/plugins/' + plugin.id)"
+            (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
+            text="View full details"
+            start-icon="square-arrow-right-top"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        }
+      </div>
+    }
+
     @if (sheetPlugin(); as plugin) {
       <nldd-simple-section
         class="space-y-5"
@@ -281,61 +338,6 @@
           </div>
         </div>
       </nldd-simple-section>
-    }
-
-    @if (sheetPlugin(); as plugin) {
-      <div
-        slot="footer"
-        class="flex flex-col gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
-      >
-        @if (isPluginInstalledAnywhere(plugin.organizationName, plugin.name)) {
-          <nldd-button
-            (click)="onInstallPlugin(plugin)"
-            type="button"
-            text="Installed"
-            start-icon="check-mark"
-            variant="secondary"
-            width="full"
-          ></nldd-button>
-        } @else {
-          <nldd-button
-            (click)="onInstallPlugin(plugin)"
-            type="button"
-            text="Install"
-            start-icon="cloud-arrow-down"
-            variant="primary"
-            width="full"
-          ></nldd-button>
-        }
-        <!-- The full listing (description, features, permissions) lives in the
-             marketplace; the console's own plugin page is the fallback for
-             environments where no marketplace is deployed.
-             A new tab, because the marketplace is a different app: the console
-             keeps the cluster context the visitor was working in, and in the
-             demo the walkthrough is not navigated out from under itself.
-             nldd-button adds rel="noopener noreferrer" and the "opens in new
-             tab" announcement on its own. The fallback below is an internal
-             route, so it stays in this tab. -->
-        @if (marketplacePluginUrl(plugin); as marketplaceUrl) {
-          <nldd-button
-            [attr.href]="marketplaceUrl"
-            target="_blank"
-            text="View full details"
-            start-icon="square-arrow-right-top"
-            variant="secondary"
-            width="full"
-          ></nldd-button>
-        } @else {
-          <nldd-button
-            [attr.href]="pageNav.path('/plugins/' + plugin.id)"
-            (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"
-            text="View full details"
-            start-icon="square-arrow-right-top"
-            variant="secondary"
-            width="full"
-          ></nldd-button>
-        }
-      </div>
     }
   </nldd-page>
 </nldd-sheet>

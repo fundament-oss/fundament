@@ -33,6 +33,7 @@ import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
+import '@nldd/design-system/badge';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
