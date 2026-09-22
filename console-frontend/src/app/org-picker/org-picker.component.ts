@@ -40,11 +40,19 @@ export default class OrgPickerComponent {
 
   invitations = input<Invitation[]>([]);
 
+  /** Who is signed in, so someone in no organization can tell the operator
+   *  which account to add. */
+  userName = input<string>('');
+
   selectOrganization = output<string>();
 
   acceptInvitation = output<Invitation>();
 
   declineInvitation = output<Invitation>();
+
+  /** Asks the shell to look again for organizations, for someone in none who
+   *  has since been added to one by an operator. */
+  recheck = output<void>();
 
   private el = inject(ElementRef<HTMLElement>);
 
@@ -56,6 +64,12 @@ export default class OrgPickerComponent {
   });
 
   pendingInvitationList = computed(() => this.invitations());
+
+  /** Nothing to pick and nothing to answer: signing in creates no organization,
+   *  so a first-time user lands here until an operator adds them to one. */
+  hasNothingToChoose = computed(
+    () => this.acceptedOrganizations().length === 0 && this.invitations().length === 0,
+  );
 
   constructor() {
     afterNextRender(() => {
@@ -74,5 +88,9 @@ export default class OrgPickerComponent {
 
   onDecline(invitation: Invitation) {
     this.declineInvitation.emit(invitation);
+  }
+
+  onRecheck() {
+    this.recheck.emit();
   }
 }
