@@ -1,14 +1,18 @@
 # Fundament
 
-Fundament is software for running an Autonomous Private Cloud. It is designed to provide organizations with a minimal, reliable foundation for running modern applications. Unlike traditional platforms that bundle every service by default, Fundament is basic at its core -delivering only the essential infrastructure and orchestration layers- while allowing each tenant to extend their environment with exactly the services and tools they need.
+Fundament is the Dutch sovereign government cloud: an open-source cloud platform, and the live proof-of-concept environment on which it runs. The NDS Cloud programme, an all-of-government programme that aims to realise a Government Cloud with the requirement to be as sovereign as currently feasible (see the [project brief sent to the Dutch Parliament](https://open.overheid.nl/details/b20dc73e-f67d-4cfa-aeaf-a3556b94d63e), in Dutch), builds on Fundament, and its design is aligned with Fundament's architecture.
+
+As open-source software, Fundament can also be run by any organization as its own Autonomous Private Cloud, separate from the sovereign government cloud. It is designed to provide organizations with a minimal, reliable foundation for running modern applications. Unlike traditional platforms that bundle every service by default, Fundament is basic at its core -delivering only the essential infrastructure and orchestration layers- while allowing each tenant to extend their environment with exactly the services and tools they need.
 
 On top of this foundation, Fundament serves as an internal developer platform (IDP): enabling developers to build, deploy, and operate applications with speed and confidence. Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make it suitable for organizations that want cloud capabilities on their own terms; secure, reliable, and without unnecessary complexity.
 
 ## Project status
 
-**Concept & Development**
+**Preparing phase 1 production**
 
-The focus of the project is currently on research and ideation. Some initial PoC applications may be built to give shape to ideas and to provide early feedback from testing users.
+The current PoC environment is being used for tests with users. A [Fieldlab](https://digilab.overheid.nl/) with a multi-user, multi-day test is planned for 23–25 November 2026. Scaling up towards a first production environment with a number of launching customers is in preparation.
+
+A broader architecture document, Het Ontwerp, that describes the context, goals and starting points of the NDS Cloud design is currently in [public review](https://www.digitaleoverheid.nl/nieuws-nds/nds-cloud-mijlpaal-publicatie-van-het-ontwerp/) (in Dutch). The NDS Cloud design has its own architecture decision records, separate from the [Architecture Decision Records](docs/adr/README.adoc) in this repository but largely compatible with them.
 
 ## Documentation
 
