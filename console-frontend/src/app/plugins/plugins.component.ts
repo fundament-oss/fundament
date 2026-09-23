@@ -85,6 +85,9 @@ interface PluginWithPresets extends Pick<
   // Resolved from catalog.v1, which returns ids and leaves the names to
   // ListPublishers and ListCategories rather than repeating them per plugin.
   organizationName: string;
+  // The publisher's name as a user sees it (e.g. "System"); organizationName is
+  // the identifier and is never shown.
+  publisherDisplayName: string;
   categories: { id: string; name: string }[];
   // catalog.v1 tags are plain labels with no identity of their own.
   tags: string[];
@@ -181,6 +184,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // from a card's "Details" button); null while the sheet is closed.
   sheetPlugin = signal<PluginWithPresets | null>(null);
 
+  // Latest published version of the plugin in the details sheet; empty while it
+  // loads, when nothing is published yet, or when the fetch failed.
+  sheetPluginVersion = signal('');
+
   // Base URL of the marketplace, or '' when it is not deployed here.
   private readonly marketplaceUrl = inject(ConfigService).getConfig().marketplaceUrl ?? '';
 
@@ -241,12 +248,6 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return presets;
   }
 
-  // Placeholder text for card fields not yet returned by the backend
-  // (PluginSummary has no vendor/version), purely for visual mockup fidelity.
-  readonly mockPluginVendor = 'Community';
-
-  readonly mockPluginVersion = 'v1.0.0';
-
   plugins: PluginWithPresets[] = [];
 
   backendPresets: Preset[] = [];
@@ -275,13 +276,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ]);
 
       const categoryNames = new Map(categoriesResponse.categories.map((c) => [c.id, c.name]));
-      const publisherNames = new Map(publishersResponse.publishers.map((p) => [p.id, p.name]));
+      const publishers = new Map(publishersResponse.publishers.map((p) => [p.id, p]));
 
       // Store backend presets
       this.backendPresets = presetsResponse.presets;
 
       // Map backend plugins to frontend format and assign presets
       this.plugins = pluginsResponse.plugins.map((backendPlugin) => {
+        const publisher = publishers.get(backendPlugin.organizationId);
         const assignedPresets: string[] = [];
 
         // Check which presets include this plugin
@@ -297,8 +299,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           // Every listed plugin's publisher has a live listing, so ListPublishers
           // always has it; falling back to the id rather than '' keeps a miss
           // traceable instead of installing under a nameless "--<plugin>".
-          organizationName:
-            publisherNames.get(backendPlugin.organizationId) ?? backendPlugin.organizationId,
+          organizationName: publisher?.name ?? backendPlugin.organizationId,
+          publisherDisplayName:
+            publisher?.displayName || publisher?.name || backendPlugin.organizationId,
           displayName: backendPlugin.displayName,
           descriptionShort: backendPlugin.descriptionShort,
           categories: backendPlugin.categoryIds.map((id) => ({
@@ -689,12 +692,23 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return `${this.marketplaceUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
   }
 
-  openPluginDetails(plugin: PluginWithPresets): void {
+  async openPluginDetails(plugin: PluginWithPresets): Promise<void> {
     this.sheetPlugin.set(plugin);
+    this.sheetPluginVersion.set('');
+    let version = '';
+    try {
+      version = (await this.fetchPluginVersions(plugin.id))[0]?.version ?? '';
+    } catch {
+      // The sheet reads fine without a version; leave it out rather than block.
+    }
+    // The sheet may have closed or moved on to another plugin in the meantime.
+    if (this.sheetPlugin() !== plugin) return;
+    this.sheetPluginVersion.set(version);
   }
 
   closePluginDetails(): void {
     this.sheetPlugin.set(null);
+    this.sheetPluginVersion.set('');
   }
 
   pluginCategoryLabel = pluginCategoryLabel;

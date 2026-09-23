@@ -75,6 +75,14 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
           listCategories: () => of({ categories: [] }),
           listPublishers: () => of({ publishers }),
           listPresets: () => of({ presets: [] }),
+          // Latest first, as the catalog returns them.
+          listPluginVersions: () =>
+            of({
+              versions: [
+                { version: '1.17.2', definitionHash: 'sha256:new' },
+                { version: '1.16.0', definitionHash: 'sha256:old' },
+              ],
+            }),
         } as unknown as ObservableClient<typeof CatalogService>,
       },
       {
@@ -140,5 +148,29 @@ describe('PluginsComponent install-status matching', () => {
     };
 
     expect(withPrivateAccess.pluginDisplayName('acme', 'cert-manager')).toBe('cert-manager');
+  });
+});
+
+describe('PluginsComponent details sheet', () => {
+  it("shows the publisher's display name and the latest published version", async () => {
+    const component = build([acmeCertManager], []);
+    await component.ngOnInit();
+    const [plugin] = component.plugins;
+
+    await component.openPluginDetails(plugin);
+
+    expect(plugin.publisherDisplayName).toBe('Acme');
+    expect(component.sheetPluginVersion()).toBe('1.17.2');
+  });
+
+  it('drops a version that resolves after the sheet was closed', async () => {
+    const component = build([acmeCertManager], []);
+    await component.ngOnInit();
+
+    const opening = component.openPluginDetails(component.plugins[0]);
+    component.closePluginDetails();
+    await opening;
+
+    expect(component.sheetPluginVersion()).toBe('');
   });
 });
