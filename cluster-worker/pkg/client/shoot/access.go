@@ -127,4 +127,12 @@ type ShootAccess interface {
 	// ListRoleBindings lists RoleBindings across all namespaces filtered by
 	// label key existence.
 	ListRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// EnsureRole creates or updates a namespaced Role with the given rules.
+	EnsureRole(ctx context.Context, clusterID uuid.UUID, namespace, name string, rules []rbacv1.PolicyRule, labels map[string]string) error
+
+	// EnsureClusterRoleBindingSubjects creates or updates a ClusterRoleBinding
+	// with arbitrary subjects (groups, users, ServiceAccounts). A changed
+	// roleRef (immutable) recreates the binding.
+	EnsureClusterRoleBindingSubjects(ctx context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error
 }

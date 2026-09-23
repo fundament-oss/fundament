@@ -566,6 +566,55 @@ func (r *RealShootAccess) ListRoleBindings(ctx context.Context, clusterID uuid.U
 	return result, nil
 }
 
+func (r *RealShootAccess) EnsureRole(ctx context.Context, clusterID uuid.UUID, namespace, name string, rules []rbacv1.PolicyRule, labels map[string]string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Rules: rules,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().Roles(namespace), name, fmt.Sprintf("Role %s/%s", namespace, name), role,
+		func(existing *rbacv1.Role) mergeAction {
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Rules = rules
+			return mergeUpdate
+		})
+}
+
+func (r *RealShootAccess) EnsureClusterRoleBindingSubjects(ctx context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		Subjects: subjects,
+		RoleRef:  roleRef,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().ClusterRoleBindings(), name, "CRB "+name, crb,
+		func(existing *rbacv1.ClusterRoleBinding) mergeAction {
+			if ClusterRoleBindingNeedsRecreate(existing, crb) {
+				return mergeRecreate
+			}
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Subjects = subjects
+			return mergeUpdate
+		})
+}
+
 func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
 	cs, err := r.newClient(ctx, clusterID)
 	if err != nil {

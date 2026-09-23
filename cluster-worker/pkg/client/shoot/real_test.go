@@ -448,6 +448,35 @@ func TestListRoleBindings_AcrossNamespacesByLabel(t *testing.T) {
 	assert.Equal(t, "admin", byName["b"].RoleRef.Name)
 }
 
+func TestEnsureClusterRoleBindingSubjects_GroupSubjectAndRecreate(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewClientset()
+	r := realAccessWith(t, cs)
+	ctx := context.Background()
+	group := []rbacv1.Subject{{Kind: rbacv1.GroupKind, APIGroup: rbacv1.GroupName, Name: "fundament:namespace-listers"}}
+
+	require.NoError(t, r.EnsureClusterRoleBindingSubjects(ctx, uuid.New(), "crb", clusterRoleRef("view"), group, nil))
+	require.NoError(t, r.EnsureClusterRoleBindingSubjects(ctx, uuid.New(), "crb", clusterRoleRef("fundament:namespace-lister"), group, nil))
+
+	got, err := cs.RbacV1().ClusterRoleBindings().Get(ctx, "crb", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "fundament:namespace-lister", got.RoleRef.Name)
+	assert.Equal(t, group, got.Subjects)
+}
+
+func TestEnsureRole_UpdatesRules(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewClientset(&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "r", Namespace: "ns"}})
+	r := realAccessWith(t, cs)
+	rules := []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"serviceaccounts"}, Verbs: []string{"impersonate"}}}
+
+	require.NoError(t, r.EnsureRole(context.Background(), uuid.New(), "ns", "r", rules, map[string]string{"a": "b"}))
+	got, err := cs.RbacV1().Roles("ns").Get(context.Background(), "r", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, rules, got.Rules)
+	assert.Equal(t, "b", got.Labels["a"])
+}
+
 func TestDeleteRoleBinding_MissingIsNoop(t *testing.T) {
 	t.Parallel()
 	r := realAccessWith(t, fake.NewClientset())
