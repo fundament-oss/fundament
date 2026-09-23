@@ -107,6 +107,10 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 		s.namespaces.serve(w, r.WithContext(ctx), claims.UserID(), clusterID)
 		return
 	}
+	if s.namespaces != nil && servesAccessReview(r) {
+		s.namespaces.serveAccessReview(w, r.WithContext(ctx), clusterID)
+		return
+	}
 
 	// --- Proxy to Kubernetes API ---
 
@@ -117,12 +121,16 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 	s.kubeHandler.ServeHTTP(w, r)
 }
 
-// servesNamespaceList reports whether the proxy answers r itself. The answer
-// is about the caller, so a request impersonating someone else (kubectl --as)
-// is left to the apiserver, which answers for the impersonated identity after
-// checking the caller may impersonate at all.
+// servesNamespaceList and servesAccessReview report whether the proxy answers r
+// itself. Both answers are about the caller, so a request impersonating someone
+// else (kubectl --as) is left to the apiserver, which answers for the
+// impersonated identity after checking the caller may impersonate at all.
 func servesNamespaceList(r *http.Request) bool {
 	return isNamespaceCollectionGet(r) && !kube.HasClientImpersonation(r.Header)
+}
+
+func servesAccessReview(r *http.Request) bool {
+	return isSelfSubjectAccessReview(r) && !kube.HasClientImpersonation(r.Header)
 }
 
 // peekTokenType returns the audience-derived token type of the request's
