@@ -1,4 +1,5 @@
-// Package token manages per-user ServiceAccount tokens for proxied cluster access.
+// Package token manages ServiceAccount tokens for proxied cluster access: the
+// per-user SAs and kube-api-proxy's own SA.
 package token
 
 import (
@@ -11,15 +12,17 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/fundament-oss/fundament/common/shootidentity"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
 
 // refreshRatio is the fraction of TTL at which to proactively refresh (80%).
 const refreshRatio = 0.8
 
-// cacheKey uniquely identifies a cached token.
+// cacheKey uniquely identifies a cached token: a ServiceAccount in
+// fundament-system on one cluster.
 type cacheKey struct {
-	userID    uuid.UUID
+	saName    string
 	clusterID string
 }
 
@@ -35,19 +38,24 @@ func (ct *cachedToken) shouldRefresh() bool {
 	return time.Now().After(refreshAt)
 }
 
-// Cache manages per-(user, cluster) SA tokens with proactive refresh.
+// Requester issues ServiceAccount tokens; *gardener.Client satisfies it.
+type Requester interface {
+	RequestNamedSAToken(ctx context.Context, clusterID, saName string) (*gardener.SAToken, error)
+}
+
+// Cache manages per-(ServiceAccount, cluster) tokens with proactive refresh.
 type Cache struct {
-	gardener *gardener.Client
-	logger   *slog.Logger
-	tokens   *ttlcache.Cache[cacheKey, *cachedToken]
-	group    singleflight.Group // deduplicates concurrent token requests
+	requester Requester
+	logger    *slog.Logger
+	tokens    *ttlcache.Cache[cacheKey, *cachedToken]
+	group     singleflight.Group // deduplicates concurrent token requests
 }
 
 // NewCache creates a new token cache.
-func NewCache(gc *gardener.Client, logger *slog.Logger) *Cache {
+func NewCache(requester Requester, logger *slog.Logger) *Cache {
 	c := &Cache{
-		gardener: gc,
-		logger:   logger,
+		requester: requester,
+		logger:    logger,
 		tokens: ttlcache.New(
 			// No default TTL — each entry gets its own TTL from the API server response.
 			ttlcache.WithTTL[cacheKey, *cachedToken](ttlcache.NoTTL),
@@ -58,12 +66,20 @@ func NewCache(gc *gardener.Client, logger *slog.Logger) *Cache {
 	return c
 }
 
-// GetToken returns a valid SA token for the given user and cluster.
-// It uses a cached token if available and not expired, triggering an async
-// refresh if the token has passed 80% of its TTL.
+// GetToken returns a valid token for the user's ServiceAccount on the cluster.
 func (c *Cache) GetToken(ctx context.Context, userID uuid.UUID, clusterID string) (string, error) {
-	key := cacheKey{userID: userID, clusterID: clusterID}
+	return c.get(ctx, cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID})
+}
 
+// GetProxyToken returns a valid token for kube-api-proxy's own ServiceAccount
+// on the cluster.
+func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, error) {
+	return c.get(ctx, cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: clusterID})
+}
+
+// get uses a cached token if available and not expired, triggering an async
+// refresh if the token has passed 80% of its TTL.
+func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
 	if item := c.tokens.Get(key); item != nil {
 		ct := item.Value()
 		if ct.shouldRefresh() {
@@ -78,32 +94,32 @@ func (c *Cache) GetToken(ctx context.Context, userID uuid.UUID, clusterID string
 }
 
 func (c *Cache) fetchAndCache(ctx context.Context, key cacheKey) (string, error) {
-	sfKey := fmt.Sprintf("%s:%s", key.userID, key.clusterID)
+	sfKey := fmt.Sprintf("%s:%s", key.saName, key.clusterID)
 
 	v, err, _ := c.group.Do(sfKey, func() (any, error) {
 		return c.requestToken(ctx, key)
 	})
 	if err != nil {
-		return "", fmt.Errorf("fetch token for %s/%s: %w", key.userID, key.clusterID, err)
+		return "", fmt.Errorf("fetch token for %s/%s: %w", key.saName, key.clusterID, err)
 	}
 
 	return v.(string), nil
 }
 
 func (c *Cache) refresh(ctx context.Context, key cacheKey) {
-	sfKey := fmt.Sprintf("%s:%s", key.userID, key.clusterID)
+	sfKey := fmt.Sprintf("%s:%s", key.saName, key.clusterID)
 
 	_, err, _ := c.group.Do(sfKey, func() (any, error) {
 		return c.requestToken(ctx, key)
 	})
 	if err != nil {
 		c.logger.WarnContext(ctx, "async token refresh failed",
-			"user_id", key.userID, "cluster_id", key.clusterID, "error", err)
+			"service_account", key.saName, "cluster_id", key.clusterID, "error", err)
 	}
 }
 
 func (c *Cache) requestToken(ctx context.Context, key cacheKey) (string, error) {
-	saToken, err := c.gardener.RequestSAToken(ctx, key.clusterID, key.userID)
+	saToken, err := c.requester.RequestNamedSAToken(ctx, key.clusterID, key.saName)
 	if err != nil {
 		return "", fmt.Errorf("request SA token: %w", err)
 	}
@@ -119,7 +135,7 @@ func (c *Cache) requestToken(ctx context.Context, key cacheKey) (string, error) 
 	c.tokens.Set(key, ct, ttl)
 
 	c.logger.InfoContext(ctx, "SA token issued",
-		"user_id", key.userID, "cluster_id", key.clusterID,
+		"service_account", key.saName, "cluster_id", key.clusterID,
 		"expires_at", saToken.ExpiresAt)
 
 	return ct.token, nil

@@ -98,3 +98,18 @@ func TestIsAllowedPath(t *testing.T) {
 		})
 	}
 }
+
+// The proxy answers namespace listings for the caller; an impersonated request
+// (kubectl --as) goes to the apiserver instead.
+func TestServesNamespaceList(t *testing.T) {
+	t.Parallel()
+	list := func(header http.Header) *http.Request {
+		r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/namespaces", http.NoBody)
+		r.Header = header
+		return r
+	}
+
+	assert.True(t, servesNamespaceList(list(http.Header{})))
+	assert.False(t, servesNamespaceList(list(http.Header{"Impersonate-User": {"bob"}})))
+	assert.False(t, servesNamespaceList(list(http.Header{"impersonate-group": {"devs"}})), "non-canonical key")
+}

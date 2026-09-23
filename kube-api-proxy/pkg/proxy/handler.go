@@ -101,6 +101,13 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 		ctx = WithSAToken(ctx, saToken)
 	}
 
+	// --- Namespace listing (GUI tools) ---
+
+	if s.namespaces != nil && servesNamespaceList(r) {
+		s.namespaces.serve(w, r.WithContext(ctx), claims.UserID(), clusterID)
+		return
+	}
+
 	// --- Proxy to Kubernetes API ---
 
 	// Store cluster ID in context for the multi-cluster proxy.
@@ -108,6 +115,14 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 	r = r.WithContext(ctx)
 
 	s.kubeHandler.ServeHTTP(w, r)
+}
+
+// servesNamespaceList reports whether the proxy answers r itself. The answer
+// is about the caller, so a request impersonating someone else (kubectl --as)
+// is left to the apiserver, which answers for the impersonated identity after
+// checking the caller may impersonate at all.
+func servesNamespaceList(r *http.Request) bool {
+	return isNamespaceCollectionGet(r) && !kube.HasClientImpersonation(r.Header)
 }
 
 // peekTokenType returns the audience-derived token type of the request's
