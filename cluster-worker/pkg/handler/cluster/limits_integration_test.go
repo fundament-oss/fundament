@@ -279,7 +279,7 @@ func TestNamespaceSync_LimitRangeFromMergedDefaults(t *testing.T) {
 	setShootStatus(t, db, clusterID, "ready")
 	projectID := insertProject(t, db, clusterID, "proj-limits")
 	nsID := insertNamespace(t, db, projectID, "team-a")
-	clusterNS := kubename.GenerateNamespace("proj-limits", projectID, "team-a")
+	clusterNS := kubename.GenerateNamespace("proj-limits", "team-a")
 
 	_, err := db.adminPool.Exec(ctx,
 		`INSERT INTO tenant.organization_limits (organization_id, default_cpu_request_m, default_cpu_limit_m, default_memory_limit_mi)

@@ -40,18 +40,19 @@ This regex is slightly more permissive than DNS-1123 (it doesn't enforce the 63-
 === Project Name
 
 * **Regex**: `^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$` (DNS-1123 label)
-* **Max length**: 63 characters
+* **Max length**: 30 characters
+* **No `+--+`**: two consecutive hyphens are reserved as the separator in Kubernetes namespace names
 * **Uniqueness**: unique per cluster
 
-Project names are DNS-1123 labels because they form part of the Kubernetes namespace name (see below).
+Project names are DNS-1123 labels because they form part of the Kubernetes namespace name (see below). The 30-character cap leaves every project at least 27 characters for its namespace names. Projects created before these two rules keep their name.
 
 === Namespace Name
 
 * **Regex**: `^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$` (DNS-1123 label)
-* **Max length**: 63 characters
+* **Max length**: 57 minus the length of the project name (at least 27)
 * **Uniqueness**: unique per project
 
-Same constraints as project names, for the same reason.
+Same constraints as project names, for the same reason; the cluster-side name `+tnt-<project>--<namespace>+` must itself fit a 63-character label.
 
 === NodePool Name
 
@@ -61,15 +62,20 @@ Same constraints as project names, for the same reason.
 
 == Kubernetes Namespace Convention
 
-When a namespace is provisioned on a cluster, the Kubernetes namespace name is constructed by concatenating the project name and namespace name with a double-dash separator:
+When a namespace is provisioned on a cluster, the Kubernetes namespace name is a fixed prefix, the project name, a double dash and the namespace name:
 
 ....
-{project}--{namespace}
+tnt-{project}--{namespace}
 ....
 
-The double dash was chosen as a separator because DNS-1123 labels allow single hyphens but the convention of `--` is visually distinct and unlikely to appear in normal names.
+Each part has a job:
 
-Some examples:
+* **`tnt-`** marks every namespace fundament creates for a project (a tenant namespace). Nothing else on a cluster uses this prefix, so a project namespace can never take the name of a system or plugin namespace: without it, project `cert` with namespace `manager` would become `cert-manager`, the namespace the cert-manager plugin installs into, and the project's admins would get access to its secrets. A list of forbidden names can't prevent this, because plugins choose their namespaces and may be installed after the project namespace exists.
+* **`+--+`** separates project and namespace. Project names may not contain it, so two different pairs never produce the same name (`a-b` + `c` gives `+tnt-a-b--c+`, `a` + `b-c` gives `+tnt-a--b-c+`).
+
+This is the scheme Gardener uses for the same two problems: project namespaces in the garden must start with `garden-`, and a shoot's control-plane namespace is `+shoot--{project}--{shoot}+`, with `+--+` forbidden in project and shoot names (https://github.com/gardener/gardener/issues/164[gardener#164]). Gardener's name rules apply to its own project and shoot names only; these namespaces live inside the shoot, where the Kubernetes limit of 63 characters is the only one.
+
+Project names are unique per cluster and immutable, so the result is readable in every Kubernetes tool and stable for the namespace's life. Some examples:
 
 [cols="1,1,1"]
 |===
@@ -77,22 +83,23 @@ Some examples:
 
 |`burger-test`
 |`foo-app`
-|`burger-test--foo-app`
+|`+tnt-burger-test--foo-app+`
 
 |`burger-test`
 |`observability-tools`
-|`burger-test--observability-tools`
+|`+tnt-burger-test--observability-tools+`
 
 |`burger-prod`
 |`foo-app`
-|`burger-prod--foo-app`
-
-|`other-project`
-|`some-namespace`
-|`other-project--some-namespace`
+|`+tnt-burger-prod--foo-app+`
 |===
 
-NOTE: There are two open questions with this scheme. First, the DNS-1123 regex currently allows `--` within project and namespace names, nothing explicitly prohibits `my--project` as a project name, which could create ambiguous Kubernetes namespace names. Second, the combined length `len(project) + 2 + len(namespace)` can exceed 63 characters (both are independently allowed up to 63), which would produce an invalid Kubernetes namespace name. Both of these need to be addressed with additional validation.
+Two rules keep the scheme valid, both enforced when a namespace is created:
+
+* **Length**: `4 + len(project) + 2 + len(namespace)` must not exceed 63, so a namespace can be at most `57 - len(project)` characters.
+* **Uniqueness on the cluster**: projects created before `+--+` was reserved may contain it (`+x--y+` + `z` and `x` + `+y--z+` both give `+tnt-x--y--z+`), so a namespace whose Kubernetes name is already used by another project's namespace on the cluster is still refused.
+
+Namespaces created before this convention carry a hashed project prefix (`<8 chars of project><4 hash chars>-<namespace>`). Kubernetes namespaces can't be renamed, so they keep that name; the cluster-worker identifies every namespace by its `fundament.io/namespace-id` label, not by its name.
 
 == Uniqueness Scoping
 

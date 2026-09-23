@@ -56,7 +56,7 @@ func newProjectRBACFixture(t *testing.T, name string) *projectRBACFixture {
 
 	return &projectRBACFixture{
 		db: db, mock: mock, clusterID: clusterID, projectID: projectID,
-		namespace: kubename.GenerateNamespace(projectName, projectID, "web"),
+		namespace: kubename.GenerateNamespace(projectName, "web"),
 		orgAdmin:  orgAdmin, projAdmin: projAdmin, projViewer: projViewer,
 		userSyncCtx: handler.SyncContext{
 			EntityType: handler.EntityProjectMember,

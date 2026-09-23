@@ -178,7 +178,7 @@ func TestNamespaceSync_CreateResyncDelete(t *testing.T) {
 	nsID := insertNamespace(t, db, projectID, "team-a")
 
 	// The cluster-side resource carries a project-scoped, collision-free name.
-	clusterNS := kubename.GenerateNamespace("proj-cycle", projectID, "team-a")
+	clusterNS := kubename.GenerateNamespace("proj-cycle", "team-a")
 
 	// Create.
 	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
@@ -218,7 +218,7 @@ func TestNamespaceSync_ShootNotReady_Precondition(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "precondition not met")
 
-	got, err := mock.GetNamespace(ctx, clusterID, kubename.GenerateNamespace("proj-not-ready", projectID, "team-a"))
+	got, err := mock.GetNamespace(ctx, clusterID, kubename.GenerateNamespace("proj-not-ready", "team-a"))
 	require.NoError(t, err)
 	require.Nil(t, got, "no namespace should be created while the shoot is not ready")
 }

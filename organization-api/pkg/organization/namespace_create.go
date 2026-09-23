@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -29,11 +30,36 @@ func (s *Server) CreateNamespace(
 		return nil, err
 	}
 
-	// The name is materialized verbatim into a v1/Namespace on the shoot, so reject
-	// anything that isn't a usable (DNS-1123, non-reserved, length-bounded) name
-	// here rather than letting the cluster-worker sync fail indefinitely.
-	if err := kubename.ValidateNamespace(req.GetName()); err != nil {
+	project, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
+	}
+
+	// The name is materialized as "tnt-<project>--<name>" into a v1/Namespace on the
+	// shoot, so reject anything that wouldn't be a usable (DNS-1123, non-reserved,
+	// length-bounded) name here rather than letting the cluster-worker sync fail
+	// indefinitely.
+	err = kubename.ValidateNamespace(project.Name, req.GetName())
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	clusterSideName := kubename.GenerateNamespace(project.Name, req.GetName())
+	taken, err := s.queries.NamespaceClusterNameTaken(ctx, db.NamespaceClusterNameTakenParams{
+		ClusterID:       project.ClusterID,
+		ProjectID:       projectID,
+		Prefix:          kubename.TenantNamespacePrefix,
+		Separator:       kubename.NamespaceSeparator,
+		ClusterSideName: clusterSideName,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check namespace name: %w", err))
+	}
+	if taken {
+		return nil, connect.NewError(connect.CodeAlreadyExists,
+			fmt.Errorf("namespace %q would be named %q on the cluster, which another project's namespace already uses", req.GetName(), clusterSideName))
 	}
 
 	params := db.NamespaceCreateParams{

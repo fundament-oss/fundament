@@ -565,6 +565,22 @@ func (m *MockShootAccess) EnsureClusterRoleBindingSubjects(_ context.Context, cl
 	return nil
 }
 
+func (m *MockShootAccess) FindNamespaceByLabel(_ context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ListNamespacesError != nil {
+		return nil, m.ListNamespacesError
+	}
+
+	for _, ns := range m.Namespaces[clusterID] {
+		if v, ok := ns.Labels[key]; ok && v == value {
+			return &ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)}, nil
+		}
+	}
+	return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
+}
+
 // GetRoleBinding returns the RoleBinding in namespace with name, or nil.
 func (m *MockShootAccess) GetRoleBinding(clusterID uuid.UUID, namespace, name string) *ResourceInfo {
 	m.mu.RLock()

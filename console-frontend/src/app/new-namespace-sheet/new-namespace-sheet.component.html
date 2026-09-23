@@ -86,9 +86,9 @@
             <nldd-validation-item
               id="namespace-name-length"
               hint
-              maxlength="63"
+              [attr.maxlength]="maxNameLength()"
             >
-              At most 63 characters
+              {{ maxNameLengthText() }}
             </nldd-validation-item>
           </nldd-validation-list>
         </nldd-form-field>

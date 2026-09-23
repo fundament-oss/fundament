@@ -98,11 +98,23 @@ message Project {
 // Create project request
 message CreateProjectRequest {
   string cluster_id = 5 [(buf.validate.field).string = {uuid: true}];
-  string name = 10 [(buf.validate.field).cel = {
-    id: "dns1123label"
-    message: "must be a valid DNS-1123 label"
-    expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
-  }];
+  // The project name is part of every cluster-side namespace name
+  // ("tnt-<project>--<namespace>", a 63-char DNS-1123 label). At most 30
+  // characters leaves namespaces at least 27; no "--" keeps the separator
+  // unambiguous.
+  string name = 10 [
+    (buf.validate.field).string = {max_len: 30},
+    (buf.validate.field).cel = {
+      id: "dns1123label"
+      message: "must be a valid DNS-1123 label"
+      expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
+    },
+    (buf.validate.field).cel = {
+      id: "no_consecutive_hyphens"
+      message: "must not contain two consecutive hyphens"
+      expression: "!this.contains('--')"
+    }
+  ];
   string alias = 20 [
     features.field_presence = EXPLICIT,
     (buf.validate.field).string = {

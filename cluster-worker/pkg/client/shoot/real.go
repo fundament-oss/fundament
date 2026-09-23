@@ -382,6 +382,24 @@ func (r *RealShootAccess) ListNamespaces(ctx context.Context, clusterID uuid.UUI
 	return result, nil
 }
 
+func (r *RealShootAccess) FindNamespaceByLabel(ctx context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error) {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	selector := key + "=" + value
+	list, err := cs.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces with %s: %w", selector, err)
+	}
+	if len(list.Items) == 0 {
+		return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
+	}
+	ns := &list.Items[0]
+	return &ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)}, nil
+}
+
 func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error {
 	cs, err := r.newClient(ctx, clusterID)
 	if err != nil {
