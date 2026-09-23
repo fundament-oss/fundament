@@ -1,13 +1,15 @@
 # Build: container images, the chart that pins them, and a preview environment per PR.
 #
-#   gate ─┬─ build ─── publish-chart ─── preview-label ─── environment-ready ─┬─ terraform-acc-tests
-#         │                                                                   └─ e2e-tests
+#   gate ─┬─ build ─── publish-chart ─┬─ preview-label ─── environment-ready ─┬─ terraform-acc-tests
+#         │                           │                                       └─ e2e-tests
+#         │                           └─ release (also needs build-plugins)
 #         ├─ build-plugins
 #         └─ preview-unlabel
 #
 #   build              service images → ghcr.io/<owner>/fundament/<name>
 #   build-plugins      plugin images  → ghcr.io/<owner>/fundament/<name>-plugin
 #   publish-chart      chart pinning build's digests → charts/ (master) or charts-pr/ (PR)
+#   release            moves the rolling release fundament-latest to this build (merge to master)
 #   preview-label      adds the flux-preview label → flux-operator installs the PR's chart
 #   environment-ready  waits until the preview runs this commit
 #   preview-unlabel    removes the label → flux-operator removes the preview
@@ -390,6 +392,64 @@ jobs:
           echo '${{ secrets.GITHUB_TOKEN }}' | mise exec -- helm registry login ghcr.io \
             --username '${{ github.actor }}' --password-stdin
           mise exec -- helm push "dist/fundament-${CHART_VERSION}.tgz" "oci://${CHART_REPO}"
+
+  # The pre-release fundament-latest always describes the latest master build: its
+  # chart version, commit and the digest of every image it pushed. release.json carries
+  # the same facts for scripts.
+  release:
+    needs: [gate, publish-chart, build-plugins]
+    if: needs.gate.outputs.is_master == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.publish-chart.outputs.chart_version }}
+      CHART: oci://${{ needs.publish-chart.outputs.chart_repo }}/fundament
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Collect image digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+
+      - name: Write the notes and release.json
+        run: |
+          {
+            echo "Rolling build of the Fundament chart and images from the latest push to master."
+            echo
+            echo "- Version: \`$VERSION\`"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Chart: \`$CHART --version $VERSION\`"
+            echo
+            echo "| Image | Digest |"
+            echo "|---|---|"
+            for file in digests/*; do
+              echo "| $(basename "$file") | \`$(cat "$file")\` |"
+            done
+          } > notes.md
+
+          images=$(for file in digests/*; do
+            jq -n --arg name "$(basename "$file")" --arg ref "$IMAGE_PREFIX/$(basename "$file")@$(cat "$file")" '{($name): $ref}'
+          done | jq -s 'add')
+          jq -n --arg version "$VERSION" --argjson run "$GITHUB_RUN_NUMBER" --arg commit "$GITHUB_SHA" --arg chart "$CHART" --argjson images "$images" \
+            '{version: $version, run: $run, commit: $commit, chart: $chart, images: $images}' > release.json
+          cat release.json
+
+      - name: Update rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -f fundament-latest
+          git push -f origin fundament-latest
+
+          if ! gh release view fundament-latest > /dev/null 2>&1; then
+            gh release create fundament-latest --prerelease --title "fundament (rolling)" --notes "placeholder"
+          fi
+          gh release edit fundament-latest --prerelease --title "fundament (rolling)" --notes-file notes.md
+          gh release upload fundament-latest release.json --clobber
 
   # flux-operator on digikluster previews every open PR labelled flux-preview. Fork PRs are
   # skipped: their runs cannot publish the chart or write labels.
