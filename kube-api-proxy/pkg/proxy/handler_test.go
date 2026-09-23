@@ -81,9 +81,10 @@ func TestIsAllowedPath(t *testing.T) {
 		{"apis/apps/v1/deployments", true},
 		{"openapi/v3", true},
 		{"version", true},
+		{"healthz", true},
+		{"livez", true},
+		{"readyz/ping", true},
 		{"", false},
-		{"healthz", false},
-		{"livez", false},
 		{"metrics", false},
 		{"logs", false},
 		// Prefix collisions must not match: only whole path segments count.

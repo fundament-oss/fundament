@@ -17,8 +17,10 @@ import (
 )
 
 // allowedPathRoots are the Kubernetes API path roots the proxy forwards,
-// matched on the whole first path segment. All other roots return 404.
-var allowedPathRoots = []string{"api", "apis", "openapi", "version"}
+// matched on the whole first path segment. All other roots return 404. The
+// health probes are there for GUI tools (Headlamp reports a cluster as lost
+// when /healthz fails); the apiserver lets any authenticated user read them.
+var allowedPathRoots = []string{"api", "apis", "openapi", "version", "healthz", "livez", "readyz"}
 
 // handleClusterProxy proxies Kubernetes API requests to a specific cluster.
 // The cluster ID and remaining path are extracted from the URL via Go 1.22+ wildcards:
