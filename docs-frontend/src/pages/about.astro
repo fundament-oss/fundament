@@ -4,41 +4,65 @@ import Layout from '../layouts/Landing.astro';
 
 <Layout
   title="About · Fundament"
-  description="About Fundament — an open-source Autonomous Private Cloud platform built by Digilab for self-hosted Kubernetes infrastructure."
+  description="About Fundament — the Dutch sovereign government cloud, an open-source Autonomous Private Cloud platform built by NLDD/Digilab."
 >
   <nldd-simple-section width="800px">
     <nldd-rich-text>
       <h1>About Fundament</h1>
       <p>
-        Fundament is software for running an Autonomous Private Cloud. It is designed to provide
-        organizations with a minimal, reliable foundation for running modern applications. Unlike
-        traditional platforms that bundle every service by default, Fundament is basic at its core
-        &mdash; delivering only the essential infrastructure and orchestration layers &mdash; while
-        allowing each tenant to extend their environment with exactly the services and tools they
-        need.
+        Fundament is the Dutch sovereign government cloud: an open-source cloud platform, and the
+        live proof-of-concept environment on which it runs. The NDS Cloud programme, an
+        all-of-government programme that aims to realise a Government Cloud with the requirement to
+        be as sovereign as currently feasible (see the <a
+          href="https://open.overheid.nl/details/b20dc73e-f67d-4cfa-aeaf-a3556b94d63e"
+          target="_blank"
+          rel="noopener noreferrer">project brief sent to the Dutch Parliament</a
+        >, in Dutch), builds on Fundament, and its design is aligned with Fundament's architecture.
+      </p>
+      <p>
+        Fundament is designed to provide government organizations with a minimal, reliable
+        foundation for running modern applications. Unlike traditional platforms that bundle every
+        service by default, Fundament is basic at its core &mdash; delivering only the essential
+        infrastructure and orchestration layers &mdash; while allowing each tenant to extend their
+        environment with exactly the services and tools they need.
       </p>
       <p>
         On top of this foundation, Fundament serves as an internal developer platform (IDP):
         enabling developers to build, deploy, and operate applications with speed and confidence.
-        Its API-first design, multi-tenant architecture, and focus on autonomy and scalability make
-        it suitable for organizations that want cloud capabilities on their own terms; secure,
-        reliable, and without unnecessary complexity.
+        Its API-first design, multi-tenant architecture, and focus on autonomy and scalability give
+        government organizations cloud capabilities on their own terms; secure, reliable, and
+        without unnecessary complexity.
       </p>
 
       <h2>Project status</h2>
-      <p><strong>Concept &amp; Development</strong></p>
+      <p><strong>Preparing phase 1 production</strong></p>
       <p>
-        The focus of the project is currently on research and ideation. Some initial PoC
-        applications may be built to give shape to ideas and to provide early feedback from testing
-        users.
+        The current PoC environment is being used for tests with users. A <a
+          href="https://fieldlab2026.projects.digilab.network/"
+          target="_blank"
+          rel="noopener noreferrer">Fieldlab</a
+        > with a multi-user, multi-day test is planned for 23&ndash;25 November 2026. Scaling up towards
+        a first production environment with a number of launching customers is in preparation.
+      </p>
+      <p>
+        A broader architecture document, Het Ontwerp, that describes the context, goals and starting
+        points of the NDS Cloud design is currently in <a
+          href="https://www.digitaleoverheid.nl/nieuws-nds/nds-cloud-mijlpaal-publicatie-van-het-ontwerp/"
+          target="_blank"
+          rel="noopener noreferrer">public review</a
+        > (in Dutch). The NDS Cloud design has its own architecture decision records, separate from the
+        <a href="/adr/readme">Architecture Decision Records</a> in this repository but largely compatible
+        with them.
       </p>
 
       <h2>Organization</h2>
       <p>
         Fundament is being developed by <a
-          href="https://digilab.overheid.nl/"
+          href="https://digitaledienst.overheid.nl/"
           target="_blank"
-          rel="noopener noreferrer">Digilab</a
+          rel="noopener noreferrer">NLDD</a
+        >/<a href="https://digilab.overheid.nl/" target="_blank" rel="noopener noreferrer"
+          >Digilab</a
         >. Digilab is a technical innovation team and testing environment initiated by the Dutch
         government to facilitate secure, responsible, and standardized data sharing across public
         sector organizations.

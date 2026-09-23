@@ -12,7 +12,7 @@ export interface Props {
 
 const {
   title = 'Fundament',
-  description = 'Fundament - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
+  description = 'Fundament - The Dutch sovereign government cloud: open-source managed Kubernetes with bare-metal provisioning',
 } = Astro.props;
 
 const { pathname } = Astro.url;
@@ -92,6 +92,12 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
             ></nldd-page-footer-legal-bar-item>
             <nldd-page-footer-legal-bar-item slot="end" text="Privacy" href="/privacy"
             ></nldd-page-footer-legal-bar-item>
+            <nldd-page-footer-legal-bar-item
+              slot="end"
+              text="Nederlandse Digitale Dienst"
+              href="https://digitaledienst.overheid.nl/"
+              target="_blank"
+              rel="noopener noreferrer"></nldd-page-footer-legal-bar-item>
             <nldd-page-footer-legal-bar-item
               slot="end"
               text="Digilab"
