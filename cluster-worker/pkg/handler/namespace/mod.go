@@ -22,6 +22,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectrbac"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
@@ -49,6 +50,7 @@ type Handler struct {
 	pool       *pgxpool.Pool
 	queries    *db.Queries
 	shoot      shoot.ShootAccess
+	rbac       *projectrbac.Converger
 	maxRetries int32
 	logger     *slog.Logger
 }
@@ -57,10 +59,12 @@ type Handler struct {
 // MaxRetries so reconcile's conditional enqueue uses the same exhaustion
 // threshold as cluster reconcile.
 func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, maxRetries int32, logger *slog.Logger) *Handler {
+	queries := db.New(pool)
 	return &Handler{
 		pool:       pool,
-		queries:    db.New(pool),
+		queries:    queries,
 		shoot:      shootAccess,
+		rbac:       projectrbac.NewConverger(queries, shootAccess, logger),
 		maxRetries: maxRetries,
 		logger:     logger.With("handler", "namespace"),
 	}
@@ -110,13 +114,22 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 
 // ensure creates or label-reconciles the cluster-side namespace for an active
 // row, then reconciles the managed LimitRange inside it from the merged
-// org/project resource defaults.
+// org/project resource defaults, and finally the project members'
+// RoleBindings (a new namespace needs them; usersync can't create them
+// before the namespace exists).
 func (h *Handler) ensure(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
 	name := kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
 	if err := h.ensureNamespace(ctx, row, name); err != nil {
 		return err
 	}
-	return h.reconcileLimitRange(ctx, row, name)
+	if err := h.reconcileLimitRange(ctx, row, name); err != nil {
+		return err
+	}
+	err := h.rbac.Converge(ctx, row.ClusterID)
+	if err != nil {
+		return fmt.Errorf("converge project role bindings: %w", err)
+	}
+	return nil
 }
 
 // ensureNamespace creates or label-reconciles the cluster-side namespace.
