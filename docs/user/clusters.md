@@ -135,13 +135,20 @@ Kubernetes API proxy and delegates authentication to an exec credential plugin:
 
 ```yaml
 users:
-- name: fundament-user-<cluster-id>
+- name: <organization>-<cluster>
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1
       command: functl
       args: [cluster, token, <cluster-id>]
 ```
+
+The cluster, context and user entries are named after the organization and
+the cluster (for example `acme-corp--production`), which is the name kubectl,
+k9s, Lens and Headlamp show. Cluster names are reduced to lowercase letters,
+digits and dashes; a name that had to be changed gets a short suffix to stay
+unique. Rename the context locally if you prefer another name
+(`kubectl config rename-context`).
 
 So [`functl`](./functl.md) must be installed, on your `PATH` and logged in
 (`functl auth login`) for the kubeconfig to work, including on machines that
@@ -159,20 +166,51 @@ ServiceAccount may do depends on your role:
 | Your role | Cluster-side result |
 | --- | --- |
 | Organization admin | The ServiceAccount is bound to the `cluster-admin` role: full access to the cluster. |
-| Member of a project on the cluster | The ServiceAccount exists but has no binding of its own, so you get only what the cluster's own RBAC grants it. |
+| Project admin | In every namespace of the project, the ServiceAccount is bound to the built-in `admin` role: manage workloads, services, config and access within those namespaces. |
+| Project viewer | In every namespace of the project, the ServiceAccount is bound to the built-in `view` role: read-only access, without Secrets. |
 | Neither | No ServiceAccount is created, and requests are refused. |
 
-Two consequences worth knowing:
+The bindings are named `fundament:project:<user-id>` and follow project
+membership: adding, promoting or removing a member, or creating a namespace,
+updates them in the background.
 
-- The proxy forwards only the `/api`, `/apis`, `/openapi` and `/version` paths.
-  Other endpoints return 404 regardless of your permissions.
-- ServiceAccounts are synced in the background after a membership change, so
-  immediately after being granted access a request can return 503 with
-  "service account sync pending". Retry shortly.
+Listing namespaces (`kubectl get namespaces`) is answered by the proxy itself,
+because Kubernetes can only grant that cluster-wide. Organization admins see
+every namespace; everyone else sees the namespaces of the projects they are a
+member of, and nothing else. `kubectl auth can-i list namespaces` answers yes
+accordingly.
 
-Finer-grained in-cluster authorization (per-namespace role bindings derived
-from project membership) is described as future work in FUN-7 and is not
-implemented yet; see [Members and roles](./members-and-roles.md).
+Consequences worth knowing:
+
+- The proxy forwards only the `/api`, `/apis`, `/openapi` and `/version` paths
+  and the `/healthz`, `/livez` and `/readyz` probes. Other endpoints return 404
+  regardless of your permissions.
+- ServiceAccounts and bindings are synced in the background after a membership
+  change, so immediately after being granted access a request can return 503
+  with "service account sync pending", or 403. Retry shortly.
+- Listing namespaced resources across all namespaces
+  (`kubectl get pods --all-namespaces`) is refused for project members. Work
+  per namespace instead.
+
+### GUI tools
+
+Tools that talk to the Kubernetes API, such as [k9s](https://k9scli.io/),
+[Headlamp](https://headlamp.dev/) and [Freelens](https://freelens.app/), work
+with the same kubeconfig: their namespace view lists the namespaces you can
+see, and from there you can open pods, follow logs and describe resources within
+your role. Things to keep in mind:
+
+- The kubeconfig runs `functl cluster token`, so `functl` must be on the `PATH`
+  of the tool, not just of your shell. Desktop apps started from a launcher may
+  not inherit your shell's `PATH`.
+- The kubeconfig sets no default namespace. Pick one of your namespaces in the
+  tool (in k9s: `:namespace`, then select), or pass it on the command line
+  (`k9s -n <namespace>`).
+- "All namespaces" views depend on the tool. Headlamp falls back to loading
+  your namespaces one by one. k9s shows an access error; pick a namespace
+  instead. Freelens (and Lens) show an empty list with a warning until you
+  enter your namespaces as the cluster's accessible namespaces in its cluster
+  settings; after that its "All namespaces" view loads them one by one.
 
 ## Lifecycle
 
