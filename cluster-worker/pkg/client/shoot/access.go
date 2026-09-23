@@ -80,6 +80,10 @@ type ShootAccess interface {
 	// ListNamespaces lists namespaces filtered by label key existence.
 	ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
 
+	// FindNamespaceByLabel returns a namespace carrying label key=value, or nil
+	// if there is none.
+	FindNamespaceByLabel(ctx context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error)
+
 	// EnsureLimitRange creates or updates the managed fundament-defaults
 	// LimitRange in a namespace to match the given defaults.
 	EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error

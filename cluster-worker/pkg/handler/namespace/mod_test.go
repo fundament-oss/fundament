@@ -57,7 +57,7 @@ func testRow(name string) *db.NamespaceGetForSyncRow {
 
 // clusterName is the cluster-side resource name the handler derives for a row.
 func clusterName(row *db.NamespaceGetForSyncRow) string {
-	return kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
+	return kubename.GenerateNamespace(row.ProjectName, row.Name)
 }
 
 func nsLabels(t *testing.T, mock *shoot.MockShootAccess, clusterID uuid.UUID, name string) map[string]string {
@@ -278,4 +278,58 @@ func TestDelete_LabelMismatchIsSkipped(t *testing.T) {
 	still, err := mock.GetNamespace(ctx, row.ClusterID, clusterName(row))
 	require.NoError(t, err)
 	require.NotNil(t, still, "a namespace we do not own must not be deleted")
+}
+
+// legacyName is a namespace name from the earlier hashed naming scheme.
+const legacyName = "projab3a6357-team-a"
+
+// A namespace created under the earlier naming scheme is found by its id label
+// and keeps its name: no second namespace under the new name.
+func TestEnsure_KeepsLegacyNamedNamespace(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a")
+	row.OrgDefaultCpuLimitM = i4(500)
+	ctx := context.Background()
+
+	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{
+		LabelNamespaceID: row.ID.String(),
+	}))
+
+	require.NoError(t, h.ensure(ctx, row))
+
+	labels := nsLabels(t, mock, row.ClusterID, legacyName)
+	require.Equal(t, row.ProjectID.String(), labels[LabelProjectID], "legacy namespace's labels reconciled")
+	fresh, err := mock.GetNamespace(ctx, row.ClusterID, clusterName(row))
+	require.NoError(t, err)
+	require.Nil(t, fresh, "no duplicate under the new name")
+	require.NotNil(t, mock.GetLimitRange(row.ClusterID, legacyName), "LimitRange goes into the legacy namespace")
+}
+
+func TestDelete_RemovesLegacyNamedNamespace(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a")
+	ctx := context.Background()
+
+	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{
+		LabelNamespaceID: row.ID.String(),
+	}))
+
+	require.NoError(t, h.delete(ctx, row))
+
+	gone, err := mock.GetNamespace(ctx, row.ClusterID, legacyName)
+	require.NoError(t, err)
+	require.Nil(t, gone)
+}
+
+func TestEnsure_NewNamespaceUsesReadableName(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a") // project "proj"
+	ctx := context.Background()
+
+	require.NoError(t, h.ensure(ctx, row))
+
+	require.Equal(t, row.ID.String(), nsLabels(t, mock, row.ClusterID, "tnt-proj--team-a")[LabelNamespaceID])
 }

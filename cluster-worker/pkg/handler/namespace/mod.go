@@ -119,27 +119,37 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 // RoleBindings (a new namespace needs them; usersync can't create them
 // before the namespace exists).
 func (h *Handler) ensure(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
-	name := kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
-	if err := h.ensureNamespace(ctx, row, name); err != nil {
+	owned, err := h.findOwned(ctx, row)
+	if err != nil {
 		return err
 	}
-	if err := h.reconcileLimitRange(ctx, row, name); err != nil {
+	name := kubename.GenerateNamespace(row.ProjectName, row.Name)
+	if owned != nil {
+		// Already materialized — possibly under an earlier naming scheme, whose
+		// name stays: namespaces can't be renamed.
+		name = owned.Name
+		err = h.reconcileLabels(ctx, row, name, desiredLabels(row))
+	} else {
+		err = h.ensureNamespace(ctx, row, name)
+	}
+	if err != nil {
 		return err
 	}
-	err := h.rbac.Converge(ctx, row.ClusterID)
+	err = h.reconcileLimitRange(ctx, row, name)
+	if err != nil {
+		return err
+	}
+	err = h.rbac.Converge(ctx, row.ClusterID)
 	if err != nil {
 		return fmt.Errorf("converge project role bindings: %w", err)
 	}
 	return nil
 }
 
-// ensureNamespace creates or label-reconciles the cluster-side namespace.
-// The cluster-side resource name is derived from the project and the namespace
-// name (kubename.GenerateNamespace) so two projects on the same shoot never collide.
-// Ownership is tracked by the LabelNamespaceID label. The name derives only from
-// immutable inputs (project id, project name, and the namespace name — none of
-// which can change), so the expected name is stable for the life of the row and a
-// single lookup by that name is authoritative.
+// ensureNamespace creates the cluster-side namespace for a row that has none
+// yet, named kubename.GenerateNamespace ("tnt-<project>--<name>"). Ownership is
+// tracked by the LabelNamespaceID label: a same-named namespace that isn't ours
+// is a collision (or a managed sibling still being deleted), never adopted.
 func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSyncRow, name string) error {
 	desired := desiredLabels(row)
 
@@ -209,19 +219,17 @@ func (h *Handler) reconcileLabels(ctx context.Context, row *db.NamespaceGetForSy
 }
 
 // delete hard-deletes the cluster-side namespace for a soft-deleted row. The
-// expected name is stable (derived from immutable inputs), so a single lookup is
-// authoritative: a namespace that is absent, or present without our id label, is
-// never touched (idempotent).
+// namespace is found by its id label, whatever name it was created under; a
+// namespace without our id label is never touched (idempotent).
 func (h *Handler) delete(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
-	name := kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
-
-	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, name)
+	owned, err := h.findOwned(ctx, row)
 	if err != nil {
-		return fmt.Errorf("get namespace %s: %w", name, err)
+		return err
 	}
-	if existing == nil || existing.Labels[LabelNamespaceID] != row.ID.String() {
-		return nil // already gone, or not ours — idempotent
+	if owned == nil {
+		return nil // already gone — idempotent
 	}
+	name := owned.Name
 
 	if err := h.shoot.DeleteNamespace(ctx, row.ClusterID, name); err != nil {
 		return fmt.Errorf("delete namespace %s: %w", name, err)
@@ -229,6 +237,18 @@ func (h *Handler) delete(ctx context.Context, row *db.NamespaceGetForSyncRow) er
 	h.logger.Info("deleted namespace",
 		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", name)
 	return nil
+}
+
+// findOwned returns the cluster-side namespace carrying this row's id label, or
+// nil if it has none yet. The label, not the name, identifies the namespace: a
+// namespace keeps the name it was created with even when the naming scheme
+// changes.
+func (h *Handler) findOwned(ctx context.Context, row *db.NamespaceGetForSyncRow) (*shoot.ResourceInfo, error) {
+	owned, err := h.shoot.FindNamespaceByLabel(ctx, row.ClusterID, LabelNamespaceID, row.ID.String())
+	if err != nil {
+		return nil, fmt.Errorf("find namespace for %s: %w", row.ID, err)
+	}
+	return owned, nil
 }
 
 // enqueueClusterNamespaces fans out a sync for every active namespace on a

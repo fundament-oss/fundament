@@ -12,6 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const namespaceClusterNameTaken = `-- name: NamespaceClusterNameTaken :one
+SELECT EXISTS (
+  SELECT 1
+  FROM tenant.namespaces
+  JOIN tenant.projects
+    ON projects.id = namespaces.project_id
+  WHERE projects.cluster_id = $1
+    AND projects.id <> $2
+    AND $3::text || projects.name || $4::text || namespaces.name = $5::text
+    AND namespaces.deleted IS NULL
+    AND projects.deleted IS NULL
+) AS taken
+`
+
+type NamespaceClusterNameTakenParams struct {
+	ClusterID       uuid.UUID
+	ProjectID       uuid.UUID
+	Prefix          string
+	Separator       string
+	ClusterSideName string
+}
+
+// Whether an active namespace of another project on the cluster already
+// materializes as the given cluster-side name "<prefix><project><separator>
+// <namespace>" (kubename.GenerateNamespace, which passes its constants in).
+// Only projects named before the separator was reserved can collide, e.g.
+// "x--y"+"z" and "x"+"y--z". Duplicates within the project itself are left to
+// namespaces_uq_name.
+func (q *Queries) NamespaceClusterNameTaken(ctx context.Context, arg NamespaceClusterNameTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, namespaceClusterNameTaken,
+		arg.ClusterID,
+		arg.ProjectID,
+		arg.Prefix,
+		arg.Separator,
+		arg.ClusterSideName,
+	)
+	var taken bool
+	err := row.Scan(&taken)
+	return taken, err
+}
+
 const namespaceCreate = `-- name: NamespaceCreate :one
 INSERT INTO tenant.namespaces (project_id, name)
 VALUES ($1, $2)
