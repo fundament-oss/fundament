@@ -99,17 +99,29 @@ func TestIsAllowedPath(t *testing.T) {
 	}
 }
 
-// The proxy answers namespace listings for the caller; an impersonated request
-// (kubectl --as) goes to the apiserver instead.
-func TestServesNamespaceList(t *testing.T) {
+// The proxy answers namespace listings and access reviews for the caller; an
+// impersonated request (kubectl --as) goes to the apiserver instead.
+func TestServesNamespaceListAndAccessReview(t *testing.T) {
 	t.Parallel()
-	list := func(header http.Header) *http.Request {
+	list := func(impersonate bool) *http.Request {
 		r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/namespaces", http.NoBody)
-		r.Header = header
+		if impersonate {
+			r.Header.Set("Impersonate-User", "bob")
+		}
+		return r
+	}
+	review := func(impersonate bool) *http.Request {
+		r := httptest.NewRequestWithContext(context.Background(), http.MethodPost, accessReviewPath, http.NoBody)
+		if impersonate {
+			r.Header["impersonate-group"] = []string{"devs"} // non-canonical key
+		}
 		return r
 	}
 
-	assert.True(t, servesNamespaceList(list(http.Header{})))
-	assert.False(t, servesNamespaceList(list(http.Header{"Impersonate-User": {"bob"}})))
-	assert.False(t, servesNamespaceList(list(http.Header{"impersonate-group": {"devs"}})), "non-canonical key")
+	assert.True(t, servesNamespaceList(list(false)))
+	assert.False(t, servesNamespaceList(list(true)))
+	assert.True(t, servesAccessReview(review(false)))
+	assert.False(t, servesAccessReview(review(true)))
+	assert.False(t, servesNamespaceList(review(false)))
+	assert.False(t, servesAccessReview(list(false)))
 }
