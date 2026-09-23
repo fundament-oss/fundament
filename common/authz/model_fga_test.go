@@ -15,7 +15,7 @@ import (
 )
 
 // storeFile is the subset of the OpenFGA store-file format this package uses:
-// fixture tuples plus Check assertions.
+// fixture tuples plus Check and ListObjects assertions.
 type storeFile struct {
 	Tuples []struct {
 		User     string `yaml:"user"`
@@ -29,6 +29,11 @@ type storeFile struct {
 			Object     string          `yaml:"object"`
 			Assertions map[string]bool `yaml:"assertions"`
 		} `yaml:"check"`
+		ListObjects []struct {
+			User       string              `yaml:"user"`
+			Type       string              `yaml:"type"`
+			Assertions map[string][]string `yaml:"assertions"`
+		} `yaml:"list_objects"`
 	} `yaml:"tests"`
 }
 
@@ -89,6 +94,20 @@ func TestModelSatisfiesStoreFile(t *testing.T) {
 					require.NoError(t, err, "%s %s %s", check.User, relation, check.Object)
 					assert.Equal(t, want, resp.GetAllowed(),
 						"check(%s, %s, %s)", check.User, relation, check.Object)
+				}
+			}
+			for _, list := range tc.ListObjects {
+				for relation, want := range list.Assertions {
+					resp, err := fga.ListObjects(ctx, &openfgav1.ListObjectsRequest{
+						StoreId:              store.GetId(),
+						AuthorizationModelId: written.GetAuthorizationModelId(),
+						User:                 list.User,
+						Relation:             relation,
+						Type:                 list.Type,
+					})
+					require.NoError(t, err, "%s %s %s", list.User, relation, list.Type)
+					assert.ElementsMatch(t, want, resp.GetObjects(),
+						"list_objects(%s, %s, %s)", list.User, relation, list.Type)
 				}
 			}
 		})
