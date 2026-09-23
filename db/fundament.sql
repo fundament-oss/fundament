@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 1.2.2
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -790,6 +790,16 @@ CREATE UNIQUE INDEX users_uq_external_ref ON tenant.users
 USING btree
 (
 	external_ref
+)
+WHERE (deleted IS NULL);
+-- ddl-end --
+
+-- object: users_uq_email | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.users_uq_email CASCADE;
+CREATE UNIQUE INDEX users_uq_email ON tenant.users
+USING btree
+(
+	(lower(email))
 )
 WHERE (deleted IS NULL);
 -- ddl-end --
