@@ -55,11 +55,16 @@ func lookupOrganizationID(ctx context.Context, queries *db.Queries, name string)
 	return id, nil
 }
 
-// Run executes the organization member add command.
+// Run executes the organization member add command. One transaction: the
+// user is either registered or looked up, then the membership is written, so
+// a failure leaves neither half behind.
 func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 	ref, err := parseUserRef(c.User)
 	if err != nil {
 		return err
+	}
+	if c.CreateUser && ref.email == "" {
+		return errors.New("--create-user registers an email address; pass the address rather than a user ID")
 	}
 
 	permission, err := parsePermission(c.Permission)
@@ -69,68 +74,6 @@ func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 
 	bgCtx := context.Background()
 
-	orgID, err := lookupOrganizationID(bgCtx, ctx.Queries, c.Organization)
-	if err != nil {
-		return err
-	}
-
-	ctx.Logger.Debug("adding organization member", "organization", c.Organization, "user", c.User, "permission", permission, "create_user", c.CreateUser)
-
-	if c.CreateUser {
-		if ref.email == "" {
-			return errors.New("--create-user registers an email address; pass the address rather than a user ID")
-		}
-		return c.createUserAndMembership(bgCtx, ctx, orgID, ref.email, permission)
-	}
-
-	user, err := lookupUser(bgCtx, ctx.Queries, ref)
-	if err != nil {
-		if errors.Is(err, errUserNotFound) {
-			if ref.email != "" {
-				return fmt.Errorf("user %q not found: pass --create-user to register the address for someone who has not signed in yet", c.User)
-			}
-			return fmt.Errorf("user %q not found", c.User)
-		}
-		return fmt.Errorf("failed to look up user: %w", err)
-	}
-
-	membership, err := ctx.Queries.MembershipCreate(bgCtx, db.MembershipCreateParams{
-		OrganizationID: orgID,
-		UserID:         user.ID,
-		Permission:     permission,
-	})
-	if err == nil {
-		ctx.Logger.Info("added organization member", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email, "permission", permission)
-		return outputMembershipCreate(ctx.Output, membership.ID)
-	}
-
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); !ok || pgErr.ConstraintName != dbconst.ConstraintOrganizationsUsersUqUser {
-		return fmt.Errorf("failed to add organization member: %w", err)
-	}
-
-	// The user already has a live membership. If it is an invitation nobody
-	// answered yet, assigning them is the answer; otherwise there is nothing to do.
-	accepted, err := ctx.Queries.MembershipAcceptPending(bgCtx, db.MembershipAcceptPendingParams{
-		OrganizationID: orgID,
-		UserID:         user.ID,
-		Permission:     permission,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to accept pending invitation: %w", err)
-	}
-	if accepted == 0 {
-		return fmt.Errorf("user %q is already a member of organization %q", c.User, c.Organization)
-	}
-
-	ctx.Logger.Info("accepted pending invitation on the user's behalf", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email, "permission", permission)
-
-	return nil
-}
-
-// createUserAndMembership registers an address nobody has signed in with and
-// assigns the membership to it, in one transaction: a user row without the
-// membership it was created for is what an operator would have to clean up.
-func (c *OrganizationMemberAddCmd) createUserAndMembership(bgCtx context.Context, ctx *Context, orgID uuid.UUID, email string, permission dbconst.OrganizationsUserPermission) error {
 	tx, err := ctx.DB.Pool.Begin(bgCtx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -139,37 +82,86 @@ func (c *OrganizationMemberAddCmd) createUserAndMembership(bgCtx context.Context
 
 	qtx := ctx.Queries.WithTx(tx)
 
-	existing, err := qtx.UserFindByEmail(bgCtx, db.UserFindByEmailParams{Email: email})
+	orgID, err := lookupOrganizationID(bgCtx, qtx, c.Organization)
 	if err != nil {
-		return fmt.Errorf("failed to look up user: %w", err)
-	}
-	if len(existing) > 0 {
-		return fmt.Errorf("user with email %q already exists (%s): add them without --create-user", email, joinUserIDs(existing))
+		return err
 	}
 
-	created, err := qtx.UserCreate(bgCtx, db.UserCreateParams{
-		Name:  email,
-		Email: email,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to register user: %w", err)
+	ctx.Logger.Debug("adding organization member", "organization", c.Organization, "user", c.User, "permission", permission, "create_user", c.CreateUser)
+
+	var userID uuid.UUID
+	if c.CreateUser {
+		// Refused rather than reused: an address that exists is a user to add
+		// without the flag, and quietly doing that would hide a wrong assumption.
+		existing, err := qtx.UserFindByEmail(bgCtx, db.UserFindByEmailParams{Email: ref.email})
+		if err != nil {
+			return fmt.Errorf("failed to look up user: %w", err)
+		}
+		if len(existing) > 0 {
+			return fmt.Errorf("user with email %q already exists (%s): add them without --create-user", ref.email, joinUserIDs(existing))
+		}
+
+		created, err := qtx.UserCreate(bgCtx, db.UserCreateParams{Name: ref.email, Email: ref.email})
+		if err != nil {
+			return fmt.Errorf("failed to register user: %w", err)
+		}
+		userID = created.ID
+	} else {
+		user, err := lookupUser(bgCtx, qtx, ref)
+		if err != nil {
+			if errors.Is(err, errUserNotFound) && ref.email != "" {
+				return fmt.Errorf("user %q not found: pass --create-user to register the address for someone who has not signed in yet", c.User)
+			}
+			if errors.Is(err, errUserNotFound) {
+				return fmt.Errorf("user %q not found", c.User)
+			}
+			return fmt.Errorf("failed to look up user: %w", err)
+		}
+		userID = user.ID
 	}
 
 	membership, err := qtx.MembershipCreate(bgCtx, db.MembershipCreateParams{
 		OrganizationID: orgID,
-		UserID:         created.ID,
+		UserID:         userID,
 		Permission:     permission,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add organization member: %w", err)
+		// A live membership already exists. If it is an invitation nobody has
+		// answered yet, assigning them is the answer; otherwise there is
+		// nothing to do. Any other error is a real one.
+		pgErr, ok := errors.AsType[*pgconn.PgError](err)
+		if !ok || pgErr.ConstraintName != dbconst.ConstraintOrganizationsUsersUqUser {
+			return fmt.Errorf("failed to add organization member: %w", err)
+		}
+		// The failed insert aborted the transaction; the update needs a fresh one.
+		if err := tx.Rollback(bgCtx); err != nil {
+			return fmt.Errorf("failed to roll back transaction: %w", err)
+		}
+		accepted, err := ctx.Queries.MembershipAcceptPending(bgCtx, db.MembershipAcceptPendingParams{
+			OrganizationID: orgID,
+			UserID:         userID,
+			Permission:     permission,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to accept pending invitation: %w", err)
+		}
+		if accepted == 0 {
+			return fmt.Errorf("user %q is already a member of organization %q", c.User, c.Organization)
+		}
+		ctx.Logger.Info("accepted pending invitation on the user's behalf", "organization", c.Organization, "user_id", userID.String(), "permission", permission)
+		return nil
 	}
 
 	if err := tx.Commit(bgCtx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	ctx.Logger.Info("registered user and added organization member; the account is linked when someone first signs in at this address",
-		"organization", c.Organization, "user_id", created.ID.String(), "email", email, "permission", permission)
+	if c.CreateUser {
+		ctx.Logger.Info("registered user and added organization member; the account is linked when someone first signs in at this address",
+			"organization", c.Organization, "user_id", userID.String(), "email", ref.email, "permission", permission)
+	} else {
+		ctx.Logger.Info("added organization member", "organization", c.Organization, "user_id", userID.String(), "permission", permission)
+	}
 
 	return outputMembershipCreate(ctx.Output, membership.ID)
 }
