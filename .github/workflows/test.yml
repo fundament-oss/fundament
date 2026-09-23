@@ -154,6 +154,44 @@ jobs:
         working-directory: common
         run: go test ./... -count=1
 
+  funops:
+    runs-on: ubuntu-24.04
+    # Its own database root: the tests run the commands against a migrated
+    # embedded postgres the way funops runs against a real installation.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-funops
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-funops-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (funops)
+        working-directory: funops
+        run: go test ./... -count=1
+
   functl:
     runs-on: ubuntu-24.04
     steps:
@@ -336,7 +374,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|funops|dcim-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04
