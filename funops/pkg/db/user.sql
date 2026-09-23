@@ -22,10 +22,10 @@ FROM tenant.users
 WHERE id = @id
   AND deleted IS NULL;
 
--- name: UserFindByEmail :one
+-- name: UserFindByEmail :many
 -- Matched case-insensitively, the way the authn-api and the invite flow match
--- it. An account somebody has signed in to comes before a registration still
--- waiting to be claimed.
+-- it. Email is not unique, so more than one match is an ambiguity for the
+-- caller to report rather than something to pick from here.
 SELECT
   id,
   name,
@@ -35,8 +35,7 @@ SELECT
 FROM tenant.users
 WHERE lower(email) = lower(@email::text)
   AND deleted IS NULL
-ORDER BY external_ref IS NULL, created
-LIMIT 1;
+ORDER BY created;
 
 -- name: UserList :many
 -- Every user, with the names of the organizations they belong to or are

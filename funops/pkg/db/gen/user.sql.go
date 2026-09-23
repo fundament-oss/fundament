@@ -52,7 +52,7 @@ func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCre
 	return i, err
 }
 
-const userFindByEmail = `-- name: UserFindByEmail :one
+const userFindByEmail = `-- name: UserFindByEmail :many
 SELECT
   id,
   name,
@@ -62,8 +62,7 @@ SELECT
 FROM tenant.users
 WHERE lower(email) = lower($1::text)
   AND deleted IS NULL
-ORDER BY external_ref IS NULL, created
-LIMIT 1
+ORDER BY created
 `
 
 type UserFindByEmailParams struct {
@@ -79,19 +78,32 @@ type UserFindByEmailRow struct {
 }
 
 // Matched case-insensitively, the way the authn-api and the invite flow match
-// it. An account somebody has signed in to comes before a registration still
-// waiting to be claimed.
-func (q *Queries) UserFindByEmail(ctx context.Context, arg UserFindByEmailParams) (UserFindByEmailRow, error) {
-	row := q.db.QueryRow(ctx, userFindByEmail, arg.Email)
-	var i UserFindByEmailRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.ExternalRef,
-		&i.Email,
-		&i.Created,
-	)
-	return i, err
+// it. Email is not unique, so more than one match is an ambiguity for the
+// caller to report rather than something to pick from here.
+func (q *Queries) UserFindByEmail(ctx context.Context, arg UserFindByEmailParams) ([]UserFindByEmailRow, error) {
+	rows, err := q.db.Query(ctx, userFindByEmail, arg.Email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserFindByEmailRow
+	for rows.Next() {
+		var i UserFindByEmailRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ExternalRef,
+			&i.Email,
+			&i.Created,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const userGetByID = `-- name: UserGetByID :one

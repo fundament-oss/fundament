@@ -75,7 +75,7 @@ func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 	user, err := lookupUser(bgCtx, ctx.Queries, ref)
 	switch {
 	case err == nil:
-	case !errors.Is(err, pgx.ErrNoRows):
+	case !errors.Is(err, errUserNotFound):
 		return fmt.Errorf("failed to look up user: %w", err)
 	case ref.email == "":
 		return fmt.Errorf("user %q not found", c.User)
@@ -163,7 +163,7 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 
 	user, err := lookupUser(bgCtx, ctx.Queries, ref)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, errUserNotFound) {
 			return fmt.Errorf("user %q not found", c.User)
 		}
 		return fmt.Errorf("failed to look up user: %w", err)

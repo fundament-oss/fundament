@@ -68,20 +68,46 @@ type userRow struct {
 	ExternalRef string
 }
 
-// lookupUser resolves a userRef to an existing user, or pgx.ErrNoRows.
+// errUserNotFound is returned by lookupUser when nothing matches the reference.
+var errUserNotFound = errors.New("user not found")
+
+// lookupUser resolves a userRef to an existing user, or errUserNotFound.
+// Email is not unique in tenant.users. Several rows at one address is a data
+// problem an operator should see, not one this tool should quietly pick a
+// side of, so that is an error naming the rows; the user ID still works.
 func lookupUser(ctx context.Context, queries *db.Queries, ref userRef) (userRow, error) {
 	if ref.email == "" {
 		u, err := queries.UserGetByID(ctx, db.UserGetByIDParams{ID: ref.id})
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return userRow{}, errUserNotFound
+			}
 			return userRow{}, fmt.Errorf("getting user by id: %w", err)
 		}
 		return userRow{ID: u.ID, Name: u.Name, Email: u.Email.String, ExternalRef: u.ExternalRef.String}, nil
 	}
-	u, err := queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: ref.email})
+	rows, err := queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: ref.email})
 	if err != nil {
 		return userRow{}, fmt.Errorf("finding user by email: %w", err)
 	}
-	return userRow{ID: u.ID, Name: u.Name, Email: u.Email.String, ExternalRef: u.ExternalRef.String}, nil
+	switch len(rows) {
+	case 0:
+		return userRow{}, errUserNotFound
+	case 1:
+		u := rows[0]
+		return userRow{ID: u.ID, Name: u.Name, Email: u.Email.String, ExternalRef: u.ExternalRef.String}, nil
+	default:
+		return userRow{}, fmt.Errorf("%d users match email %q (%s): pass the user ID instead", len(rows), ref.email, joinUserIDs(rows))
+	}
+}
+
+// joinUserIDs lists the IDs of matching rows for an error message.
+func joinUserIDs(rows []db.UserFindByEmailRow) string {
+	ids := make([]string, len(rows))
+	for i := range rows {
+		ids[i] = rows[i].ID.String()
+	}
+	return strings.Join(ids, ", ")
 }
 
 // Run executes the user create command.
@@ -98,11 +124,11 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 	ctx.Logger.Debug("creating user", "email", c.Email, "name", name)
 
 	existing, err := ctx.Queries.UserFindByEmail(context.Background(), db.UserFindByEmailParams{Email: c.Email})
-	if err == nil {
-		return fmt.Errorf("user with email %q already exists: %s", c.Email, existing.ID)
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return fmt.Errorf("failed to look up user: %w", err)
+	}
+	if len(existing) > 0 {
+		return fmt.Errorf("user with email %q already exists: %s", c.Email, joinUserIDs(existing))
 	}
 
 	u, err := ctx.Queries.UserCreate(context.Background(), db.UserCreateParams{
