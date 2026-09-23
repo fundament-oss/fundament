@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -160,7 +162,12 @@ func (s *Server) GetKubeconfig(
 	}
 	proxyURL := s.config.KubeAPIProxyURL + "/clusters/" + clusterID.String()
 
-	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL)
+	org, err := s.queries.OrganizationGetByID(ctx, db.OrganizationGetByIDParams{ID: cluster.OrganizationID})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization: %w", err))
+	}
+
+	kubeconfig := buildKubeconfig(kubeconfigEntryName(org.Name, cluster.Name, clusterID), clusterID.String(), proxyURL)
 
 	return organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
@@ -187,9 +194,50 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 	return builder.Build()
 }
 
-func buildKubeconfig(clusterID, serverURL string) string {
-	clusterName := "fundament-" + clusterID
-	userName := "fundament-user-" + clusterID
+// kubeconfigEntryName names a cluster's kubeconfig cluster, context and user
+// entries: "<org>--<cluster>", e.g. "acme-corp--production". kubectl, k9s,
+// Lens and Headlamp all show it, and Headlamp puts it in URL paths, so it is
+// reduced to [a-z0-9-]. Organization names already are; cluster names are
+// free-form, so a cluster name that had to change gets a short suffix derived
+// from its id, keeping clusters whose names reduce to the same slug apart. The
+// "--" keeps different organization/cluster pairs apart in a merged kubeconfig
+// ("acme" + "prod-eu" vs "acme-prod" + "eu"): organization names may not
+// contain it, and slugify never produces it.
+func kubeconfigEntryName(orgName, clusterName string, clusterID uuid.UUID) string {
+	slug := slugify(clusterName)
+	if slug != clusterName {
+		suffix := kubename.HashHex(clusterID[:])[:4]
+		if slug == "" {
+			slug = suffix
+		} else {
+			slug += "-" + suffix
+		}
+	}
+	return orgName + "--" + slug
+}
+
+// slugify lowercases s, keeps [a-z0-9] and turns every other run of characters
+// into a single '-', trimmed at both ends.
+func slugify(s string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			dash = false
+			continue
+		}
+		if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	return strings.TrimSuffix(b.String(), "-")
+}
+
+func buildKubeconfig(name, clusterID, serverURL string) string {
+	clusterName := name
+	userName := name
 
 	return fmt.Sprintf(`apiVersion: v1
 kind: Config
