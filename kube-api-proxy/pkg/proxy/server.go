@@ -161,6 +161,13 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
+// Unwrap exposes the underlying writer to http.ResponseController. Without it
+// the reverse proxy's flushes (FlushInterval -1) silently fail, and each watch
+// event sits in the server's buffer until the next one pushes it out.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
 func newUserAccessChecker(cfg *Config, logger *slog.Logger) (useraccess.Checker, error) {
 	if cfg.Mode == "mock" {
 		if cfg.PluginSandboxKubeconfig == "" {
