@@ -63,8 +63,9 @@ Examples:
 funops organization create acme-corp
 funops organization create acme-corp --output json
 funops organization member add acme-corp alice@acme-corp.com --permission admin
+funops organization member add acme-corp bart@acme-corp.com --create-user
 funops organization member list acme-corp
-funops user create bart@acme-corp.com
+funops user create cindy@acme-corp.com
 funops user list --without-organization
 ----
 
@@ -73,7 +74,7 @@ funops user list --without-organization
 Signing in never creates an organization (FUN-4). Getting a user into one is an operator task, and `funops` covers both orders it can happen in:
 
 * **After the first sign-in**: `funops user list --without-organization` shows who is waiting, and `funops organization member add <organization> <user-id|email>` assigns them. The membership is accepted right away; an operator assigning someone is not an invitation to answer. The user's next token refresh picks it up, so no new sign-in is needed.
-* **Before the first sign-in**: `funops organization member add <organization> <email>` with an address nobody has signed in with yet registers the user by email (as `funops user create <email>` does on its own) and assigns the membership to that registration. The authn-api links the registration to the identity provider account on the first sign-in at that address, matched case-insensitively.
+* **Before the first sign-in**: `funops organization member add <organization> <email> --create-user` registers the user by email (as `funops user create <email>` does on its own) and assigns the membership to that registration, in one transaction. The authn-api links the registration to the identity provider account on the first sign-in at that address, matched case-insensitively. Without `--create-user`, an address nobody has signed in with is an error: creating accounts as a side effect would turn a mistyped address into a membership nobody can ever claim.
 
 Users are addressed by ID or by email, never by name: names are what the identity provider reports and are not unique. `funops organization member remove` revokes a membership the way the organization-api does, and the authz outbox takes the change to OpenFGA.
 

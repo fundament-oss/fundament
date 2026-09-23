@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -47,6 +48,16 @@ func TestParseUserRef(t *testing.T) {
 			ref:     "acme/alice",
 			wantErr: `invalid user "acme/alice": expected a user ID or an email address`,
 		},
+		{
+			name:    "a lone @ is not an address",
+			ref:     "@",
+			wantErr: `invalid user "@": expected a user ID or an email address`,
+		},
+		{
+			name:    "a display name is not a bare address",
+			ref:     "Alice <alice@acme-corp.com>",
+			wantErr: `invalid user "Alice <alice@acme-corp.com>": expected a user ID or an email address`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -61,6 +72,18 @@ func TestParseUserRef(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
+	}
+}
+
+func TestParseEmail(t *testing.T) {
+	for _, ok := range []string{"alice@acme-corp.com", " bart@acme-corp.com ", "first.last+tag@sub.example.org"} {
+		got, err := parseEmail(ok)
+		require.NoError(t, err, ok)
+		assert.Equal(t, strings.TrimSpace(ok), got)
+	}
+	for _, bad := range []string{"", "@", "alice", "alice@", "@acme-corp.com", "alice@localhost", "Alice <alice@acme-corp.com>", "<alice@acme-corp.com>", "alice@acme-corp.com, bob@acme-corp.com"} {
+		_, err := parseEmail(bad)
+		assert.Error(t, err, bad)
 	}
 }
 

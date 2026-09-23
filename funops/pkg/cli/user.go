@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/mail"
 	"slices"
 	"strings"
 
@@ -43,8 +44,8 @@ type userRef struct {
 	email string
 }
 
-// parseUserRef reads "<user-id>|<email>". A UUID is a user ID; anything with an
-// @ is an email address.
+// parseUserRef reads "<user-id>|<email>". A UUID is a user ID; anything else
+// has to be a bare, well-formed email address.
 func parseUserRef(ref string) (userRef, error) {
 	ref = strings.TrimSpace(ref)
 	if ref == "" {
@@ -53,10 +54,31 @@ func parseUserRef(ref string) (userRef, error) {
 	if id, err := uuid.Parse(ref); err == nil {
 		return userRef{id: id}, nil
 	}
-	if strings.Contains(ref, "@") {
-		return userRef{email: ref}, nil
+	email, err := parseEmail(ref)
+	if err != nil {
+		return userRef{}, fmt.Errorf("invalid user %q: expected a user ID or an email address", ref)
 	}
-	return userRef{}, fmt.Errorf("invalid user %q: expected a user ID or an email address", ref)
+	return userRef{email: email}, nil
+}
+
+// parseEmail accepts a bare address and nothing else: no display name, no
+// angle brackets, exactly one @ with something on both sides. A row registered
+// at a malformed address could never be claimed by a sign-in, so it is better
+// refused here than left with a membership nobody can use.
+func parseEmail(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	addr, err := mail.ParseAddress(s)
+	if err != nil {
+		return "", fmt.Errorf("invalid email address %q", s)
+	}
+	if addr.Name != "" || addr.Address != s {
+		return "", fmt.Errorf("invalid email address %q: expected a bare address", s)
+	}
+	local, domain, ok := strings.Cut(addr.Address, "@")
+	if !ok || local == "" || !strings.Contains(domain, ".") {
+		return "", fmt.Errorf("invalid email address %q", s)
+	}
+	return addr.Address, nil
 }
 
 // userRow is the shape every lookup returns, so callers do not care whether the
@@ -112,34 +134,35 @@ func joinUserIDs(rows []db.UserFindByEmailRow) string {
 
 // Run executes the user create command.
 func (c *UserCreateCmd) Run(ctx *Context) error {
-	if !strings.Contains(c.Email, "@") {
-		return fmt.Errorf("invalid email address %q", c.Email)
+	email, err := parseEmail(c.Email)
+	if err != nil {
+		return err
 	}
 
 	name := c.Name
 	if name == "" {
-		name = c.Email
+		name = email
 	}
 
-	ctx.Logger.Debug("creating user", "email", c.Email, "name", name)
+	ctx.Logger.Debug("creating user", "email", email, "name", name)
 
-	existing, err := ctx.Queries.UserFindByEmail(context.Background(), db.UserFindByEmailParams{Email: c.Email})
+	existing, err := ctx.Queries.UserFindByEmail(context.Background(), db.UserFindByEmailParams{Email: email})
 	if err != nil {
 		return fmt.Errorf("failed to look up user: %w", err)
 	}
 	if len(existing) > 0 {
-		return fmt.Errorf("user with email %q already exists: %s", c.Email, joinUserIDs(existing))
+		return fmt.Errorf("user with email %q already exists: %s", email, joinUserIDs(existing))
 	}
 
 	u, err := ctx.Queries.UserCreate(context.Background(), db.UserCreateParams{
 		Name:  name,
-		Email: c.Email,
+		Email: email,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", c.Email, "id", u.ID.String())
+	ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", email, "id", u.ID.String())
 
 	return outputUserCreate(ctx.Output, u.ID)
 }

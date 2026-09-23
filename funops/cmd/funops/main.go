@@ -61,6 +61,7 @@ func main() {
 		Debug:   root.Debug,
 		Output:  root.Output,
 		Logger:  logger,
+		DB:      database,
 		Queries: queries,
 	}
 

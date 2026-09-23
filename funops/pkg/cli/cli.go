@@ -4,6 +4,7 @@ package cli
 import (
 	"log/slog"
 
+	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
@@ -21,5 +22,6 @@ type Context struct {
 	Debug   bool
 	Output  OutputFormat
 	Logger  *slog.Logger
+	DB      *psqldb.DB
 	Queries *db.Queries
 }

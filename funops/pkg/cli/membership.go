@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
@@ -21,11 +22,14 @@ type OrganizationMemberCmd struct {
 	Remove OrganizationMemberRemoveCmd `cmd:"" help:"Remove a user from an organization."`
 }
 
-// OrganizationMemberAddCmd assigns a user to an organization.
+// OrganizationMemberAddCmd assigns a user to an organization. The user has
+// to exist unless --create-user says to register the address: an add that
+// silently created accounts would turn a typo into an unclaimable membership.
 type OrganizationMemberAddCmd struct {
 	Organization string `arg:"" help:"Organization name." required:""`
-	User         string `arg:"" help:"User ID or email address. An unknown email address is registered first, so the membership is waiting when that person signs in." required:""`
+	User         string `arg:"" help:"User ID or email address of an existing user." required:""`
 	Permission   string `help:"Permission in the organization: viewer or admin." default:"viewer" enum:"viewer,admin"`
+	CreateUser   bool   `help:"Register the email address as a new user first, for someone who has not signed in yet. The membership is then waiting when they do."`
 }
 
 // OrganizationMemberListCmd lists the members of an organization.
@@ -70,27 +74,24 @@ func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	ctx.Logger.Debug("adding organization member", "organization", c.Organization, "user", c.User, "permission", permission)
+	ctx.Logger.Debug("adding organization member", "organization", c.Organization, "user", c.User, "permission", permission, "create_user", c.CreateUser)
+
+	if c.CreateUser {
+		if ref.email == "" {
+			return errors.New("--create-user registers an email address; pass the address rather than a user ID")
+		}
+		return c.createUserAndMembership(bgCtx, ctx, orgID, ref.email, permission)
+	}
 
 	user, err := lookupUser(bgCtx, ctx.Queries, ref)
-	switch {
-	case err == nil:
-	case !errors.Is(err, errUserNotFound):
-		return fmt.Errorf("failed to look up user: %w", err)
-	case ref.email == "":
-		return fmt.Errorf("user %q not found", c.User)
-	default:
-		// Nobody has signed in at this address yet: register it, so the
-		// membership is already theirs when they do.
-		created, err := ctx.Queries.UserCreate(bgCtx, db.UserCreateParams{
-			Name:  ref.email,
-			Email: ref.email,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to register user: %w", err)
+	if err != nil {
+		if errors.Is(err, errUserNotFound) {
+			if ref.email != "" {
+				return fmt.Errorf("user %q not found: pass --create-user to register the address for someone who has not signed in yet", c.User)
+			}
+			return fmt.Errorf("user %q not found", c.User)
 		}
-		user = userRow{ID: created.ID, Name: created.Name, Email: created.Email.String}
-		ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", ref.email, "id", user.ID.String())
+		return fmt.Errorf("failed to look up user: %w", err)
 	}
 
 	membership, err := ctx.Queries.MembershipCreate(bgCtx, db.MembershipCreateParams{
@@ -124,6 +125,53 @@ func (c *OrganizationMemberAddCmd) Run(ctx *Context) error {
 	ctx.Logger.Info("accepted pending invitation on the user's behalf", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email, "permission", permission)
 
 	return nil
+}
+
+// createUserAndMembership registers an address nobody has signed in with and
+// assigns the membership to it, in one transaction: a user row without the
+// membership it was created for is what an operator would have to clean up.
+func (c *OrganizationMemberAddCmd) createUserAndMembership(bgCtx context.Context, ctx *Context, orgID uuid.UUID, email string, permission dbconst.OrganizationsUserPermission) error {
+	tx, err := ctx.DB.Pool.Begin(bgCtx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer rollback.Rollback(bgCtx, tx, ctx.Logger)
+
+	qtx := ctx.Queries.WithTx(tx)
+
+	existing, err := qtx.UserFindByEmail(bgCtx, db.UserFindByEmailParams{Email: email})
+	if err != nil {
+		return fmt.Errorf("failed to look up user: %w", err)
+	}
+	if len(existing) > 0 {
+		return fmt.Errorf("user with email %q already exists (%s): add them without --create-user", email, joinUserIDs(existing))
+	}
+
+	created, err := qtx.UserCreate(bgCtx, db.UserCreateParams{
+		Name:  email,
+		Email: email,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to register user: %w", err)
+	}
+
+	membership, err := qtx.MembershipCreate(bgCtx, db.MembershipCreateParams{
+		OrganizationID: orgID,
+		UserID:         created.ID,
+		Permission:     permission,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add organization member: %w", err)
+	}
+
+	if err := tx.Commit(bgCtx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	ctx.Logger.Info("registered user and added organization member; the account is linked when someone first signs in at this address",
+		"organization", c.Organization, "user_id", created.ID.String(), "email", email, "permission", permission)
+
+	return outputMembershipCreate(ctx.Output, membership.ID)
 }
 
 // Run executes the organization member list command.
