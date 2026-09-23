@@ -10,7 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
@@ -144,19 +146,16 @@ func joinUserIDs(rows []db.UserFindByEmailRow) string {
 
 // registerUser registers an address nobody has signed in with, refusing one
 // that is in use: an address that exists is a user to add, and quietly reusing
-// it would hide a wrong assumption. Both user create and member add
-// --create-user go through here.
+// it would hide a wrong assumption. One live user per address is the
+// database's rule (users_uq_email), so the insert itself does the refusing;
+// there is no lookup first and no window for a second registration to slip
+// in. Both user create and member add --create-user go through here.
 func registerUser(ctx context.Context, queries *db.Queries, email, name string) (uuid.UUID, error) {
-	existing, err := queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: email})
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to look up user: %w", err)
-	}
-	if len(existing) > 0 {
-		return uuid.Nil, fmt.Errorf("user with email %q already exists (%s)", email, joinUserIDs(existing))
-	}
-
 	created, err := queries.UserCreate(ctx, db.UserCreateParams{Name: name, Email: email})
 	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintUsersUqEmail {
+			return uuid.Nil, fmt.Errorf("user with email %q already exists", email)
+		}
 		return uuid.Nil, fmt.Errorf("failed to register user: %w", err)
 	}
 	return created.ID, nil
