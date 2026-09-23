@@ -47,11 +47,19 @@ from master only.
 
 `just plugins publish` builds its own image, for the local sandbox registry.
 
+## Publishing
+
+Actions → **Publish plugins** publishes one plugin from the latest master build (the rolling
+release `fundament-latest`), as `<metadata.version>-master.<run>`, to the marketplace of the
+environment you pick. An environment is one target: variables `FUNCTL_API_ENDPOINT`,
+`FUNCTL_AUTHN_URL`, `FUNCTL_REGISTRY_URL` and `PUBLISHER_ORGANIZATION_ID`, secret
+`FUNCTL_API_KEY`.
+
 ## Adding a first-party plugin
 
 1. A directory under `plugins/` with the files from [Layout](#layout).
 2. `permissions.rbac` covers everything the plugin creates outside its own namespace, including Helm's release storage (Secrets): [RBAC model](../docs/developer/plugins/index.md#rbac-model).
 3. `mod <module> '<path>'` in `mod.just`.
-4. A `build-plugins` matrix entry in `.github/workflows/build.yml`.
+4. A `build-plugins` matrix entry in `.github/workflows/build.yml`, and the plugin's `<path>` in the `plugin` options of `.github/workflows/publish-plugins.yml`.
 5. A README with its flow.
 6. The first publish with `--create`, or a listing in `db/seed/0101-appstore-catalog.sql`.

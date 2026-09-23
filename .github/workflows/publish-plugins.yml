@@ -1,0 +1,132 @@
+name: Publish plugins
+
+# Publishes one plugin from the latest master build, as described by the rolling release
+# fundament-latest, to the marketplace of the chosen environment, as version
+# <metadata.version>-master.<Build run number>. The environment holds the target: the
+# FUNCTL_* endpoints, the API key and the publishing organization.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to publish
+        type: environment
+        required: true
+      plugin:
+        description: Plugin to publish
+        type: choice
+        required: true
+        options:
+          - cert-manager
+          - external-dns
+          - gateway-api/envoy-gateway
+          - gateway-api/istio
+          - openfsc
+          - storage/ceph-rook
+      submit:
+        description: Open a review round for the published version
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: publish-plugins-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.plugin }} to ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    env:
+      PLUGIN: ${{ inputs.plugin }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install functl
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download functl-latest --repo "$GITHUB_REPOSITORY" --pattern functl_linux_amd64.tar.gz --pattern SHA256SUMS --dir "$RUNNER_TEMP"
+          (cd "$RUNNER_TEMP" && sha256sum --check --ignore-missing SHA256SUMS)
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/functl_linux_amd64.tar.gz" -C "$RUNNER_TEMP/bin"
+
+      - name: Read the latest master build
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download fundament-latest --repo "$GITHUB_REPOSITORY" --pattern release.json --dir "$RUNNER_TEMP"
+          echo "run=$(jq -r .run "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
+          echo "sha=$(jq -r .commit "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
+
+      # The definition comes from the commit the image was built from, so the
+      # published RBAC and console surface match the code in the image.
+      - name: Stamp the definition
+        id: definition
+        env:
+          RUN: ${{ steps.build.outputs.run }}
+          SHA: ${{ steps.build.outputs.sha }}
+        run: |
+          git fetch --no-tags --depth 1 origin "$SHA"
+          git show "$SHA:plugins/$PLUGIN/definition.yaml" > "$RUNNER_TEMP/definition.yaml"
+          base=$(yq '.metadata.version' "$RUNNER_TEMP/definition.yaml")
+          V="$base-master.$RUN" yq -i '.metadata.version = strenv(V)' "$RUNNER_TEMP/definition.yaml"
+          echo "name=$(yq '.metadata.name' "$RUNNER_TEMP/definition.yaml")" >> "$GITHUB_OUTPUT"
+
+      - name: Pick the image
+        id: image
+        env:
+          RUN: ${{ steps.build.outputs.run }}
+          NAME: ${{ steps.definition.outputs.name }}
+        run: |
+          ref=$(jq -r --arg image "$NAME-plugin" '.images[$image] // empty' "$RUNNER_TEMP/release.json")
+          if [ -z "$ref" ]; then
+            echo "::error::master build $RUN has no image $NAME-plugin"
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      # One run number is one commit and one digest, so an existing version is this
+      # exact definition: a re-run after a partial failure succeeds. functl cannot
+      # submit an existing version; that is done in the developer portal.
+      - name: Publish
+        env:
+          FUNCTL_API_ENDPOINT: ${{ vars.FUNCTL_API_ENDPOINT }}
+          FUNCTL_AUTHN_URL: ${{ vars.FUNCTL_AUTHN_URL }}
+          FUNCTL_REGISTRY_URL: ${{ vars.FUNCTL_REGISTRY_URL }}
+          FUNCTL_API_KEY: ${{ secrets.FUNCTL_API_KEY }}
+          PUBLISHER_ORGANIZATION_ID: ${{ vars.PUBLISHER_ORGANIZATION_ID }}
+          RUN: ${{ steps.build.outputs.run }}
+          IMAGE: ${{ steps.image.outputs.ref }}
+          SUBMIT: ${{ inputs.submit && '--submit' || '' }}
+        run: |
+          # functl falls back to the fundament-poc endpoints when a variable is
+          # empty, so an incomplete environment must stop here.
+          for setting in FUNCTL_API_ENDPOINT FUNCTL_AUTHN_URL FUNCTL_REGISTRY_URL FUNCTL_API_KEY PUBLISHER_ORGANIZATION_ID; do
+            if [ -z "${!setting}" ]; then
+              echo "::error::$setting is not set on this environment"
+              exit 1
+            fi
+          done
+
+          export FUNCTL_CONFIG_DIR="$RUNNER_TEMP/functl"
+          functl="$RUNNER_TEMP/bin/functl"
+          "$functl" auth login "$FUNCTL_API_KEY"
+          "$functl" org set "$PUBLISHER_ORGANIZATION_ID"
+          if out=$("$functl" plugin publish "$RUNNER_TEMP/definition.yaml" --image "$IMAGE" --create $SUBMIT 2>&1); then
+            echo "$out"
+            echo "$out" | grep '^published' >> "$GITHUB_STEP_SUMMARY"
+          elif grep -q 'already_exists: version .* already exists for this plugin' <<< "$out"; then
+            echo "::notice::$PLUGIN: the version for build $RUN is already published"
+            if [ -n "$SUBMIT" ]; then
+              echo "::warning::$PLUGIN: not submitted for review; submit the existing version in the developer portal"
+            fi
+          else
+            echo "$out"
+            exit 1
+          fi
