@@ -21,6 +21,11 @@ const (
 
 	// NamespaceListerClusterRole is the ClusterRole bound to NamespaceListerGroup.
 	NamespaceListerClusterRole = "fundament:namespace-lister"
+
+	// LabelProjectID is the label cluster-worker puts on every tenant
+	// namespace naming its project; kube-api-proxy filters listings on it,
+	// so only cluster-worker may write it.
+	LabelProjectID = "fundament.io/project-id"
 )
 
 // UserServiceAccountUsername is the apiserver username of a user's per-cluster

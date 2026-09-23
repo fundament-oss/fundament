@@ -24,6 +24,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectrbac"
 	"github.com/fundament-oss/fundament/common/kubename"
+	"github.com/fundament-oss/fundament/common/shootidentity"
 )
 
 // Label keys applied to every fundament-managed namespace on a shoot. The
@@ -35,7 +36,7 @@ import (
 const (
 	LabelNamespaceID    = "fundament.io/namespace-id"
 	LabelNamespaceName  = "fundament.io/namespace-name"
-	LabelProjectID      = "fundament.io/project-id"
+	LabelProjectID      = shootidentity.LabelProjectID
 	LabelOrganizationID = "fundament.io/organization-id"
 	LabelClusterID      = "fundament.io/cluster-id"
 	LabelManagedBy      = "fundament.io/managed-by"

@@ -16,7 +16,7 @@ import (
 //
 // Auth: two modes.
 //   - Plugin requests: pluginGateway stores the plugin SA token on the request
-//     context via WithSAToken; the Director reads it and sets Authorization
+//     context via WithSAToken; Rewrite reads it and sets Authorization
 //     Bearer <SA-token>. The sandbox cluster verifies against the plugin SA's
 //     RBAC — this is what the FUN-17 plugin-scope ClusterRole is meant to
 //     enforce, and it MUST be exercised in local dev too.
@@ -50,13 +50,15 @@ func buildSandboxReverseProxy(target *url.URL, transport http.RoundTripper, logg
 		Transport: transport,
 		// -1 disables buffering so watch and log-follow requests stream smoothly.
 		FlushInterval: -1,
-		Director: func(req *http.Request) {
-			req.URL.Scheme = target.Scheme
-			req.URL.Host = target.Host
-			req.Host = target.Host
+		// Rewrite, not Director: see forwarding.go.
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			setTarget(pr, target)
+			keepForwardingHeaders(pr)
+			req := pr.Out
 			// Strip inbound Cookie so the console's UserToken never leaks
 			// upstream. Authorization is set below.
 			req.Header.Del("Cookie")
+			applyImpersonation(req)
 
 			// If pluginGateway put an SA token on the ctx (plugin path), use
 			// it — the sandbox cluster must see the plugin SA identity so the

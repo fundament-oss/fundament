@@ -22,7 +22,7 @@ func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 }
 
 // WithSAToken stores a ServiceAccount bearer token in context.
-// Uses the kube package's context key so the reverse proxy Director can read it.
+// Uses the kube package's context key so the reverse proxy's Rewrite can read it.
 func WithSAToken(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, kube.SATokenContextKey{}, token)
 }

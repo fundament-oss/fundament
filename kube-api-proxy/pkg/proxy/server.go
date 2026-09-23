@@ -38,6 +38,9 @@ type Server struct {
 	kubeHandler   http.Handler
 	handler       http.Handler
 	pluginGateway *pluginGateway
+	// namespaces serves filtered namespace listings in real mode; nil in mock
+	// mode, where user requests reach the mock or sandbox API unfiltered.
+	namespaces *namespaceLister
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *authz.Store) (*Server, error) {
@@ -74,6 +77,15 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 		store:         store,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
+	}
+
+	if tokenCache != nil && authzClient != nil {
+		s.namespaces = &namespaceLister{
+			logger:     logger,
+			visibility: newVisibilityResolver(authzClient),
+			proxyToken: tokenCache.GetProxyToken,
+			upstream:   kubeHandler,
+		}
 	}
 
 	pluginSA, err := newPluginSAResolver(cfg, logger)

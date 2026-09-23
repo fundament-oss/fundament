@@ -74,6 +74,12 @@ type SAToken struct {
 // RequestSAToken fetches an admin kubeconfig for the cluster, then uses it to
 // issue a short-lived ServiceAccount token for the given user on the shoot.
 func (c *Client) RequestSAToken(ctx context.Context, clusterID string, userID uuid.UUID) (*SAToken, error) {
+	return c.RequestNamedSAToken(ctx, clusterID, fmt.Sprintf("fundament-%s", userID))
+}
+
+// RequestNamedSAToken issues a short-lived token for the named ServiceAccount
+// in fundament-system, e.g. kube-api-proxy's own identity.
+func (c *Client) RequestNamedSAToken(ctx context.Context, clusterID, saName string) (*SAToken, error) {
 	adminKC, err := c.GetAdminKubeconfig(ctx, clusterID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("get admin kubeconfig: %w", err)
@@ -84,7 +90,6 @@ func (c *Client) RequestSAToken(ctx context.Context, clusterID string, userID uu
 		return nil, fmt.Errorf("create shoot client: %w", err)
 	}
 
-	saName := fmt.Sprintf("fundament-%s", userID)
 	expSeconds := saTokenExpiry
 
 	tokenReq := &authenticationv1.TokenRequest{

@@ -50,7 +50,7 @@ func NewMultiClusterProxy(gc *gardener.Client, logger *slog.Logger) *MultiCluste
 // ClusterIDContextKey is used to pass the cluster ID from the handler to the proxy via request context.
 type ClusterIDContextKey struct{}
 
-// SATokenContextKey is used to pass the per-user SA token from the handler to the proxy Director.
+// SATokenContextKey is used to pass the per-user SA token from the handler to the proxy's Rewrite.
 type SATokenContextKey struct{}
 
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 		return nil, fmt.Errorf("get admin kubeconfig for cluster %s: %w", clusterID, err)
 	}
 
-	// Anonymous: the Director injects a per-user/plugin SA token as the identity,
+	// Anonymous: Rewrite injects a per-user/plugin SA token as the identity,
 	// so the admin kubeconfig's client cert must not travel on the transport.
 	c, err := NewAnonymousFromBytes(adminKC.Kubeconfig)
 	if err != nil {
@@ -116,13 +116,15 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 		Transport: transport,
 		// Disable buffering to ensure smooth streaming for watch and log-follow requests.
 		FlushInterval: -1,
-		Director: func(req *http.Request) {
-			req.URL.Scheme = target.Scheme
-			req.URL.Host = target.Host
-			req.Host = target.Host
+		// Rewrite, not Director: see forwarding.go.
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			setTarget(pr, target)
+			keepForwardingHeaders(pr)
+			req := pr.Out
 			// Strip client auth headers.
 			req.Header.Del("Authorization")
 			req.Header.Del("Cookie")
+			applyImpersonation(req)
 			// Inject per-user SA token from context.
 			saToken, ok := req.Context().Value(SATokenContextKey{}).(string)
 			if !ok || saToken == "" {
