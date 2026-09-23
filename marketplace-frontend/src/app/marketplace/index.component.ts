@@ -19,10 +19,17 @@ import PluginCardComponent from './plugin-card.component';
 import PluginLabelsComponent from './plugin-labels.component';
 import { PluginIconComponent } from '../icons';
 import connectErrorMessage from '../../connect/error';
+import DeveloperLinkComponent from '../developer-link.component';
 
 @Component({
   selector: 'app-marketplace-index',
-  imports: [PluginCardComponent, PluginLabelsComponent, PluginIconComponent, RouterLink],
+  imports: [
+    PluginCardComponent,
+    PluginLabelsComponent,
+    PluginIconComponent,
+    RouterLink,
+    DeveloperLinkComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './index.component.html',

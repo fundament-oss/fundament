@@ -53,13 +53,20 @@ describe('groupPermissions', () => {
     expect(groups[1].resources.map((resource) => resource.name)).toEqual(['pods']);
   });
 
-  it('keeps unknown access levels after the known ones', () => {
+  // Overstating a grant is the safe way to be wrong on a consent page.
+  it('treats an unknown access level as the most permissive', () => {
     const groups = groupPermissions([
+      { resource: 'pods, secrets', access: 'Read' },
       { resource: 'pods', access: 'Something else' },
-      { resource: 'secrets', access: 'Read' },
+      { resource: 'configmaps', access: 'Read and write' },
     ]);
 
-    expect(groups.map((group) => group.heading)).toEqual(['Can view', 'Something else']);
+    expect(groups.map((group) => group.heading)).toEqual([
+      'Something else',
+      'Can view and change',
+      'Can view',
+    ]);
+    expect(groups[0].resources.map((resource) => resource.name)).toEqual(['pods']);
   });
 
   it('returns nothing for no permissions', () => {
@@ -69,7 +76,11 @@ describe('groupPermissions', () => {
 
 describe('grantsEverything', () => {
   it('detects a wildcard resource', () => {
-    expect(grantsEverything([{ resource: 'pods, *', access: 'Read and write' }])).toBe(true);
-    expect(grantsEverything([{ resource: 'pods', access: 'Read and write' }])).toBe(false);
+    expect(
+      grantsEverything(groupPermissions([{ resource: 'pods, *', access: 'Read and write' }])),
+    ).toBe(true);
+    expect(
+      grantsEverything(groupPermissions([{ resource: 'pods', access: 'Read and write' }])),
+    ).toBe(false);
   });
 });

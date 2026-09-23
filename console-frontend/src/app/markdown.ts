@@ -1,7 +1,6 @@
-import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { Marked, type Tokens } from 'marked';
 
-// Publisher-written descriptions are markdown. The output goes through
+// Plugin descriptions are publisher-written markdown. The output goes through
 // [innerHTML], so Angular's sanitizer strips scripts, event handlers and
 // javascript: URLs as well.
 //
@@ -12,8 +11,9 @@ import { Marked, type Tokens } from 'marked';
 // are off for the same reason: an indented line of plain text is not code.
 // Fenced blocks still are.
 //
-// The console renders the same description field with the same rules
-// (console-frontend/src/app/markdown.ts); a change here belongs there too.
+// The marketplace renders the same description field with the same rules
+// (marketplace-frontend/src/app/markdown.component.ts); a change here belongs
+// there too.
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -53,20 +53,17 @@ function createParser(sectionLevel: number) {
   });
 }
 
-@Component({
-  selector: 'app-markdown',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'markdown block' },
-  template: `<div [innerHTML]="html()"></div>`,
-})
-export default class MarkdownComponent {
-  source = input.required<string>();
+const parsers = new Map<number, Marked>();
 
-  // The level of the heading of the section this sits in: at 2, `##` in the
-  // source becomes <h3>.
-  sectionLevel = input(2);
-
-  private parser = computed(() => createParser(this.sectionLevel()));
-
-  html = computed(() => this.parser().parse(this.source(), { async: false }));
+/**
+ * Renders a plugin description to HTML, for a section whose own heading is at
+ * `sectionLevel`: at 1, `##` in the source becomes <h2>.
+ */
+export default function renderMarkdown(source: string, sectionLevel: number): string {
+  let parser = parsers.get(sectionLevel);
+  if (!parser) {
+    parser = createParser(sectionLevel);
+    parsers.set(sectionLevel, parser);
+  }
+  return parser.parse(source, { async: false });
 }

@@ -4,12 +4,16 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 func testServer(frontendURL string) *Server {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return &Server{
-		config: &Config{FrontendURL: frontendURL},
-		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		config:        &Config{FrontendURL: frontendURL},
+		logger:        logger,
+		returnOrigins: auth.NewReturnOrigins(logger, []string{frontendURL}),
 	}
 }
 
@@ -64,6 +68,8 @@ func TestIsSafeReturnTo(t *testing.T) {
 		{"scheme downgrade", "http://dcim.fundament.localhost:8443/racks", false},
 		{"different port", "https://dcim.fundament.localhost:9999/racks", false},
 		{"protocol relative", "//evil.com", false},
+		{"userinfo naming the frontend", "https://dcim.fundament.localhost:8443@evil.com/", false},
+		{"case-insensitive origin", "HTTPS://DCIM.Fundament.Localhost:8443/racks", true},
 		{"empty", "", false},
 	}
 	for _, tt := range tests {

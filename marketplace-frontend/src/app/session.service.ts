@@ -62,11 +62,6 @@ export default class SessionService {
 
   private loaded?: Promise<User | null>;
 
-  // Read once, on construction: the question is whether the page load this
-  // service belongs to arrived back from a login, and nothing outside this
-  // service writes the flag while it is alive.
-  private triedLogin = readLoginAttempt();
-
   /**
    * Whether this build has a session surface at all. The storefront and the
    * demo bundle carry no authn URL — the demo answers the registry from
@@ -77,9 +72,21 @@ export default class SessionService {
     return !!this.configService.getConfig().authnApiUrl;
   }
 
-  /** Resolves the session, asking authn-api once per app load. */
+  /**
+   * Resolves the session, asking authn-api once per app load for as long as
+   * the answer is a user. An empty answer is not kept: a session can still
+   * turn up without this page reloading, from a login in another tab, and the
+   * next caller should see it.
+   */
   ensureUser(): Promise<User | null> {
-    this.loaded ??= this.load();
+    if (!this.loaded) {
+      const loading = this.load().then((user) => {
+        // Unless something has replaced it in the meantime.
+        if (!user && this.loaded === loading) this.loaded = undefined;
+        return user;
+      });
+      this.loaded = loading;
+    }
     return this.loaded;
   }
 
@@ -109,9 +116,18 @@ export default class SessionService {
       return url.href;
     }
 
-    const base = (config.authnApiUrl ?? '').replace(/\/+$/, '');
-    const returnTo = new URL(path, window.location.origin).href;
-    return `${base}/login?return_to=${encodeURIComponent(returnTo)}`;
+    // Joined under the configured URL rather than resolved against it, which
+    // would drop a path prefix authn-api may be served under. The base is
+    // itself resolved against this page, so a root-relative authnApiUrl
+    // (`/api/authn`) works as it did when this was string concatenation.
+    const configured = config.authnApiUrl ?? '';
+    const base = new URL(
+      configured.endsWith('/') ? configured : `${configured}/`,
+      window.location.origin,
+    );
+    const url = new URL('login', base);
+    url.searchParams.set('return_to', new URL(path, window.location.origin).href);
+    return url.href;
   }
 
   /**
@@ -127,8 +143,11 @@ export default class SessionService {
    * page load calling `location.assign`, so the browser's redirect limit never
    * trips either.
    */
+  // A method although it reads only storage: the flag belongs to this service,
+  // which writes it, and the guard should not need to know where it is kept.
+  // eslint-disable-next-line class-methods-use-this
   hasTriedLogin(): boolean {
-    return this.triedLogin;
+    return readLoginAttempt();
   }
 
   /**
@@ -138,9 +157,11 @@ export default class SessionService {
    * leaving the page.
    */
   redirectToLogin(path: string): void {
-    this.triedLogin = true;
+    // Built before the attempt is recorded: a login URL that cannot be built
+    // must not leave the tab believing it has already been round the login.
+    const url = this.loginUrl(path);
     writeLoginAttempt(true);
-    window.location.assign(this.loginUrl(path));
+    window.location.assign(url);
   }
 
   private async load(): Promise<User | null> {
@@ -154,7 +175,6 @@ export default class SessionService {
       this.user.set(user);
       if (user) {
         // The round trip worked, so a later one may be attempted again.
-        this.triedLogin = false;
         writeLoginAttempt(false);
       }
       return user;

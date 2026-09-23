@@ -44,7 +44,7 @@ export default class PluginDetailComponent implements OnInit {
 
   permissionGroups = computed(() => groupPermissions(this.plugin()?.permissions ?? []));
 
-  grantsEverything = computed(() => grantsEverything(this.plugin()?.permissions ?? []));
+  grantsEverything = computed(() => grantsEverything(this.permissionGroups()));
 
   // The console page for this plugin, or '' when no console is configured.
   // Installing needs an organization and a cluster, which only the

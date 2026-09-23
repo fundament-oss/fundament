@@ -52,25 +52,12 @@
 
     <nav class="ml-auto flex items-center gap-2" aria-label="Primary">
       @if (variant === 'catalog') {
-        <!-- href in the split deployment, routerLink in the demo bundle, which
-             carries the manage routes itself. Nothing when neither applies:
-             this build's route table has no manage routes, so the links would
-             only hit its `**` wildcard and land back on the home page. -->
-        @if (developerUrl) {
-          <a [href]="developerUrl + '/manage/create'">
-            <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
-          </a>
-          <a [href]="developerUrl + '/manage'">
-            <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
-          </a>
-        } @else if (bundledDeveloperArea) {
-          <nldd-button
-            routerLink="/manage/create"
-            text="Build a plugin"
-            variant="neutral-base"
-          ></nldd-button>
-          <nldd-button routerLink="/manage" text="Sign in" variant="neutral-tinted"></nldd-button>
-        }
+        <app-developer-link path="/manage/create">
+          <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
+        </app-developer-link>
+        <app-developer-link path="/manage">
+          <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
+        </app-developer-link>
       }
       @if (variant === 'registry' && organizationContext.organizationIds().length > 1) {
         <!-- Which organization the portal publishes for; ids until a lookup
@@ -117,11 +104,7 @@
   >
     <p>Fundament Marketplace — Plugins that integrate with your clusters.</p>
     @if (variant === 'catalog') {
-      @if (developerUrl) {
-        <a [href]="developerUrl + '/manage/create'" class="link">Build a plugin</a>
-      } @else if (bundledDeveloperArea) {
-        <a routerLink="/manage/create" class="link">Build a plugin</a>
-      }
+      <app-developer-link path="/manage/create" linkClass="link">Build a plugin</app-developer-link>
     }
   </div>
 </footer>

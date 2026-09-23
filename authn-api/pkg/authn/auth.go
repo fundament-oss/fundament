@@ -69,7 +69,7 @@ type AuthnServer struct {
 	// allowedReturnOrigins is Config.AllowedReturnOrigins normalized once, at
 	// startup, so a configured origin that cannot be parsed is reported then
 	// rather than silently never matching. See return_to.go.
-	allowedReturnOrigins []string
+	allowedReturnOrigins auth.ReturnOrigins
 }
 
 // New creates a new AuthnServer.
@@ -87,7 +87,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		authz:               authzClient,
 		pluginInstallations: pluginInstallations,
 
-		allowedReturnOrigins: normalizeReturnOrigins(logger, cfg.AllowedReturnOrigins),
+		allowedReturnOrigins: auth.NewReturnOrigins(logger, cfg.AllowedReturnOrigins),
 	}, nil
 }
 

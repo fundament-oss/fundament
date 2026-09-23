@@ -175,13 +175,16 @@ export default class LoginComponent implements OnInit {
    * console just set on the parent domain rather than a route in this app.
    */
   private leave() {
+    // Taken out before either way out, a hand-off included: a returnUrl a
+    // console guard left behind for an abandoned login would otherwise wait for
+    // the next console login and send it there instead of home.
+    const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
+    localStorage.removeItem('returnUrl');
+
     if (this.handoff) {
       window.location.assign(this.handoff.url);
       return;
     }
-
-    const returnUrl = localStorage.getItem('returnUrl') || DEFAULT_ROUTE;
-    localStorage.removeItem('returnUrl');
 
     this.router.navigateByUrl(returnUrl);
   }

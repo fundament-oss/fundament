@@ -23,6 +23,7 @@ import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/route
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
+import DeveloperLinkComponent from './developer-link.component';
 import { ToastService } from './toast.service';
 import ThemeService from './theme.service';
 import { ConfigService } from './config.service';
@@ -31,7 +32,13 @@ import { VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, NgTemplateOutlet, FundamentLogoIconComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    NgTemplateOutlet,
+    FundamentLogoIconComponent,
+    DeveloperLinkComponent,
+  ],
   host: {
     class: 'flex min-h-dvh flex-col',
   },
@@ -53,14 +60,6 @@ export default class App {
   // Which audience this build serves; the shell renders per-variant chrome
   // and links to the sibling deployables by URL, never by route.
   protected readonly variant = VARIANT;
-
-  protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
-
-  // Fallback for the publishing hand-off when no portal URL is configured:
-  // true only in the demo bundle, which carries the manage routes itself.
-  // Both false means no portal is deployed here and the links are dropped
-  // rather than pointing at a route this build does not have.
-  protected readonly bundledDeveloperArea = this.configService.hasBundledDeveloperArea();
 
   protected readonly storefrontUrl = this.configService.getConfig().storefrontUrl ?? '';
 

@@ -183,22 +183,25 @@ const WORDS: Record<string, string> = {
   volume: 'volume',
 };
 
-// Every way a dictionary word can start at `start`, in singular or plural
-// form: "issuer(s)", "class(es)", "polic(y|ies)".
+// Every dictionary word in singular and plural form, paired with how that form
+// is written: "issuer(s)", "class(es)", "polic(y|ies)". Worked out once rather
+// than at every position of every name splitWords tries.
+const WORD_FORMS: [string, string][] = Object.entries(WORDS).flatMap(([word, text]) => {
+  const forms: [string, string][] = [
+    [word, text],
+    [`${word}s`, `${text}s`],
+    [`${word}es`, `${text}es`],
+  ];
+  if (word.endsWith('y')) forms.push([`${word.slice(0, -1)}ies`, `${text.slice(0, -1)}ies`]);
+  return forms;
+});
+
+// Every way a dictionary word can start at `start`.
 function wordsAt(name: string, start: number): { end: number; text: string }[] {
-  const matches: { end: number; text: string }[] = [];
-  Object.entries(WORDS).forEach(([word, text]) => {
-    const forms: [string, string][] = [
-      [word, text],
-      [`${word}s`, `${text}s`],
-      [`${word}es`, `${text}es`],
-    ];
-    if (word.endsWith('y')) forms.push([`${word.slice(0, -1)}ies`, `${text.slice(0, -1)}ies`]);
-    forms.forEach(([form, formText]) => {
-      if (name.startsWith(form, start)) matches.push({ end: start + form.length, text: formText });
-    });
-  });
-  return matches;
+  return WORD_FORMS.filter(([form]) => name.startsWith(form, start)).map(([form, text]) => ({
+    end: start + form.length,
+    text,
+  }));
 }
 
 // Splits a lowercase name into dictionary words, preferring the fewest words.
@@ -263,9 +266,12 @@ const ACCESS_HEADINGS: Record<string, string> = {
 // Most permissive first: that is what a visitor weighs up before installing.
 const ACCESS_ORDER = Object.keys(ACCESS_HEADINGS);
 
+// An access level this page does not know ranks as the most permissive of all
+// (indexOf's -1 sorts first). The catalog only sends the two above today, but
+// on a page that asks for consent, overstating what a plugin may do is the
+// safe way to be wrong.
 function accessRank(access: string): number {
-  const rank = ACCESS_ORDER.indexOf(access);
-  return rank === -1 ? ACCESS_ORDER.length : rank;
+  return ACCESS_ORDER.indexOf(access);
 }
 
 // Merges the per-rule rows into one group per access level. A resource that
@@ -302,8 +308,8 @@ export function groupPermissions(permissions: PluginPermission[]): AccessGroup[]
 }
 
 // True when the plugin asks for every resource, which the page calls out.
-export function grantsEverything(permissions: PluginPermission[]): boolean {
-  return permissions.some(({ resource }) =>
-    resource.split(',').some((name) => name.trim() === '*'),
-  );
+// Takes the grouped permissions so what counts as a resource is decided in
+// groupPermissions alone.
+export function grantsEverything(groups: AccessGroup[]): boolean {
+  return groups.some((group) => group.resources.some((resource) => resource.name === '*'));
 }

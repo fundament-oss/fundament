@@ -18,6 +18,14 @@ describe('MarkdownComponent', () => {
     expect(element.querySelectorAll('li')).toHaveLength(2);
   });
 
+  // A `#` must not land at the page section's own level either.
+  it('keeps a top-level heading below the page section', () => {
+    const element = render('# Title');
+
+    expect(element.querySelector('h2')).toBeNull();
+    expect(element.querySelector('h3')?.textContent).toBe('Title');
+  });
+
   it('opens links in a new tab', () => {
     const link = render('[docs](https://example.com)').querySelector('a');
 
@@ -25,10 +33,20 @@ describe('MarkdownComponent', () => {
     expect(link?.getAttribute('target')).toBe('_blank');
   });
 
-  it('strips scripts and event handlers', () => {
-    const element = render('<img src="x" onerror="alert(1)"><script>alert(1)</script>');
+  // Descriptions published as plain text before they were read as markdown
+  // must not lose anything that looks like a tag.
+  it('shows raw HTML as text', () => {
+    const element = render('Create a <CustomResource> object.\n\n<img src="x" onerror="alert(1)">');
 
-    expect(element.querySelector('script')).toBeNull();
-    expect(element.querySelector('img')?.hasAttribute('onerror')).toBe(false);
+    expect(element.querySelector('img')).toBeNull();
+    expect(element.textContent).toContain('Create a <CustomResource> object.');
+    expect(element.textContent).toContain('<img src="x" onerror="alert(1)">');
+  });
+
+  it('does not turn an indented line into code', () => {
+    const element = render('Usage:\n\n    run the installer');
+
+    expect(element.querySelector('pre')).toBeNull();
+    expect(element.textContent).toContain('run the installer');
   });
 });

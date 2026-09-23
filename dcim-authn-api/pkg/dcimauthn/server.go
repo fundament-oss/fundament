@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -36,6 +35,9 @@ type Server struct {
 	logger        *slog.Logger
 	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
+	// returnOrigins is the frontend URL as a return_to allowlist, built once
+	// at startup (see isSafeReturnTo).
+	returnOrigins auth.ReturnOrigins
 }
 
 // New creates a new DCIM auth Server.
@@ -48,6 +50,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		sessionStore:  sessionStore,
 		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
+		returnOrigins: auth.NewReturnOrigins(logger, []string{cfg.FrontendURL}),
 	}
 }
 
@@ -173,23 +176,11 @@ func (s *Server) getRedirectURL(state string) string {
 }
 
 // isSafeReturnTo reports whether returnTo is a trusted post-login redirect
-// target. Only same-origin absolute URLs (matching the configured frontend) are
-// allowed, which prevents using return_to as an open-redirect for phishing.
+// target. Only URLs on the configured frontend's origin are allowed, which
+// prevents using return_to as an open-redirect for phishing.
 func (s *Server) isSafeReturnTo(returnTo string) bool {
-	target, err := url.Parse(returnTo)
-	if err != nil {
-		s.logger.Warn("rejecting unparsable return_to", "return_to", returnTo)
-		return false
-	}
-
-	frontend, err := url.Parse(s.config.FrontendURL)
-	if err != nil {
-		s.logger.Error("invalid configured frontend URL", "frontend_url", s.config.FrontendURL, "error", err)
-		return false
-	}
-
-	if target.Scheme != frontend.Scheme || target.Host != frontend.Host {
-		s.logger.Warn("rejecting cross-origin return_to", "return_to", returnTo)
+	if !s.returnOrigins.Allows(returnTo) {
+		s.logger.Warn("rejecting return_to outside the frontend origin", "return_to", returnTo)
 		return false
 	}
 

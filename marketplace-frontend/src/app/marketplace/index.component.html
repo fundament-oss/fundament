@@ -323,23 +323,13 @@
                   install it in a single click.
                 </p>
               </div>
-              @if (developerUrl) {
-                <a [href]="developerUrl + '/manage/create'" class="shrink-0">
-                  <nldd-button
-                    text="Build a plugin"
-                    end-icon="arrow-right"
-                    variant="primary"
-                  ></nldd-button>
-                </a>
-              } @else {
-                <a routerLink="/manage/create" class="shrink-0">
-                  <nldd-button
-                    text="Build a plugin"
-                    end-icon="arrow-right"
-                    variant="primary"
-                  ></nldd-button>
-                </a>
-              }
+              <app-developer-link path="/manage/create" linkClass="shrink-0">
+                <nldd-button
+                  text="Build a plugin"
+                  end-icon="arrow-right"
+                  variant="primary"
+                ></nldd-button>
+              </app-developer-link>
             </div>
           </section>
         }

@@ -179,4 +179,14 @@ describe('SessionService.loginUrl', () => {
       `${AUTHN_API_URL}/login?return_to=${encodeURIComponent(`${window.location.origin}/manage`)}`,
     );
   });
+
+  // A root-relative authn URL is on this page's origin, and must not make the
+  // login URL impossible to build.
+  it('resolves a root-relative authn URL against the page', async () => {
+    const url = await loginUrl({ authnApiUrl: '/api/authn' }, '/manage');
+
+    expect(url).toBe(
+      `${window.location.origin}/api/authn/login?return_to=${encodeURIComponent(`${window.location.origin}/manage`)}`,
+    );
+  });
 });

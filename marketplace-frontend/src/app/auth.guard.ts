@@ -1,6 +1,6 @@
 import { PLATFORM_ID, inject } from '@angular/core';
 import { Location, isPlatformBrowser } from '@angular/common';
-import { CanActivateFn } from '@angular/router';
+import { CanActivateChildFn } from '@angular/router';
 import SessionService from './session.service';
 
 /**
@@ -16,7 +16,7 @@ import SessionService from './session.service';
  * `window.location` rather than the router: every login lives on another
  * origin, so it is a page load and not a navigation this app can make.
  */
-const authGuard: CanActivateFn = async (_route, state) => {
+const authGuard: CanActivateChildFn = async (_route, state) => {
   const session = inject(SessionService);
   const location = inject(Location);
 

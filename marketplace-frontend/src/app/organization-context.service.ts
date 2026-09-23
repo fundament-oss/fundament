@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import type { User } from '../generated/authn/v1/authn_pb';
 import SessionService from './session.service';
 
 const STORAGE_KEY = 'marketplace_selected_organization_id';
@@ -26,8 +27,22 @@ export default class OrganizationContextService {
 
   private loaded?: Promise<string | null>;
 
-  /** Resolves the active organization id, fetching the membership once. */
+  // The session user `loaded` was worked out from.
+  private loadedFor: User | null = null;
+
+  /**
+   * Resolves the active organization id, working it out once per session.
+   *
+   * Every registry RPC asks for it, so it is not simply dropped when it comes
+   * back empty: that would put a GetUserInfo in front of each call from a tab
+   * with no session. Instead it is redone when the session changes under it,
+   * which is how a login in another tab arrives: SessionService does not keep
+   * an empty session, so the guard's next ensureUser picks the new one up.
+   */
   ensureOrganizationId(): Promise<string | null> {
+    if (this.loaded && this.session.user() !== this.loadedFor) {
+      this.loaded = undefined;
+    }
     this.loaded ??= this.load();
     return this.loaded;
   }
@@ -45,6 +60,7 @@ export default class OrganizationContextService {
     // memberships: the header is left unset and the registry answers with its
     // own error.
     const user = await this.session.ensureUser();
+    this.loadedFor = user;
     const ids = user?.organizationIds ?? [];
     this.organizationIds.set(ids);
 
