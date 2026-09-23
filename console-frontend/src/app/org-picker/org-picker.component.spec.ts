@@ -17,6 +17,7 @@ function build(organizations = [ORGANIZATION], invitations: (typeof INVITATION)[
   fixture.componentRef.setInput('organizations', organizations);
   fixture.componentRef.setInput('invitations', invitations);
   fixture.componentRef.setInput('userName', 'Alice');
+  fixture.componentRef.setInput('userId', '019b4000-1000-7000-8000-000000000001');
   fixture.detectChanges();
   return fixture;
 }
@@ -40,8 +41,11 @@ describe('OrgPickerComponent', () => {
 
     expect(fixture.componentInstance.hasNothingToChoose()).toBe(true);
     expect(heading(fixture)).toBe('You are not in an organization yet');
-    // Naming the account makes the request to the operator a concrete one.
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Alice');
+    // Naming the account makes the request to the operator a concrete one, and
+    // the id is what `funops organization member add` accepts.
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+    expect(text).toContain('Alice');
+    expect(text).toContain('019b4000-1000-7000-8000-000000000001');
   });
 
   it('keeps offering an invitation to someone who is otherwise in no organization', () => {

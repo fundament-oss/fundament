@@ -30,13 +30,22 @@
                 people that belong to them. Your account is ready; it is waiting for an operator to
                 add it to an organization.
               </p>
-              @if (userName()) {
+              <p>
+                Ask your Fundament operator to add the account you signed in with
+                @if (userName()) {
+                  (<strong>{{ userName() }}</strong
+                  >)
+                }
+                @if (userId()) {
+                  and give them your user ID:
+                }
+              </p>
+              @if (userId()) {
+                <!-- The id is the one thing here the operator can paste into
+                     funops as is; a name is not. -->
                 <p>
-                  Ask your Fundament operator to add <strong>{{ userName() }}</strong
-                  >, the account you signed in with.
+                  <code>{{ userId() }}</code>
                 </p>
-              } @else {
-                <p>Ask your Fundament operator to add the account you signed in with.</p>
               }
             </nldd-rich-text>
             <nldd-spacer size="24"></nldd-spacer>

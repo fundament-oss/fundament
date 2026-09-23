@@ -325,6 +325,7 @@
             [organizations]="organizationDataService.userOrganizations()"
             [invitations]="pendingInvitations()"
             [userName]="currentUser()?.name ?? ''"
+            [userId]="currentUser()?.id ?? ''"
             (selectOrganization)="handleOrgPickerSelection($event)"
             (acceptInvitation)="handleAcceptInvitation($event)"
             (declineInvitation)="handleDeclineInvitation($event)"

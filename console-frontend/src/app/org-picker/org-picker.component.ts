@@ -41,8 +41,11 @@ export default class OrgPickerComponent {
   invitations = input<Invitation[]>([]);
 
   /** Who is signed in, so someone in no organization can tell the operator
-   *  which account to add. */
+   *  which account to add. The name is for the person; the id is what the
+   *  operator's tooling takes, since names are neither unique nor an address. */
   userName = input<string>('');
+
+  userId = input<string>('');
 
   selectOrganization = output<string>();
 
