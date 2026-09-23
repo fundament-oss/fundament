@@ -15,8 +15,17 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectrbac"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
+
+// noBindings is a project-RBAC desired-state source with no members, so
+// ensure's final converge step is a no-op in these database-free tests.
+type noBindings struct{}
+
+func (noBindings) ProjectRoleBindingListForCluster(context.Context, db.ProjectRoleBindingListForClusterParams) ([]db.ProjectRoleBindingListForClusterRow, error) {
+	return nil, nil
+}
 
 func newTestHandler(t *testing.T) (*Handler, *shoot.MockShootAccess) {
 	t.Helper()
@@ -24,7 +33,14 @@ func newTestHandler(t *testing.T) (*Handler, *shoot.MockShootAccess) {
 	mock := shoot.NewMockShootAccess(logger)
 	// queries is intentionally nil: ensure/delete only touch the shoot client, so
 	// these branches can be exercised without a database.
-	return &Handler{shoot: mock, logger: logger}, mock
+	return &Handler{shoot: mock, rbac: projectrbac.NewConverger(noBindings{}, mock, logger), logger: logger}, mock
+}
+
+// The converger duplicates the namespace ownership label to avoid an import
+// cycle; the two must never drift.
+func TestLabelNamespaceIDMatchesProjectRBAC(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, LabelNamespaceID, projectrbac.LabelNamespaceID)
 }
 
 func testRow(name string) *db.NamespaceGetForSyncRow {
@@ -189,7 +205,7 @@ func newRaceHandler(t *testing.T, racedLabels map[string]string) (*Handler, *sho
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	mock := shoot.NewMockShootAccess(logger)
 	race := &raceCreateShoot{MockShootAccess: mock, racedLabels: racedLabels}
-	return &Handler{shoot: race, logger: logger}, mock
+	return &Handler{shoot: race, rbac: projectrbac.NewConverger(noBindings{}, race, logger), logger: logger}, mock
 }
 
 // When a create conflict turns out to be our own namespace (a duplicate reconcile
