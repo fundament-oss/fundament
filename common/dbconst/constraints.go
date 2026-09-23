@@ -385,6 +385,8 @@ const (
 	ConstraintTasksCkPriority = "tasks_ck_priority"
 	// ConstraintTasksCkStatus is defined on dcim.tasks.
 	ConstraintTasksCkStatus = "tasks_ck_status"
+	// ConstraintUsersUqEmail is defined on tenant.users.
+	ConstraintUsersUqEmail = "users_uq_email"
 	// ConstraintUsersUqExternalRef is defined on tenant.users.
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
