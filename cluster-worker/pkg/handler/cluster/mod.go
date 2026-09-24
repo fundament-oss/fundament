@@ -31,10 +31,19 @@ type ShootStatusChecker interface {
 	RequestAdminKubeconfig(ctx context.Context, clusterID uuid.UUID, expirationSeconds int64) (*gardener.AdminKubeconfig, error)
 }
 
+// DrainingPodDeleter provides the shoot operation needed to unblock node drains.
+type DrainingPodDeleter interface {
+	DeleteDrainingPods(ctx context.Context, clusterID uuid.UUID) error
+}
+
 // Config holds handler-specific configuration.
 type Config struct {
 	StatusBatchSize int32 `env:"STATUS_BATCH_SIZE" envDefault:"50"`
 	MaxRetries      int32 `env:"MAX_RETRIES" envDefault:"10"`
+	// DeleteDrainingPods deletes the pods on nodes the machine-controller-manager
+	// is draining while a shoot is progressing, so a PodDisruptionBudget cannot
+	// hold a node pool change for up to machineDrainTimeout.
+	DeleteDrainingPods bool `env:"DELETE_DRAINING_PODS" envDefault:"false"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
@@ -55,13 +64,14 @@ type Handler struct {
 	queries       *db.Queries
 	gardener      ShootSyncer
 	statusChecker ShootStatusChecker
+	podDeleter    DrainingPodDeleter
 	logger        *slog.Logger
 	cfg           Config
 
 	preconditions map[handler.EntityType][]handler.Precondition
 }
 
-func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecker, logger *slog.Logger, cfg Config) *Handler {
+func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecker, podDeleter DrainingPodDeleter, logger *slog.Logger, cfg Config) *Handler {
 	queries := db.New(pool)
 
 	h := &Handler{
@@ -69,6 +79,7 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 		queries:       queries,
 		gardener:      syncer,
 		statusChecker: statusChecker,
+		podDeleter:    podDeleter,
 		logger:        logger.With("handler", "cluster"),
 		cfg:           cfg,
 		preconditions: make(map[handler.EntityType][]handler.Precondition),

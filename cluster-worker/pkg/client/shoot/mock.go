@@ -53,6 +53,10 @@ type MockShootAccess struct {
 	EnsureCRDError                error
 	EnsureClusterRoleError        error
 	EnsureDeploymentError         error
+	DeleteDrainingPodsError       error
+
+	// DeleteDrainingPodsCalls counts DeleteDrainingPods calls.
+	DeleteDrainingPodsCalls int
 }
 
 // MockClusterRole is the in-memory representation of an applied ClusterRole.
@@ -379,6 +383,18 @@ func (m *MockShootAccess) ListClusterRoleBindings(_ context.Context, clusterID u
 	return result, nil
 }
 
+func (m *MockShootAccess) DeleteDrainingPods(_ context.Context, clusterID uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.DeleteDrainingPodsCalls++
+	if m.DeleteDrainingPodsError != nil {
+		return m.DeleteDrainingPodsError
+	}
+	m.logger.Debug("MOCK: deleted draining pods", "cluster_id", clusterID)
+	return nil
+}
+
 // HasSA checks if a ServiceAccount exists for a user on a cluster.
 func (m *MockShootAccess) HasSA(clusterID, userID uuid.UUID) bool {
 	m.mu.RLock()
@@ -454,6 +470,7 @@ func (m *MockShootAccess) Reset() {
 	m.CRDs = make(map[uuid.UUID]map[string][]byte)
 	m.ClusterRoles = make(map[uuid.UUID]map[string]MockClusterRole)
 	m.Deployments = make(map[uuid.UUID]map[string]*appsv1.Deployment)
+	m.DeleteDrainingPodsCalls = 0
 }
 
 var _ ShootAccess = (*MockShootAccess)(nil)

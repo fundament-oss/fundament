@@ -326,6 +326,31 @@ Never "fix" this by deleting the CRD: that cascades to every tenant's
 [crd-versioning]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version
 [svm]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/storage-version-migration/
 
+### Deleting Pods on Draining Nodes
+
+A node pool change makes Gardener's machine-controller-manager (MCM) drain the
+old nodes. MCM *evicts* their pods, and an eviction that a PodDisruptionBudget
+blocks is retried until `machineDrainTimeout` (2h by default). The Shoot API has
+no setting to skip that, and MCM's own force-deletion label lives on Machine
+objects in the seed, which the cluster-worker cannot reach.
+
+With `CLUSTER_DELETE_DRAINING_PODS=true` (Helm: `clusterWorker.deleteDrainingPods`,
+off by default) the status poller does it on the shoot instead. For every shoot
+that is `progressing` or `error`, it deletes the pods on each node that is both
+cordoned and carries MCM's `Terminating` node condition. A delete, unlike an
+eviction, **deliberately bypasses PodDisruptionBudgets**; the drain then finds
+the node empty and moves on.
+
+- Requiring the cordon as well as the condition matters: MCM sets the condition
+  first, and pods deleted before the cordon could land on the same node again.
+- DaemonSet pods, mirror pods and pods that are already terminating are left
+  alone.
+- Pods get a normal delete with their own grace period, not a grace-0 force
+  delete, so StatefulSet pods cannot run twice. A pod with a long
+  `terminationGracePeriodSeconds` still holds the drain that long.
+- Failures are logged at debug level and never fail the status tick: shoots
+  that are still being created have no nodes or API server yet.
+
 ## Quick Start: Full Local Development
 
 Run the complete stack with local Gardener (gardener-operator path):
