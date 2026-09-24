@@ -132,6 +132,9 @@ export interface PluginInstallationItem {
       pluginVersion: string;
       definitionHash: string;
     };
+    // Key-value config injected as FUNP_* env vars; absent when the install
+    // uses only defaults.
+    config?: Record<string, string>;
   };
   status: { phase: string; ready: boolean };
 }

@@ -3,8 +3,8 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import type { PluginLabel, PluginSort } from "./common_pb";
 import { file_catalog_v1_common } from "./common_pb";
@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file catalog/v1/catalog.proto.
  */
 export const file_catalog_v1_catalog: GenFile = /*@__PURE__*/
-  fileDesc("ChhjYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SCmNhdGFsb2cudjEimQIKDVBsdWdpblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDIgASgJEg0KBWltYWdlGDwgASgJEhQKDGNhdGVnb3J5X2lkcxhGIAMoCRIMCgR0YWdzGFAgAygJEicKBmxhYmVscxhaIAMoDjIXLmNhdGFsb2cudjEuUGx1Z2luTGFiZWwSGQoRbGF0ZXN0X3ZlcnNpb25faWQYZCABKAkSLQoJcHVibGlzaGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLFBAoNUGx1Z2luRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgoIAEoCRIXCg9vcmdhbml6YXRpb25faWQYMiABKAkSDQoFaW1hZ2UYPCABKAkSFAoMY2F0ZWdvcnlfaWRzGEYgAygJEgwKBHRhZ3MYUCADKAkSJwoGbGFiZWxzGFogAygOMhcuY2F0YWxvZy52MS5QbHVnaW5MYWJlbBIZChFsYXRlc3RfdmVyc2lvbl9pZBhkIAEoCRItCglwdWJsaXNoZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2Rlc2NyaXB0aW9uGHggASgJEhQKC2F1dGhvcl9uYW1lGIIBIAEoCRITCgphdXRob3JfdXJsGIwBIAEoCRIXCg5yZXBvc2l0b3J5X3VybBiWASABKAkSEAoHbGljZW5zZRigASABKAkSFQoMY2FwYWJpbGl0aWVzGKoBIAMoCRI2CgtwZXJtaXNzaW9ucxi0ASADKAsyIC5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9uEi8KCGZlYXR1cmVzGL4BIAMoCzIcLm1hcmtldHBsYWNlLnYxLkZlYXR1cmVCbG9jaxI/ChNkb2N1bWVudGF0aW9uX2xpbmtzGMgBIAMoCzIhLm1hcmtldHBsYWNlLnYxLkRvY3VtZW50YXRpb25MaW5rIo4BChBQdWJsaXNoZWRWZXJzaW9uEgoKAmlkGAogASgJEg8KB3ZlcnNpb24YFCABKAkSLQoJcHVibGlzaGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9kZWZpbml0aW9uX2hhc2gYKCABKAkSFQoNcmVsZWFzZV9ub3RlcxgyIAEoCSJ/ChJMaXN0UGx1Z2luc1JlcXVlc3QSFwoFcXVlcnkYCiABKAlCCLpIBXIDGMgBEiAKC2NhdGVnb3J5X2lkGBQgASgJQgu6SAjYAQFyA7ABARIuCgRzb3J0GB4gASgOMhYuY2F0YWxvZy52MS5QbHVnaW5Tb3J0Qgi6SAWCAQIQASJBChNMaXN0UGx1Z2luc1Jlc3BvbnNlEioKB3BsdWdpbnMYCiADKAsyGS5jYXRhbG9nLnYxLlBsdWdpblN1bW1hcnkiLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIj4KEUdldFBsdWdpblJlc3BvbnNlEikKBnBsdWdpbhgKIAEoCzIZLmNhdGFsb2cudjEuUGx1Z2luRGV0YWlscyI4ChlMaXN0UGx1Z2luVmVyc2lvbnNSZXF1ZXN0EhsKCXBsdWdpbl9pZBgKIAEoCUIIukgFcgOwAQEiTAoaTGlzdFBsdWdpblZlcnNpb25zUmVzcG9uc2USLgoIdmVyc2lvbnMYCiADKAsyHC5jYXRhbG9nLnYxLlB1Ymxpc2hlZFZlcnNpb24iFwoVTGlzdENhdGVnb3JpZXNSZXF1ZXN0IkYKFkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USLAoKY2F0ZWdvcmllcxgKIAMoCzIYLm1hcmtldHBsYWNlLnYxLkNhdGVnb3J5IhcKFUxpc3RQdWJsaXNoZXJzUmVxdWVzdCJHChZMaXN0UHVibGlzaGVyc1Jlc3BvbnNlEi0KCnB1Ymxpc2hlcnMYCiADKAsyGS5tYXJrZXRwbGFjZS52MS5QdWJsaXNoZXIiFAoSTGlzdFByZXNldHNSZXF1ZXN0Ij4KE0xpc3RQcmVzZXRzUmVzcG9uc2USJwoHcHJlc2V0cxgKIAMoCzIWLm1hcmtldHBsYWNlLnYxLlByZXNldCKPAQoaR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QSHQoJcGx1Z2luX2lkGAogASgJQgi6SAVyA7ABAUgAEiUKBG5hbWUYHiABKAsyFS5jYXRhbG9nLnYxLlBsdWdpblJlZkgAEhoKB3ZlcnNpb24YFCABKAlCCbpIBnIEEAEYQEIPCgZsb29rdXASBbpIAggBIlEKCVBsdWdpblJlZhIkChFvcmdhbml6YXRpb25fbmFtZRgKIAEoCUIJukgGcgQQARg/Eh4KC3BsdWdpbl9uYW1lGBQgASgJQgm6SAZyBBABGD8iSAobR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEhAKCG1hbmlmZXN0GAogASgMEhcKD2RlZmluaXRpb25faGFzaBgUIAEoCTL5BAoOQ2F0YWxvZ1NlcnZpY2USTgoLTGlzdFBsdWdpbnMSHi5jYXRhbG9nLnYxLkxpc3RQbHVnaW5zUmVxdWVzdBofLmNhdGFsb2cudjEuTGlzdFBsdWdpbnNSZXNwb25zZRJICglHZXRQbHVnaW4SHC5jYXRhbG9nLnYxLkdldFBsdWdpblJlcXVlc3QaHS5jYXRhbG9nLnYxLkdldFBsdWdpblJlc3BvbnNlEmMKEkxpc3RQbHVnaW5WZXJzaW9ucxIlLmNhdGFsb2cudjEuTGlzdFBsdWdpblZlcnNpb25zUmVxdWVzdBomLmNhdGFsb2cudjEuTGlzdFBsdWdpblZlcnNpb25zUmVzcG9uc2USVwoOTGlzdENhdGVnb3JpZXMSIS5jYXRhbG9nLnYxLkxpc3RDYXRlZ29yaWVzUmVxdWVzdBoiLmNhdGFsb2cudjEuTGlzdENhdGVnb3JpZXNSZXNwb25zZRJXCg5MaXN0UHVibGlzaGVycxIhLmNhdGFsb2cudjEuTGlzdFB1Ymxpc2hlcnNSZXF1ZXN0GiIuY2F0YWxvZy52MS5MaXN0UHVibGlzaGVyc1Jlc3BvbnNlEk4KC0xpc3RQcmVzZXRzEh4uY2F0YWxvZy52MS5MaXN0UHJlc2V0c1JlcXVlc3QaHy5jYXRhbG9nLnYxLkxpc3RQcmVzZXRzUmVzcG9uc2USZgoTR2V0UGx1Z2luRGVmaW5pdGlvbhImLmNhdGFsb2cudjEuR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QaJy5jYXRhbG9nLnYxLkdldFBsdWdpbkRlZmluaXRpb25SZXNwb25zZUJpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWNhdGFsb2ctYXBpL3BrZy9wcm90by9nZW4vY2F0YWxvZy92MTtjYXRhbG9ndjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_catalog_v1_common, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
+  fileDesc("ChhjYXRhbG9nL3YxL2NhdGFsb2cucHJvdG8SCmNhdGFsb2cudjEimQIKDVBsdWdpblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkSGQoRZGVzY3JpcHRpb25fc2hvcnQYKCABKAkSFwoPb3JnYW5pemF0aW9uX2lkGDIgASgJEg0KBWltYWdlGDwgASgJEhQKDGNhdGVnb3J5X2lkcxhGIAMoCRIMCgR0YWdzGFAgAygJEicKBmxhYmVscxhaIAMoDjIXLmNhdGFsb2cudjEuUGx1Z2luTGFiZWwSGQoRbGF0ZXN0X3ZlcnNpb25faWQYZCABKAkSLQoJcHVibGlzaGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLFBAoNUGx1Z2luRGV0YWlscxIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgoIAEoCRIXCg9vcmdhbml6YXRpb25faWQYMiABKAkSDQoFaW1hZ2UYPCABKAkSFAoMY2F0ZWdvcnlfaWRzGEYgAygJEgwKBHRhZ3MYUCADKAkSJwoGbGFiZWxzGFogAygOMhcuY2F0YWxvZy52MS5QbHVnaW5MYWJlbBIZChFsYXRlc3RfdmVyc2lvbl9pZBhkIAEoCRItCglwdWJsaXNoZWQYbiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2Rlc2NyaXB0aW9uGHggASgJEhQKC2F1dGhvcl9uYW1lGIIBIAEoCRITCgphdXRob3JfdXJsGIwBIAEoCRIXCg5yZXBvc2l0b3J5X3VybBiWASABKAkSEAoHbGljZW5zZRigASABKAkSFQoMY2FwYWJpbGl0aWVzGKoBIAMoCRI2CgtwZXJtaXNzaW9ucxi0ASADKAsyIC5tYXJrZXRwbGFjZS52MS5QbHVnaW5QZXJtaXNzaW9uEi8KCGZlYXR1cmVzGL4BIAMoCzIcLm1hcmtldHBsYWNlLnYxLkZlYXR1cmVCbG9jaxI/ChNkb2N1bWVudGF0aW9uX2xpbmtzGMgBIAMoCzIhLm1hcmtldHBsYWNlLnYxLkRvY3VtZW50YXRpb25MaW5rIo4BChBQdWJsaXNoZWRWZXJzaW9uEgoKAmlkGAogASgJEg8KB3ZlcnNpb24YFCABKAkSLQoJcHVibGlzaGVkGB4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9kZWZpbml0aW9uX2hhc2gYKCABKAkSFQoNcmVsZWFzZV9ub3RlcxgyIAEoCSJ/ChJMaXN0UGx1Z2luc1JlcXVlc3QSFwoFcXVlcnkYCiABKAlCCLpIBXIDGMgBEiAKC2NhdGVnb3J5X2lkGBQgASgJQgu6SAjYAQFyA7ABARIuCgRzb3J0GB4gASgOMhYuY2F0YWxvZy52MS5QbHVnaW5Tb3J0Qgi6SAWCAQIQASJBChNMaXN0UGx1Z2luc1Jlc3BvbnNlEioKB3BsdWdpbnMYCiADKAsyGS5jYXRhbG9nLnYxLlBsdWdpblN1bW1hcnkiLwoQR2V0UGx1Z2luUmVxdWVzdBIbCglwbHVnaW5faWQYCiABKAlCCLpIBXIDsAEBIj4KEUdldFBsdWdpblJlc3BvbnNlEikKBnBsdWdpbhgKIAEoCzIZLmNhdGFsb2cudjEuUGx1Z2luRGV0YWlscyI4ChlMaXN0UGx1Z2luVmVyc2lvbnNSZXF1ZXN0EhsKCXBsdWdpbl9pZBgKIAEoCUIIukgFcgOwAQEiTAoaTGlzdFBsdWdpblZlcnNpb25zUmVzcG9uc2USLgoIdmVyc2lvbnMYCiADKAsyHC5jYXRhbG9nLnYxLlB1Ymxpc2hlZFZlcnNpb24iFwoVTGlzdENhdGVnb3JpZXNSZXF1ZXN0IkYKFkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USLAoKY2F0ZWdvcmllcxgKIAMoCzIYLm1hcmtldHBsYWNlLnYxLkNhdGVnb3J5IhcKFUxpc3RQdWJsaXNoZXJzUmVxdWVzdCJHChZMaXN0UHVibGlzaGVyc1Jlc3BvbnNlEi0KCnB1Ymxpc2hlcnMYCiADKAsyGS5tYXJrZXRwbGFjZS52MS5QdWJsaXNoZXIiFAoSTGlzdFByZXNldHNSZXF1ZXN0Ij4KE0xpc3RQcmVzZXRzUmVzcG9uc2USJwoHcHJlc2V0cxgKIAMoCzIWLm1hcmtldHBsYWNlLnYxLlByZXNldCKPAQoaR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QSHQoJcGx1Z2luX2lkGAogASgJQgi6SAVyA7ABAUgAEiUKBG5hbWUYHiABKAsyFS5jYXRhbG9nLnYxLlBsdWdpblJlZkgAEhoKB3ZlcnNpb24YFCABKAlCCbpIBnIEEAEYQEIPCgZsb29rdXASBbpIAggBIlEKCVBsdWdpblJlZhIkChFvcmdhbml6YXRpb25fbmFtZRgKIAEoCUIJukgGcgQQARg/Eh4KC3BsdWdpbl9uYW1lGBQgASgJQgm6SAZyBBABGD8ivQEKEUNvbmZpZ1NjaGVtYUVudHJ5EgwKBG5hbWUYCiABKAkSJAoEdHlwZRgUIAEoDjIWLmNhdGFsb2cudjEuQ29uZmlnVHlwZRIVCg1kZWZhdWx0X3ZhbHVlGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEhAKCHJlcXVpcmVkGDIgASgIEg4KBnZhbHVlcxg8IAMoCRIQCghhZHZhbmNlZBhGIAEoCBIUCgxkaXNwbGF5X25hbWUYUCABKAkifgobR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEhAKCG1hbmlmZXN0GAogASgMEhcKD2RlZmluaXRpb25faGFzaBgUIAEoCRI0Cg1jb25maWdfc2NoZW1hGB4gAygLMh0uY2F0YWxvZy52MS5Db25maWdTY2hlbWFFbnRyeSqCAQoKQ29uZmlnVHlwZRIbChdDT05GSUdfVFlQRV9VTlNQRUNJRklFRBAAEhYKEkNPTkZJR19UWVBFX1NUUklORxABEhMKD0NPTkZJR19UWVBFX0lOVBACEhQKEENPTkZJR19UWVBFX0JPT0wQAxIUChBDT05GSUdfVFlQRV9FTlVNEAQy+QQKDkNhdGFsb2dTZXJ2aWNlEk4KC0xpc3RQbHVnaW5zEh4uY2F0YWxvZy52MS5MaXN0UGx1Z2luc1JlcXVlc3QaHy5jYXRhbG9nLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USSAoJR2V0UGx1Z2luEhwuY2F0YWxvZy52MS5HZXRQbHVnaW5SZXF1ZXN0Gh0uY2F0YWxvZy52MS5HZXRQbHVnaW5SZXNwb25zZRJjChJMaXN0UGx1Z2luVmVyc2lvbnMSJS5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1JlcXVlc3QaJi5jYXRhbG9nLnYxLkxpc3RQbHVnaW5WZXJzaW9uc1Jlc3BvbnNlElcKDkxpc3RDYXRlZ29yaWVzEiEuY2F0YWxvZy52MS5MaXN0Q2F0ZWdvcmllc1JlcXVlc3QaIi5jYXRhbG9nLnYxLkxpc3RDYXRlZ29yaWVzUmVzcG9uc2USVwoOTGlzdFB1Ymxpc2hlcnMSIS5jYXRhbG9nLnYxLkxpc3RQdWJsaXNoZXJzUmVxdWVzdBoiLmNhdGFsb2cudjEuTGlzdFB1Ymxpc2hlcnNSZXNwb25zZRJOCgtMaXN0UHJlc2V0cxIeLmNhdGFsb2cudjEuTGlzdFByZXNldHNSZXF1ZXN0Gh8uY2F0YWxvZy52MS5MaXN0UHJlc2V0c1Jlc3BvbnNlEmYKE0dldFBsdWdpbkRlZmluaXRpb24SJi5jYXRhbG9nLnYxLkdldFBsdWdpbkRlZmluaXRpb25SZXF1ZXN0GicuY2F0YWxvZy52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2VCaVpdZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1jYXRhbG9nLWFwaS9wa2cvcHJvdG8vZ2VuL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_catalog_v1_common, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_marketplace_v1_common]);
 
 /**
  * Listing as it appears on a card or in a results grid.
@@ -544,6 +544,72 @@ export const PluginRefSchema: GenMessage<PluginRef> = /*@__PURE__*/
   messageDesc(file_catalog_v1_catalog, 16);
 
 /**
+ * One declared install-time config key, derived on read from the pinned
+ * manifest — never stored in a column, so it can never drift from the hash
+ * the install pins against (the schema shown is provably the one consented to).
+ *
+ * @generated from message catalog.v1.ConfigSchemaEntry
+ */
+export type ConfigSchemaEntry = Message<"catalog.v1.ConfigSchemaEntry"> & {
+  /**
+   * @generated from field: string name = 10;
+   */
+  name: string;
+
+  /**
+   * @generated from field: catalog.v1.ConfigType type = 20;
+   */
+  type: ConfigType;
+
+  /**
+   * The manifest's default, always a string: spec.config is map[string]string,
+   * so typing drives the form widget and validation, not the representation.
+   *
+   * @generated from field: string default_value = 30;
+   */
+  defaultValue: string;
+
+  /**
+   * @generated from field: string description = 40;
+   */
+  description: string;
+
+  /**
+   * @generated from field: bool required = 50;
+   */
+  required: boolean;
+
+  /**
+   * Allowed values when type is CONFIG_TYPE_ENUM; empty otherwise.
+   *
+   * @generated from field: repeated string values = 60;
+   */
+  values: string[];
+
+  /**
+   * Advanced keys start collapsed in the console install form.
+   *
+   * @generated from field: bool advanced = 70;
+   */
+  advanced: boolean;
+
+  /**
+   * Human-readable label for the console form; empty means the console
+   * derives one from name.
+   *
+   * @generated from field: string display_name = 80;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message catalog.v1.ConfigSchemaEntry.
+ * Use `create(ConfigSchemaEntrySchema)` to create a new message.
+ */
+export const ConfigSchemaEntrySchema: GenMessage<ConfigSchemaEntry> = /*@__PURE__*/
+  messageDesc(file_catalog_v1_catalog, 17);
+
+/**
  * @generated from message catalog.v1.GetPluginDefinitionResponse
  */
 export type GetPluginDefinitionResponse = Message<"catalog.v1.GetPluginDefinitionResponse"> & {
@@ -559,6 +625,14 @@ export type GetPluginDefinitionResponse = Message<"catalog.v1.GetPluginDefinitio
    * @generated from field: string definition_hash = 20;
    */
   definitionHash: string;
+
+  /**
+   * Declared install-time config keys, in manifest order; empty when the
+   * definition declares no configSchema (install proceeds with no form).
+   *
+   * @generated from field: repeated catalog.v1.ConfigSchemaEntry config_schema = 30;
+   */
+  configSchema: ConfigSchemaEntry[];
 };
 
 /**
@@ -566,7 +640,45 @@ export type GetPluginDefinitionResponse = Message<"catalog.v1.GetPluginDefinitio
  * Use `create(GetPluginDefinitionResponseSchema)` to create a new message.
  */
 export const GetPluginDefinitionResponseSchema: GenMessage<GetPluginDefinitionResponse> = /*@__PURE__*/
-  messageDesc(file_catalog_v1_catalog, 17);
+  messageDesc(file_catalog_v1_catalog, 18);
+
+/**
+ * Mirrors the manifest's configSchema type strings.
+ *
+ * @generated from enum catalog.v1.ConfigType
+ */
+export enum ConfigType {
+  /**
+   * @generated from enum value: CONFIG_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CONFIG_TYPE_STRING = 1;
+   */
+  STRING = 1,
+
+  /**
+   * @generated from enum value: CONFIG_TYPE_INT = 2;
+   */
+  INT = 2,
+
+  /**
+   * @generated from enum value: CONFIG_TYPE_BOOL = 3;
+   */
+  BOOL = 3,
+
+  /**
+   * @generated from enum value: CONFIG_TYPE_ENUM = 4;
+   */
+  ENUM = 4,
+}
+
+/**
+ * Describes the enum catalog.v1.ConfigType.
+ */
+export const ConfigTypeSchema: GenEnum<ConfigType> = /*@__PURE__*/
+  enumDesc(file_catalog_v1_catalog, 0);
 
 /**
  * CatalogService serves the public marketplace storefront. It is unauthenticated

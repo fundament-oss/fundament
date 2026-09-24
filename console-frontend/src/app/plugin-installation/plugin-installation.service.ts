@@ -54,6 +54,7 @@ export default class PluginInstallationService {
     pluginName: string,
     pluginVersion: string,
     definitionHash: string,
+    config: Record<string, string> = {},
   ): Promise<void> {
     // A plugin with no published definition has no version/hash to pin — the
     // install would reconcile to Failed. Refuse it here rather than create a
@@ -76,6 +77,7 @@ export default class PluginInstallationService {
             pluginVersion,
             definitionHash,
           },
+          ...(Object.keys(config).length > 0 ? { config } : {}),
         },
       }),
     });

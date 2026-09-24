@@ -282,8 +282,17 @@ func (s *Server) GetPluginDefinition(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("getting plugin definition: %w", err))
 	}
 
+	configSchema, err := configSchemaFromManifest(row.Manifest)
+	if err != nil {
+		// Manifests outlive the binary that parses them; the manifest bytes and
+		// hash are still what the caller needs, so degrade rather than fail.
+		s.logger.WarnContext(ctx, "unparseable plugin manifest", "error", err)
+		configSchema = nil
+	}
+
 	return catalogv1.GetPluginDefinitionResponse_builder{
 		Manifest:       row.Manifest,
 		DefinitionHash: row.Hash,
+		ConfigSchema:   configSchema,
 	}.Build(), nil
 }

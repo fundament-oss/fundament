@@ -252,11 +252,11 @@ Expect `plugin:…011 owner organization:…000` and `organization:…000 admin 
 Expected last line — **copy the hash, phase 4 needs it**:
 
 ```
-published plugin=ceph-rook version=0.1.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
+published plugin=ceph-rook version=0.2.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
 ```
 
-The registry stores versions without the `v` prefix, so `metadata.version: v0.1.0`
-publishes as `0.1.0`, which is what a `PluginInstallation` must reference.
+The registry stores versions without the `v` prefix, so `metadata.version: v0.2.0`
+publishes as `0.2.0`, which is what a `PluginInstallation` must reference.
 
 Versions are create-only on the registry — an approved version's hash is a
 consent record — so there is no `--replace`. To publish the same content again,
@@ -274,8 +274,11 @@ quorum on a single node, and the real-disk filter would ignore the loop devices.
 Three naming rules, all enforced at apply or reconcile time: `metadata.name` must be
 `<organizationName>--<pluginName>` (`system--ceph-rook`: first-party plugins are
 published by the seeded `system` org), `organizationName` is required, and
-`pluginVersion` is the registry's form without the `v` prefix (`0.1.0`, as printed by
+`pluginVersion` is the registry's form without the `v` prefix (`0.2.0`, as printed by
 the publish in phase 3).
+
+Once the appstore install form ships (configSchema support), this config can be
+entered in the Console at install time instead of hand-writing the CR below.
 
 ```bash
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
@@ -287,7 +290,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: ceph-rook
-    pluginVersion: "0.1.0"
+    pluginVersion: "0.2.0"
     definitionHash: sha256:PASTE_THE_HASH_FROM_PHASE_3
   config:
     DEV_LOOP_DEVICES: "true"        # discover ONLY /dev/loopNpN; ignore the host's real disks
