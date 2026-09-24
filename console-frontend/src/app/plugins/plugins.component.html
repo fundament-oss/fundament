@@ -1,7 +1,7 @@
 <nldd-page sticky-header>
   <nldd-top-title-bar
     slot="header"
-    text="Plugins"
+    [attr.text]="pageTitle"
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="plugins-title"
   ></nldd-top-title-bar>
@@ -10,10 +10,26 @@
       id="plugins-title"
       size="2"
     >
-      <h1>Plugins</h1>
+      <h1>{{ pageTitle }}</h1>
+      <!-- Finding plugins is the marketplace's job; this page keeps what is
+           already on your clusters. Same tab: the marketplace's Install button
+           brings you back here with the install sheet open. -->
+      @if (browsePluginsUrl) {
+        <nldd-button
+          slot="end"
+          [attr.href]="browsePluginsUrl"
+          text="Browse plugins"
+          start-icon="search"
+          variant="primary"
+        ></nldd-button>
+      }
     </nldd-title>
     <nldd-rich-text>
-      <p>Discover and install plugins to expand your Kubernetes clusters.</p>
+      @if (installedOnly) {
+        <p>The plugins installed on your clusters.</p>
+      } @else {
+        <p>Discover and install plugins to expand your Kubernetes clusters.</p>
+      }
     </nldd-rich-text>
     @if (isLoading()) {
       <nldd-spacer size="24"></nldd-spacer>
@@ -21,6 +37,14 @@
         show-text
         text="Loading plugins..."
       ></nldd-activity-indicator>
+    } @else if (installedOnly && listedPlugins.length === 0) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-inline-dialog
+        icon="plugin"
+        icon-color="secondary"
+        text="No plugins installed yet"
+        supporting-text="Browse the marketplace to find plugins for your clusters."
+      ></nldd-inline-dialog>
     } @else {
       <nldd-spacer size="16"></nldd-spacer>
       <!-- The filters were a sidebar of two lists; as menus they stay out of the

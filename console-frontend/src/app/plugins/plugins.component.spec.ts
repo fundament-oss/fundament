@@ -65,7 +65,7 @@ const acmeInstall: PluginInstallationItem = {
   status: { phase: 'Running', ready: true },
 };
 
-function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
+function build(plugins: PluginSummary[], installs: PluginInstallationItem[], marketplaceUrl = '') {
   TestBed.configureTestingModule({
     providers: [
       {
@@ -103,12 +103,11 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
         } as unknown as OrganizationDataService,
       },
       {
-        // The details sheet reads marketplaceUrl to decide between the
-        // marketplace listing and the console's own plugin page. Nothing here
-        // exercises that link, so an unconfigured marketplace is enough.
+        // marketplaceUrl decides whether the page is the catalog or lists only
+        // what is installed; unconfigured unless a test says otherwise.
         provide: ConfigService,
         useValue: {
-          getConfig: () => ({ marketplaceUrl: '' }),
+          getConfig: () => ({ marketplaceUrl }),
         } as unknown as ConfigService,
       },
       {
@@ -172,5 +171,42 @@ describe('PluginsComponent details sheet', () => {
     await opening;
 
     expect(component.sheetPluginVersion()).toBe('');
+  });
+});
+
+describe('PluginsComponent listing', () => {
+  it('lists the whole catalog when no marketplace is deployed', async () => {
+    const component = build([acmeCertManager, globexCertManager], [acmeInstall]);
+    await component.ngOnInit();
+
+    expect(component.listedPlugins.map((p) => p.id)).toEqual([
+      acmeCertManager.id,
+      globexCertManager.id,
+    ]);
+    expect(component.summaryText).toBe('2 of 2 plugins');
+  });
+
+  it('lists only the installed plugins when the marketplace does the browsing', async () => {
+    const component = build(
+      [acmeCertManager, globexCertManager],
+      [acmeInstall],
+      'https://marketplace.example.test/',
+    );
+    await component.ngOnInit();
+
+    expect(component.listedPlugins.map((p) => p.id)).toEqual([acmeCertManager.id]);
+    expect(component.filteredPlugins.map((p) => p.id)).toEqual([acmeCertManager.id]);
+    expect(component.summaryText).toBe('1 of 1 plugins');
+  });
+
+  it('keeps an installation that is still coming up in the installed list', async () => {
+    const pending: PluginInstallationItem = {
+      ...acmeInstall,
+      status: undefined as unknown as PluginInstallationItem['status'],
+    };
+    const component = build([acmeCertManager, globexCertManager], [pending], 'https://m.test');
+    await component.ngOnInit();
+
+    expect(component.listedPlugins.map((p) => p.id)).toEqual([acmeCertManager.id]);
   });
 });

@@ -8,7 +8,7 @@
   <nldd-top-title-bar
     slot="header"
     [attr.text]="plugin()?.displayName || plugin()?.name || 'Plugin'"
-    back-text="Plugins"
+    [attr.back-text]="backText"
     collapse-anchor="plugin-title"
     (back)="$event.stopPropagation(); pageNav.goTo('/plugins')"
   ></nldd-top-title-bar>

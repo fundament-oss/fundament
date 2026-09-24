@@ -15,6 +15,12 @@ type Config struct {
 	HealthPort         int           `env:"HEALTH_PORT" envDefault:"8097"`
 	StatusPollInterval time.Duration `env:"STATUS_POLL_INTERVAL" envDefault:"30s"`
 
+	// ProgressPollInterval replaces StatusPollInterval while an installation is
+	// still coming up. Nothing else wakes the reconciler when the plugin pod
+	// turns ready, so at the steady-state interval every step of an install
+	// would sit on screen as "Installing…" for up to half a minute.
+	ProgressPollInterval time.Duration `env:"PROGRESS_POLL_INTERVAL" envDefault:"5s"`
+
 	// AllowUnpinnedHash bypasses the definition-hash gate in
 	// reconcilePluginScope: when true, a PluginInstallation with an empty
 	// DefinitionHash is accepted and the definition is fetched from the

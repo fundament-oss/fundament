@@ -108,10 +108,13 @@
                       [attr.href]="path('/clusters/new')"
                       (click)="pageNav.openHere($event, overlays.newCluster, true)"
                     ></nldd-menu-item>
+                    <!-- Installing starts where plugins are found: the
+                         marketplace when there is one, since the console's
+                         page then lists only what is already installed. -->
                     <nldd-menu-item
                       icon="add-plugin"
                       text="Install plugins…"
-                      [attr.href]="path('/plugins')"
+                      [attr.href]="browsePluginsUrl || path('/plugins')"
                     ></nldd-menu-item>
                     <nldd-menu-item
                       icon="add-user"
@@ -400,7 +403,9 @@
                           size="20"
                         ></nldd-icon-cell>
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Plugins"></nldd-text-cell>
+                        <nldd-text-cell
+                          [attr.text]="browsePluginsUrl ? 'Installed plugins' : 'Plugins'"
+                        ></nldd-text-cell>
                       </nldd-list-item>
                       <nldd-list-item
                         [attr.href]="path('/metrics')"

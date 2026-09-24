@@ -55,26 +55,96 @@
         <app-developer-link path="/manage/create">
           <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
         </app-developer-link>
-        <app-developer-link path="/manage">
-          <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
-        </app-developer-link>
-      }
-      @if (variant === 'registry' && organizationContext.organizationIds().length > 1) {
-        <!-- Which organization the portal publishes for; ids until a lookup
-             can resolve names (FUN-20). -->
-        <!-- [selected] on the options, not [value] on the select: the select's
-             value binding evaluates before @for has rendered the options. -->
-        <select
-          class="border-dividers bg-surface-base rounded-md border px-2 py-1.5 font-mono text-sm"
-          aria-label="Active organization"
-          (change)="onOrganizationChange($event)"
-        >
-          @for (id of organizationContext.organizationIds(); track id) {
-            <option [value]="id" [selected]="id === organizationContext.organizationId()">
-              {{ id.slice(0, 8) }}…
-            </option>
+        <!-- The console's session, read back from authn-api (see
+             watchSession). Nothing while the answer is out, rather than a
+             "Sign in" that turns into a name a moment later. -->
+        @switch (sessionState()) {
+          @case ('signed-in') {
+            @if (consoleUrl || developerUrl) {
+              <nldd-button
+                expandable
+                popup-type="menu"
+                single-line
+                variant="neutral-tinted"
+                start-icon="person-circle"
+                [attr.text]="accountLabel()"
+                [attr.accessible-label]="'Account: ' + accountLabel()"
+              >
+                <nldd-menu slot="popup" placement="bottom-end" accessible-label="Account">
+                  @if (consoleUrl) {
+                    <nldd-menu-item
+                      icon="square-arrow-right-top"
+                      text="Open the console"
+                      [attr.href]="consoleUrl"
+                    ></nldd-menu-item>
+                  }
+                  @if (developerUrl) {
+                    <nldd-menu-item
+                      icon="square-arrow-right-top"
+                      text="Developer portal"
+                      [attr.href]="developerUrl + '/manage'"
+                    ></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-button>
+            } @else {
+              <span
+                class="flex max-w-48 items-center gap-2 truncate text-sm text-gray-600 dark:text-gray-300"
+              >
+                <nldd-icon name="person-circle" class="block! h-5 w-5 shrink-0"></nldd-icon>
+                <span class="truncate">{{ accountLabel() }}</span>
+              </span>
+            }
           }
-        </select>
+          @case ('signed-out') {
+            <app-developer-link path="/manage">
+              <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
+            </app-developer-link>
+          }
+        }
+      }
+      @if (variant === 'registry' && organizationContext.activeOrganization(); as active) {
+        <!-- Which organization the portal publishes for. Named from
+             organization-api once it answers; until then, or where it is not
+             configured, a shortened id in monospace so it does not pass for a
+             name. A switcher only when there is something to switch to. -->
+        <span class="hidden text-sm text-gray-500 md:inline dark:text-gray-400" aria-hidden="true">
+          Publishing as
+        </span>
+        @if (organizationContext.organizations().length > 1) {
+          <nldd-button
+            expandable
+            popup-type="menu"
+            single-line
+            variant="neutral-tinted"
+            start-icon="apartment-building"
+            [attr.text]="active.label"
+            [attr.accessible-label]="'Publishing as ' + active.label + ', switch organization'"
+            [class.font-mono]="!active.named"
+          >
+            <nldd-menu slot="popup" placement="bottom-end" accessible-label="Organization">
+              @for (organization of organizationContext.organizations(); track organization.id) {
+                <nldd-menu-item
+                  type="radio"
+                  [attr.text]="organization.label"
+                  [attr.selected]="organization.id === active.id ? '' : null"
+                  (click)="onOrganizationSelect(organization.id)"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-button>
+        } @else {
+          <span
+            class="border-dividers flex max-w-64 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium"
+          >
+            <nldd-icon
+              name="apartment-building"
+              class="text-accent-600 block! h-4 w-4 shrink-0"
+            ></nldd-icon>
+            <span class="sr-only">Publishing as</span>
+            <span class="truncate" [class.font-mono]="!active.named">{{ active.label }}</span>
+          </span>
+        }
       }
       @if (variant !== 'catalog' && storefrontUrl) {
         <a [href]="storefrontUrl">
