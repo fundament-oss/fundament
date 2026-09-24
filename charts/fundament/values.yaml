@@ -145,6 +145,11 @@ clusterWorker:
   replicas: 1
   logLevel: info
   gardenerMode: mock # mock or real
+  # Delete the pods on nodes Gardener's machine-controller-manager is draining
+  # while a shoot is being reconciled. A delete, unlike the drain's eviction,
+  # ignores PodDisruptionBudgets, so a blocked eviction cannot hold a node pool
+  # change for up to machineDrainTimeout (2h). Evaluation environments only.
+  deleteDrainingPods: false
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
   # Provider wiring for real mode (defaults target the local provider in code).

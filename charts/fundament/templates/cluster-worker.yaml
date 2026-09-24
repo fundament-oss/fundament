@@ -32,6 +32,10 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
+            # Always rendered, so the manifest states whether PodDisruptionBudgets
+            # can be bypassed during node drains. See clusterWorker.deleteDrainingPods.
+            - name: CLUSTER_DELETE_DRAINING_PODS
+              value: {{ $.Values.clusterWorker.deleteDrainingPods | default false | quote }}
             {{- if $.Values.pluginController.provisionShoots }}
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.

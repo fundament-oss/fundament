@@ -103,18 +103,19 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 
 	registry := handler.NewRegistry()
 
+	shootAccess, err := createShootAccess(cfg.Gardener.Mode, gardenerClient, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	// Cluster handler (sync, status, reconcile)
-	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, cfg.Cluster)
+	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, shootAccess, logger, cfg.Cluster)
 	registry.RegisterSync(handler.EntityCluster, ch)
 	registry.RegisterSync(handler.EntityNodePool, ch)
 	registry.RegisterStatus(ch)
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.Gardener.Mode, gardenerClient, logger)
-	if err != nil {
-		return nil, err
-	}
 	ush := usersync.New(pool, shootAccess, logger)
 	registry.RegisterSync(handler.EntityOrgUser, ush)
 	registry.RegisterSync(handler.EntityProjectMember, ush)

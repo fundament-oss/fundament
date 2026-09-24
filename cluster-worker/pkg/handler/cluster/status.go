@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
@@ -138,8 +139,38 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 				"name", cluster.Name,
 				"message", shootStatus.Message)
 		}
+
+		// Error is included because Gardener marks the operation as failed when
+		// its wait on the worker pool times out, and retries while the drain
+		// still runs.
+		if h.cfg.DeleteDrainingPods &&
+			(shootStatus.Status == gardener.StatusProgressing || shootStatus.Status == gardener.StatusError) {
+			h.deleteDrainingPods(ctx, cluster.ID)
+		}
 	}
 	return nil
+}
+
+// deleteDrainingPodsTimeout bounds the shoot calls made for one cluster:
+// clusters are polled one at a time, so a hanging shoot API server would
+// otherwise hold up the status of every cluster after it.
+const deleteDrainingPodsTimeout = 15 * time.Second
+
+// deleteDrainingPods deletes the pods on the shoot's draining nodes. Failures
+// are logged, never returned: consecutive failed status ticks stop the worker,
+// and an unreachable shoot must not cause that. They are logged at Debug
+// because the status query also returns shoots that are still being created
+// (no API server or nodes yet) and shoots stuck in error, which would
+// otherwise log every tick.
+func (h *Handler) deleteDrainingPods(ctx context.Context, clusterID uuid.UUID) {
+	ctx, cancel := context.WithTimeout(ctx, deleteDrainingPodsTimeout)
+	defer cancel()
+
+	if err := h.podDeleter.DeleteDrainingPods(ctx, clusterID); err != nil {
+		h.logger.Debug("failed to delete pods on draining nodes",
+			"cluster_id", clusterID,
+			"error", err)
+	}
 }
 
 // pollDeletedClusters verifies that soft-deleted clusters have actually been removed from Gardener.

@@ -94,7 +94,9 @@ Node pool changes are asynchronous, like cluster creation: the console saves
 them and the platform reconciles the cluster's worker pools with Gardener in
 the background. Nodes are replaced rather than modified: adding, removing or
 shrinking a pool takes the nodes involved out of service, so drain-sensitive
-workloads should have a PodDisruptionBudget.
+workloads should have a PodDisruptionBudget. On some environments, the pods on
+a node being replaced are deleted right away instead. There, a
+PodDisruptionBudget doesn't delay a node pool change.
 
 ## Namespaces
 

@@ -115,4 +115,9 @@ type ShootAccess interface {
 
 	// ListClusterRoleBindings lists ClusterRoleBindings filtered by label key existence.
 	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// DeleteDrainingPods deletes every pod on a node the machine-controller-manager
+	// is draining, skipping DaemonSet, mirror and already-terminating pods. A
+	// delete, unlike the drain's eviction, is not blocked by a PodDisruptionBudget.
+	DeleteDrainingPods(ctx context.Context, clusterID uuid.UUID) error
 }

@@ -3,6 +3,7 @@ package shoot
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -18,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -620,6 +622,102 @@ func (r *RealShootAccess) EnsureDeployment(ctx context.Context, clusterID uuid.U
 			existing.Spec = deployment.Spec
 			return mergeUpdate
 		})
+}
+
+// NodeTerminationCondition is the node condition the Gardener
+// machine-controller-manager sets (status True) when it starts deleting the
+// node's machine. Mirrors machineutils.NodeTerminationCondition in
+// gardener/machine-controller-manager.
+const NodeTerminationCondition corev1.NodeConditionType = "Terminating"
+
+// isDraining reports whether the machine-controller-manager is draining the
+// node. The Terminating condition alone rules out a node cordoned by hand, but
+// MCM sets it before it cordons: pods deleted in that gap could be scheduled
+// straight back onto the node, so the cordon is required as well.
+func isDraining(node *corev1.Node) bool {
+	if !node.Spec.Unschedulable {
+		return false
+	}
+	for _, c := range node.Status.Conditions {
+		if c.Type == NodeTerminationCondition && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// skipOnDrain reports whether a pod on a draining node should be left alone:
+// DaemonSet pods (the drain ignores them and they would only be recreated),
+// mirror pods (the kubelet owns them) and pods that are already terminating.
+func skipOnDrain(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return true
+	}
+	if _, ok := pod.Annotations[corev1.MirrorPodAnnotationKey]; ok {
+		return true
+	}
+	for _, ref := range pod.OwnerReferences {
+		if ref.Kind == "DaemonSet" {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RealShootAccess) DeleteDrainingPods(ctx context.Context, clusterID uuid.UUID) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	nodes, err := cs.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("list nodes: %w", err)
+	}
+
+	var errs []error
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		if !isDraining(node) {
+			continue
+		}
+
+		pods, err := cs.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", node.Name).String(),
+		})
+		if err != nil {
+			errs = append(errs, fmt.Errorf("list pods on node %s: %w", node.Name, err))
+			continue
+		}
+
+		deleted := 0
+		for j := range pods.Items {
+			pod := &pods.Items[j]
+			if skipOnDrain(pod) {
+				continue
+			}
+			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				errs = append(errs, fmt.Errorf("delete pod %s/%s on node %s: %w", pod.Namespace, pod.Name, node.Name, err))
+				continue
+			}
+			deleted++
+		}
+
+		if deleted > 0 {
+			r.logger.Info("deleted pods on draining node",
+				"cluster_id", clusterID,
+				"node", node.Name,
+				"pods", deleted)
+		}
+	}
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("delete draining pods: %w", err)
+	}
+	return nil
 }
 
 var _ ShootAccess = (*RealShootAccess)(nil)

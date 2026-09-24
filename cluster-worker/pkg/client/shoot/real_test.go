@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -392,4 +395,92 @@ func TestEnsureClusterRoleBinding_RecreatesOnRoleChange(t *testing.T) {
 	got, err := cs.RbacV1().ClusterRoleBindings().Get(context.Background(), "crb", metav1.GetOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, "fundament:plugin-controller", got.RoleRef.Name)
+}
+
+func testNode(name string, unschedulable, terminating bool) *corev1.Node {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       corev1.NodeSpec{Unschedulable: unschedulable},
+	}
+	if terminating {
+		node.Status.Conditions = []corev1.NodeCondition{{Type: NodeTerminationCondition, Status: corev1.ConditionTrue}}
+	}
+	return node
+}
+
+func testPod(name, nodeName string, mutate func(*corev1.Pod)) *corev1.Pod {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns"},
+		Spec:       corev1.PodSpec{NodeName: nodeName},
+	}
+	if mutate != nil {
+		mutate(pod)
+	}
+	return pod
+}
+
+// Only plain pods on a node that is both cordoned and marked Terminating by the
+// machine-controller-manager are deleted, with a normal (graceful) delete.
+func TestDeleteDrainingPods(t *testing.T) {
+	t.Parallel()
+
+	nodes := []*corev1.Node{
+		testNode("draining", true, true),
+		testNode("cordoned", true, false),
+		testNode("terminating", false, true),
+		testNode("healthy", false, false),
+	}
+	objs := make([]runtime.Object, 0, 4*len(nodes)+1)
+	for _, node := range nodes {
+		objs = append(objs,
+			node,
+			testPod("plain-"+node.Name, node.Name, nil),
+			testPod("ds-"+node.Name, node.Name, func(p *corev1.Pod) {
+				p.OwnerReferences = []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet", Name: "ds", UID: "ds"}}
+			}),
+			testPod("mirror-"+node.Name, node.Name, func(p *corev1.Pod) {
+				p.Annotations = map[string]string{corev1.MirrorPodAnnotationKey: "hash"}
+			}),
+		)
+	}
+	objs = append(objs, testPod("already-terminating", "draining", func(p *corev1.Pod) {
+		p.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		p.Finalizers = []string{"example.com/hold"}
+	}))
+
+	cs := fake.NewClientset(objs...)
+	// The fake ignores field selectors; apply spec.nodeName like the API server.
+	cs.PrependReactor("list", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		nodeName, ok := action.(k8stesting.ListAction).GetListRestrictions().Fields.RequiresExactMatch("spec.nodeName")
+		if !ok {
+			return false, nil, nil
+		}
+		obj, err := cs.Tracker().List(corev1.SchemeGroupVersion.WithResource("pods"), corev1.SchemeGroupVersion.WithKind("Pod"), action.GetNamespace())
+		if err != nil {
+			return true, nil, fmt.Errorf("list pods: %w", err)
+		}
+		filtered := &corev1.PodList{}
+		for _, pod := range obj.(*corev1.PodList).Items {
+			if pod.Spec.NodeName == nodeName {
+				filtered.Items = append(filtered.Items, pod)
+			}
+		}
+		return true, filtered, nil
+	})
+
+	r := realAccessWith(t, cs)
+	require.NoError(t, r.DeleteDrainingPods(context.Background(), uuid.New()))
+
+	var deleted []string
+	for _, action := range cs.Actions() {
+		if del, ok := action.(k8stesting.DeleteAction); ok {
+			deleted = append(deleted, del.GetName())
+			opts := del.GetDeleteOptions()
+			assert.Nil(t, opts.GracePeriodSeconds, "delete must use the pod's own grace period")
+		}
+	}
+	assert.Equal(t, []string{"plain-draining"}, deleted)
+
+	_, err := cs.CoreV1().Pods("ns").Get(context.Background(), "plain-draining", metav1.GetOptions{})
+	assert.True(t, apierrors.IsNotFound(err))
 }
