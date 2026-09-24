@@ -10,7 +10,8 @@ data:
   # The developer portal (FUN-20): the publishing audience only, one of three
   # deployables over the marketplace-frontend image — this one built with
   # BUILD_SCRIPT=build:registry. storefrontUrl points the "All plugins" and
-  # "View in catalog" links back at the public storefront.
+  # "View in catalog" links back at the public storefront. organizationApiUrl
+  # names the organizations the header offers to publish for.
   config.json: |
     {
       "catalogApiUrl": "",
@@ -18,7 +19,8 @@ data:
       "adminApiUrl": "",
       "consoleUrl": "{{ $.Values.externalUrls.console }}",
       "storefrontUrl": "{{ $.Values.externalUrls.marketplace }}",
-      "authnApiUrl": "{{ $.Values.externalUrls.authn }}"
+      "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
+      "organizationApiUrl": "{{ $.Values.externalUrls.organization }}"
     }
 
 {{- /*
@@ -52,7 +54,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-                checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.console $.Values.externalUrls.marketplace $.Values.externalUrls.authn | sha256sum }}
+                checksum/config: {{ printf "%s|%s|%s|%s|%s" $.Values.externalUrls.marketplaceRegistryApi $.Values.externalUrls.console $.Values.externalUrls.marketplace $.Values.externalUrls.authn $.Values.externalUrls.organization | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-registry-frontend" "component" "frontend") | nindent 8 }}
     spec:
@@ -65,7 +67,7 @@ spec:
             # browser calls; a server render uses the internal URLs below. Unset
             # URLs collapse to extra whitespace, leaving connect-src 'self'.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.marketplaceRegistryApi }} {{ $.Values.externalUrls.authn }}"
+              value: "{{ $.Values.externalUrls.marketplaceRegistryApi }} {{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }}"
             {{- if $allowedHosts }}
             - name: NG_ALLOWED_HOSTS
               value: "{{ join "," $allowedHosts }}"

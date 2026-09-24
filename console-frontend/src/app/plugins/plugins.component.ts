@@ -45,6 +45,7 @@ import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
+import injectBrowsePluginsUrl from './browse-plugins-url';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/button';
@@ -191,6 +192,16 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Base URL of the marketplace, or '' when it is not deployed here.
   private readonly marketplaceUrl = inject(ConfigService).getConfig().marketplaceUrl ?? '';
 
+  /** The marketplace, for the "Browse plugins" button; '' when this page is
+   *  the catalog itself (see injectBrowsePluginsUrl). */
+  protected readonly browsePluginsUrl = injectBrowsePluginsUrl();
+
+  /** Whether this page lists only the installed plugins, leaving discovery to
+   *  the marketplace. */
+  protected readonly installedOnly = !!this.browsePluginsUrl;
+
+  protected readonly pageTitle = this.installedOnly ? 'Installed plugins' : 'Plugins';
+
   private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
 
   // Published versions of the selected plugin, offered in the install modal.
@@ -212,7 +223,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     const presetCounts = new Map<string, number>();
 
     // Count plugins per preset based on current category filter
-    this.plugins.forEach((plugin) => {
+    this.listedPlugins.forEach((plugin) => {
       const matchesCategory =
         this.selectedCategory === 'all' ||
         plugin.categories.some((cat) => cat.id === this.selectedCategory);
@@ -225,7 +236,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     });
 
     // Count all plugins for 'all' preset
-    const allCount = this.plugins.filter(
+    const allCount = this.listedPlugins.filter(
       (plugin) =>
         this.selectedCategory === 'all' ||
         plugin.categories.some((cat) => cat.id === this.selectedCategory),
@@ -249,6 +260,17 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   plugins: PluginWithPresets[] = [];
+
+  /** The plugins this page lists: the installed ones, in any phase, where the
+   *  marketplace does the discovering; otherwise the whole catalog. Every
+   *  filter and count works from this, so a filter never offers a category
+   *  that only uninstalled plugins are in. */
+  get listedPlugins(): PluginWithPresets[] {
+    if (!this.installedOnly) return this.plugins;
+    return this.plugins.filter((plugin) =>
+      this.isPluginInstalledAnywhere(plugin.organizationName, plugin.name),
+    );
+  }
 
   backendPresets: Preset[] = [];
 
@@ -393,7 +415,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               // entries against that instead of re-deriving the slug here.
               organizationName: item.spec.definitionRef.organizationName,
               pluginName: item.spec.definitionRef.pluginName,
-              phase: item.status?.phase ?? 'Pending',
+              phase: item.status?.phase || 'Pending',
               ready: item.status?.ready ?? false,
               version: item.spec?.definitionRef?.pluginVersion ?? '',
             })),
@@ -503,7 +525,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     const categoryMap = new Map<string, { name: string; count: number }>();
 
     // Count plugins per category based on current preset filter
-    this.plugins.forEach((plugin) => {
+    this.listedPlugins.forEach((plugin) => {
       const matchesPreset =
         this.selectedPreset === 'all' ||
         (plugin.presets && plugin.presets.includes(this.selectedPreset));
@@ -522,7 +544,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     });
 
     // Count all plugins for 'all' category
-    const allCount = this.plugins.filter(
+    const allCount = this.listedPlugins.filter(
       (plugin) =>
         this.selectedPreset === 'all' ||
         (plugin.presets && plugin.presets.includes(this.selectedPreset)),
@@ -546,7 +568,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
-    this.titleService.setTitle('Plugins');
+    this.titleService.setTitle(this.pageTitle);
 
     effect(() => {
       const el = this.pluginSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -558,7 +580,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   get filteredPlugins(): PluginWithPresets[] {
     const query = this.searchQuery.trim().toLowerCase();
 
-    return this.plugins.filter((plugin) => {
+    return this.listedPlugins.filter((plugin) => {
       // Filter by preset
       const matchesPreset =
         this.selectedPreset === 'all' ||
@@ -582,7 +604,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   get summaryText(): string {
-    return `${this.filteredPlugins.length} of ${this.plugins.length} plugins`;
+    return `${this.filteredPlugins.length} of ${this.listedPlugins.length} plugins`;
   }
 
   selectCategory(categoryId: string) {

@@ -10,7 +10,7 @@ import {
   SecurityContext,
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
@@ -43,6 +43,7 @@ import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
 } from '../plugin-installation/plugin-installation.service';
+import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -94,6 +95,15 @@ interface ClusterWithState extends ClusterSummary {
 const displayNameOf = (plugin: { name: string; displayName: string }): string =>
   plugin.displayName || plugin.name;
 
+/** The phase to show for a cluster: null when the plugin is not installed on
+ *  it. An installation the controller has not given a phase yet is still being
+ *  installed, not absent: reading it as absent offers an Install that can only
+ *  answer 409. */
+function installPhaseOf(installation: PluginInstallationItem | undefined): string | null {
+  if (!installation) return null;
+  return installation.status?.phase || 'Pending';
+}
+
 /** The "official" marker reads as a property of the name, not as one entry in a
  *  tag row. */
 function isOfficialPlugin(plugin: { tags: string[] }): boolean {
@@ -114,11 +124,17 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   isOfficial = isOfficialPlugin;
 
+  /** The parent page's name, which depends on whether it lists the whole
+   *  catalog or only what is installed (see injectBrowsePluginsUrl). */
+  protected readonly backText = injectBrowsePluginsUrl() ? 'Installed plugins' : 'Plugins';
+
   private installPollingTimer: ReturnType<typeof setInterval> | null = null;
 
   private sanitizer = inject(DomSanitizer);
 
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   private catalogClient = inject(CATALOG);
 
@@ -224,20 +240,28 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       );
 
       this.clusters.set(
-        clustersResponse.clusters.map((cluster, i) => ({
-          ...cluster,
-          phase:
-            installResults[i].find((item) => item.metadata.name === resourceName)?.status?.phase ??
-            null,
-          version:
-            installResults[i].find((item) => item.metadata.name === resourceName)?.spec
-              ?.definitionRef?.pluginVersion ?? '',
-          running: cluster.status === ClusterStatus.RUNNING,
-        })),
+        clustersResponse.clusters.map((cluster, i) => {
+          const installation = installResults[i].find(
+            (item) => item.metadata.name === resourceName,
+          );
+          return {
+            ...cluster,
+            phase: installPhaseOf(installation),
+            version: installation?.spec?.definitionRef?.pluginVersion ?? '',
+            running: cluster.status === ClusterStatus.RUNNING,
+          };
+        }),
       );
 
       this.isLoading.set(false);
       this.startInstallPollingIfNeeded();
+
+      // The marketplace's "Install plugin" button lands here with ?install=1:
+      // the visitor already chose to install, so the sheet opens straight away
+      // instead of making them find the button again on this page.
+      if (this.route.snapshot.queryParamMap.has('install')) {
+        await this.openInstallModal();
+      }
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -279,6 +303,19 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     this.showInstallModal.set(false);
     this.installVersions.set([]);
     this.installVersionsError.set(false);
+
+    // Drop the hand-off flag once the sheet is dismissed, so a reload or a
+    // shared link shows the page rather than opening the sheet again.
+    if (this.route.snapshot.queryParamMap.has('install')) {
+      this.router
+        .navigate([], {
+          relativeTo: this.route,
+          queryParams: { install: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        })
+        .catch(() => {});
+    }
   }
 
   ngOnDestroy() {
@@ -334,8 +371,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       // Couldn't read this cluster — keep its current state rather than treating
       // an unreadable cluster as "plugin removed".
       if (items === null) return c;
-      const phase =
-        items.find((item) => item.metadata.name === resourceName)?.status?.phase ?? null;
+      const phase = installPhaseOf(items.find((item) => item.metadata.name === resourceName));
       // A 'Pending' row that has vanished is an optimistic install (or in-flight
       // retry) the backend has not listed yet — keep showing it as pending.
       const resolved = phase === null && c.phase === 'Pending' ? 'Pending' : phase;
