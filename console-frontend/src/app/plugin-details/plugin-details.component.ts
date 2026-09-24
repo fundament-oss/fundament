@@ -37,7 +37,7 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import { installPhase, isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
@@ -101,7 +101,7 @@ const displayNameOf = (plugin: { name: string; displayName: string }): string =>
  *  answer 409. */
 function installPhaseOf(installation: PluginInstallationItem | undefined): string | null {
   if (!installation) return null;
-  return installation.status?.phase || 'Pending';
+  return installPhase(installation.status?.phase);
 }
 
 /** The "official" marker reads as a property of the name, not as one entry in a

@@ -39,7 +39,7 @@ import { type Category, type Preset } from '../../generated/marketplace/v1/commo
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
-import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import { installPhase, isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
@@ -219,6 +219,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   installs = signal<InstallWithCluster[]>([]);
 
+  /** True when the last full read of installs failed for at least one cluster,
+   *  so an empty list cannot be read as "nothing installed". */
+  installsReadFailed = signal(false);
+
   get presets(): PresetWithCount[] {
     const presetCounts = new Map<string, number>();
 
@@ -339,7 +343,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
       this.clusters.set(this.organizationDataService.clusterSummaries());
 
-      this.installs.set(await this.fetchInstalls());
+      await this.loadInstalls();
 
       this.isLoading.set(false);
 
@@ -367,9 +371,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Re-read installs from the (reset) backend and drop any stale in-flight polling.
   private reloadInstalls(): void {
     this.stopInstallPolling();
-    this.fetchInstalls()
-      .then((installs) => this.installs.set(installs))
-      .catch(() => {}); // Background refresh; a failed read just leaves the current view.
+    this.loadInstalls().catch(() => {}); // Background refresh; a failed read just leaves the current view.
   }
 
   private async refreshClusters() {
@@ -415,7 +417,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               // entries against that instead of re-deriving the slug here.
               organizationName: item.spec.definitionRef.organizationName,
               pluginName: item.spec.definitionRef.pluginName,
-              phase: item.status?.phase || 'Pending',
+              phase: installPhase(item.status?.phase),
               ready: item.status?.ready ?? false,
               version: item.spec?.definitionRef?.pluginVersion ?? '',
             })),
@@ -426,11 +428,13 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return clusters.map((cluster, i) => ({ clusterId: cluster.id, installs: results[i] }));
   }
 
-  // Flattened view used for the initial load, where there is no previous state
-  // to reconcile against (a failed cluster simply contributes no installs).
-  private async fetchInstalls(): Promise<InstallWithCluster[]> {
+  // Full read used for the initial load, where there is no previous state to
+  // reconcile against: a failed cluster contributes no installs, and is
+  // recorded so the empty state does not claim nothing is installed.
+  private async loadInstalls(): Promise<void> {
     const byCluster = await this.fetchInstallsByCluster();
-    return byCluster.flatMap((cluster) => cluster.installs ?? []);
+    this.installsReadFailed.set(byCluster.some((cluster) => cluster.installs === null));
+    this.installs.set(byCluster.flatMap((cluster) => cluster.installs ?? []));
   }
 
   private startInstallPollingIfNeeded() {
