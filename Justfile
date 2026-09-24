@@ -255,7 +255,7 @@ fix:
 funops *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament fundament-db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
+    PASSWORD=$(kubectl --context k3d-fundament get secret -n fundament db-fun-operator -o jsonpath='{.data.password}' | {{ if os() == "macos" { "base64 -D" } else { "base64 -d" } }})
     DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
 
 # Run functl CLI

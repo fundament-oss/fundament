@@ -1,97 +1,108 @@
 package cli
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestParseUserIdentifier(t *testing.T) {
+func TestParseUserRef(t *testing.T) {
+	id := uuid.MustParse("019b4000-1000-7000-8000-000000000001")
+
 	tests := []struct {
-		name       string
-		identifier string
-		wantOrg    string
-		wantUser   string
-		wantErr    bool
-		wantErrMsg string
+		name    string
+		ref     string
+		want    userRef
+		wantErr string
 	}{
 		{
-			name:       "valid identifier",
-			identifier: "acme/alice",
-			wantOrg:    "acme",
-			wantUser:   "alice",
-			wantErr:    false,
+			name: "user id",
+			ref:  id.String(),
+			want: userRef{id: id},
 		},
 		{
-			name:       "valid identifier with dashes",
-			identifier: "my-org/my-user",
-			wantOrg:    "my-org",
-			wantUser:   "my-user",
-			wantErr:    false,
+			name: "email address",
+			ref:  "alice@acme-corp.com",
+			want: userRef{email: "alice@acme-corp.com"},
 		},
 		{
-			name:       "multiple slashes takes first as separator",
-			identifier: "org/user/extra",
-			wantOrg:    "org",
-			wantUser:   "user/extra",
-			wantErr:    false,
+			name: "surrounding whitespace is ignored",
+			ref:  "  alice@acme-corp.com ",
+			want: userRef{email: "alice@acme-corp.com"},
 		},
 		{
-			name:       "empty string",
-			identifier: "",
-			wantErr:    true,
-			wantErrMsg: "invalid user identifier '': expected format <organization>/<user>",
+			name:    "empty",
+			ref:     "",
+			wantErr: "user is required: pass a user ID or an email address",
 		},
 		{
-			name:       "no slash",
-			identifier: "orguser",
-			wantErr:    true,
-			wantErrMsg: "invalid user identifier 'orguser': expected format <organization>/<user>",
+			name:    "a name is neither",
+			ref:     "alice",
+			wantErr: `invalid user "alice": expected a user ID or an email address`,
 		},
 		{
-			name:       "empty organization",
-			identifier: "/user",
-			wantErr:    true,
-			wantErrMsg: "invalid user identifier '/user': expected format <organization>/<user>",
+			name:    "the old organization/user form",
+			ref:     "acme/alice",
+			wantErr: `invalid user "acme/alice": expected a user ID or an email address`,
 		},
 		{
-			name:       "empty user",
-			identifier: "org/",
-			wantErr:    true,
-			wantErrMsg: "invalid user identifier 'org/': expected format <organization>/<user>",
+			name:    "a lone @ is not an address",
+			ref:     "@",
+			wantErr: `invalid user "@": expected a user ID or an email address`,
 		},
 		{
-			name:       "only slash",
-			identifier: "/",
-			wantErr:    true,
-			wantErrMsg: "invalid user identifier '/': expected format <organization>/<user>",
+			name:    "a display name is not a bare address",
+			ref:     "Alice <alice@acme-corp.com>",
+			wantErr: `invalid user "Alice <alice@acme-corp.com>": expected a user ID or an email address`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			org, user, err := parseUserIdentifier(tt.identifier)
+			got, err := parseUserRef(tt.ref)
 
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("parseUserIdentifier(%q) expected error, got nil", tt.identifier)
-					return
-				}
-				if err.Error() != tt.wantErrMsg {
-					t.Errorf("parseUserIdentifier(%q) error = %q, want %q", tt.identifier, err.Error(), tt.wantErrMsg)
-				}
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
 				return
 			}
 
-			if err != nil {
-				t.Errorf("parseUserIdentifier(%q) unexpected error: %v", tt.identifier, err)
-				return
-			}
-
-			if org != tt.wantOrg {
-				t.Errorf("parseUserIdentifier(%q) org = %q, want %q", tt.identifier, org, tt.wantOrg)
-			}
-			if user != tt.wantUser {
-				t.Errorf("parseUserIdentifier(%q) user = %q, want %q", tt.identifier, user, tt.wantUser)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestParseEmail(t *testing.T) {
+	for _, ok := range []string{"alice@acme-corp.com", " bart@acme-corp.com ", "first.last+tag@sub.example.org"} {
+		got, err := parseEmail(ok)
+		require.NoError(t, err, ok)
+		assert.Equal(t, strings.TrimSpace(ok), got)
+	}
+	for _, bad := range []string{"", "@", "alice", "alice@", "@acme-corp.com", "alice@localhost", "Alice <alice@acme-corp.com>", "<alice@acme-corp.com>", "alice@acme-corp.com, bob@acme-corp.com"} {
+		_, err := parseEmail(bad)
+		assert.Error(t, err, bad)
+	}
+}
+
+func TestParsePermission(t *testing.T) {
+	got, err := parsePermission("admin")
+	require.NoError(t, err)
+	assert.Equal(t, "admin", string(got))
+
+	got, err = parsePermission("viewer")
+	require.NoError(t, err)
+	assert.Equal(t, "viewer", string(got))
+
+	_, err = parsePermission("owner")
+	require.EqualError(t, err, `invalid permission "owner": expected viewer or admin`)
+}
+
+func TestFormatOrganizationNames(t *testing.T) {
+	assert.Equal(t, "(none)", formatOrganizationNames(nil))
+	assert.Equal(t, "acme-corp,globex", formatOrganizationNames([]string{"acme-corp", "globex"}))
+	assert.Equal(t, "", formatInvitationNames(nil))
+	assert.Equal(t, "globex", formatInvitationNames([]string{"globex"}))
 }

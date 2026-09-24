@@ -67,6 +67,7 @@ const organizationGetIDByName = `-- name: OrganizationGetIDByName :one
 SELECT id
 FROM tenant.organizations
 WHERE name = $1
+  AND deleted IS NULL
 `
 
 type OrganizationGetIDByNameParams struct {
