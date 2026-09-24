@@ -16,7 +16,9 @@ data:
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
       "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
       "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}",
-      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
+      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}",
+      "mockMetrics": {{ eq $.Values.organizationApi.prometheusURL "mock" }},
+      "mockLogs": {{ eq $.Values.organizationApi.logsURL "mock" }}
     }
 
 ---
