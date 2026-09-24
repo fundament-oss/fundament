@@ -4,12 +4,14 @@ import type {
   PluginDefinition,
   ParsedCrd,
   RawCrdYaml,
+  PluginInstallationItem,
   PluginInstallationListResponse,
 } from './types';
 import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/v1/plugin_pb';
 import { PLUGIN } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
+import { installPhase, isInstallInProgress } from '../utils/plugin-install-status';
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
@@ -96,11 +98,44 @@ function mapDefinition(
   };
 }
 
+interface RunningInstallation {
+  def: ProtoPluginDefinition | undefined;
+  installationId: string;
+  installationName: string;
+  installationVersion: string;
+  organizationName: string;
+}
+
+/** Identifies one running installation at one version: a reinstall or an
+ *  upgrade changes it, a status poll that finds nothing new does not. */
+function installationKey(item: PluginInstallationItem): string {
+  return `${item.metadata.uid}/${item.spec.definitionRef.pluginVersion}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
   private loadedForClusterId: string | null = null;
+
+  // Bumped by every load and reset, so a read that a cluster switch overtook
+  // can tell its result is stale and drop it.
+  private generation = 0;
+
+  // The running installations the menu was last built from, by installationKey;
+  // null when it has not been built for the current cluster yet.
+  private runningKeys: string[] | null = null;
+
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** How often to re-read while an installation on the cluster is still coming
+   *  up or going away, or after a read that failed. */
+  private static readonly POLL_MS = 5000;
+
+  /** How often to re-read while nothing is changing, so an install started
+   *  after the menu was built, or a Degraded plugin that recovers, still shows
+   *  up without a reload. */
+  private static readonly IDLE_POLL_MS = 30000;
 
   // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
@@ -112,6 +147,40 @@ export default class PluginRegistryService {
   async loadPlugins(clusterId: string): Promise<void> {
     if (clusterId === this.loadedForClusterId) return;
 
+    this.stopPolling();
+    this.generation += 1;
+    this.runningKeys = null;
+    await this.run(clusterId, this.generation);
+  }
+
+  /**
+   * Syncs the menu and schedules the next sync. The menu is built when a
+   * project is opened, which is often while a plugin just installed is still
+   * deploying, so while any installation is on its way up or down, or a read
+   * failed, this re-reads quickly: the plugin's screens then appear in the
+   * sidebar the moment it runs, without a reload. Otherwise it keeps reading
+   * at a slower pace to notice installs started later.
+   */
+  private async run(clusterId: string, generation: number): Promise<void> {
+    const result = await this.sync(clusterId, generation);
+    if (result === 'stale' || generation !== this.generation) return;
+
+    if (result !== 'failed') this.loadedForClusterId = clusterId;
+
+    const delay =
+      result === 'idle' ? PluginRegistryService.IDLE_POLL_MS : PluginRegistryService.POLL_MS;
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
+      this.run(clusterId, generation).catch(() => {});
+    }, delay);
+  }
+
+  /** Reads the cluster's installations and rebuilds the menu from the running
+   *  ones. */
+  private async sync(
+    clusterId: string,
+    generation: number,
+  ): Promise<'idle' | 'inProgress' | 'failed' | 'stale'> {
     const { kubeApiProxyUrl } = this.configService.getConfig();
 
     let listData: PluginInstallationListResponse;
@@ -121,19 +190,50 @@ export default class PluginRegistryService {
         `${kubeApiProxyUrl}/clusters/${clusterId}/apis/plugins.fundament.io/v1/plugininstallations`,
         { credentials: 'include' },
       );
-      if (!listRes.ok) return;
+      if (!listRes.ok) return generation === this.generation ? 'failed' : 'stale';
 
       listData = (await listRes.json()) as PluginInstallationListResponse;
     } catch {
-      return;
+      return generation === this.generation ? 'failed' : 'stale';
     }
+    if (generation !== this.generation) return 'stale';
 
-    const runningPlugins = (listData.items ?? []).filter(
+    const items = listData.items ?? [];
+    const runningPlugins = items.filter(
       (item) => item.status?.phase === 'Running' && item.status?.ready,
     );
+    const keys = runningPlugins.map(installationKey);
 
+    // Nothing started or stopped since the last read: keep the menu as it is
+    // rather than fetching every definition again and redrawing the sidebar.
+    const previous = this.runningKeys;
+    const unchanged =
+      previous !== null &&
+      keys.length === previous.length &&
+      keys.every((k, i) => k === previous[i]);
+
+    if (!unchanged) {
+      const { definitions, complete } = await this.fetchDefinitions(runningPlugins);
+      if (generation !== this.generation) return 'stale';
+      this.plugins.set(definitions);
+      // A definition that failed to load must be fetched again on the next
+      // read, so only remember the key set once every fetch went through.
+      this.runningKeys = complete ? keys : null;
+      if (!complete) return 'failed';
+    }
+
+    // An installation that has no phase yet is one the controller has not
+    // picked up, which is as much on its way as a Pending one.
+    return items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))
+      ? 'inProgress'
+      : 'idle';
+  }
+
+  private async fetchDefinitions(
+    items: PluginInstallationItem[],
+  ): Promise<{ definitions: PluginDefinition[]; complete: boolean }> {
     const results = await Promise.allSettled(
-      runningPlugins.map(async (item) => {
+      items.map(async (item): Promise<RunningInstallation> => {
         const ref = item.spec.definitionRef;
         const res = await firstValueFrom(
           // A definition is keyed on (organization, plugin, version): the
@@ -157,18 +257,8 @@ export default class PluginRegistryService {
       }),
     );
 
-    const definitions: PluginDefinition[] = results
-      .filter(
-        (
-          r,
-        ): r is PromiseFulfilledResult<{
-          def: ProtoPluginDefinition | undefined;
-          installationId: string;
-          installationName: string;
-          installationVersion: string;
-          organizationName: string;
-        }> => r.status === 'fulfilled',
-      )
+    const definitions = results
+      .filter((r): r is PromiseFulfilledResult<RunningInstallation> => r.status === 'fulfilled')
       .filter((r) => r.value.def !== undefined)
       .map((r) =>
         mapDefinition(r.value.def as ProtoPluginDefinition, {
@@ -178,10 +268,14 @@ export default class PluginRegistryService {
           organizationName: r.value.organizationName,
         }),
       );
+    return { definitions, complete: results.every((r) => r.status === 'fulfilled') };
+  }
 
-    this.plugins.set(definitions);
-
-    this.loadedForClusterId = clusterId;
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   async loadCrdsForPlugin(
@@ -218,7 +312,10 @@ export default class PluginRegistryService {
   }
 
   reset(): void {
+    this.stopPolling();
+    this.generation += 1;
     this.loadedForClusterId = null;
+    this.runningKeys = null;
     this.plugins.set([]);
     this.parsedCrdByPlural.clear();
   }

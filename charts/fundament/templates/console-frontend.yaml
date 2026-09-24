@@ -16,7 +16,10 @@ data:
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
       "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
       "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}",
-      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
+      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}",
+      {{- /* organization-api serves generated data for "" as well as "mock" */}}
+      "mockMetrics": {{ has ($.Values.organizationApi.prometheusURL | default "") (list "" "mock") }},
+      "mockLogs": {{ has ($.Values.organizationApi.logsURL | default "") (list "" "mock") }}
     }
 
 ---

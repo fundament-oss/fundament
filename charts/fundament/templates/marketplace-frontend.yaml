@@ -12,13 +12,16 @@ data:
   # image (marketplace-registry-frontend.yaml, marketplace-admin-frontend.yaml),
   # so this config carries no registry or admin API URL. developerUrl points
   # the "Build a plugin" hand-off at the portal; empty hides those links.
+  # authnApiUrl lets the header tell a signed-in visitor from an anonymous one;
+  # the catalog itself stays anonymous.
   config.json: |
     {
       "catalogApiUrl": "{{ $.Values.externalUrls.marketplaceCatalogApi }}",
       "registryApiUrl": "",
       "adminApiUrl": "",
       "consoleUrl": "{{ $.Values.externalUrls.console }}",
-      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
+      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}",
+      "authnApiUrl": "{{ $.Values.externalUrls.authn }}"
     }
 
 {{- /*
@@ -52,7 +55,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-        checksum/config: {{ printf "%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry | sha256sum }}
+        checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry $.Values.externalUrls.authn | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
     spec:
@@ -65,7 +68,7 @@ spec:
             # browser calls; a server render uses the internal URLs below. Unset
             # URLs collapse to extra whitespace, leaving connect-src 'self'.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }}"
+              value: "{{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.authn }}"
             {{- if $allowedHosts }}
             - name: NG_ALLOWED_HOSTS
               value: "{{ join "," $allowedHosts }}"

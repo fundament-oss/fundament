@@ -6,5 +6,7 @@
   "pluginProxyUrl": "",
   "consoleDemoUrl": "",
   "marketplaceUrl": "",
-  "developerUrl": ""
+  "developerUrl": "",
+  "mockMetrics": true,
+  "mockLogs": true
 }

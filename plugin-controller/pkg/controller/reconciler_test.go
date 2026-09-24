@@ -388,8 +388,9 @@ func TestReconcilePluginScope_RejectsHashMismatch(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:whatever"},
 	}
 
-	// reconcileChildren propagates the hash-mismatch so the workqueue retries
-	// (and the PluginScopeReady Condition on the CR reflects the failure).
+	// reconcileChildren propagates the hash-mismatch so Reconcile can mark the
+	// installation Failed (and the PluginScopeReady Condition on the CR
+	// reflects the failure).
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "definition hash mismatch")
@@ -604,6 +605,104 @@ func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
 	var got pluginsv1.PluginInstallation
 	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
 	assert.Equal(t, pluginNamespace(cr.Name), got.Status.Namespace)
+}
+
+// reconcileWithDefClient runs one Reconcile of a qualified, finalized CR
+// against the given definition client and returns the result, the error and
+// the CR as persisted afterwards.
+func reconcileWithDefClient(t *testing.T, defClient defclient.Client, pin string) (ctrl.Result, pluginsv1.PluginInstallation, error) {
+	t.Helper()
+	scheme := newTestScheme()
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second},
+		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           defClient,
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	result, err := r.Reconcile(context.Background(), req)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	return result, got, err
+}
+
+// TestReconcile_PermanentDefinitionErrorMarksFailed verifies that a failure
+// retrying cannot fix ends in the Failed phase instead of leaving the CR
+// without one, which clients can only read as an install still starting.
+func TestReconcile_PermanentDefinitionErrorMarksFailed(t *testing.T) {
+	manifest, _ := sampleManifest(t)
+
+	tests := map[string]defclient.Client{
+		"hash mismatch": fakeDefClient{manifest: manifest},
+		"version not in catalog": fakeDefClient{
+			err: connect.NewError(connect.CodeNotFound, errors.New("no such version")),
+		},
+	}
+
+	for name, defClient := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, got, err := reconcileWithDefClient(t, defClient, "sha256:definitely-not-what-the-catalog-serves")
+			require.NoError(t, err, "a permanent failure must not be retried by the workqueue")
+			assert.Zero(t, result.RequeueAfter)
+			assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+			assert.False(t, got.Status.Ready)
+			assert.NotEmpty(t, got.Status.Message)
+		})
+	}
+}
+
+// TestReconcile_TransientDefinitionErrorStaysPending verifies that a failure
+// worth retrying is retried, and that the CR still gets a phase and a message
+// saying what it is waiting for.
+func TestReconcile_TransientDefinitionErrorStaysPending(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+
+	_, got, err := reconcileWithDefClient(t, defClient, "sha256:anything")
+	require.Error(t, err, "a transient failure must be retried by the workqueue")
+	assert.Equal(t, pluginsv1.PluginPhasePending, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "catalog unreachable")
+}
+
+// TestReconcile_PollsFasterWhileDeploying verifies that an installation on its
+// way up is checked at the progress interval, so the switch to Running shows
+// within seconds rather than at the next steady-state poll.
+func TestReconcile_PollsFasterWhileDeploying(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+
+	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest, hash: pin}, pin)
+	require.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter)
+}
+
+func TestPollInterval(t *testing.T) {
+	r := &Reconciler{cfg: config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second}}
+	assert.Equal(t, 5*time.Second, r.pollInterval(pluginsv1.PluginPhaseDeploying))
+	assert.Equal(t, 30*time.Second, r.pollInterval(pluginsv1.PluginPhaseRunning))
+	assert.Equal(t, 30*time.Second, r.pollInterval(pluginsv1.PluginPhaseDegraded))
+
+	// Unset falls back to the steady-state interval rather than a hot loop.
+	r.cfg.ProgressPollInterval = 0
+	assert.Equal(t, 30*time.Second, r.pollInterval(pluginsv1.PluginPhaseDeploying))
 }
 
 func TestMapPhase(t *testing.T) {

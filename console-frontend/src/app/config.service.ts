@@ -26,6 +26,14 @@ export interface AppConfiguration {
    * means no portal hands off to this console, and such a request is ignored.
    */
   developerUrl?: string;
+  /**
+   * Whether the organization API serves generated metrics instead of querying
+   * Prometheus. The API reports mock data the same way as real data, so only
+   * the deployment knows; the metrics screens show a Mock badge when this is set.
+   */
+  mockMetrics?: boolean;
+  /** Same as mockMetrics, for the logs backend. */
+  mockLogs?: boolean;
 }
 
 @Injectable({

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -51,10 +52,34 @@ const (
 	unknownDefinitionVersion = "unknown"
 )
 
+// permanentError marks a reconcile failure that retrying the same spec cannot
+// fix: a hash that does not match, a version the catalog does not have, a
+// manifest that does not parse. Such an installation is reported as Failed
+// rather than left without a phase, which the console can only read as an
+// install that is still starting.
+type permanentError struct{ err error }
+
+func (e *permanentError) Error() string { return e.err.Error() }
+
+func (e *permanentError) Unwrap() error { return e.err }
+
+func permanent(err error) error { return &permanentError{err: err} }
+
 // isUnpinned reports whether a definitionHash carries no real consent record:
 // either empty or the "sha256:unknown" placeholder.
 func isUnpinned(hash string) bool {
 	return hash == "" || hash == unknownDefinitionHash
+}
+
+// hasStarted reports whether the installation has been deployed before, so its
+// definition was fetched and verified at least once.
+func hasStarted(cr *pluginsv1.PluginInstallation) bool {
+	switch cr.Status.Phase {
+	case pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDegraded:
+		return true
+	default:
+		return false
+	}
 }
 
 // isUnpinnedVersion reports whether a pluginVersion is the unresolved
@@ -173,10 +198,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
 	// those before returning on error so the CR reflects the failure.
 	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
-		if err := r.client.Status().Update(ctx, &cr); err != nil {
-			log.Error("persist status after reconcile error failed", "err", err)
+		// Always leave a phase behind: a CR that never gets one reads as
+		// "still installing" to every client, however long it has been failing.
+		var perm *permanentError
+		isPermanent := errors.As(err, &perm)
+		switch {
+		case isPermanent:
+			cr.Status.Phase = pluginsv1.PluginPhaseFailed
+			cr.Status.Ready = false
+		case cr.Status.Phase == "":
+			cr.Status.Phase = pluginsv1.PluginPhasePending
+		}
+		cr.Status.Message = err.Error()
+		cr.Status.ObservedGeneration = cr.Generation
+		if updateErr := r.client.Status().Update(ctx, &cr); updateErr != nil {
+			// Retry until the phase is saved, even for a permanent error:
+			// otherwise the CR is left without one, which reads as installing.
+			log.Error("persist status after reconcile error failed", "err", updateErr)
+			return ctrl.Result{}, fmt.Errorf("update status after reconcile error: %w", errors.Join(err, updateErr))
 		}
 
+		if isPermanent {
+			// Retrying the same spec gives the same answer. A new spec, or a
+			// controller restart, reconciles it again.
+			log.Error("reconcile failed permanently", "err", err)
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 	}
 
@@ -192,7 +239,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Info("reconciled", "phase", status.Phase)
-	return ctrl.Result{RequeueAfter: r.cfg.StatusPollInterval}, nil
+	return ctrl.Result{RequeueAfter: r.pollInterval(status.Phase)}, nil
+}
+
+// pollInterval is how long to wait before asking the plugin for its status
+// again. Only the poll notices the plugin pod turning ready, so while an
+// install is on its way the controller asks at the faster progress interval,
+// and once it has settled it drops back to the steady-state one.
+func (r *Reconciler) pollInterval(phase pluginsv1.PluginPhase) time.Duration {
+	if phase == pluginsv1.PluginPhaseDeploying && r.cfg.ProgressPollInterval > 0 {
+		return min(r.cfg.ProgressPollInterval, r.cfg.StatusPollInterval)
+	}
+	return r.cfg.StatusPollInterval
 }
 
 func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) (ctrl.Result, error) {
@@ -415,14 +473,14 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 		// The operator opts into unpinned installs (empty or the "sha256:unknown"
 		// placeholder) by setting PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true on
 		// the Deployment.
-		return nil, fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned)
+		return nil, permanent(fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned))
 	}
 
 	// A definition is stored and fetched by its real metadata.version. The
 	// "unknown" placeholder resolves nothing, so fail fast with an actionable
 	// message instead of surfacing a confusing NotFound from the fetch below.
 	if isUnpinnedVersion(cr.Spec.DefinitionRef.PluginVersion) {
-		return nil, fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion)
+		return nil, permanent(fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion))
 	}
 
 	// A pinned definition is immutable and content-addressed, so a previously
@@ -442,7 +500,17 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 
 	got, err := r.defClient.GetDefinition(rpcCtx, cr.Spec.DefinitionRef.OrganizationName, cr.Spec.DefinitionRef.PluginName, cr.Spec.DefinitionRef.PluginVersion)
 	if err != nil {
-		return nil, fmt.Errorf("fetch definition: %w", err)
+		err = fmt.Errorf("fetch definition: %w", err)
+		// The catalog does not have this version, or refuses the reference
+		// outright: asking again will not change that. Anything else, an
+		// unreachable catalog included, is worth another try. An installation
+		// that already got going keeps retrying instead: its definition was
+		// fetched before, so a lookup that now fails (a yanked version, or the
+		// in-memory cache emptied by a restart) must not fail a healthy plugin.
+		if code := connect.CodeOf(err); (code == connect.CodeNotFound || code == connect.CodeInvalidArgument) && !hasStarted(cr) {
+			return nil, permanent(err)
+		}
+		return nil, err
 	}
 
 	computed := pluginruntime.HashManifest(got.Manifest)
@@ -451,12 +519,12 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 	// set (checked above) and skip comparison — the dev/marketplace-pending
 	// loop where no real consent hash exists yet (FUN-11).
 	if !isUnpinned(pinned) && computed != pinned {
-		return nil, fmt.Errorf("definition hash mismatch: pinned=%q, computed=%q", pinned, computed)
+		return nil, permanent(fmt.Errorf("definition hash mismatch: pinned=%q, computed=%q", pinned, computed))
 	}
 
 	def, err := pluginruntime.ParseDefinition(got.Manifest)
 	if err != nil {
-		return nil, fmt.Errorf("parse manifest: %w", err)
+		return nil, permanent(fmt.Errorf("parse manifest: %w", err))
 	}
 
 	// Cache only verified, pinned definitions — keyed by the consent hash so a

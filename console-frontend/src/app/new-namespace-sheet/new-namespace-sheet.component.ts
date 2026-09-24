@@ -21,6 +21,7 @@ import {
   CreateNamespaceRequestSchema,
 } from '../../generated/v1/namespace_pb';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import AutofocusDirective from '../autofocus.directive';
 import { ALL_ROLES, mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
@@ -28,7 +29,6 @@ import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import '@nldd/design-system/token-field';
 
-import '@nldd/design-system/badge';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
@@ -57,7 +57,7 @@ import '@nldd/design-system/validation-list';
  */
 @Component({
   selector: 'app-new-namespace-sheet',
-  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective],
+  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './new-namespace-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

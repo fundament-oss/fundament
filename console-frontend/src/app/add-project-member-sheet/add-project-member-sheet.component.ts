@@ -19,6 +19,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
 import { ListProjectNamespacesRequestSchema } from '../../generated/v1/namespace_pb';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import AutofocusDirective from '../autofocus.directive';
 import { ALL_ROLES } from '../utils/mock-role-bindings';
 import {
@@ -31,7 +32,6 @@ import {
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import '@nldd/design-system/combo-box';
 
-import '@nldd/design-system/badge';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/checkbox';
@@ -64,7 +64,7 @@ const stringToRole = (value: string): ProjectMemberRole =>
  */
 @Component({
   selector: 'app-add-project-member-sheet',
-  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective],
+  imports: [ReactiveFormsModule, SheetSyncDirective, AutofocusDirective, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project-member-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

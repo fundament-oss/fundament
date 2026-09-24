@@ -26,6 +26,12 @@ const UNKNOWN_DISPLAY: InstallStatusDisplay = {
   inProgress: true,
 };
 
+/** An installation the controller has not picked up yet has no phase; it is as
+ *  much on its way as a Pending one. */
+export function installPhase(phase: string | undefined | null): string {
+  return phase || 'Pending';
+}
+
 export function getInstallStatusDisplay(phase: string): InstallStatusDisplay {
   return STATUS_DISPLAY[phase] ?? UNKNOWN_DISPLAY;
 }

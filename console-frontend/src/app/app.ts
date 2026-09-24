@@ -63,6 +63,7 @@ import AddProjectMemberSheetComponent from './add-project-member-sheet/add-proje
 import { OverlayService } from './overlay.service';
 import PageNavService from './page-nav.service';
 import { PRESENTATION_ENABLED } from './presentation/presentation.tokens';
+import injectBrowsePluginsUrl from './plugins/browse-plugins-url';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
@@ -173,6 +174,10 @@ export default class App implements OnInit {
   /** The walkthrough build narrates its own path through the console, so a
    *  coach-mark pointing at the create button only competes with it. */
   private presentationEnabled = inject(PRESENTATION_ENABLED);
+
+  /** The marketplace, where plugins are found; '' when the console's own
+   *  plugins page is still the catalog (see injectBrowsePluginsUrl). */
+  protected browsePluginsUrl = injectBrowsePluginsUrl();
 
   // Version mismatch state
   apiVersionMismatch = signal(false);
