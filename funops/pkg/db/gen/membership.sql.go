@@ -27,7 +27,7 @@ WHERE organizations_users.status = 'pending'
 RETURNING
   id,
   permission,
-  (xmax = 0)::boolean AS inserted
+  (old.id IS NULL)::boolean AS inserted
 `
 
 type MembershipCreateOrAcceptParams struct {
