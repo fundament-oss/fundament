@@ -23,7 +23,7 @@ SELECT
      WHERE node_pools.cluster_id = clusters.id AND node_pools.deleted IS NULL) AS node_pool_count
 FROM tenant.clusters
 WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
-ORDER BY created DESC;
+ORDER BY created DESC, id DESC;
 
 -- name: ClusterGetByID :one
 -- Get cluster by ID, including deleted clusters for direct access.

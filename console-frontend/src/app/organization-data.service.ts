@@ -305,13 +305,15 @@ export class OrganizationDataService {
           : org,
       ),
     );
+    // First, not last: ListClusters returns newest first, so appending would put
+    // the card at the bottom until the next poll moves it to the top.
     this.clusterSummaries.update((summaries) => [
-      ...summaries,
       create(ListClustersResponse_ClusterSummarySchema, {
         id,
         name,
         status: ClusterStatus.PROVISIONING,
       }),
+      ...summaries,
     ]);
   }
 

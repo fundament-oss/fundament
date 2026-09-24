@@ -20,6 +20,7 @@ import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import { formatUsageValue, getUsagePercentage } from '../utils/usage';
+import { alignToRange } from '../utils/time-series';
 import { downloadCsv, slugify } from '../utils/csv';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
@@ -159,13 +160,17 @@ const usageBars = (entry: ClusterSummaryData | NodeUsageData) =>
     valueText: usageText(usage.used, usage.total, unit),
   }));
 
-function formatTimestamp(ts: Timestamp | undefined, includeTime: boolean): string {
-  if (!ts) return '';
-  const d = timestampDate(ts);
+function formatTime(ms: number, includeTime: boolean): string {
+  const d = new Date(ms);
   if (includeTime) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+/** Whether a padded series holds anything measured, rather than only the gaps. */
+function hasMeasurement(data: (number | null)[]): boolean {
+  return data.some((value) => value !== null);
 }
 
 function toLocalDateString(date: Date): string {
@@ -213,7 +218,7 @@ function lineDataset(
   label: string,
   borderColor: string,
   backgroundColor: string,
-  data: number[],
+  data: (number | null)[],
 ): ChartDataset<'line'> {
   return {
     label,
@@ -449,15 +454,15 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   namespaceUsage = signal<NamespaceUsageData[]>([]);
 
-  private cpuSeriesData: number[] = [];
+  private cpuSeriesData: (number | null)[] = [];
 
-  private memorySeriesData: number[] = [];
+  private memorySeriesData: (number | null)[] = [];
 
-  private podSeriesData: number[] = [];
+  private podSeriesData: (number | null)[] = [];
 
-  private networkRxSeriesData: number[] = [];
+  private networkRxSeriesData: (number | null)[] = [];
 
-  private networkTxSeriesData: number[] = [];
+  private networkTxSeriesData: (number | null)[] = [];
 
   private chartLabels: string[] = [];
 
@@ -491,19 +496,19 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   });
 
   get hasCpuData(): boolean {
-    return this.cpuSeriesData.length > 0;
+    return hasMeasurement(this.cpuSeriesData);
   }
 
   get hasMemoryData(): boolean {
-    return this.memorySeriesData.length > 0;
+    return hasMeasurement(this.memorySeriesData);
   }
 
   get hasPodData(): boolean {
-    return this.podSeriesData.length > 0;
+    return hasMeasurement(this.podSeriesData);
   }
 
   get hasNetworkData(): boolean {
-    return this.networkRxSeriesData.length > 0 || this.networkTxSeriesData.length > 0;
+    return hasMeasurement(this.networkRxSeriesData) || hasMeasurement(this.networkTxSeriesData);
   }
 
   filteredNamespaceUsage = computed<NamespaceUsageData[]>(() => {
@@ -651,22 +656,21 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   /** The charts' points, one row per sample. Grouped by series rather than by
    *  moment, so sorting on the Name column still lines the five series up. */
   private seriesRows(): string[][] {
-    const series: [string, number[], string][] = [
+    const series: [string, (number | null)[], string][] = [
       ['CPU', this.cpuSeriesData, 'cores'],
       ['Memory', this.memorySeriesData, 'GiB'],
       ['Pods', this.podSeriesData, 'pods'],
       ['Network receive', this.networkRxSeriesData, 'MB/s'],
       ['Network transmit', this.networkTxSeriesData, 'MB/s'],
     ];
+    // The null slots only pad the chart out to the full period; nothing was
+    // measured there, so they have no row to fill.
     return series.flatMap(([metric, data, unit]) =>
-      data.map((value, i) => [
-        'Time series',
-        this.chartDates[i] ?? '',
-        metric,
-        csvNumber(value),
-        '',
-        unit,
-      ]),
+      data.flatMap((value, i) =>
+        value === null
+          ? []
+          : [['Time series', this.chartDates[i] ?? '', metric, csvNumber(value), '', unit]],
+      ),
     );
   }
 
@@ -979,7 +983,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
 
     if (r.timeSeries) {
-      this.applyTimeSeries(r.timeSeries);
+      this.applyTimeSeries(r.timeSeries, r.refreshedAt);
     }
   }
 
@@ -1014,25 +1018,59 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }));
   }
 
-  private applyTimeSeries(r: {
-    cpuCores: { timestamp?: Timestamp; value: number }[];
-    memoryGib: { timestamp?: Timestamp; value: number }[];
-    podCount: { timestamp?: Timestamp; value: number }[];
-    networkReceiveMbS: { timestamp?: Timestamp; value: number }[];
-    networkTransmitMbS: { timestamp?: Timestamp; value: number }[];
-  }): void {
+  private applyTimeSeries(
+    r: {
+      cpuCores: { timestamp?: Timestamp; value: number }[];
+      memoryGib: { timestamp?: Timestamp; value: number }[];
+      podCount: { timestamp?: Timestamp; value: number }[];
+      networkReceiveMbS: { timestamp?: Timestamp; value: number }[];
+      networkTransmitMbS: { timestamp?: Timestamp; value: number }[];
+    },
+    refreshedAt: Timestamp | undefined,
+  ): void {
     const windowSeconds =
       PRESET_WINDOW_SECONDS[this.selectedPreset() as Exclude<TimeRangePreset, 'custom'>] ?? 0;
     const includeTime = windowSeconds > 0 && windowSeconds <= 86400;
-    this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp, includeTime));
-    this.chartDates = r.cpuCores.map((s) =>
-      s.timestamp ? timestampDate(s.timestamp).toISOString() : '',
+    const { startMs, endMs, stepSeconds } = this.chartRange(windowSeconds, refreshedAt);
+    const { times, values } = alignToRange(
+      [r.cpuCores, r.memoryGib, r.podCount, r.networkReceiveMbS, r.networkTransmitMbS],
+      startMs,
+      endMs,
+      stepSeconds * 1000,
     );
-    this.cpuSeriesData = r.cpuCores.map((s) => s.value);
-    this.memorySeriesData = r.memoryGib.map((s) => s.value);
-    this.podSeriesData = r.podCount.map((s) => s.value);
-    this.networkRxSeriesData = r.networkReceiveMbS.map((s) => s.value);
-    this.networkTxSeriesData = r.networkTransmitMbS.map((s) => s.value);
+    this.chartLabels = times.map((ms) => formatTime(ms, includeTime));
+    this.chartDates = times.map((ms) => new Date(ms).toISOString());
+    [
+      this.cpuSeriesData,
+      this.memorySeriesData,
+      this.podSeriesData,
+      this.networkRxSeriesData,
+      this.networkTxSeriesData,
+    ] = values;
+  }
+
+  /**
+   * The period the charts span: the one that was asked for, not the one the data
+   * happens to cover. Mirrors what buildStreamObservable requests, except that a
+   * custom range stops at now rather than running on into days not yet measured.
+   */
+  private chartRange(
+    windowSeconds: number,
+    refreshedAt: Timestamp | undefined,
+  ): { startMs: number; endMs: number; stepSeconds: number } {
+    const nowMs = refreshedAt ? timestampDate(refreshedAt).getTime() : Date.now();
+    if (windowSeconds > 0) {
+      return {
+        startMs: nowMs - windowSeconds * 1000,
+        endMs: nowMs,
+        stepSeconds: computeStepSeconds(windowSeconds),
+      };
+    }
+    return {
+      startMs: new Date(this.dateFrom).getTime(),
+      endMs: Math.min(new Date(`${this.dateTo}T23:59:59`).getTime(), nowMs),
+      stepSeconds: computeStepSeconds(this.customRangeSeconds()),
+    };
   }
 
   private destroyCharts(): void {
@@ -1084,11 +1122,11 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private initializeCharts(
     labels: string[],
-    cpu: number[],
-    memory: number[],
-    pods: number[],
-    networkRx: number[],
-    networkTx: number[],
+    cpu: (number | null)[],
+    memory: (number | null)[],
+    pods: (number | null)[],
+    networkRx: (number | null)[],
+    networkTx: (number | null)[],
   ): void {
     this.createCpuChart(labels, cpu);
     this.createMemoryChart(labels, memory);
@@ -1116,7 +1154,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     };
   }
 
-  private createCpuChart(labels: string[], data: number[]): void {
+  private createCpuChart(labels: string[], data: (number | null)[]): void {
     if (!this.cpuChartCanvas) return;
     const ctx = this.cpuChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
@@ -1128,7 +1166,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     );
   }
 
-  private createMemoryChart(labels: string[], data: number[]): void {
+  private createMemoryChart(labels: string[], data: (number | null)[]): void {
     if (!this.memoryChartCanvas) return;
     const ctx = this.memoryChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
@@ -1140,7 +1178,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     );
   }
 
-  private createPodChart(labels: string[], data: number[]): void {
+  private createPodChart(labels: string[], data: (number | null)[]): void {
     if (!this.podChartCanvas) return;
     const ctx = this.podChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
@@ -1152,7 +1190,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     );
   }
 
-  private createNetworkChart(labels: string[], rx: number[], tx: number[]): void {
+  private createNetworkChart(labels: string[], rx: (number | null)[], tx: (number | null)[]): void {
     if (!this.networkChartCanvas) return;
     const ctx = this.networkChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
