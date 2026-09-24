@@ -42,11 +42,21 @@ func (s *Server) InviteMember(
 		}
 
 		newUser, err := s.queries.UserCreate(ctx, db.UserCreateParams{Email: email})
-		if err != nil {
+		switch {
+		case err == nil:
+			userID = newUser.ID
+		case isConstraintViolation(err, dbconst.ConstraintUsersUqEmail):
+			// Someone registered the address between the lookup and the insert
+			// (a concurrent invite, or that person's first sign-in). One live
+			// user per address is the rule, so theirs is the one to invite.
+			existingUser, err := s.queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: email})
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to look up user: %w", err))
+			}
+			userID = existingUser.ID
+		default:
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create invited user: %w", err))
 		}
-
-		userID = newUser.ID
 	} else {
 		userID = existingUser.ID
 	}
@@ -58,8 +68,7 @@ func (s *Server) InviteMember(
 		Permission:     permission,
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.ConstraintName == dbconst.ConstraintOrganizationsUsersUqUser {
+		if isConstraintViolation(err, dbconst.ConstraintOrganizationsUsersUqUser) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("user is already a member of this organization"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create membership: %w", err))
@@ -68,4 +77,11 @@ func (s *Server) InviteMember(
 	return organizationv1.InviteMemberResponse_builder{
 		InvitationId: membershipRow.ID.String(),
 	}.Build(), nil
+}
+
+// isConstraintViolation reports whether err is Postgres refusing a statement
+// on the named constraint or unique index.
+func isConstraintViolation(err error, constraint string) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.ConstraintName == constraint
 }

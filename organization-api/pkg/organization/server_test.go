@@ -203,8 +203,10 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	}
 
 	for id, user := range opts.users {
+		// No address is NULL, as the authn-api stores it: users_uq_email keeps
+		// one live user per address, and an empty string would be an address.
 		_, err = adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, $4)",
+			"INSERT INTO tenant.users (id, name, external_ref, email) VALUES ($1, $2, $3, NULLIF($4, ''))",
 			id, user.Name, user.ExternalRef, user.Email,
 		)
 		require.NoError(t, err)

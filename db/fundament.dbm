@@ -959,6 +959,15 @@ END;]]> </definition>
 	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
 </index>
 
+<index name="users_uq_email" table="tenant.users"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<expression> <![CDATA[lower(email)]]> </expression>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
+
 <table name="api_keys" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="authn"/>
 	<role name="fun_owner"/>
