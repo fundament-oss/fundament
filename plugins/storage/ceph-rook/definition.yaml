@@ -7,7 +7,7 @@ metadata:
   description: Block and shared file storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
-  icon: server-stack
+  icon: external-hard-drives
   urls:
     homepage: https://rook.io
     repository: https://github.com/rook/rook
@@ -124,7 +124,7 @@ spec:
       - crd: blockstorages.ceph.fundament.io
         list: true
         detail: true
-        icon: circle-stack
+        icon: rectangle-stack
       - crd: filestorages.ceph.fundament.io
         list: true
         detail: true
@@ -132,7 +132,7 @@ spec:
       - crd: disks.ceph.fundament.io
         list: true
         detail: true
-        icon: server-stack
+        icon: ssd-hard-drive
   crds:
     - disks.ceph.fundament.io
     - diskpools.ceph.fundament.io

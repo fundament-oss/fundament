@@ -1,4 +1,11 @@
-import { loadSdk, escapeHtml, navigateToDetail, navigateBack } from './_shared.js';
+import {
+  loadSdk,
+  escapeHtml,
+  navigateToDetail,
+  navigateBack,
+  resourceNameError,
+  wireSubmit,
+} from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
@@ -81,57 +88,38 @@ if (loadError) {
   `;
 
   const form = document.getElementById('create-form');
-  const errorBox = document.getElementById('error-box');
-  const submitBtn = document.getElementById('submit-btn');
-
-  function showError(message) {
-    errorBox.textContent = message;
-    errorBox.hidden = false;
-  }
+  const nameInput = form.querySelector('[name="name"]');
 
   document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.hidden = true;
-
-    const nameInput = form.querySelector('[name="name"]');
-    const name = nameInput.value.trim();
-    if (!name) {
-      showError('Please enter a name for the DiskPool.');
-      nameInput.focus();
-      return;
-    }
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(name)) {
-      showError('Use lowercase letters, digits and dashes only.');
-      nameInput.focus();
-      return;
-    }
-
-    const checkedDisks = readSelectedDisks(form);
-    if (checkedDisks.length === 0) {
-      showError('Please select at least one disk.');
-      return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating…';
-
-    try {
+  wireSubmit(form, {
+    button: document.getElementById('submit-btn'),
+    errorBox: document.getElementById('error-box'),
+    busyLabel: 'Creating…',
+    failPrefix: 'Failed to create DiskPool',
+    validate: () => {
+      const invalid = resourceNameError(nameInput.value.trim());
+      if (invalid) {
+        nameInput.focus();
+        return invalid;
+      }
+      if (readSelectedDisks(form).length === 0) {
+        return 'Please select at least one disk.';
+      }
+      return null;
+    },
+    action: async () => {
+      const name = nameInput.value.trim();
       await fundament.k8s.create(
         { group: 'ceph.fundament.io', version: 'v1alpha1', resource: 'diskpools' },
         {
           apiVersion: 'ceph.fundament.io/v1alpha1',
           kind: 'DiskPool',
           metadata: { name },
-          spec: { disks: checkedDisks },
+          spec: { disks: readSelectedDisks(form) },
         },
       );
       navigateToDetail(name);
-    } catch (err) {
-      showError(`Failed to create DiskPool: ${err?.message ?? err}`);
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Create DiskPool';
-    }
+    },
   });
 }

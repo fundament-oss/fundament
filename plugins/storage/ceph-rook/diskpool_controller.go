@@ -208,7 +208,7 @@ func (r *DiskPoolReconciler) statusWriter() statusWriter[*v1alpha1.DiskPool, v1a
 }
 
 func (r *DiskPoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.DiskPool, status *v1alpha1.DiskPoolStatus, ready *metav1.Condition) error {
-	return r.statusWriter().write(ctx, pool.Name, status, ready)
+	return r.statusWriter().write(ctx, pool.Name, pool.Generation, status, ready)
 }
 
 func (r *DiskPoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.DiskPool, cause error) {

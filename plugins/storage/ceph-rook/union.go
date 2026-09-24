@@ -40,6 +40,13 @@ func diskUnion(ctx context.Context, c client.Client) ([]v1alpha1.DiskStatus, err
 			if err != nil {
 				return nil, fmt.Errorf("get Disk %q: %w", name, err)
 			}
+			// Create and Status().Update are two API calls (see upsertDisk); a
+			// Disk caught between them has an empty status, and including it
+			// would write a {name:"", devices:[{name:""}]} node into the
+			// CephCluster and count "" as a node.
+			if disk.Status.Node == "" {
+				continue
+			}
 			key := disk.Status.Node + "\x00" + DeviceRef(&disk.Status)
 			if _, ok := seen[key]; !ok {
 				seen[key] = struct{}{}

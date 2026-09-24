@@ -92,11 +92,15 @@ export function renderDefList(pairs) {
 }
 
 // Mirrors the Kubernetes object-name pattern the CRDs enforce; returns an
-// error message or null.
-export function resourceNameError(name) {
+// error message or null. maxLength mirrors a kind's CRD name cap where one
+// exists (FileStorage caps at 56; see filestorage_types.go).
+export function resourceNameError(name, maxLength = 63) {
   if (!name) return 'Please enter a name.';
   if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(name)) {
     return 'Use lowercase letters, digits and dashes only.';
+  }
+  if (name.length > maxLength) {
+    return `Use at most ${maxLength} characters.`;
   }
   return null;
 }

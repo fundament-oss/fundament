@@ -27,6 +27,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: |-
+          The derived CephBlockPool/StorageClass is named ceph-<name>; object names cap
+          at 253 characters, so a longer name would only fail at reconcile time,
+          wedging the object Degraded on a create that can never succeed.
         properties:
           apiVersion:
             description: |-
@@ -146,6 +150,10 @@ spec:
                 type: string
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: 'name must be at most 248 characters: the derived ceph-<name> object
+            name caps at 253'
+          rule: size(self.metadata.name) <= 248
     served: true
     storage: true
     subresources:

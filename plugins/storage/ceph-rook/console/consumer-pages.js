@@ -33,6 +33,7 @@ export const BLOCKSTORAGE = {
   createIntro: `Block storage provides ReadWriteOnce volumes over the shared Ceph cluster's disks.
     It needs at least one DiskPool contributing disks; without one it stays Degraded.`,
   metadataServers: false,
+  nameMaxLength: 63,
 };
 
 export const FILESTORAGE = {
@@ -47,6 +48,9 @@ export const FILESTORAGE = {
     many pods on many nodes can mount the same volume. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
   metadataServers: true,
+  // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
+  // capped at 63. Enforced here too so the form rejects it before the server.
+  nameMaxLength: 56,
 };
 
 function metadataServersValue(form) {
@@ -211,7 +215,7 @@ export async function consumerCreatePage(cfg) {
         <label class="plugin-label" for="consumer-name">Name</label>
         <input id="consumer-name" name="name" type="text" class="plugin-input"
                placeholder="default" required
-               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="63" />
+               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="${cfg.nameMaxLength}" />
         <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).</span>
       </div>
 
@@ -237,7 +241,7 @@ export async function consumerCreatePage(cfg) {
     busyLabel: 'Creating…',
     failPrefix: `Failed to create ${cfg.kind}`,
     validate: () => {
-      const invalid = resourceNameError(nameInput.value.trim());
+      const invalid = resourceNameError(nameInput.value.trim(), cfg.nameMaxLength);
       if (invalid) {
         nameInput.focus();
         return invalid;

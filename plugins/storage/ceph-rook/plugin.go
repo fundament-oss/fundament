@@ -102,6 +102,15 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
 		Cache:                  cacheOptions(&p.cfg),
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				// Controller-runtime's default client bypasses the cache for
+				// unstructured objects, so every rookStub Get (CephCluster,
+				// CephBlockPool, CephFilesystem) would be a live API-server
+				// call despite the informers the Watches already run.
+				Unstructured: true,
+			},
+		},
 	})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})

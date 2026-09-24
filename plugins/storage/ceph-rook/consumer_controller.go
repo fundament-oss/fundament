@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	storagev1 "k8s.io/api/storage/v1"
@@ -52,6 +53,7 @@ type ConsumerReconciler[T consumer] struct {
 	kind               string // e.g. "BlockStorage"
 	rookKind           string // e.g. "CephBlockPool"
 	derivedName        func(string) string
+	derivedPrefix      string // what derivedName prepends; toSameNamedConsumer cuts it back off
 	newObject          func() T
 	newList            func() client.ObjectList
 	renderRook         func(obj T, namespace, name string, replicas int, domain string) *unstructured.Unstructured
@@ -68,6 +70,7 @@ func NewBlockStorageReconciler(c client.Client, clusterNamespace, rookNamespace 
 		kind:             "BlockStorage",
 		rookKind:         "CephBlockPool",
 		derivedName:      DerivedName,
+		derivedPrefix:    derivedNamePrefix,
 		newObject:        func() *v1alpha1.BlockStorage { return &v1alpha1.BlockStorage{} },
 		newList:          func() client.ObjectList { return &v1alpha1.BlockStorageList{} },
 		renderRook: func(_ *v1alpha1.BlockStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
@@ -87,6 +90,7 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace s
 		kind:             "FileStorage",
 		rookKind:         "CephFilesystem",
 		derivedName:      FilesystemDerivedName,
+		derivedPrefix:    filesystemDerivedNamePrefix,
 		newObject:        func() *v1alpha1.FileStorage { return &v1alpha1.FileStorage{} },
 		newList:          func() client.ObjectList { return &v1alpha1.FileStorageList{} },
 		renderRook: func(fs *v1alpha1.FileStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
@@ -99,8 +103,6 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace s
 func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(r.newObject()).
-		Owns(&storagev1.StorageClass{}).
-		Owns(rookStub(r.rookKind)).
 		// No predicate on Disk: its changes arrive via the status subresource,
 		// which a generation filter would drop. DiskPool matters only through
 		// spec.disks, and the predicate keeps every pool status write from
@@ -108,9 +110,10 @@ func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 		Watches(&v1alpha1.Disk{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers)).
 		Watches(&v1alpha1.DiskPool{}, handler.EnqueueRequestsFromMapFunc(r.toAllConsumers),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		// Owns only sees objects carrying our ownerRef. These watches cover
-		// foreign same-named objects, whose removal is notOursError's
-		// documented recovery and would otherwise produce no event.
+		// By name, not Owns: every object we own carries the derived name, so
+		// these watches subsume Owns, and unlike Owns they also see foreign
+		// same-named objects, whose removal is notOursError's documented
+		// recovery and would otherwise produce no event.
 		Watches(&storagev1.StorageClass{}, handler.EnqueueRequestsFromMapFunc(r.toSameNamedConsumer)).
 		Watches(rookStub(r.rookKind), handler.EnqueueRequestsFromMapFunc(r.toSameNamedConsumer)).
 		Complete(r); err != nil {
@@ -141,14 +144,16 @@ func (r *ConsumerReconciler[T]) toAllConsumers(ctx context.Context, _ client.Obj
 
 // toSameNamedConsumer maps an event on a derived-named object (StorageClass or
 // the Rook kind) to the consumer whose derived name matches, whether or not
-// the object carries our ownerRef.
-func (r *ConsumerReconciler[T]) toSameNamedConsumer(ctx context.Context, obj client.Object) []reconcile.Request {
-	for _, req := range r.toAllConsumers(ctx, nil) {
-		if r.derivedName(req.Name) == obj.GetName() {
-			return []reconcile.Request{req}
-		}
+// the object carries our ownerRef. The prefix is fixed, so the consumer name
+// is cut straight off the object name rather than listing every consumer. A
+// cross-kind hit (every "cephfs-" name also starts with "ceph-") enqueues a
+// consumer that does not exist, which reconciles to a harmless NotFound.
+func (r *ConsumerReconciler[T]) toSameNamedConsumer(_ context.Context, obj client.Object) []reconcile.Request {
+	name, found := strings.CutPrefix(obj.GetName(), r.derivedPrefix)
+	if !found {
+		return nil
 	}
-	return nil
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: name}}}
 }
 
 func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -255,7 +260,7 @@ func (r *ConsumerReconciler[T]) statusWriter() statusWriter[T, v1alpha1.Consumer
 }
 
 func (r *ConsumerReconciler[T]) writeStatus(ctx context.Context, obj T, status *v1alpha1.ConsumerStatus, ready *metav1.Condition) error {
-	return r.statusWriter().write(ctx, obj.GetName(), status, ready)
+	return r.statusWriter().write(ctx, obj.GetName(), obj.GetGeneration(), status, ready)
 }
 
 func (r *ConsumerReconciler[T]) setDegraded(ctx context.Context, obj T, cause error) {

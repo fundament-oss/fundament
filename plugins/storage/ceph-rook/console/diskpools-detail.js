@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, renderDefList } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeBytes, renderDefList, wireSubmit } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
@@ -155,42 +155,30 @@ async function showEdit(item) {
   `;
 
   const form = document.getElementById('edit-form');
-  const errorBox = document.getElementById('edit-error');
-  const saveBtn = document.getElementById('save-btn');
 
   document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.hidden = true;
+  // Disjoint by construction: preserved is exactly what the picker did not
+  // render, so this cannot produce the duplicate the CRD's listType=set rejects.
+  const selected = () => [...readSelectedDisks(form), ...preserved];
 
-    // Disjoint by construction: preserved is exactly what the picker did not
-    // render, so this cannot produce the duplicate the CRD's listType=set rejects.
-    const selected = [...readSelectedDisks(form), ...preserved];
-    if (selected.length === 0) {
-      errorBox.textContent = 'Select at least one disk.';
-      errorBox.hidden = false;
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
+  wireSubmit(form, {
+    button: document.getElementById('save-btn'),
+    errorBox: document.getElementById('edit-error'),
+    busyLabel: 'Saving…',
+    failPrefix: 'Failed to save',
+    validate: () => (selected().length === 0 ? 'Select at least one disk.' : null),
+    action: async () => {
       // Merge-patch of spec only: status is untouched and disks is replaced
       // wholesale, not merged element-wise.
       await fundament.k8s.patch(
         { ...RESOURCE, name },
         {
-          spec: { disks: selected },
+          spec: { disks: selected() },
         },
       );
       await showDetail();
-    } catch (err) {
-      errorBox.textContent = `Failed to save: ${err?.message ?? err}`;
-      errorBox.hidden = false;
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-    }
+    },
   });
 }
 

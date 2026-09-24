@@ -40,11 +40,11 @@ type statusWriter[O client.Object, S any, PS interface {
 // write persists status, refetching first so a stale resourceVersion from
 // earlier in the reconcile doesn't cause a conflict.
 //
-// ready is upserted as the Ready condition. Conditions and observedGeneration
-// are taken from the refetched object rather than from the caller's status
-// value: the caller builds the observable fields, this decides what generation
-// they describe.
-func (w statusWriter[O, S, PS]) write(ctx context.Context, name string, status *S, ready *metav1.Condition) error {
+// ready is upserted as the Ready condition. observedGeneration is the
+// generation the reconcile read, not the refetched object's: the spec may have
+// changed since, and stamping the newer generation would label gen-N-derived
+// status as describing a spec the reconcile never saw.
+func (w statusWriter[O, S, PS]) write(ctx context.Context, name string, observedGeneration int64, status *S, ready *metav1.Condition) error {
 	current := w.newObject()
 	if err := w.client.Get(ctx, types.NamespacedName{Name: name}, current); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -53,7 +53,7 @@ func (w statusWriter[O, S, PS]) write(ctx context.Context, name string, status *
 		return fmt.Errorf("get %s %s for status update: %w", w.kind, name, err)
 	}
 
-	PS(status).SetObservedGeneration(current.GetGeneration())
+	PS(status).SetObservedGeneration(observedGeneration)
 	// Carry the existing conditions so SetStatusCondition can preserve
 	// lastTransitionTime for a condition whose status has not flipped. Cloned,
 	// not aliased: SetStatusCondition mutates the existing element through a
@@ -62,7 +62,7 @@ func (w statusWriter[O, S, PS]) write(ctx context.Context, name string, status *
 	conditions := PS(status).ConditionsRef()
 	*conditions = slices.Clone(*PS(w.statusOf(current)).ConditionsRef())
 	ready.Type = v1alpha1.ConditionReady
-	ready.ObservedGeneration = current.GetGeneration()
+	ready.ObservedGeneration = observedGeneration
 	meta.SetStatusCondition(conditions, *ready)
 
 	// Every Disk event in the cluster fans out to a reconcile of every object
@@ -92,7 +92,7 @@ func (w statusWriter[O, S, PS]) setDegraded(ctx context.Context, obj O, cause er
 		Reason:  v1alpha1.ReasonReconcileError,
 		Message: cause.Error(),
 	}
-	if err := w.write(ctx, obj.GetName(), &status, &ready); err != nil {
+	if err := w.write(ctx, obj.GetName(), obj.GetGeneration(), &status, &ready); err != nil {
 		log.FromContext(ctx).Error(err, "could not record degraded status", "kind", w.kind, "name", obj.GetName())
 	}
 }

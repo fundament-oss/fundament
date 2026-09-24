@@ -21,11 +21,14 @@ func DerivedName(poolName string) string {
 	return derivedNamePrefix + poolName
 }
 
+// Prefix for the objects a FileStorage derives. Distinct from
+// derivedNamePrefix so same-named CRs of different kinds cannot derive
+// colliding cluster-scoped objects.
+const filesystemDerivedNamePrefix = "cephfs-"
+
 // FilesystemDerivedName names a FileStorage's CephFilesystem and StorageClass.
-// A distinct prefix from DerivedName so same-named CRs of different kinds
-// cannot derive colliding cluster-scoped objects.
 func FilesystemDerivedName(name string) string {
-	return "cephfs-" + name
+	return filesystemDerivedNamePrefix + name
 }
 
 // ClaimOwner returns the DiskPool entitled to a disk when more than one lists

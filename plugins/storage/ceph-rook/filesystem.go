@@ -22,23 +22,11 @@ func RenderCephFilesystem(namespace, name string, replicas int, failureDomain st
 	u.SetName(name)
 	u.SetNamespace(namespace)
 
-	pool := func() map[string]any {
-		replicated := map[string]any{"size": int64(replicas)}
-		// Ceph refuses a size-1 pool unless the safety check is waived.
-		if replicas < 2 {
-			replicated["requireSafeReplicaSize"] = false
-		}
-		return map[string]any{
-			"failureDomain": failureDomain,
-			"replicated":    replicated,
-		}
-	}
-
-	dataPool := pool()
+	dataPool := replicatedPoolSpec(replicas, failureDomain)
 	dataPool["name"] = cephFSDataPoolName
 
 	u.Object["spec"] = map[string]any{
-		"metadataPool": pool(),
+		"metadataPool": replicatedPoolSpec(replicas, failureDomain),
 		"dataPools":    []any{dataPool},
 		// Deleting the CR (or its owner) must never destroy filesystem data.
 		"preserveFilesystemOnDelete": true,
