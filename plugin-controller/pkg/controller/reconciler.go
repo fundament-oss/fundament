@@ -37,6 +37,11 @@ const (
 	// the plugin-scope ClusterRole materialisation succeeds or fails.
 	ConditionPluginScopeReady = "PluginScopeReady"
 
+	// ConditionConfigValid is the Status Condition surfaced on the CR reporting
+	// whether spec.config conforms to the pinned definition's configSchema. A
+	// definition with no schema always validates (pre-schema back-compat).
+	ConditionConfigValid = "ConfigValid"
+
 	// unknownDefinitionHash is the terraform provider's default placeholder,
 	// used until the marketplace supplies real content hashes (FUN-11). It is
 	// treated as unpinned: it can never equal a real digest, so verifying
@@ -173,6 +178,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
 	// those before returning on error so the CR reflects the failure.
 	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+		cr.Status.Phase = pluginsv1.PluginPhaseFailed
+		cr.Status.Message = err.Error()
+		cr.Status.ObservedGeneration = cr.Generation
 		if err := r.client.Status().Update(ctx, &cr); err != nil {
 			log.Error("persist status after reconcile error failed", "err", err)
 		}
@@ -277,6 +285,17 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		return fmt.Errorf("reconcile plugin scope: %w", err)
 	}
 
+	// Enforce the definition's configSchema before materialising anything: an
+	// invalid spec.config fails closed exactly like a hash mismatch. The
+	// definition is the hash-verified one, so what is enforced is what the
+	// admin consented to.
+	if err := pluginruntime.ValidateConfig(cr.Spec.Config, def.Spec.ConfigSchema); err != nil {
+		setCondition(cr, ConditionConfigValid, metav1.ConditionFalse, "ConfigInvalid", err.Error())
+		return fmt.Errorf("validate config: %w", err)
+	}
+	setCondition(cr, ConditionConfigValid, metav1.ConditionTrue, "Validated",
+		"spec.config conforms to the definition's configSchema")
+
 	// Namespace (no owner ref — cleaned up via finalizer)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: nsName},
@@ -369,18 +388,18 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	return nil
 }
 
-// setPluginScopeCondition upserts the PluginScopeReady Condition on the CR's
-// status. Same-value updates preserve LastTransitionTime; changes reset it.
-func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
+// setCondition upserts a Condition of the given type on the CR's status.
+// Same-value updates preserve LastTransitionTime; changes reset it.
+func setCondition(cr *pluginsv1.PluginInstallation, condType string, status metav1.ConditionStatus, reason, message string) {
 	cond := metav1.Condition{
-		Type:               ConditionPluginScopeReady,
+		Type:               condType,
 		Status:             status,
 		ObservedGeneration: cr.Generation,
 		Reason:             reason,
 		Message:            message,
 	}
 	for i, existing := range cr.Status.Conditions {
-		if existing.Type != ConditionPluginScopeReady {
+		if existing.Type != condType {
 			continue
 		}
 		if existing.Status == status {
@@ -393,6 +412,11 @@ func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.Con
 	}
 	cond.LastTransitionTime = metav1.Now()
 	cr.Status.Conditions = append(cr.Status.Conditions, cond)
+}
+
+// setPluginScopeCondition upserts the PluginScopeReady Condition on the CR.
+func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
+	setCondition(cr, ConditionPluginScopeReady, status, reason, message)
 }
 
 // fetchDefinition fetches the PluginDefinition manifest from organization-api,

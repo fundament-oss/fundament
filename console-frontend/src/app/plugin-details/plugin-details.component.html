@@ -218,6 +218,8 @@
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginDisplayName]="plugin()?.displayName || plugin()?.name || ''"
+  [organizationName]="plugin()?.organizationName ?? ''"
+  [pluginName]="plugin()?.name ?? ''"
   [clusters]="clusters()"
   [versions]="installVersions()"
   [versionsError]="installVersionsError()"

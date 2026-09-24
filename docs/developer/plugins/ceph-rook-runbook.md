@@ -260,6 +260,9 @@ listing, seeded from the definition's metadata.
 The plugin needs local-development config: without it the default 3 mons never reach
 quorum on a single node, and the real-disk filter would ignore the loop devices.
 
+Once the appstore install form ships (configSchema support), this config can be
+entered in the Console at install time instead of hand-writing the CR below.
+
 ```bash
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
 apiVersion: plugins.fundament.io/v1
@@ -269,7 +272,7 @@ metadata:
 spec:
   definitionRef:
     pluginName: ceph-rook
-    pluginVersion: v0.1.0
+    pluginVersion: v0.2.0
     definitionHash: sha256:PASTE_THE_HASH_FROM_PHASE_3
   config:
     DEV_LOOP_DEVICES: "true"        # discover ONLY /dev/loopNpN; ignore the host's real disks

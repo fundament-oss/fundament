@@ -120,6 +120,7 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 ** `formGroups`: Groups of related fields for create/edit forms.
 ** `statusMapping`: Maps a `jsonPath` to badge/label values for status display.
 * **crds**: List of CRDs the plugin provides.
+* **configSchema**: Optional list of declared install-time config keys. Each entry has `name` (uppercase, becomes the `FUNP_<name>` env var), `displayName` (optional human-readable label; the console derives one from `name` when absent), `type` (`string`/`int`/`bool`/`enum`), `default`, `description`, `required`, `values` (enum only), and `advanced` (collapsed by default in the install form). The console renders the install form from this list; the plugin-controller rejects a `spec.config` that violates it. A definition without a schema accepts any config (pre-schema behavior).
 
 == Plugin SDK
 
@@ -192,7 +193,7 @@ spec:
     pluginName: cert-manager
     pluginVersion: v1.17.2
     definitionHash: sha256:...  # optional only when the controller runs with PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true
-  config: {}             # optional: key-value config (injected as FUNP_* env vars)
+  config: {}             # optional: key-value config (injected as FUNP_* env vars, validated against the definition's configSchema when one is declared)
 ---
 
 A plugin's identity is the pair `(organizationName, pluginName)`, and
@@ -206,6 +207,7 @@ Status fields: `phase`, `message`, `ready`, `observedGeneration`, `namespace`.
 When a `PluginInstallation` is created, the controller:
 
 . Validates that `metadata.name` equals `<organizationName>--<pluginName>` (see link:/funs/fun-17[FUN-17], "Plugin identity and naming").
+. Validates `spec.config` against the pinned definition's `configSchema` (when declared); a violation fails the install with a `ConfigValid=False` condition before any resources are materialised.
 . Creates a namespace `plugin-{metadata.name}` (or a truncated, hashed form if that would exceed 63 chars).
 . Creates a ServiceAccount named `plugin` in that namespace — every namespace-scoped child is named `plugin`, not `plugin-{metadata.name}`, since the namespace already disambiguates.
 . Creates a RoleBinding binding the ServiceAccount to the built-in `admin` ClusterRole within the plugin namespace.

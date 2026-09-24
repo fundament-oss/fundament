@@ -17,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -77,6 +78,32 @@ spec:
       - apiGroups: [""]
         resources: [secrets]
         verbs: [get]
+`)
+	sum := sha256.Sum256(manifest)
+	return manifest, "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// sampleManifestWithConfigSchema returns a valid PluginDefinition YAML that
+// declares a configSchema, plus its sha256 pin.
+func sampleManifestWithConfigSchema(t *testing.T) ([]byte, string) {
+	t.Helper()
+	manifest := []byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+  permissions:
+    rbac: []
+  configSchema:
+    - name: LOG_LEVEL
+      type: enum
+      values: [debug, info, warn]
+      default: info
+    - name: MON_COUNT
+      type: int
+      default: "3"
 `)
 	sum := sha256.Sum256(manifest)
 	return manifest, "sha256:" + hex.EncodeToString(sum[:])
@@ -943,4 +970,128 @@ func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
 		Name: pluginNamespace(cr.Name),
 	}, &existingNS)
 	assert.NoError(t, err, "namespace should still exist when uninstall fails")
+}
+
+func TestReconcileChildren_RejectsConfigViolatingSchema(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifestWithConfigSchema(t)
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	cr.Spec.Config = map[string]string{"MON_CONUT": "1"} // typo: undeclared key
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
+	r := &Reconciler{
+		client: fakeClient, logger: slog.Default(),
+		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "MON_CONUT")
+
+	// The failure is surfaced on the CR as a ConfigValid=False condition.
+	var found bool
+	for _, cond := range cr.Status.Conditions {
+		if cond.Type == ConditionConfigValid {
+			found = true
+			assert.Equal(t, metav1.ConditionFalse, cond.Status)
+			assert.Equal(t, "ConfigInvalid", cond.Reason)
+			assert.Contains(t, cond.Message, "MON_CONUT")
+		}
+	}
+	assert.True(t, found, "ConfigValid condition should be set")
+
+	// Fail-closed: nothing was materialised, exactly like a hash mismatch.
+	var deploy appsv1.Deployment
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin", Namespace: pluginNamespace(cr.Name),
+	}, &deploy)
+	assert.True(t, apierrors.IsNotFound(err), "Deployment must not be created for invalid config")
+
+	// Through the full Reconcile entrypoint, the reconcileChildren error must
+	// surface as Phase: Failed — otherwise the CR is stuck showing
+	// "Installing..." forever with no retry button (FUN-11).
+	cr.Finalizers = []string{finalizerName}
+	require.NoError(t, fakeClient.Update(context.Background(), cr))
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, reconcileErr := r.Reconcile(context.Background(), req)
+	require.Error(t, reconcileErr)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "MON_CONUT")
+}
+
+func TestReconcileChildren_AcceptsEmptyConfigWithSchema(t *testing.T) {
+	// The bulk-install path and kubectl installs send no config at all; a
+	// schema whose keys all carry defaults must accept that (defaults are
+	// applied by the plugin binary's own env parsing, not materialised here).
+	scheme := newTestScheme()
+	manifest, pin := sampleManifestWithConfigSchema(t)
+
+	cr := testCR()
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	cr.Spec.Config = nil
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
+	r := &Reconciler{
+		client: fakeClient, logger: slog.Default(),
+		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+	}
+
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+
+	var found bool
+	for _, cond := range cr.Status.Conditions {
+		if cond.Type == ConditionConfigValid {
+			found = true
+			assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		}
+	}
+	assert.True(t, found, "ConfigValid condition should be set to True")
+}
+
+func TestReconcileChildren_ValidConfigStillInjected(t *testing.T) {
+	// A schema does not change the injection contract: declared, valid keys
+	// still become FUNP_* env vars verbatim.
+	scheme := newTestScheme()
+	manifest, pin := sampleManifestWithConfigSchema(t)
+
+	cr := testCR()
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	cr.Spec.Config = map[string]string{"LOG_LEVEL": "debug", "MON_COUNT": "1"}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
+	r := &Reconciler{
+		client: fakeClient, logger: slog.Default(),
+		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+	}
+
+	require.NoError(t, r.reconcileChildren(context.Background(), slog.Default(), cr))
+
+	var deploy appsv1.Deployment
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin", Namespace: pluginNamespace(cr.Name),
+	}, &deploy))
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	values := map[string]string{}
+	for _, e := range env {
+		values[e.Name] = e.Value
+	}
+	assert.Equal(t, "debug", values["FUNP_LOG_LEVEL"])
+	assert.Equal(t, "1", values["FUNP_MON_COUNT"])
 }

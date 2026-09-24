@@ -181,9 +181,41 @@ message PluginRef {
   }];
 }
 
+// One declared install-time config key, derived on read from the pinned
+// manifest — never stored in a column, so it can never drift from the hash
+// the install pins against (the schema shown is provably the one consented to).
+message ConfigSchemaEntry {
+  string name = 10;
+  ConfigType type = 20;
+  // The manifest's default, always a string: spec.config is map[string]string,
+  // so typing drives the form widget and validation, not the representation.
+  string default_value = 30;
+  string description = 40;
+  bool required = 50;
+  // Allowed values when type is CONFIG_TYPE_ENUM; empty otherwise.
+  repeated string values = 60;
+  // Advanced keys start collapsed in the console install form.
+  bool advanced = 70;
+  // Human-readable label for the console form; empty means the console
+  // derives one from name.
+  string display_name = 80;
+}
+
+// Mirrors the manifest's configSchema type strings.
+enum ConfigType {
+  CONFIG_TYPE_UNSPECIFIED = 0;
+  CONFIG_TYPE_STRING = 1;
+  CONFIG_TYPE_INT = 2;
+  CONFIG_TYPE_BOOL = 3;
+  CONFIG_TYPE_ENUM = 4;
+}
+
 message GetPluginDefinitionResponse {
   // The stored bytes, not a re-serialization: definition_hash is the sha256 of
   // exactly these, so a caller can verify what it pins.
   bytes manifest = 10;
   string definition_hash = 20;
+  // Declared install-time config keys, in manifest order; empty when the
+  // definition declares no configSchema (install proceeds with no form).
+  repeated ConfigSchemaEntry config_schema = 30;
 }

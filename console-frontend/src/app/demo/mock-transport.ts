@@ -54,6 +54,7 @@ import {
   ListPluginVersionsResponseSchema as CatalogListPluginVersionsResponseSchema,
   ListPresetsResponseSchema as CatalogListPresetsResponseSchema,
   PublishedVersionSchema,
+  GetPluginDefinitionResponseSchema as CatalogGetPluginDefinitionResponseSchema,
 } from '../../generated/catalog/v1/catalog_pb';
 import {
   CategorySchema,
@@ -431,6 +432,16 @@ export default function createDemoTransport(): Transport {
               definitionHash: d.hash,
             }),
           ),
+        });
+      },
+      // The install modal's config-schema fetch. Left unanswered it errors, and the
+      // modal shows schemaError instead of letting the install slide run.
+      getPluginDefinition: async () => {
+        await delay(80);
+        return create(CatalogGetPluginDefinitionResponseSchema, {
+          manifest: new Uint8Array(),
+          definitionHash: '',
+          configSchema: [],
         });
       },
     });

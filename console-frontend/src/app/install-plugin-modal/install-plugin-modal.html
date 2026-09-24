@@ -39,7 +39,22 @@
         }
         <nldd-spacer size="16"></nldd-spacer>
       }
-      @if (clusters().length === 0) {
+      @if (schemaError()) {
+        <nldd-inline-dialog
+          icon="exclamation-triangle"
+          icon-color="critical"
+          text="Couldn't load configuration"
+          supporting-text="Something went wrong loading this version's configuration. Try installing again."
+        ></nldd-inline-dialog>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (pendingInstall() !== null) {
+        <app-plugin-config-form
+          [schema]="pendingInstall()!.schema"
+          (confirmed)="onConfigConfirmed($event)"
+          (cancelled)="onConfigCancelled()"
+        ></app-plugin-config-form>
+      } @else if (clusters().length === 0) {
         <nldd-inline-dialog
           icon="kubernetes"
           icon-color="secondary"
@@ -171,7 +186,7 @@
                     text="Install"
                     variant="primary"
                     size="sm"
-                    [attr.disabled]="versions().length === 0 ? '' : null"
+                    [attr.disabled]="versions().length === 0 || schemaLoading() ? '' : null"
                   >
                     <!-- Newest on its own at the top, the rest under a heading:
                          which one you get by default stays obvious however many

@@ -9,6 +9,9 @@ import (
 // Config is the plugin's runtime configuration, injected by the plugin
 // controller as FUNP_-prefixed environment variables.
 // The Rook chart version is deliberately not here; see rookChartVersion.
+//
+// Keys, types and defaults are mirrored in definition.yaml's configSchema;
+// keep the two in sync (the manifest copy is what the install form shows).
 type Config struct {
 	// RookNamespace is where the operator runs. Rook names its CSI drivers
 	// "<this namespace>.rbd.csi.ceph.com", so it reaches the rendered

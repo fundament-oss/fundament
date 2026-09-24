@@ -24,6 +24,57 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Mirrors the manifest's configSchema type strings.
+type ConfigType int32
+
+const (
+	ConfigType_CONFIG_TYPE_UNSPECIFIED ConfigType = 0
+	ConfigType_CONFIG_TYPE_STRING      ConfigType = 1
+	ConfigType_CONFIG_TYPE_INT         ConfigType = 2
+	ConfigType_CONFIG_TYPE_BOOL        ConfigType = 3
+	ConfigType_CONFIG_TYPE_ENUM        ConfigType = 4
+)
+
+// Enum value maps for ConfigType.
+var (
+	ConfigType_name = map[int32]string{
+		0: "CONFIG_TYPE_UNSPECIFIED",
+		1: "CONFIG_TYPE_STRING",
+		2: "CONFIG_TYPE_INT",
+		3: "CONFIG_TYPE_BOOL",
+		4: "CONFIG_TYPE_ENUM",
+	}
+	ConfigType_value = map[string]int32{
+		"CONFIG_TYPE_UNSPECIFIED": 0,
+		"CONFIG_TYPE_STRING":      1,
+		"CONFIG_TYPE_INT":         2,
+		"CONFIG_TYPE_BOOL":        3,
+		"CONFIG_TYPE_ENUM":        4,
+	}
+)
+
+func (x ConfigType) Enum() *ConfigType {
+	p := new(ConfigType)
+	*p = x
+	return p
+}
+
+func (x ConfigType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ConfigType) Descriptor() protoreflect.EnumDescriptor {
+	return file_catalog_v1_catalog_proto_enumTypes[0].Descriptor()
+}
+
+func (ConfigType) Type() protoreflect.EnumType {
+	return &file_catalog_v1_catalog_proto_enumTypes[0]
+}
+
+func (x ConfigType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
 // Listing as it appears on a card or in a results grid.
 type PluginSummary struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
@@ -1668,17 +1719,182 @@ func (b0 PluginRef_builder) Build() *PluginRef {
 	return m0
 }
 
+// One declared install-time config key, derived on read from the pinned
+// manifest — never stored in a column, so it can never drift from the hash
+// the install pins against (the schema shown is provably the one consented to).
+type ConfigSchemaEntry struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name         string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Type         ConfigType             `protobuf:"varint,20,opt,name=type,enum=catalog.v1.ConfigType"`
+	xxx_hidden_DefaultValue string                 `protobuf:"bytes,30,opt,name=default_value,json=defaultValue"`
+	xxx_hidden_Description  string                 `protobuf:"bytes,40,opt,name=description"`
+	xxx_hidden_Required     bool                   `protobuf:"varint,50,opt,name=required"`
+	xxx_hidden_Values       []string               `protobuf:"bytes,60,rep,name=values"`
+	xxx_hidden_Advanced     bool                   `protobuf:"varint,70,opt,name=advanced"`
+	xxx_hidden_DisplayName  string                 `protobuf:"bytes,80,opt,name=display_name,json=displayName"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *ConfigSchemaEntry) Reset() {
+	*x = ConfigSchemaEntry{}
+	mi := &file_catalog_v1_catalog_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigSchemaEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigSchemaEntry) ProtoMessage() {}
+
+func (x *ConfigSchemaEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_catalog_v1_catalog_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ConfigSchemaEntry) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *ConfigSchemaEntry) GetType() ConfigType {
+	if x != nil {
+		return x.xxx_hidden_Type
+	}
+	return ConfigType_CONFIG_TYPE_UNSPECIFIED
+}
+
+func (x *ConfigSchemaEntry) GetDefaultValue() string {
+	if x != nil {
+		return x.xxx_hidden_DefaultValue
+	}
+	return ""
+}
+
+func (x *ConfigSchemaEntry) GetDescription() string {
+	if x != nil {
+		return x.xxx_hidden_Description
+	}
+	return ""
+}
+
+func (x *ConfigSchemaEntry) GetRequired() bool {
+	if x != nil {
+		return x.xxx_hidden_Required
+	}
+	return false
+}
+
+func (x *ConfigSchemaEntry) GetValues() []string {
+	if x != nil {
+		return x.xxx_hidden_Values
+	}
+	return nil
+}
+
+func (x *ConfigSchemaEntry) GetAdvanced() bool {
+	if x != nil {
+		return x.xxx_hidden_Advanced
+	}
+	return false
+}
+
+func (x *ConfigSchemaEntry) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
+	}
+	return ""
+}
+
+func (x *ConfigSchemaEntry) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *ConfigSchemaEntry) SetType(v ConfigType) {
+	x.xxx_hidden_Type = v
+}
+
+func (x *ConfigSchemaEntry) SetDefaultValue(v string) {
+	x.xxx_hidden_DefaultValue = v
+}
+
+func (x *ConfigSchemaEntry) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *ConfigSchemaEntry) SetRequired(v bool) {
+	x.xxx_hidden_Required = v
+}
+
+func (x *ConfigSchemaEntry) SetValues(v []string) {
+	x.xxx_hidden_Values = v
+}
+
+func (x *ConfigSchemaEntry) SetAdvanced(v bool) {
+	x.xxx_hidden_Advanced = v
+}
+
+func (x *ConfigSchemaEntry) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
+type ConfigSchemaEntry_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name string
+	Type ConfigType
+	// The manifest's default, always a string: spec.config is map[string]string,
+	// so typing drives the form widget and validation, not the representation.
+	DefaultValue string
+	Description  string
+	Required     bool
+	// Allowed values when type is CONFIG_TYPE_ENUM; empty otherwise.
+	Values []string
+	// Advanced keys start collapsed in the console install form.
+	Advanced bool
+	// Human-readable label for the console form; empty means the console
+	// derives one from name.
+	DisplayName string
+}
+
+func (b0 ConfigSchemaEntry_builder) Build() *ConfigSchemaEntry {
+	m0 := &ConfigSchemaEntry{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Type = b.Type
+	x.xxx_hidden_DefaultValue = b.DefaultValue
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_Required = b.Required
+	x.xxx_hidden_Values = b.Values
+	x.xxx_hidden_Advanced = b.Advanced
+	x.xxx_hidden_DisplayName = b.DisplayName
+	return m0
+}
+
 type GetPluginDefinitionResponse struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Manifest       []byte                 `protobuf:"bytes,10,opt,name=manifest"`
 	xxx_hidden_DefinitionHash string                 `protobuf:"bytes,20,opt,name=definition_hash,json=definitionHash"`
+	xxx_hidden_ConfigSchema   *[]*ConfigSchemaEntry  `protobuf:"bytes,30,rep,name=config_schema,json=configSchema"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *GetPluginDefinitionResponse) Reset() {
 	*x = GetPluginDefinitionResponse{}
-	mi := &file_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_catalog_v1_catalog_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1690,7 +1906,7 @@ func (x *GetPluginDefinitionResponse) String() string {
 func (*GetPluginDefinitionResponse) ProtoMessage() {}
 
 func (x *GetPluginDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_catalog_v1_catalog_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1715,6 +1931,15 @@ func (x *GetPluginDefinitionResponse) GetDefinitionHash() string {
 	return ""
 }
 
+func (x *GetPluginDefinitionResponse) GetConfigSchema() []*ConfigSchemaEntry {
+	if x != nil {
+		if x.xxx_hidden_ConfigSchema != nil {
+			return *x.xxx_hidden_ConfigSchema
+		}
+	}
+	return nil
+}
+
 func (x *GetPluginDefinitionResponse) SetManifest(v []byte) {
 	if v == nil {
 		v = []byte{}
@@ -1726,6 +1951,10 @@ func (x *GetPluginDefinitionResponse) SetDefinitionHash(v string) {
 	x.xxx_hidden_DefinitionHash = v
 }
 
+func (x *GetPluginDefinitionResponse) SetConfigSchema(v []*ConfigSchemaEntry) {
+	x.xxx_hidden_ConfigSchema = &v
+}
+
 type GetPluginDefinitionResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1733,6 +1962,9 @@ type GetPluginDefinitionResponse_builder struct {
 	// exactly these, so a caller can verify what it pins.
 	Manifest       []byte
 	DefinitionHash string
+	// Declared install-time config keys, in manifest order; empty when the
+	// definition declares no configSchema (install proceeds with no form).
+	ConfigSchema []*ConfigSchemaEntry
 }
 
 func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionResponse {
@@ -1741,6 +1973,7 @@ func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionRespon
 	_, _ = b, x
 	x.xxx_hidden_Manifest = b.Manifest
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
+	x.xxx_hidden_ConfigSchema = &b.ConfigSchema
 	return m0
 }
 
@@ -1841,11 +2074,29 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x11organization_name\x18\n" +
 	" \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\x10organizationName\x12*\n" +
 	"\vplugin_name\x18\x14 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18?R\n" +
-	"pluginName\"b\n" +
+	"pluginName\"\x8d\x02\n" +
+	"\x11ConfigSchemaEntry\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12*\n" +
+	"\x04type\x18\x14 \x01(\x0e2\x16.catalog.v1.ConfigTypeR\x04type\x12#\n" +
+	"\rdefault_value\x18\x1e \x01(\tR\fdefaultValue\x12 \n" +
+	"\vdescription\x18( \x01(\tR\vdescription\x12\x1a\n" +
+	"\brequired\x182 \x01(\bR\brequired\x12\x16\n" +
+	"\x06values\x18< \x03(\tR\x06values\x12\x1a\n" +
+	"\badvanced\x18F \x01(\bR\badvanced\x12!\n" +
+	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xa6\x01\n" +
 	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
 	"\bmanifest\x18\n" +
 	" \x01(\fR\bmanifest\x12'\n" +
-	"\x0fdefinition_hash\x18\x14 \x01(\tR\x0edefinitionHash2\xf9\x04\n" +
+	"\x0fdefinition_hash\x18\x14 \x01(\tR\x0edefinitionHash\x12B\n" +
+	"\rconfig_schema\x18\x1e \x03(\v2\x1d.catalog.v1.ConfigSchemaEntryR\fconfigSchema*\x82\x01\n" +
+	"\n" +
+	"ConfigType\x12\x1b\n" +
+	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12CONFIG_TYPE_STRING\x10\x01\x12\x13\n" +
+	"\x0fCONFIG_TYPE_INT\x10\x02\x12\x14\n" +
+	"\x10CONFIG_TYPE_BOOL\x10\x03\x12\x14\n" +
+	"\x10CONFIG_TYPE_ENUM\x10\x042\xf9\x04\n" +
 	"\x0eCatalogService\x12N\n" +
 	"\vListPlugins\x12\x1e.catalog.v1.ListPluginsRequest\x1a\x1f.catalog.v1.ListPluginsResponse\x12H\n" +
 	"\tGetPlugin\x12\x1c.catalog.v1.GetPluginRequest\x1a\x1d.catalog.v1.GetPluginResponse\x12c\n" +
@@ -1855,72 +2106,77 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\vListPresets\x12\x1e.catalog.v1.ListPresetsRequest\x1a\x1f.catalog.v1.ListPresetsResponse\x12f\n" +
 	"\x13GetPluginDefinition\x12&.catalog.v1.GetPluginDefinitionRequest\x1a'.catalog.v1.GetPluginDefinitionResponseBiZ]github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_catalog_v1_catalog_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_catalog_v1_catalog_proto_goTypes = []any{
-	(*PluginSummary)(nil),               // 0: catalog.v1.PluginSummary
-	(*PluginDetails)(nil),               // 1: catalog.v1.PluginDetails
-	(*PublishedVersion)(nil),            // 2: catalog.v1.PublishedVersion
-	(*ListPluginsRequest)(nil),          // 3: catalog.v1.ListPluginsRequest
-	(*ListPluginsResponse)(nil),         // 4: catalog.v1.ListPluginsResponse
-	(*GetPluginRequest)(nil),            // 5: catalog.v1.GetPluginRequest
-	(*GetPluginResponse)(nil),           // 6: catalog.v1.GetPluginResponse
-	(*ListPluginVersionsRequest)(nil),   // 7: catalog.v1.ListPluginVersionsRequest
-	(*ListPluginVersionsResponse)(nil),  // 8: catalog.v1.ListPluginVersionsResponse
-	(*ListCategoriesRequest)(nil),       // 9: catalog.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),      // 10: catalog.v1.ListCategoriesResponse
-	(*ListPublishersRequest)(nil),       // 11: catalog.v1.ListPublishersRequest
-	(*ListPublishersResponse)(nil),      // 12: catalog.v1.ListPublishersResponse
-	(*ListPresetsRequest)(nil),          // 13: catalog.v1.ListPresetsRequest
-	(*ListPresetsResponse)(nil),         // 14: catalog.v1.ListPresetsResponse
-	(*GetPluginDefinitionRequest)(nil),  // 15: catalog.v1.GetPluginDefinitionRequest
-	(*PluginRef)(nil),                   // 16: catalog.v1.PluginRef
-	(*GetPluginDefinitionResponse)(nil), // 17: catalog.v1.GetPluginDefinitionResponse
-	(PluginLabel)(0),                    // 18: catalog.v1.PluginLabel
-	(*timestamppb.Timestamp)(nil),       // 19: google.protobuf.Timestamp
-	(*v1.PluginPermission)(nil),         // 20: marketplace.v1.PluginPermission
-	(*v1.FeatureBlock)(nil),             // 21: marketplace.v1.FeatureBlock
-	(*v1.DocumentationLink)(nil),        // 22: marketplace.v1.DocumentationLink
-	(PluginSort)(0),                     // 23: catalog.v1.PluginSort
-	(*v1.Category)(nil),                 // 24: marketplace.v1.Category
-	(*v1.Publisher)(nil),                // 25: marketplace.v1.Publisher
-	(*v1.Preset)(nil),                   // 26: marketplace.v1.Preset
+	(ConfigType)(0),                     // 0: catalog.v1.ConfigType
+	(*PluginSummary)(nil),               // 1: catalog.v1.PluginSummary
+	(*PluginDetails)(nil),               // 2: catalog.v1.PluginDetails
+	(*PublishedVersion)(nil),            // 3: catalog.v1.PublishedVersion
+	(*ListPluginsRequest)(nil),          // 4: catalog.v1.ListPluginsRequest
+	(*ListPluginsResponse)(nil),         // 5: catalog.v1.ListPluginsResponse
+	(*GetPluginRequest)(nil),            // 6: catalog.v1.GetPluginRequest
+	(*GetPluginResponse)(nil),           // 7: catalog.v1.GetPluginResponse
+	(*ListPluginVersionsRequest)(nil),   // 8: catalog.v1.ListPluginVersionsRequest
+	(*ListPluginVersionsResponse)(nil),  // 9: catalog.v1.ListPluginVersionsResponse
+	(*ListCategoriesRequest)(nil),       // 10: catalog.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil),      // 11: catalog.v1.ListCategoriesResponse
+	(*ListPublishersRequest)(nil),       // 12: catalog.v1.ListPublishersRequest
+	(*ListPublishersResponse)(nil),      // 13: catalog.v1.ListPublishersResponse
+	(*ListPresetsRequest)(nil),          // 14: catalog.v1.ListPresetsRequest
+	(*ListPresetsResponse)(nil),         // 15: catalog.v1.ListPresetsResponse
+	(*GetPluginDefinitionRequest)(nil),  // 16: catalog.v1.GetPluginDefinitionRequest
+	(*PluginRef)(nil),                   // 17: catalog.v1.PluginRef
+	(*ConfigSchemaEntry)(nil),           // 18: catalog.v1.ConfigSchemaEntry
+	(*GetPluginDefinitionResponse)(nil), // 19: catalog.v1.GetPluginDefinitionResponse
+	(PluginLabel)(0),                    // 20: catalog.v1.PluginLabel
+	(*timestamppb.Timestamp)(nil),       // 21: google.protobuf.Timestamp
+	(*v1.PluginPermission)(nil),         // 22: marketplace.v1.PluginPermission
+	(*v1.FeatureBlock)(nil),             // 23: marketplace.v1.FeatureBlock
+	(*v1.DocumentationLink)(nil),        // 24: marketplace.v1.DocumentationLink
+	(PluginSort)(0),                     // 25: catalog.v1.PluginSort
+	(*v1.Category)(nil),                 // 26: marketplace.v1.Category
+	(*v1.Publisher)(nil),                // 27: marketplace.v1.Publisher
+	(*v1.Preset)(nil),                   // 28: marketplace.v1.Preset
 }
 var file_catalog_v1_catalog_proto_depIdxs = []int32{
-	18, // 0: catalog.v1.PluginSummary.labels:type_name -> catalog.v1.PluginLabel
-	19, // 1: catalog.v1.PluginSummary.published:type_name -> google.protobuf.Timestamp
-	18, // 2: catalog.v1.PluginDetails.labels:type_name -> catalog.v1.PluginLabel
-	19, // 3: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
-	20, // 4: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
-	21, // 5: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
-	22, // 6: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
-	19, // 7: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
-	23, // 8: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
-	0,  // 9: catalog.v1.ListPluginsResponse.plugins:type_name -> catalog.v1.PluginSummary
-	1,  // 10: catalog.v1.GetPluginResponse.plugin:type_name -> catalog.v1.PluginDetails
-	2,  // 11: catalog.v1.ListPluginVersionsResponse.versions:type_name -> catalog.v1.PublishedVersion
-	24, // 12: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
-	25, // 13: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
-	26, // 14: catalog.v1.ListPresetsResponse.presets:type_name -> marketplace.v1.Preset
-	16, // 15: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
-	3,  // 16: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
-	5,  // 17: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
-	7,  // 18: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
-	9,  // 19: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
-	11, // 20: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
-	13, // 21: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
-	15, // 22: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
-	4,  // 23: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
-	6,  // 24: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
-	8,  // 25: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
-	10, // 26: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
-	12, // 27: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
-	14, // 28: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
-	17, // 29: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
-	23, // [23:30] is the sub-list for method output_type
-	16, // [16:23] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	20, // 0: catalog.v1.PluginSummary.labels:type_name -> catalog.v1.PluginLabel
+	21, // 1: catalog.v1.PluginSummary.published:type_name -> google.protobuf.Timestamp
+	20, // 2: catalog.v1.PluginDetails.labels:type_name -> catalog.v1.PluginLabel
+	21, // 3: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
+	22, // 4: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
+	23, // 5: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
+	24, // 6: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	21, // 7: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
+	25, // 8: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
+	1,  // 9: catalog.v1.ListPluginsResponse.plugins:type_name -> catalog.v1.PluginSummary
+	2,  // 10: catalog.v1.GetPluginResponse.plugin:type_name -> catalog.v1.PluginDetails
+	3,  // 11: catalog.v1.ListPluginVersionsResponse.versions:type_name -> catalog.v1.PublishedVersion
+	26, // 12: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
+	27, // 13: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
+	28, // 14: catalog.v1.ListPresetsResponse.presets:type_name -> marketplace.v1.Preset
+	17, // 15: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
+	0,  // 16: catalog.v1.ConfigSchemaEntry.type:type_name -> catalog.v1.ConfigType
+	18, // 17: catalog.v1.GetPluginDefinitionResponse.config_schema:type_name -> catalog.v1.ConfigSchemaEntry
+	4,  // 18: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
+	6,  // 19: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
+	8,  // 20: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
+	10, // 21: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
+	12, // 22: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
+	14, // 23: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
+	16, // 24: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
+	5,  // 25: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
+	7,  // 26: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
+	9,  // 27: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
+	11, // 28: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
+	13, // 29: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
+	15, // 30: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
+	19, // 31: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
+	25, // [25:32] is the sub-list for method output_type
+	18, // [18:25] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_catalog_v1_catalog_proto_init() }
@@ -1938,13 +2194,14 @@ func file_catalog_v1_catalog_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog_v1_catalog_proto_rawDesc), len(file_catalog_v1_catalog_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   18,
+			NumEnums:      1,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_catalog_v1_catalog_proto_goTypes,
 		DependencyIndexes: file_catalog_v1_catalog_proto_depIdxs,
+		EnumInfos:         file_catalog_v1_catalog_proto_enumTypes,
 		MessageInfos:      file_catalog_v1_catalog_proto_msgTypes,
 	}.Build()
 	File_catalog_v1_catalog_proto = out.File

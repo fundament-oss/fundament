@@ -361,6 +361,58 @@ func TestGetPluginDefinitionReturnsManifestAndHash(t *testing.T) {
 	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
 }
 
+const testManifestWithConfigSchema = testManifest + `  configSchema:
+    - name: MON_COUNT
+      displayName: Monitor count
+      type: int
+      default: "3"
+      description: Number of Ceph monitors
+    - name: FAILURE_DOMAIN
+      type: enum
+      values: [host, osd]
+      required: true
+      advanced: true
+`
+
+func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "with-config-schema", Visibility: "public", Published: true,
+		Manifest: []byte(testManifestWithConfigSchema),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	entries := resp.GetConfigSchema()
+	require.Len(t, entries, 2)
+	assert.Equal(t, "MON_COUNT", entries[0].GetName())
+	assert.Equal(t, "Monitor count", entries[0].GetDisplayName())
+	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_INT, entries[0].GetType())
+	assert.Equal(t, "3", entries[0].GetDefaultValue())
+	assert.Equal(t, "Number of Ceph monitors", entries[0].GetDescription())
+	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_ENUM, entries[1].GetType())
+	assert.Equal(t, []string{"host", "osd"}, entries[1].GetValues())
+	assert.True(t, entries[1].GetRequired())
+	assert.True(t, entries[1].GetAdvanced())
+}
+
+func TestGetPluginDefinitionNoConfigSchema(t *testing.T) {
+	// Pre-schema manifests must come back with an empty schema, keeping the
+	// console's instant-install path.
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "no-config-schema", Visibility: "public", Published: true,
+		Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+	assert.Empty(t, resp.GetConfigSchema())
+}
+
 // plugin-controller installs definitions that were never published, so the
 // catalog must serve them.
 func TestGetPluginDefinitionServesUnpublishedVersion(t *testing.T) {

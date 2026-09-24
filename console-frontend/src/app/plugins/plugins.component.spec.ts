@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
@@ -65,7 +66,11 @@ const acmeInstall: PluginInstallationItem = {
   status: { phase: 'Running', ready: true },
 };
 
-function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
+function build(
+  plugins: PluginSummary[],
+  installs: PluginInstallationItem[],
+  installationService: Partial<PluginInstallationService> = {},
+) {
   TestBed.configureTestingModule({
     providers: [
       {
@@ -86,6 +91,7 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[]) {
         useValue: {
           listInstallations: (clusterId: string) =>
             Promise.resolve(clusterId === cluster.id ? installs : []),
+          ...installationService,
         } as unknown as PluginInstallationService,
       },
       {
@@ -140,5 +146,52 @@ describe('PluginsComponent install-status matching', () => {
     };
 
     expect(withPrivateAccess.pluginDisplayName('acme', 'cert-manager')).toBe('cert-manager');
+  });
+});
+
+describe('PluginsComponent retry install', () => {
+  it('retry re-creates the installation with its previous config', async () => {
+    const installationService = {
+      listInstallations: () => Promise.resolve([]),
+      getInstallation: vi.fn().mockResolvedValue({
+        metadata: { name: 'acme--ceph-rook', uid: 'uid-1' },
+        spec: {
+          definitionRef: {
+            organizationName: 'acme',
+            pluginName: 'ceph-rook',
+            pluginVersion: 'v0.2.0',
+            definitionHash: 'sha256:abc',
+          },
+          config: { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
+        },
+        status: { phase: 'Failed', ready: false },
+      } as PluginInstallationItem),
+      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
+      installPlugin: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const component = build([], [], installationService);
+    // Selected as it would be from opening the modal off the plugin row.
+    component.selectedPlugin = {
+      id: 'pl-1',
+      name: 'ceph-rook',
+      displayName: 'Ceph Rook',
+      descriptionShort: '',
+      image: '',
+      organizationName: 'acme',
+      categories: [],
+      tags: [],
+    };
+
+    await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
+
+    expect(installationService.installPlugin).toHaveBeenCalledWith(
+      'c1',
+      'acme',
+      'ceph-rook',
+      'v0.2.0',
+      'sha256:abc',
+      { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
+    );
   });
 });

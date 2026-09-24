@@ -3,10 +3,20 @@ import {
   computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  inject,
   input,
   output,
+  signal,
 } from '@angular/core';
+import { create } from '@bufbuild/protobuf';
+import { firstValueFrom } from 'rxjs';
+import { CATALOG } from '../../connect/tokens';
+import {
+  ConfigSchemaEntry,
+  GetPluginDefinitionRequestSchema,
+} from '../../generated/catalog/v1/catalog_pb';
 import SheetSyncDirective from '../sheet-sync.directive';
+import PluginConfigFormComponent from './plugin-config-form.component';
 import {
   getInstallStatusDisplay,
   isInstallInProgress,
@@ -57,6 +67,9 @@ export interface InstallSelection {
   clusterIds: string[];
   version: string;
   hash: string;
+  // Chosen config values; {} when the definition declares no schema or all
+  // defaults were kept.
+  config: Record<string, string>;
 }
 
 // Emitted on retry: a single cluster plus the currently pinned version/hash.
@@ -76,7 +89,7 @@ function showsInstalledVersion(cluster: Cluster): boolean {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [SheetSyncDirective],
+  imports: [SheetSyncDirective, PluginConfigFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,6 +98,13 @@ export default class InstallPluginModalComponent {
   /** Human-readable plugin name (e.g. "OpenFSC"), shown to the user. Never the
    * install identifier — the caller keeps that to itself. */
   pluginDisplayName = input('');
+
+  // The publisher and install identifiers, for GetPluginDefinition's PluginRef
+  // lookup: neither the display name above nor the modal's own state carries
+  // these, so the parent hands them in.
+  organizationName = input('');
+
+  pluginName = input('');
 
   clusters = input<Cluster[]>([]);
 
@@ -110,6 +130,31 @@ export default class InstallPluginModalComponent {
   // Emits a cluster to retry a failed installation on, with the current pin.
   retry = output<RetrySelection>();
 
+  private catalogClient = inject(CATALOG);
+
+  // Set once a version with a non-empty schema is chosen; the form renders
+  // against it and clears it back to null on submit, cancel or close.
+  pendingInstall = signal<{
+    clusterId: string;
+    option: PluginVersionOption;
+    schema: ConfigSchemaEntry[];
+  } | null>(null);
+
+  schemaError = signal(false);
+
+  schemaLoading = signal(false);
+
+  // Keyed by version: GetPluginDefinition is pinned per version, and a sheet
+  // stays open across several "Install" clicks on the same version list.
+  private schemaCache = new Map<string, ConfigSchemaEntry[]>();
+
+  // Bumped by every onInstallOne call and by onClose. A fetch that lands after
+  // its generation has been superseded — a second click, or the sheet closing
+  // — is stale: the component is never destroyed (both parents render it
+  // unconditionally), so nothing else would stop a late response from
+  // resurrecting state on a closed sheet or one reopened for another plugin.
+  private requestGeneration = 0;
+
   /** Everything but the newest published version; the newest sits on its own at
    *  the top of the menu. */
   earlierVersions = computed(() => this.versions().slice(1));
@@ -134,14 +179,84 @@ export default class InstallPluginModalComponent {
   showsVersion = showsInstalledVersion;
 
   onClose(): void {
+    // A re-opened sheet starts clean: neither a pending form nor a stale error
+    // nor a schema fetched for a version this session may never touch again
+    // should survive across opens. Bumping the generation also drops any fetch
+    // still in flight — this component is never destroyed, so without it a
+    // late response could resurrect state after close.
+    this.requestGeneration += 1;
+    this.pendingInstall.set(null);
+    this.schemaError.set(false);
+    this.schemaLoading.set(false);
+    this.schemaCache.clear();
     this.closeModal.emit();
   }
 
   /** One row, one install, at the version picked from that row's own menu. A
    *  plugin is pinned per cluster, so the version belongs to the row and not to
-   *  the sheet. */
-  onInstallOne(clusterId: string, option: PluginVersionOption): void {
-    this.install.emit({ clusterIds: [clusterId], version: option.version, hash: option.hash });
+   *  the sheet. Fetches the version's config schema first: an empty schema
+   *  installs immediately as before, a non-empty one opens the form. Guarded by
+   *  a generation counter: the Install button is disabled while a fetch is in
+   *  flight, but a second click (a different row) or a close can still race it,
+   *  and a superseded result must not set state a later action already moved
+   *  past. */
+  async onInstallOne(clusterId: string, option: PluginVersionOption): Promise<void> {
+    this.requestGeneration += 1;
+    const generation = this.requestGeneration;
+    this.schemaError.set(false);
+    this.schemaLoading.set(true);
+    let schema: ConfigSchemaEntry[];
+    try {
+      schema = await this.fetchConfigSchema(option.version);
+    } catch {
+      // Without the schema there is no telling whether a form is needed, so
+      // installing anyway could skip required config; surface the error instead.
+      if (generation === this.requestGeneration) this.schemaError.set(true);
+      return;
+    } finally {
+      if (generation === this.requestGeneration) this.schemaLoading.set(false);
+    }
+    if (generation !== this.requestGeneration) return;
+    if (schema.length === 0) {
+      // No declared config: instant install, exactly the pre-schema behavior.
+      this.install.emit({ clusterIds: [clusterId], version: option.version, hash: option.hash, config: {} });
+      return;
+    }
+    this.pendingInstall.set({ clusterId, option, schema });
+  }
+
+  private async fetchConfigSchema(version: string): Promise<ConfigSchemaEntry[]> {
+    const cached = this.schemaCache.get(version);
+    if (cached) return cached;
+    const resp = await firstValueFrom(
+      this.catalogClient.getPluginDefinition(
+        create(GetPluginDefinitionRequestSchema, {
+          lookup: {
+            case: 'name',
+            value: { organizationName: this.organizationName(), pluginName: this.pluginName() },
+          },
+          version,
+        }),
+      ),
+    );
+    this.schemaCache.set(version, resp.configSchema);
+    return resp.configSchema;
+  }
+
+  onConfigConfirmed(config: Record<string, string>): void {
+    const pending = this.pendingInstall();
+    if (!pending) return;
+    this.pendingInstall.set(null);
+    this.install.emit({
+      clusterIds: [pending.clusterId],
+      version: pending.option.version,
+      hash: pending.option.hash,
+      config,
+    });
+  }
+
+  onConfigCancelled(): void {
+    this.pendingInstall.set(null);
   }
 
   onUninstall(clusterId: string): void {

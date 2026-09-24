@@ -399,6 +399,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
           plugin.name,
           selection.version,
           selection.hash,
+          selection.config,
         ),
       ),
     );
@@ -440,6 +441,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
     this.setPhase(clusterId, 'Pending');
     try {
+      // The failed install may carry config; read it before deleting the CR so
+      // the retry re-creates the installation as it was, not with defaults.
+      const existing = await this.pluginInstallationService
+        .getInstallation(clusterId, resourceName)
+        .catch(() => null);
+      const config = existing?.spec.config ?? {};
       await this.pluginInstallationService.uninstallPlugin(clusterId, resourceName).catch(() => {});
       await this.waitForUninstall(clusterId, resourceName);
       await this.pluginInstallationService.installPlugin(
@@ -448,6 +455,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         plugin.name,
         retry.version,
         retry.hash,
+        config,
       );
       this.startInstallPollingIfNeeded();
     } catch {

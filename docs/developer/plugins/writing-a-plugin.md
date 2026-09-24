@@ -141,6 +141,55 @@ actually embedded; the rest is on you, so change them together.
 
 `definition.yaml` has **no `spec.image`**: `functl plugin publish --image=<repo>@sha256:<digest>` injects the pushed digest, so a published definition pins immutable code and its hash binds that code. A manifest that names a mutable tag is rejected.
 
+## Declaring config
+
+`spec.configSchema` declares the install-time config keys the console should
+prompt for and the controller should validate:
+
+```yaml
+spec:
+  configSchema:
+    - name: MON_COUNT
+      displayName: Monitor count
+      type: int
+      default: "3"
+      description: Ceph monitors to run. A single-node cluster needs 1 (with ALLOW_MULTIPLE_PER_NODE), or mons never reach quorum.
+    - name: ALLOW_MULTIPLE_PER_NODE
+      type: bool
+      default: "false"
+      description: Allow multiple mons/mgrs on one node. Required on a single-node cluster.
+    - name: CEPH_IMAGE
+      type: string
+      default: "quay.io/ceph/ceph:v19.2.3"
+      advanced: true
+      description: Ceph container image. v19+ is required on arm64 (v18 segfaults on Apple Silicon).
+```
+
+Each entry's `type` is one of `string`, `int`, `bool` or `enum` (`enum` requires
+a `values` list). `name` must be uppercase and becomes the `FUNP_<name>` env var
+at install time; it is never displayed as-is. `displayName` is an optional
+human-readable label the console shows instead — when omitted, the console
+derives one from `name` (e.g. `MON_COUNT` becomes "Mon count"). `required` and
+`default` are mutually exclusive: a required key
+has no default and must be supplied. A `bool` key must always declare a default
+and can never be `required` — a checkbox has no "untouched" state, so an
+unprompted `false` would otherwise be submitted on the admin's behalf. `string`,
+`int` and `enum` keys should declare a default when a sensible one exists, but
+may omit both `default` and `required`: an omitted key falls back to whatever
+default the plugin binary's own env parsing applies. `advanced: true` collapses
+the key under an "advanced" toggle in the install form instead of showing it by
+default.
+
+The schema is closed: `spec.config` in the `PluginInstallation` may only set
+keys declared here. `functl plugin publish` validates the schema itself; the
+plugin-controller validates `spec.config` against it at install/reconcile time
+and fails with `ConfigValid=False` before touching any resources. A definition
+with no `configSchema` accepts any config, unchanged from before this feature.
+
+Secret values do not belong in `spec.config` — it is a plain CR field readable
+by anyone who can `get plugininstallations`; a secretRef mechanism is a
+separate design.
+
 ## Implement the plugin
 
 `Plugin` is the only required interface. `Installer`, `Reconciler` and

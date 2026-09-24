@@ -186,6 +186,8 @@
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"
+  [organizationName]="selectedPlugin?.organizationName ?? ''"
+  [pluginName]="selectedPlugin?.name ?? ''"
   [clusters]="clustersForModal"
   [versions]="installVersions()"
   [versionsError]="installVersionsError()"

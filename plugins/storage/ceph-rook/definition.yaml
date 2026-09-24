@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.1.0
+  version: v0.2.0
   description: Block storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
@@ -160,3 +160,49 @@ spec:
       version: v1
       resource: cephclusters
       verbs: [get]
+  configSchema:
+    - name: MON_COUNT
+      displayName: Monitor count
+      type: int
+      default: "3"
+      description: Ceph monitors to run. A single-node cluster needs 1 (with ALLOW_MULTIPLE_PER_NODE), or mons never reach quorum.
+    - name: MGR_COUNT
+      displayName: Manager count
+      type: int
+      default: "2"
+      description: Ceph managers to run. Use 1 on a single-node cluster.
+    - name: ALLOW_MULTIPLE_PER_NODE
+      displayName: Allow multiple daemons per node
+      type: bool
+      default: "false"
+      description: Allow multiple mons/mgrs on one node. Required on a single-node cluster.
+    - name: DEV_LOOP_DEVICES
+      displayName: Loop devices only (development)
+      type: bool
+      default: "false"
+      advanced: true
+      description: "Local development only: discover ONLY /dev/loopNpN partitions and ignore the host's real disks. A safety control, not a convenience."
+    - name: ALLOW_UNSUPPORTED_CEPH
+      displayName: Allow unsupported Ceph releases
+      type: bool
+      default: "false"
+      advanced: true
+      description: Waive Rook's supported-release check. Only for a Ceph release outside Rook's support table (the default image does not need it).
+    - name: CEPH_IMAGE
+      displayName: Ceph image
+      type: string
+      default: "quay.io/ceph/ceph:v19.2.3"
+      advanced: true
+      description: Ceph container image. v19+ is required on arm64 (v18 segfaults on Apple Silicon).
+    - name: ROOK_NAMESPACE
+      displayName: Rook operator namespace
+      type: string
+      default: "rook-ceph"
+      advanced: true
+      description: Namespace the Rook operator runs in. Part of the CSI driver name; do not change on a cluster with existing storage.
+    - name: CLUSTER_NAMESPACE
+      displayName: Ceph cluster namespace
+      type: string
+      default: "rook-ceph"
+      advanced: true
+      description: Namespace for the CephCluster and its CSI secrets; the CSI clusterID.

@@ -132,13 +132,15 @@ export default class FakePluginInstallationService implements Pick<
 
   // Mirrors the real signature. Unlike the real service this does not reject an
   // unpinned definition: the fixture catalog carries no pluginVersion/definitionHash,
-  // and the walkthrough's install slide must succeed regardless.
+  // and the walkthrough's install slide must succeed regardless. `_config` is
+  // accepted but ignored — signatures must stay in sync with the real service.
   async installPlugin(
     clusterId: string,
     organizationName: string,
     pluginName: string,
     pluginVersion: string,
     definitionHash: string,
+    _config: Record<string, string> = {},
   ): Promise<void> {
     const current = this.byCluster.get(clusterId) ?? [];
     // Match on the pair: two organizations may publish the same pluginName.
