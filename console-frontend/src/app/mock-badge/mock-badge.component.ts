@@ -27,7 +27,7 @@ let nextId = 0;
       type="button"
       [id]="triggerId"
       [attr.popovertarget]="popoverId"
-      aria-label="Mock"
+      [attr.aria-label]="'Mock: ' + label()"
       class="focus-visible:outline-accent-500 dark:focus-visible:outline-accent-400 inline-flex cursor-pointer rounded-full border-0 bg-transparent p-0 align-middle focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <nldd-badge color="hemelblauw" size="sm" text="Mock" decorative></nldd-badge>

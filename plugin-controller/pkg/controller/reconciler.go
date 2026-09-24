@@ -71,6 +71,17 @@ func isUnpinned(hash string) bool {
 	return hash == "" || hash == unknownDefinitionHash
 }
 
+// hasStarted reports whether the installation has been deployed before, so its
+// definition was fetched and verified at least once.
+func hasStarted(cr *pluginsv1.PluginInstallation) bool {
+	switch cr.Status.Phase {
+	case pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDegraded:
+		return true
+	default:
+		return false
+	}
+}
+
 // isUnpinnedVersion reports whether a pluginVersion is the unresolved
 // placeholder (empty or "unknown"). A definition is stored and fetched by its
 // real metadata.version, so an unpinned version can never resolve one.
@@ -200,8 +211,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		cr.Status.Message = err.Error()
 		cr.Status.ObservedGeneration = cr.Generation
-		if err := r.client.Status().Update(ctx, &cr); err != nil {
-			log.Error("persist status after reconcile error failed", "err", err)
+		if updateErr := r.client.Status().Update(ctx, &cr); updateErr != nil {
+			// Retry until the phase is saved, even for a permanent error:
+			// otherwise the CR is left without one, which reads as installing.
+			log.Error("persist status after reconcile error failed", "err", updateErr)
+			return ctrl.Result{}, fmt.Errorf("update status after reconcile error: %w", errors.Join(err, updateErr))
 		}
 
 		if isPermanent {
@@ -489,8 +503,11 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 		err = fmt.Errorf("fetch definition: %w", err)
 		// The catalog does not have this version, or refuses the reference
 		// outright: asking again will not change that. Anything else, an
-		// unreachable catalog included, is worth another try.
-		if code := connect.CodeOf(err); code == connect.CodeNotFound || code == connect.CodeInvalidArgument {
+		// unreachable catalog included, is worth another try. An installation
+		// that already got going keeps retrying instead: its definition was
+		// fetched before, so a lookup that now fails (a yanked version, or the
+		// in-memory cache emptied by a restart) must not fail a healthy plugin.
+		if code := connect.CodeOf(err); (code == connect.CodeNotFound || code == connect.CodeInvalidArgument) && !hasStarted(cr) {
 			return nil, permanent(err)
 		}
 		return nil, err

@@ -37,6 +37,16 @@
         show-text
         text="Loading plugins..."
       ></nldd-activity-indicator>
+    } @else if (installedOnly && listedPlugins.length === 0 && installsReadFailed()) {
+      <!-- A cluster we could not read may well have plugins: do not claim
+           there are none. -->
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-inline-dialog
+        icon="exclamation-triangle"
+        icon-color="critical"
+        text="Couldn't load installed plugins"
+        supporting-text="Something went wrong reading the plugins on your clusters. Reload the page to try again."
+      ></nldd-inline-dialog>
     } @else if (installedOnly && listedPlugins.length === 0) {
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-inline-dialog
