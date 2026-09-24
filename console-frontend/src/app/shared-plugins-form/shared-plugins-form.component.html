@@ -93,42 +93,6 @@
         </nldd-list>
       }
     </nldd-form-field>
-    <!-- Switch and upload in one box: the upload only exists because the switch
-         is on, and loose in the form they read as two unrelated questions. -->
-    <nldd-box>
-      <!-- Tight around the switch on its own, roomier once the upload is under
-           it: a field needs air below it, a lone checkbox row does not. -->
-      <nldd-container
-        padding-inline="16"
-        padding-top="6"
-        [attr.padding-bottom]="customPluginUploadEnabled ? '16' : '6'"
-      >
-        <!-- No field label above this one: the checkbox says what it turns on, and
-             a label repeating that would be the third "plugin" heading in a row. -->
-        <nldd-checkbox-field
-          label="Custom plugins (warning: warranty on cluster void)"
-          [checked]="customPluginUploadEnabled"
-          name="customPluginUploadEnabled"
-          (change)="onCustomPluginUploadToggle($any($event).detail.checked)"
-        ></nldd-checkbox-field>
-        <!-- The upload only appears once it is turned on. A disabled file field
-             asks to be read and then refuses to do anything; an absent one asks
-             nothing. -->
-        @if (customPluginUploadEnabled) {
-          <nldd-spacer size="16"></nldd-spacer>
-          <nldd-form-field label="Plugin ZIP file">
-            <nldd-form-field-help-text>
-              A custom plugin goes up as a ZIP file. Other file types are rejected.
-            </nldd-form-field-help-text>
-            <nldd-file-field
-              accept=".zip"
-              [translations]="fileFieldTranslations"
-              (change)="onCustomPluginFileChange($event)"
-            ></nldd-file-field>
-          </nldd-form-field>
-        }
-      </nldd-container>
-    </nldd-box>
     <nldd-form-actions>
       <ng-content></ng-content>
     </nldd-form-actions>

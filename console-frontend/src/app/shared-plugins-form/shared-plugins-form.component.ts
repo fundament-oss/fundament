@@ -21,15 +21,10 @@ import {
   ListPresetsRequestSchema,
   type Preset,
 } from '../../generated/v1/plugin_pb';
-import '@nldd/design-system/checkbox-field';
-import '@nldd/design-system/file-field';
-
 import '@nldd/design-system/activity-indicator';
-import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/checkbox';
-import '@nldd/design-system/container';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
@@ -70,10 +65,6 @@ export class SharedPluginsFormComponent implements OnInit, OnChanges {
   protected readonly pluginIconName = getPluginIconName;
 
   selectedPreset = 'custom';
-
-  customPluginUploadEnabled = false;
-
-  selectedCustomPluginFile: File | null = null;
 
   isLoading = signal(true);
 
@@ -196,25 +187,6 @@ export class SharedPluginsFormComponent implements OnInit, OnChanges {
       ...plugin,
       selected: preset.pluginIds.includes(plugin.id),
     }));
-  }
-
-  onCustomPluginUploadToggle(enabled: boolean) {
-    this.customPluginUploadEnabled = enabled;
-    // Turning it off removes the file field from the page, so a file picked
-    // before that would sit in here without anything on screen showing it.
-    if (!enabled) this.selectedCustomPluginFile = null;
-  }
-
-  // The design system ships Dutch defaults; the console is in US English.
-  readonly fileFieldTranslations = {
-    'components.file-field.to-choose-file-action': 'Choose file',
-    'components.file-field.no-file-chosen-text': 'No file chosen',
-    'components.file-field.clear-action': 'Clear selection',
-  };
-
-  onCustomPluginFileChange(event: Event) {
-    const { files } = (event as CustomEvent<{ files: File[] }>).detail;
-    this.selectedCustomPluginFile = files.length > 0 ? files[0] : null;
   }
 
   submit() {
