@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -55,6 +56,11 @@ const (
 	// version has nothing to fetch.
 	unknownDefinitionVersion = "unknown"
 )
+
+// errTerminal marks reconcile errors that cannot resolve without a spec
+// change; only these surface as Phase=Failed (the console's retry for
+// Failed deletes and re-creates the CR, so transient errors must not).
+var errTerminal = errors.New("terminal")
 
 // isUnpinned reports whether a definitionHash carries no real consent record:
 // either empty or the "sha256:unknown" placeholder.
@@ -178,9 +184,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
 	// those before returning on error so the CR reflects the failure.
 	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
-		cr.Status.Phase = pluginsv1.PluginPhaseFailed
-		cr.Status.Message = err.Error()
-		cr.Status.ObservedGeneration = cr.Generation
+		// Only a terminal error (no spec change can resolve it) marks the CR
+		// Failed: the console's retry for Failed deletes and re-creates the
+		// CR, so a transient fetch error must not land here.
+		if errors.Is(err, errTerminal) {
+			cr.Status.Phase = pluginsv1.PluginPhaseFailed
+			cr.Status.Message = err.Error()
+			cr.Status.ObservedGeneration = cr.Generation
+		}
 		if err := r.client.Status().Update(ctx, &cr); err != nil {
 			log.Error("persist status after reconcile error failed", "err", err)
 		}
@@ -291,7 +302,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	// admin consented to.
 	if err := pluginruntime.ValidateConfig(cr.Spec.Config, def.Spec.ConfigSchema); err != nil {
 		setCondition(cr, ConditionConfigValid, metav1.ConditionFalse, "ConfigInvalid", err.Error())
-		return fmt.Errorf("validate config: %w", err)
+		return fmt.Errorf("validate config: %w: %w", errTerminal, err)
 	}
 	setCondition(cr, ConditionConfigValid, metav1.ConditionTrue, "Validated",
 		"spec.config conforms to the definition's configSchema")

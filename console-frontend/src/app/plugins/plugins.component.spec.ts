@@ -194,4 +194,35 @@ describe('PluginsComponent retry install', () => {
       { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
     );
   });
+
+  // A read failure (network blip, RBAC hiccup) is not "the CR is already
+  // gone": proceeding would uninstall the plugin's only copy of its config.
+  it('aborts without uninstalling when reading the existing installation fails', async () => {
+    const installationService = {
+      listInstallations: () => Promise.resolve([]),
+      getInstallation: vi.fn().mockRejectedValue(new Error('HTTP 500')),
+      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
+      installPlugin: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const component = build([], [], installationService);
+    component.selectedPlugin = {
+      id: 'pl-1',
+      name: 'ceph-rook',
+      displayName: 'Ceph Rook',
+      descriptionShort: '',
+      image: '',
+      organizationName: 'acme',
+      categories: [],
+      tags: [],
+    };
+    const notificationService = TestBed.inject(NotificationService);
+    const errorNotification = vi.spyOn(notificationService, 'error');
+
+    await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
+
+    expect(installationService.uninstallPlugin).not.toHaveBeenCalled();
+    expect(installationService.installPlugin).not.toHaveBeenCalled();
+    expect(errorNotification).toHaveBeenCalledTimes(1);
+  });
 });

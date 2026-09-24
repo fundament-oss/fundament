@@ -367,11 +367,11 @@ const testManifestWithConfigSchema = testManifest + `  configSchema:
       type: int
       default: "3"
       description: Number of Ceph monitors
+      advanced: true
     - name: FAILURE_DOMAIN
       type: enum
       values: [host, osd]
       required: true
-      advanced: true
 `
 
 func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
@@ -392,10 +392,32 @@ func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
 	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_INT, entries[0].GetType())
 	assert.Equal(t, "3", entries[0].GetDefaultValue())
 	assert.Equal(t, "Number of Ceph monitors", entries[0].GetDescription())
+	assert.True(t, entries[0].GetAdvanced())
 	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_ENUM, entries[1].GetType())
 	assert.Equal(t, []string{"host", "osd"}, entries[1].GetValues())
 	assert.True(t, entries[1].GetRequired())
-	assert.True(t, entries[1].GetAdvanced())
+	assert.False(t, entries[1].GetAdvanced(), "a required entry cannot be advanced")
+}
+
+// An unparseable manifest must fail closed for the install modal: the manifest
+// and hash still come back (they are what the install pins against), but
+// config_schema_unavailable tells the console it cannot see whether required
+// config exists, so it must not instant-install.
+func TestGetPluginDefinitionDegradesOnUnparseableManifest(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-unparseable", Visibility: "public", Published: true,
+		Manifest: []byte(testManifest + "  fieldFromANewerSdk: true\n"),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp.GetManifest(), "stored bytes must still be returned")
+	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
+	assert.Empty(t, resp.GetConfigSchema())
+	assert.True(t, resp.GetConfigSchemaUnavailable())
 }
 
 func TestGetPluginDefinitionNoConfigSchema(t *testing.T) {

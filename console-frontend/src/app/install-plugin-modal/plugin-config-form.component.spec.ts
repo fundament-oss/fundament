@@ -123,4 +123,74 @@ describe('PluginConfigFormComponent', () => {
     const field = fixture.nativeElement.querySelector('nldd-form-field');
     expect(field?.getAttribute('label')).toBe('Monitor count');
   });
+
+  it('blocks submit when an int value has 20 digits (does not fit int64)', () => {
+    const component = build([
+      { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
+    ]);
+
+    const confirmed = vi.fn();
+    component.confirmed.subscribe(confirmed);
+
+    component.form.get('MON_COUNT')?.setValue('99999999999999999999');
+    component.onSubmit();
+
+    expect(confirmed).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when a required field is whitespace-only', () => {
+    const component = build([
+      { name: 'CEPH_IMAGE', type: ConfigType.STRING, defaultValue: '', required: true },
+    ]);
+
+    const confirmed = vi.fn();
+    component.confirmed.subscribe(confirmed);
+
+    component.form.get('CEPH_IMAGE')?.setValue('   ');
+    component.onSubmit();
+
+    expect(confirmed).not.toHaveBeenCalled();
+  });
+
+  it('reveals the advanced section on submit when a hidden advanced control is invalid', () => {
+    const component = build([
+      {
+        name: 'CEPH_IMAGE',
+        type: ConfigType.STRING,
+        defaultValue: '',
+        required: true,
+        advanced: true,
+      },
+    ]);
+
+    expect(component.showAdvanced()).toBe(false);
+    component.onSubmit();
+    expect(component.showAdvanced()).toBe(true);
+  });
+
+  describe('onEnter', () => {
+    it('does not submit when Enter originates from a non-text-field element', () => {
+      const component = build([
+        { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
+      ]);
+      const confirmed = vi.fn();
+      component.confirmed.subscribe(confirmed);
+
+      component.onEnter({ target: document.createElement('nldd-button') } as unknown as Event);
+
+      expect(confirmed).not.toHaveBeenCalled();
+    });
+
+    it('submits when Enter originates from a text field and the form is valid', () => {
+      const component = build([
+        { name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' },
+      ]);
+      const confirmed = vi.fn();
+      component.confirmed.subscribe(confirmed);
+
+      component.onEnter({ target: document.createElement('nldd-text-field') } as unknown as Event);
+
+      expect(confirmed).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -218,4 +218,9 @@ message GetPluginDefinitionResponse {
   // Declared install-time config keys, in manifest order; empty when the
   // definition declares no configSchema (install proceeds with no form).
   repeated ConfigSchemaEntry config_schema = 30;
+  // True when the stored manifest could not be parsed by this binary, so
+  // config_schema could not be derived. Distinguishes "declares no schema"
+  // (install proceeds) from "schema unknown" (the console must not
+  // instant-install past required config it cannot see).
+  bool config_schema_unavailable = 40;
 }

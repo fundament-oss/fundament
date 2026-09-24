@@ -144,8 +144,10 @@ export default class InstallPluginModalComponent {
 
   schemaLoading = signal(false);
 
-  // Keyed by version: GetPluginDefinition is pinned per version, and a sheet
-  // stays open across several "Install" clicks on the same version list.
+  // Keyed by `${organizationName}/${pluginName}/${version}`: GetPluginDefinition
+  // is pinned per version AND per plugin, and a sheet stays open across several
+  // "Install" clicks — including on a different plugin row — on the same
+  // version list.
   private schemaCache = new Map<string, ConfigSchemaEntry[]>();
 
   // Bumped by every onInstallOne call and by onClose. A fetch that lands after
@@ -207,7 +209,7 @@ export default class InstallPluginModalComponent {
     this.schemaLoading.set(true);
     let schema: ConfigSchemaEntry[];
     try {
-      schema = await this.fetchConfigSchema(option.version);
+      schema = await this.fetchConfigSchema(option.version, generation);
     } catch {
       // Without the schema there is no telling whether a form is needed, so
       // installing anyway could skip required config; surface the error instead.
@@ -225,8 +227,12 @@ export default class InstallPluginModalComponent {
     this.pendingInstall.set({ clusterId, option, schema });
   }
 
-  private async fetchConfigSchema(version: string): Promise<ConfigSchemaEntry[]> {
-    const cached = this.schemaCache.get(version);
+  private async fetchConfigSchema(version: string, generation: number): Promise<ConfigSchemaEntry[]> {
+    // Computed before the await, alongside the generation: the org/plugin name
+    // inputs could change while a fetch for a DIFFERENT plugin is in flight, so
+    // the key must be pinned to what was asked, not read again after the await.
+    const key = `${this.organizationName()}/${this.pluginName()}/${version}`;
+    const cached = this.schemaCache.get(key);
     if (cached) return cached;
     const resp = await firstValueFrom(
       this.catalogClient.getPluginDefinition(
@@ -239,7 +245,15 @@ export default class InstallPluginModalComponent {
         }),
       ),
     );
-    this.schemaCache.set(version, resp.configSchema);
+    if (resp.configSchemaUnavailable) {
+      // The catalog could not parse the manifest, so it cannot say whether
+      // required config exists — fail closed exactly like a fetch error:
+      // caught by the caller's schemaError path, nothing cached.
+      throw new Error('config schema unavailable');
+    }
+    // Only cache while still the current request: a fetch that resolves after
+    // a second click or onClose() must not poison the cache for a later open.
+    if (generation === this.requestGeneration) this.schemaCache.set(key, resp.configSchema);
     return resp.configSchema;
   }
 

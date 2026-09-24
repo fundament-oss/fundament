@@ -116,6 +116,49 @@ describe('InstallPluginModalComponent onInstallOne', () => {
     expect(component.schemaError()).toBe(false);
     expect(component.schemaLoading()).toBe(false);
     expect(install).not.toHaveBeenCalled();
+
+    // The stale resolution must not have populated the cache: fetching the
+    // same version again hits the catalog client a second time.
+    getPluginDefinition.mockReturnValue(of(create(GetPluginDefinitionResponseSchema, { configSchema: [] })));
+    await component.onInstallOne('c1', { version: 'v1.0.0', hash: 'sha256:abc' });
+    expect(getPluginDefinition).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches the schema per organization/plugin/version, not per version alone', async () => {
+    const getPluginDefinition = vi.fn().mockReturnValue(
+      of(create(GetPluginDefinitionResponseSchema, { configSchema: [] })),
+    );
+    const component = build(getPluginDefinition);
+
+    const install = vi.fn();
+    component.install.subscribe(install);
+
+    await component.onInstallOne('c1', { version: 'v1.0.0', hash: 'sha256:abc' });
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+
+    // Same version again: served from cache, no second call.
+    await component.onInstallOne('c2', { version: 'v1.0.0', hash: 'sha256:abc' });
+    expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats configSchemaUnavailable like a fetch failure: no install, nothing cached', async () => {
+    const getPluginDefinition = vi.fn().mockReturnValue(
+      of(create(GetPluginDefinitionResponseSchema, { configSchema: [], configSchemaUnavailable: true })),
+    );
+    const component = build(getPluginDefinition);
+
+    const install = vi.fn();
+    component.install.subscribe(install);
+
+    await component.onInstallOne('c1', { version: 'v1.0.0', hash: 'sha256:abc' });
+
+    expect(install).not.toHaveBeenCalled();
+    expect(component.pendingInstall()).toBeNull();
+    expect(component.schemaError()).toBe(true);
+
+    // Nothing cached: a retry hits the catalog client again.
+    await component.onInstallOne('c1', { version: 'v1.0.0', hash: 'sha256:abc' });
+    expect(getPluginDefinition).toHaveBeenCalledTimes(2);
   });
 
   it('drops a schema fetch superseded by a second click before it resolves', async () => {

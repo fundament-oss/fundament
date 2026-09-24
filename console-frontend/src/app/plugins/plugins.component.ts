@@ -857,14 +857,32 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     const clusterId = retry.clusterId;
     const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
+    const previous = this.installs().find(
+      (install) =>
+        install.clusterId === clusterId &&
+        install.organizationName === plugin.organizationName &&
+        install.pluginName === plugin.name,
+    )?.phase;
     this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, 'Pending');
+
+    // The failed install may carry config; read it before deleting the CR so
+    // the retry re-creates the installation as it was, not with defaults. A
+    // read failure (network blip, RBAC hiccup) is not the same as "CR already
+    // gone" (404 resolves null) — only the latter is safe to proceed past.
+    // Uninstalling on a failed read would delete the only copy of the config.
+    let existing;
     try {
-      // The failed install may carry config; read it before deleting the CR so
-      // the retry re-creates the installation as it was, not with defaults.
-      const existing = await this.pluginInstallationService
-        .getInstallation(clusterId, resourceName)
-        .catch(() => null);
-      const config = existing?.spec.config ?? {};
+      existing = await this.pluginInstallationService.getInstallation(clusterId, resourceName);
+    } catch {
+      if (previous) this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, previous);
+      this.notificationService.error(
+        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+      );
+      return;
+    }
+    const config = existing?.spec.config ?? {};
+
+    try {
       // The CRD from the failed install still exists, so remove it and wait for
       // it to be gone before re-creating (a plain re-POST would 409).
       await this.pluginInstallationService.uninstallPlugin(clusterId, resourceName).catch(() => {});

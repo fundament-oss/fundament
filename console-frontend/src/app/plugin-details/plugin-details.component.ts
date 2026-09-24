@@ -439,14 +439,27 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     const clusterId = retry.clusterId;
     const resourceName = pluginResourceName(plugin.organizationName, plugin.name);
+    const previous = this.clusters().find((c) => c.id === clusterId)?.phase ?? null;
     this.setPhase(clusterId, 'Pending');
+
+    // The failed install may carry config; read it before deleting the CR so
+    // the retry re-creates the installation as it was, not with defaults. A
+    // read failure (network blip, RBAC hiccup) is not the same as "CR already
+    // gone" (404 resolves null) — only the latter is safe to proceed past.
+    // Uninstalling on a failed read would delete the only copy of the config.
+    let existing;
     try {
-      // The failed install may carry config; read it before deleting the CR so
-      // the retry re-creates the installation as it was, not with defaults.
-      const existing = await this.pluginInstallationService
-        .getInstallation(clusterId, resourceName)
-        .catch(() => null);
-      const config = existing?.spec.config ?? {};
+      existing = await this.pluginInstallationService.getInstallation(clusterId, resourceName);
+    } catch {
+      this.setPhase(clusterId, previous);
+      this.notificationService.error(
+        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+      );
+      return;
+    }
+    const config = existing?.spec.config ?? {};
+
+    try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, resourceName).catch(() => {});
       await this.waitForUninstall(clusterId, resourceName);
       await this.pluginInstallationService.installPlugin(
