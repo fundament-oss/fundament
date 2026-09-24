@@ -52,6 +52,29 @@ func (q *Queries) UserCreate(ctx context.Context, arg UserCreateParams) (UserCre
 	return i, err
 }
 
+const userDeleteRegistration = `-- name: UserDeleteRegistration :execrows
+UPDATE tenant.users
+SET deleted = now()
+WHERE id = $1
+  AND external_ref IS NULL
+  AND deleted IS NULL
+`
+
+type UserDeleteRegistrationParams struct {
+	ID uuid.UUID
+}
+
+// Soft-deletes a user nobody has signed in with: a registration made at a
+// wrong address would otherwise stay claimable by whoever signs in there. An
+// account somebody has signed in to is not deleted here.
+func (q *Queries) UserDeleteRegistration(ctx context.Context, arg UserDeleteRegistrationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, userDeleteRegistration, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const userFindByEmail = `-- name: UserFindByEmail :many
 SELECT
   id,
@@ -152,9 +175,14 @@ SELECT
   users.created,
   COALESCE(
     array_agg(organizations.name ORDER BY organizations.name)
-      FILTER (WHERE organizations.id IS NOT NULL),
+      FILTER (WHERE organizations.id IS NOT NULL AND organizations_users.status = 'accepted'),
     '{}'
-  )::text[] AS organization_names
+  )::text[] AS organization_names,
+  COALESCE(
+    array_agg(organizations.name ORDER BY organizations.name)
+      FILTER (WHERE organizations.id IS NOT NULL AND organizations_users.status = 'pending'),
+    '{}'
+  )::text[] AS invitation_names
 FROM tenant.users
 LEFT JOIN tenant.organizations_users
   ON organizations_users.user_id = users.id
@@ -175,10 +203,13 @@ type UserListRow struct {
 	Email             pgtype.Text
 	Created           pgtype.Timestamptz
 	OrganizationNames []string
+	InvitationNames   []string
 }
 
-// Every user, with the names of the organizations they belong to or are
-// invited to. Users without any such organization have an empty array.
+// Every user, with the names of the organizations they are an accepted member
+// of and, separately, the ones they hold an unanswered invitation to. An
+// invitation is not membership: someone invited to one organization and in
+// none is still waiting for an operator.
 func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
 	rows, err := q.db.Query(ctx, userList)
 	if err != nil {
@@ -195,6 +226,7 @@ func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
 			&i.Email,
 			&i.Created,
 			&i.OrganizationNames,
+			&i.InvitationNames,
 		); err != nil {
 			return nil, err
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
 
@@ -18,6 +19,7 @@ import (
 type UserCmd struct {
 	Create UserCreateCmd `cmd:"" help:"Register a user by email ahead of their first sign-in."`
 	List   UserListCmd   `cmd:"" help:"List users and the organizations they belong to."`
+	Delete UserDeleteCmd `cmd:"" help:"Delete a registration nobody has signed in with."`
 }
 
 // UserCreateCmd registers a user by email before they have signed in.
@@ -32,8 +34,16 @@ type UserCreateCmd struct {
 
 // UserListCmd lists users.
 type UserListCmd struct {
-	Organization        string `help:"Only users that belong to this organization (by name)."`
-	WithoutOrganization bool   `help:"Only users that belong to no organization at all."`
+	Organization        string `help:"Only accepted members of this organization (by name)."`
+	WithoutOrganization bool   `help:"Only users that are an accepted member of no organization; an unanswered invitation does not count."`
+}
+
+// UserDeleteCmd soft-deletes a user nobody has signed in with, along with any
+// memberships and invitations they hold. A registration made at a mistyped
+// address would otherwise stay claimable by whoever signs in there. An account
+// somebody has signed in to is not a registration and is refused.
+type UserDeleteCmd struct {
+	User string `arg:"" help:"User ID or email address." required:""`
 }
 
 // userRef is what a command accepts to name a user: a user ID or an email
@@ -132,6 +142,26 @@ func joinUserIDs(rows []db.UserFindByEmailRow) string {
 	return strings.Join(ids, ", ")
 }
 
+// registerUser registers an address nobody has signed in with, refusing one
+// that is in use: an address that exists is a user to add, and quietly reusing
+// it would hide a wrong assumption. Both user create and member add
+// --create-user go through here.
+func registerUser(ctx context.Context, queries *db.Queries, email, name string) (uuid.UUID, error) {
+	existing, err := queries.UserFindByEmail(ctx, db.UserFindByEmailParams{Email: email})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to look up user: %w", err)
+	}
+	if len(existing) > 0 {
+		return uuid.Nil, fmt.Errorf("user with email %q already exists (%s)", email, joinUserIDs(existing))
+	}
+
+	created, err := queries.UserCreate(ctx, db.UserCreateParams{Name: name, Email: email})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to register user: %w", err)
+	}
+	return created.ID, nil
+}
+
 // Run executes the user create command.
 func (c *UserCreateCmd) Run(ctx *Context) error {
 	email, err := parseEmail(c.Email)
@@ -146,25 +176,66 @@ func (c *UserCreateCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("creating user", "email", email, "name", name)
 
-	existing, err := ctx.Queries.UserFindByEmail(context.Background(), db.UserFindByEmailParams{Email: email})
+	id, err := registerUser(context.Background(), ctx.Queries, email, name)
 	if err != nil {
+		return err
+	}
+
+	ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", email, "id", id.String())
+
+	return outputCreatedID(ctx.Output, id)
+}
+
+// Run executes the user delete command.
+func (c *UserDeleteCmd) Run(ctx *Context) error {
+	ref, err := parseUserRef(c.User)
+	if err != nil {
+		return err
+	}
+
+	bgCtx := context.Background()
+
+	tx, err := ctx.DB.Pool.Begin(bgCtx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer rollback.Rollback(bgCtx, tx, ctx.Logger)
+
+	qtx := ctx.Queries.WithTx(tx)
+
+	user, err := lookupUser(bgCtx, qtx, ref)
+	if err != nil {
+		if errors.Is(err, errUserNotFound) {
+			return fmt.Errorf("user %q not found", c.User)
+		}
 		return fmt.Errorf("failed to look up user: %w", err)
 	}
-	if len(existing) > 0 {
-		return fmt.Errorf("user with email %q already exists: %s", email, joinUserIDs(existing))
+	if user.ExternalRef != "" {
+		return fmt.Errorf("user %q has signed in and is not a registration; only registrations nobody has signed in with can be deleted", c.User)
 	}
 
-	u, err := ctx.Queries.UserCreate(context.Background(), db.UserCreateParams{
-		Name:  name,
-		Email: email,
-	})
+	ctx.Logger.Debug("deleting user registration", "user_id", user.ID.String(), "email", user.Email)
+
+	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
-		return fmt.Errorf("failed to create user: %w", err)
+		return fmt.Errorf("failed to revoke memberships: %w", err)
 	}
 
-	ctx.Logger.Info("registered user; the account is linked when someone first signs in at this address", "email", email, "id", u.ID.String())
+	deleted, err := qtx.UserDeleteRegistration(bgCtx, db.UserDeleteRegistrationParams{ID: user.ID})
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	if deleted == 0 {
+		return fmt.Errorf("user %q not found", c.User)
+	}
 
-	return outputUserCreate(ctx.Output, u.ID)
+	if err := tx.Commit(bgCtx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	ctx.Logger.Info("deleted user registration", "user_id", user.ID.String(), "email", user.Email, "memberships_revoked", revoked)
+
+	return nil
 }
 
 // Run executes the user list command.
@@ -189,6 +260,8 @@ func (c *UserListCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to list users: %w", err)
 	}
 
+	// Both filters go by accepted membership; an invitation someone has not
+	// answered is listed, but is not an organization they are in.
 	users = slices.DeleteFunc(users, func(u db.UserListRow) bool {
 		switch {
 		case c.WithoutOrganization:
@@ -205,11 +278,6 @@ func (c *UserListCmd) Run(ctx *Context) error {
 	return outputUserList(ctx.Output, users)
 }
 
-// userCreateOutput is the JSON output structure for user create.
-type userCreateOutput struct {
-	ID string `json:"id"`
-}
-
 // userOutput is the JSON output structure for a user.
 type userOutput struct {
 	ID            string   `json:"id"`
@@ -217,21 +285,8 @@ type userOutput struct {
 	Email         string   `json:"email"`
 	ExternalRef   string   `json:"external_ref"`
 	Organizations []string `json:"organizations"`
+	Invitations   []string `json:"invitations"`
 	Created       string   `json:"created"`
-}
-
-func outputUserCreate(format OutputFormat, id uuid.UUID) error {
-	switch format {
-	case OutputJSON:
-		return PrintJSON(userCreateOutput{
-			ID: id.String(),
-		})
-	case OutputTable:
-		fmt.Println(id.String())
-		return nil
-	default:
-		panic(fmt.Sprintf("unknown output format: %s", format))
-	}
 }
 
 func outputUserList(format OutputFormat, users []db.UserListRow) error {
@@ -245,23 +300,25 @@ func outputUserList(format OutputFormat, users []db.UserListRow) error {
 				Email:         u.Email.String,
 				ExternalRef:   u.ExternalRef.String,
 				Organizations: u.OrganizationNames,
+				Invitations:   u.InvitationNames,
 				Created:       u.Created.Time.Format(TimeFormat),
 			}
 		}
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		if _, err := fmt.Fprintln(w, "ID\tNAME\tEMAIL\tEXTERNAL_REF\tORGANIZATIONS\tCREATED"); err != nil {
+		if _, err := fmt.Fprintln(w, "ID\tNAME\tEMAIL\tEXTERNAL_REF\tORGANIZATIONS\tINVITED_TO\tCREATED"); err != nil {
 			return fmt.Errorf("writing output: %w", err)
 		}
 		for i := range users {
 			u := &users[i]
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 				u.ID.String(),
 				u.Name,
 				u.Email.String,
 				u.ExternalRef.String,
 				formatOrganizationNames(u.OrganizationNames),
+				formatInvitationNames(u.InvitationNames),
 				u.Created.Time.Format(TimeFormat),
 			); err != nil {
 				return fmt.Errorf("writing output: %w", err)
@@ -282,5 +339,11 @@ func formatOrganizationNames(names []string) string {
 	if len(names) == 0 {
 		return "(none)"
 	}
+	return strings.Join(names, ",")
+}
+
+// formatInvitationNames renders the organizations a user is invited to; most
+// users have none, and a blank keeps the column quiet.
+func formatInvitationNames(names []string) string {
 	return strings.Join(names, ",")
 }

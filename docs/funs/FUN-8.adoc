@@ -76,7 +76,9 @@ Signing in never creates an organization (FUN-4). Getting a user into one is an 
 * **After the first sign-in**: `funops user list --without-organization` shows who is waiting, and `funops organization member add <organization> <user-id|email>` assigns them. The membership is accepted right away; an operator assigning someone is not an invitation to answer. The user's next token refresh picks it up, so no new sign-in is needed.
 * **Before the first sign-in**: `funops organization member add <organization> <email> --create-user` registers the user by email (as `funops user create <email>` does on its own) and assigns the membership to that registration, in one transaction. The authn-api links the registration to the identity provider account on the first sign-in at that address, matched case-insensitively. Without `--create-user`, an address nobody has signed in with is an error: creating accounts as a side effect would turn a mistyped address into a membership nobody can ever claim.
 
-Users are addressed by ID or by email, never by name: names are what the identity provider reports and are not unique. `funops organization member remove` revokes a membership the way the organization-api does, and the authz outbox takes the change to OpenFGA.
+Adding someone who holds an unanswered invitation accepts it on their behalf, in the same statement that would otherwise insert the membership; the invitation keeps the permission it was sent with unless `--permission` is given, and a new membership defaults to viewer. An invitation is not membership: `funops user list` shows it separately, and `--without-organization` still lists the invited person as waiting.
+
+Users are addressed by ID or by email, never by name: names are what the identity provider reports and are not unique. `funops organization member remove` revokes a membership or a pending invitation the way the organization-api does, and the authz outbox takes the change to OpenFGA. `funops user delete` soft-deletes a registration nobody has signed in with, together with its memberships; an account somebody has signed in to is refused.
 
 === Non-Interactive Design
 

@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"text/tabwriter"
+
+	"github.com/google/uuid"
 )
 
 // OutputFormat represents the output format type.
@@ -34,4 +36,24 @@ func NewTableWriter() *tabwriter.Writer {
 // PrintKeyValue prints a key-value pair to the given writer.
 func PrintKeyValue(w io.Writer, key string, value any) {
 	fmt.Fprintf(w, "%s:\t%v\n", key, value)
+}
+
+// createdOutput is the JSON output structure of every create command: the id
+// of what was made, and nothing else.
+type createdOutput struct {
+	ID string `json:"id"`
+}
+
+// outputCreatedID prints the id of a created row: bare on a line for the
+// table format, so it can be captured by a script, and as an object in JSON.
+func outputCreatedID(format OutputFormat, id uuid.UUID) error {
+	switch format {
+	case OutputJSON:
+		return PrintJSON(createdOutput{ID: id.String()})
+	case OutputTable:
+		fmt.Println(id.String())
+		return nil
+	default:
+		panic(fmt.Sprintf("unknown output format: %s", format))
+	}
 }

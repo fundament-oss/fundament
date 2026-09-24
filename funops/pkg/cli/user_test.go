@@ -103,4 +103,6 @@ func TestParsePermission(t *testing.T) {
 func TestFormatOrganizationNames(t *testing.T) {
 	assert.Equal(t, "(none)", formatOrganizationNames(nil))
 	assert.Equal(t, "acme-corp,globex", formatOrganizationNames([]string{"acme-corp", "globex"}))
+	assert.Equal(t, "", formatInvitationNames(nil))
+	assert.Equal(t, "globex", formatInvitationNames([]string{"globex"}))
 }

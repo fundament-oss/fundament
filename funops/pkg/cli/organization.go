@@ -49,7 +49,7 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("organization created", "id", org.ID.String())
 
-	return outputOrganizationCreate(ctx.Output, org)
+	return outputCreatedID(ctx.Output, org.ID)
 }
 
 // Run executes the organization list command.
@@ -91,25 +91,6 @@ type organizationOutput struct {
 	Name    string `json:"name"`
 	Alias   string `json:"alias"`
 	Created string `json:"created"`
-}
-
-// organizationCreateOutput is the JSON output structure for organization create.
-type organizationCreateOutput struct {
-	ID string `json:"id"`
-}
-
-func outputOrganizationCreate(format OutputFormat, org db.OrganizationCreateRow) error {
-	switch format {
-	case OutputJSON:
-		return PrintJSON(organizationCreateOutput{
-			ID: org.ID.String(),
-		})
-	case OutputTable:
-		fmt.Println(org.ID.String())
-		return nil
-	default:
-		panic(fmt.Sprintf("unknown output format: %s", format))
-	}
 }
 
 func outputOrganizationList(format OutputFormat, orgs []db.OrganizationListRow) error {

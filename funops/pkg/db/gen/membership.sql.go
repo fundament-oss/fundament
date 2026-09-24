@@ -13,72 +13,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const membershipAcceptPending = `-- name: MembershipAcceptPending :execrows
-UPDATE tenant.organizations_users
-SET status = 'accepted', permission = $1
-WHERE organization_id = $2
-  AND user_id = $3
-  AND status = 'pending'
-  AND deleted IS NULL
-`
-
-type MembershipAcceptPendingParams struct {
-	Permission     dbconst.OrganizationsUserPermission
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-}
-
-// Turns an invitation the user has not answered yet into an accepted
-// membership, for when an operator assigns someone who was already invited.
-func (q *Queries) MembershipAcceptPending(ctx context.Context, arg MembershipAcceptPendingParams) (int64, error) {
-	result, err := q.db.Exec(ctx, membershipAcceptPending, arg.Permission, arg.OrganizationID, arg.UserID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const membershipCreate = `-- name: MembershipCreate :one
+const membershipCreateOrAccept = `-- name: MembershipCreateOrAccept :one
 INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
 VALUES ($1, $2, $3, 'accepted')
+ON CONFLICT (organization_id, user_id) WHERE deleted IS NULL AND status NOT IN ('declined', 'revoked')
+DO UPDATE SET
+  status = 'accepted',
+  permission = CASE
+    WHEN $4::boolean THEN organizations_users.permission
+    ELSE EXCLUDED.permission
+  END
+WHERE organizations_users.status = 'pending'
 RETURNING
   id,
-  organization_id,
-  user_id,
   permission,
-  status,
-  created
+  (xmax = 0)::boolean AS inserted
 `
 
-type MembershipCreateParams struct {
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
+type MembershipCreateOrAcceptParams struct {
+	OrganizationID        uuid.UUID
+	UserID                uuid.UUID
+	Permission            dbconst.OrganizationsUserPermission
+	KeepInvitedPermission bool
 }
 
-type MembershipCreateRow struct {
-	ID             uuid.UUID
-	OrganizationID uuid.UUID
-	UserID         uuid.UUID
-	Permission     dbconst.OrganizationsUserPermission
-	Status         dbconst.OrganizationsUserStatus
-	Created        pgtype.Timestamptz
+type MembershipCreateOrAcceptRow struct {
+	ID         uuid.UUID
+	Permission dbconst.OrganizationsUserPermission
+	Inserted   bool
 }
 
-// Assigns a user to an organization. The membership is accepted right away:
-// an operator assigning someone is not an invitation to answer. The insert
-// trigger puts the row on the authz outbox, so OpenFGA follows.
-func (q *Queries) MembershipCreate(ctx context.Context, arg MembershipCreateParams) (MembershipCreateRow, error) {
-	row := q.db.QueryRow(ctx, membershipCreate, arg.OrganizationID, arg.UserID, arg.Permission)
-	var i MembershipCreateRow
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.UserID,
-		&i.Permission,
-		&i.Status,
-		&i.Created,
+// Assigns a user to an organization in one statement. A new membership is
+// accepted right away: an operator assigning someone is not an invitation to
+// answer. A pending invitation becomes the accepted membership instead, and
+// keeps the permission it was sent with unless one is given. An accepted
+// membership is left alone and returns no row. The trigger puts the row on
+// the authz outbox, so OpenFGA follows.
+func (q *Queries) MembershipCreateOrAccept(ctx context.Context, arg MembershipCreateOrAcceptParams) (MembershipCreateOrAcceptRow, error) {
+	row := q.db.QueryRow(ctx, membershipCreateOrAccept,
+		arg.OrganizationID,
+		arg.UserID,
+		arg.Permission,
+		arg.KeepInvitedPermission,
 	)
+	var i MembershipCreateOrAcceptRow
+	err := row.Scan(&i.ID, &i.Permission, &i.Inserted)
 	return i, err
 }
 
@@ -87,6 +66,7 @@ UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
 WHERE organization_id = $1
   AND user_id = $2
+  AND status IN ('pending', 'accepted')
   AND deleted IS NULL
 `
 
@@ -95,9 +75,10 @@ type MembershipDeleteParams struct {
 	UserID         uuid.UUID
 }
 
-// Revokes and soft-deletes the membership, the way the organization-api does
-// it; the update trigger puts the row on the authz outbox so the user's tuples
-// are removed from OpenFGA.
+// Revokes and soft-deletes a membership or pending invitation, the way the
+// organization-api does it; the update trigger puts the row on the authz
+// outbox so the user's tuples are removed from OpenFGA. A declined invitation
+// is nothing to remove, so it does not count.
 func (q *Queries) MembershipDelete(ctx context.Context, arg MembershipDeleteParams) (int64, error) {
 	result, err := q.db.Exec(ctx, membershipDelete, arg.OrganizationID, arg.UserID)
 	if err != nil {
@@ -167,4 +148,26 @@ func (q *Queries) MembershipList(ctx context.Context, arg MembershipListParams) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const membershipRevokeAllForUser = `-- name: MembershipRevokeAllForUser :execrows
+UPDATE tenant.organizations_users
+SET deleted = now(), status = 'revoked'
+WHERE user_id = $1
+  AND status IN ('pending', 'accepted')
+  AND deleted IS NULL
+`
+
+type MembershipRevokeAllForUserParams struct {
+	UserID uuid.UUID
+}
+
+// Revokes every live membership and invitation of a user, for when the user
+// row itself is deleted.
+func (q *Queries) MembershipRevokeAllForUser(ctx context.Context, arg MembershipRevokeAllForUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, membershipRevokeAllForUser, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
