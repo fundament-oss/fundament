@@ -19,6 +19,7 @@ import (
 	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
 	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/pluginmachinery"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/proxyidentity"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
@@ -138,6 +139,13 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	pmh := pluginmachinery.New(pool, shootAccess, cfg.Plugin, logger)
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, pmh)
 	registry.RegisterReconcile(pmh)
+
+	// kube-api-proxy identity (the SA + impersonation RBAC it uses to serve a
+	// user's namespace listing). Provisioned on cluster-ready, re-asserted on
+	// reconcile.
+	pih := proxyidentity.New(pool, shootAccess, logger)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, pih)
+	registry.RegisterReconcile(pih)
 
 	// Workers
 	outboxWorker := outbox.New(pool, registry, logger, cfg.Outbox)

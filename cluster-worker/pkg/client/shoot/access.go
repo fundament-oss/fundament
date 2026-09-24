@@ -52,6 +52,7 @@ func CRBName(userID uuid.UUID) string {
 // ResourceInfo contains the metadata needed by reconciliation.
 type ResourceInfo struct {
 	Name        string
+	Namespace   string // empty for cluster-scoped resources
 	Labels      map[string]string
 	Annotations map[string]string
 	RoleRef     rbacv1.RoleRef
@@ -78,6 +79,10 @@ type ShootAccess interface {
 
 	// ListNamespaces lists namespaces filtered by label key existence.
 	ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// FindNamespaceByLabel returns a namespace carrying label key=value, or nil
+	// if there is none.
+	FindNamespaceByLabel(ctx context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error)
 
 	// EnsureLimitRange creates or updates the managed fundament-defaults
 	// LimitRange in a namespace to match the given defaults.
@@ -115,4 +120,23 @@ type ShootAccess interface {
 
 	// ListClusterRoleBindings lists ClusterRoleBindings filtered by label key existence.
 	ListClusterRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// EnsureRoleBinding creates or updates a RoleBinding in a namespace. A
+	// changed roleRef (immutable) recreates the binding.
+	EnsureRoleBinding(ctx context.Context, clusterID uuid.UUID, namespace, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error
+
+	// DeleteRoleBinding deletes a RoleBinding (no-op if absent).
+	DeleteRoleBinding(ctx context.Context, clusterID uuid.UUID, namespace, name string) error
+
+	// ListRoleBindings lists RoleBindings across all namespaces filtered by
+	// label key existence.
+	ListRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// EnsureRole creates or updates a namespaced Role with the given rules.
+	EnsureRole(ctx context.Context, clusterID uuid.UUID, namespace, name string, rules []rbacv1.PolicyRule, labels map[string]string) error
+
+	// EnsureClusterRoleBindingSubjects creates or updates a ClusterRoleBinding
+	// with arbitrary subjects (groups, users, ServiceAccounts). A changed
+	// roleRef (immutable) recreates the binding.
+	EnsureClusterRoleBindingSubjects(ctx context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error
 }

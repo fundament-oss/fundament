@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/clientcmd"
+
+	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 func Test_GetKubeconfig_ClusterNotReady(t *testing.T) {
@@ -121,8 +123,13 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 	// Kubeconfig should point at the proxy.
 	assert.Contains(t, kc, "server: https://k8s-api.example.com/clusters/"+clusterID)
 	assert.NotContains(t, kc, "insecure-skip-tls-verify")
-	assert.Contains(t, kc, "fundament-"+clusterID)
-	assert.Contains(t, kc, "fundament-user-"+clusterID)
+	cfg, err := clientcmd.Load([]byte(kc))
+	require.NoError(t, err, "a loadable kubeconfig")
+	assert.Equal(t, "test-org--ready-cluster", cfg.CurrentContext, "entries named <org>--<cluster>")
+	require.Contains(t, cfg.Contexts, "test-org--ready-cluster")
+	assert.Equal(t, "test-org--ready-cluster", cfg.Contexts["test-org--ready-cluster"].Cluster)
+	assert.Equal(t, "test-org--ready-cluster", cfg.Contexts["test-org--ready-cluster"].AuthInfo)
+	assert.NotContains(t, kc, "fundament-"+clusterID, "no uuid-based entry names")
 	assert.Contains(t, kc, "command: functl")
 	assert.Contains(t, kc, "- cluster")
 	assert.Contains(t, kc, "- token")

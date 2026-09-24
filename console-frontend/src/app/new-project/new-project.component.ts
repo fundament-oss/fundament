@@ -10,7 +10,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { AbstractControl, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -94,8 +94,11 @@ export default class NewProjectComponent implements OnInit {
       [
         Validators.required,
         Validators.minLength(1),
-        Validators.maxLength(63),
+        Validators.maxLength(30),
         Validators.pattern(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
+        // "--" separates the project from the namespace in cluster-side names.
+        (control: AbstractControl<string | null>) =>
+          control.value?.includes('--') ? { consecutiveHyphens: true } : null,
       ],
     ],
   });
@@ -199,10 +202,13 @@ export default class NewProjectComponent implements OnInit {
       return 'Project name is required.';
     }
     if (nameControl?.hasError('maxlength')) {
-      return 'Project name must not exceed 63 characters.';
+      return 'Project name must not exceed 30 characters.';
     }
     if (nameControl?.hasError('pattern')) {
       return 'Project name must contain only lowercase letters, numbers, and hyphens, start with a letter, and end with a letter or number.';
+    }
+    if (nameControl?.hasError('consecutiveHyphens')) {
+      return 'Project name must not contain two hyphens in a row.';
     }
     return '';
   }

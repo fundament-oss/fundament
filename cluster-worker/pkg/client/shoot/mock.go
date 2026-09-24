@@ -34,6 +34,10 @@ type MockShootAccess struct {
 	ClusterRoles map[uuid.UUID]map[string]MockClusterRole
 	// Deployments: clusterID -> "namespace/name" -> the applied Deployment
 	Deployments map[uuid.UUID]map[string]*appsv1.Deployment
+	// RoleBindings: clusterID -> "namespace/name" -> resource metadata (with roleRef/subjects)
+	RoleBindings map[uuid.UUID]map[string]ResourceInfo
+	// Roles: clusterID -> "namespace/name" -> rules + labels
+	Roles map[uuid.UUID]map[string]MockClusterRole
 
 	// Configurable errors for testing
 	EnsureNamespaceError          error
@@ -53,6 +57,10 @@ type MockShootAccess struct {
 	EnsureCRDError                error
 	EnsureClusterRoleError        error
 	EnsureDeploymentError         error
+	EnsureRoleBindingError        error
+	DeleteRoleBindingError        error
+	ListRoleBindingsError         error
+	EnsureRoleError               error
 }
 
 // MockClusterRole is the in-memory representation of an applied ClusterRole.
@@ -77,6 +85,8 @@ func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
 		CRDs:                make(map[uuid.UUID]map[string][]byte),
 		ClusterRoles:        make(map[uuid.UUID]map[string]MockClusterRole),
 		Deployments:         make(map[uuid.UUID]map[string]*appsv1.Deployment),
+		RoleBindings:        make(map[uuid.UUID]map[string]ResourceInfo),
+		Roles:               make(map[uuid.UUID]map[string]MockClusterRole),
 	}
 }
 
@@ -454,6 +464,133 @@ func (m *MockShootAccess) Reset() {
 	m.CRDs = make(map[uuid.UUID]map[string][]byte)
 	m.ClusterRoles = make(map[uuid.UUID]map[string]MockClusterRole)
 	m.Deployments = make(map[uuid.UUID]map[string]*appsv1.Deployment)
+	m.RoleBindings = make(map[uuid.UUID]map[string]ResourceInfo)
+	m.Roles = make(map[uuid.UUID]map[string]MockClusterRole)
+}
+
+func (m *MockShootAccess) EnsureRoleBinding(_ context.Context, clusterID uuid.UUID, namespace, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureRoleBindingError != nil {
+		return m.EnsureRoleBindingError
+	}
+
+	if m.RoleBindings[clusterID] == nil {
+		m.RoleBindings[clusterID] = make(map[string]ResourceInfo)
+	}
+	m.RoleBindings[clusterID][namespace+"/"+name] = ResourceInfo{
+		Name:      name,
+		Namespace: namespace,
+		Labels:    maps.Clone(labels),
+		RoleRef:   roleRef,
+		Subjects:  append([]rbacv1.Subject(nil), subjects...),
+	}
+	m.logger.Debug("MOCK: ensured RoleBinding", "cluster_id", clusterID, "namespace", namespace, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) DeleteRoleBinding(_ context.Context, clusterID uuid.UUID, namespace, name string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.DeleteRoleBindingError != nil {
+		return m.DeleteRoleBindingError
+	}
+
+	if m.RoleBindings[clusterID] != nil {
+		delete(m.RoleBindings[clusterID], namespace+"/"+name)
+	}
+	m.logger.Debug("MOCK: deleted RoleBinding", "cluster_id", clusterID, "namespace", namespace, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) ListRoleBindings(_ context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ListRoleBindingsError != nil {
+		return nil, m.ListRoleBindingsError
+	}
+
+	var result []ResourceInfo
+	for _, resource := range m.RoleBindings[clusterID] {
+		if labelKey != "" {
+			if _, ok := resource.Labels[labelKey]; !ok {
+				continue
+			}
+		}
+		result = append(result, resource)
+	}
+	return result, nil
+}
+
+func (m *MockShootAccess) EnsureRole(_ context.Context, clusterID uuid.UUID, namespace, name string, rules []rbacv1.PolicyRule, labels map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureRoleError != nil {
+		return m.EnsureRoleError
+	}
+
+	if m.Roles[clusterID] == nil {
+		m.Roles[clusterID] = make(map[string]MockClusterRole)
+	}
+	m.Roles[clusterID][namespace+"/"+name] = MockClusterRole{
+		Rules:  append([]rbacv1.PolicyRule(nil), rules...),
+		Labels: maps.Clone(labels),
+	}
+	m.logger.Debug("MOCK: ensured Role", "cluster_id", clusterID, "namespace", namespace, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) EnsureClusterRoleBindingSubjects(_ context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureClusterRoleBindingError != nil {
+		return m.EnsureClusterRoleBindingError
+	}
+
+	if m.ClusterRoleBindings[clusterID] == nil {
+		m.ClusterRoleBindings[clusterID] = make(map[string]ResourceInfo)
+	}
+	m.ClusterRoleBindings[clusterID][name] = ResourceInfo{
+		Name:     name,
+		Labels:   maps.Clone(labels),
+		RoleRef:  roleRef,
+		Subjects: append([]rbacv1.Subject(nil), subjects...),
+	}
+	m.logger.Debug("MOCK: ensured CRB", "cluster_id", clusterID, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) FindNamespaceByLabel(_ context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.ListNamespacesError != nil {
+		return nil, m.ListNamespacesError
+	}
+
+	for _, ns := range m.Namespaces[clusterID] {
+		if v, ok := ns.Labels[key]; ok && v == value {
+			return &ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)}, nil
+		}
+	}
+	return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
+}
+
+// GetRoleBinding returns the RoleBinding in namespace with name, or nil.
+func (m *MockShootAccess) GetRoleBinding(clusterID uuid.UUID, namespace, name string) *ResourceInfo {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	rb, ok := m.RoleBindings[clusterID][namespace+"/"+name]
+	if !ok {
+		return nil
+	}
+	return &rb
 }
 
 var _ ShootAccess = (*MockShootAccess)(nil)

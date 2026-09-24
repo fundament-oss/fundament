@@ -37,8 +37,11 @@ Namespace names follow the Kubernetes rules: lowercase letters, digits and `-`,
 starting and ending with a letter or digit. On top of that the platform
 requires:
 
-- **At most 50 characters**, shorter than the Kubernetes limit of 63, because
-  of the prefix described below.
+- **Short enough for the project prefix.** The name on the cluster is
+  `tnt-<project>--<your-name>` and must fit the Kubernetes limit of 63
+  characters, so your name can be at most `57 - length of the project name`
+  characters. Project names are at most 30 characters, so that is always at
+  least 27.
 - **Unique within the project.** Two projects may each have a `staging`.
 - **Not a system name.** `default`, `kube-system`, `kube-public`,
   `kube-node-lease` and `fundament-system` are rejected, as is anything
@@ -47,26 +50,27 @@ requires:
 ### The name on the cluster
 
 The name you choose is the name you see everywhere in the console, the API and
-`functl`. On the cluster itself the namespace is created with a project prefix:
+`functl`. On the cluster itself the namespace is created with `tnt-` and the
+project's name in front:
 
 ```
-<project-prefix>-<your-name>
+tnt-<project>--<your-name>
 ```
 
-where the prefix is 12 characters: up to 8 from the project's name, followed by
-4 characters derived from the project's ID. So a `staging` namespace in a
-project named `payments` becomes something like `payments1f3a-staging` on the
-cluster.
-
-The prefix is what lets several projects share one cluster: it keeps two
-projects' `staging` namespaces apart even when their names are similar, and the
-ID-derived part keeps them apart when the names are identical. It is
-deterministic and never changes, because it is derived only from values that
-cannot change after creation.
+So a `staging` namespace in a project named `payments` becomes
+`tnt-payments--staging` on the cluster. The project name keeps two projects'
+`staging` namespaces apart; `tnt-` (tenant) keeps your namespaces apart from
+the cluster's own, such as `kube-system` or the namespaces plugins install
+into, and groups them together in `kubectl get ns`. The name never changes,
+because project and namespace names can't be changed after creation.
 
 This matters when you use `kubectl`: the console shows `staging`, but
-`kubectl get ns` shows `payments1f3a-staging`, and that is the name you pass to
-`kubectl -n`.
+`kubectl get ns` shows `tnt-payments--staging`, and that is the name you pass
+to `kubectl -n`.
+
+Namespaces created before this naming was introduced keep their earlier
+cluster name, a project prefix with a few generated characters (for example
+`payments1f3a-staging`); Kubernetes can't rename a namespace.
 
 ## Quotas and limits
 

@@ -30,6 +30,10 @@ tuples:
     relation: project_viewer
     object: project:p1
 
+  - user: cluster:c1
+    relation: parent
+    object: project:p2
+
   - user: project:p1
     relation: parent
     object: namespace:ns1
@@ -220,3 +224,29 @@ tests:
       - user: user:mallory
         object: plugin:pl1
         assertions: { can_edit: false, can_delete: false }
+
+  # kube-api-proxy's namespace listing: org admins see every namespace
+  # (cluster#admin), everyone else only their projects' (project#can_view).
+  - name: only an organization admin is cluster admin
+    check:
+      - user: user:alice
+        object: cluster:c1
+        assertions: { admin: true }
+      - user: user:bart
+        object: cluster:c1
+        assertions: { admin: false }
+      - user: user:carol
+        object: cluster:c1
+        assertions: { admin: false }
+
+  - name: visible projects follow membership, with org admins inheriting all
+    list_objects:
+      - user: user:carol
+        type: project
+        assertions: { can_view: [project:p1] }
+      - user: user:alice
+        type: project
+        assertions: { can_view: [project:p1, project:p2] }
+      - user: user:bart
+        type: project
+        assertions: { can_view: [] }

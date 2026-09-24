@@ -2,6 +2,7 @@ package organization_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -87,4 +88,51 @@ func Test_Project_Create(t *testing.T) {
 	require.Len(t, members, 1)
 	assert.Equal(t, userID.String(), members[0].GetUserId())
 	assert.Equal(t, organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, members[0].GetRole())
+}
+
+// Project names prefix every cluster-side namespace name, so they are capped
+// at 30 characters to leave namespaces at least 27.
+func Test_Project_Create_NameLength(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, userID))
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	cluster, err := clusterClient.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+
+	_, err = client.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: cluster.GetClusterId(),
+		Name:      "p" + strings.Repeat("a", 30),
+	}.Build())
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+
+	_, err = client.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: cluster.GetClusterId(),
+		Name:      "p" + strings.Repeat("a", 29),
+	}.Build())
+	require.NoError(t, err)
+
+	// "--" separates the project from the namespace name on the cluster.
+	_, err = client.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: cluster.GetClusterId(),
+		Name:      "a--b",
+	}.Build())
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }

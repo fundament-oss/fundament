@@ -3,6 +3,7 @@ package shoot
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -123,10 +124,33 @@ const (
 	mergeSkip
 )
 
+// ensureAttempts bounds how often ensureResource starts over after another
+// writer changed the object under it.
+const ensureAttempts = 3
+
+// errConcurrentChange marks an ensure attempt that lost a race with another
+// writer: the object vanished, reappeared or changed between two calls.
+var errConcurrentChange = errors.New("changed concurrently")
+
 // ensureResource creates desired and, when it already exists, reconciles it:
 // merge mutates the fetched object toward the desired state and returns what
 // should happen to it. A nil merge treats any existing object as up to date.
+//
+// Another writer may be ensuring the same object at the same time (a second
+// cluster-worker during a rolling update), so an attempt that loses a race
+// starts over from the object's new state instead of failing.
 func ensureResource[T any](ctx context.Context, c resourceClient[T], name, desc string, desired *T, merge func(existing *T) mergeAction) error {
+	var err error
+	for range ensureAttempts {
+		err = ensureOnce(ctx, c, name, desc, desired, merge)
+		if !errors.Is(err, errConcurrentChange) {
+			return err
+		}
+	}
+	return err
+}
+
+func ensureOnce[T any](ctx context.Context, c resourceClient[T], name, desc string, desired *T, merge func(existing *T) mergeAction) error {
 	_, err := c.Create(ctx, desired, metav1.CreateOptions{})
 	if err == nil {
 		return nil
@@ -138,6 +162,9 @@ func ensureResource[T any](ctx context.Context, c resourceClient[T], name, desc 
 		return nil
 	}
 	existing, err := c.Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return fmt.Errorf("get existing %s: deleted after create found it: %w", desc, errConcurrentChange)
+	}
 	if err != nil {
 		return fmt.Errorf("get existing %s: %w", desc, err)
 	}
@@ -146,21 +173,37 @@ func ensureResource[T any](ctx context.Context, c resourceClient[T], name, desc 
 	case mergeSkip:
 		return nil
 	case mergeRecreate:
-		if err := deleteAndWait(ctx, c, name, desc); err != nil {
+		if err := deleteAndWait(ctx, c, name, desc, uidOf(existing)); err != nil {
 			return err
 		}
-		if _, err := c.Create(ctx, desired, metav1.CreateOptions{}); err != nil {
+		_, err := c.Create(ctx, desired, metav1.CreateOptions{})
+		if apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("recreate %s: created by another writer: %w", desc, errConcurrentChange)
+		}
+		if err != nil {
 			return fmt.Errorf("recreate %s: %w", desc, err)
 		}
 		return nil
 	case mergeUpdate:
-		if _, err := c.Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		_, err := c.Update(ctx, existing, metav1.UpdateOptions{})
+		if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+			return fmt.Errorf("update %s: %w", desc, errConcurrentChange)
+		}
+		if err != nil {
 			return fmt.Errorf("update %s: %w", desc, err)
 		}
 		return nil
 	default:
 		panic(fmt.Sprintf("unhandled merge action %d for %s", action, desc))
 	}
+}
+
+// uidOf returns the object's UID, or "" when T carries no object metadata.
+func uidOf[T any](obj *T) types.UID {
+	if m, ok := any(obj).(metav1.Object); ok {
+		return m.GetUID()
+	}
+	return ""
 }
 
 // Bounds on the wait between a recreate's delete and its create.
@@ -175,8 +218,10 @@ const (
 // Deployments that is foreground deletion, which keeps the object alive behind
 // a foregroundDeletion finalizer until its ReplicaSets and Pods are collected.
 // Background propagation drops the object immediately and cleans up dependents
-// behind it; the poll then covers any other finalizer still holding it.
-func deleteAndWait[T any](ctx context.Context, c resourceClient[T], name, desc string) error {
+// behind it; the poll then covers any other finalizer still holding it. An
+// object under the same name with a different UID than oldUID is a replacement
+// another writer already created, so the old one is gone too.
+func deleteAndWait[T any](ctx context.Context, c resourceClient[T], name, desc string, oldUID types.UID) error {
 	policy := metav1.DeletePropagationBackground
 	if err := c.Delete(ctx, name, metav1.DeleteOptions{PropagationPolicy: &policy}); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete existing %s before recreate: %w", desc, err)
@@ -186,12 +231,15 @@ func deleteAndWait[T any](ctx context.Context, c resourceClient[T], name, desc s
 	defer cancel()
 
 	err := wait.PollUntilContextCancel(waitCtx, recreateDeletePollWait, true, func(ctx context.Context) (bool, error) {
-		_, err := c.Get(ctx, name, metav1.GetOptions{})
+		current, err := c.Get(ctx, name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		if err != nil {
 			return false, fmt.Errorf("get %s while waiting for deletion: %w", desc, err)
+		}
+		if uid := uidOf(current); oldUID != "" && uid != "" && uid != oldUID {
+			return true, nil
 		}
 		return false, nil
 	})
@@ -334,6 +382,24 @@ func (r *RealShootAccess) ListNamespaces(ctx context.Context, clusterID uuid.UUI
 	return result, nil
 }
 
+func (r *RealShootAccess) FindNamespaceByLabel(ctx context.Context, clusterID uuid.UUID, key, value string) (*ResourceInfo, error) {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	selector := key + "=" + value
+	list, err := cs.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces with %s: %w", selector, err)
+	}
+	if len(list.Items) == 0 {
+		return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
+	}
+	ns := &list.Items[0]
+	return &ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)}, nil
+}
+
 func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error {
 	cs, err := r.newClient(ctx, clusterID)
 	if err != nil {
@@ -455,6 +521,116 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 		}
 	}
 	return result, nil
+}
+
+func (r *RealShootAccess) EnsureRoleBinding(ctx context.Context, clusterID uuid.UUID, namespace, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Subjects: subjects,
+		RoleRef:  roleRef,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().RoleBindings(namespace), name, fmt.Sprintf("RoleBinding %s/%s", namespace, name), rb,
+		func(existing *rbacv1.RoleBinding) mergeAction {
+			if existing.RoleRef != roleRef {
+				return mergeRecreate
+			}
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Subjects = subjects
+			return mergeUpdate
+		})
+}
+
+func (r *RealShootAccess) DeleteRoleBinding(ctx context.Context, clusterID uuid.UUID, namespace, name string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	return deleteResource(ctx, cs.RbacV1().RoleBindings(namespace), name, fmt.Sprintf("RoleBinding %s/%s", namespace, name))
+}
+
+func (r *RealShootAccess) ListRoleBindings(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := cs.RbacV1().RoleBindings(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: labelKey})
+	if err != nil {
+		return nil, fmt.Errorf("list RoleBindings: %w", err)
+	}
+
+	result := make([]ResourceInfo, len(list.Items))
+	for i := range list.Items {
+		result[i] = ResourceInfo{
+			Name:        list.Items[i].Name,
+			Namespace:   list.Items[i].Namespace,
+			Labels:      maps.Clone(list.Items[i].Labels),
+			Annotations: maps.Clone(list.Items[i].Annotations),
+			RoleRef:     list.Items[i].RoleRef,
+			Subjects:    append([]rbacv1.Subject(nil), list.Items[i].Subjects...),
+		}
+	}
+	return result, nil
+}
+
+func (r *RealShootAccess) EnsureRole(ctx context.Context, clusterID uuid.UUID, namespace, name string, rules []rbacv1.PolicyRule, labels map[string]string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Rules: rules,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().Roles(namespace), name, fmt.Sprintf("Role %s/%s", namespace, name), role,
+		func(existing *rbacv1.Role) mergeAction {
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Rules = rules
+			return mergeUpdate
+		})
+}
+
+func (r *RealShootAccess) EnsureClusterRoleBindingSubjects(ctx context.Context, clusterID uuid.UUID, name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Subject, labels map[string]string) error {
+	cs, err := r.newClient(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		Subjects: subjects,
+		RoleRef:  roleRef,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().ClusterRoleBindings(), name, "CRB "+name, crb,
+		func(existing *rbacv1.ClusterRoleBinding) mergeAction {
+			if ClusterRoleBindingNeedsRecreate(existing, crb) {
+				return mergeRecreate
+			}
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Subjects = subjects
+			return mergeUpdate
+		})
 }
 
 func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
