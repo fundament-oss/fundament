@@ -173,7 +173,10 @@ derives one from `name` (e.g. `MON_COUNT` becomes "Mon count"). `required` and
 `default` are mutually exclusive: a required key
 has no default and must be supplied. A `bool` key must always declare a default
 and can never be `required` — a checkbox has no "untouched" state, so an
-unprompted `false` would otherwise be submitted on the admin's behalf. `string`,
+unprompted `false` would otherwise be submitted on the admin's behalf; that
+default must be spelled exactly `"true"` or `"false"`. A `required` entry can
+never also be `advanced` (a required choice cannot default to hidden), and a
+`required` value must be non-empty after trimming whitespace. `string`,
 `int` and `enum` keys should declare a default when a sensible one exists, but
 may omit both `default` and `required`: an omitted key falls back to whatever
 default the plugin binary's own env parsing applies. `advanced: true` collapses
@@ -185,6 +188,10 @@ keys declared here. `functl plugin publish` validates the schema itself; the
 plugin-controller validates `spec.config` against it at install/reconcile time
 and fails with `ConfigValid=False` before touching any resources. A definition
 with no `configSchema` accepts any config, unchanged from before this feature.
+Publishing a manifest that declares `configSchema` requires a plugin-controller
+(and catalog) built with schema support; an older controller rejects the
+manifest at parse time (strict decoding), so upgrade controllers before
+publishing schema-bearing versions.
 
 Secret values do not belong in `spec.config` — it is a plain CR field readable
 by anyone who can `get plugininstallations`; a secretRef mechanism is a

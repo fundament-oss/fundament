@@ -269,6 +269,18 @@ func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
 			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n      required: true\n",
 			wantErr: "cannot be required",
 		},
+		"bool default spelled True": {
+			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n      default: \"True\"\n",
+			wantErr: "must be exactly",
+		},
+		"int default with explicit plus": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      default: \"+3\"\n",
+			wantErr: "explicit '+'",
+		},
+		"required and advanced": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      required: true\n      advanced: true\n",
+			wantErr: "required and advanced",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := ParseSourceDefinition(configSchemaManifest(tc.schema))
@@ -328,6 +340,13 @@ func TestValidateConfig(t *testing.T) {
 			config:  map[string]string{"MON_COUNT": "1"},
 			schema:  schema,
 			wantErr: `"FAILURE_DOMAIN" is required`,
+		},
+		"whitespace-only required string rejected": {
+			// A string type accepts any value at the per-key check, so this
+			// exercises the dedicated post-presence whitespace check.
+			config:  map[string]string{"CEPH_IMAGE": "   "},
+			schema:  []ConfigSchemaEntry{{Name: "CEPH_IMAGE", Type: "string", Required: true}},
+			wantErr: `"CEPH_IMAGE" is required`,
 		},
 		"empty config with only-default schema is valid": {
 			config: nil,

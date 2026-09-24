@@ -1884,12 +1884,13 @@ func (b0 ConfigSchemaEntry_builder) Build() *ConfigSchemaEntry {
 }
 
 type GetPluginDefinitionResponse struct {
-	state                     protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Manifest       []byte                 `protobuf:"bytes,10,opt,name=manifest"`
-	xxx_hidden_DefinitionHash string                 `protobuf:"bytes,20,opt,name=definition_hash,json=definitionHash"`
-	xxx_hidden_ConfigSchema   *[]*ConfigSchemaEntry  `protobuf:"bytes,30,rep,name=config_schema,json=configSchema"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	state                              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Manifest                []byte                 `protobuf:"bytes,10,opt,name=manifest"`
+	xxx_hidden_DefinitionHash          string                 `protobuf:"bytes,20,opt,name=definition_hash,json=definitionHash"`
+	xxx_hidden_ConfigSchema            *[]*ConfigSchemaEntry  `protobuf:"bytes,30,rep,name=config_schema,json=configSchema"`
+	xxx_hidden_ConfigSchemaUnavailable bool                   `protobuf:"varint,40,opt,name=config_schema_unavailable,json=configSchemaUnavailable"`
+	unknownFields                      protoimpl.UnknownFields
+	sizeCache                          protoimpl.SizeCache
 }
 
 func (x *GetPluginDefinitionResponse) Reset() {
@@ -1940,6 +1941,13 @@ func (x *GetPluginDefinitionResponse) GetConfigSchema() []*ConfigSchemaEntry {
 	return nil
 }
 
+func (x *GetPluginDefinitionResponse) GetConfigSchemaUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_ConfigSchemaUnavailable
+	}
+	return false
+}
+
 func (x *GetPluginDefinitionResponse) SetManifest(v []byte) {
 	if v == nil {
 		v = []byte{}
@@ -1955,6 +1963,10 @@ func (x *GetPluginDefinitionResponse) SetConfigSchema(v []*ConfigSchemaEntry) {
 	x.xxx_hidden_ConfigSchema = &v
 }
 
+func (x *GetPluginDefinitionResponse) SetConfigSchemaUnavailable(v bool) {
+	x.xxx_hidden_ConfigSchemaUnavailable = v
+}
+
 type GetPluginDefinitionResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1965,6 +1977,11 @@ type GetPluginDefinitionResponse_builder struct {
 	// Declared install-time config keys, in manifest order; empty when the
 	// definition declares no configSchema (install proceeds with no form).
 	ConfigSchema []*ConfigSchemaEntry
+	// True when the stored manifest could not be parsed by this binary, so
+	// config_schema could not be derived. Distinguishes "declares no schema"
+	// (install proceeds) from "schema unknown" (the console must not
+	// instant-install past required config it cannot see).
+	ConfigSchemaUnavailable bool
 }
 
 func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionResponse {
@@ -1974,6 +1991,7 @@ func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionRespon
 	x.xxx_hidden_Manifest = b.Manifest
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	x.xxx_hidden_ConfigSchema = &b.ConfigSchema
+	x.xxx_hidden_ConfigSchemaUnavailable = b.ConfigSchemaUnavailable
 	return m0
 }
 
@@ -2084,12 +2102,13 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\brequired\x182 \x01(\bR\brequired\x12\x16\n" +
 	"\x06values\x18< \x03(\tR\x06values\x12\x1a\n" +
 	"\badvanced\x18F \x01(\bR\badvanced\x12!\n" +
-	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xa6\x01\n" +
+	"\fdisplay_name\x18P \x01(\tR\vdisplayName\"\xe2\x01\n" +
 	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
 	"\bmanifest\x18\n" +
 	" \x01(\fR\bmanifest\x12'\n" +
 	"\x0fdefinition_hash\x18\x14 \x01(\tR\x0edefinitionHash\x12B\n" +
-	"\rconfig_schema\x18\x1e \x03(\v2\x1d.catalog.v1.ConfigSchemaEntryR\fconfigSchema*\x82\x01\n" +
+	"\rconfig_schema\x18\x1e \x03(\v2\x1d.catalog.v1.ConfigSchemaEntryR\fconfigSchema\x12:\n" +
+	"\x19config_schema_unavailable\x18( \x01(\bR\x17configSchemaUnavailable*\x82\x01\n" +
 	"\n" +
 	"ConfigType\x12\x1b\n" +
 	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +

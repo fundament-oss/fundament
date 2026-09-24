@@ -9,7 +9,13 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+} from '@angular/forms';
 import { ConfigSchemaEntry, ConfigType } from '../../generated/catalog/v1/catalog_pb';
 
 import '@nldd/design-system/button';
@@ -23,6 +29,35 @@ import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';
 
 const INT_PATTERN = /^-?\d+$/;
+const MIN_INT64 = -(2n ** 63n);
+const MAX_INT64 = 2n ** 63n - 1n;
+
+/**
+ * Mirrors the server's int validation (plugin-sdk's strconv.ParseInt(v, 10,
+ * 64)): the value must be a bare digit string and fit in a signed 64-bit
+ * range, so a value the form accepts never fails once it reaches the server.
+ */
+function intValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (value === '' || value === null || value === undefined) return null; // required handles emptiness
+  const str = String(value);
+  if (!INT_PATTERN.test(str)) return { int: true };
+  const parsed = BigInt(str);
+  if (parsed < MIN_INT64 || parsed > MAX_INT64) return { int: true };
+  return null;
+}
+
+/**
+ * Required-but-blank must fail: Validators.required alone treats a
+ * whitespace-only string as present. Applies to string/enum/int entries —
+ * bools can never be required (rejected at publish time).
+ */
+function requiredNonBlankValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (value === null || value === undefined) return { required: true };
+  if (typeof value === 'string' && value.trim() === '') return { required: true };
+  return null;
+}
 
 /**
  * A schema key is a manifest identifier (SCREAMING_SNAKE_CASE, e.g.
@@ -64,7 +99,7 @@ function labelFor(entry: ConfigSchemaEntry): string {
     <nldd-form
       [formGroup]="form"
       (submit)="onSubmit()"
-      (keydown.enter)="onSubmit()"
+      (keydown.enter)="onEnter($event)"
     >
       @for (entry of basicEntries(); track entry.name) {
         <ng-container
@@ -206,8 +241,8 @@ export default class PluginConfigFormComponent implements OnInit {
     const group: FormGroup = new FormGroup({});
     this.schema().forEach((entry) => {
       const validators = [];
-      if (entry.required) validators.push(Validators.required);
-      if (entry.type === ConfigType.INT) validators.push(Validators.pattern(INT_PATTERN));
+      if (entry.required) validators.push(requiredNonBlankValidator);
+      if (entry.type === ConfigType.INT) validators.push(intValidator);
       const initial: string | boolean =
         entry.type === ConfigType.BOOL ? entry.defaultValue === 'true' : entry.defaultValue;
       group.addControl(entry.name, new FormControl(initial, validators));
@@ -238,10 +273,23 @@ export default class PluginConfigFormComponent implements OnInit {
     this.cancelled.emit();
   }
 
+  onEnter(event: Event): void {
+    // Enter submits only from a text field; from buttons/toggles it would
+    // hijack the control the user actually pressed.
+    const target = event.target as HTMLElement | null;
+    if (target?.tagName?.toLowerCase() !== 'nldd-text-field') return;
+    this.onSubmit();
+  }
+
   onSubmit(): void {
     this.submitAttempted.set(true);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      // Defense-in-depth: an invalid control hidden under "advanced" would
+      // otherwise block submit with no visible reason.
+      if (this.advancedEntries().some((entry) => this.form.get(entry.name)?.invalid)) {
+        this.showAdvanced.set(true);
+      }
       return;
     }
     const config: Record<string, string> = {};
@@ -268,7 +316,7 @@ export default class PluginConfigFormComponent implements OnInit {
     const control = this.form.get(entry.name);
     const label = this.labelFor(entry);
     if (control?.hasError('required')) return `${label} is required.`;
-    if (control?.hasError('pattern')) return `${label} must be a whole number.`;
+    if (control?.hasError('int')) return `${label} must be a whole number.`;
     return '';
   }
 }

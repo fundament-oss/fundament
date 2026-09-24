@@ -77,6 +77,9 @@ const LIFTED = {
   assets: 'public/assets',
 };
 
+/** Subtrees that are internal working notes, never site content. */
+const EXCLUDED = ['superpowers'];
+
 /** Everything else lands here, matching the sidebar's `directory: 'docs/...'`. */
 const DOCS_DEST = 'src/content/docs/docs';
 
@@ -208,8 +211,10 @@ function sync(source) {
     replaceDir(from, join(root, dest));
   }
 
-  const lifted = new Set(Object.keys(LIFTED).map((name) => join(source, name)));
-  replaceDir(source, join(root, DOCS_DEST), (path) => !lifted.has(path));
+  const skipped = new Set(
+    [...Object.keys(LIFTED), ...EXCLUDED].map((name) => join(source, name))
+  );
+  replaceDir(source, join(root, DOCS_DEST), (path) => !skipped.has(path));
 
   const rewritten =
     rewriteDir(join(root, DOCS_DEST), '.md') +

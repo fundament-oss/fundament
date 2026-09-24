@@ -264,3 +264,9 @@ spec:
       default: "rook-ceph"
       advanced: true
       description: Namespace for the CephCluster and its CSI secrets; the CSI clusterID.
+    - name: CEPHFS_MOUNTER
+      displayName: CephFS mount client
+      type: enum
+      values: ["kernel", "fuse"]
+      advanced: true
+      description: "How the CephFS CSI driver mounts volumes. Unset uses the CSI default (kernel client). Use fuse on nodes without the ceph kernel module (local Docker VMs). RBD is unaffected."

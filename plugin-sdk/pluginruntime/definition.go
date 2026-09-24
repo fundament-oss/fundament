@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -277,6 +278,9 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 		if entry.Required && entry.Default != "" {
 			return fmt.Errorf("configSchema key %q sets both required and a default; they are mutually exclusive (required means the admin must choose)", entry.Name)
 		}
+		if entry.Required && entry.Advanced {
+			return fmt.Errorf("configSchema key %q is required and advanced; a required choice cannot default to hidden", entry.Name)
+		}
 		if entry.Type == "bool" {
 			if entry.Required {
 				return fmt.Errorf("configSchema key %q is a required bool; booleans cannot be required (declare a default instead)", entry.Name)
@@ -285,9 +289,18 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 				return fmt.Errorf("configSchema key %q is a bool without a default; a checkbox has no absent state, so declare the default explicitly", entry.Name)
 			}
 		}
+		if entry.Type == "int" && entry.Default != "" && strings.HasPrefix(entry.Default, "+") {
+			return fmt.Errorf("configSchema key %q int default must not carry an explicit '+'", entry.Name)
+		}
 		if entry.Default != "" {
 			if err := validateConfigValue(entry.Default, entry); err != nil {
 				return fmt.Errorf("configSchema key %q default: %w", entry.Name, err)
+			}
+			// The console form compares defaults with a strict 'true'/'false'
+			// spelling; constrain the contract here rather than loosen the
+			// client to accept every strconv.ParseBool spelling ("True", "1"...).
+			if entry.Type == "bool" && entry.Default != "true" && entry.Default != "false" {
+				return fmt.Errorf("configSchema key %q bool default must be exactly \"true\" or \"false\", got %q", entry.Name, entry.Default)
 			}
 		}
 	}
@@ -350,8 +363,12 @@ func ValidateConfig(config map[string]string, schema []ConfigSchemaEntry) error 
 	}
 	for _, entry := range schema {
 		if entry.Required {
-			if _, set := config[entry.Name]; !set {
+			value, set := config[entry.Name]
+			if !set {
 				return fmt.Errorf("config key %q is required by the definition's configSchema but not set", entry.Name)
+			}
+			if strings.TrimSpace(value) == "" {
+				return fmt.Errorf("config key %q is required by the definition's configSchema but empty", entry.Name)
 			}
 		}
 	}

@@ -283,16 +283,22 @@ func (s *Server) GetPluginDefinition(
 	}
 
 	configSchema, err := configSchemaFromManifest(row.Manifest)
+	var configSchemaUnavailable bool
 	if err != nil {
 		// Manifests outlive the binary that parses them; the manifest bytes and
 		// hash are still what the caller needs, so degrade rather than fail.
+		// configSchemaUnavailable tells the console this is "schema unknown",
+		// not "declares no schema" — it must not instant-install past required
+		// config it cannot see.
 		s.logger.WarnContext(ctx, "unparseable plugin manifest", "error", err)
 		configSchema = nil
+		configSchemaUnavailable = true
 	}
 
 	return catalogv1.GetPluginDefinitionResponse_builder{
-		Manifest:       row.Manifest,
-		DefinitionHash: row.Hash,
-		ConfigSchema:   configSchema,
+		Manifest:                row.Manifest,
+		DefinitionHash:          row.Hash,
+		ConfigSchema:            configSchema,
+		ConfigSchemaUnavailable: configSchemaUnavailable,
 	}.Build(), nil
 }
