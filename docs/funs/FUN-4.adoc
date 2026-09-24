@@ -65,6 +65,8 @@ Users are global entities; they exist outside the organization hierarchy. A user
 
 **Organization membership** gates access to the platform. It doubles as the invitation mechanism: a membership record tracks both the invitation status (`pending`, `accepted`, `declined`, `revoked`) and the permission level (`admin` or `viewer`). An admin invites a user by email, creating a pending membership. The invited user can accept or decline. Admins can revoke membership at any time.
 
+Organizations are not self-service. Signing in for the first time creates the user, and nothing else: the user exists without any organization until a Fundament operator assigns them to one through `funops` (see FUN-8), or an organization admin invites them. The operator can do so before the person has ever signed in, by registering the email address; the authn-api links that registration to the identity provider account on the first sign-in at that address, so the memberships are already there. A user without any organization can sign in to the console and the CLI, which tell them an operator has to add them, but can reach no organization-scoped resource.
+
 **Project membership** gates access to workloads. Each membership has a permission (`admin` or `viewer`). Project membership is separate from organization membership, you need both to actually do anything in a project. See FUN-7 for the full permission model.
 
 == Design Decisions

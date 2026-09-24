@@ -19,8 +19,8 @@ You need:
   hosted installation that is the
   [Fundament Console](https://console.fundament.projects.digilab.network/).
 - Membership of at least one organization. Organizations are not self-service:
-  an existing organization admin invites you. See
-  [Members and roles](./members-and-roles.md).
+  the platform operators set them up and add you, or an existing organization
+  admin invites you. See [Members and roles](./members-and-roles.md).
 
 ## 1. Sign in
 
@@ -31,6 +31,10 @@ the same credentials as for the rest of your organization's tooling.
 After signing in you land on the dashboard. If you belong to more than one
 organization, use the organization picker in the header to switch between them.
 Everything else in the console is scoped to the organization you have selected.
+
+Signing in does not create an organization. If you are not in one yet, the
+console says so and waits: ask your Fundament operator to add the account you
+signed in with, then use **Check again** on that page.
 
 ## 2. Create a cluster
 

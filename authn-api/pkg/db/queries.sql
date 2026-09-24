@@ -29,9 +29,9 @@ WHERE id = $1 AND deleted IS NULL;
 -- name: UserGetByEmail :one
 -- Get a user by email who has no external_ref (pending invitation).
 -- The address is matched case-insensitively: the spelling someone was invited
--- at and the spelling their identity provider reports are the same address, and
--- missing each other here would sign the invited person in as a stranger and
--- start a new organization for them.
+-- at (or registered at by an operator) and the spelling their identity provider
+-- reports are the same address, and missing each other here would sign the
+-- invited person in as a stranger without any of their memberships.
 SELECT id, name, external_ref, email, created
 FROM tenant.users
 WHERE lower(email) = lower(@email::text) AND external_ref IS NULL AND deleted IS NULL
@@ -40,17 +40,6 @@ LIMIT 1;
 
 -- name: UserSetExternalRef :exec
 UPDATE tenant.users SET external_ref = $2, name = $3 WHERE id = $1;
-
--- name: OrganizationCreate :one
-INSERT INTO tenant.organizations (name, alias)
-VALUES ($1, $2)
-RETURNING id, name, alias, created;
-
--- name: OrganizationUserCreate :one
--- Creates a membership for a user in an organization
-INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status)
-VALUES ($1, $2, $3, $4)
-RETURNING id, organization_id, user_id, permission, status, created;
 
 -- name: UserListOrganizations :many
 -- Get the organizations a user belongs to (only accepted memberships)
