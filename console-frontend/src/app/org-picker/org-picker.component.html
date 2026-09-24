@@ -16,84 +16,125 @@
           md-padding="24"
           lg-padding="32"
         >
-          <nldd-title size="3">
-            <h1>Select an organization</h1>
-          </nldd-title>
-          <nldd-spacer size="12"></nldd-spacer>
-          <nldd-rich-text spacing="flat">
-            <p>
-              Select the organization you want to start with. You can switch between them at any
-              time from the toolbar.
-            </p>
-          </nldd-rich-text>
-          <nldd-spacer size="24"></nldd-spacer>
-          @if (acceptedOrganizations().length > 0) {
-            <nldd-list
-              variant="box-tinted"
-              type="navigation"
-              accessible-label="Organizations"
-            >
-              @for (org of acceptedOrganizations(); track org.id) {
-                <nldd-list-item
-                  button
-                  (click)="onSelect(org.id)"
-                >
-                  <nldd-icon-cell icon="apartment-building"></nldd-icon-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell [attr.text]="org.alias || org.name"></nldd-text-cell>
-                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                  <nldd-icon-cell
-                    icon="chevron-right"
-                    size="20"
-                    color="secondary"
-                  ></nldd-icon-cell>
-                </nldd-list-item>
-              }
-            </nldd-list>
-          }
-          @if (pendingInvitationList().length > 0) {
-            <nldd-spacer size="24"></nldd-spacer>
-            <!-- A list of its own: these are not places you can go yet, they are
-                 offers to answer. -->
-            <nldd-title size="5">
-              <h2>Pending invitations</h2>
+          @if (hasNothingToChoose()) {
+            <!-- Signing in creates no organization. Someone who is in none is
+                 not stuck on a broken page, they are waiting for an operator,
+                 and this says so and gives them something to do meanwhile. -->
+            <nldd-title size="3">
+              <h1>You are not in an organization yet</h1>
             </nldd-title>
-            <nldd-spacer size="8"></nldd-spacer>
-            <nldd-list
-              variant="box-tinted"
-              accessible-label="Pending invitations"
-            >
-              @for (invitation of pendingInvitationList(); track invitation.id) {
-                <nldd-list-item>
-                  <nldd-icon-cell
-                    icon="apartment-building"
-                    color="secondary"
-                  ></nldd-icon-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell [attr.text]="invitation.organizationAlias"></nldd-text-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-cell width="fit-content">
-                    <nldd-button
-                      type="button"
-                      (click)="onAccept(invitation)"
-                      text="Accept"
-                      size="sm"
-                      variant="primary"
-                    ></nldd-button>
-                  </nldd-cell>
-                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                  <nldd-cell width="fit-content">
-                    <nldd-button
-                      type="button"
-                      (click)="onDecline(invitation)"
-                      text="Decline"
-                      size="sm"
-                      variant="destructive"
-                    ></nldd-button>
-                  </nldd-cell>
-                </nldd-list-item>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-rich-text spacing="flat">
+              <p>
+                Organizations on Fundament are set up by the platform operators, who also add the
+                people that belong to them. Your account is ready; it is waiting for an operator to
+                add it to an organization.
+              </p>
+              <p>
+                Ask your Fundament operator to add the account you signed in with
+                @if (userName()) {
+                  (<strong>{{ userName() }}</strong
+                  >)
+                }
+                @if (userId()) {
+                  and give them your user ID:
+                }
+              </p>
+              @if (userId()) {
+                <!-- The id is the one thing here the operator can paste into
+                     funops as is; a name is not. -->
+                <p>
+                  <code>{{ userId() }}</code>
+                </p>
               }
-            </nldd-list>
+            </nldd-rich-text>
+            <nldd-spacer size="24"></nldd-spacer>
+            <nldd-button
+              type="button"
+              (click)="onRecheck()"
+              text="Check again"
+              variant="primary"
+            ></nldd-button>
+          } @else {
+            <nldd-title size="3">
+              <h1>Select an organization</h1>
+            </nldd-title>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-rich-text spacing="flat">
+              <p>
+                Select the organization you want to start with. You can switch between them at any
+                time from the toolbar.
+              </p>
+            </nldd-rich-text>
+            <nldd-spacer size="24"></nldd-spacer>
+            @if (acceptedOrganizations().length > 0) {
+              <nldd-list
+                variant="box-tinted"
+                type="navigation"
+                accessible-label="Organizations"
+              >
+                @for (org of acceptedOrganizations(); track org.id) {
+                  <nldd-list-item
+                    button
+                    (click)="onSelect(org.id)"
+                  >
+                    <nldd-icon-cell icon="apartment-building"></nldd-icon-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-text-cell [attr.text]="org.alias || org.name"></nldd-text-cell>
+                    <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                    <nldd-icon-cell
+                      icon="chevron-right"
+                      size="20"
+                      color="secondary"
+                    ></nldd-icon-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+            }
+            @if (pendingInvitationList().length > 0) {
+              <nldd-spacer size="24"></nldd-spacer>
+              <!-- A list of its own: these are not places you can go yet, they are
+                   offers to answer. -->
+              <nldd-title size="5">
+                <h2>Pending invitations</h2>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-list
+                variant="box-tinted"
+                accessible-label="Pending invitations"
+              >
+                @for (invitation of pendingInvitationList(); track invitation.id) {
+                  <nldd-list-item>
+                    <nldd-icon-cell
+                      icon="apartment-building"
+                      color="secondary"
+                    ></nldd-icon-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-text-cell [attr.text]="invitation.organizationAlias"></nldd-text-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-cell width="fit-content">
+                      <nldd-button
+                        type="button"
+                        (click)="onAccept(invitation)"
+                        text="Accept"
+                        size="sm"
+                        variant="primary"
+                      ></nldd-button>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                    <nldd-cell width="fit-content">
+                      <nldd-button
+                        type="button"
+                        (click)="onDecline(invitation)"
+                        text="Decline"
+                        size="sm"
+                        variant="destructive"
+                      ></nldd-button>
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+            }
           }
         </nldd-container>
       </nldd-box>

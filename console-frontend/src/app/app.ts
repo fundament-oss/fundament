@@ -327,7 +327,7 @@ export default class App implements OnInit {
    * Load the user's organizations and determine which one to select.
    * - If a valid org is stored in sessionStorage, restore it.
    * - If the user belongs to only one org, auto-select it.
-   * - If the user belongs to multiple orgs, show the org picker.
+   * - If the user belongs to multiple orgs, or to none, show the org picker.
    */
   private async loadUserOrganizations() {
     try {
@@ -340,12 +340,6 @@ export default class App implements OnInit {
       const orgs = orgResponse.organizations;
       const invitations = inviteResponse.invitations;
       this.pendingInvitations.set(invitations);
-
-      if (orgs.length === 0) {
-        // eslint-disable-next-line no-console
-        console.error('User does not belong to any organization');
-        return;
-      }
 
       // Store the full list for the picker and sidebar selector
       this.organizationDataService.setUserOrganizations(orgs);
@@ -366,13 +360,31 @@ export default class App implements OnInit {
       } else if (acceptedOrgs.length === 1 && invitations.length === 0) {
         await this.selectAndLoadOrganization(acceptedOrgs[0].id);
       } else {
-        // Multiple orgs or pending invitations: show picker
+        // Multiple orgs, pending invitations, or no organization at all: the
+        // picker covers each. Signing in creates no organization; someone in
+        // none is waiting for an operator to add them, and the picker says so.
         this.showOrgPicker.set(true);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load organizations:', error);
     }
+  }
+
+  /**
+   * A user in no organization can only wait for an operator to add them. The
+   * membership reaches the session on a token refresh, so checking again is a
+   * refresh and a reload of the organizations rather than a full page load.
+   */
+  async handleOrganizationsRecheck() {
+    try {
+      await this.apiService.refreshToken();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to refresh token:', error);
+      return;
+    }
+    await this.loadUserOrganizations();
   }
 
   /**

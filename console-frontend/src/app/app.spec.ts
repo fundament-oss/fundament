@@ -2,8 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
-import { Transport } from '@connectrpc/connect';
+import { Transport, createRouterTransport } from '@connectrpc/connect';
+import { create } from '@bufbuild/protobuf';
 import App from './app';
+import AuthnApiService from './authn-api.service';
+import {
+  OrganizationService,
+  ListOrganizationsResponseSchema,
+  type Organization,
+} from '../generated/v1/organization_pb';
+import { InviteService, ListInvitationsResponseSchema } from '../generated/v1/invite_pb';
 import { ConfigService, type AppConfiguration } from './config.service';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
@@ -55,9 +63,11 @@ const ORGANIZATION = { id: 'org-1', name: 'acme-corp', alias: 'acme' };
  * one; `url` is the page being left, which is all `router.url` knows until that
  * arrival lands.
  */
-async function setUpShell(url: string, arriving: string | null) {
+async function setUpShell(url: string, arriving: string | null, extraProviders: unknown[] = []) {
   const navigatedTo: string[] = [];
+  const userOrganizations = signal<Organization[]>([ORGANIZATION as Organization]);
   await configure([
+    ...(extraProviders as never[]),
     {
       provide: Router,
       useValue: {
@@ -73,7 +83,8 @@ async function setUpShell(url: string, arriving: string | null) {
     {
       provide: OrganizationDataService,
       useValue: {
-        userOrganizations: signal([ORGANIZATION]),
+        userOrganizations,
+        setUserOrganizations: (orgs: Organization[]) => userOrganizations.set(orgs),
         organizations: signal([ORGANIZATION]),
         clusterSummaries: signal([]),
         getOrganizationById: () => ORGANIZATION,
@@ -94,6 +105,26 @@ async function setUpShell(url: string, arriving: string | null) {
   ]);
 
   return { app: TestBed.createComponent(App).componentInstance, navigatedTo };
+}
+
+/**
+ * The organization-api as a user with these memberships sees it, and an authn
+ * service whose token refresh is a no-op. What `handleOrganizationsRecheck`
+ * touches, and nothing else.
+ */
+function memberOf(organizations: Organization[]): unknown[] {
+  const transport = createRouterTransport(({ service }) => {
+    service(OrganizationService, {
+      listOrganizations: () => create(ListOrganizationsResponseSchema, { organizations }),
+    });
+    service(InviteService, {
+      listInvitations: () => create(ListInvitationsResponseSchema, { invitations: [] }),
+    });
+  });
+  return [
+    { provide: ORGANIZATION_TRANSPORT, useValue: transport },
+    { provide: AuthnApiService, useValue: { refreshToken: async () => {} } },
+  ];
 }
 
 describe('App', () => {
@@ -128,6 +159,35 @@ describe('App', () => {
 
     await app.handleOrgPickerSelection(ORGANIZATION.id);
 
+    expect(navigatedTo).toEqual(['/organizations/acme-corp/clusters']);
+  });
+
+  // Signing in creates no organization. Someone in none gets the picker's
+  // message rather than a blank pane, and stays there.
+  it('shows the picker to someone in no organization', async () => {
+    const { app, navigatedTo } = await setUpShell('/clusters', null, memberOf([]));
+
+    await app.handleOrganizationsRecheck();
+
+    expect(app.showOrgPicker()).toBe(true);
+    expect(app.selectedOrgId()).toBeNull();
+    expect(navigatedTo).toEqual([]);
+  });
+
+  it('settles on the organization an operator has since added someone to', async () => {
+    // The operator ran `funops organization member add` after the shell first
+    // loaded; checking again finds the membership and goes in.
+    const { app, navigatedTo } = await setUpShell(
+      '/clusters',
+      null,
+      memberOf([ORGANIZATION as Organization]),
+    );
+    app.showOrgPicker.set(true);
+
+    await app.handleOrganizationsRecheck();
+
+    expect(app.showOrgPicker()).toBe(false);
+    expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
     expect(navigatedTo).toEqual(['/organizations/acme-corp/clusters']);
   });
 });
