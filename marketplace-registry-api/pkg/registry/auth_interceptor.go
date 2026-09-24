@@ -2,19 +2,16 @@ package registry
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"slices"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // OrganizationHeader selects the active organization, as on every other
 // organization-scoped surface (FUN-6).
-const OrganizationHeader = "Fun-Organization"
+const OrganizationHeader = auth.OrganizationHeader
 
 func (s *Server) authInterceptor() connect.Interceptor {
 	return auth.NewInterceptor(s.authenticate)
@@ -31,21 +28,9 @@ func (s *Server) authenticate(ctx context.Context, _ string, header http.Header)
 
 	ctx = WithUserID(ctx, claims.UserID())
 
-	orgHeader := header.Get(OrganizationHeader)
-	if orgHeader == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing %s header", OrganizationHeader))
-	}
-
-	organizationID, err := uuid.Parse(orgHeader)
+	organizationID, err := auth.OrganizationFromHeader(claims, header)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization ID: %w", err))
-	}
-
-	// The JWT carries the authoritative membership list, so this is settled
-	// without a database round trip.
-	if !slices.Contains(claims.OrganizationIDs, organizationID) {
-		return nil, connect.NewError(connect.CodePermissionDenied,
-			fmt.Errorf("user is not a member of organization %s", organizationID))
+		return nil, err //nolint:wrapcheck // already a connect error
 	}
 
 	return WithOrganizationID(ctx, organizationID), nil

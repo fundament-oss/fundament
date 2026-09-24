@@ -42,13 +42,13 @@ cluster-start:
 cluster-stop:
     k3d cluster stop fundament
 
-# The sandbox-catalog relay and the plugin serverlb (attached by plugin-sandbox-kubeconfig) stay on
+# The sandbox-catalog relays and the plugin serverlb (attached by plugin-sandbox-kubeconfig) stay on
 # k3d-fundament and block its removal.
 # Delete the local k3d cluster and registry
 cluster-delete:
     k3d cluster delete fundament
     @k3d registry delete registry.localhost 2>/dev/null || true
-    @docker rm -f fun-catalog-relay > /dev/null 2>&1 || true
+    @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
     @docker network disconnect -f k3d-fundament k3d-fundament-plugin-serverlb > /dev/null 2>&1 || true
     @docker network rm k3d-fundament 2>/dev/null || true
 
@@ -198,11 +198,11 @@ plugin-sandbox-kubeconfig:
          WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" \
         || echo "  (could not reach the database — the console will still show provisioning)" >&2
 
-    # Both consumers read the Secret only at startup, and Reloader does not reliably pick
+    # All three consumers read the Secret only at startup, and Reloader does not reliably pick
     # this one up, so restart them here rather than leave a Secret that has no effect.
-    echo "- restarting plugin-proxy and kube-api-proxy to pick the Secret up"
+    echo "- restarting plugin-proxy, kube-api-proxy and authn-api to pick the Secret up"
     kubectl --context k3d-fundament -n fundament rollout restart \
-        deployment/plugin-proxy deployment/kube-api-proxy > /dev/null
+        deployment/plugin-proxy deployment/kube-api-proxy deployment/authn-api > /dev/null
     kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
 
     # Confirm the new pod actually switched off the in-memory mock. `rollout status`

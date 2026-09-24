@@ -19,10 +19,38 @@ type DB struct {
 
 type Option = func(ctx context.Context, config *pgxpool.Config)
 
+// New is NewLazy followed by a connectivity check, so a misconfigured primary
+// pool fails at startup rather than on the first query.
 func New(ctx context.Context, logger *slog.Logger, cfg Config, options ...Option) (*DB, error) {
+	db, err := NewLazy(ctx, logger, cfg, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Debug("pinging database")
+	if err := db.Pool.Ping(ctx); err != nil {
+		logger.Error("failed to ping database", "error", err)
+		db.Pool.Close()
+		return nil, fmt.Errorf("pinging database: %w", err)
+	}
+
+	logger.Debug("database connection established")
+	return db, nil
+}
+
+func (s *DB) Close() {
+	s.logger.Debug("closing database connection pool")
+	s.Pool.Close()
+}
+
+// NewLazy is New without the connectivity check: the pool is configured but
+// no connection is made until the first query. For a secondary pool whose
+// backing role or grants may land after the process starts (a chart upgrade
+// rolls the Deployment while the migration Job is still running), so that the
+// primary surface keeps serving while the secondary reports errors per call.
+func NewLazy(ctx context.Context, logger *slog.Logger, cfg Config, options ...Option) (*DB, error) {
 	logger.Debug("creating database connection pool")
 
-	// Parse the database URL into a config
 	pgxcfg, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
 		logger.Error("failed to parse database URL", "error", err)
@@ -39,21 +67,8 @@ func New(ctx context.Context, logger *slog.Logger, cfg Config, options ...Option
 		return nil, fmt.Errorf("creating connection pool: %w", err)
 	}
 
-	logger.Debug("pinging database")
-	if err := pool.Ping(ctx); err != nil {
-		logger.Error("failed to ping database", "error", err)
-		pool.Close()
-		return nil, fmt.Errorf("pinging database: %w", err)
-	}
-
-	logger.Debug("database connection established")
 	return &DB{
 		Pool:   pool,
 		logger: logger,
 	}, nil
-}
-
-func (s *DB) Close() {
-	s.logger.Debug("closing database connection pool")
-	s.Pool.Close()
 }

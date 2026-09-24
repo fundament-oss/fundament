@@ -34,8 +34,8 @@ Because the manifest now lives host-side, the permissions a plugin runs under ar
 
 The plugin-controller runs in the plugin (sandbox) cluster, while organization-api runs in the management cluster. Moving the definition into organization-api therefore turns what used to be an intra-cluster fetch (controller → plugin pod, same cluster) into a *cross-cluster* one (controller → management-cluster organization-api). Two consequences follow:
 
-* `GetPluginDefinition` is a *public* endpoint. The controller fetching a definition has no user session to present, and the definition is not user-scoped data, so the fetch carries no token. (Deeper admin-only gating of *publishing* is tracked as a follow-up once a role concept exists; `PutPluginDefinition` stays organization-scoped in the meantime.)
-* organization-api must be *reachable from the plugin cluster*. The controller's `ORGANIZATION_API_URL` must therefore be organization-api's externally-routable URL (the same endpoint the Console uses), not the in-cluster `organization-api:8080` Service name — that name does not resolve from the plugin cluster's DNS.
+* `GetPluginDefinition` was a *public* endpoint when this FUN was written: the controller had no user session to present, so the fetch carried no token. Superseded by link:/funs/fun-22[FUN-22]: the controller has a cluster identity to present, and the fetch is authenticated and tenanted through `install.v1`. (Deeper admin-only gating of *publishing* is tracked as a follow-up once a role concept exists; `PutPluginDefinition` stays organization-scoped in the meantime.)
+* organization-api must be *reachable from the plugin cluster*. The controller's `ORGANIZATION_API_URL` must therefore be organization-api's externally-routable URL (the same endpoint the Console uses), not the in-cluster `organization-api:8080` Service name — that name does not resolve from the plugin cluster's DNS. This stands after link:/funs/fun-22[FUN-22] and now also covers authn-api's external URL (`FUNDAMENT_AUTHN_API_URL`), where the controller exchanges its projected ServiceAccount token.
 
 == Consequences
 

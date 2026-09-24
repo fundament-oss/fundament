@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file authn/v1/authn.proto.
  */
 export const file_authn_v1_authn: GenFile = /*@__PURE__*/
-  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJZChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKD2luc3RhbGxhdGlvbl9pZBgUIAEoCUIIukgFcgOwAQEiVwoXTWludFBsdWdpblRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAzJaCgxBdXRoblNlcnZpY2USSgoLR2V0VXNlckluZm8SHC5hdXRobi52MS5HZXRVc2VySW5mb1JlcXVlc3QaHS5hdXRobi52MS5HZXRVc2VySW5mb1Jlc3BvbnNlMrgBCgxUb2tlblNlcnZpY2USUAoNRXhjaGFuZ2VUb2tlbhIeLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXF1ZXN0Gh8uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlc3BvbnNlElYKD01pbnRQbHVnaW5Ub2tlbhIgLmF1dGhuLnYxLk1pbnRQbHVnaW5Ub2tlblJlcXVlc3QaIS5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXNwb25zZUJXWktnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2F1dGhuLWFwaS9wa2cvcHJvdG8vZ2VuL2F1dGhuL3YxO2F1dGhudjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
+  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJZChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKD2luc3RhbGxhdGlvbl9pZBgUIAEoCUIIukgFcgOwAQEiVwoXTWludFBsdWdpblRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyI8ChxFeGNoYW5nZVdvcmtsb2FkVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIl0KHUV4Y2hhbmdlV29ya2xvYWRUb2tlblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgKIAEoCRISCgp0b2tlbl90eXBlGBQgASgJEhIKCmV4cGlyZXNfaW4YHiABKAMyWgoMQXV0aG5TZXJ2aWNlEkoKC0dldFVzZXJJbmZvEhwuYXV0aG4udjEuR2V0VXNlckluZm9SZXF1ZXN0Gh0uYXV0aG4udjEuR2V0VXNlckluZm9SZXNwb25zZTKiAgoMVG9rZW5TZXJ2aWNlElAKDUV4Y2hhbmdlVG9rZW4SHi5hdXRobi52MS5FeGNoYW5nZVRva2VuUmVxdWVzdBofLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXNwb25zZRJWCg9NaW50UGx1Z2luVG9rZW4SIC5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXF1ZXN0GiEuYXV0aG4udjEuTWludFBsdWdpblRva2VuUmVzcG9uc2USaAoVRXhjaGFuZ2VXb3JrbG9hZFRva2VuEiYuYXV0aG4udjEuRXhjaGFuZ2VXb3JrbG9hZFRva2VuUmVxdWVzdBonLmF1dGhuLnYxLkV4Y2hhbmdlV29ya2xvYWRUb2tlblJlc3BvbnNlQldaS2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvYXV0aG4tYXBpL3BrZy9wcm90by9nZW4vYXV0aG4vdjE7YXV0aG52MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * @generated from message authn.v1.GetUserInfoRequest
@@ -211,6 +211,64 @@ export const MintPluginTokenResponseSchema: GenMessage<MintPluginTokenResponse> 
   messageDesc(file_authn_v1_authn, 6);
 
 /**
+ * ExchangeWorkloadToken request - names the cluster the workload runs on. The
+ * projected ServiceAccount token is taken from the Authorization header.
+ *
+ * @generated from message authn.v1.ExchangeWorkloadTokenRequest
+ */
+export type ExchangeWorkloadTokenRequest = Message<"authn.v1.ExchangeWorkloadTokenRequest"> & {
+  /**
+   * The fundament cluster UUID (FUNDAMENT_CLUSTER_ID on the workload).
+   *
+   * @generated from field: string cluster_id = 10;
+   */
+  clusterId: string;
+};
+
+/**
+ * Describes the message authn.v1.ExchangeWorkloadTokenRequest.
+ * Use `create(ExchangeWorkloadTokenRequestSchema)` to create a new message.
+ */
+export const ExchangeWorkloadTokenRequestSchema: GenMessage<ExchangeWorkloadTokenRequest> = /*@__PURE__*/
+  messageDesc(file_authn_v1_authn, 7);
+
+/**
+ * ExchangeWorkloadToken response
+ *
+ * @generated from message authn.v1.ExchangeWorkloadTokenResponse
+ */
+export type ExchangeWorkloadTokenResponse = Message<"authn.v1.ExchangeWorkloadTokenResponse"> & {
+  /**
+   * JWT access token (aud=fundament-workload) for the installer surface.
+   *
+   * @generated from field: string access_token = 10;
+   */
+  accessToken: string;
+
+  /**
+   * Token type (always "Bearer")
+   *
+   * @generated from field: string token_type = 20;
+   */
+  tokenType: string;
+
+  /**
+   * Seconds until token expires (at most 15 minutes, never past the
+   * presented ServiceAccount token's expiry; exchange again to refresh)
+   *
+   * @generated from field: int64 expires_in = 30;
+   */
+  expiresIn: bigint;
+};
+
+/**
+ * Describes the message authn.v1.ExchangeWorkloadTokenResponse.
+ * Use `create(ExchangeWorkloadTokenResponseSchema)` to create a new message.
+ */
+export const ExchangeWorkloadTokenResponseSchema: GenMessage<ExchangeWorkloadTokenResponse> = /*@__PURE__*/
+  messageDesc(file_authn_v1_authn, 8);
+
+/**
  * @generated from service authn.v1.AuthnService
  */
 export const AuthnService: GenService<{
@@ -257,6 +315,20 @@ export const TokenService: GenService<{
     methodKind: "unary";
     input: typeof MintPluginTokenRequestSchema;
     output: typeof MintPluginTokenResponseSchema;
+  },
+  /**
+   * ExchangeWorkloadToken turns a shoot workload's projected ServiceAccount
+   * token (Authorization: Bearer, audience fundament-authn-api) into a
+   * short-lived WorkloadToken (aud=fundament-workload) for the named cluster.
+   * authn-api verifies the token against that cluster's API server; every
+   * failure before signing is Unauthenticated (FUN-22).
+   *
+   * @generated from rpc authn.v1.TokenService.ExchangeWorkloadToken
+   */
+  exchangeWorkloadToken: {
+    methodKind: "unary";
+    input: typeof ExchangeWorkloadTokenRequestSchema;
+    output: typeof ExchangeWorkloadTokenResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_authn_v1_authn, 1);

@@ -69,4 +69,7 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-20[FUN-20 Marketplace APIs]
 | prediscussion
+
+| link:/funs/fun-22[FUN-22 Cluster Workload Identity]
+| prediscussion
 |===

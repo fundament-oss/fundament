@@ -2,18 +2,15 @@ package organization
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"slices"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // OrganizationHeader is the header name for selecting the active organization.
-const OrganizationHeader = "Fun-Organization"
+const OrganizationHeader = auth.OrganizationHeader
 
 func (s *Server) authInterceptor() connect.Interceptor {
 	return auth.NewInterceptor(s.authenticate)
@@ -41,18 +38,9 @@ func (s *Server) authenticate(ctx context.Context, procedure string, header http
 		return ctx, nil
 	}
 
-	orgHeader := header.Get(OrganizationHeader)
-	if orgHeader == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing %s header", OrganizationHeader))
-	}
-
-	organizationID, err := uuid.Parse(orgHeader)
+	organizationID, err := auth.OrganizationFromHeader(claims, header)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid organization ID: %w", err))
-	}
-
-	if !slices.Contains(claims.OrganizationIDs, organizationID) {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("user is not a member of organization %s", organizationID))
+		return nil, err //nolint:wrapcheck // already a connect error
 	}
 
 	ctx = WithOrganizationID(ctx, organizationID)

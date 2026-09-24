@@ -8,6 +8,11 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "backend") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
+    {{- if $.Values.authnApi.sandboxKubeconfigSecret }}
+    # The sandbox kubeconfig Secret is created out of band after this pod is
+    # running and mounted optional: true, so `auto` never sees it. Name it.
+    secret.reloader.stakater.com/reload: {{ $.Values.authnApi.sandboxKubeconfigSecret | quote }}
+    {{- end }}
 spec:
   replicas: {{ $.Values.authnApi.replicas }}
   selector:
@@ -59,23 +64,64 @@ spec:
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
             {{- end }}
+            {{- if $.Values.authnApi.sandboxKubeconfigSecret }}
+            - name: PLUGIN_SANDBOX_KUBECONFIG
+              value: /etc/plugin-sandbox/kubeconfig
+            {{- end }}
+            - name: SHOOT_VERIFIER_MODE
+              value: {{ $.Values.authnApi.shootVerifierMode | default "auto" | quote }}
+            {{- if $.Values.authnApi.mockShootSecret }}
+            - name: MOCK_SHOOT_SECRET
+              value: {{ $.Values.authnApi.mockShootSecret | quote }}
+            {{- end }}
+            {{- if $.Values.authnApi.mockShootSecretAllowDefault }}
+            - name: MOCK_SHOOT_SECRET_ALLOW_DEFAULT
+              value: "true"
+            {{- end }}
+            # clusterId and organizationId name one tenant.clusters row and must move
+            # together: the exchange refuses a verifier organization that differs
+            # from the row (FUN-22, check 5).
+            {{- if $.Values.pluginController.clusterId }}
+            - name: LOCAL_CLUSTER_ID
+              value: {{ $.Values.pluginController.clusterId | quote }}
+            - name: LOCAL_ORGANIZATION_ID
+              value: {{ required "pluginController.organizationId must be set together with pluginController.clusterId" $.Values.pluginController.organizationId | quote }}
+            {{- end }}
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_NAME
               value: {{ include "fundament.openfga.storeName" $ }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.authnApi.sandboxKubeconfigSecret }}
           volumeMounts:
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: gardener-kubeconfig
               mountPath: /etc/gardener
               readOnly: true
+            {{- end }}
+            {{- if $.Values.authnApi.sandboxKubeconfigSecret }}
+            - name: plugin-sandbox-kubeconfig
+              mountPath: /etc/plugin-sandbox
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.authnApi.sandboxKubeconfigSecret }}
       volumes:
+        {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.authnApi.sandboxKubeconfigSecret }}
+        - name: plugin-sandbox-kubeconfig
+          secret:
+            secretName: {{ $.Values.authnApi.sandboxKubeconfigSecret }}
+            optional: true
+            items:
+              - key: kubeconfig
+                path: kubeconfig
+        {{- end }}
       {{- end }}
 ---
 apiVersion: v1

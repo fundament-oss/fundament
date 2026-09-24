@@ -114,9 +114,10 @@ func listAsCatalog(t *testing.T, env *testEnv) []uuid.UUID {
 	return ids
 }
 
-// Kept under its old name, but this is now PluginList's own EXISTS filter, not
-// a policy: plugins_select_catalog stopped requiring a published version so the
-// catalog role can reach unpublished manifests for plugin-controller.
+// PluginList's own EXISTS filter, not a policy: plugins_select_catalog checks
+// visibility and deletion; plugin_definitions_select_catalog is what hides
+// unpublished versions themselves (installers read own drafts through
+// install.v1, FUN-22).
 func TestRLSHidesUnpublishedPlugin(t *testing.T) {
 	env := newTestEnv(t)
 	id := seedPlugin(t, env, seedOptions{Name: "rls-unpublished", Visibility: "public", Published: false})

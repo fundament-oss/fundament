@@ -4,6 +4,7 @@ import {
   CatalogService,
   ListPluginVersionsRequestSchema,
 } from '../../generated/catalog/v1/catalog_pb';
+import { InstallService } from '../../generated/install/v1/install_pb';
 import createDemoTransport from './mock-transport';
 import * as fx from './fixtures';
 
@@ -45,5 +46,29 @@ describe('demo plugin versions', () => {
     );
 
     expect(resp.versions).toEqual([]);
+  });
+});
+
+// The console reads listings through install.v1 as the organization (FUN-22);
+// the demo must answer it with the same fixtures as the storefront.
+describe('demo install surface', () => {
+  const install = createClient(InstallService, createDemoTransport());
+  const catalog = createClient(CatalogService, createDemoTransport());
+
+  it('serves the same listings and versions as the catalog', async () => {
+    const [installList, catalogList] = await Promise.all([
+      install.listPlugins({}),
+      catalog.listPlugins({}),
+    ]);
+    expect(installList.plugins.map((p) => p.id)).toEqual(catalogList.plugins.map((p) => p.id));
+
+    const req = create(ListPluginVersionsRequestSchema, { pluginId: 'pl-cert-manager' });
+    const [installVersions, catalogVersions] = await Promise.all([
+      install.listPluginVersions(req),
+      catalog.listPluginVersions(req),
+    ]);
+    expect(installVersions.versions.map((v) => v.version)).toEqual(
+      catalogVersions.versions.map((v) => v.version),
+    );
   });
 });

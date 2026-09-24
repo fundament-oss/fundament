@@ -60,6 +60,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_marketplace_install_api"
+ sql-disabled="true">
+</role>
+
 <database name="fundament" is-template="false" allow-conns="true" sql-disabled="true">
 </database>
 
@@ -1470,7 +1474,7 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugin_definitions_select_catalog" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL]]> </expression>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND published IS NOT NULL]]> </expression>
 </policy>
 
 <policy name="plugins_select_catalog" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
@@ -1508,7 +1512,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<policy name="plugin_labels_select_catalog" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+<policy name="plugin_labels_select_catalog" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api,fun_marketplace_install_api"/>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id)]]> </expression>
 </policy>
 
@@ -1542,7 +1546,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<policy name="plugin_features_select_catalog" table="appstore.plugin_features" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+<policy name="plugin_features_select_catalog" table="appstore.plugin_features" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api,fun_marketplace_install_api"/>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_features.plugin_id)]]> </expression>
 </policy>
 
@@ -1732,7 +1736,7 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<policy name="plugins_tags_select_catalog" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+<policy name="plugins_tags_select_catalog" table="appstore.plugins_tags" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api,fun_marketplace_install_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugins_tags.plugin_id)]]> </expression>
 </policy>
 
@@ -1795,7 +1799,7 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<policy name="categories_plugins_select_catalog" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+<policy name="categories_plugins_select_catalog" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api,fun_marketplace_install_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.categories_plugins.plugin_id)]]> </expression>
 </policy>
 
@@ -1835,7 +1839,7 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<policy name="plugin_documentation_links_select_catalog" table="appstore.plugin_documentation_links" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
+<policy name="plugin_documentation_links_select_catalog" table="appstore.plugin_documentation_links" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api,fun_marketplace_install_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_documentation_links.plugin_id)]]> </expression>
 </policy>
 
@@ -1908,8 +1912,20 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
+<policy name="plugin_allowed_organizations_select_install" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_install_api"/>
+	<expression type="using-exp"> <![CDATA[appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
 <policy name="plugins_select_all" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[visibility = 'public' OR organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugins_select_install" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_install_api"/>
+	<expression type="using-exp"> <![CDATA[appstore.plugins.deleted IS NULL AND (appstore.plugins.visibility = 'public' OR appstore.plugins.organization_id = authn.current_organization_id() OR EXISTS (SELECT 1 FROM appstore.plugin_allowed_organizations WHERE appstore.plugin_allowed_organizations.plugin_id = appstore.plugins.id AND appstore.plugin_allowed_organizations.organization_id = authn.current_organization_id()))]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_select_install" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_marketplace_install_api"/>
+	<expression type="using-exp"> <![CDATA[appstore.plugin_definitions.deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.deleted IS NULL AND (appstore.plugin_definitions.published IS NOT NULL OR appstore.plugins.organization_id = authn.current_organization_id()))]]> </expression>
 </policy>
 
 <trigger name="require_admin" firing-type="AFTER" per-line="true" constraint="true"
@@ -2022,6 +2038,10 @@ END;]]> </definition>
 
 <policy name="organizations_select_catalog" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_catalog_api"/>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL AND appstore.plugins.visibility = 'public')]]> </expression>
+</policy>
+
+<policy name="organizations_select_install" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_install_api"/>
+	<expression type="using-exp"> <![CDATA[tenant.organizations.deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL)]]> </expression>
 </policy>
 
 <policy name="organizations_select_admin" table="tenant.organizations" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
@@ -5520,6 +5540,71 @@ END;]]> </definition>
 <permission>
 	<object name="tenant.organizations" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore" type="schema"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="tenant" type="schema"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_definitions" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_allowed_organizations" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_labels" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_features" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_documentation_links" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.tags" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins_tags" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.categories_plugins" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.organizations" type="table"/>
+	<roles names="fun_marketplace_install_api"/>
 	<privileges select="true"/>
 </permission>
 </dbmodel>

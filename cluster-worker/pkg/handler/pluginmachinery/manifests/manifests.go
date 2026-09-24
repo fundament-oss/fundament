@@ -21,6 +21,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // CRD is the PluginInstallation CustomResourceDefinition manifest, generated
@@ -52,6 +54,18 @@ const (
 	componentLabelValue = "plugin-controller"
 
 	healthPort = 8097
+
+	// TokenVolumeName, TokenMountPath and TokenFileName describe the projected
+	// ServiceAccount token volume; plugin-controller reads
+	// TokenMountPath/TokenFileName (its FUNDAMENT_TOKEN_FILE default).
+	TokenVolumeName = "fundament-token"
+	TokenMountPath  = "/var/run/secrets/fundament" //nolint:gosec // a path, not a credential
+	TokenFileName   = "token"
+	// TokenExpirationSeconds is the projected token's lifetime. Deliberately
+	// 3600, not the admission default 3607: kube-apiserver's
+	// --service-account-extend-token-expiration (on by default) turns a request
+	// for exactly 3607 seconds into a year-long token.
+	TokenExpirationSeconds int64 = 3600
 )
 
 // Labels returns the label set applied to every shoot-side plugin machinery
@@ -125,6 +139,10 @@ type DeploymentParams struct {
 	// CatalogAPIURL is the externally routable marketplace-catalog-api base URL
 	// (FUN-19: the controller runs outside the management cluster).
 	CatalogAPIURL string
+	// AuthnAPIURL is the externally routable authn-api base URL, where the
+	// controller exchanges its projected ServiceAccount token for a
+	// WorkloadToken (FUN-22).
+	AuthnAPIURL string
 	// AllowUnpinnedHash skips definition-hash verification. Local dev only;
 	// never set for production shoots.
 	AllowUnpinnedHash bool
@@ -151,6 +169,7 @@ func Deployment(params *DeploymentParams) *appsv1.Deployment {
 		{Name: "FUNDAMENT_INSTALL_ID", Value: params.ClusterID},
 		{Name: "FUNDAMENT_ORGANIZATION_ID", Value: params.OrganizationID},
 		{Name: "MARKETPLACE_CATALOG_API_URL", Value: params.CatalogAPIURL},
+		{Name: "FUNDAMENT_AUTHN_API_URL", Value: params.AuthnAPIURL},
 	}
 	if params.LogLevel != "" {
 		env = append(env, corev1.EnvVar{Name: "LOG_LEVEL", Value: params.LogLevel})
@@ -175,11 +194,35 @@ func Deployment(params *DeploymentParams) *appsv1.Deployment {
 				ObjectMeta: metav1.ObjectMeta{Labels: selectorLabels},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: DeploymentName,
+					// The controller's fundament credential (FUN-22): a ServiceAccount
+					// token bound to this pod, audience-restricted to authn-api so it
+					// is useless against the shoot's own API server, rotated by kubelet
+					// at ~80% of its lifetime. automountServiceAccountToken stays on:
+					// controller-runtime needs the ordinary kube token.
+					Volumes: []corev1.Volume{{
+						Name: TokenVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								Sources: []corev1.VolumeProjection{{
+									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+										Audience:          auth.WorkloadCredentialAudience,
+										ExpirationSeconds: new(TokenExpirationSeconds),
+										Path:              TokenFileName,
+									},
+								}},
+							},
+						},
+					}},
 					Containers: []corev1.Container{
 						{
 							Name:  "plugin-controller",
 							Image: params.Image,
 							Env:   env,
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      TokenVolumeName,
+								MountPath: TokenMountPath,
+								ReadOnly:  true,
+							}},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -221,6 +264,9 @@ func (p *DeploymentParams) Validate() error {
 	}
 	if p.CatalogAPIURL == "" {
 		return fmt.Errorf("catalog-api URL is empty")
+	}
+	if p.AuthnAPIURL == "" {
+		return fmt.Errorf("authn-api URL is empty")
 	}
 	return nil
 }

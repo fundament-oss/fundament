@@ -12,6 +12,7 @@ roles:
   - name: fun_marketplace_catalog_api
   - name: fun_marketplace_registry_api
   - name: fun_marketplace_admin_api
+  - name: fun_marketplace_install_api
 outputs:
   - sql
 templates:

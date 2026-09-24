@@ -23,14 +23,15 @@ func TestConfigEnabled(t *testing.T) {
 	assert.False(t, Config{}.Enabled())
 	assert.False(t, Config{ControllerImage: "img"}.Enabled())
 	assert.False(t, Config{CatalogAPIURL: "url"}.Enabled())
-	assert.True(t, Config{ControllerImage: "img", CatalogAPIURL: "url"}.Enabled())
+	assert.False(t, Config{ControllerImage: "img", CatalogAPIURL: "url"}.Enabled(), "authn-api URL is required since FUN-22")
+	assert.True(t, Config{ControllerImage: "img", CatalogAPIURL: "url", AuthnAPIURL: "authn"}.Enabled())
 }
 
 func TestSyncRejectsUnexpectedEntity(t *testing.T) {
 	t.Parallel()
 	h := &Handler{
 		shoot:  shoot.NewMockShootAccess(testLogger()),
-		cfg:    Config{ControllerImage: "img", CatalogAPIURL: "url"},
+		cfg:    Config{ControllerImage: "img", CatalogAPIURL: "url", AuthnAPIURL: "authn"},
 		logger: testLogger(),
 	}
 
