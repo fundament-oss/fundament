@@ -176,7 +176,15 @@
       id="log-explorer-title"
       size="2"
     >
-      <h1>Log explorer</h1>
+      <h1>
+        Log explorer
+        @if (mockLogs) {
+          &ngsp;<app-mock-badge
+            label="Mock: generated logs"
+            explanation="This environment is not connected to a logs backend yet. The log lines are generated example data."
+          ></app-mock-badge>
+        }
+      </h1>
     </nldd-title>
     <nldd-spacer
       slot="header"

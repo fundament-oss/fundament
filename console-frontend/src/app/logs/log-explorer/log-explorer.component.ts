@@ -24,6 +24,8 @@ import { LogBackend, LogSource } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { NotificationService } from '../../notification.service';
 import PageNavService from '../../page-nav.service';
+import { ConfigService } from '../../config.service';
+import MockBadgeComponent from '../../mock-badge/mock-badge.component';
 import PluginInstallationService from '../../plugin-installation/plugin-installation.service';
 import '@nldd/design-system/search-field';
 import '@nldd/design-system/tab-bar';
@@ -154,7 +156,7 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
 
 @Component({
   selector: 'app-log-explorer',
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './log-explorer.component.html',
@@ -170,6 +172,8 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
 })
 export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
+
+  protected readonly mockLogs = inject(ConfigService).getConfig().mockLogs ?? false;
 
   private readonly notificationService = inject(NotificationService);
 

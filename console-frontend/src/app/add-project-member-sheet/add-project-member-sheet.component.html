@@ -117,12 +117,9 @@
             <div class="form-field-header">
               <span class="form-field-header__label">
                 Namespace access
-                <nldd-badge
-                  color="hemelblauw"
-                  size="sm"
-                  text="Mock"
-                  accessible-label="Mock data, namespace access is not saved yet"
-                ></nldd-badge>
+                <app-mock-badge
+                  label="Mock: namespace access is not saved yet"
+                ></app-mock-badge>
                 <span class="form-field-header__optional">Optional</span>
               </span>
               <span class="form-field-header__supporting-label"
@@ -244,13 +241,8 @@
                 }
               </nldd-list>
               <nldd-form-field-help-text>
-                <nldd-badge
-                  color="hemelblauw"
-                  size="sm"
-                  text="Mock"
-                  accessible-label="Mock data, roles are not saved yet"
-                ></nldd-badge
-                >&ngsp; Without a role they can see the namespace, but do nothing in it.
+                <app-mock-badge label="Mock: roles are not saved yet"></app-mock-badge>&ngsp;
+                Without a role they can see the namespace, but do nothing in it.
               </nldd-form-field-help-text>
             </nldd-form-field>
           }

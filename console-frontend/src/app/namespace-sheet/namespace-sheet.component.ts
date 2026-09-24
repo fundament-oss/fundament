@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { PROJECT, NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatDate } from '../utils/date-format';
@@ -24,7 +25,6 @@ import '@nldd/design-system/token-field';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
-import '@nldd/design-system/badge';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
@@ -71,7 +71,7 @@ const accessSummary = (entry: NamespaceMember): string => {
  */
 @Component({
   selector: 'app-namespace-sheet',
-  imports: [DialogSyncDirective, SheetSyncDirective],
+  imports: [DialogSyncDirective, SheetSyncDirective, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespace-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

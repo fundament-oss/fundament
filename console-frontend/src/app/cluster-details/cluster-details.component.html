@@ -239,7 +239,15 @@
         <nldd-box>
           <nldd-container padding="16">
             <nldd-title size="5">
-              <h3>Resource usage</h3>
+              <h3>
+                Resource usage
+                @if (mockMetrics) {
+                  &ngsp;<app-mock-badge
+                    label="Mock: generated metrics"
+                    explanation="This environment is not connected to a metrics backend yet. The figures are generated example data."
+                  ></app-mock-badge>
+                }
+              </h3>
               <nldd-button
                 slot="end"
                 [attr.href]="pageNav.path('/metrics')"

@@ -25,6 +25,8 @@ import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
 import datePickerTranslations from '../utils/nldd-translations';
+import { ConfigService } from '../config.service';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary,
@@ -319,7 +321,7 @@ function closeCustomRange(): void {
 
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
@@ -336,6 +338,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private metricsHealth = inject(MetricsHealthService);
 
   protected pageNav = inject(PageNavService);
+
+  protected readonly mockMetrics = inject(ConfigService).getConfig().mockMetrics ?? false;
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 

@@ -17,6 +17,7 @@ import {
 import { ORGANIZATION } from '../../connect/tokens';
 import PageNavService from '../page-nav.service';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
@@ -118,7 +119,7 @@ const valueText = (value: number | null, unit: string): string =>
 
 @Component({
   selector: 'app-organization-limits',
-  imports: [ResourceLimitSectionComponent, SheetSyncDirective],
+  imports: [ResourceLimitSectionComponent, SheetSyncDirective, MockBadgeComponent],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

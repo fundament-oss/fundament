@@ -47,6 +47,8 @@ import getPluginIconName from '../utils/plugin-icon-name';
 import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
+import { ConfigService } from '../config.service';
 import focusFirstModalInput from '../modal-focus';
 import {
   formatDate as formatDateUtil,
@@ -219,6 +221,7 @@ const getEventLine = (event: ClusterEvent): string => {
     DialogSyncDirective,
     SheetSyncDirective,
     PluginIconComponent,
+    MockBadgeComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
@@ -226,6 +229,8 @@ const getEventLine = (event: ClusterEvent): string => {
 })
 export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   protected pageNav = inject(PageNavService);
+
+  protected readonly mockMetrics = inject(ConfigService).getConfig().mockMetrics ?? false;
 
   /**
    * nldd-top-title-bar resolves `collapse-anchor` once, when the attribute
@@ -373,7 +378,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   isLoadingEvents = signal<boolean>(true);
 
-  // Cluster data with API-fetched and mock data
+  // Cluster data as fetched from the API
   clusterData = {
     basics: {
       id: '',
@@ -384,44 +389,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     status: ClusterStatus.UNSPECIFIED,
     syncState: null as SyncState | null,
     created: undefined as Timestamp | undefined,
-    activity: [
-      {
-        timestamp: '2024-12-06T14:30:00Z',
-        action: 'Node pool scaled up',
-        details: 'Added 2 nodes to default pool',
-      },
-      {
-        timestamp: '2024-12-06T12:15:00Z',
-        action: 'Plugin updated',
-        details: 'Updated monitoring plugin to v2.1.3',
-      },
-      {
-        timestamp: '2024-12-04T11:10:00Z',
-        action: 'Node maintenance',
-        details: 'Completed maintenance on node-3',
-      },
-      {
-        timestamp: '2024-12-03T08:40:00Z',
-        action: 'Resource limit adjusted',
-        details: 'Increased memory limit for database pod',
-      },
-      {
-        timestamp: '2024-12-02T13:55:00Z',
-        action: 'User access granted',
-        details: 'Added developer@company.com to cluster',
-      },
-      {
-        timestamp: '2024-12-01T10:15:00Z',
-        action: 'Monitoring alert resolved',
-        details: 'High CPU usage alert cleared',
-      },
-    ],
     nodePools: [] as NodePool[],
-    workerNodes: {
-      nodeType: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)',
-      minAutoscaling: 1,
-      maxAutoscaling: 5,
-    },
   };
 
   ngOnDestroy() {
