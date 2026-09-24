@@ -19,10 +19,17 @@ import PluginCardComponent from './plugin-card.component';
 import PluginLabelsComponent from './plugin-labels.component';
 import { PluginIconComponent } from '../icons';
 import connectErrorMessage from '../../connect/error';
+import DeveloperLinkComponent from '../developer-link.component';
 
 @Component({
   selector: 'app-marketplace-index',
-  imports: [PluginCardComponent, PluginLabelsComponent, PluginIconComponent, RouterLink],
+  imports: [
+    PluginCardComponent,
+    PluginLabelsComponent,
+    PluginIconComponent,
+    RouterLink,
+    DeveloperLinkComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './index.component.html',
@@ -33,6 +40,11 @@ export default class MarketplaceIndexComponent implements OnInit {
   // URL of the sibling deployable this page links out to (FUN-20); empty
   // when that area is not deployed, which hides the link.
   protected developerUrl = inject(ConfigService).getConfig().developerUrl ?? '';
+
+  // The demo bundle has no portal URL but does carry the manage routes, so
+  // its call to action links internally. Neither means no portal exists in
+  // this environment and the whole panel is dropped.
+  protected bundledDeveloperArea = inject(ConfigService).hasBundledDeveloperArea();
 
   private service = inject(MarketplaceService);
 

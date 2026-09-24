@@ -20,8 +20,10 @@ import '@nldd/design-system/dropdown';
 import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/inline-dialog';
 import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
+import DeveloperLinkComponent from './developer-link.component';
 import { ToastService } from './toast.service';
 import ThemeService from './theme.service';
 import { ConfigService } from './config.service';
@@ -30,7 +32,13 @@ import { VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, FundamentLogoIconComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    NgTemplateOutlet,
+    FundamentLogoIconComponent,
+    DeveloperLinkComponent,
+  ],
   host: {
     class: 'flex min-h-dvh flex-col',
   },
@@ -52,8 +60,6 @@ export default class App {
   // Which audience this build serves; the shell renders per-variant chrome
   // and links to the sibling deployables by URL, never by route.
   protected readonly variant = VARIANT;
-
-  protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
 
   protected readonly storefrontUrl = this.configService.getConfig().storefrontUrl ?? '';
 

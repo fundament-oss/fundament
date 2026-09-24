@@ -1,0 +1,189 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import type { User } from '../generated/authn/v1/authn_pb';
+import { AUTHN_CLIENT } from '../connect/authn';
+import { ConfigService } from './config.service';
+
+// Set on the way out to the login, cleared as soon as a session resolves, so
+// it only ever survives a round trip that came back without one. sessionStorage
+// rather than localStorage: it is about this tab's current attempt, and it must
+// not outlive the tab.
+const LOGIN_ATTEMPT_KEY = 'marketplace_login_attempted';
+
+// sessionStorage is absent during a server render and throws outright in a
+// sandboxed frame, and the caller's answer to both is the same, so the access
+// is wrapped rather than guarded at each call site.
+function readLoginAttempt(): boolean {
+  try {
+    return sessionStorage.getItem(LOGIN_ATTEMPT_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function writeLoginAttempt(attempted: boolean): void {
+  try {
+    if (attempted) {
+      sessionStorage.setItem(LOGIN_ATTEMPT_KEY, '1');
+    } else {
+      sessionStorage.removeItem(LOGIN_ATTEMPT_KEY);
+    }
+  } catch {
+    // No storage to remember the attempt in. The guard then falls back to
+    // redirecting every time, which is what it did before there was a flag.
+  }
+}
+
+/**
+ * The visitor's console session, as the developer portal sees it (FUN-20).
+ *
+ * The marketplace mints nothing of its own: the session is the console's
+ * `fundament_auth` cookie, set by authn-api on the parent domain, which the
+ * browser therefore sends to the portal's own APIs as well —
+ * marketplace-registry-api validates exactly that cookie, issuer and audience.
+ * So "signing in" here means sending the visitor to a login that sets that
+ * cookie — the console's own page where there is a console, dex's otherwise
+ * (see loginUrl) — and reading the session back out of `GetUserInfo`.
+ *
+ * There is deliberately no refresh attempt when `GetUserInfo` says no. The
+ * cookie *is* the access token, and `/refresh` runs the same validator over the
+ * same cookie — requiring a live `exp` — so it can only succeed where
+ * `GetUserInfo` already did. The console's auth guard does try it; here it would
+ * be a second failing request in front of every anonymous page load.
+ */
+@Injectable({ providedIn: 'root' })
+export default class SessionService {
+  private readonly authnClient = inject(AUTHN_CLIENT);
+
+  private readonly configService = inject(ConfigService);
+
+  /** The signed-in user, or null once a lookup has come back empty. */
+  readonly user = signal<User | null>(null);
+
+  private loaded?: Promise<User | null>;
+
+  /**
+   * Whether this build has a session surface at all. The storefront and the
+   * demo bundle carry no authn URL — the demo answers the registry from
+   * in-memory fixtures and has no backend to authenticate against — so there
+   * is nobody to ask and nowhere to send a visitor.
+   */
+  hasSessionSurface(): boolean {
+    return !!this.configService.getConfig().authnApiUrl;
+  }
+
+  /**
+   * Resolves the session, asking authn-api once per app load for as long as
+   * the answer is a user. An empty answer is not kept: a session can still
+   * turn up without this page reloading, from a login in another tab, and the
+   * next caller should see it.
+   */
+  ensureUser(): Promise<User | null> {
+    if (!this.loaded) {
+      const loading = this.load().then((user) => {
+        // Unless something has replaced it in the meantime.
+        if (!user && this.loaded === loading) this.loaded = undefined;
+        return user;
+      });
+      this.loaded = loading;
+    }
+    return this.loaded;
+  }
+
+  /**
+   * Where to send the browser to sign in, given a path in this app to come
+   * back to.
+   *
+   * The console's login page when this deployment has one. The portal borrows
+   * the console's session rather than minting its own, so the console owns the
+   * only password form in the product, and a second one here would be a second
+   * place to later add rate limiting, lockout or a password reset. The console
+   * is named an app rather than handed a URL, so that it resolves where to
+   * return to against its own configuration instead of carrying an allowlist
+   * (see its login/login-handoff.ts).
+   *
+   * Failing that, authn-api's OIDC login, which is dex's own page. It only
+   * honours a `return_to` for an origin the deployment serves, so the portal's
+   * origin has to be on authn's CORS list, which it needs regardless.
+   */
+  loginUrl(path: string): string {
+    const config = this.configService.getConfig();
+
+    if (config.consoleUrl) {
+      const url = new URL('/login', config.consoleUrl);
+      url.searchParams.set('app', 'marketplace-registry');
+      url.searchParams.set('path', path);
+      return url.href;
+    }
+
+    // Joined under the configured URL rather than resolved against it, which
+    // would drop a path prefix authn-api may be served under. The base is
+    // itself resolved against this page, so a root-relative authnApiUrl
+    // (`/api/authn`) works as it did when this was string concatenation.
+    const configured = config.authnApiUrl ?? '';
+    const base = new URL(
+      configured.endsWith('/') ? configured : `${configured}/`,
+      window.location.origin,
+    );
+    const url = new URL('login', base);
+    url.searchParams.set('return_to', new URL(path, window.location.origin).href);
+    return url.href;
+  }
+
+  /**
+   * Whether this tab has already been sent to the login and come back without
+   * a session.
+   *
+   * `GetUserInfo` failing does not distinguish "no cookie" from "authn did not
+   * answer", and a redirect is only the right response to the first. A login
+   * that sets a cookie this origin still cannot read — authn 5xx, a
+   * `COOKIE_DOMAIN` that misses this host, a CORS header that does not come
+   * back — would otherwise loop the tab silently: dex re-approves the session
+   * it just minted on every pass, so nothing prompts, and each hop is a fresh
+   * page load calling `location.assign`, so the browser's redirect limit never
+   * trips either.
+   */
+  // A method although it reads only storage: the flag belongs to this service,
+  // which writes it, and the guard should not need to know where it is kept.
+  // eslint-disable-next-line class-methods-use-this
+  hasTriedLogin(): boolean {
+    return readLoginAttempt();
+  }
+
+  /**
+   * Leaves for the login. A page load and not a router navigation: whichever
+   * login answers, it is on another origin. It lives here rather than in the
+   * guard so that what the guard decides can be tested without a real browser
+   * leaving the page.
+   */
+  redirectToLogin(path: string): void {
+    // Built before the attempt is recorded: a login URL that cannot be built
+    // must not leave the tab believing it has already been round the login.
+    const url = this.loginUrl(path);
+    writeLoginAttempt(true);
+    window.location.assign(url);
+  }
+
+  private async load(): Promise<User | null> {
+    if (!this.hasSessionSurface()) {
+      return null;
+    }
+
+    try {
+      const response = await firstValueFrom(this.authnClient.getUserInfo({}));
+      const user = response.user ?? null;
+      this.user.set(user);
+      if (user) {
+        // The round trip worked, so a later one may be attempted again.
+        writeLoginAttempt(false);
+      }
+      return user;
+    } catch {
+      // Not signed in, or authn is unreachable. Either way there is no session
+      // to act on; the guard turns this into a login and everything else
+      // treats it as an anonymous visitor.
+      this.user.set(null);
+      return null;
+    }
+  }
+}

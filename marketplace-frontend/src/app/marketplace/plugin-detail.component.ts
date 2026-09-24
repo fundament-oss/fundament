@@ -15,10 +15,12 @@ import { PluginIconComponent } from '../icons';
 import MarketplaceService, { type MarketplacePluginDetails } from './marketplace.service';
 import PluginLabelsComponent from './plugin-labels.component';
 import connectErrorMessage from '../../connect/error';
+import MarkdownComponent from '../markdown.component';
+import { groupPermissions, grantsEverything } from './permissions';
 
 @Component({
   selector: 'app-plugin-detail',
-  imports: [RouterLink, PluginIconComponent, PluginLabelsComponent],
+  imports: [RouterLink, PluginIconComponent, PluginLabelsComponent, MarkdownComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-detail.component.html',
@@ -39,6 +41,10 @@ export default class PluginDetailComponent implements OnInit {
   isLoading = signal(true);
 
   errorMessage = signal<string | null>(null);
+
+  permissionGroups = computed(() => groupPermissions(this.plugin()?.permissions ?? []));
+
+  grantsEverything = computed(() => grantsEverything(this.permissionGroups()));
 
   // The console page for this plugin, or '' when no console is configured.
   // Installing needs an organization and a cluster, which only the

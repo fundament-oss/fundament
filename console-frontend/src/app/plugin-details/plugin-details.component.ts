@@ -4,8 +4,10 @@ import {
   OnInit,
   OnDestroy,
   signal,
+  computed,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  SecurityContext,
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
@@ -21,6 +23,7 @@ import InstallPluginModalComponent, {
 } from '../install-plugin-modal/install-plugin-modal';
 import { PluginIconComponent } from '../icons';
 import getPluginIconName from '../utils/plugin-icon-name';
+import renderMarkdown from '../markdown';
 import { CLUSTER, CATALOG } from '../../connect/tokens';
 import {
   GetPluginRequestSchema,
@@ -133,6 +136,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   plugin = signal<PluginDetailView | null>(null);
 
+  // The description sits directly under the page's own title.
+  renderedMarkdown = computed<SafeHtml>(() => {
+    const html = renderMarkdown(this.plugin()?.description || '', 1);
+    return this.sanitizer.sanitize(SecurityContext.HTML, html) || '';
+  });
+
   clusters = signal<ClusterWithState[]>([]);
 
   // Published versions of this plugin, offered in the install modal.
@@ -237,30 +246,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       );
       this.isLoading.set(false);
     }
-  }
-
-  getRenderedMarkdown(): SafeHtml {
-    const description = this.plugin()?.description || '';
-
-    // Simple markdown to HTML conversion
-    let html = description
-      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-semibold mb-3">$1</h1>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mb-2 mt-4">$1</h2>')
-      .replace(/^- (.*$)/gim, '<li>$1</li>')
-      // A run of items is a list. Without the wrapper these were bare <li>
-      // elements, and every list rule nldd-rich-text has is keyed on ul/ol — so
-      // the bullets lost their marker and their indent, and stood in a wider
-      // column than the paragraphs around them. The indent comes from the design
-      // system now instead of from a hardcoded ml-4, and assistive tech is told
-      // it is reading a list.
-      .replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, (run) => `<ul>${run}</ul>`)
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-      .replace(/\n\n/g, '</p><p class="mb-3">')
-      .trim();
-
-    html = `<p class="mb-3">${html}</p>`;
-
-    return this.sanitizer.sanitize(1, html) || '';
   }
 
   async openInstallModal(): Promise<void> {

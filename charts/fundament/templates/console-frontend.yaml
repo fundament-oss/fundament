@@ -15,7 +15,8 @@ data:
       "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
       "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}",
       "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
-      "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}"
+      "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}",
+      "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}"
     }
 
 ---

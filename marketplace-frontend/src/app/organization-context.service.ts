@@ -1,24 +1,25 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { AUTHN_CLIENT } from '../connect/authn';
+import type { User } from '../generated/authn/v1/authn_pb';
+import SessionService from './session.service';
 
 const STORAGE_KEY = 'marketplace_selected_organization_id';
 
 /**
  * The organization the developer portal acts for. Every registry.v1 RPC is
  * organization-scoped through the Fun-Organization header (FUN-6), and the
- * membership list comes from authn.v1 GetUserInfo — the same cookie-backed
- * session the registry validates, so the header can never name an
- * organization the token does not.
+ * membership list comes off the session SessionService resolves — the same
+ * cookie-backed session the registry validates, so the header can never name
+ * an organization the token does not.
  *
  * localStorage remembers the last selection; a stored id that is no longer in
- * the membership list falls back to the first membership. Developer login via
- * the console is deferred (FUN-20), so an unauthenticated visitor simply has
- * no organizations and the portal's calls fail with the API's own error.
+ * the membership list falls back to the first membership. A visitor with no
+ * session has no organizations, which the portal's auth guard turns into a
+ * login before any of this is asked for; on a build with no session surface at
+ * all (the demo) the header simply stays unset.
  */
 @Injectable({ providedIn: 'root' })
 export default class OrganizationContextService {
-  private readonly authnClient = inject(AUTHN_CLIENT);
+  private readonly session = inject(SessionService);
 
   readonly organizationIds = signal<string[]>([]);
 
@@ -26,8 +27,22 @@ export default class OrganizationContextService {
 
   private loaded?: Promise<string | null>;
 
-  /** Resolves the active organization id, fetching the membership once. */
+  // The session user `loaded` was worked out from.
+  private loadedFor: User | null = null;
+
+  /**
+   * Resolves the active organization id, working it out once per session.
+   *
+   * Every registry RPC asks for it, so it is not simply dropped when it comes
+   * back empty: that would put a GetUserInfo in front of each call from a tab
+   * with no session. Instead it is redone when the session changes under it,
+   * which is how a login in another tab arrives: SessionService does not keep
+   * an empty session, so the guard's next ensureUser picks the new one up.
+   */
   ensureOrganizationId(): Promise<string | null> {
+    if (this.loaded && this.session.user() !== this.loadedFor) {
+      this.loaded = undefined;
+    }
     this.loaded ??= this.load();
     return this.loaded;
   }
@@ -41,21 +56,17 @@ export default class OrganizationContextService {
   }
 
   private async load(): Promise<string | null> {
-    try {
-      const response = await firstValueFrom(this.authnClient.getUserInfo({}));
-      const ids = response.user?.organizationIds ?? [];
-      this.organizationIds.set(ids);
+    // SessionService swallows the unauthenticated case, so no session means no
+    // memberships: the header is left unset and the registry answers with its
+    // own error.
+    const user = await this.session.ensureUser();
+    this.loadedFor = user;
+    const ids = user?.organizationIds ?? [];
+    this.organizationIds.set(ids);
 
-      const stored = typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY);
-      const active = stored && ids.includes(stored) ? stored : (ids[0] ?? null);
-      this.organizationId.set(active);
-      return active;
-    } catch {
-      // Not signed in (or authn unreachable): leave the header unset and let
-      // the registry answer with its own error.
-      this.organizationIds.set([]);
-      this.organizationId.set(null);
-      return null;
-    }
+    const stored = typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY);
+    const active = stored && ids.includes(stored) ? stored : (ids[0] ?? null);
+    this.organizationId.set(active);
+    return active;
   }
 }

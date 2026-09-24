@@ -1,7 +1,24 @@
 <!-- Top navigation bar -->
 <header class="border-dividers bg-surface-base/90 sticky top-0 z-40 border-b backdrop-blur">
   <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-    <a routerLink="/" class="flex shrink-0 items-center gap-2">
+    <!-- The wordmark goes to the marketplace index. In the developer portal and
+         the backoffice that index is a sibling deployment (FUN-20), so the link
+         is a URL there; routing to "/" would only redirect back to /manage or
+         /admin, which reads as a dead logo to anyone already on that page.
+         Without a storefront URL the route is all there is: the storefront
+         serves the index itself, and so does the demo bundle, which carries
+         both route tables. -->
+    @if (storefrontUrl) {
+      <a [href]="storefrontUrl" class="flex shrink-0 items-center gap-2">
+        <ng-container [ngTemplateOutlet]="wordmark" />
+      </a>
+    } @else {
+      <a routerLink="/" class="flex shrink-0 items-center gap-2">
+        <ng-container [ngTemplateOutlet]="wordmark" />
+      </a>
+    }
+
+    <ng-template #wordmark>
       <app-fundament-logo-icon class="text-accent-600 h-6 w-6" />
       <span class="text-lg font-semibold">
         Fundament
@@ -17,7 +34,7 @@
           }
         }
       </span>
-    </a>
+    </ng-template>
 
     @if (variant === 'catalog') {
       <!-- Search -->
@@ -35,23 +52,12 @@
 
     <nav class="ml-auto flex items-center gap-2" aria-label="Primary">
       @if (variant === 'catalog') {
-        <!-- href in the split deployment, routerLink when no portal URL is
-             configured — the demo bundle carries the manage routes itself. -->
-        @if (developerUrl) {
-          <a [href]="developerUrl + '/manage/create'">
-            <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
-          </a>
-          <a [href]="developerUrl + '/manage'">
-            <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
-          </a>
-        } @else {
-          <nldd-button
-            routerLink="/manage/create"
-            text="Build a plugin"
-            variant="neutral-base"
-          ></nldd-button>
-          <nldd-button routerLink="/manage" text="Sign in" variant="neutral-tinted"></nldd-button>
-        }
+        <app-developer-link path="/manage/create">
+          <nldd-button text="Build a plugin" variant="neutral-base"></nldd-button>
+        </app-developer-link>
+        <app-developer-link path="/manage">
+          <nldd-button text="Sign in" variant="neutral-tinted"></nldd-button>
+        </app-developer-link>
       }
       @if (variant === 'registry' && organizationContext.organizationIds().length > 1) {
         <!-- Which organization the portal publishes for; ids until a lookup
@@ -98,11 +104,7 @@
   >
     <p>Fundament Marketplace — Plugins that integrate with your clusters.</p>
     @if (variant === 'catalog') {
-      @if (developerUrl) {
-        <a [href]="developerUrl + '/manage/create'" class="link">Build a plugin</a>
-      } @else {
-        <a routerLink="/manage/create" class="link">Build a plugin</a>
-      }
+      <app-developer-link path="/manage/create" linkClass="link">Build a plugin</app-developer-link>
     }
   </div>
 </footer>

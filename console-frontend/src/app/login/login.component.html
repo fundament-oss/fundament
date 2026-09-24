@@ -26,7 +26,10 @@
           </nldd-title>
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-rich-text spacing="flat">
-            <p>The platform your team manages its Kubernetes clusters and projects with.</p>
+            <!-- Who this login is for. A visitor sent here by another Fundament
+                 surface is looking at a console on a host they did not ask for,
+                 so the line says why. -->
+            <p>{{ description }}</p>
           </nldd-rich-text>
           <nldd-spacer size="24"></nldd-spacer>
           @if (error(); as message) {

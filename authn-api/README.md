@@ -9,6 +9,7 @@ Authentication service for Fundament using OIDC and JWT.
 | Endpoint    | Method | Description                                      |
 |-------------|--------|--------------------------------------------------|
 | `/login`    | GET    | Redirects to OIDC provider for authentication    |
+|             |        | Optional `return_to`, see below                  |
 | `/callback` | GET    | Handles OIDC redirect, sets auth cookie          |
 | `/refresh`  | POST   | Refreshes JWT token, returns new token as JSON   |
 | `/logout`   | POST   | Clears auth cookie                               |
@@ -29,6 +30,20 @@ Proto definition: `proto/authn/v1/authn.proto`
 2. User authenticates with OIDC provider
 3. Callback sets `fundament_auth` cookie
 4. User is redirected to frontend
+
+`/login` takes an optional `return_to`, and the callback sends the browser there
+instead of `FRONTEND_URL`. That is how a surface other than the console starts a
+login and lands the visitor back where they were, with the cookie set on
+`COOKIE_DOMAIN` so it reaches every Fundament host under that domain. The
+marketplace developer portal uses it where no console is deployed; where one is,
+it sends the visitor to the console's own login page instead, which signs in
+through `/login/password` and needs no `return_to`.
+
+A `return_to` is only honoured when its origin is one this deployment serves:
+`CORS_ALLOWED_ORIGINS` plus `FRONTEND_URL`. Anything else is refused with 400,
+so a login cannot be turned into an open redirect. A new browser surface
+therefore has to be added to `CORS_ALLOWED_ORIGINS` — which it needs anyway to
+call authn with the session cookie attached.
 
 ### API Usage
 

@@ -154,6 +154,12 @@ func run() error {
 		CookieDomain: cfg.CookieDomain,
 		CookieSecure: cfg.CookieSecure,
 		FrontendURL:  cfg.FrontendURL,
+		// The browser origins allowed to call authn with the session cookie are
+		// also the ones a login may return to, so there is one list rather than
+		// two that can disagree (see pkg/authn/return_to.go). FrontendURL is
+		// the default landing place, so it belongs on it whether or not the
+		// deployment spelled it out.
+		AllowedReturnOrigins: append([]string{cfg.FrontendURL}, cfg.CORSAllowedOrigins...),
 	}
 
 	pluginProxyClient := pluginproxyv1connect.NewPluginInstallationServiceClient(

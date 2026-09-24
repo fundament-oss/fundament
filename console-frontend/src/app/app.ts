@@ -98,6 +98,12 @@ function parentOf(url: string): string {
   return project ? `/projects/${project[1]}` : '/';
 }
 
+/** Whether a router URL is the login page. The query does not count: another
+ *  surface handing a visitor over opens it as `/login?app=…&path=…`. */
+function isLoginUrl(url: string): boolean {
+  return url.split(/[?#]/)[0] === '/login';
+}
+
 @Component({
   selector: 'app-root',
   imports: [
@@ -285,7 +291,7 @@ export default class App implements OnInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        this.isLoginPage.set(event.urlAfterRedirects === '/login');
+        this.isLoginPage.set(isLoginUrl(event.urlAfterRedirects));
         // A sheet the shell owns stands over the page it was opened from, so
         // arriving somewhere else takes it away. One arrival is exempt: the
         // redirect that an address like /clusters/new makes to bring its own
@@ -307,7 +313,7 @@ export default class App implements OnInit {
     // guard may have redirected on the way (an overlay address lands on '/').
     // Reading the router rather than the address bar we started from keeps the
     // pane behind the sheet from rendering the URL we no longer are at.
-    this.isLoginPage.set(this.router.url === '/login');
+    this.isLoginPage.set(isLoginUrl(this.router.url));
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
 

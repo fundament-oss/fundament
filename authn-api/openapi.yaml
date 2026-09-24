@@ -29,7 +29,11 @@ paths:
       parameters:
         - name: return_to
           in: query
-          description: URL to redirect to after successful login
+          description: |
+            Absolute URL to redirect to after successful login. Its origin must be
+            one this deployment serves (the CORS origin list plus FRONTEND_URL),
+            so that a login cannot be used as an open redirect; anything else is
+            refused with 400. Omitted means FRONTEND_URL.
           required: false
           schema:
             type: string
@@ -42,6 +46,8 @@ paths:
               $ref: "#/components/headers/Location"
             Set-Cookie:
               $ref: "#/components/headers/SetCookieAuth"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -312,10 +318,6 @@ components:
           type: string
           format: password
           description: User's password
-        return_to:
-          type: string
-          format: uri
-          description: Optional URL to redirect to after successful login
 
     StatusResponse:
       type: object

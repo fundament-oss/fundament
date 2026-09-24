@@ -296,7 +296,10 @@
           <div class="min-w-0">
             <h2 class="text-xl font-semibold">{{ plugin.displayName || plugin.name }}</h2>
             <p class="font-mono text-sm text-gray-600 dark:text-gray-300">
-              {{ mockPluginVendor }} · {{ mockPluginVersion }}
+              {{ plugin.publisherDisplayName }}
+              @if (sheetPluginVersion(); as version) {
+                · {{ version }}
+              }
             </p>
           </div>
         </div>

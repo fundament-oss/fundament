@@ -11,7 +11,16 @@ import (
 // HandleLogin initiates the OIDC login flow by redirecting to the provider.
 func (s *AuthnServer) HandleLogin(w http.ResponseWriter, r *http.Request, params authnhttp.HandleLoginParams) {
 	var returnTo string
-	if params.ReturnTo != nil {
+	if params.ReturnTo != nil && *params.ReturnTo != "" {
+		// Refused rather than quietly replaced by the frontend URL: a caller
+		// that names an origin this deployment does not serve is either an
+		// open-redirect attempt or a misconfigured surface, and neither should
+		// look like a successful login to somewhere else.
+		if !s.isSafeReturnTo(*params.ReturnTo) {
+			s.logger.Warn("rejected return_to outside the allowlist", "return_to", *params.ReturnTo)
+			s.writeErrorJSON(w, http.StatusBadRequest, "return_to is not an allowed origin")
+			return
+		}
 		returnTo = *params.ReturnTo
 	}
 

@@ -87,4 +87,21 @@ export class ConfigService {
     }
     return this.config;
   }
+
+  /**
+   * Whether the storefront's publishing hand-off stays inside this bundle
+   * rather than linking out to the developer portal's own deployment.
+   *
+   * Only the demo bundle does: it merges both route tables and ships an
+   * in-memory registry transport, which makes it the one storefront
+   * configuration carrying a registry API URL without a `developerUrl`. With
+   * neither, no portal is reachable from this environment — the manage routes
+   * are not in the storefront's route table, so linking to them would only
+   * hit its `**` wildcard and bounce the visitor back to the home page. The
+   * links are hidden in that case instead.
+   */
+  hasBundledDeveloperArea(): boolean {
+    const config = this.getConfig();
+    return !config.developerUrl && !!config.registryApiUrl;
+  }
 }

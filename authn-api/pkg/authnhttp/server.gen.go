@@ -34,9 +34,6 @@ type PasswordLoginRequest struct {
 
 	// Password User's password
 	Password string `json:"password"`
-
-	// ReturnTo Optional URL to redirect to after successful login
-	ReturnTo *string `json:"return_to,omitempty"`
 }
 
 // RefreshResponse defines model for RefreshResponse.
@@ -109,7 +106,10 @@ type HandleCallbackParams struct {
 
 // HandleLoginParams defines parameters for HandleLogin.
 type HandleLoginParams struct {
-	// ReturnTo URL to redirect to after successful login
+	// ReturnTo Absolute URL to redirect to after successful login. Its origin must be
+	// one this deployment serves (the CORS origin list plus FRONTEND_URL),
+	// so that a login cannot be used as an open redirect; anything else is
+	// refused with 400. Omitted means FRONTEND_URL.
 	ReturnTo *string `form:"return_to,omitempty" json:"return_to,omitempty"`
 }
 
@@ -498,6 +498,15 @@ func (response HandleLogin307Response) VisitHandleLoginResponse(w http.ResponseW
 	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
 	w.WriteHeader(307)
 	return nil
+}
+
+type HandleLogin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response HandleLogin400JSONResponse) VisitHandleLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type HandleLogin500JSONResponse struct {

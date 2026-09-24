@@ -49,6 +49,54 @@ Things to keep in mind when working on server-rendered routes:
   and why hydration is configured with `withNoIncrementalHydration()`: the event
   replay it would otherwise enable ships two inline scripts.
 
+## Signing in
+
+The developer portal has no session of its own. The console's `fundament_auth`
+cookie is set by `authn-api` on the parent domain (`COOKIE_DOMAIN`), so the
+browser sends it to the portal's APIs too, and `marketplace-registry-api`
+validates exactly that cookie, issuer and audience.
+
+So signing in is a hand-off: [`src/app/auth.guard.ts`](src/app/auth.guard.ts)
+asks `authn.v1 GetUserInfo` whether there is a session, and if there is not it
+sends the browser to a login that sets that cookie.
+[`SessionService.loginUrl`](src/app/session.service.ts) picks which:
+
+- **The console's own login page**, `consoleUrl/login?app=marketplace-registry&path=<this
+route>`, wherever a console is deployed. There is one password form in the
+  product and the console owns it, so there is one place to later add rate
+  limiting, lockout or a password reset. The console is handed an _app name_
+  rather than a URL, and resolves where to send the visitor back to against its
+  own configuration — so it needs no allowlist of its own and cannot be turned
+  into an open redirect. See its
+  [`login/login-handoff.ts`](../console-frontend/src/app/login/login-handoff.ts),
+  and give it `developerUrl` in its `config.json`.
+- **`authnApiUrl/login?return_to=<this route>`** otherwise, which is dex's own
+  page. `authn-api` runs the OIDC round trip, sets the cookie and redirects
+  back. It only honours a `return_to` whose origin it serves, so the portal's
+  own origin has to be in authn's `CORS_ALLOWED_ORIGINS` — which it needs
+  regardless, to call `GetUserInfo` with the cookie attached.
+
+Password login is an OAuth password grant, which only works while dex
+authenticates against its own store (`passwordConnector: local`). The day
+Fundament federates to a real identity provider, the console's form stops
+working and the redirect becomes the only path, for the console as much as for
+the portal.
+
+The hand-off is attempted once per tab. If the browser comes back from the
+login and `GetUserInfo` still says there is no session, the guard lets the
+navigation through and leaves the API's own error to surface, rather than
+sending the visitor round again: `GetUserInfo` failing does not distinguish
+"not signed in" from "authn did not answer", and a second pass would loop the
+tab silently, because dex re-approves the session it just minted every time.
+
+Configuration that has to agree for this to work: `authnApiUrl` in the
+deployment's `config.json` (a build without it has no session surface, which is
+how the storefront and the demo bundle opt out), `consoleUrl` here and
+`developerUrl` on the console for the hand-off, and the portal's origin on
+authn's CORS list. The review backoffice is deliberately not part of this:
+reviewers are Fundament staff and authenticate against `dcim-authn-api`
+(FUN-20).
+
 ## Development
 
 ```sh
