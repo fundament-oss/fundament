@@ -36,13 +36,6 @@ const (
 	fieldOwner = "fundament-storage-plugin"
 )
 
-var fundamentCRDNames = []string{
-	"disks.ceph.fundament.io",
-	"diskpools.ceph.fundament.io",
-	"blockstorages.ceph.fundament.io",
-	"filestorages.ceph.fundament.io",
-}
-
 // rookCRDNames are the Rook kinds the manager starts informers for. The
 // CephBlockPool watch in DiskPoolReconciler.SetupWithManager syncs its cache
 // at manager start, so a CRD the chart has applied but the API server has not
@@ -66,11 +59,12 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 		return fmt.Errorf("wait for rook CRDs to be established: %w", err)
 	}
 
-	if err := applyCRDs(ctx, kube); err != nil {
+	fundamentCRDs, err := applyCRDs(ctx, kube)
+	if err != nil {
 		return fmt.Errorf("apply fundament CRDs: %w", err)
 	}
 
-	if err := crd.WaitEstablished(ctx, kube, fundamentCRDNames); err != nil {
+	if err := crd.WaitEstablished(ctx, kube, fundamentCRDs); err != nil {
 		return fmt.Errorf("wait for CRDs to be established: %w", err)
 	}
 
@@ -81,29 +75,37 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	return nil
 }
 
-// applyCRDs server-side applies every document in the embedded crds/ dir.
-func applyCRDs(ctx context.Context, kube client.Client) error {
+// applyCRDs server-side applies every document in the embedded crds/ dir and
+// returns the applied names, so the establishment wait can never miss a CRD
+// added to the directory later (an applied-but-unwaited CRD races its informer
+// at manager start, exactly the failure the rookCRDNames comment warns about).
+func applyCRDs(ctx context.Context, kube client.Client) ([]string, error) {
 	entries, err := crdFS.ReadDir("crds")
 	if err != nil {
-		return fmt.Errorf("read embedded crds dir: %w", err)
+		return nil, fmt.Errorf("read embedded crds dir: %w", err)
 	}
+	var names []string
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
 		data, err := crdFS.ReadFile("crds/" + entry.Name())
 		if err != nil {
-			return fmt.Errorf("read embedded crd %s: %w", entry.Name(), err)
+			return nil, fmt.Errorf("read embedded crd %s: %w", entry.Name(), err)
 		}
-		if err := applyYAMLDocs(ctx, kube, data); err != nil {
-			return fmt.Errorf("apply crd %s: %w", entry.Name(), err)
+		applied, err := applyYAMLDocs(ctx, kube, data)
+		if err != nil {
+			return nil, fmt.Errorf("apply crd %s: %w", entry.Name(), err)
 		}
+		names = append(names, applied...)
 	}
-	return nil
+	return names, nil
 }
 
-// applyYAMLDocs server-side applies each document in a multi-document YAML.
-func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
+// applyYAMLDocs server-side applies each document in a multi-document YAML and
+// returns the applied object names.
+func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) ([]string, error) {
+	var names []string
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(data)))
 	for {
 		doc, err := reader.Read()
@@ -111,7 +113,7 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("read yaml document: %w", err)
+			return nil, fmt.Errorf("read yaml document: %w", err)
 		}
 		doc = bytes.TrimSpace(doc)
 		if len(doc) == 0 {
@@ -120,17 +122,18 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 
 		obj := &unstructured.Unstructured{}
 		if err := utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(doc), 4096).Decode(&obj.Object); err != nil {
-			return fmt.Errorf("decode yaml document: %w", err)
+			return nil, fmt.Errorf("decode yaml document: %w", err)
 		}
 		if obj.Object == nil {
 			continue
 		}
 
 		if err := kube.Apply(ctx, client.ApplyConfigurationFromUnstructured(obj), client.ForceOwnership, client.FieldOwner(fieldOwner)); err != nil {
-			return fmt.Errorf("server-side apply %s/%s: %w", obj.GetKind(), obj.GetName(), err)
+			return nil, fmt.Errorf("server-side apply %s/%s: %w", obj.GetKind(), obj.GetName(), err)
 		}
+		names = append(names, obj.GetName())
 	}
-	return nil
+	return names, nil
 }
 
 // bootstrapCephCluster creates the singleton CephCluster if absent. An existing

@@ -38,6 +38,28 @@ func TestAllowUnsupportedCephOverride(t *testing.T) {
 	assert.True(t, cfg.AllowUnsupportedCeph)
 }
 
+func TestCephFSMounterDefaultsEmpty(t *testing.T) {
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Empty(t, cfg.CephFSMounter, "empty leaves the CSI default (kernel client)")
+}
+
+func TestCephFSMounterAcceptsFuse(t *testing.T) {
+	t.Setenv("FUNP_CEPHFS_MOUNTER", "fuse")
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "fuse", cfg.CephFSMounter)
+}
+
+// A typo would otherwise produce an immutable StorageClass with a mounter the
+// CSI driver rejects, so reject it at load instead.
+func TestCephFSMounterRejectsInvalid(t *testing.T) {
+	t.Setenv("FUNP_CEPHFS_MOUNTER", "fusion")
+	_, err := LoadConfig()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CEPHFS_MOUNTER")
+}
+
 // An env var would let the same consented image pull a different Rook, which is
 // what the manifest hash exists to prevent.
 func TestRookChartVersionIsNotConfigurable(t *testing.T) {

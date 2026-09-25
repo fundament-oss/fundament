@@ -49,12 +49,13 @@ func TestRBDProvisioner(t *testing.T) {
 
 func TestRenderCephFSStorageClass(t *testing.T) {
 	t.Parallel()
-	sc := RenderCephFSStorageClass("cephfs-shared", "rook-ceph", "cephfs-shared", "rook-ceph")
+	sc := RenderCephFSStorageClass("cephfs-shared", "rook-ceph", "cephfs-shared", "rook-ceph", "")
 	assert.Equal(t, "cephfs-shared", sc.Name)
 	assert.Equal(t, "rook-ceph.cephfs.csi.ceph.com", sc.Provisioner)
 	assert.Equal(t, "rook-ceph", sc.Parameters["clusterID"])
 	assert.Equal(t, "cephfs-shared", sc.Parameters["fsName"])
 	assert.Equal(t, "cephfs-shared-data0", sc.Parameters["pool"], "must match Rook's <fsName>-<dataPool.name>")
+	assert.NotContains(t, sc.Parameters, "mounter", "empty mounter leaves the CSI default")
 	assert.NotContains(t, sc.Parameters, "csi.storage.k8s.io/fstype", "CephFS is already a filesystem")
 	assert.Equal(t, "rook-csi-cephfs-provisioner", sc.Parameters["csi.storage.k8s.io/provisioner-secret-name"])
 	assert.Equal(t, "rook-csi-cephfs-node", sc.Parameters["csi.storage.k8s.io/node-stage-secret-name"])
@@ -72,13 +73,21 @@ func TestRenderCephFSStorageClass(t *testing.T) {
 // clusterID and secrets follow the CephCluster's.
 func TestRenderCephFSStorageClassFollowsRookNamespace(t *testing.T) {
 	t.Parallel()
-	sc := RenderCephFSStorageClass("cephfs-shared", "ceph-cluster", "cephfs-shared", "rook-system")
+	sc := RenderCephFSStorageClass("cephfs-shared", "ceph-cluster", "cephfs-shared", "rook-system", "")
 	assert.Equal(t, "rook-system.cephfs.csi.ceph.com", sc.Provisioner)
 	assert.Equal(t, "ceph-cluster", sc.Parameters["clusterID"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/provisioner-secret-namespace"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/controller-expand-secret-namespace"])
+}
+
+// mounter=fuse serves CephFS on nodes without the ceph kernel module (local
+// Docker VMs); it must reach the StorageClass verbatim.
+func TestRenderCephFSStorageClassSetsFuseMounter(t *testing.T) {
+	t.Parallel()
+	sc := RenderCephFSStorageClass("cephfs-shared", "rook-ceph", "cephfs-shared", "rook-ceph", "fuse")
+	assert.Equal(t, "fuse", sc.Parameters["mounter"])
 }
 
 func TestCephFSProvisioner(t *testing.T) {

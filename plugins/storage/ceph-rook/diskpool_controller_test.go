@@ -719,3 +719,58 @@ func TestWriteStatusPersistsConditionOnlyChange(t *testing.T) {
 	assert.Equal(t, before.LastTransitionTime, after.LastTransitionTime,
 		"the condition did not flip, so its transition time must stand")
 }
+
+// A Disk caught between upsertDisk's Create and Status().Update has an empty
+// status. It must be excluded from the pool's selection the same way diskUnion
+// excludes it from the CephCluster -- Ready with selectedDiskCount=N while
+// contributing nothing would satisfy `kubectl wait` before any device was
+// recorded -- and the operator must see why the count is low.
+func TestReconcileSkipsUndiscoveredDisks(t *testing.T) {
+	t.Parallel()
+	pending := &v1alpha1.Disk{ObjectMeta: metav1.ObjectMeta{Name: "pending"}}
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		pending,
+		testPool("pool", time.Now(), "node-a-1", "pending"),
+	)
+	r := newReconciler(c)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	pool := getPool(t, c, "pool")
+	assert.Equal(t, v1alpha1.PhaseReady, pool.Status.Phase)
+	assert.Equal(t, 1, pool.Status.SelectedDiskCount, "an undiscovered disk contributes nothing yet")
+	assert.Contains(t, pool.Status.Message, "awaiting discovery: pending")
+	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
+}
+
+// A write conflict means another reconcile got there first -- routine with the
+// cache-backed client. It must requeue against fresher state, not flap the
+// pool to Degraded until backoff.
+func TestReconcileConflictRequeuesWithoutDegrading(t *testing.T) {
+	t.Parallel()
+	c := fake.NewClientBuilder().
+		WithScheme(testScheme(t)).
+		WithObjects(cephCluster(), testDisk("a", "node-a", "/dev/sdb", 100, true), testPool("pool", time.Now(), "a")).
+		WithStatusSubresource(&v1alpha1.DiskPool{}, &v1alpha1.Disk{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if obj.GetObjectKind().GroupVersionKind().Kind == "CephCluster" {
+					return apierrors.NewConflict(
+						schema.GroupResource{Group: "ceph.rook.io", Resource: "cephclusters"},
+						obj.GetName(), errors.New("stale resourceVersion"))
+				}
+				return c.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := newReconciler(c)
+
+	res, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err, "a conflict is not a reconcile failure")
+	assert.True(t, res.Requeue)
+	assert.NotEqual(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase,
+		"a routine conflict must not be reported to the operator")
+}

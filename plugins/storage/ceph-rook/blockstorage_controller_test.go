@@ -412,3 +412,88 @@ func TestImmutableStorageClassDrift(t *testing.T) {
 	expandable.AllowVolumeExpansion = ptr.To(false)
 	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
 }
+
+// Without the CephCluster nothing can provision: the derived pair would only
+// publish a StorageClass whose PVCs pend forever behind a Provisioning status.
+// The real cause must be named, and polled for -- no watch covers the
+// CephCluster here.
+func TestBlockStorageDegradedWithoutCephCluster(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		testBlockStorage("fast"),
+	)
+	r := newBlockReconciler(c)
+
+	res, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+	assert.Equal(t, provisioningRequeue, res.RequeueAfter, "poll until the CephCluster exists")
+
+	var sc storagev1.StorageClass
+	getErr := c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc)
+	assert.True(t, apierrors.IsNotFound(getErr), "no StorageClass without a CephCluster")
+
+	bs := getBlock(t, c)
+	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
+	assert.Contains(t, bs.Status.Message, "CephCluster")
+	cond := meta.FindStatusCondition(bs.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, v1alpha1.ReasonCephClusterMissing, cond.Reason)
+}
+
+// The live spec also carries fields the renderer does not emit -- CRD defaults,
+// Rook-written values. They must survive an update, and their presence alone
+// must not count as drift: replacing spec wholesale would strip them on every
+// write, each one re-fought by the defaulter in a watch-driven loop.
+func TestBlockStoragePreservesForeignSpecFieldsOnDerivedObject(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		testBlockStorage("fast"),
+	)
+	r := newBlockReconciler(c)
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	// Simulate the API server defaulting fields at levels the renderer omits.
+	cbp := rookStub("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, cbp))
+	require.NoError(t, unstructured.SetNestedField(cbp.Object, false, "spec", "enableRBDStats"))
+	require.NoError(t, unstructured.SetNestedField(cbp.Object, "0", "spec", "replicated", "targetSizeRatio"))
+	require.NoError(t, c.Update(context.Background(), cbp))
+	defaulted := cbp.GetResourceVersion()
+
+	_, err = reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	after := rookStub("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, after))
+	assert.Equal(t, defaulted, after.GetResourceVersion(),
+		"defaulted fields alone are not drift; no update may be issued")
+
+	// A real change updates the rendered fields and still keeps the foreign ones.
+	require.NoError(t, unstructured.SetNestedField(after.Object, int64(99), "spec", "replicated", "size"))
+	require.NoError(t, c.Update(context.Background(), after))
+
+	_, err = reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	final := rookStub("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "ceph-fast"}, final))
+	size, _, err := unstructured.NestedInt64(final.Object, "spec", "replicated", "size")
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, size, "the rendered field is reconciled back")
+	_, found, err := unstructured.NestedBool(final.Object, "spec", "enableRBDStats")
+	require.NoError(t, err)
+	assert.True(t, found, "top-level foreign field survives the update")
+	ratio, found, err := unstructured.NestedString(final.Object, "spec", "replicated", "targetSizeRatio")
+	require.NoError(t, err)
+	assert.True(t, found, "nested foreign field survives the update")
+	assert.Equal(t, "0", ratio)
+}

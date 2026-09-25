@@ -30,7 +30,7 @@ func testFileStorage() *v1alpha1.FileStorage {
 }
 
 func newFileReconciler(c client.Client) *ConsumerReconciler[*v1alpha1.FileStorage] {
-	return NewFileStorageReconciler(c, testNamespace, testNamespace)
+	return NewFileStorageReconciler(c, testNamespace, testNamespace, "")
 }
 
 func reconcileFile(t *testing.T, r *ConsumerReconciler[*v1alpha1.FileStorage]) (ctrl.Result, error) {
@@ -92,6 +92,26 @@ func TestFileStorageCreatesDerivedObjects(t *testing.T) {
 	assert.Equal(t, "cephfs-shared", got.Status.StorageClassName)
 	assert.Equal(t, 2, got.Status.Replicas)
 	assert.Equal(t, "host", got.Status.FailureDomain)
+}
+
+// The CephFSMounter config must reach the derived StorageClass, so a cluster
+// whose nodes lack the ceph kernel module can serve CephFS via ceph-fuse.
+func TestFileStorageAppliesConfiguredMounter(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		testFileStorage(),
+	)
+	r := NewFileStorageReconciler(c, testNamespace, testNamespace, "fuse")
+
+	_, err := reconcileFile(t, r)
+	require.NoError(t, err)
+
+	var sc storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "cephfs-shared"}, &sc))
+	assert.Equal(t, "fuse", sc.Parameters["mounter"])
 }
 
 // No DiskPool contributes disks: Degraded, nothing created.

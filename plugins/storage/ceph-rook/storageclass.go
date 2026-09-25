@@ -71,10 +71,15 @@ func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace str
 
 // RenderCephFSStorageClass builds the CephFS StorageClass. fsName is the
 // CephFilesystem's name; the pool parameter must name Rook's derived data pool
-// or provisioning fails.
-func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace string) *storagev1.StorageClass {
-	return cephStorageClass(name, CephFSProvisioner(rookNamespace), clusterNamespace, "cephfs", map[string]string{
+// or provisioning fails. mounter selects the CSI mount method ("" = CSI default
+// kernel client, "fuse" = ceph-fuse for nodes without the ceph kernel module).
+func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace, mounter string) *storagev1.StorageClass {
+	params := map[string]string{
 		"fsName": fsName,
 		"pool":   fsName + "-" + cephFSDataPoolName,
-	})
+	}
+	if mounter != "" {
+		params["mounter"] = mounter
+	}
+	return cephStorageClass(name, CephFSProvisioner(rookNamespace), clusterNamespace, "cephfs", params)
 }

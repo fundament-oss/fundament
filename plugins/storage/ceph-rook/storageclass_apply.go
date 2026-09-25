@@ -10,7 +10,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +22,13 @@ import (
 // (only allowVolumeExpansion and metadata can change), so drift on immutable
 // fields is a terminal error naming the one action that fixes it.
 func applyOwnedStorageClass(ctx context.Context, c client.Client, owner client.Object, ownerKind string, desired *storagev1.StorageClass) error {
-	desired.OwnerReferences = []metav1.OwnerReference{controllerRef(owner, ownerKind)}
+	// Scheme-derived, like the update path below: a hand-built ref with a
+	// drifting kind string would be one SetControllerReference later rejects
+	// as foreign, permanently. controllerRef stays for unstructured Rook
+	// objects only.
+	if err := controllerutil.SetControllerReference(owner, desired, c.Scheme()); err != nil {
+		return fmt.Errorf("set StorageClass controller reference: %w", err)
+	}
 
 	var existing storagev1.StorageClass
 	err := c.Get(ctx, types.NamespacedName{Name: desired.Name}, &existing)

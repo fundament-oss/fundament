@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -65,7 +66,9 @@ func (r *DiskPoolReconciler) SetupWithManager(mgr manager.Manager) error {
 func (r *DiskPoolReconciler) toAllDiskPools(ctx context.Context, _ client.Object) []reconcile.Request {
 	var pools v1alpha1.DiskPoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
-		// Return empty; the reconciler will retry on the next event.
+		// Map-function failures are not requeued, so a dropped fan-out is
+		// invisible until the ~10h resync; log it.
+		log.FromContext(ctx).Error(err, "list DiskPools for watch fan-out")
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(pools.Items))
@@ -88,7 +91,7 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// deleted pool's disks until the next resync. controller-runtime
 			// delivers the delete event after the cache has dropped the object,
 			// so the List below no longer returns it.
-			if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
+			if _, err := r.recomputeCephClusterNodes(ctx); err != nil {
 				return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes after deleting DiskPool %s: %w", req.Name, err)
 			}
 			return ctrl.Result{}, nil
@@ -99,7 +102,7 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// A pool being deleted has already released its claims; recompute the union
 	// without it and rely on owner-reference GC for the rest.
 	if !pool.DeletionTimestamp.IsZero() {
-		if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
+		if _, err := r.recomputeCephClusterNodes(ctx); err != nil {
 			return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes while deleting DiskPool %s: %w", pool.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -107,6 +110,12 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	result, err := r.reconcilePool(ctx, &pool)
 	if err != nil {
+		// Conflicts are routine with the cache-backed client: another
+		// reconcile's write can land before the informer delivers it. Retry
+		// against fresher state instead of flapping the pool to Degraded.
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		// Record why the pool is stuck before surfacing the error, so the
 		// operator sees the reason in the console instead of only in the logs.
 		r.setDegraded(ctx, &pool, err)
@@ -117,16 +126,26 @@ func (r *DiskPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // reconcilePool does the work for a live DiskPool.
 func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.DiskPool) (ctrl.Result, error) {
+	// One pool list serves both this pool's selection and the union below.
+	var pools v1alpha1.DiskPoolList
+	if err := r.Client.List(ctx, &pools); err != nil {
+		return ctrl.Result{}, fmt.Errorf("list DiskPools: %w", err)
+	}
+
 	// Step 2: Resolve this pool's spec.disks. This is its contribution to the
 	// shared OSD set, and what selectedDiskCount/rawCapacityBytes report.
-	selected, notes, err := r.resolveDisks(ctx, pool)
+	selected, notes, err := resolvePoolDisks(ctx, r.Client, pool, pools.Items)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve disks for DiskPool %s: %w", pool.Name, err)
 	}
 
 	// Step 3: Set the singleton CephCluster's spec.storage.nodes to the union of
 	// all pools' disks, so pools don't clobber each other.
-	clusterExists, err := r.reconcileCephClusterNodes(ctx)
+	union, err := diskUnionOver(ctx, r.Client, pools.Items)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("compute disk union: %w", err)
+	}
+	clusterExists, err := r.reconcileCephClusterNodes(ctx, union)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes: %w", err)
 	}
@@ -215,75 +234,21 @@ func (r *DiskPoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.Dis
 	r.statusWriter().setDegraded(ctx, pool, cause)
 }
 
-// resolveDisks fetches DiskStatus for each disk this pool selects, and returns
-// human-readable notes for anything it had to skip.
-//
-// Disks that do not exist are skipped. Disks another DiskPool has a stronger
-// claim to are skipped too — silently feeding them into this pool would put the
-// same device in two pools' capacity accounting. Any other error (e.g. a
-// transient API failure) is returned so the caller can requeue, rather than
-// silently dropping the disk and lowering the disk count.
-//
-// A disk reporting available=false is NOT skipped: once Ceph consumes a device
-// it stops looking empty, so dropping unavailable disks would pull live OSDs
-// out of the CephCluster on the next reconcile.
-func (r *DiskPoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1.DiskPool) ([]v1alpha1.DiskStatus, []string, error) {
-	var pools v1alpha1.DiskPoolList
-	if err := r.Client.List(ctx, &pools); err != nil {
-		return nil, nil, fmt.Errorf("list DiskPools: %w", err)
-	}
-
-	var (
-		selected  []v1alpha1.DiskStatus
-		missing   []string
-		conflicts []string
-	)
-	// spec.disks is a set (x-kubernetes-list-type on the CRD), but an object
-	// written before that marker existed could still repeat a name, and a repeat
-	// would be counted twice in selectedDiskCount and rawCapacityBytes -- the
-	// two numbers an operator sizes workloads against.
-	seen := make(map[string]struct{}, len(pool.Spec.Disks))
-	for _, name := range pool.Spec.Disks {
-		if _, dup := seen[name]; dup {
-			continue
-		}
-		seen[name] = struct{}{}
-		if owner := ClaimOwner(pools.Items, name); owner != "" && owner != pool.Name {
-			conflicts = append(conflicts, fmt.Sprintf("%s (claimed by %s)", name, owner))
-			continue
-		}
-		var disk v1alpha1.Disk
-		err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &disk)
-		if apierrors.IsNotFound(err) {
-			missing = append(missing, name)
-			continue
-		}
-		if err != nil {
-			return nil, nil, fmt.Errorf("get Disk %q: %w", name, err)
-		}
-		selected = append(selected, disk.Status)
-	}
-
-	var notes []string
-	if len(missing) > 0 {
-		notes = append(notes, "skipped missing disks: "+strings.Join(missing, ", "))
-	}
-	if len(conflicts) > 0 {
-		notes = append(notes, "skipped disks claimed by another pool: "+strings.Join(conflicts, ", "))
-	}
-	return selected, notes, nil
-}
-
-// reconcileCephClusterNodes loads the singleton CephCluster and sets
-// spec.storage.nodes to the union of all live DiskPools' disks. It reports
-// whether the CephCluster exists: when it does not, nothing was recorded and
-// the caller must not present the pool as contributed.
-func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
+// recomputeCephClusterNodes recomputes the union from scratch and records it;
+// the deletion paths use it, where no pool list is at hand.
+func (r *DiskPoolReconciler) recomputeCephClusterNodes(ctx context.Context) (clusterExists bool, err error) {
 	union, err := diskUnion(ctx, r.Client)
 	if err != nil {
 		return false, err
 	}
+	return r.reconcileCephClusterNodes(ctx, union)
+}
 
+// reconcileCephClusterNodes loads the singleton CephCluster and sets
+// spec.storage.nodes to the given union of all live DiskPools' disks. It
+// reports whether the CephCluster exists: when it does not, nothing was
+// recorded and the caller must not present the pool as contributed.
+func (r *DiskPoolReconciler) reconcileCephClusterNodes(ctx context.Context, union []v1alpha1.DiskStatus) (clusterExists bool, err error) {
 	nodes := BuildStorageNodes(union)
 	nodesIface := storageNodesToInterface(nodes)
 

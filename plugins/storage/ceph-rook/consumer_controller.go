@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -52,8 +53,7 @@ type ConsumerReconciler[T consumer] struct {
 
 	kind               string // e.g. "BlockStorage"
 	rookKind           string // e.g. "CephBlockPool"
-	derivedName        func(string) string
-	derivedPrefix      string // what derivedName prepends; toSameNamedConsumer cuts it back off
+	derivedPrefix      string // derived objects are named derivedPrefix + consumer name
 	newObject          func() T
 	newList            func() client.ObjectList
 	renderRook         func(obj T, namespace, name string, replicas int, domain string) *unstructured.Unstructured
@@ -69,7 +69,6 @@ func NewBlockStorageReconciler(c client.Client, clusterNamespace, rookNamespace 
 		RookNamespace:    rookNamespace,
 		kind:             "BlockStorage",
 		rookKind:         "CephBlockPool",
-		derivedName:      DerivedName,
 		derivedPrefix:    derivedNamePrefix,
 		newObject:        func() *v1alpha1.BlockStorage { return &v1alpha1.BlockStorage{} },
 		newList:          func() client.ObjectList { return &v1alpha1.BlockStorageList{} },
@@ -81,22 +80,24 @@ func NewBlockStorageReconciler(c client.Client, clusterNamespace, rookNamespace 
 }
 
 // NewFileStorageReconciler reconciles FileStorage into a CephFilesystem and a
-// CephFS StorageClass.
-func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace string) *ConsumerReconciler[*v1alpha1.FileStorage] {
+// CephFS StorageClass. cephFSMounter selects the CSI mount method for the
+// derived StorageClass (see Config.CephFSMounter).
+func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace, cephFSMounter string) *ConsumerReconciler[*v1alpha1.FileStorage] {
 	return &ConsumerReconciler[*v1alpha1.FileStorage]{
 		Client:           c,
 		ClusterNamespace: clusterNamespace,
 		RookNamespace:    rookNamespace,
 		kind:             "FileStorage",
 		rookKind:         "CephFilesystem",
-		derivedName:      FilesystemDerivedName,
 		derivedPrefix:    filesystemDerivedNamePrefix,
 		newObject:        func() *v1alpha1.FileStorage { return &v1alpha1.FileStorage{} },
 		newList:          func() client.ObjectList { return &v1alpha1.FileStorageList{} },
 		renderRook: func(fs *v1alpha1.FileStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
 			return RenderCephFilesystem(namespace, name, replicas, domain, int64(fs.Spec.MetadataServers))
 		},
-		renderStorageClass: RenderCephFSStorageClass,
+		renderStorageClass: func(name, clusterNamespace, poolOrFSName, rookNamespace string) *storagev1.StorageClass {
+			return RenderCephFSStorageClass(name, clusterNamespace, poolOrFSName, rookNamespace, cephFSMounter)
+		},
 	}
 }
 
@@ -128,10 +129,14 @@ func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 func (r *ConsumerReconciler[T]) toAllConsumers(ctx context.Context, _ client.Object) []reconcile.Request {
 	list := r.newList()
 	if err := r.Client.List(ctx, list); err != nil {
+		// Map-function failures are not requeued, so a dropped fan-out is
+		// invisible until the ~10h resync; log it.
+		log.FromContext(ctx).Error(err, "list consumers for watch fan-out", "kind", r.kind)
 		return nil
 	}
 	items, err := meta.ExtractList(list)
 	if err != nil {
+		log.FromContext(ctx).Error(err, "extract consumer list for watch fan-out", "kind", r.kind)
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(items))
@@ -170,13 +175,48 @@ func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 
 	result, err := r.reconcile(ctx, obj)
 	if err != nil {
+		// Conflicts are routine with the cache-backed client: another
+		// reconcile's write can land before the informer delivers it. Retry
+		// against fresher state instead of flapping the consumer to Degraded.
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		r.setDegraded(ctx, obj, err)
 		return ctrl.Result{}, err
 	}
 	return result, nil
 }
 
+// derivedName names this consumer's derived Rook object and StorageClass.
+// Always prefix+name: toSameNamedConsumer routes events by cutting the prefix
+// back off, so the two cannot drift.
+func (r *ConsumerReconciler[T]) derivedName(name string) string {
+	return r.derivedPrefix + name
+}
+
 func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Result, error) {
+	// The derived Rook object can only provision inside the CephCluster.
+	// Without it, creating the pair would publish a StorageClass whose PVCs
+	// pend forever behind a "Provisioning" status; name the real cause
+	// instead. No watch covers the CephCluster here, so poll until it exists.
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.ClusterNamespace, Name: cephClusterName},
+		rookStub("CephCluster")); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("get CephCluster: %w", err)
+		}
+		status := *obj.ConsumerStatus()
+		status.Phase = v1alpha1.PhaseDegraded
+		status.Message = fmt.Sprintf("CephCluster %s/%s not found: nothing can be provisioned until it exists", r.ClusterNamespace, cephClusterName)
+		if err := r.writeStatus(ctx, obj, &status, &metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.ReasonCephClusterMissing,
+			Message: status.Message,
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: provisioningRequeue}, nil
+	}
+
 	union, err := diskUnion(ctx, r.Client)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("compute disk union: %w", err)
@@ -284,6 +324,12 @@ func rookStub(kind string) *unstructured.Unstructured {
 // It returns the live object (with server-populated status), so the caller
 // reads the phase without a second Get. An identical object is not rewritten,
 // for the same fan-out reason as writeStatus.
+//
+// Server-side apply would be the idiomatic way to merge, but is not adopted
+// here: these are unstructured third-party CRDs, and the fake client used in
+// the reconciler tests cannot simulate the schema-aware list-merge (ownerRef
+// preservation) or no-op detection SSA relies on, so the behaviour below would
+// become untestable. The explicit merge keeps that coverage.
 func applyOwnedRookObject(ctx context.Context, c client.Client, owner client.Object, ownerKind string, desired *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	desired.SetOwnerReferences([]metav1.OwnerReference{controllerRef(owner, ownerKind)})
 	kind := desired.GetKind()
@@ -304,18 +350,75 @@ func applyOwnedRookObject(ctx context.Context, c client.Client, owner client.Obj
 		return nil, notOursError(ownerKind, kind, desired.GetName())
 	}
 
-	if equality.Semantic.DeepEqual(existing.Object["spec"], desired.Object["spec"]) {
+	// Merge rather than compare-and-replace: the live spec also carries CRD
+	// defaults and Rook-written fields the renderer does not emit, so a
+	// wholesale replacement would strip them — and a DeepEqual against them
+	// could never match, turning every reconcile into an Update the defaulter
+	// then fights. Owner references are kept for the same reason: ownedBy
+	// proved our controller ref is present, and assigning desired's list
+	// wholesale would drop a foreign non-controller ref (see
+	// applyOwnedStorageClass).
+	if !mergeRenderedSpec(existing, desired) {
 		return existing, nil
 	}
-
-	// Update only spec, keeping the existing owner references: ownedBy proved
-	// our controller ref is present, and assigning desired's list wholesale
-	// would drop a foreign non-controller ref (see applyOwnedStorageClass).
-	existing.Object["spec"] = desired.Object["spec"]
 	if err := c.Update(ctx, existing); err != nil {
 		return nil, fmt.Errorf("update %s: %w", kind, err)
 	}
 	return existing, nil
+}
+
+// mergeRenderedSpec merges desired's spec into existing's in place, preserving
+// spec fields the renderer does not emit. Reports whether existing changed and
+// needs an Update.
+func mergeRenderedSpec(existing, desired *unstructured.Unstructured) bool {
+	spec, changed := mergeRenderedValue(existing.Object["spec"], desired.Object["spec"])
+	if changed {
+		existing.Object["spec"] = spec
+	}
+	return changed
+}
+
+// mergeRenderedValue merges want into have: maps merge key-wise and
+// equal-length slices element-wise (the defaults inside dataPools live in its
+// one element); anything else resolves to want. Reports whether the merged
+// value differs from have.
+func mergeRenderedValue(have, want any) (any, bool) {
+	switch wantV := want.(type) {
+	case map[string]any:
+		haveM, ok := have.(map[string]any)
+		if !ok {
+			return want, true
+		}
+		changed := false
+		for key, val := range wantV {
+			prev, exists := haveM[key]
+			merged, diff := mergeRenderedValue(prev, val)
+			haveM[key] = merged
+			if diff || !exists {
+				changed = true
+			}
+		}
+		return haveM, changed
+	case []any:
+		haveS, ok := have.([]any)
+		if !ok || len(haveS) != len(wantV) {
+			return want, true
+		}
+		changed := false
+		for i := range wantV {
+			merged, diff := mergeRenderedValue(haveS[i], wantV[i])
+			haveS[i] = merged
+			if diff {
+				changed = true
+			}
+		}
+		return haveS, changed
+	default:
+		if equality.Semantic.DeepEqual(have, want) {
+			return have, false
+		}
+		return want, true
+	}
 }
 
 // rookObjectPhase derives the owner's Phase from a Rook object's status.phase.

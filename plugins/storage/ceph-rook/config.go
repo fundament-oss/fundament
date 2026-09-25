@@ -40,13 +40,28 @@ type Config struct {
 	// DevLoopDevices is an allowlist switch for local k3d development: only
 	// /dev/loopNpN is discovered, and real disks are ignored entirely.
 	DevLoopDevices bool `env:"DEV_LOOP_DEVICES" envDefault:"false"`
+
+	// CephFSMounter selects how the CephFS CSI driver mounts volumes: "" (the
+	// CSI default, kernel client) or "fuse". A node without the ceph kernel
+	// module -- common in local Docker VMs like OrbStack, colima and Docker
+	// Desktop -- cannot kernel-mount CephFS, so local dev sets this to "fuse".
+	// Real clusters leave it empty. Only FileStorage's StorageClass reads it;
+	// RBD is unaffected.
+	CephFSMounter string `env:"CEPHFS_MOUNTER"`
 }
+
+// cephFSMounters are the values ceph-csi accepts for the StorageClass "mounter"
+// parameter; "" leaves it unset (CSI default).
+var cephFSMounters = map[string]struct{}{"": {}, "kernel": {}, "fuse": {}}
 
 // LoadConfig parses the plugin configuration from the environment.
 func LoadConfig() (Config, error) {
 	var cfg Config
 	if err := env.ParseWithOptions(&cfg, env.Options{Prefix: "FUNP_"}); err != nil {
 		return Config{}, fmt.Errorf("parse config: %w", err)
+	}
+	if _, ok := cephFSMounters[cfg.CephFSMounter]; !ok {
+		return Config{}, fmt.Errorf("invalid CEPHFS_MOUNTER %q: want \"kernel\" or \"fuse\"", cfg.CephFSMounter)
 	}
 	return cfg, nil
 }

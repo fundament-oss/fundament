@@ -24,6 +24,15 @@ function claimText(status) {
   return 'No claim recorded';
 }
 
+// Soft-deleted disks are never removed (repo policy is soft deletes only), so a
+// disk that has left discovery lingers as a Disk CR with available=false. Hide
+// the fully-dead ones -- unavailable AND unclaimed -- so the list is not
+// cluttered with departed or filtered-out devices. A disk a pool still claims
+// stays visible even when unavailable, so it is never silently dropped.
+function isLive(status) {
+  return status?.available === true || Boolean(status?.claimedBy);
+}
+
 try {
   const { items } = await fundament.k8s.list({
     group: 'ceph.fundament.io',
@@ -31,10 +40,12 @@ try {
     resource: 'disks',
   });
 
-  if (!items || items.length === 0) {
+  const live = (items ?? []).filter((item) => isLive(item.status ?? {}));
+
+  if (live.length === 0) {
     tbody.innerHTML = emptyRow(5, 'No disks discovered yet.');
   } else {
-    tbody.innerHTML = items
+    tbody.innerHTML = live
       .map((item) => {
         const s = item.status ?? {};
         const name = item.metadata?.name ?? '';

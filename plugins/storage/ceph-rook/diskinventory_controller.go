@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -51,6 +52,11 @@ func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 		Watches(
 			&v1alpha1.DiskPool{},
 			handler.EnqueueRequestsFromMapFunc(r.poolToDiscoveryConfigMaps),
+			// claimedBy depends only on spec.disks and timestamps; without the
+			// predicate every pool status write would re-reconcile every node's
+			// ConfigMap. Pool deletion still passes: the predicate filters only
+			// Update events, and pools carry no finalizer.
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r); err != nil {
 		return fmt.Errorf("register DiskInventory controller: %w", err)
@@ -70,7 +76,9 @@ func (r *DiskInventoryReconciler) poolToDiscoveryConfigMaps(ctx context.Context,
 		client.MatchingLabels{"app": discoverAppLabel},
 	)
 	if err != nil {
-		// Return empty; the reconciler will retry on the next event.
+		// Map-function failures are not requeued, so a dropped fan-out is
+		// invisible until the ~10h resync; log it.
+		log.FromContext(ctx).Error(err, "list discovery ConfigMaps for watch fan-out")
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(cms.Items))
@@ -92,7 +100,11 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			// disks stay available=true forever and the console keeps offering
 			// them. The labels went with the object; the name still has the node.
 			node := nodeFromConfigMap(req.Name, nil)
-			if err := r.softDeleteStale(ctx, node, nil); err != nil {
+			claimedBy, err := r.buildClaimedByIndex(ctx)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("build claimed-by index: %w", err)
+			}
+			if err := r.softDeleteStale(ctx, node, nil, claimedBy); err != nil {
 				return ctrl.Result{}, fmt.Errorf("soft-delete disks for departed node %q: %w", node, err)
 			}
 			return ctrl.Result{}, nil
@@ -126,7 +138,7 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Soft-delete Disk CRs belonging to this node that are no longer present.
-	if err := r.softDeleteStale(ctx, node, seenNames); err != nil {
+	if err := r.softDeleteStale(ctx, node, seenNames, claimedBy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("soft-delete stale disks for node %q: %w", node, err)
 	}
 
@@ -181,9 +193,15 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 }
 
 // softDeleteStale marks Disks on node that are no longer reported as
-// Available=false. Never Delete -- repo policy is soft deletes only. A nil seen
-// set means nothing is reported, which is what a departed node looks like.
-func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node string, seen map[string]struct{}) error {
+// Available=false and reconciles their claimedBy from claimedBy. Never Delete
+// -- repo policy is soft deletes only. A nil seen set means nothing is
+// reported, which is what a departed node looks like.
+//
+// claimedBy is refreshed here too, not just in the discovered-device loop:
+// otherwise a claimed disk that drops out of discovery (filtered out, or the
+// device gone) keeps a stale claim forever. A disk a pool still lists by name
+// keeps its claim; one released reads as unclaimed, matching the pool specs.
+func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node string, seen map[string]struct{}, claimedBy map[string]string) error {
 	var allDisks v1alpha1.DiskList
 	if err := r.Client.List(ctx, &allDisks); err != nil {
 		return fmt.Errorf("list Disks: %w", err)
@@ -197,10 +215,12 @@ func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node stri
 		if _, ok := seen[disk.Name]; ok {
 			continue
 		}
-		if disk.Status.Available {
+		claim := claimedBy[disk.Name]
+		if disk.Status.Available || disk.Status.ClaimedBy != claim {
 			disk.Status.Available = false
+			disk.Status.ClaimedBy = claim
 			if err := r.Client.Status().Update(ctx, disk); err != nil {
-				return fmt.Errorf("mark disk %q unavailable: %w", disk.Name, err)
+				return fmt.Errorf("soft-delete disk %q: %w", disk.Name, err)
 			}
 		}
 	}
