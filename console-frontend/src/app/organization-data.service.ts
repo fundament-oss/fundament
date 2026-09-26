@@ -8,11 +8,10 @@ import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
-  ListClustersResponse_ClusterSummarySchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
-import { ClusterStatus } from '../generated/v1/common_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
+import sortClustersByName from './utils/cluster-order';
 
 export interface ProjectData {
   id: string;
@@ -157,10 +156,11 @@ export class OrganizationDataService {
         return;
       }
 
-      this.clusterSummaries.set(clustersResponse.clusters);
+      const clusters = sortClustersByName(clustersResponse.clusters);
+      this.clusterSummaries.set(clusters);
       this.clustersLoaded.set(true);
 
-      const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
+      const clustersData: ClusterData[] = clusters.map((cluster) => ({
         id: cluster.id,
         name: cluster.name,
         projects: [],
@@ -293,26 +293,47 @@ export class OrganizationDataService {
   }
 
   /**
-   * Add a newly created cluster to the cache immediately (before a full reload).
-   * This ensures other views (e.g. Projects, plugins) reflect the new cluster right away.
+   * Refresh the cluster list from the server after a cluster was created, so
+   * every view built on the cache (Projects, plugins, the sidebar) shows the
+   * new cluster in its place. Projects already loaded for the other clusters
+   * stay in place.
    */
-  addCluster(id: string, name: string) {
+  async reloadClusters() {
     const activeOrgId = this.cachedOrganizationId;
+    if (!activeOrgId) return;
+
+    let response;
+    try {
+      response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+    } catch (error) {
+      // The cluster exists either way; the cache catches up on the next load.
+      // eslint-disable-next-line no-console
+      console.error('Error reloading clusters:', error);
+      return;
+    }
+
+    // The user switched organization while the request was in flight; this
+    // response belongs to the old one and must not land in the new cache.
+    if (this.cachedOrganizationId !== activeOrgId) return;
+
+    const clusters = sortClustersByName(response.clusters);
+    this.clusterSummaries.set(clusters);
     this.organizations.update((orgs) =>
-      orgs.map((org) =>
-        org.id === activeOrgId
-          ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] }
-          : org,
-      ),
-    );
-    this.clusterSummaries.update((summaries) => [
-      ...summaries,
-      create(ListClustersResponse_ClusterSummarySchema, {
-        id,
-        name,
-        status: ClusterStatus.PROVISIONING,
+      orgs.map((org) => {
+        if (org.id !== activeOrgId) return org;
+
+        const known = new Map(org.clusters.map((c) => [c.id, c]));
+        return {
+          ...org,
+          clusters: clusters.map(
+            (cluster) =>
+              known.get(cluster.id) ?? { id: cluster.id, name: cluster.name, projects: [] },
+          ),
+        };
       }),
-    ]);
+    );
   }
 
   /**
