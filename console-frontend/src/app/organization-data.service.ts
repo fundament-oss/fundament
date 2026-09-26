@@ -312,6 +312,10 @@ export class OrganizationDataService {
       return;
     }
 
+    // The user switched organization while the request was in flight; this
+    // response belongs to the old one and must not land in the new cache.
+    if (this.cachedOrganizationId !== activeOrgId) return;
+
     this.clusterSummaries.set(response.clusters);
     this.organizations.update((orgs) =>
       orgs.map((org) => {
