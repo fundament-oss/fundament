@@ -131,3 +131,65 @@ func Test_Member_Get(t *testing.T) {
 		})
 	}
 }
+
+// GetMember must resolve within the current organization only. A caller who
+// is a member of two organizations can select both of their own membership
+// rows, so without an organization filter a lookup by user id could return the
+// other organization's row, and a lookup by that row's id would succeed.
+func Test_Member_Get_UserInTwoOrganizations(t *testing.T) {
+	t.Parallel()
+
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+	callerUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "org-a"),
+		WithOrganization(orgBID, "org-b"),
+		WithUser(&UserArgs{
+			ID:     callerUserID,
+			Name:   "caller-user",
+			OrgIDs: []uuid.UUID{orgAID, orgBID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, callerUserID)
+
+	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
+
+	callerMembershipID := func(t *testing.T, orgID uuid.UUID) string {
+		t.Helper()
+
+		ctx, callInfo := connect.NewClientContext(context.Background())
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+		res, err := client.ListMembers(ctx, &organizationv1.ListMembersRequest{})
+		require.NoError(t, err)
+		require.Len(t, res.GetMembers(), 1)
+
+		return res.GetMembers()[0].GetId()
+	}
+
+	membershipA := callerMembershipID(t, orgAID)
+	membershipB := callerMembershipID(t, orgBID)
+	require.NotEqual(t, membershipA, membershipB)
+
+	ctxA, callInfoA := connect.NewClientContext(context.Background())
+	callInfoA.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfoA.RequestHeader().Set("Fun-Organization", orgAID.String())
+
+	res, err := client.GetMember(ctxA, organizationv1.GetMemberRequest_builder{
+		UserId: new(callerUserID.String()),
+	}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, membershipA, res.GetMember().GetId())
+
+	_, err = client.GetMember(ctxA, organizationv1.GetMemberRequest_builder{
+		Id: new(membershipB),
+	}.Build())
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+}
