@@ -11,7 +11,7 @@ function sendInit(): void {
         protocolVersion: 1,
         theme: 'light',
         pluginName: 'ceph-rook',
-        crdKind: 'StoragePool',
+        crdKind: 'DiskPool',
         view: 'detail',
         kubeApiProxyUrl: 'https://proxy.example/kube',
         clusterId: 'cluster-1',
@@ -30,9 +30,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 const POOL = {
-  group: 'storage.fundament.io',
+  group: 'ceph.fundament.io',
   version: 'v1alpha1',
-  resource: 'storagepools',
+  resource: 'diskpools',
   name: 'test-pool',
 };
 
@@ -58,7 +58,7 @@ describe('plugin-sdk k8s write verbs', () => {
 
     expect(url).toBe(
       'https://proxy.example/kube/clusters/cluster-1' +
-        '/apis/storage.fundament.io/v1alpha1/storagepools/test-pool',
+        '/apis/ceph.fundament.io/v1alpha1/diskpools/test-pool',
     );
     expect(init.method).toBe('PATCH');
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/merge-patch+json');
@@ -69,7 +69,7 @@ describe('plugin-sdk k8s write verbs', () => {
     await window.fundament.k8s.delete(POOL);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain('/storagepools/test-pool');
+    expect(url).toContain('/diskpools/test-pool');
     expect(init.method).toBe('DELETE');
     expect(init.body).toBeUndefined();
   });

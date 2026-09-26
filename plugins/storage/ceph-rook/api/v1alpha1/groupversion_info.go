@@ -1,6 +1,6 @@
-// Package v1alpha1 contains API Schema definitions for the storage.fundament.io v1alpha1 API group.
+// Package v1alpha1 contains API Schema definitions for the ceph.fundament.io v1alpha1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=storage.fundament.io
+// +groupName=ceph.fundament.io
 package v1alpha1
 
 import (
@@ -10,7 +10,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "storage.fundament.io", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "ceph.fundament.io", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	// The deprecation is about api packages pulling in controller-runtime; this

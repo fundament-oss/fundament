@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Disk Pools</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Disk Pools</h1>
+      <div class="plugin-actions">
+        <button type="button" class="plugin-button" id="create-btn">
+          Create disk pool
+        </button>
+      </div>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phase</th>
+            <th>Disks</th>
+            <th>Raw Size</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="5" class="plugin-text">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script type="module" src="./diskpools-list.js"></script>
+  </body>
+</html>

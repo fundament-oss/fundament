@@ -12,7 +12,9 @@ func TestAddToScheme(t *testing.T) {
 	s := runtime.NewScheme()
 	require.NoError(t, AddToScheme(s))
 	assert.True(t, s.Recognizes(GroupVersion.WithKind("Disk")))
-	assert.True(t, s.Recognizes(GroupVersion.WithKind("StoragePool")))
+	assert.True(t, s.Recognizes(GroupVersion.WithKind("DiskPool")))
+	assert.True(t, s.Recognizes(GroupVersion.WithKind("BlockStorage")))
+	assert.True(t, s.Recognizes(GroupVersion.WithKind("FileStorage")))
 }
 
 func TestDiskDeepCopy(t *testing.T) {

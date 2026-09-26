@@ -212,6 +212,65 @@ func TestDiskInventoryDepartedNodeLeavesOtherNodesAlone(t *testing.T) {
 	assert.True(t, getDisk(t, c, stayingDisk).Status.Available, "node-b never went anywhere")
 }
 
+// A claimed disk that drops out of discovery must have its claim reconciled,
+// not frozen: the claimedBy recompute used to run only over discovered devices,
+// so a disk released from a pool while no longer reported kept a stale claim.
+func TestDiskInventoryClearsClaimWhenClaimedDiskVanishes(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	diskName := DiskName(node, "path:/dev/sdb")
+
+	c := newFakeClient(t,
+		discoveryConfigMap(t, node, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}),
+		testPool("pool", time.Now(), diskName),
+	)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	require.Equal(t, "pool", getDisk(t, c, diskName).Status.ClaimedBy)
+
+	// The pool releases the disk and the device stops being reported in the same
+	// window -- the disk is now neither discovered nor claimed.
+	require.NoError(t, c.Delete(context.Background(),
+		&v1alpha1.DiskPool{ObjectMeta: metav1.ObjectMeta{Name: "pool"}}))
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
+	cm.Data["devices"] = "[]"
+	require.NoError(t, c.Update(context.Background(), &cm))
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	disk := getDisk(t, c, diskName)
+	assert.False(t, disk.Status.Available, "vanished disk is unavailable")
+	assert.Empty(t, disk.Status.ClaimedBy, "a released disk must not keep a stale claim")
+}
+
+// A soft-deleted disk a pool still lists by name keeps its claim: the claim
+// tracks the pool spec, not whether the device is currently present.
+func TestDiskInventoryKeepsClaimWhenPoolStillListsVanishedDisk(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	diskName := DiskName(node, "path:/dev/sdb")
+
+	c := newFakeClient(t,
+		discoveryConfigMap(t, node, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}),
+		testPool("pool", time.Now(), diskName),
+	)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+	require.NoError(t, reconcileDiscovery(t, r, node))
+
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
+	cm.Data["devices"] = "[]"
+	require.NoError(t, c.Update(context.Background(), &cm))
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	disk := getDisk(t, c, diskName)
+	assert.False(t, disk.Status.Available)
+	assert.Equal(t, "pool", disk.Status.ClaimedBy, "the pool still lists it, so the claim stands")
+}
+
 // A Disk CR is named after its stable identity, so a kernel rename must not
 // produce a second CR for the same physical device.
 func TestDiskInventoryKeepsDiskNameAcrossKernelRename(t *testing.T) {

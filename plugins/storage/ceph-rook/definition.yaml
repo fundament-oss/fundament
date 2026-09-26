@@ -4,10 +4,10 @@ metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
   version: v0.1.0
-  description: Block storage for in-cluster workloads, backed by Ceph and Rook.
+  description: Block and shared file storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
-  icon: server-stack
+  icon: external-hard-drives
   urls:
     homepage: https://rook.io
     repository: https://github.com/rook/rook
@@ -15,6 +15,7 @@ metadata:
   tags:
     - storage
     - block
+    - file
     - ceph
 spec:
   permissions:
@@ -22,16 +23,22 @@ spec:
       - internet_access
     rbac:
       # --- Fundament storage resources this plugin reconciles ---
-      # storagepools/finalizers: the API server requires update on the owner's
+      # diskpools/finalizers: the API server requires update on the owner's
       # finalizers before accepting an owner ref with blockOwnerDeletion=true.
       - apiGroups:
-          - storage.fundament.io
+          - ceph.fundament.io
         resources:
           - disks
           - disks/status
-          - storagepools
-          - storagepools/status
-          - storagepools/finalizers
+          - diskpools
+          - diskpools/status
+          - diskpools/finalizers
+          - blockstorages
+          - blockstorages/status
+          - blockstorages/finalizers
+          - filestorages
+          - filestorages/status
+          - filestorages/finalizers
         verbs:
           - get
           - list
@@ -46,6 +53,7 @@ spec:
         resources:
           - cephclusters
           - cephblockpools
+          - cephfilesystems
         verbs:
           - get
           - list
@@ -54,8 +62,9 @@ spec:
           - update
           - patch
           - delete
-      # --- StorageClasses: created/updated by the StoragePool controller and
-      # watched via Owns(). No delete; cascade is the k8s garbage collector. ---
+      # --- StorageClasses: created/updated by the BlockStorage/FileStorage
+      # controllers and watched via Owns(). No delete; cascade is the k8s
+      # garbage collector. ---
       - apiGroups:
           - storage.k8s.io
         resources:
@@ -78,7 +87,7 @@ spec:
           - get
           - list
           - watch
-      # --- CRD management: apply own storage.fundament.io CRDs at install time ---
+      # --- CRD management: apply own ceph.fundament.io CRDs at install time ---
       - apiGroups:
           - apiextensions.k8s.io
         resources:
@@ -108,27 +117,68 @@ spec:
         verbs: ["*"]
   menu:
     project:
-      - crd: storagepools.storage.fundament.io
+      - crd: diskpools.ceph.fundament.io
         list: true
         detail: true
-        icon: circle-stack
-      - crd: disks.storage.fundament.io
+        icon: file-box
+      - crd: blockstorages.ceph.fundament.io
         list: true
         detail: true
-        icon: server-stack
+        icon: rectangle-stack
+      - crd: filestorages.ceph.fundament.io
+        list: true
+        detail: true
+        icon: folder-open
+      - crd: disks.ceph.fundament.io
+        list: true
+        detail: true
+        icon: ssd-hard-drive
   crds:
-    - disks.storage.fundament.io
-    - storagepools.storage.fundament.io
+    - disks.ceph.fundament.io
+    - diskpools.ceph.fundament.io
+    - blockstorages.ceph.fundament.io
+    - filestorages.ceph.fundament.io
   customComponents:
-    StoragePool:
-      list: storagepools-list.html
-      detail: storagepools-detail.html
-      create: storagepools-create.html
+    DiskPool:
+      list: diskpools-list.html
+      detail: diskpools-detail.html
+      create: diskpools-create.html
     Disk:
       list: disks-list.html
       detail: disks-detail.html
+    BlockStorage:
+      list: blockstorages-list.html
+      detail: blockstorages-detail.html
+      create: blockstorages-create.html
+    FileStorage:
+      list: filestorages-list.html
+      detail: filestorages-detail.html
+      create: filestorages-create.html
   uiHints:
-    storagepools.storage.fundament.io:
+    diskpools.ceph.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Degraded:
+            badge: danger
+            label: Degraded
+    blockstorages.ceph.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Provisioning:
+            badge: warning
+            label: Provisioning
+          Degraded:
+            badge: danger
+            label: Degraded
+    filestorages.ceph.fundament.io:
       statusMapping:
         jsonPath: ".status.phase"
         values:
@@ -148,13 +198,21 @@ spec:
   # No delete: the console offers no delete, because the guard for it would have
   # to be server-side to mean anything. No update: the edit form merge-patches.
   allowedResources:
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
       resource: disks
       verbs: [list, get]
-    - group: storage.fundament.io
+    - group: ceph.fundament.io
       version: v1alpha1
-      resource: storagepools
+      resource: diskpools
+      verbs: [list, get, create, patch]
+    - group: ceph.fundament.io
+      version: v1alpha1
+      resource: blockstorages
+      verbs: [list, get, create, patch]
+    - group: ceph.fundament.io
+      version: v1alpha1
+      resource: filestorages
       verbs: [list, get, create, patch]
     - group: ceph.rook.io
       version: v1

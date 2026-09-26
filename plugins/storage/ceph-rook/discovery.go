@@ -145,7 +145,7 @@ func ParseDiscoveredDevices(node, raw string, loopDevices bool) ([]v1alpha1.Disk
 }
 
 // DeviceKey is the identity a Disk CR is named after, preferring whatever
-// survives a reboot: a Disk whose name changes drops out of every StoragePool
+// survives a reboot: a Disk whose name changes drops out of every DiskPool
 // listing it, and the device silently leaves the CephCluster.
 //
 // The prefixes stop a serial colliding with a WWN of the same text.

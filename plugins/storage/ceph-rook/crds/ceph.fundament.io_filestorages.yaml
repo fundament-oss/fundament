@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: storagepools.storage.fundament.io
+  name: filestorages.ceph.fundament.io
 spec:
-  group: storage.fundament.io
+  group: ceph.fundament.io
   names:
-    kind: StoragePool
-    listKind: StoragePoolList
-    plural: storagepools
-    singular: storagepool
+    kind: FileStorage
+    listKind: FileStorageList
+    plural: filestorages
+    singular: filestorage
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -27,6 +27,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: |-
+          Rook labels the MDS deployment rook_file_system=cephfs-<name>; label values
+          cap at 63 characters, so a longer name would fail only after the
+          CephFilesystem exists.
         properties:
           apiVersion:
             description: |-
@@ -46,20 +50,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: StoragePoolSpec is the operator's desired block storage.
+            default: {}
+            description: |-
+              FileStorageSpec asks for a shared (ReadWriteMany) CephFS StorageClass over
+              the shared OSD set. FileStorage brings no disks; DiskPools do that.
             properties:
-              disks:
+              metadataServers:
+                default: 1
                 description: |-
-                  Disks are the names of Disk objects to consume as OSDs. listType=set so the
-                  API server rejects a repeat, which would be double-counted in status.
-                items:
-                  type: string
-                type: array
-                x-kubernetes-list-type: set
+                  MetadataServers is the number of active MDS daemons. Each active gets a
+                  standby (activeStandby). More than 1 only helps metadata-heavy workloads
+                  at scale.
+                format: int32
+                maximum: 5
+                minimum: 1
+                type: integer
               replication:
                 default: auto
-                description: Replication selects replica count; "auto" derives it
-                  from node count.
+                description: |-
+                  Replication selects replica count for both the metadata and data pool;
+                  "auto" derives it from node count.
                 enum:
                 - auto
                 - "1"
@@ -69,11 +79,9 @@ spec:
             type: object
           status:
             description: |-
-              StoragePoolStatus is the observed state.
-
-              Every field describes this pool's contribution to one shared Ceph cluster, not
-              storage that belongs to it: all pools feed a single OSD set, and the derived
-              CephBlockPool has no CRUSH rule confining it to spec.disks.
+              ConsumerStatus is the observed state shared by the consumer kinds
+              (BlockStorage, FileStorage). Fields describe the derived Rook object and
+              StorageClass, sized against the whole cluster's OSD set.
             properties:
               conditions:
                 description: |-
@@ -142,36 +150,22 @@ spec:
               message:
                 type: string
               observedGeneration:
-                description: |-
-                  ObservedGeneration is the metadata.generation this status was computed
-                  from. Below metadata.generation means the controller has not caught up with
-                  the current spec, and every field above describes an older one.
+                description: ObservedGeneration is the metadata.generation this status
+                  was computed from.
                 format: int64
                 type: integer
               phase:
                 type: string
-              rawCapacityBytes:
-                description: |-
-                  RawCapacityBytes is the summed size of the disks this pool contributes,
-                  before replication. Not the pool's capacity: volumes draw on the whole
-                  cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
-                format: int64
-                type: integer
               replicas:
-                description: |-
-                  Sized against the nodes contributing disks to the whole cluster, since that
-                  is what bounds where Ceph can place a replica.
-                type: integer
-              selectedDiskCount:
-                description: |-
-                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
-                  how many OSDs are running: Rook creates those asynchronously, and removing a
-                  disk from spec never removes its OSD (that needs a Ceph purge).
                 type: integer
               storageClassName:
                 type: string
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: 'name must be at most 56 characters: Rook derives a cephfs-<name>
+            label capped at 63'
+          rule: size(self.metadata.name) <= 56
     served: true
     storage: true
     subresources:

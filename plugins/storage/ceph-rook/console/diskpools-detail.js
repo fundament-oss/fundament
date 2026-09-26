@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, renderDefList } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeBytes, renderDefList, wireSubmit } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
@@ -9,13 +9,13 @@ const heading = document.getElementById('heading');
 const actions = document.getElementById('actions');
 
 const RESOURCE = {
-  group: 'storage.fundament.io',
+  group: 'ceph.fundament.io',
   version: 'v1alpha1',
-  resource: 'storagepools',
+  resource: 'diskpools',
 };
 
 const RESOURCE_DISKS = {
-  group: 'storage.fundament.io',
+  group: 'ceph.fundament.io',
   version: 'v1alpha1',
   resource: 'disks',
 };
@@ -60,9 +60,6 @@ function renderReadOnly(item, byName) {
 
   const pairs = [
     ['Phase', status.phase ?? 'Unknown'],
-    ['Storage Class', status.storageClassName ?? '—'],
-    ['Replicas', String(status.replicas ?? '—')],
-    ['Failure Domain', status.failureDomain ?? '—'],
     // Labelled as contributions, not capacity: the obvious reading is wrong.
     ['Disks contributed', String(status.selectedDiskCount ?? '—')],
     ['Raw size of contributed disks', humanizeBytes(status.rawCapacityBytes ?? 0)],
@@ -73,9 +70,10 @@ function renderReadOnly(item, byName) {
     <h2 class="plugin-heading">Status</h2>
     ${renderDefList(pairs)}
     <p class="plugin-hint">
-      Every storage pool feeds one shared Ceph cluster. Volumes provisioned through this
-      pool are placed across all of the cluster's disks, not only the ones listed below,
-      so the raw size above is this pool's contribution rather than its capacity. Use
+      Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
+      turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
+      are placed across all of the cluster's disks, not only the ones listed below, so the raw
+      size above is this pool's contribution rather than its capacity. Use
       <code>ceph df</code> for actual free space.
     </p>
     <h2 class="plugin-heading">Contributed Disks</h2>
@@ -86,7 +84,7 @@ function renderReadOnly(item, byName) {
 async function showDetail() {
   try {
     const item = await fundament.k8s.get({ ...RESOURCE, name });
-    heading.textContent = `Storage Pool · ${item.metadata?.name ?? name}`;
+    heading.textContent = `Disk Pool · ${item.metadata?.name ?? name}`;
     content.innerHTML = renderReadOnly(item, await diskIndex());
     actions.hidden = false;
     // .onclick, not addEventListener: this button lives outside #content and
@@ -135,25 +133,9 @@ async function showEdit(item) {
            to remove one.
          </p>`;
 
-  const replication = item.spec?.replication ?? 'auto';
-  const options = ['auto', '1', '2', '3']
-    .map(
-      (v) =>
-        `<option value="${v}"${v === replication ? ' selected' : ''}>${
-          v === 'auto' ? 'auto (recommended)' : v
-        }</option>`,
-    )
-    .join('');
-
   content.innerHTML = `
     <form id="edit-form" class="plugin-form" novalidate>
       <div class="plugin-error" id="edit-error" hidden></div>
-
-      <div class="plugin-field">
-        <label class="plugin-label" for="replication">Replication</label>
-        <select id="replication" name="replication" class="plugin-select">${options}</select>
-        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
-      </div>
 
       <div class="plugin-field">
         <span class="plugin-label">Disks</span>
@@ -173,50 +155,35 @@ async function showEdit(item) {
   `;
 
   const form = document.getElementById('edit-form');
-  const errorBox = document.getElementById('edit-error');
-  const saveBtn = document.getElementById('save-btn');
 
   document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.hidden = true;
+  // Disjoint by construction: preserved is exactly what the picker did not
+  // render, so this cannot produce the duplicate the CRD's listType=set rejects.
+  const selected = () => [...readSelectedDisks(form), ...preserved];
 
-    // Disjoint by construction: preserved is exactly what the picker did not
-    // render, so this cannot produce the duplicate the CRD's listType=set rejects.
-    const selected = [...readSelectedDisks(form), ...preserved];
-    if (selected.length === 0) {
-      errorBox.textContent = 'Select at least one disk.';
-      errorBox.hidden = false;
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
+  wireSubmit(form, {
+    button: document.getElementById('save-btn'),
+    errorBox: document.getElementById('edit-error'),
+    busyLabel: 'Saving…',
+    failPrefix: 'Failed to save',
+    validate: () => (selected().length === 0 ? 'Select at least one disk.' : null),
+    action: async () => {
       // Merge-patch of spec only: status is untouched and disks is replaced
       // wholesale, not merged element-wise.
       await fundament.k8s.patch(
         { ...RESOURCE, name },
         {
-          spec: {
-            disks: selected,
-            replication: form.querySelector('[name="replication"]').value,
-          },
+          spec: { disks: selected() },
         },
       );
       await showDetail();
-    } catch (err) {
-      errorBox.textContent = `Failed to save: ${err?.message ?? err}`;
-      errorBox.hidden = false;
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-    }
+    },
   });
 }
 
 if (!name) {
-  content.textContent = 'No storage pool selected.';
+  content.textContent = 'No disk pool selected.';
 } else {
   await showDetail();
 }

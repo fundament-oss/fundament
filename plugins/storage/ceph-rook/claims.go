@@ -9,10 +9,10 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// Prefix for the objects a StoragePool derives. Pool names are operator-chosen
+// Prefix for the objects a DiskPool derives. Pool names are operator-chosen
 // and StorageClasses are cluster-scoped, so an unprefixed name could collide with
 // — and then garbage-collect — something like k3d's "local-path". The prefix
-// reduces collisions; ownedByPool is what prevents damage.
+// reduces collisions; ownedBy is what prevents damage.
 const derivedNamePrefix = "ceph-"
 
 // DerivedName names both the CephBlockPool and the StorageClass, so status can
@@ -21,14 +21,24 @@ func DerivedName(poolName string) string {
 	return derivedNamePrefix + poolName
 }
 
-// ClaimOwner returns the StoragePool entitled to a disk when more than one lists
+// Prefix for the objects a FileStorage derives. Distinct from
+// derivedNamePrefix so same-named CRs of different kinds cannot derive
+// colliding cluster-scoped objects.
+const filesystemDerivedNamePrefix = "cephfs-"
+
+// FilesystemDerivedName names a FileStorage's CephFilesystem and StorageClass.
+func FilesystemDerivedName(name string) string {
+	return filesystemDerivedNamePrefix + name
+}
+
+// ClaimOwner returns the DiskPool entitled to a disk when more than one lists
 // it, or "" when no live pool claims it.
 //
-// Decided from the StoragePool list, not Disk.status.claimedBy, which lags.
+// Decided from the DiskPool list, not Disk.status.claimedBy, which lags.
 // Oldest pool wins; ties break on name so two controllers agree. Pools being
 // deleted release their claims immediately.
-func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
-	var claimants []*v1alpha1.StoragePool
+func ClaimOwner(pools []v1alpha1.DiskPool, diskName string) string {
+	var claimants []*v1alpha1.DiskPool
 	for i := range pools {
 		pool := &pools[i]
 		if !pool.DeletionTimestamp.IsZero() {
@@ -51,9 +61,9 @@ func ClaimOwner(pools []v1alpha1.StoragePool, diskName string) string {
 	return claimants[0].Name
 }
 
-// BuildClaimIndex maps each claimed disk to its owning StoragePool using
+// BuildClaimIndex maps each claimed disk to its owning DiskPool using
 // ClaimOwner's precedence. It populates Disk.status.claimedBy.
-func BuildClaimIndex(pools []v1alpha1.StoragePool) map[string]string {
+func BuildClaimIndex(pools []v1alpha1.DiskPool) map[string]string {
 	index := make(map[string]string)
 	for i := range pools {
 		pool := &pools[i]
@@ -70,15 +80,15 @@ func BuildClaimIndex(pools []v1alpha1.StoragePool) map[string]string {
 	return index
 }
 
-// ownedByPool reports whether refs contain a controller reference to pool. Every
-// write to a derived object is gated on this: adopting an object we do not own
-// would also mean deleting it when the pool goes away.
-func ownedByPool(refs []metav1.OwnerReference, pool *v1alpha1.StoragePool) bool {
+// ownedBy reports whether refs contain a controller reference to owner of the
+// given kind. Every write to a derived object is gated on this: adopting an
+// object we do not own would also mean deleting it when the owner goes away.
+func ownedBy(refs []metav1.OwnerReference, kind string, owner metav1.Object) bool {
 	for _, ref := range refs {
 		if ref.Controller == nil || !*ref.Controller {
 			continue
 		}
-		if ref.Kind == "StoragePool" && ref.Name == pool.Name && ref.UID == pool.UID {
+		if ref.Kind == kind && ref.Name == owner.GetName() && ref.UID == owner.GetUID() {
 			return true
 		}
 	}

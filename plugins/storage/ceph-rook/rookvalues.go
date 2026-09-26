@@ -32,7 +32,7 @@ func RookValues(cfg *Config) map[string]string {
 }
 
 // BootstrapCephCluster returns the baseline CephCluster. storage.nodes is left
-// empty so StoragePoolReconciler owns disk assignment.
+// empty so DiskPoolReconciler owns disk assignment.
 func BootstrapCephCluster(namespace string, cfg *Config) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{
 		Object: map[string]any{

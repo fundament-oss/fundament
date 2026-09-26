@@ -1,4 +1,4 @@
-# Sample StoragePool for sandbox verification. Full walkthrough:
+# Sample DiskPool for sandbox verification. Full walkthrough:
 # docs/developer/fundament/k3d-block-devices.md
 #
 # k3d nodes have no raw disks, so provide loop-backed ones:
@@ -22,12 +22,26 @@
 # stable identity, so they differ per cluster:
 #
 #   kubectl get disks
-apiVersion: storage.fundament.io/v1alpha1
-kind: StoragePool
+apiVersion: ceph.fundament.io/v1alpha1
+kind: DiskPool
 metadata:
   name: test-pool
 spec:
   # Replace with actual Disk CR names from `kubectl get disks`:
   disks:
     - placeholder-node-loop0p1
+---
+apiVersion: ceph.fundament.io/v1alpha1
+kind: BlockStorage
+metadata:
+  name: test-block
+spec:
   replication: auto
+---
+apiVersion: ceph.fundament.io/v1alpha1
+kind: FileStorage
+metadata:
+  name: test-file
+spec:
+  replication: auto
+  metadataServers: 1

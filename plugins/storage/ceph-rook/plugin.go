@@ -102,6 +102,15 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
 		Cache:                  cacheOptions(&p.cfg),
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				// Controller-runtime's default client bypasses the cache for
+				// unstructured objects, so every rookStub Get (CephCluster,
+				// CephBlockPool, CephFilesystem) would be a live API-server
+				// call despite the informers the Watches already run.
+				Unstructured: true,
+			},
+		},
 	})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
@@ -116,13 +125,34 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		return fmt.Errorf("setup disk inventory reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
-	if err := (&StoragePoolReconciler{
+	if err := (&DiskPoolReconciler{
 		Client:           mgr.GetClient(),
 		ClusterNamespace: p.cfg.ClusterNamespace,
-		RookNamespace:    p.cfg.RookNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
-		return fmt.Errorf("setup storagepool reconciler: %w", pluginerrors.NewPermanent(err))
+		return fmt.Errorf("setup diskpool reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	if err := NewBlockStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup blockstorage reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	if err := NewFileStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace, p.cfg.CephFSMounter).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup filestorage reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	// Reports the CephCluster's health as the plugin's own status, so a broken
+	// storage cluster surfaces at the plugin level instead of behind a green
+	// Running. It drives PhaseRunning/PhaseDegraded from here on.
+	if err := (&CephHealthReconciler{
+		Client:           mgr.GetClient(),
+		ClusterNamespace: p.cfg.ClusterNamespace,
+		Host:             host,
+	}).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup ceph health reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
 	host.ReportReady()
