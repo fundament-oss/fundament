@@ -1,4 +1,5 @@
 - Always use `go generate ./...` or `just generate` to generate/regenerate files.
+- Before committing Go changes, run `just fix` and `just fmt`: CI fails on any go fix modernizer still to apply.
 - You are not allowed to edit the files in: db/migrations/
 - You are not allowed to edit the file: db/fundament.sql
 - You are not allowed to use aliases in SQL queries
