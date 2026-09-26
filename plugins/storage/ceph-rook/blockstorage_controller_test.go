@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -177,7 +176,7 @@ func TestBlockStorageKeepsForeignOwnerRefOnStorageClass(t *testing.T) {
 		{
 			APIVersion: v1alpha1.GroupVersion.String(), Kind: "BlockStorage",
 			Name: "fast", UID: bs.UID,
-			Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
+			Controller: new(true), BlockOwnerDeletion: new(true),
 		},
 		{APIVersion: "v1", Kind: "ConfigMap", Name: "tracker", UID: types.UID("uid-tracker")},
 	}
@@ -211,7 +210,7 @@ func TestBlockStorageKeepsForeignOwnerRefOnCephBlockPool(t *testing.T) {
 		{
 			APIVersion: v1alpha1.GroupVersion.String(), Kind: "BlockStorage",
 			Name: "fast", UID: bs.UID,
-			Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
+			Controller: new(true), BlockOwnerDeletion: new(true),
 		},
 		{APIVersion: "v1", Kind: "ConfigMap", Name: "tracker", UID: types.UID("uid-tracker")},
 	})
@@ -409,7 +408,7 @@ func TestImmutableStorageClassDrift(t *testing.T) {
 
 	// allowVolumeExpansion is the one field Kubernetes lets us update.
 	expandable := desired.DeepCopy()
-	expandable.AllowVolumeExpansion = ptr.To(false)
+	expandable.AllowVolumeExpansion = new(false)
 	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
 }
 

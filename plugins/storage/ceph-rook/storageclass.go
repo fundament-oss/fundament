@@ -50,7 +50,7 @@ func cephStorageClass(name, provisioner, clusterNamespace, secretInfix string, p
 		Provisioner:          provisioner,
 		ReclaimPolicy:        ptr.To(corev1.PersistentVolumeReclaimDelete),
 		Parameters:           shared,
-		AllowVolumeExpansion: ptr.To(true),
+		AllowVolumeExpansion: new(true),
 		VolumeBindingMode:    ptr.To(storagev1.VolumeBindingImmediate),
 	}
 }
