@@ -16,6 +16,7 @@ import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import sortClustersByName from '../utils/cluster-order';
 import PageNavService from '../page-nav.service';
 
 import '@nldd/design-system/badge';
@@ -95,7 +96,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
     try {
       const response = await firstValueFrom(this.client.listClusters({}));
       const previousClusters = this.clusters();
-      this.clusters.set(response.clusters);
+      this.clusters.set(sortClustersByName(response.clusters));
 
       // Check if any previously-DELETING cluster has disappeared
       previousClusters

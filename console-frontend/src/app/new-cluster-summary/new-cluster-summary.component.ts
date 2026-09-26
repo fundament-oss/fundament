@@ -133,7 +133,7 @@ export default class NewClusterSummaryComponent {
     }
 
     this.clusterId.set(clusterId);
-    this.organizationDataService.addCluster(clusterId, formState.clusterName);
+    await this.organizationDataService.reloadClusters();
 
     const notCreated = await this.createNodePools(clusterId, formState.nodePools ?? []);
 
