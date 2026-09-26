@@ -8,10 +8,8 @@ import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
-  ListClustersResponse_ClusterSummarySchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
-import { ClusterStatus } from '../generated/v1/common_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
 
 export interface ProjectData {
@@ -293,26 +291,42 @@ export class OrganizationDataService {
   }
 
   /**
-   * Add a newly created cluster to the cache immediately (before a full reload).
-   * This ensures other views (e.g. Projects, plugins) reflect the new cluster right away.
+   * Refresh the cluster list from the server after a cluster was created, so
+   * every view built on the cache (Projects, plugins, the sidebar) shows the
+   * new cluster in the same order the server lists it. Projects already loaded
+   * for the other clusters stay in place.
    */
-  addCluster(id: string, name: string) {
+  async reloadClusters() {
     const activeOrgId = this.cachedOrganizationId;
+    if (!activeOrgId) return;
+
+    let response;
+    try {
+      response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+    } catch (error) {
+      // The cluster exists either way; the cache catches up on the next load.
+      // eslint-disable-next-line no-console
+      console.error('Error reloading clusters:', error);
+      return;
+    }
+
+    this.clusterSummaries.set(response.clusters);
     this.organizations.update((orgs) =>
-      orgs.map((org) =>
-        org.id === activeOrgId
-          ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] }
-          : org,
-      ),
-    );
-    this.clusterSummaries.update((summaries) => [
-      ...summaries,
-      create(ListClustersResponse_ClusterSummarySchema, {
-        id,
-        name,
-        status: ClusterStatus.PROVISIONING,
+      orgs.map((org) => {
+        if (org.id !== activeOrgId) return org;
+
+        const known = new Map(org.clusters.map((c) => [c.id, c]));
+        return {
+          ...org,
+          clusters: response.clusters.map(
+            (cluster) =>
+              known.get(cluster.id) ?? { id: cluster.id, name: cluster.name, projects: [] },
+          ),
+        };
       }),
-    ]);
+    );
   }
 
   /**

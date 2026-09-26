@@ -197,3 +197,55 @@ func Test_Cluster_List_Counts(t *testing.T) {
 	assert.Equal(t, int32(2), cluster.GetNodePoolCount())
 	assert.Equal(t, int32(1), cluster.GetProjectCount())
 }
+
+// The list is what the console renders, so its order has to be stable across
+// requests. Clusters are sorted by name rather than by creation time: rows
+// created in one transaction share a timestamp, which left their relative
+// order up to the planner.
+func Test_Cluster_List_SortedByName(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	// Created in an order that neither matches the expected result nor its reverse.
+	for _, name := range []string{"charlie", "alpha", "delta", "bravo"} {
+		createCtx, createCallInfo := connect.NewClientContext(context.Background())
+		createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+		_, err := client.CreateCluster(createCtx, organizationv1.CreateClusterRequest_builder{
+			Name:              name,
+			Region:            "eu-west-1",
+			KubernetesVersion: "1.28",
+		}.Build())
+		require.NoError(t, err)
+	}
+
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	res, err := client.ListClusters(listCtx, organizationv1.ListClustersRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(res.GetClusters()))
+	for _, cluster := range res.GetClusters() {
+		names = append(names, cluster.GetName())
+	}
+
+	assert.Equal(t, []string{"alpha", "bravo", "charlie", "delta"}, names)
+}
