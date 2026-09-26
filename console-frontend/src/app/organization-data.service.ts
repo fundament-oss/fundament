@@ -11,6 +11,7 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
+import sortClustersByName from './utils/cluster-order';
 
 export interface ProjectData {
   id: string;
@@ -155,10 +156,11 @@ export class OrganizationDataService {
         return;
       }
 
-      this.clusterSummaries.set(clustersResponse.clusters);
+      const clusters = sortClustersByName(clustersResponse.clusters);
+      this.clusterSummaries.set(clusters);
       this.clustersLoaded.set(true);
 
-      const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
+      const clustersData: ClusterData[] = clusters.map((cluster) => ({
         id: cluster.id,
         name: cluster.name,
         projects: [],
@@ -293,8 +295,8 @@ export class OrganizationDataService {
   /**
    * Refresh the cluster list from the server after a cluster was created, so
    * every view built on the cache (Projects, plugins, the sidebar) shows the
-   * new cluster in the same order the server lists it. Projects already loaded
-   * for the other clusters stay in place.
+   * new cluster in its place. Projects already loaded for the other clusters
+   * stay in place.
    */
   async reloadClusters() {
     const activeOrgId = this.cachedOrganizationId;
@@ -316,7 +318,8 @@ export class OrganizationDataService {
     // response belongs to the old one and must not land in the new cache.
     if (this.cachedOrganizationId !== activeOrgId) return;
 
-    this.clusterSummaries.set(response.clusters);
+    const clusters = sortClustersByName(response.clusters);
+    this.clusterSummaries.set(clusters);
     this.organizations.update((orgs) =>
       orgs.map((org) => {
         if (org.id !== activeOrgId) return org;
@@ -324,7 +327,7 @@ export class OrganizationDataService {
         const known = new Map(org.clusters.map((c) => [c.id, c]));
         return {
           ...org,
-          clusters: response.clusters.map(
+          clusters: clusters.map(
             (cluster) =>
               known.get(cluster.id) ?? { id: cluster.id, name: cluster.name, projects: [] },
           ),

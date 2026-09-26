@@ -198,11 +198,10 @@ func Test_Cluster_List_Counts(t *testing.T) {
 	assert.Equal(t, int32(1), cluster.GetProjectCount())
 }
 
-// The list is what the console renders, so its order has to be stable across
-// requests. Clusters are sorted by name rather than by creation time: rows
-// created in one transaction share a timestamp, which left their relative
-// order up to the planner.
-func Test_Cluster_List_SortedByName(t *testing.T) {
+// The order has to be stable across requests. Rows created in one
+// transaction share a timestamp, so the id (a UUIDv7, time-ordered) breaks
+// the tie. Presentation order, such as by name, is the console's business.
+func Test_Cluster_List_OrderedByCreation(t *testing.T) {
 	t.Parallel()
 
 	orgID := uuid.New()
@@ -221,8 +220,9 @@ func Test_Cluster_List_SortedByName(t *testing.T) {
 
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	// Created in an order that neither matches the expected result nor its reverse.
-	for _, name := range []string{"charlie", "alpha", "delta", "bravo"} {
+	// Deliberately not alphabetical, so an order by name would fail this test.
+	created := []string{"charlie", "alpha", "delta", "bravo"}
+	for _, name := range created {
 		createCtx, createCallInfo := connect.NewClientContext(context.Background())
 		createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 		createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
@@ -247,5 +247,5 @@ func Test_Cluster_List_SortedByName(t *testing.T) {
 		names = append(names, cluster.GetName())
 	}
 
-	assert.Equal(t, []string{"alpha", "bravo", "charlie", "delta"}, names)
+	assert.Equal(t, created, names)
 }

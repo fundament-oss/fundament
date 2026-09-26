@@ -169,9 +169,7 @@ export default function createDemoTransport(): Transport {
     router.service(ClusterService, {
       listClusters: async () => {
         await delay();
-        // The real API lists clusters by name, so the demo does too.
-        const clusters = [...fx.clusterSummaries].sort((a, b) => a.name.localeCompare(b.name));
-        return create(ListClustersResponseSchema, { clusters });
+        return create(ListClustersResponseSchema, { clusters: fx.clusterSummaries });
       },
       getCluster: async (req) => {
         await delay();
