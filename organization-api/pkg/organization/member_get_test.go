@@ -179,11 +179,21 @@ func Test_Member_Get_UserInTwoOrganizations(t *testing.T) {
 	callInfoA.RequestHeader().Set("Authorization", "Bearer "+token)
 	callInfoA.RequestHeader().Set("Fun-Organization", orgAID.String())
 
-	res, err := client.GetMember(ctxA, organizationv1.GetMemberRequest_builder{
+	ctxB, callInfoB := connect.NewClientContext(context.Background())
+	callInfoB.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfoB.RequestHeader().Set("Fun-Organization", orgBID.String())
+
+	byUserID := organizationv1.GetMemberRequest_builder{
 		UserId: new(callerUserID.String()),
-	}.Build())
+	}.Build()
+
+	resA, err := client.GetMember(ctxA, byUserID)
 	require.NoError(t, err)
-	assert.Equal(t, membershipA, res.GetMember().GetId())
+	assert.Equal(t, membershipA, resA.GetMember().GetId())
+
+	resB, err := client.GetMember(ctxB, byUserID)
+	require.NoError(t, err)
+	assert.Equal(t, membershipB, resB.GetMember().GetId())
 
 	_, err = client.GetMember(ctxA, organizationv1.GetMemberRequest_builder{
 		Id: new(membershipB),
