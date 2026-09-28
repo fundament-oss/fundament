@@ -27,7 +27,7 @@ let nextId = 0;
       type="button"
       [id]="triggerId"
       [attr.popovertarget]="popoverId"
-      [attr.aria-label]="'Mock: ' + label()"
+      [attr.aria-label]="label()"
       class="focus-visible:outline-accent-500 dark:focus-visible:outline-accent-400 inline-flex cursor-pointer rounded-full border-0 bg-transparent p-0 align-middle focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <nldd-badge color="hemelblauw" size="sm" text="Mock" decorative></nldd-badge>
@@ -51,7 +51,8 @@ let nextId = 0;
   `,
 })
 export default class MockBadgeComponent {
-  /** Short and specific to the place: the popover's lead. */
+  /** Short and specific to the place: the popover's lead, and the button's
+   *  accessible name, so start it with "Mock:". */
   label = input.required<string>();
 
   /** The rest of the popover, for places with something more specific to say. */

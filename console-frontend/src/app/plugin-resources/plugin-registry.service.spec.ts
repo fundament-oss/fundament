@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PluginRegistryService from './plugin-registry.service';
 import { ConfigService } from '../config.service';
@@ -33,6 +33,7 @@ function installation(
 describe('PluginRegistryService', () => {
   let items: PluginInstallationItem[];
   let getPluginDefinition: ReturnType<typeof vi.fn>;
+  let getConfig: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -53,13 +54,13 @@ describe('PluginRegistryService', () => {
       }),
     );
 
+    getConfig = vi.fn(() => ({ kubeApiProxyUrl: 'https://proxy.test' }));
+
     TestBed.configureTestingModule({
       providers: [
         {
           provide: ConfigService,
-          useValue: {
-            getConfig: () => ({ kubeApiProxyUrl: 'https://proxy.test' }),
-          } as unknown as ConfigService,
+          useValue: { getConfig } as unknown as ConfigService,
         },
         { provide: PLUGIN, useValue: { getPluginDefinition } },
       ],
@@ -106,6 +107,45 @@ describe('PluginRegistryService', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+  });
+
+  it('backs off a list that keeps failing', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    vi.mocked(fetch).mockImplementation(async () => new Response('', { status: 403 }));
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a definition that keeps failing no slower than the idle pace', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    getPluginDefinition.mockImplementation(() => throwError(() => new Error('gone')));
+
+    await registry.loadPlugins('cl-1');
+    // 5s, 10s, 20s, then capped at 30s.
+    await vi.advanceTimersByTimeAsync(5000 + 10000 + 20000 + 30000);
+    expect(fetch).toHaveBeenCalledTimes(5);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(fetch).toHaveBeenCalledTimes(6);
+  });
+
+  it('starts over after a first load that threw', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    getConfig.mockImplementationOnce(() => {
+      throw new Error('no config yet');
+    });
+
+    await expect(registry.loadPlugins('cl-1')).rejects.toThrow('no config yet');
+    await registry.loadPlugins('cl-1');
+
+    expect(registry.allPlugins()).toHaveLength(1);
   });
 
   it('stops reading when the project is left', async () => {

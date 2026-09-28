@@ -116,7 +116,16 @@ function installationKey(item: PluginInstallationItem): string {
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
-  private loadedForClusterId: string | null = null;
+  // The cluster the poll loop runs for, and its first sync; a second
+  // loadPlugins for the same cluster waits on that instead of starting over.
+  private activeClusterId: string | null = null;
+
+  private firstLoad: Promise<void> | null = null;
+
+  // Reads that failed in a row, to back off from a failure that is not
+  // clearing (no RBAC to list installations, no plugins CRD on the cluster, a
+  // running plugin whose definition is gone from the catalog).
+  private failures = 0;
 
   // Bumped by every load and reset, so a read that a cluster switch overtook
   // can tell its result is stale and drop it.
@@ -129,8 +138,11 @@ export default class PluginRegistryService {
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** How often to re-read while an installation on the cluster is still coming
-   *  up or going away, or after a read that failed. */
+   *  up or going away, and the first retry after a read that failed. */
   private static readonly POLL_MS = 5000;
+
+  /** The longest wait between retries of a read that keeps failing. */
+  private static readonly MAX_BACKOFF_MS = 120000;
 
   /** How often to re-read while nothing is changing, so an install started
    *  after the menu was built, or a Degraded plugin that recovers, still shows
@@ -144,13 +156,23 @@ export default class PluginRegistryService {
 
   private pluginClient = inject(PLUGIN);
 
-  async loadPlugins(clusterId: string): Promise<void> {
-    if (clusterId === this.loadedForClusterId) return;
+  loadPlugins(clusterId: string): Promise<void> {
+    if (clusterId === this.activeClusterId && this.firstLoad) return this.firstLoad;
 
     this.stopPolling();
     this.generation += 1;
     this.runningKeys = null;
-    await this.run(clusterId, this.generation);
+    this.failures = 0;
+    this.activeClusterId = clusterId;
+    const { generation } = this;
+    const firstLoad = this.run(clusterId, generation).catch((err: unknown) => {
+      // A load that threw scheduled no next read, so let the next call for
+      // this cluster start over rather than hand back the same failure.
+      if (generation === this.generation) this.firstLoad = null;
+      throw err;
+    });
+    this.firstLoad = firstLoad;
+    return firstLoad;
   }
 
   /**
@@ -159,16 +181,35 @@ export default class PluginRegistryService {
    * deploying, so while any installation is on its way up or down, or a read
    * failed, this re-reads quickly: the plugin's screens then appear in the
    * sidebar the moment it runs, without a reload. Otherwise it keeps reading
-   * at a slower pace to notice installs started later.
+   * at a slower pace to notice installs started later. A read that keeps
+   * failing is retried with exponential backoff. So is a definition that keeps
+   * failing to load, but never slower than the idle pace: the list itself
+   * still works, and an install started meanwhile should still show up.
    */
   private async run(clusterId: string, generation: number): Promise<void> {
     const result = await this.sync(clusterId, generation);
     if (result === 'stale' || generation !== this.generation) return;
 
-    if (result !== 'failed') this.loadedForClusterId = clusterId;
+    this.failures = result === 'failed' || result === 'incomplete' ? this.failures + 1 : 0;
+    const backoff = PluginRegistryService.POLL_MS * 2 ** (this.failures - 1);
 
-    const delay =
-      result === 'idle' ? PluginRegistryService.IDLE_POLL_MS : PluginRegistryService.POLL_MS;
+    let delay: number;
+    switch (result) {
+      case 'idle':
+        delay = PluginRegistryService.IDLE_POLL_MS;
+        break;
+      case 'inProgress':
+        delay = PluginRegistryService.POLL_MS;
+        break;
+      case 'incomplete':
+        delay = Math.min(backoff, PluginRegistryService.IDLE_POLL_MS);
+        break;
+      case 'failed':
+        delay = Math.min(backoff, PluginRegistryService.MAX_BACKOFF_MS);
+        break;
+      default:
+        throw new Error(`unexpected sync result: ${result satisfies never}`);
+    }
     this.pollTimer = setTimeout(() => {
       this.pollTimer = null;
       this.run(clusterId, generation).catch(() => {});
@@ -176,11 +217,12 @@ export default class PluginRegistryService {
   }
 
   /** Reads the cluster's installations and rebuilds the menu from the running
-   *  ones. */
+   *  ones. 'failed' is a list that could not be read, 'incomplete' a list that
+   *  was read with a running plugin whose definition could not be. */
   private async sync(
     clusterId: string,
     generation: number,
-  ): Promise<'idle' | 'inProgress' | 'failed' | 'stale'> {
+  ): Promise<'idle' | 'inProgress' | 'incomplete' | 'failed' | 'stale'> {
     const { kubeApiProxyUrl } = this.configService.getConfig();
 
     let listData: PluginInstallationListResponse;
@@ -212,21 +254,23 @@ export default class PluginRegistryService {
       keys.length === previous.length &&
       keys.every((k, i) => k === previous[i]);
 
+    let complete = true;
     if (!unchanged) {
-      const { definitions, complete } = await this.fetchDefinitions(runningPlugins);
+      const fetched = await this.fetchDefinitions(runningPlugins);
       if (generation !== this.generation) return 'stale';
-      this.plugins.set(definitions);
+      this.plugins.set(fetched.definitions);
       // A definition that failed to load must be fetched again on the next
       // read, so only remember the key set once every fetch went through.
-      this.runningKeys = complete ? keys : null;
-      if (!complete) return 'failed';
+      this.runningKeys = fetched.complete ? keys : null;
+      complete = fetched.complete;
     }
 
     // An installation that has no phase yet is one the controller has not
     // picked up, which is as much on its way as a Pending one.
-    return items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))
-      ? 'inProgress'
-      : 'idle';
+    if (items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))) {
+      return 'inProgress';
+    }
+    return complete ? 'idle' : 'incomplete';
   }
 
   private async fetchDefinitions(
@@ -257,17 +301,29 @@ export default class PluginRegistryService {
       }),
     );
 
-    const definitions = results
-      .filter((r): r is PromiseFulfilledResult<RunningInstallation> => r.status === 'fulfilled')
-      .filter((r) => r.value.def !== undefined)
-      .map((r) =>
-        mapDefinition(r.value.def as ProtoPluginDefinition, {
+    // A definition that fails to load keeps the menu entry it had, so one
+    // flaky fetch does not drop a working plugin from the sidebar.
+    const previous = this.plugins();
+    const definitions = results.flatMap((r, i): PluginDefinition[] => {
+      if (r.status === 'rejected') {
+        const ref = items[i];
+        const kept = previous.find(
+          (p) =>
+            p.installationId === ref.metadata.uid &&
+            p.installationVersion === ref.spec.definitionRef.pluginVersion,
+        );
+        return kept ? [kept] : [];
+      }
+      if (r.value.def === undefined) return [];
+      return [
+        mapDefinition(r.value.def, {
           installationId: r.value.installationId,
           installationName: r.value.installationName,
           installationVersion: r.value.installationVersion,
           organizationName: r.value.organizationName,
         }),
-      );
+      ];
+    });
     return { definitions, complete: results.every((r) => r.status === 'fulfilled') };
   }
 
@@ -314,7 +370,9 @@ export default class PluginRegistryService {
   reset(): void {
     this.stopPolling();
     this.generation += 1;
-    this.loadedForClusterId = null;
+    this.activeClusterId = null;
+    this.firstLoad = null;
+    this.failures = 0;
     this.runningKeys = null;
     this.plugins.set([]);
     this.parsedCrdByPlural.clear();

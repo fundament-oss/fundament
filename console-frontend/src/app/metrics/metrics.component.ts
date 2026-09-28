@@ -15,7 +15,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js';
+import {
+  Chart,
+  ChartConfiguration,
+  ChartDataset,
+  registerables,
+  ScriptableLineSegmentContext,
+} from 'chart.js';
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
@@ -214,12 +220,41 @@ function computeStepSeconds(rangeSeconds: number): number {
   return 3_600;
 }
 
+/** The most missed scrapes in a row a line is drawn across; a longer gap is an
+ *  outage, and a line over it would show values nobody measured. */
+const MAX_BRIDGED_GAP = 1;
+
+/** Whether the line between two samples, by index, crosses an outage. */
+function crossesOutage(from: number, to: number): boolean {
+  return to - from - 1 > MAX_BRIDGED_GAP;
+}
+
+/** Hides a stretch of line, and the fill under it, that crosses an outage. */
+function hideOutage(ctx: ScriptableLineSegmentContext): string | undefined {
+  return crossesOutage(ctx.p0DataIndex, ctx.p1DataIndex) ? 'transparent' : undefined;
+}
+
+/** A dot for each sample with no line to either side, which would otherwise
+ *  not show at all. */
+function pointRadii(data: (number | null)[]): number[] {
+  const measured = data.flatMap((value, index) => (value === null ? [] : [index]));
+  const radii = data.map(() => 0);
+  measured.forEach((index, k) => {
+    const joinsPrevious = k > 0 && !crossesOutage(measured[k - 1], index);
+    const joinsNext = k < measured.length - 1 && !crossesOutage(index, measured[k + 1]);
+    if (!joinsPrevious && !joinsNext) radii[index] = 3;
+  });
+  return radii;
+}
+
 function lineDataset(
   label: string,
   borderColor: string,
   backgroundColor: string,
   data: (number | null)[],
 ): ChartDataset<'line'> {
+  // The series is padded with nulls to span the whole range: bridge a missed
+  // scrape rather than break the line, but leave an outage empty.
   return {
     label,
     data: data.length ? data : [0],
@@ -228,7 +263,9 @@ function lineDataset(
     borderWidth: 1,
     tension: 0.4,
     fill: true,
-    pointRadius: 0,
+    spanGaps: true,
+    segment: { borderColor: hideOutage, backgroundColor: hideOutage },
+    pointRadius: data.length ? pointRadii(data) : 0,
   };
 }
 

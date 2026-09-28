@@ -138,22 +138,21 @@ export default class App {
 
   /**
    * Keeps the storefront header in step with the console session. Asked once
-   * on load, and again whenever the tab comes back into view while signed out:
-   * signing in happens in the console, usually in another tab, and the visitor
+   * on load, and again whenever the tab comes back into view: signing in and
+   * out happen in the console, usually in another tab, and the visitor
    * returning here should not have to reload to see it.
    */
   private watchSession() {
-    const check = () => {
-      this.session
-        .ensureUser()
+    const check = (lookup: Promise<unknown>) => {
+      lookup
         .then((user) => this.sessionState.set(user ? 'signed-in' : 'signed-out'))
         .catch(() => this.sessionState.set('signed-out'));
     };
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && this.sessionState() === 'signed-out') check();
+      if (document.visibilityState === 'visible') check(this.session.recheckUser());
     };
 
-    check();
+    check(this.session.ensureUser());
     document.addEventListener('visibilitychange', onVisible);
     this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
   }

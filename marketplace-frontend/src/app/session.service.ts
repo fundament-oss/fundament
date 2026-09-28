@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { AUTHN_CLIENT } from '../connect/authn';
@@ -62,6 +63,19 @@ export default class SessionService {
 
   private loaded?: Promise<User | null>;
 
+  // Bumped by every lookup, so one that a newer lookup overtook leaves the
+  // answer to that one instead of writing its own older answer over it.
+  private lookups = 0;
+
+  // When authn-api last answered with the user this page holds; 0 when it
+  // holds none, or only kept one because authn did not answer.
+  private userConfirmedAt = 0;
+
+  /** How long a user authn-api just confirmed is taken on trust by
+   *  recheckUser, so switching tabs back and forth does not cost a request
+   *  each time. Short, because a sign-out in another tab takes only seconds. */
+  private static readonly RECHECK_AFTER_MS = 15_000;
+
   /**
    * Whether this build has a session surface at all. The storefront and the
    * demo bundle carry no authn URL — the demo answers the registry from
@@ -79,15 +93,34 @@ export default class SessionService {
    * next caller should see it.
    */
   ensureUser(): Promise<User | null> {
-    if (!this.loaded) {
-      const loading = this.load().then((user) => {
-        // Unless something has replaced it in the meantime.
-        if (!user && this.loaded === loading) this.loaded = undefined;
-        return user;
-      });
-      this.loaded = loading;
+    return this.loaded ?? this.track(this.load(false));
+  }
+
+  /**
+   * Asks authn-api again even when a user was found before: signing out
+   * happens in the console, and a page that kept its cached user would go on
+   * showing a session that no longer exists. Only an answer that the session
+   * is gone ends it: authn not answering keeps the user this page had, so a
+   * network blip while the tab was away does not look like a sign-out. A user
+   * confirmed within RECHECK_AFTER_MS is returned without asking.
+   */
+  recheckUser(): Promise<User | null> {
+    const user = this.user();
+    if (user && Date.now() - this.userConfirmedAt < SessionService.RECHECK_AFTER_MS) {
+      return Promise.resolve(user);
     }
-    return this.loaded;
+    return this.track(this.load(true));
+  }
+
+  private track(lookup: Promise<User | null>): Promise<User | null> {
+    const loading = lookup.then((user) => {
+      // Forget an empty answer so the next caller asks again, unless a newer
+      // lookup has taken its place meanwhile.
+      if (!user && this.loaded === loading) this.loaded = undefined;
+      return user;
+    });
+    this.loaded = loading;
+    return loading;
   }
 
   /**
@@ -164,26 +197,39 @@ export default class SessionService {
     window.location.assign(url);
   }
 
-  private async load(): Promise<User | null> {
+  /**
+   * Asks authn-api for the session. keepOnError keeps the user this page
+   * already had when authn fails for any reason other than saying there is
+   * no session.
+   */
+  private async load(keepOnError: boolean): Promise<User | null> {
     if (!this.hasSessionSurface()) {
       return null;
     }
 
+    this.lookups += 1;
+    const lookup = this.lookups;
+    let user: User | null;
+    let confirmed = false;
     try {
       const response = await firstValueFrom(this.authnClient.getUserInfo({}));
-      const user = response.user ?? null;
-      this.user.set(user);
+      user = response.user ?? null;
+      confirmed = true;
       if (user) {
         // The round trip worked, so a later one may be attempted again.
         writeLoginAttempt(false);
       }
-      return user;
-    } catch {
-      // Not signed in, or authn is unreachable. Either way there is no session
-      // to act on; the guard turns this into a login and everything else
-      // treats it as an anonymous visitor.
-      this.user.set(null);
-      return null;
+    } catch (err) {
+      // Not signed in, or authn is unreachable. On a first lookup either way
+      // there is no session to act on; the guard turns this into a login and
+      // everything else treats it as an anonymous visitor.
+      const signedOut = ConnectError.from(err).code === Code.Unauthenticated;
+      user = keepOnError && !signedOut ? this.user() : null;
     }
+
+    if (lookup !== this.lookups) return this.user();
+    this.userConfirmedAt = confirmed && user ? Date.now() : 0;
+    this.user.set(user);
+    return user;
   }
 }
