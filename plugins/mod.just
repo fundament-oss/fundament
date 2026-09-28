@@ -40,12 +40,12 @@ cluster-stop:
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}
 
-# Delete the local K3D cluster, its registry and the sandbox-catalog relay
+# Delete the local K3D cluster, its registry and the sandbox-catalog relays
 cluster-delete:
     -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
-    @docker rm -f fun-catalog-relay > /dev/null 2>&1 || true
+    @docker rm -f fun-catalog-relay fun-authn-relay > /dev/null 2>&1 || true
 
 # Loop-backed block devices for a storage plugin; run without arguments for usage
 storage-disks *args:
@@ -91,11 +91,12 @@ status:
     kubectl --context {{ kube_context }} get plugininstallations
 
 
-# Local dev only: the two k3d clusters are network-isolated (FUN-19). We expose the
-# catalog as a NodePort in the management cluster and run a small relay container on
-# the management cluster's docker network that publishes a host port; the sandbox
-# controller reaches it via host.k3d.internal (pluginController.catalogApiUrl
-# in plugins/sandbox/values.yaml is http://host.k3d.internal:38080).
+# Local dev only: the two k3d clusters are network-isolated (FUN-19, FUN-22). We
+# expose the catalog and authn-api as NodePorts in the management cluster and run a
+# small relay container per service on the management cluster's docker network
+# that publishes a host port; the sandbox controller reaches them via
+# host.k3d.internal (pluginController.catalogApiUrl and authnApiUrl in
+# plugins/sandbox/values.yaml are http://host.k3d.internal:38080 and :38081).
 #
 # We deliberately do NOT bridge the sandbox k3d nodes onto the management network:
 # multi-homing a node breaks its registry-mirror DNS (plugin-registry.localhost),
@@ -108,6 +109,9 @@ sandbox-catalog:
     HOSTPORT=38080
     NODEPORT=30080
     RELAY=fun-catalog-relay
+    AUTHN_HOSTPORT=38081
+    AUTHN_NODEPORT=30081
+    AUTHN_RELAY=fun-authn-relay
 
     # 0. Clean up what the pre-catalog recipe left behind: the old Service holds
     #    the same fixed nodePort, and the old relay still binds HOSTPORT under a
@@ -119,6 +123,7 @@ sandbox-catalog:
     # 1. Expose marketplace-catalog-api's Connect port as a NodePort in the mgmt cluster.
     #    Path is relative to plugins/ (this Justfile's dir), like the skaffold recipes.
     kubectl --context k3d-fundament apply -f sandbox/marketplace-catalog-api-nodeport.yaml
+    kubectl --context k3d-fundament apply -f sandbox/authn-api-nodeport.yaml
 
     # 2. Resolve a management-cluster node IP on its docker network.
     node_ip=$(docker inspect k3d-fundament-server-0 \
@@ -135,9 +140,15 @@ sandbox-catalog:
     docker run -d --name "$RELAY" --network k3d-fundament --restart unless-stopped \
         -p "0.0.0.0:${HOSTPORT}:8080" \
         alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${NODEPORT}" >/dev/null
+    docker rm -f "$AUTHN_RELAY" >/dev/null 2>&1 || true
+    docker run -d --name "$AUTHN_RELAY" --network k3d-fundament --restart unless-stopped \
+        -p "0.0.0.0:${AUTHN_HOSTPORT}:8080" \
+        alpine/socat "TCP-LISTEN:8080,fork,reuseaddr" "TCP:${node_ip}:${AUTHN_NODEPORT}" >/dev/null
 
     echo "- marketplace-catalog-api reachable from the sandbox at http://host.k3d.internal:${HOSTPORT}"
     echo "  (matches pluginController.catalogApiUrl in plugins/sandbox/values.yaml)"
+    echo "- authn-api reachable from the sandbox at http://host.k3d.internal:${AUTHN_HOSTPORT}"
+    echo "  (matches pluginController.authnApiUrl in plugins/sandbox/values.yaml)"
 
 # Publishes the pushed digest to marketplace-registry-api via `functl plugin publish`
 # (FUN-20). Requires PLUGIN_REGISTRY (e.g. localhost:5112) and a functl session:

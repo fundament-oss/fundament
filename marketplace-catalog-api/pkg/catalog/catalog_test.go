@@ -361,18 +361,19 @@ func TestGetPluginDefinitionReturnsManifestAndHash(t *testing.T) {
 	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
 }
 
-// plugin-controller installs definitions that were never published, so the
-// catalog must serve them.
-func TestGetPluginDefinitionServesUnpublishedVersion(t *testing.T) {
+// The anonymous storefront serves published versions only. Installers that
+// need a draft (their own) read through install.v1 instead (FUN-22); see
+// install_test.go.
+func TestGetPluginDefinitionHidesUnpublishedVersion(t *testing.T) {
 	env := newTestEnv(t)
 	id := seedPlugin(t, env, seedOptions{Name: "definition-draft", Visibility: "public", Published: true})
 	seedVersion(t, env, id, "2.0.0", false)
 
-	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
 		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "2.0.0"}.Build())
-	require.NoError(t, err)
+	require.Error(t, err)
 
-	assert.NotEmpty(t, resp.GetManifest())
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
 // The listing-level cases, one per way a listing stays unreachable: not public,
@@ -421,25 +422,25 @@ func TestGetPluginDefinitionByNameReturnsManifest(t *testing.T) {
 	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
 }
 
-// The controller installs versions that were never published, and in a real
-// environment nothing has been: PutPluginDefinition never sets published. So an
-// organization whose every plugin is a draft still has to be resolvable.
-func TestGetPluginDefinitionByNameServesUnpublishedPlugin(t *testing.T) {
+// By name as by id: a version that was never published is not the
+// storefront's to hand out. The owning organization reads it through
+// install.v1 (FUN-22).
+func TestGetPluginDefinitionByNameHidesUnpublishedPlugin(t *testing.T) {
 	env := newTestEnv(t)
 	seedPlugin(t, env, seedOptions{
 		Name: "by-name-draft", Visibility: "public", Published: false, Manifest: []byte(testManifest),
 	})
 
-	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+	_, err := newServer(t, env).GetPluginDefinition(context.Background(),
 		catalogv1.GetPluginDefinitionRequest_builder{
 			Name: catalogv1.PluginRef_builder{
 				OrganizationName: seededOrganizationName, PluginName: "by-name-draft",
 			}.Build(),
 			Version: "1.0.0",
 		}.Build())
-	require.NoError(t, err)
+	require.Error(t, err)
 
-	assert.Equal(t, testManifest, string(resp.GetManifest()))
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
 func TestGetPluginDefinitionByNameHidesRestrictedPlugin(t *testing.T) {

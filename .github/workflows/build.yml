@@ -577,6 +577,7 @@ jobs:
           ORGANIZATION_API_URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           AUTHN_API_URL="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           PLUGIN_PROXY_URL="https://plugin-proxy.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          E2E_MOCK_SHOOT_VERIFIER=true \
           bun run test
 
       - name: Upload test reports

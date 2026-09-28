@@ -89,3 +89,42 @@ func TestGetUserInfo_RejectsPluginToken(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }
+
+// TestGetUserInfo_RejectsWorkloadToken extends the FUN-17 wall to the third
+// token type: a WorkloadToken (FUN-22) presented to a user endpoint is
+// rejected on the audience pin.
+func TestGetUserInfo_RejectsWorkloadToken(t *testing.T) {
+	secret := []byte("test-secret")
+	server := &AuthnServer{
+		config:    &Config{JWTSecret: secret, TokenExpiry: time.Minute},
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		validator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
+	}
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server)
+	mux := http.NewServeMux()
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	workloadClaims := &auth.WorkloadClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
+			Subject:   uuid.New().String(),
+			Audience:  jwt.ClaimStrings{auth.TokenTypeWorkload},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+		OrganizationID: uuid.New().String(),
+		Workload:       "plugin-controller",
+	}
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, workloadClaims).SignedString(secret)
+	require.NoError(t, err)
+
+	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+tokenStr)
+
+	_, err = client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
+	require.Error(t, err)
+	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}

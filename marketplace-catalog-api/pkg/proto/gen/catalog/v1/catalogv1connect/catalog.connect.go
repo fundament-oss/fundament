@@ -73,9 +73,10 @@ type CatalogServiceClient interface {
 	// Curated plugin sets for the storefront's browse filters.
 	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	// Verbatim manifest for one version, plus the hash an install pins against.
-	// Any version of a PUBLIC listing is reachable, published or not, so
-	// plugin-controller can install what it installs today — it holds no user JWT.
-	// RESTRICTED listings stay hidden, as everywhere else in this service.
+	// Published versions of PUBLIC listings only, as everywhere else in this
+	// service. Installers read through install.v1 as their organization
+	// (FUN-22): plugin-controller with a WorkloadToken, the console with a user
+	// session, which is how RESTRICTED listings and own drafts become reachable.
 	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 
@@ -226,9 +227,10 @@ type CatalogServiceHandler interface {
 	// Curated plugin sets for the storefront's browse filters.
 	ListPresets(context.Context, *v1.ListPresetsRequest) (*v1.ListPresetsResponse, error)
 	// Verbatim manifest for one version, plus the hash an install pins against.
-	// Any version of a PUBLIC listing is reachable, published or not, so
-	// plugin-controller can install what it installs today — it holds no user JWT.
-	// RESTRICTED listings stay hidden, as everywhere else in this service.
+	// Published versions of PUBLIC listings only, as everywhere else in this
+	// service. Installers read through install.v1 as their organization
+	// (FUN-22): plugin-controller with a WorkloadToken, the console with a user
+	// session, which is how RESTRICTED listings and own drafts become reachable.
 	GetPluginDefinition(context.Context, *v1.GetPluginDefinitionRequest) (*v1.GetPluginDefinitionResponse, error)
 }
 

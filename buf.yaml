@@ -13,6 +13,13 @@ deps:
 lint:
   use:
     - STANDARD
+  # install.v1 deliberately reuses catalog.v1's request and response messages:
+  # it is the same read surface under a tenant-aware role (FUN-22), and one
+  # message set keeps the Go handler and the console client shared.
+  ignore_only:
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - marketplace-catalog-api/pkg/proto/install/v1/install.proto
+      - marketplace-catalog-api/pkg/proto/catalog/v1/catalog.proto
 breaking:
   use:
     - FILE

@@ -22,7 +22,7 @@ import InstallPluginModalComponent, {
 } from '../install-plugin-modal/install-plugin-modal';
 import { PluginIconComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
-import { CLUSTER, CATALOG } from '../../connect/tokens';
+import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import {
   PRESENTATION_ENABLED,
   PLUGIN_INSTALLS_RESET_EVENT,
@@ -150,6 +150,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private catalogClient = inject(CATALOG);
 
+  // Listings, details and versions come from install.v1 as the current
+  // organization, so RESTRICTED plugins it may install appear (FUN-22).
+  // Categories, publishers and presets stay on the anonymous storefront.
+  private installClient = inject(INSTALL);
+
   private clusterClient = inject(CLUSTER);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
@@ -265,12 +270,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       // per plugin.
       const [pluginsResponse, categoriesResponse, publishersResponse, presetsResponse] =
         await Promise.all([
-          firstValueFrom(this.catalogClient.listPlugins(create(ListPluginsRequestSchema, {}))),
+          firstValueFrom(this.installClient.listPlugins(create(ListPluginsRequestSchema, {}))),
           firstValueFrom(
             this.catalogClient.listCategories(create(ListCategoriesRequestSchema, {})),
           ),
           firstValueFrom(
-            this.catalogClient.listPublishers(create(ListPublishersRequestSchema, {})),
+            this.installClient.listPublishers(create(ListPublishersRequestSchema, {})),
           ),
           firstValueFrom(this.catalogClient.listPresets(create(ListPresetsRequestSchema, {}))),
         ]);
@@ -296,9 +301,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return {
           id: backendPlugin.id,
           name: backendPlugin.name,
-          // Every listed plugin's publisher has a live listing, so ListPublishers
-          // always has it; falling back to the id rather than '' keeps a miss
-          // traceable instead of installing under a nameless "--<plugin>".
+          // install.v1 ListPublishers covers the owner of every listing its
+          // ListPlugins returns; falling back to the id rather than '' keeps a
+          // miss traceable instead of installing under a nameless "--<plugin>".
           organizationName: publisher?.name ?? backendPlugin.organizationId,
           publisherDisplayName:
             publisher?.displayName || publisher?.name || backendPlugin.organizationId,
@@ -723,7 +728,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
     const resp = await firstValueFrom(
-      this.catalogClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
+      this.installClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
     );
     return resp.versions.map((v) => ({ version: v.version, hash: v.definitionHash }));
   }

@@ -255,6 +255,7 @@ Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
 |-----|---------|
 | `PLUGIN_CONTROLLER_IMAGE` | plugin-controller image, **pullable from shoot nodes** |
 | `PLUGIN_MARKETPLACE_CATALOG_API_URL` | externally routable marketplace-catalog-api base URL |
+| `PLUGIN_AUTHN_API_URL` | externally routable authn-api base URL; the shoot-side controller exchanges its projected ServiceAccount token there (FUN-22) |
 | `PLUGIN_LOG_LEVEL` | shoot-side controller log level |
 | `PLUGIN_ALLOW_UNPINNED_HASH` | skip the definition-hash gate — local dev only |
 

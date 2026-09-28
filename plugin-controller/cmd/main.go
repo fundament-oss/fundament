@@ -19,10 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/controller"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/defclient"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/identity"
 )
 
 func main() {
@@ -35,6 +37,9 @@ func run() error {
 	var cfg config.Config
 	if err := env.Parse(&cfg); err != nil {
 		return fmt.Errorf("parse env: %w", err)
+	}
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
 	}
 
 	slogHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -82,13 +87,17 @@ func run() error {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 
-	// defclient talks to marketplace-catalog-api, which serves the platform's
-	// source-of-truth PluginDefinition manifests under RLS. Its per-request timeout is
-	// enforced by the reconciler (see scopeRPCTimeout); the HTTP client's own
-	// timeout is a broad safety net.
+	// defclient talks to install.v1 on marketplace-catalog-api, which serves the
+	// platform's source-of-truth PluginDefinition manifests under RLS as this
+	// cluster's organization. The credential is the projected ServiceAccount
+	// token on disk, exchanged at authn-api for a WorkloadToken (FUN-22). The
+	// per-request timeout is enforced by the reconciler (see scopeRPCTimeout);
+	// the HTTP client's own timeout is a broad safety net.
 	defHTTP := &http.Client{Timeout: 30 * time.Second}
+	tokenSource := identity.NewFileTokenSource(cfg.TokenFile, cfg.FundamentClusterID,
+		authnv1connect.NewTokenServiceClient(defHTTP, cfg.AuthnAPIURL), logger)
 	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg,
-		controller.WithDefClient(defclient.New(cfg.CatalogAPIURL, defHTTP)),
+		controller.WithDefClient(defclient.New(cfg.CatalogAPIURL, defHTTP, tokenSource)),
 	)
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup controller: %w", err)

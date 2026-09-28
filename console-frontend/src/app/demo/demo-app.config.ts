@@ -6,6 +6,7 @@ import { TitleService } from '../title.service';
 import {
   AUTHN_TRANSPORT,
   MARKETPLACE_TRANSPORT,
+  INSTALL_TRANSPORT,
   ORGANIZATION_TRANSPORT,
 } from '../../connect/connect.module';
 import { PRESENTATION_ENABLED } from '../presentation/presentation.tokens';
@@ -86,6 +87,7 @@ const demoAppConfig: ApplicationConfig = {
     { provide: AUTHN_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: MARKETPLACE_TRANSPORT, useFactory: () => createDemoTransport() },
+    { provide: INSTALL_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: PRESENTATION_ENABLED, useValue: true },
   ],
 };

@@ -54,7 +54,10 @@ import {
   ListPluginVersionsResponseSchema as CatalogListPluginVersionsResponseSchema,
   ListPresetsResponseSchema as CatalogListPresetsResponseSchema,
   PublishedVersionSchema,
+  type GetPluginRequest,
+  type ListPluginVersionsRequest,
 } from '../../generated/catalog/v1/catalog_pb';
+import { InstallService } from '../../generated/install/v1/install_pb';
 import {
   CategorySchema,
   PresetSchema,
@@ -338,7 +341,9 @@ export default function createDemoTransport(): Transport {
       },
     });
 
-    router.service(CatalogService, {
+    // The storefront and install.v1 (FUN-22) share these read handlers: the
+    // demo has one organization, so the installer sees the same listings.
+    const catalogReads = {
       listPlugins: async () => {
         await delay();
         return create(CatalogListPluginsResponseSchema, {
@@ -387,7 +392,7 @@ export default function createDemoTransport(): Transport {
           ],
         });
       },
-      getPlugin: async (req) => {
+      getPlugin: async (req: GetPluginRequest) => {
         await delay();
         const detail = fx.pluginDetail(req.pluginId);
         if (!detail) {
@@ -421,7 +426,7 @@ export default function createDemoTransport(): Transport {
       },
       // The install modal's version picker. Left unanswered it errors, and the modal
       // shows "Couldn't load versions" instead of letting the install slide run.
-      listPluginVersions: async (req) => {
+      listPluginVersions: async (req: ListPluginVersionsRequest) => {
         await delay(80);
         return create(CatalogListPluginVersionsResponseSchema, {
           versions: fx.pluginDefinitionVersions(req.pluginId).map((d) =>
@@ -433,6 +438,13 @@ export default function createDemoTransport(): Transport {
           ),
         });
       },
+    };
+    router.service(CatalogService, catalogReads);
+    router.service(InstallService, {
+      listPlugins: catalogReads.listPlugins,
+      getPlugin: catalogReads.getPlugin,
+      listPluginVersions: catalogReads.listPluginVersions,
+      listPublishers: catalogReads.listPublishers,
     });
 
     // Metrics, so the charts have something to draw. One snapshot per stream:

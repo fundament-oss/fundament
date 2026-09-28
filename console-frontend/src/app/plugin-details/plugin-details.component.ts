@@ -24,7 +24,7 @@ import InstallPluginModalComponent, {
 import { PluginIconComponent } from '../icons';
 import getPluginIconName from '../utils/plugin-icon-name';
 import renderMarkdown from '../markdown';
-import { CLUSTER, CATALOG } from '../../connect/tokens';
+import { CLUSTER, CATALOG, INSTALL } from '../../connect/tokens';
 import {
   GetPluginRequestSchema,
   ListCategoriesRequestSchema,
@@ -122,6 +122,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private catalogClient = inject(CATALOG);
 
+  // Listings, details and versions come from install.v1 as the current
+  // organization, so RESTRICTED plugins it may install appear (FUN-22).
+  // Categories, publishers and presets stay on the anonymous storefront.
+  private installClient = inject(INSTALL);
+
   private clusterClient = inject(CLUSTER);
 
   private notificationService = inject(NotificationService);
@@ -172,13 +177,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       const [pluginResponse, categoriesResponse, publishersResponse, clustersResponse] =
         await Promise.all([
           firstValueFrom(
-            this.catalogClient.getPlugin(create(GetPluginRequestSchema, { pluginId: id })),
+            this.installClient.getPlugin(create(GetPluginRequestSchema, { pluginId: id })),
           ),
           firstValueFrom(
             this.catalogClient.listCategories(create(ListCategoriesRequestSchema, {})),
           ),
           firstValueFrom(
-            this.catalogClient.listPublishers(create(ListPublishersRequestSchema, {})),
+            this.installClient.listPublishers(create(ListPublishersRequestSchema, {})),
           ),
           firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
         ]);
@@ -270,7 +275,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
     const resp = await firstValueFrom(
-      this.catalogClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
+      this.installClient.listPluginVersions(create(ListPluginVersionsRequestSchema, { pluginId })),
     );
     return resp.versions.map((v) => ({ version: v.version, hash: v.definitionHash }));
   }

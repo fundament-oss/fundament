@@ -41,6 +41,10 @@ spec:
               value: {{ $.Values.images.pluginController }}
             - name: PLUGIN_MARKETPLACE_CATALOG_API_URL
               value: {{ required "externalUrls.marketplaceCatalogApi must be set when pluginController.provisionShoots is set" $.Values.externalUrls.marketplaceCatalogApi }}
+            # Where the shoot-side controller exchanges its projected ServiceAccount
+            # token for a WorkloadToken (FUN-22).
+            - name: PLUGIN_AUTHN_API_URL
+              value: {{ required "externalUrls.authn must be set when pluginController.provisionShoots is set" $.Values.externalUrls.authn }}
             - name: PLUGIN_LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             # Always rendered, so the manifest states the shoot fleet's

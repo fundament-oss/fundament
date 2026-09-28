@@ -1,0 +1,67 @@
+meta {
+  name: Exchange Workload Token
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{authnUrl}}/authn.v1.TokenService/ExchangeWorkloadToken
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{workloadCredential}}
+}
+
+body:json {
+  {
+    "clusterId": "{{clusterId}}"
+  }
+}
+
+script:post-response {
+  if (res.headers['content-type']?.includes('application/json') && res.body.accessToken) {
+    bru.setVar("workloadToken", res.body.accessToken);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Exchange Workload Token (FUN-22)
+
+  Exchanges a shoot workload's projected ServiceAccount token (audience
+  `fundament-authn-api`) for a short-lived WorkloadToken (`aud=fundament-workload`)
+  bound to the named cluster. authn-api verifies the credential against that
+  cluster's API server (TokenReview) and only for the allow-listed
+  plugin-controller ServiceAccount.
+
+  ## Variables
+
+  - `workloadCredential`: the projected token, e.g. from a plugin-controller pod:
+    `kubectl -n fundament-system exec deploy/plugin-controller -- cat /var/run/secrets/fundament/token`
+  - `clusterId`: the fundament cluster UUID the pod runs on (`FUNDAMENT_CLUSTER_ID`)
+
+  Every failure before signing is `unauthenticated`; the reason is in authn-api's log.
+
+  ## Response
+
+  ```json
+  {
+    "accessToken": "<JWT>",
+    "tokenType": "Bearer",
+    "expiresIn": 900
+  }
+  ```
+
+  `expiresIn` is at most 900 and never beyond the credential's own expiry. The
+  token is stored as `workloadToken`.
+}
