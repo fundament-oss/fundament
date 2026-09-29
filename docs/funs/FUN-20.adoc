@@ -165,8 +165,8 @@ Only the parts that are decisions rather than mechanics.
 |`functl plugin publish` (done; it replaced `plugins/cmd/plugin-publish`)
 
 |`GetPluginDefinition`
-|`registry.v1`, as an unauthenticated procedure
-|`plugin-controller/pkg/defclient`
+|`install.v1`, authenticated with a WorkloadToken (link:/funs/fun-22[FUN-22]; this row originally said `registry.v1`, as an unauthenticated procedure)
+|`plugin-controller/pkg/defclient` (done)
 
 |`ListPlugins`, `GetPluginDetail`, `ListPluginDefinitions`
 |`registry.v1`
@@ -175,9 +175,9 @@ Only the parts that are decisions rather than mechanics.
 
 Two wrinkles are worth naming before those MRs rather than discovering inside them.
 
-`GetPluginDefinition` is anonymous and cross-cluster: `plugin-controller` calls it on every reconcile, from the plugin cluster (link:/funs/fun-19[FUN-19]). Landing it on `registry.v1` gives the developer-authenticated deployable one endpoint that takes no credential, which cuts against the split axis in <<Three APIs>>. It cannot go to `catalog.v1` instead, because the controller must resolve definitions for restricted listings too. However it lands, it must stay reachable from the plugin cluster and must not gain a status gate — hiding an approved definition from the controller breaks reconciliation.
+`GetPluginDefinition` is cross-cluster: `plugin-controller` calls it on every reconcile, from the plugin cluster (link:/funs/fun-19[FUN-19]). It was anonymous when this FUN was written; link:/funs/fun-22[FUN-22] settled where it lands: `install.v1`, a fourth surface served from the catalog binary under its own tenant-aware role, authenticated with the WorkloadToken the controller obtains for its cluster. It could not go to `registry.v1`, which would have given the developer-authenticated deployable one endpoint that takes no credential, cutting against the split axis in <<Three APIs>>; nor to `catalog.v1`, because the controller must resolve definitions for restricted listings too. It stays reachable from the plugin cluster and has no status gate — hiding an approved definition from the controller breaks reconciliation; the only versions it hides are other organizations' unpublished ones.
 
-The console reads are the authenticated in-product catalog (link:/funs/fun-11[FUN-11]), which `catalog.v1` cannot serve because it is anonymous and public-only. Moving them to `registry.v1` widens that service past "plugins the caller's organization owns" — the console browses plugins it may *install*, not ones it publishes. That is a contract change, or a fourth surface, and should be settled before the MR.
+The console reads are the authenticated in-product catalog (link:/funs/fun-11[FUN-11]), which `catalog.v1` cannot serve because it is anonymous and public-only. Moving them to `registry.v1` would widen that service past "plugins the caller's organization owns" — the console browses plugins it may *install*, not ones it publishes. That fourth surface is `install.v1` (link:/funs/fun-22[FUN-22]), which also takes a UserToken plus `Fun-Organization`; the console's plugin list and detail pages read from it.
 
 == Deferred
 

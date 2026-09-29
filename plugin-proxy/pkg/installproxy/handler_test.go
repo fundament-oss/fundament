@@ -142,3 +142,29 @@ func TestParseRoute(t *testing.T) {
 		})
 	}
 }
+
+// TestRuntimeProxy_RejectsWorkloadToken pins the FUN-22 wall for the plugin
+// runtime proxy: a WorkloadToken bound to the same cluster is not a
+// PluginToken and is refused before any installation lookup.
+func TestRuntimeProxy_RejectsWorkloadToken(t *testing.T) {
+	secret := []byte("s")
+	c := &auth.WorkloadClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   uuid.New().String(),
+			Issuer:    auth.ConsoleIssuer,
+			Audience:  jwt.ClaimStrings{auth.TokenTypeWorkload},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+		OrganizationID: uuid.New().String(),
+		Workload:       "plugin-controller",
+	}
+	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(secret)
+	require.NoError(t, err)
+
+	h := New(secret, allowAuthz{}, stubBackend(), discardLogger())
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}

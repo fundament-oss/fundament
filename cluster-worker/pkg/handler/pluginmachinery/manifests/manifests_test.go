@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fundament-oss/fundament/common/auth"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -62,6 +64,7 @@ func TestDeploymentEnv(t *testing.T) {
 		ClusterID:      "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
 		OrganizationID: "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
 		CatalogAPIURL:  "https://api.fundament.example.com",
+		AuthnAPIURL:    "https://authn.fundament.example.com",
 	})
 
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
@@ -82,6 +85,7 @@ func TestDeploymentEnv(t *testing.T) {
 		"FUNDAMENT_INSTALL_ID":        "0f2be2a1-59b3-4a4b-96a5-77567d67ed49",
 		"FUNDAMENT_ORGANIZATION_ID":   "b25e3543-38fa-4f9a-92eb-a53b45b0a19d",
 		"MARKETPLACE_CATALOG_API_URL": "https://api.fundament.example.com",
+		"FUNDAMENT_AUTHN_API_URL":     "https://authn.fundament.example.com",
 	}, env)
 }
 
@@ -92,6 +96,7 @@ func TestDeploymentOptionalEnv(t *testing.T) {
 		ClusterID:         "c",
 		OrganizationID:    "o",
 		CatalogAPIURL:     "u",
+		AuthnAPIURL:       "a",
 		AllowUnpinnedHash: true,
 		LogLevel:          "debug",
 	})
@@ -106,7 +111,7 @@ func TestDeploymentOptionalEnv(t *testing.T) {
 
 func TestDeploymentShape(t *testing.T) {
 	t.Parallel()
-	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u"})
+	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u", AuthnAPIURL: "a"})
 
 	assert.Equal(t, DeploymentName, d.Name)
 	assert.Equal(t, Namespace, d.Namespace)
@@ -126,7 +131,7 @@ func TestDeploymentShape(t *testing.T) {
 
 func TestDeploymentParamsValidate(t *testing.T) {
 	t.Parallel()
-	valid := DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u"}
+	valid := DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u", AuthnAPIURL: "a"}
 	require.NoError(t, valid.Validate())
 
 	cases := []struct {
@@ -137,6 +142,7 @@ func TestDeploymentParamsValidate(t *testing.T) {
 		{"missing cluster id", func(p *DeploymentParams) { p.ClusterID = "" }},
 		{"missing organization id", func(p *DeploymentParams) { p.OrganizationID = "" }},
 		{"missing catalog URL", func(p *DeploymentParams) { p.CatalogAPIURL = "" }},
+		{"missing authn URL", func(p *DeploymentParams) { p.AuthnAPIURL = "" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -177,4 +183,31 @@ func TestLabels(t *testing.T) {
 	l := Labels()
 	assert.Equal(t, "cluster-worker", l[LabelManagedBy])
 	assert.Equal(t, "plugin-controller", l["app.kubernetes.io/component"])
+}
+
+// The projected token is the controller's only fundament credential (FUN-22):
+// audience-bound to authn-api, 3600 seconds (never 3607, see
+// TokenExpirationSeconds), mounted where plugin-controller reads it by default.
+func TestDeploymentProjectedToken(t *testing.T) {
+	t.Parallel()
+	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u", AuthnAPIURL: "a"})
+
+	require.Len(t, d.Spec.Template.Spec.Volumes, 1)
+	vol := d.Spec.Template.Spec.Volumes[0]
+	assert.Equal(t, TokenVolumeName, vol.Name)
+	require.NotNil(t, vol.Projected)
+	require.Len(t, vol.Projected.Sources, 1)
+	sat := vol.Projected.Sources[0].ServiceAccountToken
+	require.NotNil(t, sat)
+	assert.Equal(t, auth.WorkloadCredentialAudience, sat.Audience)
+	require.NotNil(t, sat.ExpirationSeconds)
+	assert.Equal(t, int64(3600), *sat.ExpirationSeconds)
+	assert.Equal(t, TokenFileName, sat.Path)
+
+	c := d.Spec.Template.Spec.Containers[0]
+	require.Len(t, c.VolumeMounts, 1)
+	assert.Equal(t, TokenVolumeName, c.VolumeMounts[0].Name)
+	assert.Equal(t, "/var/run/secrets/fundament", c.VolumeMounts[0].MountPath)
+	assert.True(t, c.VolumeMounts[0].ReadOnly)
+	assert.Nil(t, d.Spec.Template.Spec.AutomountServiceAccountToken, "controller-runtime still needs the kube token")
 }

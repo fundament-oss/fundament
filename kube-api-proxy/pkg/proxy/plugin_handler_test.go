@@ -305,3 +305,47 @@ type errPluginSA struct{}
 func (errPluginSA) Resolve(_ context.Context, _, _, _ string) (pluginsa.Token, error) {
 	return pluginsa.Token{}, errors.New("boom")
 }
+
+func mintWorkloadToken(t *testing.T, secret []byte, clusterID string) string {
+	t.Helper()
+	c := &auth.WorkloadClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   clusterID,
+			Issuer:    auth.ConsoleIssuer,
+			Audience:  jwt.ClaimStrings{auth.TokenTypeWorkload},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+		OrganizationID: uuid.New().String(),
+		Workload:       "plugin-controller",
+	}
+	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(secret)
+	require.NoError(t, err)
+	return s
+}
+
+// TestWorkloadTokenRejectedOnBothPaths pins the FUN-22 wall for
+// kube-api-proxy: a WorkloadToken whose sub is the very cluster in the path
+// is refused by the plugin gateway (not a PluginToken) and by the user path
+// (not a UserToken), so a workload can never reach a shoot API through the
+// proxy with the identity fundament minted for it.
+func TestWorkloadTokenRejectedOnBothPaths(t *testing.T) {
+	secret := []byte("s")
+	clusterID := uuid.New()
+	tok := mintWorkloadToken(t, secret, clusterID.String())
+
+	g := newPluginGateway(t, secret, true, true)
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/v1/pods", http.NoBody)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	w := httptest.NewRecorder()
+	g.serve(w, r, clusterID.String())
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "plugin gateway accepted a WorkloadToken")
+
+	s := &Server{
+		logger:        discardLogger(),
+		authValidator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
+	}
+	assert.Equal(t, auth.TokenTypeUser, peekTokenType(r), "a non-plugin audience is routed to the user path")
+	w = httptest.NewRecorder()
+	s.handleUserClusterProxy(w, r, clusterID)
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "user path accepted a WorkloadToken")
+}

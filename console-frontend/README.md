@@ -9,6 +9,18 @@ Credentials:
 - Un: `admin@example.com`
 - Pw: `password`
 
+Signing in never creates an organization, and `admin@example.com` is seeded
+into none: it lands on the "not in an organization yet" screen. Use it to see
+that state, or assign it one from the repo root:
+
+```bash
+just funops organization member add acme-corp admin@example.com --permission admin
+```
+
+The seeded persona accounts (`alice@acme-corp.com` and the others in
+`charts/fundament/values-local.yaml`, all with password `password`) are already
+in their organizations.
+
 ## Linting and formatting
 
 To lint or format the code, use:

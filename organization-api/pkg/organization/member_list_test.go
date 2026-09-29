@@ -70,3 +70,68 @@ func Test_Member_List(t *testing.T) {
 
 	require.Len(t, listRes.GetMembers(), 3)
 }
+
+// A user who belongs to two organizations must only appear once in each
+// organization's member list. The memberships table lets a user select their
+// own rows across organizations (the invitation flow needs that), so the list
+// query has to pin the organization itself.
+func Test_Member_List_UserInTwoOrganizations(t *testing.T) {
+	t.Parallel()
+
+	orgAID := uuid.New()
+	orgBID := uuid.New()
+	callerUserID := uuid.New()
+	orgAOnlyUserID := uuid.New()
+	orgBOnlyUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgAID, "org-a"),
+		WithOrganization(orgBID, "org-b"),
+		WithUser(&UserArgs{
+			ID:     callerUserID,
+			Name:   "caller-user",
+			OrgIDs: []uuid.UUID{orgAID, orgBID},
+		}),
+		WithUser(&UserArgs{
+			ID:     orgAOnlyUserID,
+			Name:   "org-a-user",
+			OrgIDs: []uuid.UUID{orgAID},
+		}),
+		WithUser(&UserArgs{
+			ID:     orgBOnlyUserID,
+			Name:   "org-b-user",
+			OrgIDs: []uuid.UUID{orgBID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, callerUserID)
+
+	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
+
+	listMembers := func(t *testing.T, orgID uuid.UUID) []*organizationv1.Member {
+		t.Helper()
+
+		ctx, callInfo := connect.NewClientContext(context.Background())
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+		res, err := client.ListMembers(ctx, &organizationv1.ListMembersRequest{})
+		require.NoError(t, err)
+
+		return res.GetMembers()
+	}
+
+	userIDs := func(members []*organizationv1.Member) []string {
+		ids := make([]string, 0, len(members))
+		for _, m := range members {
+			ids = append(ids, m.GetUserId())
+		}
+		return ids
+	}
+
+	membersA := listMembers(t, orgAID)
+	assert.ElementsMatch(t, []string{callerUserID.String(), orgAOnlyUserID.String()}, userIDs(membersA))
+
+	membersB := listMembers(t, orgBID)
+	assert.ElementsMatch(t, []string{callerUserID.String(), orgBOnlyUserID.String()}, userIDs(membersB))
+}

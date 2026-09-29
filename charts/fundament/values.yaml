@@ -84,6 +84,23 @@ authnApi:
   enabled: true
   replicas: 1
   logLevel: info
+  # Shoot workload token verification (FUN-22): "auto" picks TokenReview via
+  # Gardener (clusterWorker.gardenerKubeconfigSecret), else the plugin sandbox
+  # kubeconfig below, else denies every exchange; "mock" accepts HMAC mock
+  # tokens for the seeded cluster (tests and PR environments only).
+  shootVerifierMode: auto
+  # mockShootSecret: the HMAC key the mock verifier accepts. Empty keeps the
+  # binary's default, which is public: authn-api refuses to start with it in
+  # mock mode unless mockShootSecretAllowDefault is set. The cucumber suite
+  # reads MOCK_SHOOT_SECRET to match.
+  mockShootSecret: ""
+  # mockShootSecretAllowDefault: accept the public default secret in mock mode.
+  # Only where the seeded test accounts are public too (previews): a forged
+  # token then reads exactly what those logins already can.
+  mockShootSecretAllowDefault: false
+  # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets the local
+  # plugin sandbox cluster (same Secret plugin-proxy and kube-api-proxy use).
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
@@ -285,6 +302,21 @@ pluginController:
   # to the catalog; a controller in another cluster needs an externally reachable
   # URL (FUN-19) — see plugins/sandbox/values.yaml.
   catalogApiUrl: ""
+  # authnApiUrl: base URL the plugin-controller exchanges its projected
+  # ServiceAccount token at (FUN-22). Defaults to the in-cluster
+  # http://authn-api:8080; a controller in another cluster needs an externally
+  # reachable URL — see plugins/sandbox/values.yaml.
+  authnApiUrl: ""
+  # clusterId: the tenant.clusters id this controller acts as. authn-api
+  # verifies the projected token against that cluster and takes the
+  # organization from its row, so it must be a real id: plugins/sandbox/
+  # values.yaml sets the seeded acme-corp cluster. Required whenever the
+  # controller is enabled: the chart refuses to render without it.
+  clusterId: ""
+  # organizationId: the organization that owns clusterId (tenant.clusters.
+  # organization_id). Required together with clusterId; the sandbox verifier
+  # reports it, and the exchange refuses a mismatch.
+  organizationId: ""
   # Provision plugin machinery (PluginInstallation CRD + images.pluginController)
   # onto every ready shoot via cluster-worker, with
   # externalUrls.marketplaceCatalogApi as the catalog URL. images.pluginController

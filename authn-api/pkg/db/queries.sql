@@ -61,3 +61,10 @@ FROM authn.api_key_get_by_hash($1);
 -- name: APIKeyUpdateLastUsed :exec
 -- Uses SECURITY DEFINER function to bypass RLS
 SELECT authn.api_key_update_last_used($1);
+
+-- name: ClusterGetByID :one
+-- The organization a shoot workload belongs to comes from this row, never
+-- from the shoot (FUN-22). Deleted clusters refuse the exchange.
+SELECT id, organization_id
+FROM tenant.clusters
+WHERE id = $1 AND deleted IS NULL;

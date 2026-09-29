@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 
 	"github.com/fundament-oss/fundament/authn-api/pkg/authnhttp"
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/authn-api/pkg/shootverify"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/psqldb"
@@ -41,6 +43,9 @@ type Config struct {
 	CookieDomain string
 	CookieSecure bool
 	FrontendURL  string
+	// WorkloadSubjects extends DefaultWorkloadSubjects with deployment-specific
+	// ServiceAccounts (the plugin sandbox's controller in local dev).
+	WorkloadSubjects map[string]string
 	// AllowedReturnOrigins are the origins a login's `return_to` may name.
 	// New normalizes them once; read the result off the server rather than
 	// this field. See return_to.go for why the list is the CORS origins.
@@ -66,6 +71,11 @@ type AuthnServer struct {
 	cookieBuilder       *auth.CookieBuilder
 	authz               authzEvaluator
 	pluginInstallations PluginInstallationLookup
+	shootVerifier       shootverify.Verifier
+	clusters            clusterLookup
+	// workloadSubjects maps a verified Kubernetes username to the workload name
+	// it is allow-listed under (FUN-22).
+	workloadSubjects map[string]string
 	// allowedReturnOrigins is Config.AllowedReturnOrigins normalized once, at
 	// startup, so a configured origin that cannot be parsed is reported then
 	// rather than silently never matching. See return_to.go.
@@ -73,14 +83,15 @@ type AuthnServer struct {
 }
 
 // New creates a new AuthnServer.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup) (*AuthnServer, error) {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup, shootVerifier shootverify.Verifier) (*AuthnServer, error) {
+	queries := db.New(database.Pool)
 	return &AuthnServer{
 		config:              cfg,
 		logger:              logger,
 		oauth2Config:        oauth2Config,
 		oidcVerifier:        verifier,
 		db:                  database,
-		queries:             db.New(database.Pool),
+		queries:             queries,
 		sessionStore:        sessionStore,
 		validator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
 		cookieBuilder:       auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
@@ -88,6 +99,9 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		pluginInstallations: pluginInstallations,
 
 		allowedReturnOrigins: auth.NewReturnOrigins(logger, cfg.AllowedReturnOrigins),
+		shootVerifier:        shootVerifier,
+		clusters:             queries,
+		workloadSubjects:     workloadSubjects(cfg.WorkloadSubjects),
 	}, nil
 }
 
@@ -196,4 +210,11 @@ func (s *AuthnServer) authenticateWithPassword(ctx context.Context, email, passw
 		return nil, fmt.Errorf("password authentication failed: %w", err)
 	}
 	return token, nil
+}
+
+// workloadSubjects merges the deployment-specific allow-list over the default.
+func workloadSubjects(extra map[string]string) map[string]string {
+	subjects := DefaultWorkloadSubjects()
+	maps.Copy(subjects, extra)
+	return subjects
 }

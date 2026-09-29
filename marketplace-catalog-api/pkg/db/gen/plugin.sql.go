@@ -107,8 +107,11 @@ type PluginDefinitionGetByNameRow struct {
 // The same lookup as PluginDefinitionGetPublished, keyed the way a
 // PluginInstallation names a plugin: plugin names are unique per publisher, so
 // tenant.organizations is part of the key rather than a decoration. Every table
-// here is RLS-gated for the catalog role, which is what keeps a RESTRICTED or
-// soft-deleted listing unreachable by name as well as by id.
+// here is RLS-gated for the connecting role, which is what keeps a RESTRICTED or
+// soft-deleted listing unreachable by name as well as by id. install.v1 runs
+// this same query as the install role, whose definitions policy admits the
+// caller's own unpublished versions; the storefront role's does not, and
+// published is not repeated here so the two can share the query.
 func (q *Queries) PluginDefinitionGetByName(ctx context.Context, arg PluginDefinitionGetByNameParams) (PluginDefinitionGetByNameRow, error) {
 	row := q.db.QueryRow(ctx, pluginDefinitionGetByName, arg.OrganizationName, arg.PluginName, arg.Version)
 	var i PluginDefinitionGetByNameRow
@@ -134,13 +137,14 @@ type PluginDefinitionGetPublishedRow struct {
 	Hash     string
 }
 
-// Deliberately does not filter published: plugin-controller installs definitions
-// that were never published, and plugin_definitions' policy no longer hides them.
+// Which versions are reachable is the connecting role's definitions policy:
+// published only for the storefront role; published, or the caller's own
+// unpublished, for the install role behind install.v1 (FUN-22). The query does
+// not repeat either so both surfaces can share it.
 // Joined through appstore.plugins for the same reason as
 // PluginLatestPublishedDefinition: plugin_definitions' policy cannot reach the
 // plugin's visibility or deleted without recursing, so the join is what keeps a
-// RESTRICTED or taken-down listing from handing out its manifest. published and
-// deleted are left to the policies.
+// RESTRICTED or taken-down listing from handing out its manifest.
 func (q *Queries) PluginDefinitionGetPublished(ctx context.Context, arg PluginDefinitionGetPublishedParams) (PluginDefinitionGetPublishedRow, error) {
 	row := q.db.QueryRow(ctx, pluginDefinitionGetPublished, arg.PluginID, arg.Version)
 	var i PluginDefinitionGetPublishedRow
@@ -261,9 +265,8 @@ SELECT
 FROM appstore.plugins
 WHERE appstore.plugins.id = $1::uuid
   AND EXISTS (
-    -- The storefront shows a listing only once it has a published version.
-    -- plugins_select_catalog no longer checks this: the catalog role reads
-    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    -- The storefront shows a listing only once it has a published version;
+    -- plugins_select_catalog checks visibility and deletion, not this.
     SELECT 1
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -461,9 +464,8 @@ WHERE
     )
   )
   AND EXISTS (
-    -- The storefront shows a listing only once it has a published version.
-    -- plugins_select_catalog no longer checks this: the catalog role reads
-    -- unpublished rows so GetPluginDefinition can serve plugin-controller.
+    -- The storefront shows a listing only once it has a published version;
+    -- plugins_select_catalog checks visibility and deletion, not this.
     SELECT 1
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
@@ -624,9 +626,8 @@ type PluginVersionListByPluginIDRow struct {
 	ReleaseNotes  string
 }
 
-// published IS NOT NULL is explicit because plugin_definitions' policy no longer
-// filters it: the catalog role reads drafts so GetPluginDefinition can serve
-// plugin-controller. The storefront must still only show published history.
+// published IS NOT NULL is explicit even though plugin_definitions' policy also
+// filters it: the storefront must only ever show published history.
 // Joined through appstore.plugins so the plugin's own RLS policy gates the rows:
 // a restricted or soft-deleted listing must not keep leaking its version history
 // to anyone who already knows the id. The check cannot live in

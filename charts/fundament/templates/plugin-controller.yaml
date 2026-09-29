@@ -152,17 +152,23 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            # The cluster this controller acts as (FUN-22): authn-api verifies the
+            # projected token against it and looks up its organization, so both
+            # must be real tenant ids (plugins/sandbox/values.yaml: the seeded
+            # acme-corp cluster). Rendering fails without them.
             - name: FUNDAMENT_CLUSTER_ID
-              value: {{ $.Release.Name }}
+              value: {{ required "pluginController.clusterId must be the tenant.clusters id this controller acts as" $.Values.pluginController.clusterId | quote }}
             - name: FUNDAMENT_INSTALL_ID
               value: {{ $.Release.Name }}
             - name: FUNDAMENT_ORGANIZATION_ID
-              value: {{ $.Release.Name }}
+              value: {{ required "pluginController.organizationId must be the organization that owns pluginController.clusterId" $.Values.pluginController.organizationId | quote }}
             {{- if $.Values.pluginController.organizationApiUrl }}
             {{- fail "pluginController.organizationApiUrl was renamed to pluginController.catalogApiUrl: the controller now fetches definitions from marketplace-catalog-api" }}
             {{- end }}
             - name: MARKETPLACE_CATALOG_API_URL
               value: {{ $.Values.pluginController.catalogApiUrl | default "http://marketplace-catalog-api:8080" }}
+            - name: FUNDAMENT_AUTHN_API_URL
+              value: {{ $.Values.pluginController.authnApiUrl | default "http://authn-api:8080" }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             {{- if $.Values.pluginController.allowUnpinnedHash }}
@@ -175,4 +181,20 @@ spec:
             {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
+          volumeMounts:
+            - name: fundament-token
+              mountPath: /var/run/secrets/fundament
+              readOnly: true
+      # The controller's fundament credential (FUN-22). KEEP IN SYNC with
+      # Deployment() in cluster-worker/pkg/handler/pluginmachinery/manifests:
+      # audience fundament-authn-api, 3600 seconds (never 3607: kube-apiserver's
+      # extend-token-expiration turns exactly 3607 into a year-long token).
+      volumes:
+        - name: fundament-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: fundament-authn-api
+                  expirationSeconds: 3600
+                  path: token
 {{- end }}

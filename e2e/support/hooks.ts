@@ -66,6 +66,17 @@ After(async function (this: ICustomWorld, { result }) {
   await this.context?.close();
 });
 
+// @mock-verifier scenarios mint HMAC stand-ins for projected tokens, which only
+// an authn-api in SHOOT_VERIFIER_MODE=mock accepts (PR previews). Against any
+// other deployment they would fail for the wrong reason, so they skip unless
+// the environment says it runs the mock verifier.
+Before({ tags: '@mock-verifier' }, function () {
+  if (process.env.E2E_MOCK_SHOOT_VERIFIER !== 'true') {
+    return 'skipped';
+  }
+  return undefined;
+});
+
 // API testing hooks for @api tagged scenarios
 Before({ tags: '@api' }, async function (this: ICustomWorld) {
   this.organizationApiUrl =

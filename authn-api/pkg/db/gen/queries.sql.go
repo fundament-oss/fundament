@@ -68,6 +68,30 @@ func (q *Queries) APIKeyUpdateLastUsed(ctx context.Context, arg APIKeyUpdateLast
 	return err
 }
 
+const clusterGetByID = `-- name: ClusterGetByID :one
+SELECT id, organization_id
+FROM tenant.clusters
+WHERE id = $1 AND deleted IS NULL
+`
+
+type ClusterGetByIDParams struct {
+	ID uuid.UUID
+}
+
+type ClusterGetByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+}
+
+// The organization a shoot workload belongs to comes from this row, never
+// from the shoot (FUN-22). Deleted clusters refuse the exchange.
+func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (ClusterGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
+	var i ClusterGetByIDRow
+	err := row.Scan(&i.ID, &i.OrganizationID)
+	return i, err
+}
+
 const userCreate = `-- name: UserCreate :one
 INSERT INTO tenant.users (name, external_ref, email)
 VALUES ($1, $2, $3)

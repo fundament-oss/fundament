@@ -13,7 +13,8 @@ SELECT
 FROM tenant.users
 INNER JOIN tenant.organizations_users
     ON organizations_users.user_id = users.id
-WHERE organizations_users.deleted IS NULL
+WHERE organizations_users.organization_id = authn.current_organization_id()
+    AND organizations_users.deleted IS NULL
     AND users.deleted IS NULL
 ORDER BY organizations_users.created DESC;
 
@@ -32,6 +33,7 @@ FROM tenant.users
 INNER JOIN tenant.organizations_users
     ON organizations_users.user_id = users.id
 WHERE organizations_users.id = @id
+    AND organizations_users.organization_id = authn.current_organization_id()
     AND organizations_users.deleted IS NULL
     AND users.deleted IS NULL;
 
@@ -50,6 +52,7 @@ FROM tenant.users
 INNER JOIN tenant.organizations_users
     ON organizations_users.user_id = users.id
 WHERE organizations_users.user_id = @user_id
+    AND organizations_users.organization_id = authn.current_organization_id()
     AND organizations_users.deleted IS NULL
     AND users.deleted IS NULL;
 

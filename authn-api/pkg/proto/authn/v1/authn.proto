@@ -25,6 +25,12 @@ service TokenService {
   // UserToken. The minted token carries aud=fundament-plugin and is rejected
   // by every API except kube-api-proxy and plugin-proxy.
   rpc MintPluginToken(MintPluginTokenRequest) returns (MintPluginTokenResponse);
+  // ExchangeWorkloadToken turns a shoot workload's projected ServiceAccount
+  // token (Authorization: Bearer, audience fundament-authn-api) into a
+  // short-lived WorkloadToken (aud=fundament-workload) for the named cluster.
+  // authn-api verifies the token against that cluster's API server; every
+  // failure before signing is Unauthenticated (FUN-22).
+  rpc ExchangeWorkloadToken(ExchangeWorkloadTokenRequest) returns (ExchangeWorkloadTokenResponse);
 }
 
 message GetUserInfoRequest {}
@@ -78,5 +84,23 @@ message MintPluginTokenResponse {
   // Token type (always "Bearer")
   string token_type = 20;
   // Seconds until token expires (15 minutes; mint again to refresh)
+  int64 expires_in = 30;
+}
+
+// ExchangeWorkloadToken request - names the cluster the workload runs on. The
+// projected ServiceAccount token is taken from the Authorization header.
+message ExchangeWorkloadTokenRequest {
+  // The fundament cluster UUID (FUNDAMENT_CLUSTER_ID on the workload).
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// ExchangeWorkloadToken response
+message ExchangeWorkloadTokenResponse {
+  // JWT access token (aud=fundament-workload) for the installer surface.
+  string access_token = 10;
+  // Token type (always "Bearer")
+  string token_type = 20;
+  // Seconds until token expires (at most 15 minutes, never past the
+  // presented ServiceAccount token's expiry; exchange again to refresh)
   int64 expires_in = 30;
 }

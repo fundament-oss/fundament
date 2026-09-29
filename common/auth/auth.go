@@ -27,14 +27,24 @@ const (
 )
 
 // TokenType is the value carried in the JWT `aud` claim. It distinguishes
-// user tokens from plugin tokens so that services can refuse the wrong kind
+// user, plugin and workload tokens so that services can refuse the wrong kind
 // at validation time.
 type TokenType = string
 
 const (
 	TokenTypeUser   TokenType = "fundament-user"
 	TokenTypePlugin TokenType = "fundament-plugin"
+	// TokenTypeWorkload marks a WorkloadToken: a workload on one cluster (FUN-22).
+	// Parsed only by ParseWorkloadToken, never by Validator.
+	TokenTypeWorkload TokenType = "fundament-workload" //nolint:gosec // audience label, not a credential
 )
+
+// WorkloadCredentialAudience is the audience a shoot workload's projected
+// ServiceAccount token must carry to be exchangeable for a WorkloadToken
+// (FUN-22). It names authn-api as the intended recipient, so the token is
+// useless against the shoot's own API server and an ordinary kube token is
+// not exchangeable.
+const WorkloadCredentialAudience = "fundament-authn-api" //nolint:gosec // audience label, not a credential
 
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {

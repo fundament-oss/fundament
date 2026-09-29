@@ -30,6 +30,13 @@ db:
 authnApi:
   enabled: true
   replicas: 1
+  # No shoots in a preview; the cucumber suite exchanges HMAC mock tokens for
+  # the seeded cluster (e2e/features/exchange-workload-token.feature, FUN-22).
+  # The default mock secret is public, and so are the seeded logins a preview
+  # advertises: a forged mock token reads exactly what alice@acme-corp.com
+  # already can. Set authnApi.mockShootSecret where that is not true.
+  shootVerifierMode: mock
+  mockShootSecretAllowDefault: true
 
 kubeApiProxy:
   enabled: true

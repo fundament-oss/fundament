@@ -641,9 +641,10 @@ export const CatalogService: GenService<{
   },
   /**
    * Verbatim manifest for one version, plus the hash an install pins against.
-   * Any version of a PUBLIC listing is reachable, published or not, so
-   * plugin-controller can install what it installs today — it holds no user JWT.
-   * RESTRICTED listings stay hidden, as everywhere else in this service.
+   * Published versions of PUBLIC listings only, as everywhere else in this
+   * service. Installers read through install.v1 as their organization
+   * (FUN-22): plugin-controller with a WorkloadToken, the console with a user
+   * session, which is how RESTRICTED listings and own drafts become reachable.
    *
    * @generated from rpc catalog.v1.CatalogService.GetPluginDefinition
    */
