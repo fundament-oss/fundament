@@ -12,6 +12,44 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const organizationCountLiveClusters = `-- name: OrganizationCountLiveClusters :one
+SELECT count(*)
+FROM tenant.clusters
+WHERE organization_id = $1
+  AND deleted IS NULL
+`
+
+type OrganizationCountLiveClustersParams struct {
+	OrganizationID uuid.UUID
+}
+
+// Projects and namespaces live under clusters, so a live cluster is what still
+// depends on the organization.
+func (q *Queries) OrganizationCountLiveClusters(ctx context.Context, arg OrganizationCountLiveClustersParams) (int64, error) {
+	row := q.db.QueryRow(ctx, organizationCountLiveClusters, arg.OrganizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const organizationCountLivePlugins = `-- name: OrganizationCountLivePlugins :one
+SELECT count(*)
+FROM appstore.plugins
+WHERE organization_id = $1
+  AND deleted IS NULL
+`
+
+type OrganizationCountLivePluginsParams struct {
+	OrganizationID uuid.UUID
+}
+
+func (q *Queries) OrganizationCountLivePlugins(ctx context.Context, arg OrganizationCountLivePluginsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, organizationCountLivePlugins, arg.OrganizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const organizationCreate = `-- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name, alias)
 VALUES ($1, $2)
@@ -47,16 +85,20 @@ func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreate
 }
 
 const organizationDelete = `-- name: OrganizationDelete :execrows
-DELETE FROM tenant.organizations
-WHERE name = $1
+UPDATE tenant.organizations
+SET deleted = now()
+WHERE id = $1
+  AND deleted IS NULL
 `
 
 type OrganizationDeleteParams struct {
-	Name string
+	ID uuid.UUID
 }
 
+// Soft-deletes the organization; the name is free for a new one afterwards
+// (organizations_uq_name includes deleted).
 func (q *Queries) OrganizationDelete(ctx context.Context, arg OrganizationDeleteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, organizationDelete, arg.Name)
+	result, err := q.db.Exec(ctx, organizationDelete, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -81,6 +123,28 @@ func (q *Queries) OrganizationGetIDByName(ctx context.Context, arg OrganizationG
 	return id, err
 }
 
+const organizationGetIDByNameForUpdate = `-- name: OrganizationGetIDByNameForUpdate :one
+SELECT id
+FROM tenant.organizations
+WHERE name = $1
+  AND deleted IS NULL
+FOR UPDATE
+`
+
+type OrganizationGetIDByNameForUpdateParams struct {
+	Name string
+}
+
+// Locks the live organization for the rest of the transaction, so a cluster
+// cannot be created in it (the foreign key check needs a share lock on this
+// row) while it is being deleted.
+func (q *Queries) OrganizationGetIDByNameForUpdate(ctx context.Context, arg OrganizationGetIDByNameForUpdateParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, organizationGetIDByNameForUpdate, arg.Name)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const organizationList = `-- name: OrganizationList :many
 SELECT
   id,
@@ -88,6 +152,7 @@ SELECT
   alias,
   created
 FROM tenant.organizations
+WHERE deleted IS NULL
 ORDER BY created DESC
 `
 

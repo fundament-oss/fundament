@@ -153,7 +153,7 @@ func (c *Client) Namespaces() organizationv1connect.NamespaceServiceClient {
 	return organizationv1connect.NewNamespaceServiceClient(
 		c.httpClient,
 		c.apiEndpoint,
-		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor()),
+		connect.WithInterceptors(c.idempotencyInterceptor(), c.authInterceptor(), c.orgInterceptor()),
 	)
 }
 

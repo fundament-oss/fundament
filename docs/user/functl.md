@@ -8,13 +8,15 @@ sidebar:
 the console does (organizations, projects, namespaces, clusters, members and
 API keys) from a terminal or a CI pipeline.
 
-The [functl README](https://github.com/fundament-oss/fundament/blob/master/functl/README.md)
-is the canonical reference for flags and options; this page is the short version.
+`functl <command> --help` is the reference for every command's arguments and
+flags; this page covers setup and the things `--help` does not tell you. The
+[functl README](https://github.com/fundament-oss/fundament/blob/master/functl/README.md)
+has the full option list of `functl plugin create`.
 
 ## Install
 
-Prebuilt binaries for Linux (amd64, arm64) and macOS (Apple Silicon) are
-published to the rolling `functl-latest` release:
+Prebuilt binaries for Linux (amd64, arm64), macOS (Apple Silicon) and Windows
+(amd64) are published to the rolling `functl-latest` release:
 
 ```bash
 # Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
@@ -23,8 +25,32 @@ curl -fsSL https://github.com/fundament-oss/fundament/releases/download/functl-l
 sudo mv functl /usr/local/bin/
 ```
 
+On Windows, download the `.zip` instead:
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/fundament-oss/fundament/releases/download/functl-latest/functl_windows_amd64.zip -OutFile functl.zip
+Expand-Archive functl.zip -DestinationPath .
+```
+
 Checksums are published alongside the archives as `SHA256SUMS`. Verify the
 install with `functl version`.
+
+## Point functl at the sandbox
+
+Without a config file, `functl` talks to the `fundament-poc.nl` installation.
+An API key only works on the installation it was created on, so to use a key
+from the [sandbox console](https://console.fundament.projects.digilab.network/api-keys),
+create `~/.config/fundament/config.yaml` first:
+
+```yaml
+api_endpoint: https://organization.fundament.projects.digilab.network
+authn_url: https://authn.fundament.projects.digilab.network
+registry_url: https://marketplace-registry-api.fundament.projects.digilab.network
+```
+
+Without it, `functl auth login` sends the key to `fundament-poc.nl`, which
+rejects it. See
+[Configuration](#configuration) for the other settings.
 
 ## Authenticate
 
@@ -43,13 +69,17 @@ which is what you want in CI.
 
 ## Select an organization
 
-Most commands work within one organization:
+Most commands work within one organization. Select it by its ID, which
+`functl org list` shows:
 
 ```bash
 functl org list
-functl org set <ORG>     # remembered for subsequent commands
+functl org set <ORG_ID>   # remembered for subsequent commands
 functl org unset
 ```
+
+To use another organization for a single command, pass `--org=<ORG_ID>`
+instead, for example in CI.
 
 ## Commands
 
@@ -62,10 +92,22 @@ functl org unset
 | `functl cluster` | `list`, `get`, `kubeconfig`, `token` |
 | `functl apikey` | `list`, `create`, `revoke`, `delete` |
 | `functl config` | `dir`, `path` |
-| `functl plugin` | `create` |
+| `functl plugin` | `create`, `publish` |
 | `functl version` | none |
 
-Run `functl <group> --help` for the flags of any individual command.
+Things to know before you run them:
+
+- Commands take IDs, not names: organization, cluster, project, namespace, API
+  key and user IDs. The `list` commands show them.
+- Projects belong to a cluster: `functl project list <CLUSTER_ID>` and
+  `functl project create <CLUSTER_ID> <NAME>`.
+- `functl namespace list` needs `--cluster=<CLUSTER_ID>` or
+  `--project=<PROJECT_ID>`.
+- Member commands identify the member with `--user-id=<USER_ID>`, from
+  `functl org member list` or `functl project member list <PROJECT_ID>`.
+  Project members also take `--role`, organization members `--permission`.
+- `org member remove` and `project member remove` ask for confirmation; pass
+  `--yes` to skip it in scripts.
 
 ### Plugin development
 
@@ -83,6 +125,16 @@ each one with a flag (`--template=minimal|helm`, `--console=none|vanilla|vite`,
 `--module`, `--crd`, `--kind`, ...) for unattended use. See
 [Writing a plugin](../developer/plugins/writing-a-plugin.md).
 
+`functl plugin publish <definition.yaml> --image=<IMAGE>` pushes a plugin
+version to the marketplace registry, for the active organization:
+
+- It needs the registry's address in `registry_url` or `FUNCTL_REGISTRY_URL`,
+  and refuses to run without it.
+- `--image` must be a digest reference (`registry/repo@sha256:...`); a tag such
+  as `:1.0` is refused.
+- `--create` reserves the listing first if it does not exist yet, and
+  `--submit` opens a review round for the pushed version.
+
 ### Cluster credentials
 
 `functl cluster kubeconfig` writes a kubeconfig for a cluster, the usual way to
@@ -94,15 +146,19 @@ to keep working. See [Cluster access](./clusters.md#cluster-access).
 
 ## Configuration
 
-`functl` works without a config file; the built-in defaults point at the
-deployed environment. Create `~/.config/fundament/config.yaml` only to target a
-different installation:
+`functl` works without a config file, and then uses the `fundament-poc.nl`
+installation (`https://organization-api.fundament-poc.nl` and
+`https://authn.fundament-poc.nl`). Create `~/.config/fundament/config.yaml` to
+target another installation, such as [the sandbox](#point-functl-at-the-sandbox):
 
 ```yaml
 api_endpoint: https://organization-api.my-own-fundament.example
 authn_url: https://authn.my-own-fundament.example
+registry_url: https://marketplace-registry-api.my-own-fundament.example
 output: table
 ```
+
+`registry_url` is only needed for `functl plugin publish`; there is no default.
 
 Environment variables override the config file:
 
@@ -111,8 +167,17 @@ Environment variables override the config file:
 | `FUNDAMENT_API_KEY` | API key, takes precedence over the credentials file |
 | `FUNCTL_API_ENDPOINT` | Organization API endpoint |
 | `FUNCTL_AUTHN_URL` | Authentication API endpoint |
+| `FUNCTL_REGISTRY_URL` | Marketplace registry API endpoint, for `plugin publish` |
 | `FUNCTL_CONFIG_DIR` | Configuration directory (must be absolute) |
 | `FUNCTL_DEBUG` | Enable debug logging (same as `--debug`) |
+
+These flags work on every command:
+
+| Flag | Description |
+| --- | --- |
+| `--org=<ORG_ID>` | Use this organization instead of the one from `functl org set` |
+| `-o`, `--output` | `table` (default) or `json` |
+| `-d`, `--debug` | Enable debug logging |
 
 Use `functl config dir` and `functl config path` to see what actually resolved.
 
@@ -121,8 +186,25 @@ Use `functl config dir` and `functl config path` to see what actually resolved.
 The default is a human-readable table. For scripting, ask for JSON:
 
 ```bash
-functl project list -o json
+functl project list <CLUSTER_ID> -o json
 ```
+
+```json
+[
+  {
+    "id": "019424a8-1234-7000-8000-000000000001",
+    "cluster_id": "019424a8-0000-7000-8000-000000000001",
+    "name": "my-project",
+    "alias": "My project",
+    "created": "2026-01-15T10:30:00Z",
+    "namespace_count": 2,
+    "member_count": 1
+  }
+]
+```
+
+Field names follow the API, in snake_case, and every field is present even when
+it is empty.
 
 ## See also
 

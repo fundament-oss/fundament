@@ -58,3 +58,13 @@ SET deleted = now(), status = 'revoked'
 WHERE user_id = @user_id
   AND status IN ('pending', 'accepted')
   AND deleted IS NULL;
+
+-- name: MembershipRevokeAllForOrganization :execrows
+-- Revokes every live membership and invitation in an organization, for when
+-- the organization itself is deleted. The update trigger puts each row on the
+-- authz outbox, so the members' tuples are removed from OpenFGA.
+UPDATE tenant.organizations_users
+SET deleted = now(), status = 'revoked'
+WHERE organization_id = @organization_id
+  AND status IN ('pending', 'accepted')
+  AND deleted IS NULL;

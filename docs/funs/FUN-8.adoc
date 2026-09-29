@@ -78,7 +78,7 @@ Signing in never creates an organization (FUN-4). Getting a user into one is an 
 
 Adding someone who holds an unanswered invitation accepts it on their behalf, in the same statement that would otherwise insert the membership; the invitation keeps the permission it was sent with unless `--permission` is given, and a new membership defaults to viewer. An invitation is not membership: `funops user list` shows it separately, and `--without-organization` still lists the invited person as waiting.
 
-Users are addressed by ID or by email, never by name: names are what the identity provider reports and are not unique. `funops organization member remove` revokes a membership or a pending invitation the way the organization-api does, and the authz outbox takes the change to OpenFGA. `funops user delete` soft-deletes a registration nobody has signed in with, together with its memberships; an account somebody has signed in to is refused.
+Users are addressed by ID or by email, never by name: names are what the identity provider reports and are not unique. `funops organization member remove` revokes a membership or a pending invitation the way the organization-api does, and the authz outbox takes the change to OpenFGA. `funops user delete` soft-deletes a registration nobody has signed in with, together with its memberships; an account somebody has signed in to is refused. `funops organization delete` soft-deletes an organization and revokes its memberships and API keys in the same transaction; it is refused while the organization has live clusters or publishes plugins.
 
 === Non-Interactive Design
 

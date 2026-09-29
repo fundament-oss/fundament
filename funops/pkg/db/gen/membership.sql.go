@@ -150,6 +150,29 @@ func (q *Queries) MembershipList(ctx context.Context, arg MembershipListParams) 
 	return items, nil
 }
 
+const membershipRevokeAllForOrganization = `-- name: MembershipRevokeAllForOrganization :execrows
+UPDATE tenant.organizations_users
+SET deleted = now(), status = 'revoked'
+WHERE organization_id = $1
+  AND status IN ('pending', 'accepted')
+  AND deleted IS NULL
+`
+
+type MembershipRevokeAllForOrganizationParams struct {
+	OrganizationID uuid.UUID
+}
+
+// Revokes every live membership and invitation in an organization, for when
+// the organization itself is deleted. The update trigger puts each row on the
+// authz outbox, so the members' tuples are removed from OpenFGA.
+func (q *Queries) MembershipRevokeAllForOrganization(ctx context.Context, arg MembershipRevokeAllForOrganizationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, membershipRevokeAllForOrganization, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const membershipRevokeAllForUser = `-- name: MembershipRevokeAllForUser :execrows
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
