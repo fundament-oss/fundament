@@ -96,13 +96,34 @@ func TestOrganizationDelete_RefusesOrganizationWithClusters(t *testing.T) {
 	ctx := newTestContext(t)
 
 	err := (&OrganizationDeleteCmd{Name: "acme-corp"}).Run(ctx)
-	require.EqualError(t, err, "organization 'acme-corp' still has 1 cluster(s); delete them first")
+	require.EqualError(t, err, "organization 'acme-corp' still has 1 cluster(s); delete them first and wait until they are torn down")
 
 	live, _ := organizationRows(t, ctx, "acme-corp")
 	assert.Equal(t, 1, live)
 	members, err := ctx.Queries.MembershipList(t.Context(), membershipListParamsFor(t, ctx, "acme-corp"))
 	require.NoError(t, err)
 	assert.Len(t, members, 3, "nothing is revoked when the delete is refused")
+}
+
+func TestOrganizationDelete_WaitsForClusterTeardown(t *testing.T) {
+	ctx := newTestContext(t)
+
+	// Globex has no clusters. Give it one that is deleted but whose shoot
+	// Gardener has not confirmed gone yet.
+	var clusterID string
+	err := ctx.DB.Pool.QueryRow(t.Context(), `
+		INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted, shoot_status)
+		VALUES ('019b4000-0000-7000-8000-000000000002', 'tearing-down', 'local', '1.31', now(), 'deleting')
+		RETURNING id`).Scan(&clusterID)
+	require.NoError(t, err)
+
+	err = (&OrganizationDeleteCmd{Name: "globex"}).Run(ctx)
+	require.EqualError(t, err, "organization 'globex' still has 1 cluster(s); delete them first and wait until they are torn down")
+
+	_, err = ctx.DB.Pool.Exec(t.Context(), `UPDATE tenant.clusters SET shoot_status = 'deleted' WHERE id = $1`, clusterID)
+	require.NoError(t, err)
+
+	require.NoError(t, (&OrganizationDeleteCmd{Name: "globex"}).Run(ctx))
 }
 
 func TestOrganizationDelete_RefusesOrganizationWithPlugins(t *testing.T) {

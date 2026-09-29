@@ -40,7 +40,9 @@ install with `functl version`.
 Without a config file, `functl` talks to the `fundament-poc.nl` installation.
 An API key only works on the installation it was created on, so to use a key
 from the [sandbox console](https://console.fundament.projects.digilab.network/api-keys),
-create `~/.config/fundament/config.yaml` first:
+create `config.yaml` in the [config directory](#configuration) first
+(`~/.config/fundament/config.yaml`, or `%APPDATA%\fundament\config.yaml` on
+Windows):
 
 ```yaml
 api_endpoint: https://organization.fundament.projects.digilab.network
@@ -63,7 +65,7 @@ functl auth status           # show who you are
 functl auth logout           # remove stored credentials
 ```
 
-The key is stored in `~/.config/fundament/credentials`. Setting
+The key is stored in `credentials` in the config directory. Setting
 `FUNDAMENT_API_KEY` in the environment takes precedence over the stored key,
 which is what you want in CI.
 
@@ -103,7 +105,8 @@ Things to know before you run them:
   `functl project create <CLUSTER_ID> <NAME>`.
 - `functl namespace list` needs `--cluster=<CLUSTER_ID>` or
   `--project=<PROJECT_ID>`.
-- Member commands identify the member with `--user-id=<USER_ID>`, from
+- `functl org member invite` takes the new member's `--email`. The other member
+  commands identify the member with `--user-id=<USER_ID>`, from
   `functl org member list` or `functl project member list <PROJECT_ID>`.
   Project members also take `--role`, organization members `--permission`.
 - `org member remove` and `project member remove` ask for confirmation; pass
@@ -148,8 +151,8 @@ to keep working. See [Cluster access](./clusters.md#cluster-access).
 
 `functl` works without a config file, and then uses the `fundament-poc.nl`
 installation (`https://organization-api.fundament-poc.nl` and
-`https://authn.fundament-poc.nl`). Create `~/.config/fundament/config.yaml` to
-target another installation, such as [the sandbox](#point-functl-at-the-sandbox):
+`https://authn.fundament-poc.nl`). Create `config.yaml` in the config directory
+to target another installation, such as [the sandbox](#point-functl-at-the-sandbox):
 
 ```yaml
 api_endpoint: https://organization-api.my-own-fundament.example
@@ -178,6 +181,13 @@ These flags work on every command:
 | `--org=<ORG_ID>` | Use this organization instead of the one from `functl org set` |
 | `-o`, `--output` | `table` (default) or `json` |
 | `-d`, `--debug` | Enable debug logging |
+
+The config directory is the first of these that applies:
+
+1. `$FUNCTL_CONFIG_DIR`
+2. `$XDG_CONFIG_HOME/fundament`
+3. `%APPDATA%\fundament` on Windows
+4. `~/.config/fundament`
 
 Use `functl config dir` and `functl config path` to see what actually resolved.
 

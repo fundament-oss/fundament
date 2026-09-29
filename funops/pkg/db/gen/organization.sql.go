@@ -16,7 +16,7 @@ const organizationCountLiveClusters = `-- name: OrganizationCountLiveClusters :o
 SELECT count(*)
 FROM tenant.clusters
 WHERE organization_id = $1
-  AND deleted IS NULL
+  AND (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
 `
 
 type OrganizationCountLiveClustersParams struct {
@@ -24,7 +24,10 @@ type OrganizationCountLiveClustersParams struct {
 }
 
 // Projects and namespaces live under clusters, so a live cluster is what still
-// depends on the organization.
+// depends on the organization. A deleted cluster counts until Gardener confirms
+// its shoot is gone (shoot_status = 'deleted'), as in ClusterCreate: the
+// organization name is free again once it is deleted, and the Gardener project
+// is named after it.
 func (q *Queries) OrganizationCountLiveClusters(ctx context.Context, arg OrganizationCountLiveClustersParams) (int64, error) {
 	row := q.db.QueryRow(ctx, organizationCountLiveClusters, arg.OrganizationID)
 	var count int64
@@ -135,9 +138,11 @@ type OrganizationGetIDByNameForUpdateParams struct {
 	Name string
 }
 
-// Locks the live organization for the rest of the transaction, so a cluster
-// cannot be created in it (the foreign key check needs a share lock on this
-// row) while it is being deleted.
+// Locks the live organization for the rest of the transaction. A cluster
+// insert still in flight holds a key share lock on this row for its foreign
+// key, so this waits for it to commit and the counts below then see it. It
+// does not stop an insert that starts after the lock: that one waits and then
+// succeeds, because the soft-deleted row still satisfies the foreign key.
 func (q *Queries) OrganizationGetIDByNameForUpdate(ctx context.Context, arg OrganizationGetIDByNameForUpdateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, organizationGetIDByNameForUpdate, arg.Name)
 	var id uuid.UUID

@@ -98,7 +98,7 @@ func (c *OrganizationDeleteCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to count clusters: %w", err)
 	}
 	if clusters > 0 {
-		return fmt.Errorf("organization '%s' still has %d cluster(s); delete them first", c.Name, clusters)
+		return fmt.Errorf("organization '%s' still has %d cluster(s); delete them first and wait until they are torn down", c.Name, clusters)
 	}
 
 	plugins, err := qtx.OrganizationCountLivePlugins(bgCtx, db.OrganizationCountLivePluginsParams{OrganizationID: orgID})

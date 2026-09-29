@@ -89,6 +89,7 @@ invitation, and the user loses access through OpenFGA.
 
 `funops organization delete` removes an organization, and revokes its
 memberships and API keys with it. It refuses while the organization still has
-clusters or publishes plugins; delete those first. Nothing is thrown away: the
+clusters or publishes plugins; delete those first. A deleted cluster still
+counts until Gardener confirms its shoot is gone. Nothing is thrown away: the
 organization is marked deleted, disappears from `funops organization list`,
 and its name can be used again.
