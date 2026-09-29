@@ -116,16 +116,28 @@ function installationKey(item: PluginInstallationItem): string {
 export default class PluginRegistryService {
   private plugins = signal<PluginDefinition[]>([]);
 
-  // The cluster the poll loop runs for, and its first sync; a second
+  // The cluster the poll loop runs for, and its latest sync; a second
   // loadPlugins for the same cluster waits on that instead of starting over.
   private activeClusterId: string | null = null;
 
-  private firstLoad: Promise<void> | null = null;
+  private latestLoad: Promise<void> | null = null;
 
-  // Reads that failed in a row, to back off from a failure that is not
-  // clearing (no RBAC to list installations, no plugins CRD on the cluster, a
-  // running plugin whose definition is gone from the catalog).
+  // Whether the latest sync left something unread: the list, or a running
+  // plugin's definition. A loadPlugins then retries at once rather than hand
+  // back that result: it comes from a user opening a screen that needs it.
+  private lastSyncFailed = false;
+
+  // List reads that failed in a row, to back off from a failure that is not
+  // clearing (no RBAC to list installations, no plugins CRD on the cluster).
   private failures = 0;
+
+  // Definition fetches that failed in a row, and when to try them again. Kept
+  // apart from the list reads, which go on at the fast pace while an install
+  // is on its way: a running plugin whose definition is gone from the catalog
+  // must not be refetched on every one of those.
+  private definitionFailures = 0;
+
+  private definitionRetryAt: number | null = null;
 
   // Bumped by every load and reset, so a read that a cluster switch overtook
   // can tell its result is stale and drop it.
@@ -157,22 +169,37 @@ export default class PluginRegistryService {
   private pluginClient = inject(PLUGIN);
 
   loadPlugins(clusterId: string): Promise<void> {
-    if (clusterId === this.activeClusterId && this.firstLoad) return this.firstLoad;
+    if (clusterId === this.activeClusterId && this.latestLoad) {
+      // A retry already waiting on the backoff timer runs now instead; one
+      // that is under way is what the caller waits on.
+      if (this.lastSyncFailed && this.pollTimer) {
+        this.stopPolling();
+        if (this.definitionRetryAt !== null) this.definitionRetryAt = 0;
+        this.startRun(clusterId, this.generation);
+      }
+      return this.latestLoad;
+    }
 
     this.stopPolling();
     this.generation += 1;
     this.runningKeys = null;
     this.failures = 0;
+    this.definitionFailures = 0;
+    this.definitionRetryAt = null;
+    this.lastSyncFailed = false;
     this.activeClusterId = clusterId;
-    const { generation } = this;
-    const firstLoad = this.run(clusterId, generation).catch((err: unknown) => {
+    return this.startRun(clusterId, this.generation);
+  }
+
+  private startRun(clusterId: string, generation: number): Promise<void> {
+    const load = this.run(clusterId, generation).catch((err: unknown) => {
       // A load that threw scheduled no next read, so let the next call for
       // this cluster start over rather than hand back the same failure.
-      if (generation === this.generation) this.firstLoad = null;
+      if (generation === this.generation && this.latestLoad === load) this.latestLoad = null;
       throw err;
     });
-    this.firstLoad = firstLoad;
-    return firstLoad;
+    this.latestLoad = load;
+    return load;
   }
 
   /**
@@ -183,15 +210,16 @@ export default class PluginRegistryService {
    * sidebar the moment it runs, without a reload. Otherwise it keeps reading
    * at a slower pace to notice installs started later. A read that keeps
    * failing is retried with exponential backoff. So is a definition that keeps
-   * failing to load, but never slower than the idle pace: the list itself
-   * still works, and an install started meanwhile should still show up.
+   * failing to load, on a clock of its own and never slower than the idle
+   * pace: the list itself still works, and an install started meanwhile
+   * should still show up.
    */
   private async run(clusterId: string, generation: number): Promise<void> {
     const result = await this.sync(clusterId, generation);
     if (result === 'stale' || generation !== this.generation) return;
 
-    this.failures = result === 'failed' || result === 'incomplete' ? this.failures + 1 : 0;
-    const backoff = PluginRegistryService.POLL_MS * 2 ** (this.failures - 1);
+    this.failures = result === 'failed' ? this.failures + 1 : 0;
+    this.lastSyncFailed = result === 'failed' || this.definitionRetryAt !== null;
 
     let delay: number;
     switch (result) {
@@ -202,23 +230,27 @@ export default class PluginRegistryService {
         delay = PluginRegistryService.POLL_MS;
         break;
       case 'incomplete':
-        delay = Math.min(backoff, PluginRegistryService.IDLE_POLL_MS);
+        delay = Math.max(0, (this.definitionRetryAt ?? 0) - Date.now());
         break;
       case 'failed':
-        delay = Math.min(backoff, PluginRegistryService.MAX_BACKOFF_MS);
+        delay = Math.min(
+          PluginRegistryService.POLL_MS * 2 ** (this.failures - 1),
+          PluginRegistryService.MAX_BACKOFF_MS,
+        );
         break;
       default:
         throw new Error(`unexpected sync result: ${result satisfies never}`);
     }
     this.pollTimer = setTimeout(() => {
       this.pollTimer = null;
-      this.run(clusterId, generation).catch(() => {});
+      this.startRun(clusterId, generation).catch(() => {});
     }, delay);
   }
 
   /** Reads the cluster's installations and rebuilds the menu from the running
    *  ones. 'failed' is a list that could not be read, 'incomplete' a list that
-   *  was read with a running plugin whose definition could not be. */
+   *  was read with a running plugin whose definition could not be, and whose
+   *  retry is what to wait for next. */
   private async sync(
     clusterId: string,
     generation: number,
@@ -246,23 +278,33 @@ export default class PluginRegistryService {
     );
     const keys = runningPlugins.map(installationKey);
 
-    // Nothing started or stopped since the last read: keep the menu as it is
-    // rather than fetching every definition again and redrawing the sidebar.
+    // Nothing started or stopped since the last read, and no failed
+    // definition is due another try: keep the menu as it is rather than
+    // fetching every definition again and redrawing the sidebar.
     const previous = this.runningKeys;
     const unchanged =
       previous !== null &&
       keys.length === previous.length &&
       keys.every((k, i) => k === previous[i]);
+    const retryDue = this.definitionRetryAt !== null && Date.now() >= this.definitionRetryAt;
 
-    let complete = true;
-    if (!unchanged) {
+    if (!unchanged || retryDue) {
       const fetched = await this.fetchDefinitions(runningPlugins);
       if (generation !== this.generation) return 'stale';
       this.plugins.set(fetched.definitions);
-      // A definition that failed to load must be fetched again on the next
-      // read, so only remember the key set once every fetch went through.
-      this.runningKeys = fetched.complete ? keys : null;
-      complete = fetched.complete;
+      this.runningKeys = keys;
+      if (fetched.complete) {
+        this.definitionFailures = 0;
+        this.definitionRetryAt = null;
+      } else {
+        this.definitionFailures += 1;
+        this.definitionRetryAt =
+          Date.now() +
+          Math.min(
+            PluginRegistryService.POLL_MS * 2 ** (this.definitionFailures - 1),
+            PluginRegistryService.IDLE_POLL_MS,
+          );
+      }
     }
 
     // An installation that has no phase yet is one the controller has not
@@ -270,7 +312,7 @@ export default class PluginRegistryService {
     if (items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))) {
       return 'inProgress';
     }
-    return complete ? 'idle' : 'incomplete';
+    return this.definitionRetryAt === null ? 'idle' : 'incomplete';
   }
 
   private async fetchDefinitions(
@@ -371,8 +413,11 @@ export default class PluginRegistryService {
     this.stopPolling();
     this.generation += 1;
     this.activeClusterId = null;
-    this.firstLoad = null;
+    this.latestLoad = null;
+    this.lastSyncFailed = false;
     this.failures = 0;
+    this.definitionFailures = 0;
+    this.definitionRetryAt = null;
     this.runningKeys = null;
     this.plugins.set([]);
     this.parsedCrdByPlural.clear();

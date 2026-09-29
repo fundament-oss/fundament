@@ -56,6 +56,16 @@
         supporting-text="Browse the marketplace to find plugins for your clusters."
       ></nldd-inline-dialog>
     } @else {
+      <!-- Some clusters could be read and others not: the list shows what was
+           read, so say that plugins on the rest may be missing from it. -->
+      @if (installsReadFailed()) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-inline-dialog
+          variant="alert"
+          text="Some clusters couldn't be read"
+          supporting-text="Plugins installed on those clusters may be missing here. Reload the page to try again."
+        ></nldd-inline-dialog>
+      }
       <nldd-spacer size="16"></nldd-spacer>
       <!-- The filters were a sidebar of two lists; as menus they stay out of the
            way until you need them, and the button label reports the active
@@ -302,7 +312,8 @@
             variant="secondary"
             width="full"
           ></nldd-button>
-        } @else {
+        } @else if (!plugin.unlisted) {
+          <!-- An unlisted plugin has no listing left to show in full. -->
           <nldd-button
             [attr.href]="pageNav.path('/plugins/' + plugin.id)"
             (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"

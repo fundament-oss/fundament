@@ -247,6 +247,15 @@ function pointRadii(data: (number | null)[]): number[] {
   return radii;
 }
 
+/** A series as a line dataset draws it. The dots are per index, so a live tick
+ *  that slides the series has to place them afresh along with the data. */
+function lineSeries(data: (number | null)[]): Pick<ChartDataset<'line'>, 'data' | 'pointRadius'> {
+  return {
+    data: data.length ? data : [0],
+    pointRadius: data.length ? pointRadii(data) : 0,
+  };
+}
+
 function lineDataset(
   label: string,
   borderColor: string,
@@ -257,7 +266,7 @@ function lineDataset(
   // scrape rather than break the line, but leave an outage empty.
   return {
     label,
-    data: data.length ? data : [0],
+    ...lineSeries(data),
     borderColor,
     backgroundColor,
     borderWidth: 1,
@@ -265,13 +274,22 @@ function lineDataset(
     fill: true,
     spanGaps: true,
     segment: { borderColor: hideOutage, backgroundColor: hideOutage },
-    pointRadius: data.length ? pointRadii(data) : 0,
   };
 }
 
+/** The first and last moment of a custom range's days, both in local time: a
+ *  date-only string on its own would parse as UTC midnight. */
+function startOfDay(date: string): Date {
+  return new Date(`${date}T00:00:00`);
+}
+
+function endOfDay(date: string): Date {
+  return new Date(`${date}T23:59:59`);
+}
+
 function formatRange(start: string, end: string): string {
-  const from = new Date(`${start}T00:00:00`);
-  const to = new Date(`${end}T00:00:00`);
+  const from = startOfDay(start);
+  const to = startOfDay(end);
   const sameYear = from.getFullYear() === to.getFullYear();
   const short: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const long: Intl.DateTimeFormatOptions = { ...short, year: 'numeric' };
@@ -926,8 +944,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
             })
           : create(StreamProjectWorkloadMetricsRequestSchema, {
               projectId: pid,
-              start: timestampFromDate(new Date(this.dateFrom)),
-              end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+              start: timestampFromDate(startOfDay(this.dateFrom)),
+              end: timestampFromDate(endOfDay(this.dateTo)),
               stepSeconds: computeStepSeconds(this.customRangeSeconds()),
             });
       return this.metricsClient.streamProjectWorkloadMetrics(req);
@@ -944,8 +962,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
             })
           : create(StreamClusterWorkloadMetricsRequestSchema, {
               clusterId,
-              start: timestampFromDate(new Date(this.dateFrom)),
-              end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+              start: timestampFromDate(startOfDay(this.dateFrom)),
+              end: timestampFromDate(endOfDay(this.dateTo)),
               stepSeconds: computeStepSeconds(this.customRangeSeconds()),
             });
       return this.metricsClient.streamClusterWorkloadMetrics(req);
@@ -958,16 +976,16 @@ export default class MetricsComponent implements OnInit, OnDestroy {
             stepSeconds: computeStepSeconds(windowSeconds),
           })
         : create(StreamOrgWorkloadMetricsRequestSchema, {
-            start: timestampFromDate(new Date(this.dateFrom)),
-            end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+            start: timestampFromDate(startOfDay(this.dateFrom)),
+            end: timestampFromDate(endOfDay(this.dateTo)),
             stepSeconds: computeStepSeconds(this.customRangeSeconds()),
           });
     return this.metricsClient.streamOrgWorkloadMetrics(req);
   }
 
   private customRangeSeconds(): number {
-    const from = new Date(this.dateFrom).getTime();
-    const to = new Date(`${this.dateTo}T23:59:59`).getTime();
+    const from = startOfDay(this.dateFrom).getTime();
+    const to = endOfDay(this.dateTo).getTime();
     return Math.max(0, Math.round((to - from) / 1000));
   }
 
@@ -1104,8 +1122,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       };
     }
     return {
-      startMs: new Date(this.dateFrom).getTime(),
-      endMs: Math.min(new Date(`${this.dateTo}T23:59:59`).getTime(), nowMs),
+      startMs: startOfDay(this.dateFrom).getTime(),
+      endMs: Math.min(endOfDay(this.dateTo).getTime(), nowMs),
       stepSeconds: computeStepSeconds(this.customRangeSeconds()),
     };
   }
@@ -1136,23 +1154,23 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private updateChartsInPlace(): void {
     if (this.cpuChart) {
       this.cpuChart.data.labels = this.chartLabels;
-      this.cpuChart.data.datasets[0].data = this.cpuSeriesData;
+      Object.assign(this.cpuChart.data.datasets[0], lineSeries(this.cpuSeriesData));
       this.cpuChart.update('none');
     }
     if (this.memoryChart) {
       this.memoryChart.data.labels = this.chartLabels;
-      this.memoryChart.data.datasets[0].data = this.memorySeriesData;
+      Object.assign(this.memoryChart.data.datasets[0], lineSeries(this.memorySeriesData));
       this.memoryChart.update('none');
     }
     if (this.podChart) {
       this.podChart.data.labels = this.chartLabels;
-      this.podChart.data.datasets[0].data = this.podSeriesData;
+      Object.assign(this.podChart.data.datasets[0], lineSeries(this.podSeriesData));
       this.podChart.update('none');
     }
     if (this.networkChart) {
       this.networkChart.data.labels = this.chartLabels;
-      this.networkChart.data.datasets[0].data = this.networkRxSeriesData;
-      this.networkChart.data.datasets[1].data = this.networkTxSeriesData;
+      Object.assign(this.networkChart.data.datasets[0], lineSeries(this.networkRxSeriesData));
+      Object.assign(this.networkChart.data.datasets[1], lineSeries(this.networkTxSeriesData));
       this.networkChart.update('none');
     }
   }

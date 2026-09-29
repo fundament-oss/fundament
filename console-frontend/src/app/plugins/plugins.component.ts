@@ -39,7 +39,11 @@ import { type Category, type Preset } from '../../generated/marketplace/v1/commo
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
-import { installPhase, isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import {
+  installPhase,
+  isInstallInProgress,
+  isInstallRunning,
+} from '../utils/plugin-install-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
@@ -93,6 +97,9 @@ interface PluginWithPresets extends Pick<
   // catalog.v1 tags are plain labels with no identity of their own.
   tags: string[];
   presets?: string[]; // Array of preset IDs this plugin belongs to
+  // Installed on a cluster, but no longer listed in the catalog (unpublished
+  // or yanked): there is no listing to link to and no version to offer.
+  unlisted?: boolean;
 }
 
 // Cluster row data passed to the install modal
@@ -276,9 +283,35 @@ export default class PluginsComponent implements OnInit, OnDestroy {
    *  that only uninstalled plugins are in. */
   get listedPlugins(): PluginWithPresets[] {
     if (!this.installedOnly) return this.plugins;
-    return this.plugins.filter((plugin) =>
+    const listed = this.plugins.filter((plugin) =>
       this.isPluginInstalledAnywhere(plugin.organizationName, plugin.name),
     );
+    // The catalog only returns published listings, so a plugin unpublished
+    // since it was installed has no entry there, yet still runs on a cluster
+    // (and still has its screens in the sidebar): list it from the install.
+    const unlisted = new Map<string, PluginWithPresets>();
+    this.installs().forEach((install) => {
+      const key = `${install.organizationName}/${install.pluginName}`;
+      if (unlisted.has(key)) return;
+      const inCatalog = this.plugins.some(
+        (p) => p.organizationName === install.organizationName && p.name === install.pluginName,
+      );
+      if (inCatalog) return;
+      unlisted.set(key, {
+        id: `unlisted:${key}`,
+        name: install.pluginName,
+        displayName: '',
+        descriptionShort: 'No longer listed in the marketplace.',
+        image: '',
+        organizationName: install.organizationName,
+        publisherDisplayName: install.organizationName,
+        categories: [],
+        tags: [],
+        presets: [],
+        unlisted: true,
+      });
+    });
+    return [...listed, ...unlisted.values()];
   }
 
   backendPresets: Preset[] = [];
@@ -702,7 +735,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     let versions: PluginVersionOption[] = [];
     let errored = false;
     try {
-      versions = await this.fetchPluginVersions(plugin.id);
+      // An unlisted plugin has nothing to offer; the modal still lets it be
+      // removed.
+      if (!plugin.unlisted) versions = await this.fetchPluginVersions(plugin.id);
     } catch {
       errored = true;
     }
@@ -719,7 +754,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Both apps list the same appstore.plugins rows, so the id in the URL is the
   // same key on the other side.
   marketplacePluginUrl(plugin: PluginWithPresets): string {
-    if (!this.marketplaceUrl) return '';
+    if (!this.marketplaceUrl || plugin.unlisted) return '';
     return `${this.marketplaceUrl.replace(/\/+$/, '')}/plugins/${plugin.id}`;
   }
 
@@ -728,7 +763,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.sheetPluginVersion.set('');
     let version = '';
     try {
-      version = (await this.fetchPluginVersions(plugin.id))[0]?.version ?? '';
+      if (!plugin.unlisted) version = (await this.fetchPluginVersions(plugin.id))[0]?.version ?? '';
     } catch {
       // The sheet reads fine without a version; leave it out rather than block.
     }

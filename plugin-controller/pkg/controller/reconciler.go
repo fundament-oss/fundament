@@ -80,7 +80,7 @@ func (e *permanentError) Error() string { return e.err.Error() }
 
 func (e *permanentError) Unwrap() error { return e.err }
 
-func permanent(err error) error { return &permanentError{err: err} }
+func newPermanentErr(err error) error { return &permanentError{err: err} }
 
 // isUnpinned reports whether a definitionHash carries no real consent record:
 // either empty or the "sha256:unknown" placeholder.
@@ -239,6 +239,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// "still installing" to every client, however long it has been failing.
 		var perm *permanentError
 		isPermanent := errors.As(err, &perm)
+		// A plugin that already got going on this spec keeps running
+		// whatever this pass could not do, so keep reporting its health:
+		// otherwise its phase and ready flag freeze at the last good poll, and
+		// a plugin that dies meanwhile still reads Running. Read before the
+		// status is touched: hasStarted falls back on ObservedGeneration.
+		started := !isPermanent && hasStarted(&cr)
 		switch {
 		case isPermanent:
 			cr.Status.Phase = pluginsv1.PluginPhaseFailed
@@ -247,12 +253,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cr.Status.Phase = pluginsv1.PluginPhasePending
 		}
 		cr.Status.Message = err.Error()
-		cr.Status.ObservedGeneration = cr.Generation
-		// A plugin that already got going on this spec keeps running
-		// whatever this pass could not do, so keep reporting its health:
-		// otherwise its phase and ready flag freeze at the last good poll, and
-		// a plugin that dies meanwhile still reads Running.
-		started := !isPermanent && hasStarted(&cr)
+		// Only claim the generation when the phase describes it. A transient
+		// failure on a spec that never started leaves the previous spec's
+		// phase in place, and stamping the new generation over it would make
+		// the next pass take that phase for this spec's and count it started.
+		if isPermanent || started {
+			cr.Status.ObservedGeneration = cr.Generation
+		}
 		if started {
 			polled := r.statusPoller.poll(ctx, &cr)
 			cr.Status.Phase = polled.Phase
@@ -273,11 +280,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{RequeueAfter: failedRetryInterval}, nil
 		}
 		if started {
-			// Retry at the poll pace rather than the workqueue backoff, which
-			// grows to minutes and would let the health reported above go
-			// stale just as long.
+			// Retry at the steady-state poll pace rather than the workqueue
+			// backoff, which grows to minutes and would let the health
+			// reported above go stale just as long. Not at the faster progress
+			// pace: every retry repeats the definition lookup, against a
+			// service that is likely the one failing.
 			log.Error("reconcile failed, plugin keeps running", "err", err)
-			return ctrl.Result{RequeueAfter: r.pollInterval(&cr, time.Now())}, nil
+			return ctrl.Result{RequeueAfter: r.cfg.StatusPollInterval}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 	}
@@ -583,14 +592,14 @@ func (r *Reconciler) fetchDefinitionOnce(ctx context.Context, cr *pluginsv1.Plug
 		// The operator opts into unpinned installs (empty or the "sha256:unknown"
 		// placeholder) by setting PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true on
 		// the Deployment.
-		return nil, permanent(fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned))
+		return nil, newPermanentErr(fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned))
 	}
 
 	// A definition is stored and fetched by its real metadata.version. The
 	// "unknown" placeholder resolves nothing, so fail fast with an actionable
 	// message instead of surfacing a confusing NotFound from the fetch below.
 	if isUnpinnedVersion(cr.Spec.DefinitionRef.PluginVersion) {
-		return nil, permanent(fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion))
+		return nil, newPermanentErr(fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion))
 	}
 
 	// A pinned definition is immutable and content-addressed, so a previously
@@ -615,7 +624,7 @@ func (r *Reconciler) fetchDefinitionOnce(ctx context.Context, cr *pluginsv1.Plug
 		// outright: asking again soon will not change that. Anything else, an
 		// unreachable catalog included, is worth another try right away.
 		if code := connect.CodeOf(err); code == connect.CodeNotFound || code == connect.CodeInvalidArgument {
-			return nil, permanent(err)
+			return nil, newPermanentErr(err)
 		}
 		return nil, err
 	}
@@ -626,12 +635,12 @@ func (r *Reconciler) fetchDefinitionOnce(ctx context.Context, cr *pluginsv1.Plug
 	// set (checked above) and skip comparison — the dev/marketplace-pending
 	// loop where no real consent hash exists yet (FUN-11).
 	if !isUnpinned(pinned) && computed != pinned {
-		return nil, permanent(fmt.Errorf("definition hash mismatch: pinned=%q, computed=%q", pinned, computed))
+		return nil, newPermanentErr(fmt.Errorf("definition hash mismatch: pinned=%q, computed=%q", pinned, computed))
 	}
 
 	def, err := pluginruntime.ParseDefinition(got.Manifest)
 	if err != nil {
-		return nil, permanent(fmt.Errorf("parse manifest: %w", err))
+		return nil, newPermanentErr(fmt.Errorf("parse manifest: %w", err))
 	}
 
 	// Cache only verified, pinned definitions — keyed by the consent hash so a

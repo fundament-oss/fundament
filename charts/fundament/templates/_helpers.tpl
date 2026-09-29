@@ -156,3 +156,14 @@ readinessProbe:
   failureThreshold: 60
 {{- end }}
 {{- end }}
+
+{{/*
+CORS origins for a backend the browser calls with credentials: the operator's
+externalUrls.corsAllowedOrigins when set, otherwise the frontends that call it
+(those configured), so a frontend that gains a credentialed call to an API is
+not CORS-blocked just because nobody listed its origin.
+Usage: include "fundament.corsOrigins" (dict "root" $ "frontends" (list $.Values.externalUrls.console))
+*/}}
+{{- define "fundament.corsOrigins" -}}
+{{- .root.Values.externalUrls.corsAllowedOrigins | default (compact .frontends | join ",") -}}
+{{- end }}

@@ -216,4 +216,24 @@ describe('PluginsComponent listing', () => {
 
     expect(component.listedPlugins.map((p) => p.id)).toEqual([acmeCertManager.id]);
   });
+
+  // The catalog only returns published listings, so a plugin unpublished after
+  // it was installed has no entry, yet still runs.
+  it('keeps an installed plugin that is no longer in the catalog', async () => {
+    const component = build([globexCertManager], [acmeInstall], 'https://m.test');
+    await component.ngOnInit();
+
+    const [plugin] = component.listedPlugins;
+    expect(component.listedPlugins).toHaveLength(1);
+    expect(plugin).toMatchObject({
+      organizationName: 'acme',
+      name: 'cert-manager',
+      unlisted: true,
+    });
+    expect(component.marketplacePluginUrl(plugin)).toBe('');
+
+    await component.onInstallPlugin(plugin);
+    expect(component.installVersions()).toEqual([]);
+    expect(component.installVersionsError()).toBe(false);
+  });
 });

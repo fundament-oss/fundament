@@ -135,6 +135,38 @@ describe('PluginRegistryService', () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
+  it('backs off a failing definition while another installation is still on its way', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [
+      installation('Running'),
+      { ...installation('Deploying'), metadata: { name: 'acme--other', uid: 'uid-2' } },
+    ];
+    getPluginDefinition.mockImplementation(() => throwError(() => new Error('gone')));
+
+    await registry.loadPlugins('cl-1');
+    // The list is read every 5s; the definition only at 5s, then 15s.
+    await vi.advanceTimersByTimeAsync(5000 + 10000);
+    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(getPluginDefinition).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a failed read at once when the plugins are asked for again', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    vi.mocked(fetch).mockImplementationOnce(async () => new Response('', { status: 403 }));
+
+    await registry.loadPlugins('cl-1');
+    expect(registry.allPlugins()).toEqual([]);
+
+    await registry.loadPlugins('cl-1');
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(registry.allPlugins()).toHaveLength(1);
+
+    // A read that went through is not repeated on the next ask.
+    await registry.loadPlugins('cl-1');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('starts over after a first load that threw', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Running')];

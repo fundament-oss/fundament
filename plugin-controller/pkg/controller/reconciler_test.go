@@ -17,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -729,6 +730,51 @@ func TestReconcile_UpgradeToBrokenSpecMarksFailed(t *testing.T) {
 			assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
 		})
 	}
+}
+
+// TestReconcile_TransientErrorOnUpgradeKeepsGeneration verifies that a
+// transient failure on a spec that never started does not stamp the new
+// generation over a status written before the Progressing condition existed:
+// the next pass would take the previous spec's Running phase for this one's,
+// count it started, and never mark a broken upgrade Failed.
+func TestReconcile_TransientErrorOnUpgradeKeepsGeneration(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+	legacyUpgrade := func(cr *pluginsv1.PluginInstallation) {
+		cr.Generation = 2
+		cr.Status.Phase = pluginsv1.PluginPhaseRunning
+		cr.Status.Ready = true
+		cr.Status.ObservedGeneration = 1
+	}
+
+	_, got, err := reconcileWithDefClient(t, defClient, "sha256:anything", legacyUpgrade)
+	require.Error(t, err, "a spec that never started is retried by the workqueue")
+	assert.Equal(t, int64(1), got.Status.ObservedGeneration)
+	assert.Nil(t, meta.FindStatusCondition(got.Status.Conditions, ConditionProgressing), "no health was polled for the new spec")
+	assert.False(t, hasStarted(&got), "the new spec has not started")
+	assert.Contains(t, got.Status.Message, "catalog unreachable")
+}
+
+// TestReconcile_StartedInstallRetriesAtSteadyPace verifies that a started
+// install whose reconcile keeps failing is not retried at the fast progress
+// pace: each retry repeats the definition lookup against a failing service.
+func TestReconcile_StartedInstallRetriesAtSteadyPace(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+	deploying := func(cr *pluginsv1.PluginInstallation) {
+		cr.Status.Phase = pluginsv1.PluginPhaseDeploying
+		cr.Status.ObservedGeneration = cr.Generation
+		cr.Status.Conditions = []metav1.Condition{{
+			Type:               ConditionProgressing,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: cr.Generation,
+			Reason:             "Deploying",
+			LastTransitionTime: metav1.Now(),
+		}}
+	}
+
+	result, got, err := reconcileWithDefClient(t, defClient, "sha256:anything", deploying)
+	require.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
+	assert.Equal(t, 30*time.Second, result.RequeueAfter)
 }
 
 // TestReconcile_TransientDefinitionErrorStaysPending verifies that a failure
