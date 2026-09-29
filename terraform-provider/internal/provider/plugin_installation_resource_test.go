@@ -108,9 +108,7 @@ func TestPluginInstallationCreatePayload_Config(t *testing.T) {
 	}
 
 	body, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
-	}
+	require.NoError(t, err)
 
 	assert.Contains(t, string(body), `"config":{"MON_COUNT":"1"}`)
 }
@@ -123,15 +121,24 @@ func TestPluginInstallationResourceModelNullValues(t *testing.T) {
 		Phase:      types.StringNull(),
 	}
 
-	if !model.ID.IsNull() {
-		t.Error("expected ID to be null")
-	}
-	if !model.Phase.IsNull() {
-		t.Error("expected Phase to be null")
-	}
-	if model.ClusterID.IsNull() {
-		t.Error("expected ClusterID to not be null")
-	}
+	assert.True(t, model.ID.IsNull())
+	assert.True(t, model.Phase.IsNull())
+	assert.False(t, model.ClusterID.IsNull())
+}
+
+func TestConfigIsEmpty(t *testing.T) {
+	assert.True(t, configIsEmpty(types.MapNull(types.StringType)))
+
+	empty, diags := types.MapValueFrom(t.Context(), types.StringType, map[string]string{})
+	require.False(t, diags.HasError())
+	assert.True(t, configIsEmpty(empty))
+
+	filled, diags := types.MapValueFrom(t.Context(), types.StringType, map[string]string{"MON_COUNT": "1"})
+	require.False(t, diags.HasError())
+	assert.False(t, configIsEmpty(filled))
+
+	// Unknown could resolve to anything, so it must not count as empty.
+	assert.False(t, configIsEmpty(types.MapUnknown(types.StringType)))
 }
 
 func TestPluginInstallationResource_URLConstruction(t *testing.T) {

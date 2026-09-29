@@ -73,16 +73,17 @@ func configSchemaFromManifest(manifest []byte) ([]*catalogv1.ConfigSchemaEntry, 
 	return entries, nil
 }
 
-// configTypeFromManifest maps the manifest's type string to the proto enum.
+// configTypeFromManifest maps the manifest's type string (plugin-sdk's
+// authoritative vocabulary) to the proto enum.
 func configTypeFromManifest(t string) (catalogv1.ConfigType, error) {
 	switch t {
-	case "string":
+	case pluginruntime.ConfigTypeString:
 		return catalogv1.ConfigType_CONFIG_TYPE_STRING, nil
-	case "int":
+	case pluginruntime.ConfigTypeInt:
 		return catalogv1.ConfigType_CONFIG_TYPE_INT, nil
-	case "bool":
+	case pluginruntime.ConfigTypeBool:
 		return catalogv1.ConfigType_CONFIG_TYPE_BOOL, nil
-	case "enum":
+	case pluginruntime.ConfigTypeEnum:
 		return catalogv1.ConfigType_CONFIG_TYPE_ENUM, nil
 	default:
 		// Reachable under the lenient decode above: a newer SDK may declare

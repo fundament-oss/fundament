@@ -40,6 +40,7 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import {
+  hasInvalidConfig,
   installPhase,
   isInstallInProgress,
   isInstallRunning,
@@ -48,7 +49,8 @@ import getPluginIconName from '../utils/plugin-icon-name';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
-  RetryReadError,
+  RetryAbortedError,
+  RetryConfigVersionError,
 } from '../plugin-installation/plugin-installation.service';
 import injectBrowsePluginsUrl from './browse-plugins-url';
 
@@ -113,6 +115,9 @@ interface ClusterModalRow {
   // The version pinned on this cluster; empty when not installed.
   version: string;
   running: boolean;
+  // True when a Failed phase is config-caused (ConfigValid=False): the modal
+  // hides Retry for it, since retry replays the same config.
+  configInvalid: boolean;
 }
 
 // Extended install type with cluster ID and live status phase. organizationName +
@@ -127,6 +132,9 @@ interface InstallWithCluster {
   // The version pinned on this cluster. A plugin is installed per cluster, so
   // two clusters can run different versions of the same plugin.
   version: string;
+  // True when a Failed phase is config-caused (ConfigValid=False): the modal
+  // hides Retry for it, since retry replays the same config.
+  configInvalid: boolean;
 }
 
 // Extended category type with count for filtering
@@ -459,6 +467,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               phase: installPhase(item.status?.phase),
               ready: item.status?.ready ?? false,
               version: item.spec?.definitionRef?.pluginVersion ?? '',
+              configInvalid: hasInvalidConfig(item),
             })),
           )
           .catch((): InstallWithCluster[] | null => null),
@@ -705,6 +714,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         phase: install?.phase ?? null,
         version: install?.version ?? '',
         running: cluster.status === ClusterStatus.RUNNING,
+        configInvalid: install?.configInvalid ?? false,
       };
     });
   }
@@ -867,6 +877,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         phase: 'Pending',
         ready: false,
         version: selection.version,
+        configInvalid: false,
       })),
     ]);
 
@@ -955,13 +966,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch (err) {
-      // A failed read aborted before anything was deleted — roll the row back
-      // to the phase it had.
-      if (err instanceof RetryReadError && previous) {
+      // An aborted retry stopped before anything was deleted — roll the row
+      // back to the phase it had.
+      if (err instanceof RetryAbortedError && previous) {
         this.setInstallPhase(clusterId, plugin.organizationName, plugin.name, previous);
       }
       this.notificationService.error(
-        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+        err instanceof RetryConfigVersionError
+          ? `Can't retry ${displayNameOf(plugin)} at a different version with its saved configuration — uninstall and reinstall it instead`
+          : `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }
   }

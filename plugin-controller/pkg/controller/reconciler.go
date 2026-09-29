@@ -50,19 +50,6 @@ const (
 	// definition with no schema always validates (pre-schema back-compat).
 	ConditionConfigValid = "ConfigValid"
 
-	// unknownDefinitionHash is the terraform provider's default placeholder,
-	// used until the marketplace supplies real content hashes (FUN-11). It is
-	// treated as unpinned: it can never equal a real digest, so verifying
-	// against it would reject every install forever.
-	unknownDefinitionHash = "sha256:unknown"
-
-	// unknownDefinitionVersion is the terraform/console default placeholder for
-	// spec.definitionRef.pluginVersion until the marketplace supplies real
-	// versions (FUN-11). Unlike the hash, the version is the key used to resolve
-	// the stored definition, so it cannot be silently skipped — an unpinned
-	// version has nothing to fetch.
-	unknownDefinitionVersion = "unknown"
-
 	// failedRetryInterval is how long a permanently failed installation waits
 	// before it is tried again. The answer rarely changes, but a version that
 	// was just published, or a lookup that raced, must not stay Failed forever.
@@ -88,9 +75,10 @@ func (e *permanentError) Unwrap() error { return e.err }
 func newPermanentErr(err error) error { return &permanentError{err: err} }
 
 // isUnpinned reports whether a definitionHash carries no real consent record:
-// either empty or the "sha256:unknown" placeholder.
+// either empty or the shared "sha256:unknown" placeholder — it can never
+// equal a real digest, so verifying against it would reject every install.
 func isUnpinned(hash string) bool {
-	return hash == "" || hash == unknownDefinitionHash
+	return hash == "" || hash == pluginruntime.UnknownHash
 }
 
 // hasStarted reports whether the installation's current spec has been deployed
@@ -125,10 +113,11 @@ func hasStarted(cr *pluginsv1.PluginInstallation) bool {
 }
 
 // isUnpinnedVersion reports whether a pluginVersion is the unresolved
-// placeholder (empty or "unknown"). A definition is stored and fetched by its
-// real metadata.version, so an unpinned version can never resolve one.
+// placeholder (empty or the shared "unknown"). A definition is stored and
+// fetched by its real metadata.version, so an unpinned version can never
+// resolve one.
 func isUnpinnedVersion(version string) bool {
-	return version == "" || version == unknownDefinitionVersion
+	return version == "" || version == pluginruntime.UnknownVersion
 }
 
 type Reconciler struct {

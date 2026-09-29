@@ -33,9 +33,10 @@ const MIN_INT64 = -(2n ** 63n);
 const MAX_INT64 = 2n ** 63n - 1n;
 
 /**
- * Mirrors the server's int validation (plugin-sdk's strconv.ParseInt(v, 10,
- * 64)): the value must be a bare digit string and fit in a signed 64-bit
- * range, so a value the form accepts never fails once it reaches the server.
+ * Mirrors the server's int validation (plugin-sdk's validateConfigValue: no
+ * explicit '+', then strconv.ParseInt(v, 10, 64)): the value must be a bare
+ * digit string with an optional '-' and fit in a signed 64-bit range, so the
+ * form and the server accept exactly the same values.
  */
 function intValidator(control: AbstractControl): ValidationErrors | null {
   const value = control.value;
@@ -83,6 +84,16 @@ function humanizeConfigName(name: string): string {
  */
 function labelFor(entry: ConfigSchemaEntry): string {
   return entry.displayName || humanizeConfigName(entry.name);
+}
+
+/**
+ * The values rendered as enum toggle buttons. A schema may list "" to accept
+ * an explicitly empty value (meaning "use the default"), but an unselected
+ * group already expresses that state — an empty toggle button would be an
+ * unlabeled control.
+ */
+function enumChoices(entry: ConfigSchemaEntry): string[] {
+  return entry.values.filter((value) => value !== '');
 }
 
 /**
@@ -252,12 +263,9 @@ export default class PluginConfigFormComponent implements OnInit {
     this.form = group;
   }
 
-  enumChoices(entry: ConfigSchemaEntry): string[] {
-    // A schema may list "" to accept an explicitly empty value (meaning "use
-    // the default"), but an unselected group already expresses that state —
-    // an empty toggle button would be an unlabeled control.
-    return entry.values.filter((value) => value !== '');
-  }
+  /** Enum values to render as toggle buttons, for the template — see
+   *  enumChoices. */
+  readonly enumChoices = enumChoices;
 
   toggleAdvanced(): void {
     this.showAdvanced.update((value) => !value);

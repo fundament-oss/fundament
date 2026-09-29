@@ -55,7 +55,7 @@ function toItem(install: DemoInstall): PluginInstallationItem {
 @Injectable({ providedIn: 'root' })
 export default class FakePluginInstallationService implements Pick<
   PluginInstallationService,
-  'listInstallations' | 'getInstallation' | 'installPlugin' | 'uninstallPlugin'
+  'listInstallations' | 'getInstallation' | 'installPlugin' | 'uninstallPlugin' | 'retryInstall'
 > {
   private readonly byCluster = new Map<string, DemoInstall[]>();
 
@@ -157,6 +157,20 @@ export default class FakePluginInstallationService implements Pick<
       },
     ]);
     FakePluginInstallationService.notifyChanged();
+  }
+
+  // Mirrors the real signature. The demo never surfaces a Failed phase today,
+  // but the plugins pages call this on Retry, so it must exist and behave:
+  // drop the install and re-create it as freshly Pending.
+  async retryInstall(
+    clusterId: string,
+    organizationName: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
+    await this.uninstallPlugin(clusterId, pluginResourceName(organizationName, pluginName));
+    await this.installPlugin(clusterId, organizationName, pluginName, pluginVersion, definitionHash);
   }
 
   // Real callers pass the installation (resource) name — e.g.

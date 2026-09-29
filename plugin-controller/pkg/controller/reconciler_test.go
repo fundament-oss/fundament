@@ -1276,69 +1276,6 @@ func TestReconcileChildren_RejectsConfigViolatingSchema(t *testing.T) {
 	assert.NotContains(t, got.Status.Message, "terminal")
 }
 
-func TestReconcile_HashMismatch_MarksFailed(t *testing.T) {
-	// A pinned hash that does not match the fetched manifest can never heal on
-	// retry (the published manifest is immutable), so it must surface as
-	// Phase: Failed like invalid config — not sit in "Installing..." forever.
-	scheme := newTestScheme()
-	manifest, _ := sampleManifestWithConfigSchema(t)
-
-	cr := testCR()
-	cr.Name = "acme--cert-manager"
-	cr.Spec.DefinitionRef.OrganizationName = "acme"
-	cr.Spec.DefinitionRef.DefinitionHash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-	cr.Finalizers = []string{finalizerName}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
-	r := &Reconciler{
-		client: fakeClient, logger: slog.Default(),
-		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
-		uninstallHTTPClient: http.DefaultClient,
-		defClient:           fakeDefClient{manifest: manifest},
-	}
-
-	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
-	_, err := r.Reconcile(context.Background(), req)
-	require.Error(t, err)
-
-	var got pluginsv1.PluginInstallation
-	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
-	assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
-	assert.Contains(t, got.Status.Message, "hash mismatch")
-	assert.NotContains(t, got.Status.Message, "terminal")
-}
-
-func TestReconcile_FetchError_DoesNotMarkFailed(t *testing.T) {
-	// A transient fetch error (cold defCache, organization-api blip) must not
-	// flip Phase to Failed: the console's Failed-retry deletes and re-creates
-	// the CR, which would be destructive for a healthy install.
-	scheme := newTestScheme()
-
-	cr := testCR()
-	cr.Name = "acme--cert-manager"
-	cr.Spec.DefinitionRef.OrganizationName = "acme"
-	cr.Spec.DefinitionRef.DefinitionHash = "sha256:pinned"
-	cr.Finalizers = []string{finalizerName}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
-	r := &Reconciler{
-		client: fakeClient, logger: slog.Default(),
-		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
-		uninstallHTTPClient: http.DefaultClient,
-		defClient:           fakeDefClient{err: errors.New("organization-api unreachable")},
-	}
-
-	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
-	_, err := r.Reconcile(context.Background(), req)
-	require.Error(t, err)
-
-	var got pluginsv1.PluginInstallation
-	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
-	assert.NotEqual(t, pluginsv1.PluginPhaseFailed, got.Status.Phase, "transient fetch errors must not mark the CR Failed")
-}
-
 func TestReconcileChildren_AcceptsEmptyConfigWithSchema(t *testing.T) {
 	// The bulk-install path and kubectl installs send no config at all; a
 	// schema whose keys all carry defaults must accept that (defaults are

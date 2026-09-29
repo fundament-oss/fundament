@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import PluginInstallationService, {
   pluginResourceName,
+  RetryConfigVersionError,
   RetryReadError,
 } from './plugin-installation.service';
 import { ConfigService } from '../config.service';
@@ -38,23 +39,27 @@ describe('PluginInstallationService retryInstall', () => {
     return TestBed.inject(PluginInstallationService);
   }
 
+  const failedInstall = {
+    metadata: { name: 'acme--ceph-rook', uid: 'uid-1' },
+    spec: {
+      definitionRef: {
+        organizationName: 'acme',
+        pluginName: 'ceph-rook',
+        pluginVersion: 'v0.2.0',
+        definitionHash: 'sha256:abc',
+      },
+      config: { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
+    },
+    status: { phase: 'Failed', ready: false },
+  } as PluginInstallationItem;
+
   it('re-creates the installation with its previous config', async () => {
     const service = build();
-    vi.spyOn(service, 'getInstallation').mockResolvedValue({
-      metadata: { name: 'acme--ceph-rook', uid: 'uid-1' },
-      spec: {
-        definitionRef: {
-          organizationName: 'acme',
-          pluginName: 'ceph-rook',
-          pluginVersion: 'v0.2.0',
-          definitionHash: 'sha256:abc',
-        },
-        config: { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
-      },
-      status: { phase: 'Failed', ready: false },
-    } as PluginInstallationItem);
+    // First read returns the failed CR; the uninstall poll then sees it gone.
+    vi.spyOn(service, 'getInstallation')
+      .mockResolvedValueOnce(failedInstall)
+      .mockResolvedValue(null);
     const uninstall = vi.spyOn(service, 'uninstallPlugin').mockResolvedValue(undefined);
-    vi.spyOn(service, 'listInstallations').mockResolvedValue([]);
     const install = vi.spyOn(service, 'installPlugin').mockResolvedValue(undefined);
 
     await service.retryInstall('c1', 'acme', 'ceph-rook', 'v0.2.0', 'sha256:abc');
@@ -64,6 +69,39 @@ describe('PluginInstallationService retryInstall', () => {
       MON_COUNT: '1',
       DEV_LOOP_DEVICES: 'true',
     });
+  });
+
+  // Config was written against the recorded version's schema, so a retry that
+  // switches versions (the unrecorded-pin fallback) must not replay it against
+  // a different schema — and must abort before deleting the only copy.
+  it('aborts with RetryConfigVersionError, without uninstalling, on a version switch with config', async () => {
+    const service = build();
+    vi.spyOn(service, 'getInstallation').mockResolvedValue(failedInstall);
+    const uninstall = vi.spyOn(service, 'uninstallPlugin').mockResolvedValue(undefined);
+    const install = vi.spyOn(service, 'installPlugin').mockResolvedValue(undefined);
+
+    await expect(
+      service.retryInstall('c1', 'acme', 'ceph-rook', 'v0.3.0', 'sha256:def'),
+    ).rejects.toBeInstanceOf(RetryConfigVersionError);
+    expect(uninstall).not.toHaveBeenCalled();
+    expect(install).not.toHaveBeenCalled();
+  });
+
+  it('allows a version switch when the failed install carries no config', async () => {
+    const service = build();
+    const configless = {
+      ...failedInstall,
+      spec: { definitionRef: failedInstall.spec.definitionRef },
+    } as PluginInstallationItem;
+    vi.spyOn(service, 'getInstallation')
+      .mockResolvedValueOnce(configless)
+      .mockResolvedValue(null);
+    vi.spyOn(service, 'uninstallPlugin').mockResolvedValue(undefined);
+    const install = vi.spyOn(service, 'installPlugin').mockResolvedValue(undefined);
+
+    await service.retryInstall('c1', 'acme', 'ceph-rook', 'v0.3.0', 'sha256:def');
+
+    expect(install).toHaveBeenCalledWith('c1', 'acme', 'ceph-rook', 'v0.3.0', 'sha256:def', {});
   });
 
   // A read failure (network blip, RBAC hiccup) is not "the CR is already

@@ -123,6 +123,16 @@ export interface PluginNavItem {
   icon?: string;
 }
 
+// One entry of the CR's status.conditions (metav1.Condition); only the fields
+// the console reads. `status` is the Kubernetes spelling: 'True' | 'False' |
+// 'Unknown'.
+export interface PluginInstallationCondition {
+  type: string;
+  status: string;
+  reason?: string;
+  message?: string;
+}
+
 export interface PluginInstallationItem {
   metadata: { name: string; uid: string };
   spec: {
@@ -136,7 +146,7 @@ export interface PluginInstallationItem {
     // uses only defaults.
     config?: Record<string, string>;
   };
-  status: { phase: string; ready: boolean };
+  status: { phase: string; ready: boolean; conditions?: PluginInstallationCondition[] };
 }
 
 export interface PluginInstallationListResponse {

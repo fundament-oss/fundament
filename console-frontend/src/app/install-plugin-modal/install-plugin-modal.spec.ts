@@ -202,3 +202,64 @@ describe('InstallPluginModalComponent onInstallOne', () => {
     expect(component.pendingInstall()).toBeNull();
   });
 });
+
+describe('InstallPluginModalComponent onRetry', () => {
+  function buildWithVersions(versions: { version: string; hash: string }[]) {
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: INSTALL,
+          useValue: { getPluginDefinition: vi.fn() } as unknown as ObservableClient<
+            typeof CatalogService
+          >,
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(InstallPluginModalComponent);
+    fixture.componentRef.setInput('versions', versions);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('retries at the recorded pinned version', () => {
+    const component = buildWithVersions([
+      { version: 'v2.0.0', hash: 'sha256:def' },
+      { version: 'v1.0.0', hash: 'sha256:abc' },
+    ]);
+    let emitted: unknown;
+    component.retry.subscribe((value) => {
+      emitted = value;
+    });
+
+    component.onRetry('c1', 'v1.0.0');
+
+    expect(emitted).toEqual({ clusterId: 'c1', version: 'v1.0.0', hash: 'sha256:abc' });
+    expect(component.retryUnavailableVersion()).toBeNull();
+  });
+
+  it('falls back to the latest version only for an unrecorded pin', () => {
+    const component = buildWithVersions([{ version: 'v2.0.0', hash: 'sha256:def' }]);
+    let emitted: unknown;
+    component.retry.subscribe((value) => {
+      emitted = value;
+    });
+
+    component.onRetry('c1', 'unknown');
+
+    expect(emitted).toEqual({ clusterId: 'c1', version: 'v2.0.0', hash: 'sha256:def' });
+  });
+
+  // A recorded pin missing from the published list must not silently retry a
+  // different version (the preserved config was written against its schema) —
+  // and must not be a silent no-op either: the refusal is surfaced.
+  it('surfaces the refusal when the recorded pin is no longer published', () => {
+    const component = buildWithVersions([{ version: 'v2.0.0', hash: 'sha256:def' }]);
+    const retry = vi.fn();
+    component.retry.subscribe(retry);
+
+    component.onRetry('c1', 'v1.0.0');
+
+    expect(retry).not.toHaveBeenCalled();
+    expect(component.retryUnavailableVersion()).toBe('v1.0.0');
+  });
+});

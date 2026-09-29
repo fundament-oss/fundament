@@ -8,13 +8,10 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { INSTALL } from '../../connect/tokens';
-import {
-  ConfigSchemaEntry,
-  GetPluginDefinitionRequestSchema,
-} from '../../generated/catalog/v1/catalog_pb';
+import { ConfigSchemaEntry } from '../../generated/catalog/v1/catalog_pb';
+import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
+import { UNKNOWN_PLUGIN_VERSION } from '../plugin-installation/plugin-installation.service';
 import SheetSyncDirective from '../sheet-sync.directive';
 import PluginConfigFormComponent from './plugin-config-form.component';
 import {
@@ -53,6 +50,11 @@ interface Cluster {
   // installed per cluster, so two clusters can run different versions.
   version: string;
   running: boolean;
+  // True when a Failed phase was caused by config the controller rejected
+  // (ConfigValid=False). Retry replays the failed CR's config verbatim, so it
+  // can never recover such a failure — the row hides Retry and the sheet
+  // points at uninstall + reinstall instead.
+  configInvalid: boolean;
 }
 
 // A published definition the user can pin on install: the version they see and
@@ -144,6 +146,11 @@ export default class InstallPluginModalComponent {
 
   schemaLoading = signal(false);
 
+  // The version a Retry was refused for: its recorded pin is no longer in the
+  // published list, and retrying a different version would replay config
+  // written against the pinned version's schema. Null when no refusal stands.
+  retryUnavailableVersion = signal<string | null>(null);
+
   // Keyed by `${organizationName}/${pluginName}/${version}`: GetPluginDefinition
   // is pinned per version AND per plugin, and a sheet stays open across several
   // "Install" clicks — including on a different plugin row — on the same
@@ -160,6 +167,15 @@ export default class InstallPluginModalComponent {
   /** Everything but the newest published version; the newest sits on its own at
    *  the top of the menu. */
   earlierVersions = computed(() => this.versions().slice(1));
+
+  /** Clusters whose failed installation cannot be retried because the
+   *  controller rejected its config — the sheet explains the way out once,
+   *  above the list. */
+  configInvalidClusters = computed(() =>
+    this.clusters()
+      .filter((cluster) => cluster.phase !== null && isInstallFailed(cluster.phase) && cluster.configInvalid)
+      .map((cluster) => cluster.name),
+  );
 
   /** The published versions as a sentence fragment, newest first. */
   versionList = computed(() =>
@@ -190,6 +206,7 @@ export default class InstallPluginModalComponent {
     this.pendingInstall.set(null);
     this.schemaError.set(false);
     this.schemaLoading.set(false);
+    this.retryUnavailableVersion.set(null);
     this.schemaCache.clear();
     this.closeModal.emit();
   }
@@ -234,27 +251,18 @@ export default class InstallPluginModalComponent {
     const key = `${this.organizationName()}/${this.pluginName()}/${version}`;
     const cached = this.schemaCache.get(key);
     if (cached) return cached;
-    const resp = await firstValueFrom(
-      this.installClient.getPluginDefinition(
-        create(GetPluginDefinitionRequestSchema, {
-          lookup: {
-            case: 'name',
-            value: { organizationName: this.organizationName(), pluginName: this.pluginName() },
-          },
-          version,
-        }),
-      ),
+    // The shared fetch throws on "schema unavailable" — failing closed like a
+    // fetch error: caught by the caller's schemaError path, nothing cached.
+    const schema = await fetchPluginConfigSchema(
+      this.installClient,
+      this.organizationName(),
+      this.pluginName(),
+      version,
     );
-    if (resp.configSchemaUnavailable) {
-      // The catalog could not parse the manifest, so it cannot say whether
-      // required config exists — fail closed exactly like a fetch error:
-      // caught by the caller's schemaError path, nothing cached.
-      throw new Error('config schema unavailable');
-    }
     // Only cache while still the current request: a fetch that resolves after
     // a second click or onClose() must not poison the cache for a later open.
-    if (generation === this.requestGeneration) this.schemaCache.set(key, resp.configSchema);
-    return resp.configSchema;
+    if (generation === this.requestGeneration) this.schemaCache.set(key, schema);
+    return schema;
   }
 
   onConfigConfirmed(config: Record<string, string>): void {
@@ -280,14 +288,18 @@ export default class InstallPluginModalComponent {
   /** Retries at the version already pinned on that cluster, falling back to the
    *  latest published one only when the failed install never recorded a
    *  version. A recorded version missing from the published list must not
-   *  silently retry a different one: the preserved config was written against
-   *  the pinned version's schema. */
+   *  retry a different one — the preserved config was written against the
+   *  pinned version's schema — so the refusal is surfaced instead. */
   onRetry(clusterId: string, pinned: string): void {
-    const recorded = pinned !== '' && pinned !== 'unknown';
+    const recorded = pinned !== '' && pinned !== UNKNOWN_PLUGIN_VERSION;
     const option = recorded
       ? this.versions().find((v) => v.version === pinned)
       : this.versions()[0];
-    if (!option) return;
+    if (!option) {
+      this.retryUnavailableVersion.set(recorded ? pinned : null);
+      return;
+    }
+    this.retryUnavailableVersion.set(null);
     this.retry.emit({ clusterId, version: option.version, hash: option.hash });
   }
 }

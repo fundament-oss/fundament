@@ -176,7 +176,10 @@ and can never be `required` — a checkbox has no "untouched" state, so an
 unprompted `false` would otherwise be submitted on the admin's behalf; that
 default must be spelled exactly `"true"` or `"false"`. A `required` entry can
 never also be `advanced` (a required choice cannot default to hidden), and a
-`required` value must be non-empty after trimming whitespace. `string`,
+`required` value must be non-empty after trimming whitespace — so a `required`
+enum must list at least one non-blank value. `int` values never carry an
+explicit `+` (the console form and the controller share one int grammar:
+optional `-`, digits, within int64). `string`,
 `int` and `enum` keys should declare a default when a sensible one exists, but
 may omit both `default` and `required`: an omitted key falls back to whatever
 default the plugin binary's own env parsing applies. `advanced: true` collapses
@@ -184,7 +187,10 @@ the key under an "advanced" toggle in the install form instead of showing it by
 default.
 
 The schema is closed: `spec.config` in the `PluginInstallation` may only set
-keys declared here. `functl plugin publish` validates the schema itself; the
+keys declared here. The one exception is the SDK's own keys — `LOG_LEVEL` and
+`RECONCILE_INTERVAL`, which every plugin binary reads through the SDK's base
+config — those are always accepted (and validated with the SDK's own parsers)
+without being declared; declare one only to constrain it further. `functl plugin publish` validates the schema itself; the
 plugin-controller validates `spec.config` against it at install/reconcile time
 and fails with `ConfigValid=False` before touching any resources. A definition
 with no `configSchema` accepts any config, unchanged from before this feature.

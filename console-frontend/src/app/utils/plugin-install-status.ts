@@ -2,6 +2,8 @@
 // Phases come from the backend CRD (plugin-controller/pkg/api/v1/types.go):
 // Pending, Deploying, Running, Degraded, Failed, Terminating.
 
+import type { PluginInstallationItem } from '../plugin-resources/types';
+
 export interface InstallStatusDisplay {
   label: string;
   /** `color` for the `nldd-badge` that shows this status. */
@@ -52,4 +54,15 @@ export function isInstallTerminating(phase: string): boolean {
 
 export function isInstallFailed(phase: string): boolean {
   return phase === 'Failed';
+}
+
+/** True when the controller rejected the installation's config against its
+ *  definition's schema (the ConfigValid=False condition). Retry replays the
+ *  failed CR's config verbatim, so a config-caused failure can never be
+ *  retried out of — the UI must offer uninstall + reinstall instead. */
+export function hasInvalidConfig(item: PluginInstallationItem): boolean {
+  // status itself can be absent on a CR the controller has not picked up yet.
+  return (item.status?.conditions ?? []).some(
+    (condition) => condition.type === 'ConfigValid' && condition.status === 'False',
+  );
 }

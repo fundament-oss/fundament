@@ -17,7 +17,7 @@ import { CLUSTER, INSTALL, PLUGIN } from '../../connect/tokens';
 import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
-import { GetPluginDefinitionRequestSchema } from '../../generated/catalog/v1/catalog_pb';
+import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -156,21 +156,20 @@ export default class ClusterPluginsComponent implements OnInit {
       // This bulk form has no per-plugin config step (the install modal on
       // the plugins page does), so a plugin whose definition declares
       // required config would only ever reconcile to Failed from here. Fail
-      // closed before mutating anything.
-      const needsConfig = (
-        await Promise.all(
-          toInstall.map(async (p) => ((await this.requiresConfigForm(p)) ? p.displayName : null)),
-        )
-      ).filter((name): name is string => name !== null);
-      if (needsConfig.length > 0) {
-        this.errorMessage.set(
-          `${needsConfig.join(', ')} must be configured at install time — install from the plugins page instead`,
-        );
-        return;
-      }
+      // closed per plugin — a schema fetch error counts as requiring config —
+      // while the rest of the submit (other installs, all uninstalls) still
+      // goes through.
+      const checked = await Promise.all(
+        toInstall.map(async (p) => ({
+          plugin: p,
+          needsConfig: await this.requiresConfigForm(p).catch(() => true),
+        })),
+      );
+      const blocked = checked.filter((c) => c.needsConfig).map((c) => c.plugin);
+      const installable = checked.filter((c) => !c.needsConfig).map((c) => c.plugin);
 
       await Promise.all([
-        ...toInstall.map((p) =>
+        ...installable.map((p) =>
           this.pluginInstallationService.installPlugin(
             this.clusterId,
             p.organizationName,
@@ -184,6 +183,14 @@ export default class ClusterPluginsComponent implements OnInit {
         ),
       ]);
 
+      if (blocked.length > 0) {
+        this.errorMessage.set(
+          `${blocked.map((p) => p.displayName || p.name).join(', ')} must be configured at install time — install from the plugins page instead. Everything else was applied.`,
+        );
+        await this.load();
+        return;
+      }
+
       this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
@@ -196,24 +203,17 @@ export default class ClusterPluginsComponent implements OnInit {
     this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 
-  // True when the pinned definition declares required config keys — or when
-  // the catalog cannot say (schema unavailable): installing past an unseen
-  // required key creates a CR the controller terminally fails, so unknown
-  // fails closed like the install modal does. A fetch error propagates to
-  // onFormSubmit's catch for the same reason.
+  // True when the pinned definition declares required config keys. The shared
+  // fetch throws when the catalog cannot say (schema unavailable), and both
+  // that and a fetch error are caught per plugin in onFormSubmit, failing
+  // closed like the install modal does.
   private async requiresConfigForm(plugin: PluginSummary): Promise<boolean> {
-    const resp = await firstValueFrom(
-      this.installClient.getPluginDefinition(
-        create(GetPluginDefinitionRequestSchema, {
-          lookup: {
-            case: 'name',
-            value: { organizationName: plugin.organizationName, pluginName: plugin.name },
-          },
-          version: plugin.pluginVersion,
-        }),
-      ),
+    const schema = await fetchPluginConfigSchema(
+      this.installClient,
+      plugin.organizationName,
+      plugin.name,
+      plugin.pluginVersion,
     );
-    if (resp.configSchemaUnavailable) return true;
-    return resp.configSchema.some((entry) => entry.required);
+    return schema.some((entry) => entry.required);
   }
 }

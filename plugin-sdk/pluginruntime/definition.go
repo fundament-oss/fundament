@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"maps"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -42,10 +44,39 @@ var validImagePullPolicies = map[string]bool{"": true, "Always": true, "IfNotPre
 // starting with a letter.
 var configKeyNameRegex = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 
+// The types a configSchema entry may declare, as the manifest spells them.
+// This is the one authoritative vocabulary: validation here, the catalog's
+// proto-enum mapping, and any other Go consumer key off these constants (the
+// console keys off the catalog's generated enum).
+const (
+	ConfigTypeString = "string"
+	ConfigTypeInt    = "int"
+	ConfigTypeBool   = "bool"
+	ConfigTypeEnum   = "enum"
+)
+
+// The placeholder spec.definitionRef pin written by installers (terraform,
+// console) until the marketplace supplies real versions and hashes (FUN-11).
+// Spelled once here for every Go consumer; the console mirrors them in TS
+// (UNKNOWN_PLUGIN_VERSION in plugin-installation.service.ts).
+const (
+	// UnknownVersion resolves no stored definition — the version is the fetch
+	// key, so an unpinned version has nothing to fetch.
+	UnknownVersion = "unknown"
+	// UnknownHash can never equal a real digest, so it is treated as unpinned
+	// rather than verified (verifying would reject every install forever).
+	UnknownHash = "sha256:unknown"
+)
+
 // validConfigTypes is the set of types a configSchema entry may declare.
 // Values stay strings in spec.config; the type drives validation and the
 // console's input widget, not the representation.
-var validConfigTypes = map[string]bool{"string": true, "int": true, "bool": true, "enum": true}
+var validConfigTypes = map[string]bool{
+	ConfigTypeString: true,
+	ConfigTypeInt:    true,
+	ConfigTypeBool:   true,
+	ConfigTypeEnum:   true,
+}
 
 // PluginDefinition is the top-level plugin manifest, modeled after a
 // Kubernetes resource with apiVersion, kind, metadata, and spec.
@@ -269,10 +300,16 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 		if !validConfigTypes[entry.Type] {
 			return fmt.Errorf("configSchema key %q has invalid type %q, expected one of \"string\", \"int\", \"bool\", \"enum\"", entry.Name, entry.Type)
 		}
-		if entry.Type == "enum" && len(entry.Values) == 0 {
+		if entry.Type == ConfigTypeEnum && len(entry.Values) == 0 {
 			return fmt.Errorf("configSchema key %q is an enum but declares no values", entry.Name)
 		}
-		if entry.Type != "enum" && len(entry.Values) > 0 {
+		// A required value must be non-blank at install time, so a required
+		// enum whose values are all blank could never be satisfied by any
+		// config — reject the deadlock at publish time.
+		if entry.Type == ConfigTypeEnum && entry.Required && !slices.ContainsFunc(entry.Values, func(v string) bool { return strings.TrimSpace(v) != "" }) {
+			return fmt.Errorf("configSchema key %q is a required enum but declares no non-blank value", entry.Name)
+		}
+		if entry.Type != ConfigTypeEnum && len(entry.Values) > 0 {
 			return fmt.Errorf("configSchema key %q declares values but is not an enum", entry.Name)
 		}
 		if entry.Required && entry.Default != "" {
@@ -281,16 +318,13 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 		if entry.Required && entry.Advanced {
 			return fmt.Errorf("configSchema key %q is required and advanced; a required choice cannot default to hidden", entry.Name)
 		}
-		if entry.Type == "bool" {
+		if entry.Type == ConfigTypeBool {
 			if entry.Required {
 				return fmt.Errorf("configSchema key %q is a required bool; booleans cannot be required (declare a default instead)", entry.Name)
 			}
 			if entry.Default == "" {
 				return fmt.Errorf("configSchema key %q is a bool without a default; a checkbox has no absent state, so declare the default explicitly", entry.Name)
 			}
-		}
-		if entry.Type == "int" && entry.Default != "" && strings.HasPrefix(entry.Default, "+") {
-			return fmt.Errorf("configSchema key %q int default must not carry an explicit '+'", entry.Name)
 		}
 		if entry.Default != "" {
 			if err := validateConfigValue(entry.Default, entry); err != nil {
@@ -299,7 +333,7 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 			// The console form compares defaults with a strict 'true'/'false'
 			// spelling; constrain the contract here rather than loosen the
 			// client to accept every strconv.ParseBool spelling ("True", "1"...).
-			if entry.Type == "bool" && entry.Default != "true" && entry.Default != "false" {
+			if entry.Type == ConfigTypeBool && entry.Default != "true" && entry.Default != "false" {
 				return fmt.Errorf("configSchema key %q bool default must be exactly \"true\" or \"false\", got %q", entry.Name, entry.Default)
 			}
 		}
@@ -312,19 +346,25 @@ func validateConfigSchema(schema []ConfigSchemaEntry) error {
 // so a value the schema passes never fails inside the pod.
 func validateConfigValue(value string, entry ConfigSchemaEntry) error {
 	switch entry.Type {
-	case "string":
+	case ConfigTypeString:
 		return nil
-	case "int":
+	case ConfigTypeInt:
+		// No explicit '+': strconv.ParseInt would accept it, but the console
+		// form's int pattern (a single shared grammar) does not — a value the
+		// server admits must be re-enterable through the form.
+		if strings.HasPrefix(value, "+") {
+			return fmt.Errorf("%q must not carry an explicit '+'", value)
+		}
 		if _, err := strconv.ParseInt(value, 10, 64); err != nil {
 			return fmt.Errorf("%q is not an integer", value)
 		}
 		return nil
-	case "bool":
+	case ConfigTypeBool:
 		if _, err := strconv.ParseBool(value); err != nil {
 			return fmt.Errorf("%q is not a boolean", value)
 		}
 		return nil
-	case "enum":
+	case ConfigTypeEnum:
 		if slices.Contains(entry.Values, value) {
 			return nil
 		}
@@ -336,12 +376,37 @@ func validateConfigValue(value string, entry ConfigSchemaEntry) error {
 	}
 }
 
+// sdkReservedConfigKeys are the config keys every plugin binary reads through
+// the SDK itself (Config in config.go: FUNP_LOG_LEVEL, FUNP_RECONCILE_INTERVAL),
+// independent of what its definition declares.
+// A schema-bearing definition accepts them without declaring them — otherwise
+// declaring any schema would break e.g. LOG_LEVEL on every install. Values are
+// checked with the same parsers the SDK's env decoding applies, so a value
+// admitted here never fails inside the pod. A schema MAY declare one of these
+// keys itself (e.g. to constrain it to an enum); the declared entry then wins.
+var sdkReservedConfigKeys = map[string]func(value string) error{
+	"LOG_LEVEL": func(value string) error {
+		var level slog.Level
+		if err := level.UnmarshalText([]byte(value)); err != nil {
+			return fmt.Errorf("%q is not a log level", value)
+		}
+		return nil
+	},
+	"RECONCILE_INTERVAL": func(value string) error {
+		if _, err := time.ParseDuration(value); err != nil {
+			return fmt.Errorf("%q is not a duration", value)
+		}
+		return nil
+	},
+}
+
 // ValidateConfig checks a PluginInstallation's spec.config against the
 // definition's declared configSchema. An empty schema accepts anything —
 // definitions published before configSchema existed keep their historical
-// accept-anything behavior. A declared schema rejects undeclared keys, values
-// that fail their declared type, and missing required keys. Shared between
-// publish-side tooling and plugin-controller so the two can never drift.
+// accept-anything behavior. A declared schema rejects undeclared keys (except
+// the SDK-reserved ones every plugin reads), values that fail their declared
+// type, and missing required keys. Shared between publish-side tooling and
+// plugin-controller so the two can never drift.
 func ValidateConfig(config map[string]string, schema []ConfigSchemaEntry) error {
 	if len(schema) == 0 {
 		return nil
@@ -355,6 +420,12 @@ func ValidateConfig(config map[string]string, schema []ConfigSchemaEntry) error 
 	for _, key := range slices.Sorted(maps.Keys(config)) {
 		entry, declared := entries[key]
 		if !declared {
+			if validateReserved, reserved := sdkReservedConfigKeys[key]; reserved {
+				if err := validateReserved(config[key]); err != nil {
+					return fmt.Errorf("config key %q: %w", key, err)
+				}
+				continue
+			}
 			return fmt.Errorf("config key %q is not declared in the definition's configSchema", key)
 		}
 		if err := validateConfigValue(config[key], entry); err != nil {

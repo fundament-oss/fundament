@@ -281,6 +281,12 @@ func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
 			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      required: true\n      advanced: true\n",
 			wantErr: "required and advanced",
 		},
+		"required enum with only blank values": {
+			// Unsatisfiable: the enum accepts only "", the required check
+			// rejects exactly "".
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [\"\"]\n      required: true\n",
+			wantErr: "non-blank",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := ParseSourceDefinition(configSchemaManifest(tc.schema))
@@ -319,6 +325,14 @@ func TestValidateConfig(t *testing.T) {
 			schema:  schema,
 			wantErr: "not an integer",
 		},
+		"int with explicit plus rejected": {
+			// strconv.ParseInt would accept "+3", but the console form's int
+			// grammar does not — the server and the form share one grammar so
+			// every admitted value stays re-enterable through the form.
+			config:  map[string]string{"MON_COUNT": "+3", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: "explicit '+'",
+		},
 		"empty int value rejected": {
 			// Present-but-empty is a value, not an omission: "" would crash the
 			// plugin's own env parsing, so it must fail here first.
@@ -351,6 +365,29 @@ func TestValidateConfig(t *testing.T) {
 		"empty config with only-default schema is valid": {
 			config: nil,
 			schema: []ConfigSchemaEntry{{Name: "MON_COUNT", Type: "int", Default: "3"}},
+		},
+		"SDK-reserved keys accepted without declaration": {
+			// Every plugin binary reads FUNP_LOG_LEVEL and
+			// FUNP_RECONCILE_INTERVAL through the SDK, so declaring a schema
+			// must not break them.
+			config: map[string]string{
+				"LOG_LEVEL":          "debug",
+				"RECONCILE_INTERVAL": "30s",
+				"FAILURE_DOMAIN":     "host",
+			},
+			schema: schema,
+		},
+		"SDK-reserved key with a value the SDK cannot parse rejected": {
+			config:  map[string]string{"RECONCILE_INTERVAL": "soon", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: `"soon" is not a duration`,
+		},
+		"declared entry wins over the SDK-reserved fallback": {
+			// A schema may constrain a reserved key itself; its declaration
+			// then applies instead of the SDK parser.
+			config:  map[string]string{"LOG_LEVEL": "debug"},
+			schema:  []ConfigSchemaEntry{{Name: "LOG_LEVEL", Type: "enum", Values: []string{"info", "warn"}}},
+			wantErr: "not one of",
 		},
 		"enum listing empty string accepts explicit empty value": {
 			// An enum may list "" so a present-but-empty value (templated

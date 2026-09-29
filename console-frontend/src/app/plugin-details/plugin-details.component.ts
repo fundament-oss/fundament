@@ -37,12 +37,18 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { installPhase, isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import {
+  hasInvalidConfig,
+  installPhase,
+  isInstallInProgress,
+  isInstallRunning,
+} from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
 import { NotificationService } from '../notification.service';
 import PluginInstallationService, {
   pluginResourceName,
-  RetryReadError,
+  RetryAbortedError,
+  RetryConfigVersionError,
 } from '../plugin-installation/plugin-installation.service';
 import injectBrowsePluginsUrl from '../plugins/browse-plugins-url';
 
@@ -88,6 +94,9 @@ interface ClusterWithState extends ClusterSummary {
   // The version pinned on this cluster; empty when not installed.
   version: string;
   running: boolean;
+  // True when a Failed phase is config-caused (ConfigValid=False): the modal
+  // hides Retry for it, since retry replays the same config.
+  configInvalid: boolean;
 }
 
 // The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install
@@ -254,6 +263,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
             ...cluster,
             phase: installPhaseOf(installation),
             version: installation?.spec?.definitionRef?.pluginVersion ?? '',
+            configInvalid: installation ? hasInvalidConfig(installation) : false,
             running: cluster.status === ClusterStatus.RUNNING,
           };
         }),
@@ -377,11 +387,17 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       // Couldn't read this cluster — keep its current state rather than treating
       // an unreadable cluster as "plugin removed".
       if (items === null) return c;
-      const phase = installPhaseOf(items.find((item) => item.metadata.name === resourceName));
+      const install = items.find((item) => item.metadata.name === resourceName);
+      const phase = installPhaseOf(install);
       // A 'Pending' row that has vanished is an optimistic install (or in-flight
       // retry) the backend has not listed yet — keep showing it as pending.
       const resolved = phase === null && c.phase === 'Pending' ? 'Pending' : phase;
-      return { ...c, phase: resolved, running: c.status === ClusterStatus.RUNNING };
+      return {
+        ...c,
+        phase: resolved,
+        configInvalid: install ? hasInvalidConfig(install) : false,
+        running: c.status === ClusterStatus.RUNNING,
+      };
     });
 
     next.forEach((n, i) => {
@@ -478,11 +494,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch (err) {
-      // A failed read aborted before anything was deleted — roll the row back
-      // to the phase it had.
-      if (err instanceof RetryReadError) this.setPhase(clusterId, previous);
+      // An aborted retry stopped before anything was deleted — roll the row
+      // back to the phase it had.
+      if (err instanceof RetryAbortedError) this.setPhase(clusterId, previous);
       this.notificationService.error(
-        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+        err instanceof RetryConfigVersionError
+          ? `Can't retry ${displayNameOf(plugin)} at a different version with its saved configuration — uninstall and reinstall it instead`
+          : `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }
   }

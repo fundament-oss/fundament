@@ -2,6 +2,15 @@ import { Injectable, inject } from '@angular/core';
 
 import { ConfigService } from '../config.service';
 import { PluginInstallationItem, PluginInstallationListResponse } from '../plugin-resources/types';
+import { RetryConfigVersionError, RetryReadError } from './retry-errors';
+
+export { RetryAbortedError, RetryConfigVersionError, RetryReadError } from './retry-errors';
+
+/** Placeholder spec.definitionRef.pluginVersion for installs that never
+ *  resolved a real published version (the terraform provider's default until
+ *  the marketplace supplies real pins). Mirrors plugin-sdk's
+ *  pluginruntime.UnknownVersion — the one spelling every codebase keys off. */
+export const UNKNOWN_PLUGIN_VERSION = 'unknown';
 
 // Kubernetes resource names must be RFC-1123 (lowercase alphanumerics and '-'),
 // but catalog entries carry display names like "Grafana Alloy".
@@ -20,10 +29,6 @@ function slug(value: string): string {
 export function pluginResourceName(organizationName: string, pluginName: string): string {
   return `${slug(organizationName)}--${slug(pluginName)}`;
 }
-
-/** Thrown by retryInstall when reading the existing installation failed. The
- *  CR was not touched, so the caller can roll its UI state back. */
-export class RetryReadError extends Error {}
 
 @Injectable({ providedIn: 'root' })
 export default class PluginInstallationService {
@@ -120,6 +125,20 @@ export default class PluginInstallationService {
     }
     const config = existing?.spec.config ?? {};
 
+    // Preserved config was written against the recorded version's schema; a
+    // retry that switches versions (the fallback for an unrecorded pin) must
+    // not replay it against a different schema. Abort before deleting — the
+    // failed CR still holds the only copy of that config.
+    if (
+      existing &&
+      Object.keys(config).length > 0 &&
+      existing.spec.definitionRef.pluginVersion !== pluginVersion
+    ) {
+      throw new RetryConfigVersionError(
+        `installation ${resourceName} carries config for version ${existing.spec.definitionRef.pluginVersion}`,
+      );
+    }
+
     // The CR from the failed install still exists, so remove it and wait for
     // it to be gone before re-creating (a plain re-POST would 409).
     await this.uninstallPlugin(clusterId, resourceName).catch(() => {});
@@ -142,8 +161,10 @@ export default class PluginInstallationService {
     attempts = 30,
   ): Promise<void> {
     if (attempts <= 0) return;
-    const items = await this.listInstallations(clusterId).catch(() => []);
-    if (!items.some((item) => item.metadata.name === resourceName)) return;
+    // A poll error keeps waiting (non-null sentinel): only a definite 404
+    // proves the CR is gone.
+    const item = await this.getInstallation(clusterId, resourceName).catch(() => ({}));
+    if (item === null) return;
     await new Promise((resolve) => {
       setTimeout(resolve, 1000);
     });

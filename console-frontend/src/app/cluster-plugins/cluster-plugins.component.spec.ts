@@ -27,16 +27,31 @@ const cephRook: PluginSummary = create(PluginSummarySchema, {
   definitionHash: 'sha256:abc',
 });
 
+const certManager: PluginSummary = create(PluginSummarySchema, {
+  id: 'pl-2',
+  name: 'cert-manager',
+  displayName: 'Cert Manager',
+  organizationName: 'acme',
+  pluginVersion: 'v1.0.0',
+  definitionHash: 'sha256:def',
+});
+
 // This page's bulk form has no per-plugin config step, so a plugin whose
 // definition declares required config (or whose schema the catalog cannot
 // read) must be refused before anything is installed or uninstalled.
 describe('ClusterPluginsComponent required-config guard', () => {
-  function build(definitionResponse: {
-    configSchema: { name: string; required?: boolean }[];
-    configSchemaUnavailable?: boolean;
-  }) {
+  function build(
+    definitionResponse: {
+      configSchema: { name: string; required?: boolean }[];
+      configSchemaUnavailable?: boolean;
+    },
+    opts: {
+      plugins?: PluginSummary[];
+      installations?: { metadata: { name: string }; spec: { definitionRef: { pluginName: string } } }[];
+    } = {},
+  ) {
     const installationService = {
-      listInstallations: () => Promise.resolve([]),
+      listInstallations: () => Promise.resolve(opts.installations ?? []),
       installPlugin: vi.fn().mockResolvedValue(undefined),
       uninstallPlugin: vi.fn().mockResolvedValue(undefined),
     };
@@ -58,7 +73,7 @@ describe('ClusterPluginsComponent required-config guard', () => {
         {
           provide: PLUGIN,
           useValue: {
-            listPlugins: () => of({ plugins: [cephRook] }),
+            listPlugins: () => of({ plugins: opts.plugins ?? [cephRook] }),
           } as unknown as ObservableClient<typeof PluginService>,
         },
         {
@@ -117,6 +132,31 @@ describe('ClusterPluginsComponent required-config guard', () => {
     await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
 
     expect(installationService.installPlugin).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('Ceph Rook');
+  });
+
+  // A blocked install must not swallow the rest of the submit: the uninstall
+  // the user also requested still goes through, and the banner says so.
+  it('still uninstalls when another plugin is refused for required config', async () => {
+    const { component, installationService } = build(
+      { configSchema: [{ name: 'FAILURE_DOMAIN', required: true }] },
+      {
+        plugins: [cephRook, certManager],
+        installations: [
+          {
+            metadata: { name: 'acme--cert-manager' },
+            spec: { definitionRef: { pluginName: 'cert-manager' } },
+          },
+        ],
+      },
+    );
+    await component.load();
+
+    // cert-manager unchecked (uninstall), ceph-rook checked (blocked install).
+    await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
+
+    expect(installationService.installPlugin).not.toHaveBeenCalled();
+    expect(installationService.uninstallPlugin).toHaveBeenCalledWith('c1', 'acme--cert-manager');
     expect(component.errorMessage()).toContain('Ceph Rook');
   });
 });
