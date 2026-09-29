@@ -55,7 +55,7 @@ Two-level cache minimizes latency and Gardener API calls:
 |------|---------|
 | 401 | Missing or invalid JWT |
 | 403 | OpenFGA denies `can_view` for this user+cluster |
-| 404 | Path doesn't match `/clusters/{uuid}/{api\|apis\|openapi}` |
+| 404 | Path doesn't match `/clusters/{uuid}/{api\|apis\|openapi\|version\|healthz\|livez\|readyz}` |
 | 503 | ServiceAccount not yet created (cluster-worker hasn't synced) |
 
 ## Local development

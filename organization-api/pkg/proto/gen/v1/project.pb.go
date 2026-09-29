@@ -616,8 +616,12 @@ type CreateProjectRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	ClusterId string
-	Name      string
-	Alias     *string
+	// The project name is part of every cluster-side namespace name
+	// ("tnt-<project>--<namespace>", a 63-char DNS-1123 label). At most 30
+	// characters leaves namespaces at least 27; no "--" keeps the separator
+	// unambiguous.
+	Name  string
+	Alias *string
 }
 
 func (b0 CreateProjectRequest_builder) Build() *CreateProjectRequest {
@@ -2262,13 +2266,14 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x05alias\x18\x19 \x01(\tR\x05alias\x124\n" +
 	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12'\n" +
 	"\x0fnamespace_count\x18# \x01(\x05R\x0enamespaceCount\x12!\n" +
-	"\fmember_count\x18( \x01(\x05R\vmemberCount\"\xe3\x01\n" +
+	"\fmember_count\x18( \x01(\x05R\vmemberCount\"\xc5\x02\n" +
 	"\x14CreateProjectRequest\x12'\n" +
 	"\n" +
-	"cluster_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12{\n" +
+	"cluster_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\xdc\x01\n" +
 	"\x04name\x18\n" +
-	" \x01(\tBg\xbaHd\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\x12%\n" +
+	" \x01(\tB\xc7\x01\xbaH\xc3\x01\xba\x01a\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')\xba\x01X\n" +
+	"\x16no_consecutive_hyphens\x12(must not contain two consecutive hyphens\x1a\x14!this.contains('--')r\x02\x18\x1eR\x04name\x12%\n" +
 	"\x05alias\x18\x14 \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xff\x01\xaa\x01\x02\b\x01R\x05alias\"6\n" +
 	"\x15CreateProjectResponse\x12\x1d\n" +
 	"\n" +

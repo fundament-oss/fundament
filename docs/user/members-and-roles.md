@@ -53,14 +53,14 @@ enforced yet, and the list of roles is not final.
 What is enforced today has no namespace dimension. A namespace inherits its
 permissions wholesale from its project: a project admin can view, edit and
 delete every namespace in the project, and a project viewer can view all of
-them. On the cluster itself the split is coarser still: organization admins
-get `cluster-admin`, everyone else gets whatever the cluster's own RBAC grants
-their ServiceAccount. See
-[Cluster access](./clusters.md#what-the-kubeconfig-grants).
+them. On the cluster the same split applies: organization admins get
+`cluster-admin`; project admins are bound to the built-in `admin` role and
+project viewers to the built-in `view` role in every namespace of their
+project. See [Cluster access](./clusters.md#what-the-kubeconfig-grants).
 
-Per-namespace role bindings derived from project membership are recorded as
-future work in FUN-7, including the option of matching namespaces by pattern
-(for example `staging-*`) rather than one binding at a time.
+Bindings that differ per namespace within a project are recorded as future
+work in FUN-7, including the option of matching namespaces by pattern (for
+example `staging-*`) rather than one binding at a time.
 
 ## Authorization model
 

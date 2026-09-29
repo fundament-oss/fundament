@@ -17,8 +17,10 @@ import (
 )
 
 // allowedPathRoots are the Kubernetes API path roots the proxy forwards,
-// matched on the whole first path segment. All other roots return 404.
-var allowedPathRoots = []string{"api", "apis", "openapi", "version"}
+// matched on the whole first path segment. All other roots return 404. The
+// health probes are there for GUI tools (Headlamp reports a cluster as lost
+// when /healthz fails); the apiserver lets any authenticated user read them.
+var allowedPathRoots = []string{"api", "apis", "openapi", "version", "healthz", "livez", "readyz"}
 
 // handleClusterProxy proxies Kubernetes API requests to a specific cluster.
 // The cluster ID and remaining path are extracted from the URL via Go 1.22+ wildcards:
@@ -101,6 +103,17 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 		ctx = WithSAToken(ctx, saToken)
 	}
 
+	// --- Namespace listing (GUI tools) ---
+
+	if s.namespaces != nil && servesNamespaceList(r) {
+		s.namespaces.serve(w, r.WithContext(ctx), claims.UserID(), clusterID)
+		return
+	}
+	if s.namespaces != nil && servesAccessReview(r) {
+		s.namespaces.serveAccessReview(w, r.WithContext(ctx), clusterID)
+		return
+	}
+
 	// --- Proxy to Kubernetes API ---
 
 	// Store cluster ID in context for the multi-cluster proxy.
@@ -108,6 +121,18 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 	r = r.WithContext(ctx)
 
 	s.kubeHandler.ServeHTTP(w, r)
+}
+
+// servesNamespaceList and servesAccessReview report whether the proxy answers r
+// itself. Both answers are about the caller, so a request impersonating someone
+// else (kubectl --as) is left to the apiserver, which answers for the
+// impersonated identity after checking the caller may impersonate at all.
+func servesNamespaceList(r *http.Request) bool {
+	return isNamespaceCollectionGet(r) && !kube.HasClientImpersonation(r.Header)
+}
+
+func servesAccessReview(r *http.Request) bool {
+	return isSelfSubjectAccessReview(r) && !kube.HasClientImpersonation(r.Header)
 }
 
 // peekTokenType returns the audience-derived token type of the request's

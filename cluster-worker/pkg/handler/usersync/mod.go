@@ -16,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectrbac"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
@@ -24,14 +25,17 @@ type Handler struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	shoot   shoot.ShootAccess
+	rbac    *projectrbac.Converger
 	logger  *slog.Logger
 }
 
 func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, logger *slog.Logger) *Handler {
+	queries := db.New(pool)
 	return &Handler{
 		pool:    pool,
-		queries: db.New(pool),
+		queries: queries,
 		shoot:   shootAccess,
+		rbac:    projectrbac.NewConverger(queries, shootAccess, logger),
 		logger:  logger.With("handler", "usersync"),
 	}
 }
@@ -203,7 +207,18 @@ func (h *Handler) syncUserToCluster(ctx context.Context, userID, clusterID uuid.
 		}
 	}
 
-	return h.applyUserAccess(ctx, clusterID, userID, emailStr, accessLevel)
+	err = h.applyUserAccess(ctx, clusterID, userID, emailStr, accessLevel)
+	if err != nil {
+		return err
+	}
+
+	// Project membership or org-admin status changed: the user's project
+	// RoleBindings follow. Converge is cluster-wide and idempotent.
+	err = h.rbac.Converge(ctx, clusterID)
+	if err != nil {
+		return fmt.Errorf("converge project role bindings: %w", err)
+	}
+	return nil
 }
 
 // applyUserAccess converges the SA and CRB state based on the desired access level.
@@ -319,6 +334,12 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	// 4. Build plan, then apply.
 	plan := buildReconcilePlan(desiredUsers, actualSAs, actualCRBs)
 	if err := h.applyReconcilePlan(ctx, clusterID, plan); err != nil {
+		return fmt.Errorf("reconcile cluster %s: %w", clusterID, err)
+	}
+
+	// 5. Project RoleBindings (FUN-7).
+	err = h.rbac.Converge(ctx, clusterID)
+	if err != nil {
 		return fmt.Errorf("reconcile cluster %s: %w", clusterID, err)
 	}
 	return nil

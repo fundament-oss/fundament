@@ -92,7 +92,7 @@ request.
 Two things that surprise people the first time:
 
 - The namespace is called something else on the cluster. A `staging` namespace
-  in project `payments` shows up in `kubectl` as `payments1f3a-staging`; see
+  in project `payments` shows up in `kubectl` as `tnt-payments--staging`; see
   [Namespaces](./namespaces.md#the-name-on-the-cluster).
 - What you may do depends on your role. Organization admins get full access;
   project members get only what the cluster's RBAC grants them. See

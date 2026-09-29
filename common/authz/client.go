@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/openfga/go-sdk/client"
@@ -106,6 +107,36 @@ func (c *Client) Evaluate(ctx context.Context, req EvaluationRequest) (Decision,
 	}
 
 	return Decision{Decision: decision}, nil
+}
+
+// ListObjects returns the ids of every objectType object on which subject holds
+// action (an OpenFGA ListObjects call). OpenFGA bounds the result count and
+// duration server-side; callers should keep the candidate set small.
+func (c *Client) ListObjects(ctx context.Context, subject Object, action Action, objectType ObjectType) ([]string, error) {
+	storeID, err := c.store.ID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.fga.ListObjects(ctx).
+		Body(client.ClientListObjectsRequest{
+			User:     subject.String(),
+			Relation: string(action.Name),
+			Type:     string(objectType),
+		}).
+		Options(client.ClientListObjectsOptions{StoreId: &storeID}).
+		Execute()
+	if err != nil {
+		return nil, fmt.Errorf("list objects: %w", err)
+	}
+
+	prefix := string(objectType) + ":"
+	objects := resp.GetObjects()
+	ids := make([]string, 0, len(objects))
+	for _, o := range objects {
+		ids = append(ids, strings.TrimPrefix(o, prefix))
+	}
+	return ids, nil
 }
 
 // Evaluations performs batch access evaluations following the AuthZEN Access Evaluations API.

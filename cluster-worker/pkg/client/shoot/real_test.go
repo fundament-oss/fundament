@@ -393,3 +393,92 @@ func TestEnsureClusterRoleBinding_RecreatesOnRoleChange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "fundament:plugin-controller", got.RoleRef.Name)
 }
+
+func clusterRoleRef(name string) rbacv1.RoleRef {
+	return rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: name}
+}
+
+// A RoleBinding whose subjects or labels drift is updated in place; a changed
+// roleRef (immutable) recreates it.
+func TestEnsureRoleBinding_UpdatesAndRecreates(t *testing.T) {
+	t.Parallel()
+	subjects := []rbacv1.Subject{{Kind: "ServiceAccount", Name: "sa", Namespace: "fundament-system"}}
+	existing := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "rb", Namespace: "ns"}, // Labels are nil
+		Subjects:   []rbacv1.Subject{{Kind: "ServiceAccount", Name: "other", Namespace: "fundament-system"}},
+		RoleRef:    clusterRoleRef("view"),
+	}
+	cs := fake.NewClientset(existing)
+	r := realAccessWith(t, cs)
+	ctx := context.Background()
+	labels := map[string]string{"fundament.io/user-id": "u1"}
+
+	err := r.EnsureRoleBinding(ctx, uuid.New(), "ns", "rb", clusterRoleRef("view"), subjects, labels)
+	require.NoError(t, err)
+	got, err := cs.RbacV1().RoleBindings("ns").Get(ctx, "rb", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, subjects, got.Subjects)
+	assert.Equal(t, "u1", got.Labels["fundament.io/user-id"])
+
+	err = r.EnsureRoleBinding(ctx, uuid.New(), "ns", "rb", clusterRoleRef("admin"), subjects, labels)
+	require.NoError(t, err)
+	got, err = cs.RbacV1().RoleBindings("ns").Get(ctx, "rb", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "admin", got.RoleRef.Name)
+	assert.Equal(t, subjects, got.Subjects)
+}
+
+func TestListRoleBindings_AcrossNamespacesByLabel(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewClientset(
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "a", Namespace: "ns1", Labels: map[string]string{"fundament.io/user-id": "u1"}}, RoleRef: clusterRoleRef("view")},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "b", Namespace: "ns2", Labels: map[string]string{"fundament.io/user-id": "u2"}}, RoleRef: clusterRoleRef("admin")},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "c", Namespace: "ns2"}, RoleRef: clusterRoleRef("edit")},
+	)
+	r := realAccessWith(t, cs)
+
+	got, err := r.ListRoleBindings(context.Background(), uuid.New(), "fundament.io/user-id")
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	byName := map[string]ResourceInfo{}
+	for _, rb := range got {
+		byName[rb.Name] = rb
+	}
+	assert.Equal(t, "ns1", byName["a"].Namespace)
+	assert.Equal(t, "admin", byName["b"].RoleRef.Name)
+}
+
+func TestEnsureClusterRoleBindingSubjects_GroupSubjectAndRecreate(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewClientset()
+	r := realAccessWith(t, cs)
+	ctx := context.Background()
+	group := []rbacv1.Subject{{Kind: rbacv1.GroupKind, APIGroup: rbacv1.GroupName, Name: "fundament:namespace-listers"}}
+
+	require.NoError(t, r.EnsureClusterRoleBindingSubjects(ctx, uuid.New(), "crb", clusterRoleRef("view"), group, nil))
+	require.NoError(t, r.EnsureClusterRoleBindingSubjects(ctx, uuid.New(), "crb", clusterRoleRef("fundament:namespace-lister"), group, nil))
+
+	got, err := cs.RbacV1().ClusterRoleBindings().Get(ctx, "crb", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "fundament:namespace-lister", got.RoleRef.Name)
+	assert.Equal(t, group, got.Subjects)
+}
+
+func TestEnsureRole_UpdatesRules(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewClientset(&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "r", Namespace: "ns"}})
+	r := realAccessWith(t, cs)
+	rules := []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"serviceaccounts"}, Verbs: []string{"impersonate"}}}
+
+	require.NoError(t, r.EnsureRole(context.Background(), uuid.New(), "ns", "r", rules, map[string]string{"a": "b"}))
+	got, err := cs.RbacV1().Roles("ns").Get(context.Background(), "r", metav1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, rules, got.Rules)
+	assert.Equal(t, "b", got.Labels["a"])
+}
+
+func TestDeleteRoleBinding_MissingIsNoop(t *testing.T) {
+	t.Parallel()
+	r := realAccessWith(t, fake.NewClientset())
+	require.NoError(t, r.DeleteRoleBinding(context.Background(), uuid.New(), "ns", "rb"))
+}

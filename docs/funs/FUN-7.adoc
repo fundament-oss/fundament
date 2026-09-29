@@ -207,7 +207,7 @@ The current approach is:
 * RoleBindings are created from project membership. When a user is added to a project, corresponding Kubernetes RoleBindings are synced to every namespace within that project
 * Users can download a KubeConfig with their credentials via the API or the console
 
-In-cluster authorization is intentionally simple for now. The RoleBindings grant either read or write access to standard Kubernetes resources (deployments, services, pods, etc.) based on the user's project permission.
+In-cluster authorization is intentionally simple for now. The RoleBindings grant either read or write access to standard Kubernetes resources (deployments, services, pods, etc.) based on the user's project permission: project admins are bound to the built-in `admin` ClusterRole and project viewers to the built-in `view` ClusterRole. Organization admins get no RoleBindings; their ServiceAccount is bound to `cluster-admin` instead.
 
 NOTE: A future enhancement may add namespace-level granularity, where RoleBindings can target specific namespaces within a project using a glob or matcher pattern (e.g., `{user_id, project_id, namespace_match="staging-*"}`). This is not currently implemented.
 

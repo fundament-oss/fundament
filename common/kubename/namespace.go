@@ -4,27 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/validation"
-)
-
-const (
-	// ProjectPrefixLen is the number of sanitized project-name chars that lead
-	// the cluster-side namespace name.
-	ProjectPrefixLen = 8
-	// ProjectHashLen is the number of project-id hash chars appended to the
-	// project prefix to keep it collision-free.
-	ProjectHashLen = 4
-
-	// namespacePrefixLen is the fixed cost the project prefix and its separator add
-	// to the cluster-side name: sanitized(8) + hash(4) + "-"(1).
-	namespacePrefixLen = ProjectPrefixLen + ProjectHashLen + 1
-
-	// MaxNamespaceNameLength is the longest namespace name org-api accepts. The
-	// cluster-side name is "<project-prefix>-<name>" and must stay within the
-	// DNS-1123 label limit, so the user-facing portion is capped at
-	// limit - prefix = 63 - 13 = 50.
-	MaxNamespaceNameLength = validation.DNS1123LabelMaxLength - namespacePrefixLen
 )
 
 // reservedNamespaces holds namespace names that must never be created: the
@@ -39,16 +19,13 @@ var reservedNamespaces = map[string]struct{}{
 	"fundament-system": {},
 }
 
-// ValidateNamespace reports whether name is a usable project-namespace name: a
-// valid DNS-1123 label, within MaxNamespaceNameLength (so the prefixed
-// cluster-side name still fits), and not a reserved/system name. The name is
-// materialized verbatim into the cluster-side namespace, so an invalid name would
-// otherwise fail the sync indefinitely — this catches it at the API boundary
-// instead.
-func ValidateNamespace(name string) error {
-	if len(name) > MaxNamespaceNameLength {
-		return fmt.Errorf("namespace name %q is too long: %d chars, max %d", name, len(name), MaxNamespaceNameLength)
-	}
+// ValidateNamespace reports whether name is a usable namespace name in the
+// given project: a valid DNS-1123 label, not a reserved/system name, and short
+// enough that the cluster-side name (GenerateNamespace) is still a DNS-1123
+// label. The name is materialized into a v1/Namespace on the shoot, so an
+// invalid name would otherwise fail the sync indefinitely — this catches it at
+// the API boundary instead.
+func ValidateNamespace(projectName, name string) error {
 	if errs := validation.IsDNS1123Label(name); len(errs) > 0 {
 		return fmt.Errorf("invalid namespace name %q: %s", name, strings.Join(errs, "; "))
 	}
@@ -58,27 +35,51 @@ func ValidateNamespace(name string) error {
 	if strings.HasPrefix(name, "kube-") {
 		return fmt.Errorf("namespace name %q uses the reserved \"kube-\" prefix", name)
 	}
+	if limit := MaxNamespaceNameLength(projectName); len(name) > limit {
+		return fmt.Errorf("namespace name %q is too long for project %q: %d chars, max %d (project name + namespace name may be at most %d)",
+			name, projectName, len(name), limit, maxCombinedLength)
+	}
 	return nil
 }
 
-// GenerateNamespace derives the deterministic, collision-free cluster-side
-// namespace name for a fundament namespace:
+const (
+	// TenantNamespacePrefix starts every namespace fundament creates for a
+	// project. Nothing else on a cluster may use it, so a project namespace can
+	// never take the name of a system or plugin namespace (a project "cert" with
+	// a namespace "manager" must not become cert-manager's namespace).
+	TenantNamespacePrefix = "tnt-"
+	// NamespaceSeparator joins the project and namespace names. New project
+	// names may not contain it, so different pairs never produce the same name
+	// ("a-b"+"c" and "a"+"b-c" give tnt-a-b--c and tnt-a--b-c).
+	NamespaceSeparator = "--"
+
+	// maxCombinedLength is what a DNS-1123 label leaves for the project and
+	// namespace names together.
+	maxCombinedLength = validation.DNS1123LabelMaxLength - len(TenantNamespacePrefix) - len(NamespaceSeparator)
+)
+
+// MaxNamespaceNameLength is the longest namespace name a project can hold: the
+// cluster-side name (GenerateNamespace) must fit a DNS-1123 label (63 chars).
+func MaxNamespaceNameLength(projectName string) int {
+	return maxCombinedLength - len(projectName)
+}
+
+// GenerateNamespace derives the cluster-side name for a fundament namespace:
 //
-//	<sanitize(projectName)[:8] + hash(projectID)[:4]>-<name>
+//	tnt-<projectName>--<name>
 //
-// The project-id hash keeps the names of two projects on the same cluster
-// distinct even when their names sanitize identically, which is what makes a
-// shared shoot safe. name is assumed to have passed ValidateNamespace, so the
-// result is a valid DNS-1123 label of at most 63 chars. The name is stable
-// because it derives only from immutable inputs (project id, project name, and
-// the namespace name, none of which can change).
-func GenerateNamespace(projectName string, projectID uuid.UUID, name string) string {
-	// The project-id hash leads the suffix (offset = ProjectPrefixLen) and pads
-	// short/empty project names so the prefix is always fixed-width. The project
-	// prefix may start with a digit — the cluster-side name is "<prefix>-<name>"
-	// and a leading digit is a valid DNS-1123 label start — so Sanitize (not
-	// SanitizeDNS1035) is used here.
-	prefix := Bounded(Sanitize(projectName), HashHex(projectID[:]),
-		ProjectPrefixLen, ProjectHashLen, ProjectPrefixLen)
-	return prefix + "-" + name
+// The same scheme as Gardener's seed namespaces (shoot--<project>--<shoot>):
+// a fixed prefix separates tenant namespaces from everything else on the
+// cluster, and a separator that project names may not contain keeps them
+// apart from each other. Project names are unique per cluster and immutable, so
+// the name is readable in kubectl and GUI tools and stable for the namespace's
+// life. Projects created before the separator was reserved may contain "--";
+// for those org-api still refuses a namespace whose generated name is already
+// in use on its cluster, and cluster-worker never adopts a namespace it doesn't
+// own. name is assumed to have passed ValidateNamespace.
+//
+// Namespaces created before this scheme keep their name; the cluster-worker
+// finds them by their fundament.io/namespace-id label.
+func GenerateNamespace(projectName, name string) string {
+	return TenantNamespacePrefix + projectName + NamespaceSeparator + name
 }

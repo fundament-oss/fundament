@@ -15,8 +15,17 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/projectrbac"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
+
+// noBindings is a project-RBAC desired-state source with no members, so
+// ensure's final converge step is a no-op in these database-free tests.
+type noBindings struct{}
+
+func (noBindings) ProjectRoleBindingListForCluster(context.Context, db.ProjectRoleBindingListForClusterParams) ([]db.ProjectRoleBindingListForClusterRow, error) {
+	return nil, nil
+}
 
 func newTestHandler(t *testing.T) (*Handler, *shoot.MockShootAccess) {
 	t.Helper()
@@ -24,7 +33,14 @@ func newTestHandler(t *testing.T) (*Handler, *shoot.MockShootAccess) {
 	mock := shoot.NewMockShootAccess(logger)
 	// queries is intentionally nil: ensure/delete only touch the shoot client, so
 	// these branches can be exercised without a database.
-	return &Handler{shoot: mock, logger: logger}, mock
+	return &Handler{shoot: mock, rbac: projectrbac.NewConverger(noBindings{}, mock, logger), logger: logger}, mock
+}
+
+// The converger duplicates the namespace ownership label to avoid an import
+// cycle; the two must never drift.
+func TestLabelNamespaceIDMatchesProjectRBAC(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, LabelNamespaceID, projectrbac.LabelNamespaceID)
 }
 
 func testRow(name string) *db.NamespaceGetForSyncRow {
@@ -41,7 +57,7 @@ func testRow(name string) *db.NamespaceGetForSyncRow {
 
 // clusterName is the cluster-side resource name the handler derives for a row.
 func clusterName(row *db.NamespaceGetForSyncRow) string {
-	return kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
+	return kubename.GenerateNamespace(row.ProjectName, row.Name)
 }
 
 func nsLabels(t *testing.T, mock *shoot.MockShootAccess, clusterID uuid.UUID, name string) map[string]string {
@@ -189,7 +205,7 @@ func newRaceHandler(t *testing.T, racedLabels map[string]string) (*Handler, *sho
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	mock := shoot.NewMockShootAccess(logger)
 	race := &raceCreateShoot{MockShootAccess: mock, racedLabels: racedLabels}
-	return &Handler{shoot: race, logger: logger}, mock
+	return &Handler{shoot: race, rbac: projectrbac.NewConverger(noBindings{}, race, logger), logger: logger}, mock
 }
 
 // When a create conflict turns out to be our own namespace (a duplicate reconcile
@@ -262,4 +278,58 @@ func TestDelete_LabelMismatchIsSkipped(t *testing.T) {
 	still, err := mock.GetNamespace(ctx, row.ClusterID, clusterName(row))
 	require.NoError(t, err)
 	require.NotNil(t, still, "a namespace we do not own must not be deleted")
+}
+
+// legacyName is a namespace name from the earlier hashed naming scheme.
+const legacyName = "projab3a6357-team-a"
+
+// A namespace created under the earlier naming scheme is found by its id label
+// and keeps its name: no second namespace under the new name.
+func TestEnsure_KeepsLegacyNamedNamespace(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a")
+	row.OrgDefaultCpuLimitM = i4(500)
+	ctx := context.Background()
+
+	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{
+		LabelNamespaceID: row.ID.String(),
+	}))
+
+	require.NoError(t, h.ensure(ctx, row))
+
+	labels := nsLabels(t, mock, row.ClusterID, legacyName)
+	require.Equal(t, row.ProjectID.String(), labels[LabelProjectID], "legacy namespace's labels reconciled")
+	fresh, err := mock.GetNamespace(ctx, row.ClusterID, clusterName(row))
+	require.NoError(t, err)
+	require.Nil(t, fresh, "no duplicate under the new name")
+	require.NotNil(t, mock.GetLimitRange(row.ClusterID, legacyName), "LimitRange goes into the legacy namespace")
+}
+
+func TestDelete_RemovesLegacyNamedNamespace(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a")
+	ctx := context.Background()
+
+	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{
+		LabelNamespaceID: row.ID.String(),
+	}))
+
+	require.NoError(t, h.delete(ctx, row))
+
+	gone, err := mock.GetNamespace(ctx, row.ClusterID, legacyName)
+	require.NoError(t, err)
+	require.Nil(t, gone)
+}
+
+func TestEnsure_NewNamespaceUsesReadableName(t *testing.T) {
+	t.Parallel()
+	h, mock := newTestHandler(t)
+	row := testRow("team-a") // project "proj"
+	ctx := context.Background()
+
+	require.NoError(t, h.ensure(ctx, row))
+
+	require.Equal(t, row.ID.String(), nsLabels(t, mock, row.ClusterID, "tnt-proj--team-a")[LabelNamespaceID])
 }

@@ -10,7 +10,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, type ValidatorFn } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -49,6 +49,11 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/validation-list';
+
+/** What a 63-character label leaves for project and namespace name together
+ *  after "tnt-" and "--" (kubename.maxCombinedLength in Go). */
+const MAX_COMBINED_NAME_LENGTH = 57;
+
 /**
  * Making a namespace, from wherever you were. The shell owns this sheet rather
  * than the namespace list, so the toolbar can open it over any page; that also
@@ -85,6 +90,27 @@ export default class NewNamespaceSheetComponent {
   projectName = computed(() => {
     const gevonden = this.organizationDataService.getProjectById(this.projectId())?.project;
     return gevonden?.alias || gevonden?.name || 'this project';
+  });
+
+  /** The cluster-side name is "tnt-<project name>--<namespace name>", a
+   *  63-character DNS-1123 label, so the project name eats into the namespace's
+   *  length. */
+  technicalProjectName = computed(
+    () => this.organizationDataService.getProjectById(this.projectId())?.project?.name ?? '',
+  );
+
+  maxNameLength = computed(() => {
+    const technicalName = this.technicalProjectName();
+    // Until the project is known, the most any one-character project allows.
+    return MAX_COMBINED_NAME_LENGTH - (technicalName.length || 1);
+  });
+
+  /** The limit differs per project, so it says where the number comes from. */
+  maxNameLengthText = computed(() => {
+    const limit = `At most ${this.maxNameLength()} characters`;
+    return this.technicalProjectName()
+      ? `${limit} (project name + namespace name may be at most ${MAX_COMBINED_NAME_LENGTH})`
+      : limit;
   });
 
   members = signal<ProjectMember[]>([]);
@@ -132,13 +158,24 @@ export default class NewNamespaceSheetComponent {
       [
         Validators.required,
         Validators.minLength(1),
-        Validators.maxLength(63),
         Validators.pattern(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
       ],
     ],
   });
 
+  private nameLengthValidator: ValidatorFn | null = null;
+
   constructor() {
+    // The length limit follows the project, which is known only once the input
+    // is set and may load after the sheet opened.
+    effect(() => {
+      const control = this.namespaceForm.controls.name;
+      if (this.nameLengthValidator) control.removeValidators(this.nameLengthValidator);
+      this.nameLengthValidator = Validators.maxLength(this.maxNameLength());
+      control.addValidators(this.nameLengthValidator);
+      control.updateValueAndValidity();
+    });
+
     // Opening is the moment to start from nothing and to fetch what the form
     // offers: the sheet outlives the page it was opened over, so neither the
     // draft nor the member list can be left over from last time.
@@ -271,7 +308,7 @@ export default class NewNamespaceSheetComponent {
       return 'Namespace name is required.';
     }
     if (nameControl?.hasError('maxlength')) {
-      return 'Namespace name must not exceed 63 characters.';
+      return `${this.maxNameLengthText()}.`;
     }
     if (nameControl?.hasError('pattern')) {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
