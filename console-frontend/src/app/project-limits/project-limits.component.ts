@@ -20,6 +20,7 @@ import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import { positive } from '../utils/limits';
 import ResourceLimitSectionComponent, {
   modeFor,
@@ -64,7 +65,7 @@ interface NamespaceDefaults {
 
 @Component({
   selector: 'app-project-limits',
-  imports: [ResourceLimitSectionComponent, SheetSyncDirective],
+  imports: [ResourceLimitSectionComponent, SheetSyncDirective, MockBadgeComponent],
   templateUrl: './project-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

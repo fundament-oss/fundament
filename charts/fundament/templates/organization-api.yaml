@@ -42,9 +42,13 @@ spec:
               value: {{ $.Values.organizationApi.prometheusURL | quote }}
             - name: LOGS_URL
               value: {{ $.Values.organizationApi.logsURL | quote }}
-            {{- if $.Values.externalUrls.corsAllowedOrigins }}
+            # The console and the developer portal (its "Publishing as" names)
+            # call organization-api with the session cookie. Left unset, rs/cors
+            # answers "*", which a browser refuses for a credentialed call.
+            {{- $corsOrigins := include "fundament.corsOrigins" (dict "root" $ "frontends" (list $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry)) }}
+            {{- if $corsOrigins }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ $.Values.externalUrls.corsAllowedOrigins }}
+              value: {{ $corsOrigins | quote }}
             {{- end }}
             {{- if $.Values.externalUrls.kubeApiProxy }}
             - name: KUBE_API_PROXY_URL

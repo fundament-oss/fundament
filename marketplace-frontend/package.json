@@ -45,7 +45,7 @@
     "@bufbuild/protobuf": "2.12.1",
     "@connectrpc/connect": "2.1.2",
     "@connectrpc/connect-web": "2.1.2",
-    "@nldd/design-system": "0.8.68",
+    "@nldd/design-system": "0.8.91",
     "express": "^5.2.1",
     "marked": "18.0.13",
     "rxjs": "7.8.2",

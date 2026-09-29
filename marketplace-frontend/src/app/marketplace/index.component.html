@@ -195,21 +195,23 @@
 
         @if (filteredPlugins().length === 0) {
           <nldd-box>
-            <nldd-inline-dialog
-              icon="puzzle-piece"
-              icon-color="secondary"
-              text="No plugins found"
-              [supportingText]="emptyStateMessage()"
-            >
-              @if (widenableMatchCount() > 0) {
-                <nldd-button
-                  slot="actions"
-                  (click)="selectCategory('all')"
-                  [text]="'Search all categories (' + widenableMatchCount() + ')'"
-                  variant="secondary"
-                ></nldd-button>
-              }
-            </nldd-inline-dialog>
+            <nldd-container padding="24">
+              <nldd-inline-dialog
+                icon="puzzle-piece"
+                icon-color="secondary"
+                text="No plugins found"
+                [supportingText]="emptyStateMessage()"
+              >
+                @if (widenableMatchCount() > 0) {
+                  <nldd-button
+                    slot="actions"
+                    (click)="selectCategory('all')"
+                    [text]="'Search all categories (' + widenableMatchCount() + ')'"
+                    variant="secondary"
+                  ></nldd-button>
+                }
+              </nldd-inline-dialog>
+            </nldd-container>
           </nldd-box>
         } @else {
           <div class="grid grid-cols-1 gap-5 @xl:grid-cols-2 @4xl:grid-cols-3">

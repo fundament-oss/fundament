@@ -69,7 +69,13 @@
       <nldd-spacer size="24"></nldd-spacer>
       @for (summary of summaries(); track summary.copy.name) {
         <nldd-title size="4">
-          <h2>{{ summary.copy.title }}</h2>
+          <h2>
+            {{ summary.copy.title }}&ngsp;
+            <app-mock-badge
+              label="Mock: namespace defaults are not final yet"
+              explanation="Namespace defaults are saved and applied to your namespaces, but this part of the console is still being worked out. How it works may change."
+            ></app-mock-badge>
+          </h2>
         </nldd-title>
         @if (summary.mode !== 'unlimited') {
           <nldd-spacer size="8"></nldd-spacer>
@@ -269,7 +275,13 @@
         id="edit-namespace-defaults-title"
         size="3"
       >
-        <h1>Edit namespace defaults</h1>
+        <h1>
+          Edit namespace defaults&ngsp;
+          <app-mock-badge
+            label="Mock: namespace defaults are not final yet"
+            explanation="Namespace defaults are saved and applied to your namespaces, but this part of the console is still being worked out. How it works may change."
+          ></app-mock-badge>
+        </h1>
       </nldd-title>
       <nldd-spacer size="16"></nldd-spacer>
       @if (namespaceError(); as message) {

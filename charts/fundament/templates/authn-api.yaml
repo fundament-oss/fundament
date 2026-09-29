@@ -56,8 +56,10 @@ spec:
               value: "{{ hasPrefix "https://" .Values.externalUrls.authn }}"
             - name: LOG_LEVEL
               value: {{ .Values.authnApi.logLevel }}
+            # The console, the storefront's header (who is signed in) and the
+            # developer portal all ask authn-api with the session cookie.
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.console }}
+              value: {{ include "fundament.corsOrigins" (dict "root" $ "frontends" (list .Values.externalUrls.console .Values.externalUrls.marketplace .Values.externalUrls.marketplaceRegistry)) | quote }}
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: GARDENER_MODE
               value: real

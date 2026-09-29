@@ -106,6 +106,7 @@ func run() error {
 	logger.Info("plugin-controller starting",
 		"namespace", cfg.Namespace,
 		"statusPollInterval", cfg.StatusPollInterval,
+		"progressPollInterval", cfg.ProgressPollInterval,
 	)
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

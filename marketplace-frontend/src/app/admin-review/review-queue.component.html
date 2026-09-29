@@ -47,13 +47,15 @@
   <!-- Submissions Table -->
   @if (submissions().length === 0) {
     <nldd-box>
-      <nldd-inline-dialog
-        icon="puzzle-piece"
-        icon-color="secondary"
-        text="Nothing to review"
-        supporting-text="There are no plugin submissions in the queue right now."
-      >
-      </nldd-inline-dialog>
+      <nldd-container padding="24">
+        <nldd-inline-dialog
+          icon="puzzle-piece"
+          icon-color="secondary"
+          text="Nothing to review"
+          supporting-text="There are no plugin submissions in the queue right now."
+        >
+        </nldd-inline-dialog>
+      </nldd-container>
     </nldd-box>
   } @else {
     <div class="table-container">
