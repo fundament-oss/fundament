@@ -114,7 +114,7 @@ func (c *OrganizationDeleteCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to revoke memberships: %w", err)
 	}
 
-	revokedAPIKeys, err := qtx.APIKeyRevokeAllForOrganization(bgCtx, db.APIKeyRevokeAllForOrganizationParams{OrganizationID: orgID})
+	revokedKeysCount, err := qtx.APIKeyRevokeAllForOrganization(bgCtx, db.APIKeyRevokeAllForOrganizationParams{OrganizationID: orgID})
 	if err != nil {
 		return fmt.Errorf("failed to revoke API keys: %w", err)
 	}
@@ -132,7 +132,7 @@ func (c *OrganizationDeleteCmd) Run(ctx *Context) error {
 	}
 
 	ctx.Logger.Info("deleted organization", "name", c.Name, "id", orgID.String(),
-		"memberships_revoked", revokedMemberships, "api_keys_revoked", revokedAPIKeys)
+		"memberships_revoked", revokedMemberships, "api_keys_revoked", revokedKeysCount)
 
 	return nil
 }
