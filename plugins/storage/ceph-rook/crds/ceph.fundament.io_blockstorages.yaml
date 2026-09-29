@@ -24,6 +24,9 @@ spec:
     - jsonPath: .status.storageClassName
       name: StorageClass
       type: string
+    - jsonPath: .spec.default
+      name: Default
+      type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -57,6 +60,12 @@ spec:
               BlockStorageSpec defines a block-volume (ReadWriteOnce) StorageClass on the
               shared Ceph cluster, using the disks that DiskPools contribute.
             properties:
+              default:
+                description: |-
+                  Default marks the derived StorageClass as the cluster default
+                  (storageclass.kubernetes.io/is-default-class). If more than one
+                  BlockStorage sets it, none is marked default and each is Degraded.
+                type: boolean
               replication:
                 default: auto
                 description: |-

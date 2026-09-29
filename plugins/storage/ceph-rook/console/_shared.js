@@ -123,6 +123,19 @@ export function replicationFieldHtml(selected = 'auto') {
     </div>`;
 }
 
+// Default-StorageClass checkbox shared by the BlockStorage create and edit
+// forms. At most one BlockStorage may set it; conflicts show as Degraded.
+export function defaultFieldHtml(checked = false) {
+  return `
+    <div class="plugin-field">
+      <label class="plugin-checkbox">
+        <input type="checkbox" name="default"${checked ? ' checked' : ''} />
+        Default StorageClass
+      </label>
+      <span class="plugin-hint">PersistentVolumeClaims without an explicit storageClassName use this class. Only one BlockStorage may be the default; a second one degrades both until resolved.</span>
+    </div>`;
+}
+
 // Metadata-servers input shared by the FileStorage create and edit forms.
 export function metadataServersFieldHtml(value = 1) {
   return `

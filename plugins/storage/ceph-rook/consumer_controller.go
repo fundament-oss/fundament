@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -58,6 +59,9 @@ type ConsumerReconciler[T consumer] struct {
 	newList            func() client.ObjectList
 	renderRook         func(obj T, namespace, name string, replicas int, domain string) *unstructured.Unstructured
 	renderStorageClass func(name, clusterNamespace, poolOrFSName, rookNamespace string) *storagev1.StorageClass
+	// isDefault reports whether obj asks for the cluster-default StorageClass
+	// annotation; nil for kinds without a spec.default field (FileStorage).
+	isDefault func(obj T) bool
 }
 
 // NewBlockStorageReconciler reconciles BlockStorage into a CephBlockPool and
@@ -76,6 +80,7 @@ func NewBlockStorageReconciler(c client.Client, clusterNamespace, rookNamespace 
 			return RenderCephBlockPool(namespace, name, replicas, domain)
 		},
 		renderStorageClass: RenderStorageClass,
+		isDefault:          func(bs *v1alpha1.BlockStorage) bool { return bs.Spec.Default },
 	}
 }
 
@@ -102,8 +107,16 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace, 
 }
 
 func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
-	if err := ctrl.NewControllerManagedBy(mgr).
-		For(r.newObject()).
+	b := ctrl.NewControllerManagedBy(mgr).
+		For(r.newObject())
+	// For() only enqueues the changed object, but one consumer's spec.default
+	// affects every other holder of the flag: gaining it degrades them, losing
+	// it (or deletion) lets one claim the annotation. Fan the events out.
+	if r.isDefault != nil {
+		b = b.Watches(r.newObject(), handler.EnqueueRequestsFromMapFunc(r.toAllConsumers),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	}
+	if err := b.
 		// No predicate on Disk: its changes arrive via the status subresource,
 		// which a generation filter would drop. DiskPool matters only through
 		// spec.disks, and the predicate keeps every pool status write from
@@ -241,6 +254,15 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 	replicas, domain, msg := ComputeReplication(obj.ReplicationSpec(), DistinctNodeCount(union))
 	derived := r.derivedName(obj.GetName())
 
+	wantDefault := r.isDefault != nil && r.isDefault(obj)
+	var defaultConflicts []string
+	if wantDefault {
+		defaultConflicts, err = r.otherDefaults(ctx, obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	rook, err := applyOwnedRookObject(ctx, r.Client, obj, r.kind,
 		r.renderRook(obj, r.ClusterNamespace, derived, replicas, domain))
 	if err != nil {
@@ -248,8 +270,31 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 	}
 
 	desired := r.renderStorageClass(derived, r.ClusterNamespace, derived, r.RookNamespace)
+	if wantDefault && len(defaultConflicts) == 0 {
+		metav1.SetMetaDataAnnotation(&desired.ObjectMeta, defaultClassAnnotation, "true")
+	}
 	if err := applyOwnedStorageClass(ctx, r.Client, obj, r.kind, desired); err != nil {
 		return ctrl.Result{}, fmt.Errorf("apply StorageClass %s: %w", derived, err)
+	}
+
+	// Conflicting defaults degrade every claimant symmetrically: picking a
+	// winner here would silently change which class PVCs land on. The pair
+	// above is still applied, so provisioning by explicit class keeps working.
+	// No requeue: the own-kind watch fires when the conflict is resolved.
+	if len(defaultConflicts) > 0 {
+		message := fmt.Sprintf("spec.default is also set on %s %s; at most one may set it, so no StorageClass is marked default until the conflict is resolved",
+			r.kind, strings.Join(defaultConflicts, ", "))
+		return ctrl.Result{}, r.writeStatus(ctx, obj, &v1alpha1.ConsumerStatus{
+			Phase:            v1alpha1.PhaseDegraded,
+			StorageClassName: derived,
+			Replicas:         replicas,
+			FailureDomain:    domain,
+			Message:          message,
+		}, &metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.ReasonDefaultConflict,
+			Message: message,
+		})
 	}
 
 	phase := rookObjectPhase(rook)
@@ -287,6 +332,30 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: provisioningRequeue}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// otherDefaults names the other consumers of this kind that also set
+// spec.default, sorted. Ones being deleted are skipped: a vanishing claimant
+// must not hold the conflict open. Only called when r.isDefault is non-nil.
+func (r *ConsumerReconciler[T]) otherDefaults(ctx context.Context, obj T) ([]string, error) {
+	list := r.newList()
+	if err := r.Client.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list %s for default-conflict check: %w", r.kind, err)
+	}
+	items, err := meta.ExtractList(list)
+	if err != nil {
+		return nil, fmt.Errorf("extract %s list for default-conflict check: %w", r.kind, err)
+	}
+	var names []string
+	for _, item := range items {
+		other := item.(T)
+		if other.GetName() == obj.GetName() || !other.GetDeletionTimestamp().IsZero() || !r.isDefault(other) {
+			continue
+		}
+		names = append(names, other.GetName())
+	}
+	sort.Strings(names)
+	return names, nil
 }
 
 // statusWriter builds the shared writer (see status.go) for this consumer kind.

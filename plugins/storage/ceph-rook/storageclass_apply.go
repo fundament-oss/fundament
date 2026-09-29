@@ -10,6 +10,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,6 +58,13 @@ func applyOwnedStorageClass(ctx context.Context, c client.Client, owner client.O
 
 	before := existing.DeepCopy()
 	existing.AllowVolumeExpansion = desired.AllowVolumeExpansion
+	// Only the default-class annotation is ours to manage; annotations other
+	// parties set stay untouched.
+	if v, ok := desired.Annotations[defaultClassAnnotation]; ok {
+		metav1.SetMetaDataAnnotation(&existing.ObjectMeta, defaultClassAnnotation, v)
+	} else {
+		delete(existing.Annotations, defaultClassAnnotation)
+	}
 	// Upserts our controller ref and keeps any other party's ownerRef, unlike
 	// assigning desired.OwnerReferences wholesale.
 	if err := controllerutil.SetControllerReference(owner, &existing, c.Scheme()); err != nil {

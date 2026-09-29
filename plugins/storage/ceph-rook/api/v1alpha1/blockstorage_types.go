@@ -11,6 +11,11 @@ type BlockStorageSpec struct {
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
+	// Default marks the derived StorageClass as the cluster default
+	// (storageclass.kubernetes.io/is-default-class). If more than one
+	// BlockStorage sets it, none is marked default and each is Degraded.
+	// +optional
+	Default bool `json:"default,omitempty"`
 }
 
 // BlockStorage provides block volumes (ReadWriteOnce) over the shared Ceph
@@ -26,6 +31,7 @@ type BlockStorageSpec struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
+// +kubebuilder:printcolumn:name="Default",type=boolean,JSONPath=`.spec.default`
 // +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 248",message="name must be at most 248 characters: the derived ceph-<name> object name caps at 253"
 type BlockStorage struct {
 	metav1.TypeMeta   `json:",inline"`

@@ -10,6 +10,10 @@ const ReasonNoOSDs = "NoOSDs"
 // consumer cannot become Ready until Rook resolves it.
 const ReasonRookFailure = "RookFailure"
 
+// ReasonDefaultConflict: more than one BlockStorage sets spec.default, so none
+// of them marks its StorageClass as the cluster default.
+const ReasonDefaultConflict = "DefaultConflict"
+
 // ConsumerStatus is the observed state of a BlockStorage or FileStorage and
 // the StorageClass it derives.
 type ConsumerStatus struct {

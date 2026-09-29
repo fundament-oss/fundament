@@ -97,7 +97,8 @@ are exercised through the per-kind controller test files
 `ComponentMapping` has `list`, `detail` and `create` slots but no `edit`, so an
 Edit button swaps the read-only view for a form. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
-replication; `FileStorage` edits replication and metadata server count. Every
+replication and whether its StorageClass is the cluster default; `FileStorage`
+edits replication and metadata server count. Every
 edit saves a merge-patch of `spec` only, so `status` is never clobbered, and
 `DiskPool`'s disk array is replaced wholesale rather than merged element-wise.
 
