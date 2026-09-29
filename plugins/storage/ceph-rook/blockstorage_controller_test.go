@@ -441,6 +441,101 @@ func TestBlockStorageDegradedWithoutCephCluster(t *testing.T) {
 	assert.Equal(t, v1alpha1.ReasonCephClusterMissing, cond.Reason)
 }
 
+// spec.default marks the derived StorageClass as the cluster default, so PVCs
+// without an explicit storageClassName land on Ceph instead of the
+// distribution's own default class.
+func TestBlockStorageDefaultAnnotatesStorageClass(t *testing.T) {
+	t.Parallel()
+	bs := testBlockStorage("fast")
+	bs.Spec.Default = true
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		bs,
+	)
+	r := newBlockReconciler(c)
+
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	var sc storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc))
+	assert.Equal(t, "true", sc.Annotations["storageclass.kubernetes.io/is-default-class"])
+	assert.Equal(t, v1alpha1.PhaseProvisioning, getBlock(t, c).Status.Phase)
+}
+
+// Two BlockStorages claiming default is a configuration error: neither
+// StorageClass gets the annotation and both report Degraded naming the other,
+// so the conflict cannot silently pick a winner. Provisioning itself keeps
+// working: the derived pool and StorageClass are still applied.
+func TestBlockStorageDefaultConflictDegrades(t *testing.T) {
+	t.Parallel()
+	fast := testBlockStorage("fast")
+	fast.Spec.Default = true
+	other := testBlockStorage("other")
+	other.Spec.Default = true
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		fast,
+		other,
+	)
+	r := newBlockReconciler(c)
+
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	var sc storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc),
+		"the StorageClass is still applied; only the default annotation is withheld")
+	assert.NotContains(t, sc.Annotations, "storageclass.kubernetes.io/is-default-class")
+
+	bs := getBlock(t, c)
+	assert.Equal(t, v1alpha1.PhaseDegraded, bs.Status.Phase)
+	assert.Contains(t, bs.Status.Message, "other")
+	cond := meta.FindStatusCondition(bs.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonDefaultConflict, cond.Reason)
+}
+
+// Unsetting spec.default must take the annotation back off the StorageClass,
+// and must not disturb annotations someone else put there.
+func TestBlockStorageRemovesDefaultAnnotationWhenUnset(t *testing.T) {
+	t.Parallel()
+	bs := testBlockStorage("fast")
+	bs.Spec.Default = true
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		bs,
+	)
+	r := newBlockReconciler(c)
+	_, err := reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	// A foreign annotation lands on the live object between reconciles.
+	var sc storagev1.StorageClass
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc))
+	require.Equal(t, "true", sc.Annotations["storageclass.kubernetes.io/is-default-class"])
+	sc.Annotations["example.com/keep"] = "yes"
+	require.NoError(t, c.Update(context.Background(), &sc))
+
+	live := getBlock(t, c)
+	live.Spec.Default = false
+	require.NoError(t, c.Update(context.Background(), live))
+
+	_, err = reconcileBlock(t, r)
+	require.NoError(t, err)
+
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-fast"}, &sc))
+	assert.NotContains(t, sc.Annotations, "storageclass.kubernetes.io/is-default-class")
+	assert.Equal(t, "yes", sc.Annotations["example.com/keep"], "foreign annotations survive")
+}
+
 // The live spec also carries fields the renderer does not emit -- CRD defaults,
 // Rook-written values. They must survive an update, and their presence alone
 // must not count as drift: replacing spec wholesale would strip them on every

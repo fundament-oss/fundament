@@ -14,6 +14,7 @@ import {
   navigateBack,
   renderDefList,
   replicationFieldHtml,
+  defaultFieldHtml,
   metadataServersFieldHtml,
   metadataServersError,
   resourceNameError,
@@ -33,6 +34,7 @@ export const BLOCKSTORAGE = {
   createIntro: `Block storage provides ReadWriteOnce volumes over the shared Ceph cluster's disks.
     It needs at least one DiskPool contributing disks; without one it stays Degraded.`,
   metadataServers: false,
+  defaultToggle: true,
   nameMaxLength: 63,
 };
 
@@ -48,6 +50,7 @@ export const FILESTORAGE = {
     many pods on many nodes can mount the same volume. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
   metadataServers: true,
+  defaultToggle: false,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
   // capped at 63. Enforced here too so the form rejects it before the server.
   nameMaxLength: 56,
@@ -61,6 +64,8 @@ function metadataServersValue(form) {
 function specFrom(cfg, form) {
   const spec = { replication: form.querySelector('[name="replication"]').value };
   if (cfg.metadataServers) spec.metadataServers = metadataServersValue(form);
+  // Always sent, so unticking the box merge-patches the field back to false.
+  if (cfg.defaultToggle) spec.default = form.querySelector('[name="default"]').checked;
   return spec;
 }
 
@@ -124,6 +129,7 @@ export async function consumerDetailPage(cfg) {
       ['Replicas', String(status.replicas ?? '—')],
     ];
     if (cfg.metadataServers) pairs.push(['Metadata servers', String(item.spec?.metadataServers ?? 1)]);
+    if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
     pairs.push(['Failure Domain', status.failureDomain ?? '—']);
     if (status.message) pairs.push(['Message', status.message]);
 
@@ -164,6 +170,8 @@ export async function consumerDetailPage(cfg) {
         ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
 
         ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
+
+        ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
         <div class="plugin-actions">
           <button type="submit" class="plugin-button" id="save-btn">Save</button>
@@ -222,6 +230,8 @@ export async function consumerCreatePage(cfg) {
       ${replicationFieldHtml()}
 
       ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
+
+      ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
       <div class="plugin-actions">
         <button id="submit-btn" type="submit" class="plugin-button">Create ${cfg.kind}</button>

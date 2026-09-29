@@ -9,6 +9,11 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// defaultClassAnnotation is Kubernetes' marker for the cluster-default
+// StorageClass: PVCs without spec.storageClassName bind to the class carrying
+// it. Managed on derived StorageClasses via BlockStorage spec.default.
+const defaultClassAnnotation = "storageclass.kubernetes.io/is-default-class"
+
 // RBDProvisioner is the CSI driver name for a Rook operator in rookNamespace.
 //
 // Rook registers drivers as "<operator namespace>.rbd.csi.ceph.com", so this

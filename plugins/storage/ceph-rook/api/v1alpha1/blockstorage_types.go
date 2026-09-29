@@ -9,6 +9,11 @@ type BlockStorageSpec struct {
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
+	// Default marks the derived StorageClass as the cluster default
+	// (storageclass.kubernetes.io/is-default-class). At most one BlockStorage
+	// may set it; all that do while another does are Degraded.
+	// +optional
+	Default bool `json:"default,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -17,6 +22,7 @@ type BlockStorageSpec struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
+// +kubebuilder:printcolumn:name="Default",type=boolean,JSONPath=`.spec.default`
 // The derived CephBlockPool/StorageClass is named ceph-<name>; object names cap
 // at 253 characters, so a longer name would only fail at reconcile time,
 // wedging the object Degraded on a create that can never succeed.

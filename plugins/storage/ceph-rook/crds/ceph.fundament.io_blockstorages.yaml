@@ -24,6 +24,9 @@ spec:
     - jsonPath: .status.storageClassName
       name: StorageClass
       type: string
+    - jsonPath: .spec.default
+      name: Default
+      type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -54,6 +57,12 @@ spec:
               BlockStorageSpec asks for an RBD StorageClass over the shared OSD set.
               BlockStorage brings no disks; DiskPools do that.
             properties:
+              default:
+                description: |-
+                  Default marks the derived StorageClass as the cluster default
+                  (storageclass.kubernetes.io/is-default-class). At most one BlockStorage
+                  may set it; all that do while another does are Degraded.
+                type: boolean
               replication:
                 default: auto
                 description: Replication selects replica count; "auto" derives it
