@@ -284,7 +284,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: ceph-rook
-    pluginVersion: "0.1.0"
+    pluginVersion: "0.2.0"
     definitionHash: sha256:<hash printed by `just plugins publish storage/ceph-rook`>
 ```
 

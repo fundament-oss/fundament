@@ -178,3 +178,233 @@ spec:
 		})
 	}
 }
+
+// configSchemaManifest wraps a configSchema block in a minimal valid source
+// definition, so each case below states only the schema under test.
+func configSchemaManifest(schema string) []byte {
+	return []byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  permissions:
+    rbac: []
+  configSchema:
+` + schema)
+}
+
+func TestParseSourceDefinition_AcceptsValidConfigSchema(t *testing.T) {
+	def, err := ParseSourceDefinition(configSchemaManifest(`    - name: MON_COUNT
+      displayName: Monitor count
+      type: int
+      default: "3"
+      description: Number of Ceph monitors
+    - name: ALLOW_MULTIPLE_PER_NODE
+      type: bool
+      default: "false"
+      advanced: true
+    - name: FAILURE_DOMAIN
+      type: enum
+      values: [host, osd]
+      required: true
+`))
+	require.NoError(t, err)
+	require.Len(t, def.Spec.ConfigSchema, 3)
+	assert.Equal(t, "MON_COUNT", def.Spec.ConfigSchema[0].Name)
+	assert.Equal(t, "Monitor count", def.Spec.ConfigSchema[0].DisplayName)
+	assert.Equal(t, "int", def.Spec.ConfigSchema[0].Type)
+	assert.Equal(t, "3", def.Spec.ConfigSchema[0].Default)
+	assert.True(t, def.Spec.ConfigSchema[1].Advanced)
+	assert.Equal(t, []string{"host", "osd"}, def.Spec.ConfigSchema[2].Values)
+	assert.True(t, def.Spec.ConfigSchema[2].Required)
+}
+
+func TestParseSourceDefinition_RejectsBadConfigSchema(t *testing.T) {
+	for name, tc := range map[string]struct {
+		schema  string
+		wantErr string
+	}{
+		"lowercase key name": {
+			schema:  "    - name: mon_count\n      type: int\n",
+			wantErr: "mon_count",
+		},
+		"duplicate key": {
+			schema:  "    - name: MON_COUNT\n      type: int\n    - name: MON_COUNT\n      type: int\n",
+			wantErr: "twice",
+		},
+		"unknown type": {
+			schema:  "    - name: MON_COUNT\n      type: integer\n",
+			wantErr: "integer",
+		},
+		"enum without values": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n",
+			wantErr: "no values",
+		},
+		"values on non-enum": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      values: [\"1\", \"3\"]\n",
+			wantErr: "not an enum",
+		},
+		"non-integer int default": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      default: three\n",
+			wantErr: "not an integer",
+		},
+		"non-boolean bool default": {
+			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n      default: yes\n",
+			wantErr: "not a boolean",
+		},
+		"enum default outside values": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      default: rack\n",
+			wantErr: "rack",
+		},
+		"required with default": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      default: host\n      required: true\n",
+			wantErr: "mutually exclusive",
+		},
+		"bool without default": {
+			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n",
+			wantErr: "without a default",
+		},
+		"required bool": {
+			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n      required: true\n",
+			wantErr: "cannot be required",
+		},
+		"bool default spelled True": {
+			schema:  "    - name: DEV_LOOP_DEVICES\n      type: bool\n      default: \"True\"\n",
+			wantErr: "must be exactly",
+		},
+		"int default with explicit plus": {
+			schema:  "    - name: MON_COUNT\n      type: int\n      default: \"+3\"\n",
+			wantErr: "explicit '+'",
+		},
+		"required and advanced": {
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [host, osd]\n      required: true\n      advanced: true\n",
+			wantErr: "required and advanced",
+		},
+		"required enum with only blank values": {
+			// Unsatisfiable: the enum accepts only "", the required check
+			// rejects exactly "".
+			schema:  "    - name: FAILURE_DOMAIN\n      type: enum\n      values: [\"\"]\n      required: true\n",
+			wantErr: "non-blank",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseSourceDefinition(configSchemaManifest(tc.schema))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	schema := []ConfigSchemaEntry{
+		{Name: "MON_COUNT", Type: "int", Default: "3"},
+		{Name: "DEV_LOOP_DEVICES", Type: "bool", Default: "false"},
+		{Name: "FAILURE_DOMAIN", Type: "enum", Values: []string{"host", "osd"}, Required: true},
+		{Name: "CEPH_IMAGE", Type: "string"},
+	}
+
+	for name, tc := range map[string]struct {
+		config  map[string]string
+		schema  []ConfigSchemaEntry
+		wantErr string // empty means valid
+	}{
+		"no schema accepts anything (pre-schema back-compat)": {
+			config: map[string]string{"WHATEVER": "yes"}, schema: nil,
+		},
+		"valid config": {
+			config: map[string]string{"MON_COUNT": "1", "FAILURE_DOMAIN": "osd"}, schema: schema,
+		},
+		"undeclared key rejected": {
+			config:  map[string]string{"MON_CONUT": "1", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: `"MON_CONUT" is not declared`,
+		},
+		"non-integer int rejected": {
+			config:  map[string]string{"MON_COUNT": "three", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: "not an integer",
+		},
+		"int with explicit plus rejected": {
+			// strconv.ParseInt would accept "+3", but the console form's int
+			// grammar does not — the server and the form share one grammar so
+			// every admitted value stays re-enterable through the form.
+			config:  map[string]string{"MON_COUNT": "+3", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: "explicit '+'",
+		},
+		"empty int value rejected": {
+			// Present-but-empty is a value, not an omission: "" would crash the
+			// plugin's own env parsing, so it must fail here first.
+			config:  map[string]string{"MON_COUNT": "", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: "not an integer",
+		},
+		"bad bool rejected": {
+			config:  map[string]string{"DEV_LOOP_DEVICES": "yes", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: "not a boolean",
+		},
+		"enum outside values rejected": {
+			config:  map[string]string{"FAILURE_DOMAIN": "rack"},
+			schema:  schema,
+			wantErr: "not one of",
+		},
+		"missing required rejected": {
+			config:  map[string]string{"MON_COUNT": "1"},
+			schema:  schema,
+			wantErr: `"FAILURE_DOMAIN" is required`,
+		},
+		"whitespace-only required string rejected": {
+			// A string type accepts any value at the per-key check, so this
+			// exercises the dedicated post-presence whitespace check.
+			config:  map[string]string{"CEPH_IMAGE": "   "},
+			schema:  []ConfigSchemaEntry{{Name: "CEPH_IMAGE", Type: "string", Required: true}},
+			wantErr: `"CEPH_IMAGE" is required`,
+		},
+		"empty config with only-default schema is valid": {
+			config: nil,
+			schema: []ConfigSchemaEntry{{Name: "MON_COUNT", Type: "int", Default: "3"}},
+		},
+		"SDK-reserved keys accepted without declaration": {
+			// Every plugin binary reads FUNP_LOG_LEVEL and
+			// FUNP_RECONCILE_INTERVAL through the SDK, so declaring a schema
+			// must not break them.
+			config: map[string]string{
+				"LOG_LEVEL":          "debug",
+				"RECONCILE_INTERVAL": "30s",
+				"FAILURE_DOMAIN":     "host",
+			},
+			schema: schema,
+		},
+		"SDK-reserved key with a value the SDK cannot parse rejected": {
+			config:  map[string]string{"RECONCILE_INTERVAL": "soon", "FAILURE_DOMAIN": "host"},
+			schema:  schema,
+			wantErr: `"soon" is not a duration`,
+		},
+		"declared entry wins over the SDK-reserved fallback": {
+			// A schema may constrain a reserved key itself; its declaration
+			// then applies instead of the SDK parser.
+			config:  map[string]string{"LOG_LEVEL": "debug"},
+			schema:  []ConfigSchemaEntry{{Name: "LOG_LEVEL", Type: "enum", Values: []string{"info", "warn"}}},
+			wantErr: "not one of",
+		},
+		"enum listing empty string accepts explicit empty value": {
+			// An enum may list "" so a present-but-empty value (templated
+			// config spelling "use the default") validates; ceph-rook's
+			// CEPHFS_MOUNTER relies on this.
+			config: map[string]string{"MOUNTER": ""},
+			schema: []ConfigSchemaEntry{{Name: "MOUNTER", Type: "enum", Values: []string{"", "kernel", "fuse"}}},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := ValidateConfig(tc.config, tc.schema)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+			}
+		})
+	}
+}

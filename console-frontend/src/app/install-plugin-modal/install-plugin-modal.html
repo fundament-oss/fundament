@@ -39,7 +39,46 @@
         }
         <nldd-spacer size="16"></nldd-spacer>
       }
-      @if (clusters().length === 0) {
+      @if (schemaError()) {
+        <nldd-inline-dialog
+          icon="exclamation-triangle"
+          icon-color="critical"
+          text="Couldn't load configuration"
+          supporting-text="Something went wrong loading this version's configuration. Try installing again."
+        ></nldd-inline-dialog>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (configInvalidClusters().length > 0) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Invalid configuration"
+          [attr.supporting-text]="
+            'The installation on ' +
+            configInvalidClusters().join(', ') +
+            ' failed because its configuration is invalid. Retrying would replay the same configuration, so uninstall the plugin and install it again with corrected values.'
+          "
+        ></nldd-inline-dialog>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (retryUnavailableVersion() !== null) {
+        <nldd-inline-dialog
+          variant="alert"
+          text="Can't retry this installation"
+          [attr.supporting-text]="
+            'Version ' +
+            retryUnavailableVersion() +
+            ' is no longer published, and retrying a different version would reuse configuration made for it. Uninstall the plugin and install a published version instead.'
+          "
+        ></nldd-inline-dialog>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (pendingInstall() !== null) {
+        <app-plugin-config-form
+          [schema]="pendingInstall()!.schema"
+          (confirmed)="onConfigConfirmed($event)"
+          (cancelled)="onConfigCancelled()"
+        ></app-plugin-config-form>
+      } @else if (clusters().length === 0) {
         <nldd-inline-dialog
           icon="kubernetes"
           icon-color="secondary"
@@ -117,7 +156,10 @@
                 ></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
               }
-              @if (cluster.phase !== null && isFailed(cluster.phase)) {
+              <!-- No Retry for a config-caused failure: retry replays the
+                   failed CR's config verbatim, so it would fail identically —
+                   the dialog above the list explains the way out. -->
+              @if (cluster.phase !== null && isFailed(cluster.phase) && !cluster.configInvalid) {
                 <nldd-cell width="fit-content">
                   <nldd-button
                     type="button"
@@ -171,7 +213,7 @@
                     text="Install"
                     variant="primary"
                     size="sm"
-                    [attr.disabled]="versions().length === 0 ? '' : null"
+                    [attr.disabled]="versions().length === 0 || schemaLoading() ? '' : null"
                   >
                     <!-- Newest on its own at the top, the rest under a heading:
                          which one you get by default stays obvious however many

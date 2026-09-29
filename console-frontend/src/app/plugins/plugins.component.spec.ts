@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  RetryReadError,
+} from '../plugin-installation/plugin-installation.service';
 import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { NotificationService } from '../notification.service';
@@ -66,7 +69,12 @@ const acmeInstall: PluginInstallationItem = {
   status: { phase: 'Running', ready: true },
 };
 
-function build(plugins: PluginSummary[], installs: PluginInstallationItem[], marketplaceUrl = '') {
+function build(
+  plugins: PluginSummary[],
+  installs: PluginInstallationItem[],
+  marketplaceUrl = '',
+  installationService: Partial<PluginInstallationService> = {},
+) {
   TestBed.configureTestingModule({
     providers: [
       {
@@ -101,6 +109,7 @@ function build(plugins: PluginSummary[], installs: PluginInstallationItem[], mar
         useValue: {
           listInstallations: (clusterId: string) =>
             Promise.resolve(clusterId === cluster.id ? installs : []),
+          ...installationService,
         } as unknown as PluginInstallationService,
       },
       {
@@ -235,5 +244,59 @@ describe('PluginsComponent listing', () => {
     await component.onInstallPlugin(plugin);
     expect(component.installVersions()).toEqual([]);
     expect(component.installVersionsError()).toBe(false);
+  });
+});
+
+// The read-config/uninstall/re-create sequence itself is the service's;
+// see plugin-installation.service.spec.ts. These pin the delegation and the
+// component's handling of an aborted retry.
+describe('PluginsComponent retry install', () => {
+  // Selected as it would be from opening the modal off the plugin row.
+  const selectedPlugin = {
+    id: 'pl-1',
+    name: 'ceph-rook',
+    displayName: 'Ceph Rook',
+    descriptionShort: '',
+    image: '',
+    organizationName: 'acme',
+    publisherDisplayName: 'Acme',
+    categories: [],
+    tags: [],
+  };
+
+  it('retries through the service at the chosen version and hash', async () => {
+    const installationService = {
+      listInstallations: () => Promise.resolve([]),
+      retryInstall: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const component = build([], [], '', installationService);
+    component.selectedPlugin = { ...selectedPlugin };
+
+    await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
+
+    expect(installationService.retryInstall).toHaveBeenCalledWith(
+      'c1',
+      'acme',
+      'ceph-rook',
+      'v0.2.0',
+      'sha256:abc',
+    );
+  });
+
+  it('notifies when the service aborts the retry on a failed read', async () => {
+    const installationService = {
+      listInstallations: () => Promise.resolve([]),
+      retryInstall: vi.fn().mockRejectedValue(new RetryReadError('read failed')),
+    };
+
+    const component = build([], [], '', installationService);
+    component.selectedPlugin = { ...selectedPlugin };
+    const notificationService = TestBed.inject(NotificationService);
+    const errorNotification = vi.spyOn(notificationService, 'error');
+
+    await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
+
+    expect(errorNotification).toHaveBeenCalledTimes(1);
   });
 });

@@ -45,18 +45,10 @@ const (
 	// started coming up.
 	ConditionProgressing = "Progressing"
 
-	// unknownDefinitionHash is the terraform provider's default placeholder,
-	// used until the marketplace supplies real content hashes (FUN-11). It is
-	// treated as unpinned: it can never equal a real digest, so verifying
-	// against it would reject every install forever.
-	unknownDefinitionHash = "sha256:unknown"
-
-	// unknownDefinitionVersion is the terraform/console default placeholder for
-	// spec.definitionRef.pluginVersion until the marketplace supplies real
-	// versions (FUN-11). Unlike the hash, the version is the key used to resolve
-	// the stored definition, so it cannot be silently skipped — an unpinned
-	// version has nothing to fetch.
-	unknownDefinitionVersion = "unknown"
+	// ConditionConfigValid is the Status Condition surfaced on the CR reporting
+	// whether spec.config conforms to the pinned definition's configSchema. A
+	// definition with no schema always validates (pre-schema back-compat).
+	ConditionConfigValid = "ConfigValid"
 
 	// failedRetryInterval is how long a permanently failed installation waits
 	// before it is tried again. The answer rarely changes, but a version that
@@ -83,9 +75,10 @@ func (e *permanentError) Unwrap() error { return e.err }
 func newPermanentErr(err error) error { return &permanentError{err: err} }
 
 // isUnpinned reports whether a definitionHash carries no real consent record:
-// either empty or the "sha256:unknown" placeholder.
+// either empty or the shared "sha256:unknown" placeholder — it can never
+// equal a real digest, so verifying against it would reject every install.
 func isUnpinned(hash string) bool {
-	return hash == "" || hash == unknownDefinitionHash
+	return hash == "" || hash == pluginruntime.UnknownHash
 }
 
 // hasStarted reports whether the installation's current spec has been deployed
@@ -120,10 +113,11 @@ func hasStarted(cr *pluginsv1.PluginInstallation) bool {
 }
 
 // isUnpinnedVersion reports whether a pluginVersion is the unresolved
-// placeholder (empty or "unknown"). A definition is stored and fetched by its
-// real metadata.version, so an unpinned version can never resolve one.
+// placeholder (empty or the shared "unknown"). A definition is stored and
+// fetched by its real metadata.version, so an unpinned version can never
+// resolve one.
 func isUnpinnedVersion(version string) bool {
-	return version == "" || version == unknownDefinitionVersion
+	return version == "" || version == pluginruntime.UnknownVersion
 }
 
 type Reconciler struct {
@@ -441,6 +435,18 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		return fmt.Errorf("reconcile plugin scope: %w", err)
 	}
 
+	// Enforce the definition's configSchema before materialising anything: an
+	// invalid spec.config fails closed exactly like a hash mismatch, and is
+	// permanent — the same spec revalidates to the same answer. The definition
+	// is the hash-verified one, so what is enforced is what the admin
+	// consented to.
+	if err := pluginruntime.ValidateConfig(cr.Spec.Config, def.Spec.ConfigSchema); err != nil {
+		setCondition(cr, ConditionConfigValid, metav1.ConditionFalse, "ConfigInvalid", err.Error())
+		return newPermanentErr(fmt.Errorf("validate config: %w", err))
+	}
+	setCondition(cr, ConditionConfigValid, metav1.ConditionTrue, "Validated",
+		"spec.config conforms to the definition's configSchema")
+
 	// Namespace (no owner ref — cleaned up via finalizer)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: nsName},
@@ -533,30 +539,21 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	return nil
 }
 
-// setPluginScopeCondition upserts the PluginScopeReady Condition on the CR's
-// status. Same-value updates preserve LastTransitionTime; changes reset it.
-func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
-	cond := metav1.Condition{
-		Type:               ConditionPluginScopeReady,
+// setCondition upserts a Condition of the given type on the CR's status.
+// Same-value updates preserve LastTransitionTime; changes reset it.
+func setCondition(cr *pluginsv1.PluginInstallation, condType string, status metav1.ConditionStatus, reason, message string) {
+	meta.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
+		Type:               condType,
 		Status:             status,
 		ObservedGeneration: cr.Generation,
 		Reason:             reason,
 		Message:            message,
-	}
-	for i, existing := range cr.Status.Conditions {
-		if existing.Type != ConditionPluginScopeReady {
-			continue
-		}
-		if existing.Status == status {
-			cond.LastTransitionTime = existing.LastTransitionTime
-		} else {
-			cond.LastTransitionTime = metav1.Now()
-		}
-		cr.Status.Conditions[i] = cond
-		return
-	}
-	cond.LastTransitionTime = metav1.Now()
-	cr.Status.Conditions = append(cr.Status.Conditions, cond)
+	})
+}
+
+// setPluginScopeCondition upserts the PluginScopeReady Condition on the CR.
+func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
+	setCondition(cr, ConditionPluginScopeReady, status, reason, message)
 }
 
 // fetchDefinition fetches the PluginDefinition manifest from organization-api,

@@ -32,6 +32,13 @@ resource "fundament_plugin_installation" "grafana" {
   # forces a replacement.
   # plugin_version  = "10.2.0"
   # definition_hash = "sha256:..."
+
+  # Install-time configuration, validated by the plugin controller against the
+  # configSchema declared by the pinned definition. Omitted keys use the
+  # definition's defaults. Changing this forces a replacement.
+  # config = {
+  #   ADMIN_USER = "admin"
+  # }
 }
 
 # Import an existing plugin installation. The second path segment is the

@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	marketplacev1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1"
+	catalogv1 "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
@@ -27,6 +30,67 @@ func capabilitiesAndPermissions(manifest []byte) ([]string, []*marketplacev1.Plu
 	}
 
 	return capabilities, permissions, nil
+}
+
+// configSchemaFromManifest derives the install-form schema from the pinned
+// manifest, like capabilitiesAndPermissions above: never stored in a column,
+// so it can never drift from the hash.
+//
+// Unlike the publish-time parser, this decode deliberately tolerates unknown
+// fields: manifests outlive the binary that parses them, and a manifest
+// published by a newer plugin-sdk must not lose its install form — the
+// console fails closed on "schema unavailable", which would block every
+// install of that version, config or not, until the catalog is upgraded.
+// Only a configSchema this binary cannot faithfully project (undecodable
+// yaml, a config type it does not know) reports unavailable.
+func configSchemaFromManifest(manifest []byte) ([]*catalogv1.ConfigSchemaEntry, error) {
+	var definition struct {
+		Spec struct {
+			ConfigSchema []pluginruntime.ConfigSchemaEntry `yaml:"configSchema"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(manifest, &definition); err != nil {
+		return nil, fmt.Errorf("parsing plugin definition: %w", err)
+	}
+
+	entries := make([]*catalogv1.ConfigSchemaEntry, 0, len(definition.Spec.ConfigSchema))
+	for _, entry := range definition.Spec.ConfigSchema {
+		configType, err := configTypeFromManifest(entry.Type)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, catalogv1.ConfigSchemaEntry_builder{
+			Name:         entry.Name,
+			DisplayName:  entry.DisplayName,
+			Type:         configType,
+			DefaultValue: entry.Default,
+			Description:  entry.Description,
+			Required:     entry.Required,
+			Values:       entry.Values,
+			Advanced:     entry.Advanced,
+		}.Build())
+	}
+	return entries, nil
+}
+
+// configTypeFromManifest maps the manifest's type string (plugin-sdk's
+// authoritative vocabulary) to the proto enum.
+func configTypeFromManifest(t string) (catalogv1.ConfigType, error) {
+	switch t {
+	case pluginruntime.ConfigTypeString:
+		return catalogv1.ConfigType_CONFIG_TYPE_STRING, nil
+	case pluginruntime.ConfigTypeInt:
+		return catalogv1.ConfigType_CONFIG_TYPE_INT, nil
+	case pluginruntime.ConfigTypeBool:
+		return catalogv1.ConfigType_CONFIG_TYPE_BOOL, nil
+	case pluginruntime.ConfigTypeEnum:
+		return catalogv1.ConfigType_CONFIG_TYPE_ENUM, nil
+	default:
+		// Reachable under the lenient decode above: a newer SDK may declare
+		// types this binary does not know, and a form it cannot render
+		// correctly must report the schema unavailable instead.
+		return 0, fmt.Errorf("config type %q unknown to this catalog", t)
+	}
 }
 
 // Collapses RBAC verbs into the two phrases the storefront shows. bind,

@@ -361,6 +361,100 @@ func TestGetPluginDefinitionReturnsManifestAndHash(t *testing.T) {
 	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
 }
 
+const testManifestWithConfigSchema = testManifest + `  configSchema:
+    - name: MON_COUNT
+      displayName: Monitor count
+      type: int
+      default: "3"
+      description: Number of Ceph monitors
+      advanced: true
+    - name: FAILURE_DOMAIN
+      type: enum
+      values: [host, osd]
+      required: true
+`
+
+func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "with-config-schema", Visibility: "public", Published: true,
+		Manifest: []byte(testManifestWithConfigSchema),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	entries := resp.GetConfigSchema()
+	require.Len(t, entries, 2)
+	assert.Equal(t, "MON_COUNT", entries[0].GetName())
+	assert.Equal(t, "Monitor count", entries[0].GetDisplayName())
+	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_INT, entries[0].GetType())
+	assert.Equal(t, "3", entries[0].GetDefaultValue())
+	assert.Equal(t, "Number of Ceph monitors", entries[0].GetDescription())
+	assert.True(t, entries[0].GetAdvanced())
+	assert.Equal(t, catalogv1.ConfigType_CONFIG_TYPE_ENUM, entries[1].GetType())
+	assert.Equal(t, []string{"host", "osd"}, entries[1].GetValues())
+	assert.True(t, entries[1].GetRequired())
+	assert.False(t, entries[1].GetAdvanced(), "a required entry cannot be advanced")
+}
+
+// A manifest carrying fields from a newer plugin-sdk must NOT lose its config
+// schema: the console fails closed on config_schema_unavailable, so a strict
+// parse here would block every install of that version — even one declaring
+// no config — until the catalog is upgraded.
+func TestGetPluginDefinitionToleratesNewerSdkFields(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-newer-sdk", Visibility: "public", Published: true,
+		Manifest: []byte(testManifestWithConfigSchema + "  fieldFromANewerSdk: true\n"),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.False(t, resp.GetConfigSchemaUnavailable())
+	require.Len(t, resp.GetConfigSchema(), 2)
+	assert.Equal(t, "MON_COUNT", resp.GetConfigSchema()[0].GetName())
+}
+
+// A configSchema this binary cannot faithfully project must fail closed for
+// the install modal: the manifest and hash still come back (they are what the
+// install pins against), but config_schema_unavailable tells the console it
+// cannot see whether required config exists, so it must not instant-install.
+func TestGetPluginDefinitionDegradesOnUnknownConfigType(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-unknown-config-type", Visibility: "public", Published: true,
+		Manifest: []byte(testManifest + "  configSchema:\n    - name: RATIO\n      type: float\n"),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp.GetManifest(), "stored bytes must still be returned")
+	assert.Equal(t, "sha256:seed", resp.GetDefinitionHash())
+	assert.Empty(t, resp.GetConfigSchema())
+	assert.True(t, resp.GetConfigSchemaUnavailable())
+}
+
+func TestGetPluginDefinitionNoConfigSchema(t *testing.T) {
+	// Pre-schema manifests must come back with an empty schema, keeping the
+	// console's instant-install path.
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "no-config-schema", Visibility: "public", Published: true,
+		Manifest: []byte(testManifest),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+	assert.Empty(t, resp.GetConfigSchema())
+}
+
 // The anonymous storefront serves published versions only. Installers that
 // need a draft (their own) read through install.v1 instead (FUN-22); see
 // install_test.go.

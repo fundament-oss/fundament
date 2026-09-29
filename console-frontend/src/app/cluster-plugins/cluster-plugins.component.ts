@@ -13,10 +13,11 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
-import { CLUSTER, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, INSTALL, PLUGIN } from '../../connect/tokens';
 import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -53,6 +54,8 @@ export default class ClusterPluginsComponent implements OnInit {
   private client = inject(CLUSTER);
 
   private pluginClient = inject(PLUGIN);
+
+  private installClient = inject(INSTALL);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -150,8 +153,23 @@ export default class ClusterPluginsComponent implements OnInit {
         (i) => !newNames.has(i.spec.definitionRef.pluginName),
       );
 
+      // This bulk form has no per-plugin config step (the install modal on
+      // the plugins page does), so a plugin whose definition declares
+      // required config would only ever reconcile to Failed from here. Fail
+      // closed per plugin — a schema fetch error counts as requiring config —
+      // while the rest of the submit (other installs, all uninstalls) still
+      // goes through.
+      const checked = await Promise.all(
+        toInstall.map(async (p) => ({
+          plugin: p,
+          needsConfig: await this.requiresConfigForm(p).catch(() => true),
+        })),
+      );
+      const blocked = checked.filter((c) => c.needsConfig).map((c) => c.plugin);
+      const installable = checked.filter((c) => !c.needsConfig).map((c) => c.plugin);
+
       await Promise.all([
-        ...toInstall.map((p) =>
+        ...installable.map((p) =>
           this.pluginInstallationService.installPlugin(
             this.clusterId,
             p.organizationName,
@@ -165,6 +183,14 @@ export default class ClusterPluginsComponent implements OnInit {
         ),
       ]);
 
+      if (blocked.length > 0) {
+        this.errorMessage.set(
+          `${blocked.map((p) => p.displayName || p.name).join(', ')} must be configured at install time — install from the plugins page instead. Everything else was applied.`,
+        );
+        await this.load();
+        return;
+      }
+
       this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
@@ -175,5 +201,19 @@ export default class ClusterPluginsComponent implements OnInit {
 
   onCancel() {
     this.pageNav.goTo(`/clusters/${this.clusterId}`);
+  }
+
+  // True when the pinned definition declares required config keys. The shared
+  // fetch throws when the catalog cannot say (schema unavailable), and both
+  // that and a fetch error are caught per plugin in onFormSubmit, failing
+  // closed like the install modal does.
+  private async requiresConfigForm(plugin: PluginSummary): Promise<boolean> {
+    const schema = await fetchPluginConfigSchema(
+      this.installClient,
+      plugin.organizationName,
+      plugin.name,
+      plugin.pluginVersion,
+    );
+    return schema.some((entry) => entry.required);
   }
 }

@@ -3,6 +3,7 @@ import { createClient } from '@connectrpc/connect';
 import {
   CatalogService,
   ListPluginVersionsRequestSchema,
+  GetPluginDefinitionRequestSchema,
 } from '../../generated/catalog/v1/catalog_pb';
 import { InstallService } from '../../generated/install/v1/install_pb';
 import createDemoTransport from './mock-transport';
@@ -46,6 +47,19 @@ describe('demo plugin versions', () => {
     );
 
     expect(resp.versions).toEqual([]);
+  });
+
+  // Guards the install modal's config-schema fetch: an unanswered RPC leaves it
+  // showing schemaError instead of letting the install slide run.
+  it('resolves getPluginDefinition with an empty config schema', async () => {
+    const resp = await client.getPluginDefinition(
+      create(GetPluginDefinitionRequestSchema, {
+        lookup: { case: 'pluginId', value: 'pl-cert-manager' },
+        version: 'v1.17.2',
+      }),
+    );
+
+    expect(resp.configSchema).toEqual([]);
   });
 });
 

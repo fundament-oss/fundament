@@ -2,6 +2,15 @@ import { Injectable, inject } from '@angular/core';
 
 import { ConfigService } from '../config.service';
 import { PluginInstallationItem, PluginInstallationListResponse } from '../plugin-resources/types';
+import { RetryConfigVersionError, RetryReadError } from './retry-errors';
+
+export { RetryAbortedError, RetryConfigVersionError, RetryReadError } from './retry-errors';
+
+/** Placeholder spec.definitionRef.pluginVersion for installs that never
+ *  resolved a real published version (the terraform provider's default until
+ *  the marketplace supplies real pins). Mirrors plugin-sdk's
+ *  pluginruntime.UnknownVersion — the one spelling every codebase keys off. */
+export const UNKNOWN_PLUGIN_VERSION = 'unknown';
 
 // Kubernetes resource names must be RFC-1123 (lowercase alphanumerics and '-'),
 // but catalog entries carry display names like "Grafana Alloy".
@@ -54,6 +63,7 @@ export default class PluginInstallationService {
     pluginName: string,
     pluginVersion: string,
     definitionHash: string,
+    config: Record<string, string> = {},
   ): Promise<void> {
     // A plugin with no published definition has no version/hash to pin — the
     // install would reconcile to Failed. Refuse it here rather than create a
@@ -76,6 +86,7 @@ export default class PluginInstallationService {
             pluginVersion,
             definitionHash,
           },
+          ...(Object.keys(config).length > 0 ? { config } : {}),
         },
       }),
     });
@@ -88,5 +99,75 @@ export default class PluginInstallationService {
       credentials: 'include',
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+
+  // Re-creates a failed installation, preserving its spec.config.
+  //
+  // The failed install may carry config; it is read before deleting the CR so
+  // the retry re-creates the installation as it was, not with defaults. A
+  // read failure (network blip, RBAC hiccup) is not the same as "CR already
+  // gone" (404 resolves null) — only the latter is safe to proceed past.
+  // Uninstalling on a failed read would delete the only copy of the config,
+  // so that aborts with RetryReadError instead.
+  async retryInstall(
+    clusterId: string,
+    organizationName: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
+    const resourceName = pluginResourceName(organizationName, pluginName);
+    let existing: PluginInstallationItem | null;
+    try {
+      existing = await this.getInstallation(clusterId, resourceName);
+    } catch {
+      throw new RetryReadError(`failed to read installation ${resourceName}`);
+    }
+    const config = existing?.spec.config ?? {};
+
+    // Preserved config was written against the recorded version's schema; a
+    // retry that switches versions (the fallback for an unrecorded pin) must
+    // not replay it against a different schema. Abort before deleting — the
+    // failed CR still holds the only copy of that config.
+    if (
+      existing &&
+      Object.keys(config).length > 0 &&
+      existing.spec.definitionRef.pluginVersion !== pluginVersion
+    ) {
+      throw new RetryConfigVersionError(
+        `installation ${resourceName} carries config for version ${existing.spec.definitionRef.pluginVersion}`,
+      );
+    }
+
+    // The CR from the failed install still exists, so remove it and wait for
+    // it to be gone before re-creating (a plain re-POST would 409).
+    await this.uninstallPlugin(clusterId, resourceName).catch(() => {});
+    await this.waitForUninstall(clusterId, resourceName);
+    await this.installPlugin(
+      clusterId,
+      organizationName,
+      pluginName,
+      pluginVersion,
+      definitionHash,
+      config,
+    );
+  }
+
+  private async waitForUninstall(
+    clusterId: string,
+    resourceName: string,
+    // Wait up to ~30s for finalizers to clear the old CR before re-creating it;
+    // re-POSTing while it is still terminating would 409.
+    attempts = 30,
+  ): Promise<void> {
+    if (attempts <= 0) return;
+    // A poll error keeps waiting (non-null sentinel): only a definite 404
+    // proves the CR is gone.
+    const item = await this.getInstallation(clusterId, resourceName).catch(() => ({}));
+    if (item === null) return;
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1000);
+    });
+    await this.waitForUninstall(clusterId, resourceName, attempts - 1);
   }
 }

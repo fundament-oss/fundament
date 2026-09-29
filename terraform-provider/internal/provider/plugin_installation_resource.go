@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -15,10 +16,12 @@ import (
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -42,6 +45,7 @@ type PluginInstallationResourceModel struct {
 	PluginName       types.String `tfsdk:"plugin_name"`
 	PluginVersion    types.String `tfsdk:"plugin_version"`
 	DefinitionHash   types.String `tfsdk:"definition_hash"`
+	Config           types.Map    `tfsdk:"config"`
 	Phase            types.String `tfsdk:"phase"`
 }
 
@@ -62,6 +66,10 @@ type pluginDefinitionRef struct {
 
 type pluginInstallationSpec struct {
 	DefinitionRef pluginDefinitionRef `json:"definitionRef"`
+	// Config holds the install-time config the definition's configSchema
+	// declares. The plugin-controller validates it against the pinned
+	// definition and fails the installation closed on any violation.
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type pluginInstallationStatus struct {
@@ -73,8 +81,12 @@ const pluginInstallationAPIVersion = "plugins.fundament.io/v1"
 
 // unpinnedPluginVersion is the placeholder plugin_version that means "not
 // explicitly pinned" — the provider resolves the latest published definition
-// instead.
-const unpinnedPluginVersion = "unknown"
+// instead. unpinnedDefinitionHash is its hash counterpart. Both are the
+// platform-wide placeholders the plugin-controller and console also key off.
+const (
+	unpinnedPluginVersion  = pluginruntime.UnknownVersion
+	unpinnedDefinitionHash = pluginruntime.UnknownHash
+)
 
 // definitionHashRegex validates definition_hash: "sha256:" followed by a
 // 64-character lowercase hex digest, or the placeholder "sha256:unknown" used
@@ -96,6 +108,17 @@ type pluginInstallationCreatePayload struct {
 	Kind       string                     `json:"kind"`
 	Metadata   pluginInstallationMetadata `json:"metadata"`
 	Spec       pluginInstallationSpec     `json:"spec"`
+}
+
+// configIsEmpty reports whether a config value carries no keys: null, or a
+// known map with zero elements. Both spellings serialise to a CR without
+// spec.config, so they are the same installation. Unknown is not empty — it
+// could resolve to anything.
+func configIsEmpty(m types.Map) bool {
+	if m.IsUnknown() {
+		return false
+	}
+	return m.IsNull() || len(m.Elements()) == 0
 }
 
 // installationName is the CR's metadata.name: a plugin's identity is the pair
@@ -153,7 +176,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				Description: "The published version of the plugin definition to pin (definitionRef.pluginVersion). Optional; when omitted the provider pins the latest published version for the plugin. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("unknown"),
+				Default:     stringdefault.StaticString(unpinnedPluginVersion),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
@@ -163,13 +186,35 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				Description: "The sha256 content hash of the pinned plugin definition (definitionRef.definitionHash), prefixed with \"sha256:\". Optional; when omitted the provider pins the hash of the latest published definition. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString("sha256:unknown"),
+				Default:     stringdefault.StaticString(unpinnedDefinitionHash),
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(definitionHashRegex, "definition_hash must be 'sha256:' followed by a 64-character hex digest (or the placeholder 'sha256:unknown')"),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"config": schema.MapAttribute{
+				Description: "Install-time configuration for the plugin, as string key/value pairs (spec.config). " +
+					"Keys and values must conform to the configSchema declared by the pinned plugin definition; " +
+					"the plugin controller rejects undeclared keys and ill-typed values, failing the installation. " +
+					"Omitted keys use the definition's defaults. Changing this value forces a replacement, " +
+					"except between the two spellings of \"no config\" (omitted and {}), which are equivalent.",
+				ElementType: types.StringType,
+				Optional:    true,
+				PlanModifiers: []planmodifier.Map{
+					// null and {} both mean "no config" (the CR omits spec.config
+					// either way), so flapping between them — e.g. `config = {}`
+					// in HCL against a null state after `terraform import` — must
+					// not destroy and recreate a healthy installation.
+					mapplanmodifier.RequiresReplaceIf(
+						func(ctx context.Context, req planmodifier.MapRequest, resp *mapplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = !(configIsEmpty(req.StateValue) && configIsEmpty(req.PlanValue))
+						},
+						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (null and {}).",
+						"Replaces the installation unless the change is between the equivalent \"no config\" spellings (`null` and `{}`).",
+					),
 				},
 			},
 			"phase": schema.StringAttribute{
@@ -253,6 +298,14 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	config := map[string]string{}
+	if !plan.Config.IsNull() && !plan.Config.IsUnknown() {
+		resp.Diagnostics.Append(plan.Config.ElementsAs(ctx, &config, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	crd := pluginInstallationCreatePayload{
 		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
@@ -264,6 +317,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 				PluginVersion:    pluginVersion,
 				DefinitionHash:   definitionHash,
 			},
+			Config: config,
 		},
 	}
 
@@ -297,7 +351,8 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			return
 		}
 		if existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
-			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash {
+			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash ||
+			!maps.Equal(existingCRD.Spec.Config, config) {
 			resp.Diagnostics.AddError(
 				"Plugin Installation Already Exists With Different Configuration",
 				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
@@ -469,12 +524,26 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	if crd.Spec.DefinitionRef.PluginVersion != "" {
 		state.PluginVersion = types.StringValue(crd.Spec.DefinitionRef.PluginVersion)
 	} else {
-		state.PluginVersion = types.StringValue("unknown")
+		state.PluginVersion = types.StringValue(unpinnedPluginVersion)
 	}
 	if crd.Spec.DefinitionRef.DefinitionHash != "" {
 		state.DefinitionHash = types.StringValue(crd.Spec.DefinitionRef.DefinitionHash)
 	} else {
-		state.DefinitionHash = types.StringValue("sha256:unknown")
+		state.DefinitionHash = types.StringValue(unpinnedDefinitionHash)
+	}
+	if len(crd.Spec.Config) > 0 {
+		configValue, diags := types.MapValueFrom(ctx, types.StringType, crd.Spec.Config)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Config = configValue
+	} else if !state.Config.IsNull() && len(state.Config.Elements()) == 0 {
+		// `config = {}` in HCL round-trips: the CR omits an empty config, so
+		// keep the empty map rather than flapping to null and forcing a
+		// replacement on every refresh.
+	} else {
+		state.Config = types.MapNull(types.StringType)
 	}
 	if crd.Status.Phase != "" {
 		state.Phase = types.StringValue(crd.Status.Phase)
@@ -485,9 +554,26 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update is not implemented — all attributes have RequiresReplace.
+// Update is only reachable when config flips between null and {} — the two
+// spellings of "no config", which RequiresReplaceIf deliberately does not
+// replace on (every other attribute change forces a replacement). The CR is
+// identical either way, so just sync the state to the planned spelling.
 func (r *PluginInstallationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Update Not Supported", "All plugin_installation attributes require replacement; Update should never be called.")
+	var plan, state PluginInstallationResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !configIsEmpty(state.Config) || !configIsEmpty(plan.Config) {
+		resp.Diagnostics.AddError("Update Not Supported", "All plugin_installation attributes require replacement; Update should never be called for anything but the equivalent \"no config\" spellings.")
+		return
+	}
+
+	state.Config = plan.Config
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

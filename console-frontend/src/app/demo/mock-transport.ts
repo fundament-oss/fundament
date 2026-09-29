@@ -54,6 +54,7 @@ import {
   ListPluginVersionsResponseSchema as CatalogListPluginVersionsResponseSchema,
   ListPresetsResponseSchema as CatalogListPresetsResponseSchema,
   PublishedVersionSchema,
+  GetPluginDefinitionResponseSchema as CatalogGetPluginDefinitionResponseSchema,
   type GetPluginRequest,
   type ListPluginVersionsRequest,
 } from '../../generated/catalog/v1/catalog_pb';
@@ -438,6 +439,16 @@ export default function createDemoTransport(): Transport {
           ),
         });
       },
+      // The install modal's config-schema fetch. Left unanswered it errors, and the
+      // modal shows schemaError instead of letting the install slide run.
+      getPluginDefinition: async () => {
+        await delay(80);
+        return create(CatalogGetPluginDefinitionResponseSchema, {
+          manifest: new Uint8Array(),
+          definitionHash: '',
+          configSchema: [],
+        });
+      },
     };
     router.service(CatalogService, catalogReads);
     router.service(InstallService, {
@@ -445,6 +456,7 @@ export default function createDemoTransport(): Transport {
       getPlugin: catalogReads.getPlugin,
       listPluginVersions: catalogReads.listPluginVersions,
       listPublishers: catalogReads.listPublishers,
+      getPluginDefinition: catalogReads.getPluginDefinition,
     });
 
     // Metrics, so the charts have something to draw. One snapshot per stream:
