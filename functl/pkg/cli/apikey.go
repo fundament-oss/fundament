@@ -20,7 +20,7 @@ type APIKeyListCmd struct{}
 
 // Run executes the apikey list command.
 func (c *APIKeyListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ type APIKeyCreateCmd struct {
 
 // Run executes the apikey create command.
 func (c *APIKeyCreateCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ type APIKeyRevokeCmd struct {
 
 // Run executes the apikey revoke command.
 func (c *APIKeyRevokeCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ type APIKeyDeleteCmd struct {
 
 // Run executes the apikey delete command.
 func (c *APIKeyDeleteCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
