@@ -12,8 +12,8 @@ type BlockStorageSpec struct {
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
 	// Default marks the derived StorageClass as the cluster default
-	// (storageclass.kubernetes.io/is-default-class). At most one BlockStorage
-	// may set it; all that do while another does are Degraded.
+	// (storageclass.kubernetes.io/is-default-class). If more than one
+	// BlockStorage sets it, none is marked default and each is Degraded.
 	// +optional
 	Default bool `json:"default,omitempty"`
 }
