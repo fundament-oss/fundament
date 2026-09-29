@@ -2,32 +2,41 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// FileStorageSpec asks for a shared (ReadWriteMany) CephFS StorageClass over
-// the shared OSD set. FileStorage brings no disks; DiskPools do that.
+// FileStorageSpec asks for a shared-filesystem (ReadWriteMany) StorageClass
+// over the shared Ceph cluster. A FileStorage brings no disks of its own;
+// DiskPools contribute those.
 type FileStorageSpec struct {
-	// Replication selects replica count for both the metadata and data pool;
-	// "auto" derives it from node count.
+	// Replication is how many copies Ceph keeps of each piece of data, for both
+	// the filesystem's metadata and its contents: an explicit count, or "auto"
+	// to derive it from the number of nodes contributing disks (capped at 3).
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
-	// MetadataServers is the number of active MDS daemons. Each active gets a
-	// standby (activeStandby). More than 1 only helps metadata-heavy workloads
-	// at scale.
+	// MetadataServers is the number of active filesystem metadata servers. Each
+	// active server gets its own standby for failover. More than 1 only helps
+	// metadata-heavy workloads at scale.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=5
 	// +kubebuilder:default=1
 	MetadataServers int32 `json:"metadataServers,omitempty"`
 }
 
+// FileStorage provides shared volumes (ReadWriteMany) over the shared Ceph
+// cluster — many pods on many nodes can mount the same volume. It derives a
+// StorageClass, named in status.storageClassName, for PersistentVolumeClaims
+// to reference.
+//
+// The name-length limit exists because Rook labels the metadata-server
+// deployment rook_file_system=cephfs-<name> and label values cap at 63
+// characters; without it, a longer name would fail only after the filesystem
+// exists.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
-// Rook labels the MDS deployment rook_file_system=cephfs-<name>; label values
-// cap at 63 characters, so a longer name would fail only after the
-// CephFilesystem exists.
 // +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 56",message="name must be at most 56 characters: Rook derives a cephfs-<name> label capped at 63"
 type FileStorage struct {
 	metav1.TypeMeta   `json:",inline"`

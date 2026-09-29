@@ -24,6 +24,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: |-
+          DiskPool contributes a set of discovered disks to the shared Ceph cluster.
+          It provides capacity only; a BlockStorage or FileStorage turns that capacity
+          into a StorageClass.
         properties:
           apiVersion:
             description: |-
@@ -44,14 +48,16 @@ spec:
             type: object
           spec:
             description: |-
-              DiskPoolSpec is the operator's disk contribution to the shared Ceph
+              DiskPoolSpec selects the disks this pool contributes to the shared Ceph
               cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
               StorageClasses.
             properties:
               disks:
                 description: |-
-                  Disks are the names of Disk objects to consume as OSDs. listType=set so the
-                  API server rejects a repeat, which would be double-counted in status.
+                  Disks are the names of the Disk objects to contribute. Ceph runs one
+                  storage daemon (OSD) per disk; every pool's disks join a single shared set
+                  that all volumes are placed across. A name may appear only once — a
+                  duplicate would be double-counted in status, so the API server rejects it.
                 items:
                   type: string
                 type: array
@@ -61,13 +67,13 @@ spec:
             description: |-
               DiskPoolStatus is the observed state.
 
-              Every field describes this pool's contribution to one shared Ceph cluster, not
-              storage that belongs to it: all pools feed a single OSD set.
+              Every field describes this pool's contribution to the one shared Ceph
+              cluster, not storage that belongs to this pool: all pools feed the same
+              cluster, and volumes are placed across every disk in it.
             properties:
               conditions:
-                description: |-
-                  Conditions carries ConditionReady. listType=map on type so the API server
-                  merges by condition type rather than by position.
+                description: Conditions carries the Ready condition, keyed by condition
+                  type.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -127,6 +133,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               message:
+                description: |-
+                  Message explains the current phase, naming the operator action needed
+                  when the pool is Degraded.
                 type: string
               observedGeneration:
                 description: |-
@@ -140,15 +149,17 @@ spec:
               rawCapacityBytes:
                 description: |-
                   RawCapacityBytes is the summed size of the disks this pool contributes,
-                  before replication. Not the pool's capacity: volumes draw on the whole
-                  cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
+                  before replication. It is not the pool's capacity: volumes are placed
+                  across every disk in the shared cluster, not only this pool's. Use
+                  `ceph df` for real free space.
                 format: int64
                 type: integer
               selectedDiskCount:
                 description: |-
-                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
-                  how many OSDs are running: Rook creates those asynchronously, and removing a
-                  disk from spec never removes its OSD (that needs a Ceph purge).
+                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk. It
+                  is not the number of storage daemons (OSDs) running: Ceph creates those
+                  asynchronously, and removing a disk from spec never removes its OSD (that
+                  takes a manual Ceph purge).
                 type: integer
             type: object
         type: object

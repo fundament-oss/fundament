@@ -30,8 +30,9 @@ export const BLOCKSTORAGE = {
   noneSelected: 'No block storage selected.',
   storageClassPrefix: 'ceph-',
   detailHint: "Volumes are placed across all of the shared Ceph cluster's disks.",
-  createIntro: `Block storage provides ReadWriteOnce volumes over the shared Ceph cluster's disks.
-    It needs at least one DiskPool contributing disks; without one it stays Degraded.`,
+  createIntro: `Block storage provides ReadWriteOnce volumes — each mounted by one node at a
+    time — over the shared Ceph cluster's disks. It needs at least one DiskPool
+    contributing disks; without one it stays Degraded.`,
   metadataServers: false,
   nameMaxLength: 63,
 };
@@ -44,9 +45,9 @@ export const FILESTORAGE = {
   noneSelected: 'No file storage selected.',
   storageClassPrefix: 'cephfs-',
   detailHint: 'Volumes can be mounted by many pods across nodes.',
-  createIntro: `File storage provides shared ReadWriteMany volumes over the shared Ceph cluster's disks —
-    many pods on many nodes can mount the same volume. It needs at least one DiskPool
-    contributing disks; without one it stays Degraded.`,
+  createIntro: `File storage provides ReadWriteMany volumes over the shared Ceph cluster's
+    disks — many pods on many nodes can mount the same volume. It needs at least one
+    DiskPool contributing disks; without one it stays Degraded.`,
   metadataServers: true,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
   // capped at 63. Enforced here too so the form rejects it before the server.

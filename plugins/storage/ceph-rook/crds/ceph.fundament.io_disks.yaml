@@ -36,6 +36,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: |-
+          Disk is a block device discovered on a cluster node. Disks appear and update
+          automatically; an operator's only interaction is selecting them into a
+          DiskPool.
         properties:
           apiVersion:
             description: |-
@@ -56,58 +60,69 @@ spec:
             type: object
           spec:
             description: |-
-              DiskSpec is intentionally empty: Disks are published from Rook discovery and
-              are not operator-editable.
+              DiskSpec is empty: a Disk is published by disk discovery and cannot be
+              edited.
             type: object
           status:
-            description: DiskStatus is the discovered state of a node block device.
+            description: DiskStatus is the discovered state of a block device on a
+              cluster node.
             properties:
               available:
+                description: |-
+                  Available reports whether the last probe found the device empty and
+                  usable. It does not say whether a DiskPool has claimed it; ClaimedBy does.
                 type: boolean
               claimedBy:
+                description: ClaimedBy names the DiskPool this disk belongs to, empty
+                  when unclaimed.
                 type: string
               filesystem:
                 description: |-
-                  Filesystem is what the node found on the device, e.g. "ext4" or
-                  "ceph_bluestore". Empty means the last probe found none -- which is not the
-                  same as the device being empty, since the probe can be stale. Set is a fact;
-                  unset is an absence of evidence. Available folds this into a boolean and so
-                  cannot express the difference, which is why both are published -- and both
-                  are print columns, so `kubectl get disks` shows Available=true next to a
-                  filesystem when the probe contradicts itself.
+                  Filesystem is what the last probe found on the device, e.g. "ext4" or
+                  "ceph_bluestore". A set value means data really is there; an empty value
+                  only means the last probe saw none — the probe can be stale, so it does
+                  not prove the device is empty.
                 type: string
               model:
+                description: Model is the device model the node reports.
                 type: string
               node:
+                description: Node is the name of the cluster node the device is attached
+                  to.
                 type: string
               path:
                 description: |-
-                  Path is the kernel name, e.g. /dev/sdb: what an operator recognises, but
-                  reassignable across reboots, so not what identifies the device.
+                  Path is the kernel device name, e.g. /dev/sdb — what an operator sees on
+                  the node. The kernel may reassign it on a reboot, so it does not identify
+                  the device.
                 type: string
               rotational:
+                description: Rotational is true for spinning disks.
                 type: boolean
               serial:
+                description: Serial is the device serial number the node reports.
                 type: string
               sizeBytes:
+                description: SizeBytes is the device's size in bytes.
                 format: int64
                 type: integer
               stablePath:
                 description: |-
-                  StablePath is the /dev/disk/by-id link, empty when the node reports none
-                  (loop devices, some virtual disks). When set it is what goes into the
-                  CephCluster, because it survives a reboot that renames Path.
+                  StablePath is the device's /dev/disk/by-id link, empty when the node
+                  reports none (loop devices, some virtual disks). It survives reboots, so
+                  when set it is the name recorded in the Ceph cluster.
                 type: string
               type:
-                description: DiskType classifies a block device.
+                description: Type classifies the device as hdd, ssd or nvme.
                 enum:
                 - hdd
                 - ssd
                 - nvme
                 type: string
               wwn:
-                description: WWN is a fallback stable identity when there is no by-id
-                  link.
+                description: |-
+                  WWN is the device's World Wide Name, a fallback identity for devices
+                  without a by-id link.
                 type: string
             type: object
         type: object

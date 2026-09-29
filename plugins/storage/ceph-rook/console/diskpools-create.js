@@ -73,10 +73,11 @@ if (loadError) {
         <span class="plugin-label">Disks</span>
         ${diskPicker}
         <span class="plugin-hint">
-          These disks become OSDs in the shared Ceph cluster. Disks spread over two or more
-          nodes enable host-level failure domains. Fundament can confirm only that a disk is
-          unclaimed, not that it is empty — a disk marked as carrying a filesystem holds data,
-          and one marked with nothing may still hold data the last node probe missed.
+          Each selected disk joins the shared Ceph cluster, which runs one storage daemon
+          (OSD) per disk. Disks spread over two or more nodes let volumes survive a node
+          failure. Fundament can confirm only that a disk is unclaimed, not that it is
+          empty — a disk marked as carrying a filesystem holds data, and one marked with
+          nothing may still hold data the last probe missed.
         </span>
       </div>
 

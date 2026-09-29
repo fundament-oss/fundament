@@ -142,8 +142,9 @@ async function showEdit(item) {
         ${renderDiskPicker(disks, current)}
         ${preservedNote}
         <span class="plugin-hint">
-          Unchecking a disk removes it from the CephCluster device list but does NOT retire
-          its OSD — that needs a manual Ceph purge, and data may rebalance.
+          Unchecking a disk removes it from the shared Ceph cluster's device list, but its
+          storage daemon (OSD) keeps running until it is purged from Ceph manually — and
+          data may rebalance in the meantime.
         </span>
       </div>
 

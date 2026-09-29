@@ -15,39 +15,51 @@ const (
 	DiskTypeNVMe DiskType = "nvme"
 )
 
-// DiskSpec is intentionally empty: Disks are published from Rook discovery and
-// are not operator-editable.
+// DiskSpec is empty: a Disk is published by disk discovery and cannot be
+// edited.
 type DiskSpec struct{}
 
-// DiskStatus is the discovered state of a node block device.
+// DiskStatus is the discovered state of a block device on a cluster node.
 type DiskStatus struct {
+	// Node is the name of the cluster node the device is attached to.
 	Node string `json:"node,omitempty"`
-	// Path is the kernel name, e.g. /dev/sdb: what an operator recognises, but
-	// reassignable across reboots, so not what identifies the device.
+	// Path is the kernel device name, e.g. /dev/sdb — what an operator sees on
+	// the node. The kernel may reassign it on a reboot, so it does not identify
+	// the device.
 	Path string `json:"path,omitempty"`
-	// StablePath is the /dev/disk/by-id link, empty when the node reports none
-	// (loop devices, some virtual disks). When set it is what goes into the
-	// CephCluster, because it survives a reboot that renames Path.
-	StablePath string   `json:"stablePath,omitempty"`
-	SizeBytes  int64    `json:"sizeBytes,omitempty"`
-	Type       DiskType `json:"type,omitempty"`
-	Rotational bool     `json:"rotational,omitempty"`
-	Model      string   `json:"model,omitempty"`
-	Serial     string   `json:"serial,omitempty"`
-	// WWN is a fallback stable identity when there is no by-id link.
+	// StablePath is the device's /dev/disk/by-id link, empty when the node
+	// reports none (loop devices, some virtual disks). It survives reboots, so
+	// when set it is the name recorded in the Ceph cluster.
+	StablePath string `json:"stablePath,omitempty"`
+	// SizeBytes is the device's size in bytes.
+	SizeBytes int64 `json:"sizeBytes,omitempty"`
+	// Type classifies the device as hdd, ssd or nvme.
+	Type DiskType `json:"type,omitempty"`
+	// Rotational is true for spinning disks.
+	Rotational bool `json:"rotational,omitempty"`
+	// Model is the device model the node reports.
+	Model string `json:"model,omitempty"`
+	// Serial is the device serial number the node reports.
+	Serial string `json:"serial,omitempty"`
+	// WWN is the device's World Wide Name, a fallback identity for devices
+	// without a by-id link.
 	WWN string `json:"wwn,omitempty"`
-	// Filesystem is what the node found on the device, e.g. "ext4" or
-	// "ceph_bluestore". Empty means the last probe found none -- which is not the
-	// same as the device being empty, since the probe can be stale. Set is a fact;
-	// unset is an absence of evidence. Available folds this into a boolean and so
-	// cannot express the difference, which is why both are published -- and both
-	// are print columns, so `kubectl get disks` shows Available=true next to a
-	// filesystem when the probe contradicts itself.
+	// Filesystem is what the last probe found on the device, e.g. "ext4" or
+	// "ceph_bluestore". A set value means data really is there; an empty value
+	// only means the last probe saw none — the probe can be stale, so it does
+	// not prove the device is empty.
 	Filesystem string `json:"filesystem,omitempty"`
-	Available  bool   `json:"available,omitempty"`
-	ClaimedBy  string `json:"claimedBy,omitempty"`
+	// Available reports whether the last probe found the device empty and
+	// usable. It does not say whether a DiskPool has claimed it; ClaimedBy does.
+	Available bool `json:"available,omitempty"`
+	// ClaimedBy names the DiskPool this disk belongs to, empty when unclaimed.
+	ClaimedBy string `json:"claimedBy,omitempty"`
 }
 
+// Disk is a block device discovered on a cluster node. Disks appear and update
+// automatically; an operator's only interaction is selecting them into a
+// DiskPool.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status

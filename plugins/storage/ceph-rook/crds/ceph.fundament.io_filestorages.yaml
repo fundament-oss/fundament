@@ -28,9 +28,15 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          Rook labels the MDS deployment rook_file_system=cephfs-<name>; label values
-          cap at 63 characters, so a longer name would fail only after the
-          CephFilesystem exists.
+          FileStorage provides shared volumes (ReadWriteMany) over the shared Ceph
+          cluster — many pods on many nodes can mount the same volume. It derives a
+          StorageClass, named in status.storageClassName, for PersistentVolumeClaims
+          to reference.
+
+          The name-length limit exists because Rook labels the metadata-server
+          deployment rook_file_system=cephfs-<name> and label values cap at 63
+          characters; without it, a longer name would fail only after the filesystem
+          exists.
         properties:
           apiVersion:
             description: |-
@@ -52,15 +58,16 @@ spec:
           spec:
             default: {}
             description: |-
-              FileStorageSpec asks for a shared (ReadWriteMany) CephFS StorageClass over
-              the shared OSD set. FileStorage brings no disks; DiskPools do that.
+              FileStorageSpec asks for a shared-filesystem (ReadWriteMany) StorageClass
+              over the shared Ceph cluster. A FileStorage brings no disks of its own;
+              DiskPools contribute those.
             properties:
               metadataServers:
                 default: 1
                 description: |-
-                  MetadataServers is the number of active MDS daemons. Each active gets a
-                  standby (activeStandby). More than 1 only helps metadata-heavy workloads
-                  at scale.
+                  MetadataServers is the number of active filesystem metadata servers. Each
+                  active server gets its own standby for failover. More than 1 only helps
+                  metadata-heavy workloads at scale.
                 format: int32
                 maximum: 5
                 minimum: 1
@@ -68,8 +75,9 @@ spec:
               replication:
                 default: auto
                 description: |-
-                  Replication selects replica count for both the metadata and data pool;
-                  "auto" derives it from node count.
+                  Replication is how many copies Ceph keeps of each piece of data, for both
+                  the filesystem's metadata and its contents: an explicit count, or "auto"
+                  to derive it from the number of nodes contributing disks (capped at 3).
                 enum:
                 - auto
                 - "1"
@@ -80,13 +88,12 @@ spec:
           status:
             description: |-
               ConsumerStatus is the observed state shared by the consumer kinds
-              (BlockStorage, FileStorage). Fields describe the derived Rook object and
-              StorageClass, sized against the whole cluster's OSD set.
+              (BlockStorage, FileStorage). Fields describe the derived StorageClass, sized
+              against the whole shared Ceph cluster, not any single pool.
             properties:
               conditions:
-                description: |-
-                  Conditions carries ConditionReady. listType=map on type so the API server
-                  merges by condition type rather than by position.
+                description: Conditions carries the Ready condition, keyed by condition
+                  type.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -146,8 +153,14 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               failureDomain:
+                description: |-
+                  FailureDomain is where Ceph places the replicas of each piece of data:
+                  "host" spreads them across nodes, "osd" only across disks.
                 type: string
               message:
+                description: |-
+                  Message explains the current phase, naming the operator action needed
+                  when the object is Degraded.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the metadata.generation this status
@@ -155,10 +168,18 @@ spec:
                 format: int64
                 type: integer
               phase:
+                description: |-
+                  Phase is Provisioning until the derived storage reports Ready, and
+                  Degraded when reconciliation needs operator action.
                 type: string
               replicas:
+                description: Replicas is the replica count that spec.replication resolved
+                  to.
                 type: integer
               storageClassName:
+                description: |-
+                  StorageClassName is the derived StorageClass's name — what a
+                  PersistentVolumeClaim should reference.
                 type: string
             type: object
         type: object

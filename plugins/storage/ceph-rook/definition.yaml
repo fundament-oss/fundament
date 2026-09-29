@@ -23,8 +23,9 @@ spec:
       - internet_access
     rbac:
       # --- Fundament storage resources this plugin reconciles ---
-      # diskpools/finalizers: the API server requires update on the owner's
-      # finalizers before accepting an owner ref with blockOwnerDeletion=true.
+      # The finalizers subresources are needed because the plugin sets owner
+      # references with blockOwnerDeletion=true, and the API server requires
+      # update rights on the owner's finalizers before accepting those.
       - apiGroups:
           - ceph.fundament.io
         resources:
@@ -63,8 +64,8 @@ spec:
           - patch
           - delete
       # --- StorageClasses: created/updated by the BlockStorage/FileStorage
-      # controllers and watched via Owns(). No delete; cascade is the k8s
-      # garbage collector. ---
+      # controllers and watched as owned objects. No delete verb: removal
+      # happens through owner references and the garbage collector. ---
       - apiGroups:
           - storage.k8s.io
         resources:
@@ -100,18 +101,20 @@ spec:
           - update
           - patch
       # --- Rook operator install (cluster-admin-equivalent) ---
-      # This SA helm-installs the Rook operator, which creates privileged
+      # The plugin helm-installs the Rook operator, which creates privileged
       # host-networked DaemonSets, the Ceph CSI driver, and its own cluster-wide
-      # RBAC with escalate+bind. No narrower stable rule set exists, and there is
-      # no cluster-admin escalation field.
+      # RBAC with escalate+bind. No narrower stable rule set exists, and there
+      # is no cluster-admin escalation field to request instead.
       #
-      # Read this rule literally: it makes the plugin cluster-admin on the tenant
-      # cluster. Nothing narrows it. plugin-controller copies these rules verbatim
-      # into a ClusterRole bound to the plugin SA (mutatePluginScopeClusterRole),
-      # and FUN-17's SubjectAccessReview is a per-request check in kube-api-proxy
-      # on the console iframe path — the plugin pod uses its in-cluster config and
-      # never goes through it. The specific rules above document the plugin
-      # binary's own direct API usage; they grant nothing this rule does not.
+      # Read this rule literally: it makes the plugin cluster-admin on the
+      # tenant cluster, and nothing narrows it. plugin-controller copies these
+      # rules verbatim into a ClusterRole bound to the plugin's ServiceAccount
+      # (mutatePluginScopeClusterRole). FUN-17's SubjectAccessReview does not
+      # constrain it either: that is a per-request check in kube-api-proxy on
+      # the console iframe path, and the plugin pod talks to the API server
+      # directly with its in-cluster config. The specific rules above document
+      # the plugin binary's own direct API usage; they grant nothing this rule
+      # does not already grant.
       - apiGroups: ["*"]
         resources: ["*"]
         verbs: ["*"]
@@ -191,12 +194,13 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
-  # Exactly the verbs the console pages issue, no more: nothing enforces this
-  # list at request time yet, so it is a declaration of intent, and a declaration
-  # that overstates is worse than none.
+  # Exactly the verbs the console pages issue, no more. Nothing enforces this
+  # list at request time yet, so it is a declaration of intent — and a
+  # declaration that overstates what the pages do is worse than none.
   #
-  # No delete: the console offers no delete, because the guard for it would have
-  # to be server-side to mean anything. No update: the edit form merge-patches.
+  # No delete verb: the console offers no delete, because a guard for it would
+  # have to be server-side to mean anything. No update verb: the edit forms
+  # merge-patch instead.
   allowedResources:
     - group: ceph.fundament.io
       version: v1alpha1
