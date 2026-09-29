@@ -72,9 +72,9 @@ function renderReadOnly(item, byName) {
     <p class="plugin-hint">
       Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
       turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
-      are placed across all of the cluster's disks, not only the ones listed below, so the raw
-      size above is this pool's contribution rather than its capacity. Use
-      <code>ceph df</code> for actual free space.
+      are placed across all of the cluster's disks, so the raw size above is this pool's
+      contribution. Use
+      <code>ceph df</code> for free space.
     </p>
     <h2 class="plugin-heading">Contributed Disks</h2>
     ${renderDiskList(spec.disks, byName)}
@@ -127,7 +127,7 @@ async function showEdit(item) {
     preserved.length === 0
       ? ''
       : `<p class="plugin-hint">
-           Kept as they are, because this form cannot show them — a disk is only listed here
+           Kept as they are, because this form cannot show them: a disk is listed here only
            when it exists and is either free or already claimed by this pool:
            ${escapeHtml(preserved.join(', '))}. Saving leaves them in the pool; use kubectl
            to remove one.
@@ -142,8 +142,9 @@ async function showEdit(item) {
         ${renderDiskPicker(disks, current)}
         ${preservedNote}
         <span class="plugin-hint">
-          Unchecking a disk removes it from the CephCluster device list but does NOT retire
-          its OSD — that needs a manual Ceph purge, and data may rebalance.
+          Unchecking a disk removes it from the shared Ceph cluster's device list, but its
+          storage daemon (OSD) keeps running until it is purged from Ceph manually, and
+          data may rebalance in the meantime.
         </span>
       </div>
 

@@ -2,12 +2,11 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// DiskPoolSpec is the operator's disk contribution to the shared Ceph
-// cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
-// StorageClasses.
+// DiskPoolSpec selects the disks this pool contributes to the shared Ceph
+// cluster.
 type DiskPoolSpec struct {
-	// Disks are the names of Disk objects to consume as OSDs. listType=set so the
-	// API server rejects a repeat, which would be double-counted in status.
+	// Disks are the names of the Disk objects to contribute. Ceph runs one
+	// storage daemon (OSD) per disk. Each name may appear once.
 	// +optional
 	// +listType=set
 	Disks []string `json:"disks,omitempty"`
@@ -46,34 +45,34 @@ const (
 	ReasonReconcileError = "ReconcileError"
 )
 
-// DiskPoolStatus is the observed state.
-//
-// Every field describes this pool's contribution to one shared Ceph cluster, not
-// storage that belongs to it: all pools feed a single OSD set.
+// DiskPoolStatus is the observed state of this pool's contribution to the
+// shared Ceph cluster. Volumes are placed across the disks of all pools.
 type DiskPoolStatus struct {
 	Phase string `json:"phase,omitempty"`
-	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
-	// how many OSDs are running: Rook creates those asynchronously, and removing a
-	// disk from spec never removes its OSD (that needs a Ceph purge).
+	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk. Ceph
+	// creates their storage daemons (OSDs) asynchronously, and removing a disk
+	// from spec keeps its OSD until a manual Ceph purge.
 	SelectedDiskCount int `json:"selectedDiskCount,omitempty"`
 	// RawCapacityBytes is the summed size of the disks this pool contributes,
-	// before replication. Not the pool's capacity: volumes draw on the whole
-	// cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
-	RawCapacityBytes int64  `json:"rawCapacityBytes,omitempty"`
-	Message          string `json:"message,omitempty"`
-	// ObservedGeneration is the metadata.generation this status was computed
-	// from. Below metadata.generation means the controller has not caught up with
-	// the current spec, and every field above describes an older one.
+	// before replication. Volumes are placed across every disk in the shared
+	// cluster; `ceph df` shows free space.
+	RawCapacityBytes int64 `json:"rawCapacityBytes,omitempty"`
+	// Message explains the current phase, naming the operator action needed
+	// when the pool is Degraded.
+	Message string `json:"message,omitempty"`
+	// ObservedGeneration is the metadata.generation this status was computed from.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Conditions carries ConditionReady. listType=map on type so the API server
-	// merges by condition type rather than by position.
+	// Conditions carries the Ready condition, keyed by condition type.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// DiskPool contributes a set of discovered disks to the shared Ceph cluster.
+// A BlockStorage or FileStorage turns that capacity into a StorageClass.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status

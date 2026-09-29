@@ -295,28 +295,31 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
 - Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', ''),
     ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block and shared file storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
 
-The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes, exposing discovered raw disks as block and shared file storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference.
+The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes and turns their spare raw disks into block and shared file storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference.
 
 ## Key Features
 
-- **Automatic Disk Discovery**: Rook scans nodes for raw block devices and publishes them as Disk CRs
-- **Declarative Disk Pools**: A DiskPool CR selects disks to contribute as OSDs to the shared cluster
-- **Block and File Storage Classes**: A BlockStorage CR produces a ready-to-use RBD StorageClass; a FileStorage CR produces a CephFS StorageClass with active/standby metadata servers
-- **Tunable Replication**: Set replication to auto, 1, 2, or 3 on each BlockStorage or FileStorage — auto derives the replica count from the number of nodes contributing disks to the cluster
+- **Automatic disk discovery**: nodes are scanned for raw block devices, which appear in the console as Disks
+- **Declarative disk pools**: a DiskPool selects which discovered disks to contribute to the shared cluster
+- **Block and file storage classes**: a BlockStorage produces a ready-to-use ReadWriteOnce StorageClass; a FileStorage produces a ReadWriteMany StorageClass backed by a shared filesystem with active and standby metadata servers
+- **Tunable replication**: set replication to auto, 1, 2, or 3 per BlockStorage or FileStorage; auto derives the replica count from the number of nodes contributing disks
 
 ## Use Cases
 
 - Persistent block volumes for stateful workloads (databases, message queues)
-- Shared volumes multiple pods can mount at once (shared caches, content repositories)
-- ReadWriteOnce and ReadWriteMany volumes for workloads on bare-metal or VM clusters
+- Shared volumes many pods can mount at once (shared caches, content repositories)
+- ReadWriteOnce and ReadWriteMany volumes on bare-metal or VM clusters
 - Cost-effective in-cluster storage using spare raw disks
 
 ## Requirements
 
-- **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem are not offered.
-- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. Nothing narrows them: the plugin runs with full cluster-admin on the cluster you install it into. Install it only if that tradeoff is acceptable for your cluster.
-- Block storage (RBD, ReadWriteOnce) and shared file storage (CephFS, ReadWriteMany) are supported. Object storage (RGW) is not yet supported.
-- All disk pools share one Ceph cluster. Data is placed across every disk in it, so additional BlockStorage/FileStorage objects give you additional StorageClasses rather than isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
+- **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem or partition table are not offered.
+- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions and runs as cluster-admin on the cluster you install it into.
+
+## Limitations
+
+- Block storage (ReadWriteOnce) and shared file storage (ReadWriteMany) are supported; object storage (S3-style, RGW) is not yet.
+- All disk pools feed one shared Ceph cluster, and data is placed across every disk in it. Additional BlockStorage/FileStorage objects give you additional StorageClasses over the same disks.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,

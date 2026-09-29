@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="660" viewBox="0 0 940 660"
+     style="background: #ffffff; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color-scheme: light dark;">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .fg    { fill: light-dark(#111827, #e5e7eb); }
+    .muted { fill: light-dark(#6b7280, #9ca3af); }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: light-dark(#f9fafb, #1b2130); stroke: light-dark(#d1d5db, #3b4457); }
+    .cr    { fill: light-dark(#eef2ff, #312e81); stroke: #6366f1; }
+    .box   { fill: light-dark(#ffffff, #1f2937); stroke: light-dark(#d1d5db, #3b4457); }
+    .inv   { fill: light-dark(#ecfdf5, #064e3b); stroke: #10b981; }
+    .arrow { stroke: light-dark(#6b7280, #9ca3af); stroke-width: 2; fill: none; }
+    .dash  { stroke-dasharray: 5 4; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="light-dark(#6b7280, #9ca3af)"/>
+    </marker>
+  </defs>
+
+  <text class="fg" x="30" y="34" font-size="16" font-weight="600">ceph-rook object map</text>
+  <text class="muted" x="30" y="54" font-size="12">Solid arrows: the plugin writes or owns the target. Dashed arrows: a reference by name.</text>
+
+  <!-- row 1: discovery -->
+  <rect class="box" x="30" y="84" width="230" height="56" rx="6"/>
+  <text class="fg mono" x="46" y="106" font-size="12.5">rook-discover ConfigMaps</text>
+  <text class="muted" x="46" y="124" font-size="12">raw device JSON, one per node</text>
+
+  <path class="arrow" d="M260,112 L338,112" marker-end="url(#a)"/>
+  <text class="muted" x="300" y="104" font-size="11" text-anchor="middle">published as</text>
+
+  <rect class="inv" x="340" y="80" width="230" height="64" rx="6"/>
+  <text class="fg mono" x="356" y="102" font-size="12.5" font-weight="600">Disk</text>
+  <text class="muted" x="356" y="120" font-size="12">cluster-scoped device inventory</text>
+  <text class="muted" x="356" y="136" font-size="12">status: node, path, size, claimedBy</text>
+
+  <!-- row 2: pool -> cluster -->
+  <rect class="cr" x="30" y="200" width="230" height="64" rx="6"/>
+  <text class="fg mono" x="46" y="222" font-size="12.5" font-weight="600">DiskPool</text>
+  <text class="muted" x="46" y="240" font-size="12">spec.disks — Disk names</text>
+
+  <path class="arrow dash" d="M260,220 L420,220 L420,146" marker-end="url(#a)"/>
+  <text class="muted" x="430" y="180" font-size="11">selects by name</text>
+
+  <rect class="box" x="650" y="180" width="260" height="110" rx="6"/>
+  <text class="fg mono" x="666" y="204" font-size="12.5" font-weight="600">CephCluster rook-ceph</text>
+  <text class="muted" x="666" y="222" font-size="12">singleton, namespace rook-ceph</text>
+  <text class="muted" x="666" y="240" font-size="12">spec.storage.nodes — every pool's</text>
+  <text class="muted" x="666" y="256" font-size="12">disks, deduplicated</text>
+  <text class="muted" x="666" y="274" font-size="12">runs one OSD per disk</text>
+
+  <path class="arrow" d="M260,244 L648,244" marker-end="url(#a)"/>
+  <text class="muted" x="455" y="236" font-size="11" text-anchor="middle">devices folded in (all pools together)</text>
+
+  <!-- row 3: BlockStorage -->
+  <rect class="cr" x="30" y="340" width="230" height="64" rx="6"/>
+  <text class="fg mono" x="46" y="362" font-size="12.5" font-weight="600">BlockStorage</text>
+  <text class="muted" x="46" y="380" font-size="12">spec.replication</text>
+
+  <rect class="panel" x="340" y="326" width="570" height="92" rx="8"/>
+  <text class="muted" x="356" y="346" font-size="11">derived and owned; foreign objects are refused</text>
+  <rect class="box" x="356" y="356" width="250" height="50" rx="6"/>
+  <text class="fg mono" x="370" y="376" font-size="12.5">CephBlockPool</text>
+  <text class="muted mono" x="370" y="394" font-size="12">ceph-&lt;name&gt;</text>
+  <rect class="box" x="640" y="356" width="250" height="50" rx="6"/>
+  <text class="fg mono" x="654" y="376" font-size="12.5">StorageClass ceph-&lt;name&gt;</text>
+  <text class="muted" x="654" y="394" font-size="12">ReadWriteOnce (block)</text>
+
+  <path class="arrow" d="M260,372 L338,372" marker-end="url(#a)"/>
+  <text class="muted" x="300" y="364" font-size="11" text-anchor="middle">derives</text>
+
+  <!-- row 4: FileStorage -->
+  <rect class="cr" x="30" y="450" width="230" height="74" rx="6"/>
+  <text class="fg mono" x="46" y="472" font-size="12.5" font-weight="600">FileStorage</text>
+  <text class="muted" x="46" y="490" font-size="12">spec.replication</text>
+  <text class="muted" x="46" y="506" font-size="12">spec.metadataServers</text>
+
+  <rect class="panel" x="340" y="436" width="570" height="92" rx="8"/>
+  <text class="muted" x="356" y="456" font-size="11">derived and owned; foreign objects are refused</text>
+  <rect class="box" x="356" y="466" width="250" height="50" rx="6"/>
+  <text class="fg mono" x="370" y="486" font-size="12.5">CephFilesystem</text>
+  <text class="muted mono" x="370" y="504" font-size="12">cephfs-&lt;name&gt;</text>
+  <rect class="box" x="640" y="466" width="250" height="50" rx="6"/>
+  <text class="fg mono" x="654" y="486" font-size="12.5">StorageClass cephfs-&lt;name&gt;</text>
+  <text class="muted" x="654" y="504" font-size="12">ReadWriteMany (shared file)</text>
+
+  <path class="arrow" d="M260,487 L338,487" marker-end="url(#a)"/>
+  <text class="muted" x="300" y="479" font-size="11" text-anchor="middle">derives</text>
+
+  <!-- data placement: derived pools draw on the shared OSDs -->
+  <path class="arrow dash" d="M780,324 L780,292" marker-end="url(#a)"/>
+  <text class="muted" x="790" y="312" font-size="11">volumes span every OSD</text>
+
+  <!-- bottom: PVC -->
+  <rect class="box" x="30" y="560" width="230" height="64" rx="6"/>
+  <text class="fg" x="46" y="584" font-size="12.5" font-weight="600">PersistentVolumeClaim</text>
+  <text class="muted" x="46" y="602" font-size="12">storageClassName from</text>
+  <text class="muted mono" x="46" y="618" font-size="12">status.storageClassName</text>
+
+  <path class="arrow dash" d="M260,592 L740,592 L740,530" marker-end="url(#a)"/>
+  <text class="muted" x="460" y="584" font-size="11" text-anchor="middle">references either StorageClass</text>
+
+  <text class="muted" x="30" y="650" font-size="12">Every volume's data is placed across all OSDs in the shared CephCluster; pools contribute capacity.</text>
+</svg>

@@ -10,20 +10,27 @@ const ReasonNoOSDs = "NoOSDs"
 // consumer cannot become Ready until Rook resolves it.
 const ReasonRookFailure = "RookFailure"
 
-// ConsumerStatus is the observed state shared by the consumer kinds
-// (BlockStorage, FileStorage). Fields describe the derived Rook object and
-// StorageClass, sized against the whole cluster's OSD set.
+// ConsumerStatus is the observed state of a BlockStorage or FileStorage and
+// the StorageClass it derives.
 type ConsumerStatus struct {
-	Phase            string `json:"phase,omitempty"`
+	// Phase is Provisioning until the derived storage reports Ready, and
+	// Degraded when reconciliation needs operator action.
+	Phase string `json:"phase,omitempty"`
+	// StorageClassName is the name of the derived StorageClass, for
+	// PersistentVolumeClaims to reference.
 	StorageClassName string `json:"storageClassName,omitempty"`
-	Replicas         int    `json:"replicas,omitempty"`
-	FailureDomain    string `json:"failureDomain,omitempty"`
-	Message          string `json:"message,omitempty"`
+	// Replicas is the replica count that spec.replication resolved to.
+	Replicas int `json:"replicas,omitempty"`
+	// FailureDomain is where Ceph places the replicas of each piece of data:
+	// "host" spreads them across nodes, "osd" only across disks.
+	FailureDomain string `json:"failureDomain,omitempty"`
+	// Message explains the current phase, naming the operator action needed
+	// when the object is Degraded.
+	Message string `json:"message,omitempty"`
 	// ObservedGeneration is the metadata.generation this status was computed from.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// Conditions carries ConditionReady. listType=map on type so the API server
-	// merges by condition type rather than by position.
+	// Conditions carries the Ready condition, keyed by condition type.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
