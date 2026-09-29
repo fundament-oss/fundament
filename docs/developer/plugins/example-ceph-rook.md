@@ -23,7 +23,7 @@ cluster — from empty machine to a pod writing to a Ceph-backed volume — foll
 
 ## Object map
 
-How the plugin's objects relate — what an operator creates, what the plugin
+How the plugin's objects relate: what an operator creates, what the plugin
 publishes and derives, and what everything feeds into:
 
 ![Object map: Disks feed DiskPools into the singleton CephCluster; BlockStorage and FileStorage each derive a Rook object and a StorageClass](../../assets/ceph-rook-object-map.svg)
@@ -194,9 +194,9 @@ This design supports:
 - **Multi-tenancy**: Different `BlockStorage`/`FileStorage` objects can have different replication (and, for `FileStorage`, a different `metadataServers` count), allowing per-workload customization.
 - **Shared infrastructure**: All storage in the cluster flows through a single Ceph cluster, simplifying backup, disaster recovery, and capacity planning.
 
-What it does **not** support is tiering by device type: no renderer sets a
-`deviceClass` or a per-pool CRUSH rule, so a pool of SSD disks and a pool of HDD
-disks still feed one OSD set that every volume spans — see
+Tiering by device type is not supported: no renderer sets a `deviceClass` or a
+per-pool CRUSH rule, so a pool of SSD disks and a pool of HDD disks feed one OSD
+set that every volume spans; see
 [Pools share one OSD set](#pools-share-one-osd-set).
 
 ## Replication strategy

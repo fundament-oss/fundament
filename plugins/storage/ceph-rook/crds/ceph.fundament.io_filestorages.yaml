@@ -28,15 +28,14 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          FileStorage provides shared volumes (ReadWriteMany) over the shared Ceph
-          cluster — many pods on many nodes can mount the same volume. It derives a
+          FileStorage provides shared volumes (ReadWriteMany), which many pods on many
+          nodes can mount at once, over the shared Ceph cluster. It derives a
           StorageClass, named in status.storageClassName, for PersistentVolumeClaims
           to reference.
 
           The name-length limit exists because Rook labels the metadata-server
           deployment rook_file_system=cephfs-<name> and label values cap at 63
-          characters; without it, a longer name would fail only after the filesystem
-          exists.
+          characters.
         properties:
           apiVersion:
             description: |-
@@ -58,16 +57,14 @@ spec:
           spec:
             default: {}
             description: |-
-              FileStorageSpec asks for a shared-filesystem (ReadWriteMany) StorageClass
-              over the shared Ceph cluster. A FileStorage brings no disks of its own;
-              DiskPools contribute those.
+              FileStorageSpec defines a shared-filesystem (ReadWriteMany) StorageClass on
+              the shared Ceph cluster, using the disks that DiskPools contribute.
             properties:
               metadataServers:
                 default: 1
                 description: |-
                   MetadataServers is the number of active filesystem metadata servers. Each
-                  active server gets its own standby for failover. More than 1 only helps
-                  metadata-heavy workloads at scale.
+                  active server gets its own standby for failover.
                 format: int32
                 maximum: 5
                 minimum: 1
@@ -87,9 +84,8 @@ spec:
             type: object
           status:
             description: |-
-              ConsumerStatus is the observed state shared by the consumer kinds
-              (BlockStorage, FileStorage). Fields describe the derived StorageClass, sized
-              against the whole shared Ceph cluster, not any single pool.
+              ConsumerStatus is the observed state of a BlockStorage or FileStorage and
+              the StorageClass it derives.
             properties:
               conditions:
                 description: Conditions carries the Ready condition, keyed by condition
@@ -178,8 +174,8 @@ spec:
                 type: integer
               storageClassName:
                 description: |-
-                  StorageClassName is the derived StorageClass's name — what a
-                  PersistentVolumeClaim should reference.
+                  StorageClassName is the name of the derived StorageClass, for
+                  PersistentVolumeClaims to reference.
                 type: string
             type: object
         type: object

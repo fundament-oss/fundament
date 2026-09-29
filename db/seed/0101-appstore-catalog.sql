@@ -302,7 +302,7 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 - **Automatic disk discovery**: nodes are scanned for raw block devices, which appear in the console as Disks
 - **Declarative disk pools**: a DiskPool selects which discovered disks to contribute to the shared cluster
 - **Block and file storage classes**: a BlockStorage produces a ready-to-use ReadWriteOnce StorageClass; a FileStorage produces a ReadWriteMany StorageClass backed by a shared filesystem with active and standby metadata servers
-- **Tunable replication**: set replication to auto, 1, 2, or 3 per BlockStorage or FileStorage — auto derives the replica count from the number of nodes contributing disks
+- **Tunable replication**: set replication to auto, 1, 2, or 3 per BlockStorage or FileStorage; auto derives the replica count from the number of nodes contributing disks
 
 ## Use Cases
 
@@ -314,12 +314,12 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 ## Requirements
 
 - **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem or partition table are not offered.
-- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. Nothing narrows them: the plugin runs with full cluster-admin on the cluster you install it into. Install it only if that tradeoff is acceptable for your cluster.
+- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions and runs as cluster-admin on the cluster you install it into.
 
 ## Limitations
 
 - Block storage (ReadWriteOnce) and shared file storage (ReadWriteMany) are supported; object storage (S3-style, RGW) is not yet.
-- All disk pools feed one shared Ceph cluster, and data is placed across every disk in it. Additional BlockStorage/FileStorage objects give you additional StorageClasses over the same disks, not isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
+- All disk pools feed one shared Ceph cluster, and data is placed across every disk in it. Additional BlockStorage/FileStorage objects give you additional StorageClasses over the same disks.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,

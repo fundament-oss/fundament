@@ -2,9 +2,8 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// FileStorageSpec asks for a shared-filesystem (ReadWriteMany) StorageClass
-// over the shared Ceph cluster. A FileStorage brings no disks of its own;
-// DiskPools contribute those.
+// FileStorageSpec defines a shared-filesystem (ReadWriteMany) StorageClass on
+// the shared Ceph cluster, using the disks that DiskPools contribute.
 type FileStorageSpec struct {
 	// Replication is how many copies Ceph keeps of each piece of data, for both
 	// the filesystem's metadata and its contents: an explicit count, or "auto"
@@ -13,23 +12,21 @@ type FileStorageSpec struct {
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
 	// MetadataServers is the number of active filesystem metadata servers. Each
-	// active server gets its own standby for failover. More than 1 only helps
-	// metadata-heavy workloads at scale.
+	// active server gets its own standby for failover.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=5
 	// +kubebuilder:default=1
 	MetadataServers int32 `json:"metadataServers,omitempty"`
 }
 
-// FileStorage provides shared volumes (ReadWriteMany) over the shared Ceph
-// cluster — many pods on many nodes can mount the same volume. It derives a
+// FileStorage provides shared volumes (ReadWriteMany), which many pods on many
+// nodes can mount at once, over the shared Ceph cluster. It derives a
 // StorageClass, named in status.storageClassName, for PersistentVolumeClaims
 // to reference.
 //
 // The name-length limit exists because Rook labels the metadata-server
 // deployment rook_file_system=cephfs-<name> and label values cap at 63
-// characters; without it, a longer name would fail only after the filesystem
-// exists.
+// characters.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster

@@ -24,7 +24,7 @@ if (!ctx.resource?.name) {
     // binds to and what survives a reboot.
     const device = [
       ['Path (kernel)', s.path ?? '—'],
-      ['Path (stable)', s.stablePath || 'none reported — this device is tracked by its kernel path'],
+      ['Path (stable)', s.stablePath || 'none reported; tracked by its kernel path'],
       ['Node', s.node ?? '—'],
       ['Size', humanizeBytes(s.sizeBytes ?? 0)],
       ['Type', s.type ?? '—'],
@@ -43,7 +43,7 @@ if (!ctx.resource?.name) {
     const allocation = [
       ['Claimed by', s.claimedBy || 'not claimed by any DiskPool'],
       ['Filesystem found', s.filesystem || 'none reported by the last probe'],
-      ['Reported empty', s.available ? 'yes — last node probe found nothing on it' : 'no'],
+      ['Reported empty', s.available ? 'yes (the last probe found nothing on it)' : 'no'],
     ];
 
     content.innerHTML = `
@@ -52,10 +52,9 @@ if (!ctx.resource?.name) {
       <h2 class="plugin-heading">Allocation</h2>
       ${renderDefList(allocation)}
       <p class="plugin-text">
-        “Claimed by” is the only line Fundament controls, and it says whether this plugin
-        handed the disk to a pool. The two below it are the node's last probe: a filesystem
-        it names is really there, but the probe can lag, so “Reported empty: yes” is not a
-        guarantee the disk is unused. Confirm on the node before repurposing or pulling it.
+        “Claimed by” is set by Fundament: the DiskPool this disk belongs to. “Filesystem
+        found” and “Reported empty” come from the node's last probe, which can lag. Confirm
+        on the node before repurposing or removing a disk.
       </p>
     `;
   } catch (err) {

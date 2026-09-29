@@ -59,7 +59,7 @@
   <text class="muted" x="46" y="380" font-size="12">spec.replication</text>
 
   <rect class="panel" x="340" y="326" width="570" height="92" rx="8"/>
-  <text class="muted" x="356" y="346" font-size="11">derived and owned — never adopts an object it does not own</text>
+  <text class="muted" x="356" y="346" font-size="11">derived and owned; foreign objects are refused</text>
   <rect class="box" x="356" y="356" width="250" height="50" rx="6"/>
   <text class="fg mono" x="370" y="376" font-size="12.5">CephBlockPool</text>
   <text class="muted mono" x="370" y="394" font-size="12">ceph-&lt;name&gt;</text>
@@ -77,7 +77,7 @@
   <text class="muted" x="46" y="506" font-size="12">spec.metadataServers</text>
 
   <rect class="panel" x="340" y="436" width="570" height="92" rx="8"/>
-  <text class="muted" x="356" y="456" font-size="11">derived and owned — never adopts an object it does not own</text>
+  <text class="muted" x="356" y="456" font-size="11">derived and owned; foreign objects are refused</text>
   <rect class="box" x="356" y="466" width="250" height="50" rx="6"/>
   <text class="fg mono" x="370" y="486" font-size="12.5">CephFilesystem</text>
   <text class="muted mono" x="370" y="504" font-size="12">cephfs-&lt;name&gt;</text>
@@ -101,5 +101,5 @@
   <path class="arrow dash" d="M260,592 L740,592 L740,530" marker-end="url(#a)"/>
   <text class="muted" x="460" y="584" font-size="11" text-anchor="middle">references either StorageClass</text>
 
-  <text class="muted" x="30" y="650" font-size="12">Every volume's data is placed across all OSDs in the shared CephCluster — pools contribute capacity, they do not confine data.</text>
+  <text class="muted" x="30" y="650" font-size="12">Every volume's data is placed across all OSDs in the shared CephCluster; pools contribute capacity.</text>
 </svg>

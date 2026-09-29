@@ -106,15 +106,12 @@ spec:
       # RBAC with escalate+bind. No narrower stable rule set exists, and there
       # is no cluster-admin escalation field to request instead.
       #
-      # Read this rule literally: it makes the plugin cluster-admin on the
-      # tenant cluster, and nothing narrows it. plugin-controller copies these
-      # rules verbatim into a ClusterRole bound to the plugin's ServiceAccount
-      # (mutatePluginScopeClusterRole). FUN-17's SubjectAccessReview does not
-      # constrain it either: that is a per-request check in kube-api-proxy on
-      # the console iframe path, and the plugin pod talks to the API server
-      # directly with its in-cluster config. The specific rules above document
-      # the plugin binary's own direct API usage; they grant nothing this rule
-      # does not already grant.
+      # This rule makes the plugin cluster-admin on the tenant cluster:
+      # plugin-controller copies these rules verbatim into a ClusterRole bound
+      # to the plugin's ServiceAccount (mutatePluginScopeClusterRole). FUN-17's
+      # SubjectAccessReview applies to kube-api-proxy's console path; the plugin
+      # pod calls the API server directly with its in-cluster config. The rules
+      # above list the plugin binary's own API usage.
       - apiGroups: ["*"]
         resources: ["*"]
         verbs: ["*"]
@@ -195,8 +192,7 @@ spec:
             badge: danger
             label: Degraded
   # Exactly the verbs the console pages issue, no more. Nothing enforces this
-  # list at request time yet, so it is a declaration of intent — and a
-  # declaration that overstates what the pages do is worse than none.
+  # list at request time yet, so it is a declaration of intent.
   #
   # No delete verb: the console offers no delete, because a guard for it would
   # have to be server-side to mean anything. No update verb: the edit forms

@@ -38,10 +38,9 @@ if (loadError) {
 } else if (availableDisks.length === 0) {
   content.innerHTML = `
     <p class="plugin-text">
-      No disks to offer. A disk appears here once it has been discovered, is not claimed by
-      another DiskPool, and the node's last probe found nothing on it. That probe can lag,
-      so a disk missing from this list is not necessarily in use — check
-      <code>kubectl get disks</code> for what each one reports.
+      No disks to offer. A disk appears here when it is discovered, unclaimed, and empty
+      in the node's last probe. The probe can lag; <code>kubectl get disks</code> shows
+      what each disk reports.
     </p>
     <div class="plugin-actions">
       <button type="button" class="plugin-button-secondary" id="back-btn">Back to Disk Pools</button>
@@ -55,7 +54,7 @@ if (loadError) {
     <p class="plugin-text">
       <strong>Recommendation:</strong> create a single DiskPool per cluster. All pools feed
       one shared Ceph cluster and data is placed across every disk in it, so a second pool
-      only contributes more disks — not isolated or tiered storage.
+      only contributes more disks.
     </p>
 
     <form id="create-form" class="plugin-form" novalidate>
@@ -75,9 +74,9 @@ if (loadError) {
         <span class="plugin-hint">
           Each selected disk joins the shared Ceph cluster, which runs one storage daemon
           (OSD) per disk. Disks spread over two or more nodes let volumes survive a node
-          failure. Fundament can confirm only that a disk is unclaimed, not that it is
-          empty — a disk marked as carrying a filesystem holds data, and one marked with
-          nothing may still hold data the last probe missed.
+          failure. Fundament confirms only that a disk is unclaimed. A disk marked as
+          carrying a filesystem holds data, and one marked with nothing may still hold data
+          the last probe missed.
         </span>
       </div>
 

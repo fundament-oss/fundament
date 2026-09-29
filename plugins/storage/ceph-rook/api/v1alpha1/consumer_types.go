@@ -10,15 +10,14 @@ const ReasonNoOSDs = "NoOSDs"
 // consumer cannot become Ready until Rook resolves it.
 const ReasonRookFailure = "RookFailure"
 
-// ConsumerStatus is the observed state shared by the consumer kinds
-// (BlockStorage, FileStorage). Fields describe the derived StorageClass, sized
-// against the whole shared Ceph cluster, not any single pool.
+// ConsumerStatus is the observed state of a BlockStorage or FileStorage and
+// the StorageClass it derives.
 type ConsumerStatus struct {
 	// Phase is Provisioning until the derived storage reports Ready, and
 	// Degraded when reconciliation needs operator action.
 	Phase string `json:"phase,omitempty"`
-	// StorageClassName is the derived StorageClass's name — what a
-	// PersistentVolumeClaim should reference.
+	// StorageClassName is the name of the derived StorageClass, for
+	// PersistentVolumeClaims to reference.
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Replicas is the replica count that spec.replication resolved to.
 	Replicas int `json:"replicas,omitempty"`

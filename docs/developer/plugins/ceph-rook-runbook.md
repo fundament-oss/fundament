@@ -256,7 +256,7 @@ published plugin=ceph-rook version=0.1.0 hash=sha256:... id=... version_id=... s
 ```
 
 The registry stores versions without the `v` prefix, so `metadata.version: v0.1.0`
-publishes as `0.1.0` — and `0.1.0` is what a `PluginInstallation` must reference.
+publishes as `0.1.0`, which is what a `PluginInstallation` must reference.
 
 Versions are create-only on the registry — an approved version's hash is a
 consent record — so there is no `--replace`. To publish the same content again,
@@ -272,7 +272,7 @@ The plugin needs local-development config: without it the default 3 mons never r
 quorum on a single node, and the real-disk filter would ignore the loop devices.
 
 Three naming rules, all enforced at apply or reconcile time: `metadata.name` must be
-`<organizationName>--<pluginName>` (`system--ceph-rook` — first-party plugins are
+`<organizationName>--<pluginName>` (`system--ceph-rook`: first-party plugins are
 published by the seeded `system` org), `organizationName` is required, and
 `pluginVersion` is the registry's form without the `v` prefix (`0.1.0`, as printed by
 the publish in phase 3).

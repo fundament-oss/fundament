@@ -3,13 +3,10 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // DiskPoolSpec selects the disks this pool contributes to the shared Ceph
-// cluster. Consumers (BlockStorage, FileStorage) turn that capacity into
-// StorageClasses.
+// cluster.
 type DiskPoolSpec struct {
 	// Disks are the names of the Disk objects to contribute. Ceph runs one
-	// storage daemon (OSD) per disk; every pool's disks join a single shared set
-	// that all volumes are placed across. A name may appear only once — a
-	// duplicate would be double-counted in status, so the API server rejects it.
+	// storage daemon (OSD) per disk. Each name may appear once.
 	// +optional
 	// +listType=set
 	Disks []string `json:"disks,omitempty"`
@@ -48,29 +45,22 @@ const (
 	ReasonReconcileError = "ReconcileError"
 )
 
-// DiskPoolStatus is the observed state.
-//
-// Every field describes this pool's contribution to the one shared Ceph
-// cluster, not storage that belongs to this pool: all pools feed the same
-// cluster, and volumes are placed across every disk in it.
+// DiskPoolStatus is the observed state of this pool's contribution to the
+// shared Ceph cluster. Volumes are placed across the disks of all pools.
 type DiskPoolStatus struct {
 	Phase string `json:"phase,omitempty"`
-	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk. It
-	// is not the number of storage daemons (OSDs) running: Ceph creates those
-	// asynchronously, and removing a disk from spec never removes its OSD (that
-	// takes a manual Ceph purge).
+	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk. Ceph
+	// creates their storage daemons (OSDs) asynchronously, and removing a disk
+	// from spec keeps its OSD until a manual Ceph purge.
 	SelectedDiskCount int `json:"selectedDiskCount,omitempty"`
 	// RawCapacityBytes is the summed size of the disks this pool contributes,
-	// before replication. It is not the pool's capacity: volumes are placed
-	// across every disk in the shared cluster, not only this pool's. Use
-	// `ceph df` for real free space.
+	// before replication. Volumes are placed across every disk in the shared
+	// cluster; `ceph df` shows free space.
 	RawCapacityBytes int64 `json:"rawCapacityBytes,omitempty"`
 	// Message explains the current phase, naming the operator action needed
 	// when the pool is Degraded.
 	Message string `json:"message,omitempty"`
-	// ObservedGeneration is the metadata.generation this status was computed
-	// from. Below metadata.generation means the controller has not caught up with
-	// the current spec, and every field above describes an older one.
+	// ObservedGeneration is the metadata.generation this status was computed from.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Conditions carries the Ready condition, keyed by condition type.
@@ -81,8 +71,7 @@ type DiskPoolStatus struct {
 }
 
 // DiskPool contributes a set of discovered disks to the shared Ceph cluster.
-// It provides capacity only; a BlockStorage or FileStorage turns that capacity
-// into a StorageClass.
+// A BlockStorage or FileStorage turns that capacity into a StorageClass.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster

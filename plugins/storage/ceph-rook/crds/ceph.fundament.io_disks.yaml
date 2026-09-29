@@ -37,9 +37,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          Disk is a block device discovered on a cluster node. Disks appear and update
-          automatically; an operator's only interaction is selecting them into a
-          DiskPool.
+          Disk is a block device discovered on a cluster node. Disk discovery creates
+          and updates Disks; select them in a DiskPool to use them.
         properties:
           apiVersion:
             description: |-
@@ -59,9 +58,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: |-
-              DiskSpec is empty: a Disk is published by disk discovery and cannot be
-              edited.
+            description: DiskSpec has no fields; disk discovery fills in status.
             type: object
           status:
             description: DiskStatus is the discovered state of a block device on a
@@ -70,7 +67,7 @@ spec:
               available:
                 description: |-
                   Available reports whether the last probe found the device empty and
-                  usable. It does not say whether a DiskPool has claimed it; ClaimedBy does.
+                  usable. ClaimedBy shows whether a DiskPool has claimed it.
                 type: boolean
               claimedBy:
                 description: ClaimedBy names the DiskPool this disk belongs to, empty
@@ -79,9 +76,8 @@ spec:
               filesystem:
                 description: |-
                   Filesystem is what the last probe found on the device, e.g. "ext4" or
-                  "ceph_bluestore". A set value means data really is there; an empty value
-                  only means the last probe saw none — the probe can be stale, so it does
-                  not prove the device is empty.
+                  "ceph_bluestore". Empty means the probe found none; the probe can be
+                  stale.
                 type: string
               model:
                 description: Model is the device model the node reports.
@@ -92,9 +88,8 @@ spec:
                 type: string
               path:
                 description: |-
-                  Path is the kernel device name, e.g. /dev/sdb — what an operator sees on
-                  the node. The kernel may reassign it on a reboot, so it does not identify
-                  the device.
+                  Path is the kernel device name, e.g. /dev/sdb. The kernel may reassign it
+                  on reboot; StablePath identifies the device.
                 type: string
               rotational:
                 description: Rotational is true for spinning disks.
