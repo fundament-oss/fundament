@@ -63,8 +63,8 @@ spec:
               default:
                 description: |-
                   Default marks the derived StorageClass as the cluster default
-                  (storageclass.kubernetes.io/is-default-class). At most one BlockStorage
-                  may set it; all that do while another does are Degraded.
+                  (storageclass.kubernetes.io/is-default-class). If more than one
+                  BlockStorage sets it, none is marked default and each is Degraded.
                 type: boolean
               replication:
                 default: auto
