@@ -112,6 +112,33 @@ export default class SessionService {
     return this.track(this.load(true));
   }
 
+  /**
+   * Ends the console session. authn-api clears the `fundament_auth` cookie on
+   * the parent domain, so the console is signed out as well: there is only
+   * one session. Throws when authn-api did not clear it, leaving the user in
+   * place so the header does not claim a sign-out that did not happen.
+   */
+  async logout(): Promise<void> {
+    const configured = this.configService.getConfig().authnApiUrl ?? '';
+    const base = new URL(
+      configured.endsWith('/') ? configured : `${configured}/`,
+      window.location.origin,
+    );
+    const response = await fetch(new URL('logout', base), {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
+    }
+
+    // Supersede any lookup still out, so its answer cannot sign the user back in.
+    this.lookups += 1;
+    this.loaded = undefined;
+    this.userConfirmedAt = 0;
+    this.user.set(null);
+  }
+
   private track(lookup: Promise<User | null>): Promise<User | null> {
     const loading = lookup.then((user) => {
       // Forget an empty answer so the next caller asks again, unless a newer

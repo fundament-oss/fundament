@@ -7,6 +7,8 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+// Pads the empty state's box; loaded with this page rather than up front.
+import '@nldd/design-system/container';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ConfigService } from '../config.service';

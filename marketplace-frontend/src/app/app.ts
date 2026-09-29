@@ -29,7 +29,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
 import DeveloperLinkComponent from './developer-link.component';
 import { ToastService } from './toast.service';
-import ThemeService from './theme.service';
+import ThemeService, { type ThemePreference } from './theme.service';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 import SessionService from './session.service';
@@ -100,6 +100,8 @@ export default class App {
   // Theme state, owned by ThemeService so the server can render it too.
   isDarkMode = this.themeService.isDarkMode;
 
+  themePreference = this.themeService.preference;
+
   // Search box value; submitting navigates to the marketplace filtered by query.
   searchQuery = signal('');
 
@@ -119,13 +121,17 @@ export default class App {
     // The header's menus (account, organization) only exist for a signed-in
     // visitor, so the menu element is fetched once one is needed rather than
     // weighing on every anonymous first load. Until it is defined the buttons
-    // render as plain buttons; a custom element upgrades in place.
+    // render as plain buttons; a custom element upgrades in place. The
+    // account menu's header needs identity and container, so they come along.
     const menuLoad = effect(() => {
       const needed =
-        (this.sessionState() === 'signed-in' && !!(this.consoleUrl || this.developerUrl)) ||
-        this.organizationContext.organizations().length > 1;
+        this.sessionState() === 'signed-in' || this.organizationContext.organizations().length > 1;
       if (!needed) return;
-      import('@nldd/design-system/menu').catch(() => {});
+      Promise.all([
+        import('@nldd/design-system/menu'),
+        import('@nldd/design-system/identity'),
+        import('@nldd/design-system/container'),
+      ]).catch(() => {});
       menuLoad.destroy();
     });
 
@@ -201,5 +207,22 @@ export default class App {
 
   toggleTheme() {
     this.themeService.toggle();
+  }
+
+  setTheme(preference: ThemePreference) {
+    this.themeService.setPreference(preference);
+  }
+
+  /**
+   * Signs out of the console session. The storefront is public, so the
+   * visitor stays on the page it was on, now as a signed-out visitor.
+   */
+  async handleLogout() {
+    try {
+      await this.session.logout();
+      this.sessionState.set('signed-out');
+    } catch {
+      this.toastService.error('Logging out failed. Please try again.');
+    }
   }
 }

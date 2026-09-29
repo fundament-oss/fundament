@@ -60,41 +60,77 @@
              "Sign in" that turns into a name a moment later. -->
         @switch (sessionState()) {
           @case ('signed-in') {
-            @if (consoleUrl || developerUrl) {
-              <nldd-button
-                expandable
-                popup-type="menu"
-                single-line
-                variant="neutral-tinted"
-                start-icon="person-circle"
-                [attr.text]="accountLabel()"
-                [attr.accessible-label]="'Account: ' + accountLabel()"
-              >
-                <nldd-menu slot="popup" placement="bottom-end" accessible-label="Account">
-                  @if (consoleUrl) {
+            <!-- Mirrors the console's account menu. Both links open in this
+                 tab, so they carry what they lead to as an icon rather than
+                 an external-link glyph. -->
+            <nldd-button
+              expandable
+              popup-type="menu"
+              single-line
+              variant="neutral-tinted"
+              start-icon="person-circle"
+              [attr.text]="accountLabel()"
+              [attr.accessible-label]="'Account: ' + accountLabel()"
+            >
+              <nldd-menu slot="popup" placement="bottom-end" accessible-label="Account">
+                <!-- The menu's header slot is unpadded on purpose, so the
+                     container supplies the spacing. -->
+                <nldd-container slot="header" padding-inline="16" padding-block="12">
+                  <nldd-identity
+                    [attr.text]="accountLabel()"
+                    [attr.supporting-text]="user()?.id || null"
+                  ></nldd-identity>
+                </nldd-container>
+                @if (consoleUrl) {
+                  <nldd-menu-item
+                    icon="console"
+                    text="Open the Console"
+                    [attr.href]="consoleUrl"
+                  ></nldd-menu-item>
+                }
+                @if (developerUrl) {
+                  <nldd-menu-item
+                    icon="code"
+                    text="Developer portal"
+                    [attr.href]="developerUrl + '/manage'"
+                  ></nldd-menu-item>
+                }
+                @if (consoleUrl || developerUrl) {
+                  <nldd-menu-divider></nldd-menu-divider>
+                }
+                <nldd-menu-item text="Appearance" icon="appearance">
+                  <nldd-menu>
                     <nldd-menu-item
-                      icon="square-arrow-right-top"
-                      text="Open the console"
-                      [attr.href]="consoleUrl"
+                      text="System"
+                      icon="display"
+                      type="radio"
+                      [attr.selected]="themePreference() === 'system' ? '' : null"
+                      (select)="setTheme('system')"
                     ></nldd-menu-item>
-                  }
-                  @if (developerUrl) {
                     <nldd-menu-item
-                      icon="square-arrow-right-top"
-                      text="Developer portal"
-                      [attr.href]="developerUrl + '/manage'"
+                      text="Light"
+                      icon="light-mode"
+                      type="radio"
+                      [attr.selected]="themePreference() === 'light' ? '' : null"
+                      (select)="setTheme('light')"
                     ></nldd-menu-item>
-                  }
-                </nldd-menu>
-              </nldd-button>
-            } @else {
-              <span
-                class="flex max-w-48 items-center gap-2 truncate text-sm text-gray-600 dark:text-gray-300"
-              >
-                <nldd-icon name="person-circle" class="block! h-5 w-5 shrink-0"></nldd-icon>
-                <span class="truncate">{{ accountLabel() }}</span>
-              </span>
-            }
+                    <nldd-menu-item
+                      text="Dark"
+                      icon="dark-mode"
+                      type="radio"
+                      [attr.selected]="themePreference() === 'dark' ? '' : null"
+                      (select)="setTheme('dark')"
+                    ></nldd-menu-item>
+                  </nldd-menu>
+                </nldd-menu-item>
+                <nldd-menu-divider></nldd-menu-divider>
+                <nldd-menu-item
+                  text="Log out"
+                  icon="logout"
+                  (select)="handleLogout()"
+                ></nldd-menu-item>
+              </nldd-menu>
+            </nldd-button>
           }
           @case ('signed-out') {
             <app-developer-link path="/manage">
@@ -151,13 +187,18 @@
           <nldd-button text="Browse the marketplace" variant="neutral-tinted"></nldd-button>
         </a>
       }
-      <nldd-icon-button
-        [icon]="isDarkMode() ? 'sun' : 'moon'"
-        [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
-        variant="neutral-transparent"
-        size="sm"
-        (click)="toggleTheme()"
-      ></nldd-icon-button>
+      <!-- A signed-in visitor picks the theme under Appearance in the account
+           menu; everyone else gets this toggle, so an anonymous first load
+           does not have to fetch the menu element for it. -->
+      @if (!(variant === 'catalog' && sessionState() === 'signed-in')) {
+        <nldd-icon-button
+          [icon]="isDarkMode() ? 'sun' : 'moon'"
+          [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
+          variant="neutral-transparent"
+          size="sm"
+          (click)="toggleTheme()"
+        ></nldd-icon-button>
+      }
     </nav>
   </div>
 </header>

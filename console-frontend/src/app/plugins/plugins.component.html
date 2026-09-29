@@ -13,8 +13,11 @@
       <h1>{{ pageTitle }}</h1>
       <!-- Finding plugins is the marketplace's job; this page keeps what is
            already on your clusters. Same tab: the marketplace's Install button
-           brings you back here with the install sheet open. -->
-      @if (browsePluginsUrl) {
+           brings you back here with the install sheet open. Only once there is
+           a list: with none, the empty state below makes the same offer in the
+           middle of the page. Hidden while loading too, so it does not arrive
+           and then leave again. -->
+      @if (browsePluginsUrl && !isLoading() && (listedPlugins.length > 0 || installsReadFailed())) {
         <nldd-button
           slot="end"
           [attr.href]="browsePluginsUrl"
@@ -54,7 +57,15 @@
         icon-color="secondary"
         text="No plugins installed yet"
         supporting-text="Browse the marketplace to find plugins for your clusters."
-      ></nldd-inline-dialog>
+      >
+        <nldd-button
+          slot="actions"
+          [attr.href]="browsePluginsUrl"
+          text="Browse plugins"
+          start-icon="search"
+          variant="primary"
+        ></nldd-button>
+      </nldd-inline-dialog>
     } @else {
       <!-- Some clusters could be read and others not: the list shows what was
            read, so say that plugins on the rest may be missing from it. -->
