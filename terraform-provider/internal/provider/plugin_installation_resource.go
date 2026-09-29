@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -42,6 +44,7 @@ type PluginInstallationResourceModel struct {
 	PluginName       types.String `tfsdk:"plugin_name"`
 	PluginVersion    types.String `tfsdk:"plugin_version"`
 	DefinitionHash   types.String `tfsdk:"definition_hash"`
+	Config           types.Map    `tfsdk:"config"`
 	Phase            types.String `tfsdk:"phase"`
 }
 
@@ -62,6 +65,10 @@ type pluginDefinitionRef struct {
 
 type pluginInstallationSpec struct {
 	DefinitionRef pluginDefinitionRef `json:"definitionRef"`
+	// Config holds the install-time config the definition's configSchema
+	// declares. The plugin-controller validates it against the pinned
+	// definition and fails the installation closed on any violation.
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type pluginInstallationStatus struct {
@@ -172,6 +179,17 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"config": schema.MapAttribute{
+				Description: "Install-time configuration for the plugin, as string key/value pairs (spec.config). " +
+					"Keys and values must conform to the configSchema declared by the pinned plugin definition; " +
+					"the plugin controller rejects undeclared keys and ill-typed values, failing the installation. " +
+					"Omitted keys use the definition's defaults. Changing this value forces a replacement.",
+				ElementType: types.StringType,
+				Optional:    true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.RequiresReplace(),
+				},
+			},
 			"phase": schema.StringAttribute{
 				Description: "The current phase of the plugin installation as reported by the plugin controller.",
 				Computed:    true,
@@ -253,6 +271,14 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	config := map[string]string{}
+	if !plan.Config.IsNull() && !plan.Config.IsUnknown() {
+		resp.Diagnostics.Append(plan.Config.ElementsAs(ctx, &config, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	crd := pluginInstallationCreatePayload{
 		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
@@ -264,6 +290,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 				PluginVersion:    pluginVersion,
 				DefinitionHash:   definitionHash,
 			},
+			Config: config,
 		},
 	}
 
@@ -297,7 +324,8 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			return
 		}
 		if existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
-			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash {
+			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash ||
+			!maps.Equal(existingCRD.Spec.Config, config) {
 			resp.Diagnostics.AddError(
 				"Plugin Installation Already Exists With Different Configuration",
 				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
@@ -475,6 +503,20 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		state.DefinitionHash = types.StringValue(crd.Spec.DefinitionRef.DefinitionHash)
 	} else {
 		state.DefinitionHash = types.StringValue("sha256:unknown")
+	}
+	if len(crd.Spec.Config) > 0 {
+		configValue, diags := types.MapValueFrom(ctx, types.StringType, crd.Spec.Config)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.Config = configValue
+	} else if !state.Config.IsNull() && len(state.Config.Elements()) == 0 {
+		// `config = {}` in HCL round-trips: the CR omits an empty config, so
+		// keep the empty map rather than flapping to null and forcing a
+		// replacement on every refresh.
+	} else {
+		state.Config = types.MapNull(types.StringType)
 	}
 	if crd.Status.Phase != "" {
 		state.Phase = types.StringValue(crd.Status.Phase)

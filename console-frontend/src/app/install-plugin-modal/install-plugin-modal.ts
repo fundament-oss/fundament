@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { CATALOG } from '../../connect/tokens';
+import { INSTALL } from '../../connect/tokens';
 import {
   ConfigSchemaEntry,
   GetPluginDefinitionRequestSchema,
@@ -130,7 +130,7 @@ export default class InstallPluginModalComponent {
   // Emits a cluster to retry a failed installation on, with the current pin.
   retry = output<RetrySelection>();
 
-  private catalogClient = inject(CATALOG);
+  private installClient = inject(INSTALL);
 
   // Set once a version with a non-empty schema is chosen; the form renders
   // against it and clears it back to null on submit, cancel or close.
@@ -235,7 +235,7 @@ export default class InstallPluginModalComponent {
     const cached = this.schemaCache.get(key);
     if (cached) return cached;
     const resp = await firstValueFrom(
-      this.catalogClient.getPluginDefinition(
+      this.installClient.getPluginDefinition(
         create(GetPluginDefinitionRequestSchema, {
           lookup: {
             case: 'name',
@@ -278,9 +278,15 @@ export default class InstallPluginModalComponent {
   }
 
   /** Retries at the version already pinned on that cluster, falling back to the
-   *  latest published one when the failed install never recorded a version. */
+   *  latest published one only when the failed install never recorded a
+   *  version. A recorded version missing from the published list must not
+   *  silently retry a different one: the preserved config was written against
+   *  the pinned version's schema. */
   onRetry(clusterId: string, pinned: string): void {
-    const option = this.versions().find((v) => v.version === pinned) ?? this.versions()[0];
+    const recorded = pinned !== '' && pinned !== 'unknown';
+    const option = recorded
+      ? this.versions().find((v) => v.version === pinned)
+      : this.versions()[0];
     if (!option) return;
     this.retry.emit({ clusterId, version: option.version, hash: option.hash });
   }

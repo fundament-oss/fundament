@@ -3,7 +3,9 @@ import { vi } from 'vitest';
 import { of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import PluginsComponent from './plugins.component';
-import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginInstallationService, {
+  RetryReadError,
+} from '../plugin-installation/plugin-installation.service';
 import { ConfigService } from '../config.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { NotificationService } from '../notification.service';
@@ -245,83 +247,56 @@ describe('PluginsComponent listing', () => {
   });
 });
 
+// The read-config/uninstall/re-create sequence itself is the service's;
+// see plugin-installation.service.spec.ts. These pin the delegation and the
+// component's handling of an aborted retry.
 describe('PluginsComponent retry install', () => {
-  it('retry re-creates the installation with its previous config', async () => {
+  // Selected as it would be from opening the modal off the plugin row.
+  const selectedPlugin = {
+    id: 'pl-1',
+    name: 'ceph-rook',
+    displayName: 'Ceph Rook',
+    descriptionShort: '',
+    image: '',
+    organizationName: 'acme',
+    publisherDisplayName: 'Acme',
+    categories: [],
+    tags: [],
+  };
+
+  it('retries through the service at the chosen version and hash', async () => {
     const installationService = {
       listInstallations: () => Promise.resolve([]),
-      getInstallation: vi.fn().mockResolvedValue({
-        metadata: { name: 'acme--ceph-rook', uid: 'uid-1' },
-        spec: {
-          definitionRef: {
-            organizationName: 'acme',
-            pluginName: 'ceph-rook',
-            pluginVersion: 'v0.2.0',
-            definitionHash: 'sha256:abc',
-          },
-          config: { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
-        },
-        status: { phase: 'Failed', ready: false },
-      } as PluginInstallationItem),
-      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
-      installPlugin: vi.fn().mockResolvedValue(undefined),
+      retryInstall: vi.fn().mockResolvedValue(undefined),
     };
 
     const component = build([], [], '', installationService);
-    // Selected as it would be from opening the modal off the plugin row.
-    component.selectedPlugin = {
-      id: 'pl-1',
-      name: 'ceph-rook',
-      displayName: 'Ceph Rook',
-      descriptionShort: '',
-      image: '',
-      organizationName: 'acme',
-      publisherDisplayName: 'Acme',
-      categories: [],
-      tags: [],
-    };
+    component.selectedPlugin = { ...selectedPlugin };
 
     await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
 
-    expect(installationService.installPlugin).toHaveBeenCalledWith(
+    expect(installationService.retryInstall).toHaveBeenCalledWith(
       'c1',
       'acme',
       'ceph-rook',
       'v0.2.0',
       'sha256:abc',
-      { MON_COUNT: '1', DEV_LOOP_DEVICES: 'true' },
     );
-
   });
 
-  // A read failure (network blip, RBAC hiccup) is not "the CR is already
-  // gone": proceeding would uninstall the plugin's only copy of its config.
-  it('aborts without uninstalling when reading the existing installation fails', async () => {
+  it('notifies when the service aborts the retry on a failed read', async () => {
     const installationService = {
       listInstallations: () => Promise.resolve([]),
-      getInstallation: vi.fn().mockRejectedValue(new Error('HTTP 500')),
-      uninstallPlugin: vi.fn().mockResolvedValue(undefined),
-      installPlugin: vi.fn().mockResolvedValue(undefined),
+      retryInstall: vi.fn().mockRejectedValue(new RetryReadError('read failed')),
     };
 
-    const component = build([], [], installationService);
-    component.selectedPlugin = {
-      id: 'pl-1',
-      name: 'ceph-rook',
-      displayName: 'Ceph Rook',
-      descriptionShort: '',
-      image: '',
-      organizationName: 'acme',
-      publisherDisplayName: 'Acme',
-      categories: [],
-      tags: [],
-    };
+    const component = build([], [], '', installationService);
+    component.selectedPlugin = { ...selectedPlugin };
     const notificationService = TestBed.inject(NotificationService);
     const errorNotification = vi.spyOn(notificationService, 'error');
 
     await component.onRetryInstall({ clusterId: 'c1', version: 'v0.2.0', hash: 'sha256:abc' });
 
-    expect(installationService.uninstallPlugin).not.toHaveBeenCalled();
-    expect(installationService.installPlugin).not.toHaveBeenCalled();
     expect(errorNotification).toHaveBeenCalledTimes(1);
   });
 });

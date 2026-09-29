@@ -21,6 +21,10 @@ export function pluginResourceName(organizationName: string, pluginName: string)
   return `${slug(organizationName)}--${slug(pluginName)}`;
 }
 
+/** Thrown by retryInstall when reading the existing installation failed. The
+ *  CR was not touched, so the caller can roll its UI state back. */
+export class RetryReadError extends Error {}
+
 @Injectable({ providedIn: 'root' })
 export default class PluginInstallationService {
   private configService = inject(ConfigService);
@@ -90,5 +94,59 @@ export default class PluginInstallationService {
       credentials: 'include',
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+
+  // Re-creates a failed installation, preserving its spec.config.
+  //
+  // The failed install may carry config; it is read before deleting the CR so
+  // the retry re-creates the installation as it was, not with defaults. A
+  // read failure (network blip, RBAC hiccup) is not the same as "CR already
+  // gone" (404 resolves null) — only the latter is safe to proceed past.
+  // Uninstalling on a failed read would delete the only copy of the config,
+  // so that aborts with RetryReadError instead.
+  async retryInstall(
+    clusterId: string,
+    organizationName: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
+    const resourceName = pluginResourceName(organizationName, pluginName);
+    let existing: PluginInstallationItem | null;
+    try {
+      existing = await this.getInstallation(clusterId, resourceName);
+    } catch {
+      throw new RetryReadError(`failed to read installation ${resourceName}`);
+    }
+    const config = existing?.spec.config ?? {};
+
+    // The CR from the failed install still exists, so remove it and wait for
+    // it to be gone before re-creating (a plain re-POST would 409).
+    await this.uninstallPlugin(clusterId, resourceName).catch(() => {});
+    await this.waitForUninstall(clusterId, resourceName);
+    await this.installPlugin(
+      clusterId,
+      organizationName,
+      pluginName,
+      pluginVersion,
+      definitionHash,
+      config,
+    );
+  }
+
+  private async waitForUninstall(
+    clusterId: string,
+    resourceName: string,
+    // Wait up to ~30s for finalizers to clear the old CR before re-creating it;
+    // re-POSTing while it is still terminating would 409.
+    attempts = 30,
+  ): Promise<void> {
+    if (attempts <= 0) return;
+    const items = await this.listInstallations(clusterId).catch(() => []);
+    if (!items.some((item) => item.metadata.name === resourceName)) return;
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1000);
+    });
+    await this.waitForUninstall(clusterId, resourceName, attempts - 1);
   }
 }

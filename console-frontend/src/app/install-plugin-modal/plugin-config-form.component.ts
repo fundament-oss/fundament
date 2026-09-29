@@ -39,8 +39,10 @@ const MAX_INT64 = 2n ** 63n - 1n;
  */
 function intValidator(control: AbstractControl): ValidationErrors | null {
   const value = control.value;
-  if (value === '' || value === null || value === undefined) return null; // required handles emptiness
-  const str = String(value);
+  if (value === null || value === undefined) return null; // required handles emptiness
+  // Validate the trimmed value — it is what onSubmit emits.
+  const str = String(value).trim();
+  if (str === '') return null;
   if (!INT_PATTERN.test(str)) return { int: true };
   const parsed = BigInt(str);
   if (parsed < MIN_INT64 || parsed > MAX_INT64) return { int: true };
@@ -179,7 +181,7 @@ function labelFor(entry: ConfigSchemaEntry): string {
             [invalid]="isInvalid(entry.name)"
             (change)="onEnumChange(entry.name, $event)"
           >
-            @for (value of entry.values; track value) {
+            @for (value of enumChoices(entry); track value) {
               <nldd-toggle-button
                 type="radio"
                 [value]="value"
@@ -248,6 +250,13 @@ export default class PluginConfigFormComponent implements OnInit {
       group.addControl(entry.name, new FormControl(initial, validators));
     });
     this.form = group;
+  }
+
+  enumChoices(entry: ConfigSchemaEntry): string[] {
+    // A schema may list "" to accept an explicitly empty value (meaning "use
+    // the default"), but an unselected group already expresses that state —
+    // an empty toggle button would be an unlabeled control.
+    return entry.values.filter((value) => value !== '');
   }
 
   toggleAdvanced(): void {

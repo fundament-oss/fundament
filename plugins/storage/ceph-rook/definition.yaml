@@ -267,6 +267,8 @@ spec:
     - name: CEPHFS_MOUNTER
       displayName: CephFS mount client
       type: enum
-      values: ["kernel", "fuse"]
+      # "" mirrors config.go's accept-set: an explicitly empty value means the
+      # CSI default, same as omitting the key.
+      values: ["", "kernel", "fuse"]
       advanced: true
       description: "How the CephFS CSI driver mounts volumes. Unset uses the CSI default (kernel client). Use fuse on nodes without the ceph kernel module (local Docker VMs). RBD is unaffected."

@@ -352,6 +352,13 @@ func TestValidateConfig(t *testing.T) {
 			config: nil,
 			schema: []ConfigSchemaEntry{{Name: "MON_COUNT", Type: "int", Default: "3"}},
 		},
+		"enum listing empty string accepts explicit empty value": {
+			// An enum may list "" so a present-but-empty value (templated
+			// config spelling "use the default") validates; ceph-rook's
+			// CEPHFS_MOUNTER relies on this.
+			config: map[string]string{"MOUNTER": ""},
+			schema: []ConfigSchemaEntry{{Name: "MOUNTER", Type: "enum", Values: []string{"", "kernel", "fuse"}}},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := ValidateConfig(tc.config, tc.schema)

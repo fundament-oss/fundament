@@ -1271,6 +1271,42 @@ func TestReconcileChildren_RejectsConfigViolatingSchema(t *testing.T) {
 	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
 	assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
 	assert.Contains(t, got.Status.Message, "MON_CONUT")
+	// The terminal marker is control flow, not content: it must not leak into
+	// the user-visible message.
+	assert.NotContains(t, got.Status.Message, "terminal")
+}
+
+func TestReconcile_HashMismatch_MarksFailed(t *testing.T) {
+	// A pinned hash that does not match the fetched manifest can never heal on
+	// retry (the published manifest is immutable), so it must surface as
+	// Phase: Failed like invalid config — not sit in "Installing..." forever.
+	scheme := newTestScheme()
+	manifest, _ := sampleManifestWithConfigSchema(t)
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.Spec.DefinitionRef.DefinitionHash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+	cr.Finalizers = []string{finalizerName}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).WithObjects(cr).WithStatusSubresource(cr).Build()
+	r := &Reconciler{
+		client: fakeClient, logger: slog.Default(),
+		cfg:                 config.Config{FundamentClusterID: "test-cluster"},
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest},
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.Error(t, err)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "hash mismatch")
+	assert.NotContains(t, got.Status.Message, "terminal")
 }
 
 func TestReconcile_FetchError_DoesNotMarkFailed(t *testing.T) {

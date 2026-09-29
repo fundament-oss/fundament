@@ -138,6 +138,18 @@ describe('PluginConfigFormComponent', () => {
     expect(confirmed).not.toHaveBeenCalled();
   });
 
+  it('accepts an int pasted with surrounding whitespace, matching what submit emits', () => {
+    const component = build([{ name: 'MON_COUNT', type: ConfigType.INT, defaultValue: '3' }]);
+
+    const confirmed = vi.fn();
+    component.confirmed.subscribe(confirmed);
+
+    component.form.get('MON_COUNT')?.setValue(' 1 ');
+    component.onSubmit();
+
+    expect(confirmed).toHaveBeenCalledWith({ MON_COUNT: '1' });
+  });
+
   it('blocks submit when a required field is whitespace-only', () => {
     const component = build([
       { name: 'CEPH_IMAGE', type: ConfigType.STRING, defaultValue: '', required: true },

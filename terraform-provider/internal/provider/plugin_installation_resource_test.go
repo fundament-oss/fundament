@@ -86,6 +86,33 @@ func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
 	if strings.Contains(got, `"pluginName":"grafana","image"`) || strings.Contains(got, `"spec":{"pluginName"`) {
 		t.Errorf("payload must not carry the legacy top-level spec.pluginName: %s", got)
 	}
+	// No config attribute set means no spec.config key at all — an empty
+	// object would look like "explicitly no config" to the controller.
+	assert.NotContains(t, got, `"config"`, "payload must omit an empty config")
+}
+
+func TestPluginInstallationCreatePayload_Config(t *testing.T) {
+	payload := pluginInstallationCreatePayload{
+		APIVersion: pluginInstallationAPIVersion,
+		Kind:       "PluginInstallation",
+		Metadata:   pluginInstallationMetadata{Name: "acme--ceph-rook"},
+		Spec: pluginInstallationSpec{
+			DefinitionRef: pluginDefinitionRef{
+				OrganizationName: "acme",
+				PluginName:       "ceph-rook",
+				PluginVersion:    "v0.2.0",
+				DefinitionHash:   "sha256:abc",
+			},
+			Config: map[string]string{"MON_COUNT": "1"},
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	assert.Contains(t, string(body), `"config":{"MON_COUNT":"1"}`)
 }
 
 func TestPluginInstallationResourceModelNullValues(t *testing.T) {

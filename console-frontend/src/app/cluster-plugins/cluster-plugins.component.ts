@@ -13,10 +13,11 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
-import { CLUSTER, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, INSTALL, PLUGIN } from '../../connect/tokens';
 import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
+import { GetPluginDefinitionRequestSchema } from '../../generated/catalog/v1/catalog_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -53,6 +54,8 @@ export default class ClusterPluginsComponent implements OnInit {
   private client = inject(CLUSTER);
 
   private pluginClient = inject(PLUGIN);
+
+  private installClient = inject(INSTALL);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -150,6 +153,22 @@ export default class ClusterPluginsComponent implements OnInit {
         (i) => !newNames.has(i.spec.definitionRef.pluginName),
       );
 
+      // This bulk form has no per-plugin config step (the install modal on
+      // the plugins page does), so a plugin whose definition declares
+      // required config would only ever reconcile to Failed from here. Fail
+      // closed before mutating anything.
+      const needsConfig = (
+        await Promise.all(
+          toInstall.map(async (p) => ((await this.requiresConfigForm(p)) ? p.displayName : null)),
+        )
+      ).filter((name): name is string => name !== null);
+      if (needsConfig.length > 0) {
+        this.errorMessage.set(
+          `${needsConfig.join(', ')} must be configured at install time — install from the plugins page instead`,
+        );
+        return;
+      }
+
       await Promise.all([
         ...toInstall.map((p) =>
           this.pluginInstallationService.installPlugin(
@@ -175,5 +194,26 @@ export default class ClusterPluginsComponent implements OnInit {
 
   onCancel() {
     this.pageNav.goTo(`/clusters/${this.clusterId}`);
+  }
+
+  // True when the pinned definition declares required config keys — or when
+  // the catalog cannot say (schema unavailable): installing past an unseen
+  // required key creates a CR the controller terminally fails, so unknown
+  // fails closed like the install modal does. A fetch error propagates to
+  // onFormSubmit's catch for the same reason.
+  private async requiresConfigForm(plugin: PluginSummary): Promise<boolean> {
+    const resp = await firstValueFrom(
+      this.installClient.getPluginDefinition(
+        create(GetPluginDefinitionRequestSchema, {
+          lookup: {
+            case: 'name',
+            value: { organizationName: plugin.organizationName, pluginName: plugin.name },
+          },
+          version: plugin.pluginVersion,
+        }),
+      ),
+    );
+    if (resp.configSchemaUnavailable) return true;
+    return resp.configSchema.some((entry) => entry.required);
   }
 }

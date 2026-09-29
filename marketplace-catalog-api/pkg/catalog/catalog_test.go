@@ -399,15 +399,35 @@ func TestGetPluginDefinitionDerivesConfigSchema(t *testing.T) {
 	assert.False(t, entries[1].GetAdvanced(), "a required entry cannot be advanced")
 }
 
-// An unparseable manifest must fail closed for the install modal: the manifest
-// and hash still come back (they are what the install pins against), but
-// config_schema_unavailable tells the console it cannot see whether required
-// config exists, so it must not instant-install.
-func TestGetPluginDefinitionDegradesOnUnparseableManifest(t *testing.T) {
+// A manifest carrying fields from a newer plugin-sdk must NOT lose its config
+// schema: the console fails closed on config_schema_unavailable, so a strict
+// parse here would block every install of that version — even one declaring
+// no config — until the catalog is upgraded.
+func TestGetPluginDefinitionToleratesNewerSdkFields(t *testing.T) {
 	env := newTestEnv(t)
 	id := seedPlugin(t, env, seedOptions{
-		Name: "definition-unparseable", Visibility: "public", Published: true,
-		Manifest: []byte(testManifest + "  fieldFromANewerSdk: true\n"),
+		Name: "definition-newer-sdk", Visibility: "public", Published: true,
+		Manifest: []byte(testManifestWithConfigSchema + "  fieldFromANewerSdk: true\n"),
+	})
+
+	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),
+		catalogv1.GetPluginDefinitionRequest_builder{PluginId: new(id.String()), Version: "1.0.0"}.Build())
+	require.NoError(t, err)
+
+	assert.False(t, resp.GetConfigSchemaUnavailable())
+	require.Len(t, resp.GetConfigSchema(), 2)
+	assert.Equal(t, "MON_COUNT", resp.GetConfigSchema()[0].GetName())
+}
+
+// A configSchema this binary cannot faithfully project must fail closed for
+// the install modal: the manifest and hash still come back (they are what the
+// install pins against), but config_schema_unavailable tells the console it
+// cannot see whether required config exists, so it must not instant-install.
+func TestGetPluginDefinitionDegradesOnUnknownConfigType(t *testing.T) {
+	env := newTestEnv(t)
+	id := seedPlugin(t, env, seedOptions{
+		Name: "definition-unknown-config-type", Visibility: "public", Published: true,
+		Manifest: []byte(testManifest + "  configSchema:\n    - name: RATIO\n      type: float\n"),
 	})
 
 	resp, err := newServer(t, env).GetPluginDefinition(context.Background(),

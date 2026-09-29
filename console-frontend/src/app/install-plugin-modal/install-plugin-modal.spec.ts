@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { from, of } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
 import InstallPluginModalComponent, { InstallSelection } from './install-plugin-modal';
-import { CATALOG } from '../../connect/tokens';
+import { INSTALL } from '../../connect/tokens';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
   CatalogService,
@@ -17,7 +17,7 @@ function build(getPluginDefinition: ReturnType<typeof vi.fn>) {
   TestBed.configureTestingModule({
     providers: [
       {
-        provide: CATALOG,
+        provide: INSTALL,
         useValue: {
           getPluginDefinition,
         } as unknown as ObservableClient<typeof CatalogService>,
