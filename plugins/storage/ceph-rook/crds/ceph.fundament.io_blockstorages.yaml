@@ -31,9 +31,12 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          The derived CephBlockPool/StorageClass is named ceph-<name>; object names cap
-          at 253 characters, so a longer name would only fail at reconcile time,
-          wedging the object Degraded on a create that can never succeed.
+          BlockStorage provides block volumes (ReadWriteOnce) over the shared Ceph
+          cluster: it derives a StorageClass, named in status.storageClassName, for
+          PersistentVolumeClaims to reference.
+
+          The name-length limit exists because the derived objects are named
+          ceph-<name> and object names cap at 253 characters.
         properties:
           apiVersion:
             description: |-
@@ -54,8 +57,8 @@ spec:
             type: object
           spec:
             description: |-
-              BlockStorageSpec asks for an RBD StorageClass over the shared OSD set.
-              BlockStorage brings no disks; DiskPools do that.
+              BlockStorageSpec defines a block-volume (ReadWriteOnce) StorageClass on the
+              shared Ceph cluster, using the disks that DiskPools contribute.
             properties:
               default:
                 description: |-
@@ -65,8 +68,10 @@ spec:
                 type: boolean
               replication:
                 default: auto
-                description: Replication selects replica count; "auto" derives it
-                  from node count.
+                description: |-
+                  Replication is how many copies Ceph keeps of each piece of data: an
+                  explicit count, or "auto" to derive it from the number of nodes
+                  contributing disks (capped at 3).
                 enum:
                 - auto
                 - "1"
@@ -76,14 +81,12 @@ spec:
             type: object
           status:
             description: |-
-              ConsumerStatus is the observed state shared by the consumer kinds
-              (BlockStorage, FileStorage). Fields describe the derived Rook object and
-              StorageClass, sized against the whole cluster's OSD set.
+              ConsumerStatus is the observed state of a BlockStorage or FileStorage and
+              the StorageClass it derives.
             properties:
               conditions:
-                description: |-
-                  Conditions carries ConditionReady. listType=map on type so the API server
-                  merges by condition type rather than by position.
+                description: Conditions carries the Ready condition, keyed by condition
+                  type.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -143,8 +146,14 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               failureDomain:
+                description: |-
+                  FailureDomain is where Ceph places the replicas of each piece of data:
+                  "host" spreads them across nodes, "osd" only across disks.
                 type: string
               message:
+                description: |-
+                  Message explains the current phase, naming the operator action needed
+                  when the object is Degraded.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the metadata.generation this status
@@ -152,10 +161,18 @@ spec:
                 format: int64
                 type: integer
               phase:
+                description: |-
+                  Phase is Provisioning until the derived storage reports Ready, and
+                  Degraded when reconciliation needs operator action.
                 type: string
               replicas:
+                description: Replicas is the replica count that spec.replication resolved
+                  to.
                 type: integer
               storageClassName:
+                description: |-
+                  StorageClassName is the name of the derived StorageClass, for
+                  PersistentVolumeClaims to reference.
                 type: string
             type: object
         type: object

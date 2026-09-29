@@ -33,6 +33,12 @@
             accessible-label="Connection lost, retrying"
           ></nldd-badge>
         }
+        @if (mockMetrics) {
+          <app-mock-badge
+            label="Mock: generated metrics"
+            explanation="This environment is not connected to a metrics backend yet. The figures are generated example data."
+          ></app-mock-badge>
+        }
       </h1>
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>

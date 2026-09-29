@@ -23,9 +23,16 @@ export interface AppConfiguration {
   developerUrl?: string;
   /**
    * Base URL of authn-api. The developer portal resolves the session's
-   * organization membership through it; the other builds leave it empty.
+   * organization membership through it, and the storefront whether its
+   * visitor is signed in at all; the backoffice leaves it empty.
    */
   authnApiUrl?: string;
+  /**
+   * Base URL of organization-api. The developer portal reads the names of the
+   * session's organizations from it, for the header's organization switcher.
+   * Empty leaves the switcher on shortened ids.
+   */
+  organizationApiUrl?: string;
 }
 
 export type ConfigLoader = () => Promise<AppConfiguration>;

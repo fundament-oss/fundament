@@ -17,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -388,8 +389,9 @@ func TestReconcilePluginScope_RejectsHashMismatch(t *testing.T) {
 		defClient:           fakeDefClient{manifest: manifest, hash: "sha256:whatever"},
 	}
 
-	// reconcileChildren propagates the hash-mismatch so the workqueue retries
-	// (and the PluginScopeReady Condition on the CR reflects the failure).
+	// reconcileChildren propagates the hash-mismatch so Reconcile can mark the
+	// installation Failed (and the PluginScopeReady Condition on the CR
+	// reflects the failure).
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "definition hash mismatch")
@@ -604,6 +606,246 @@ func TestReconcile_PublishesResolvedNamespace(t *testing.T) {
 	var got pluginsv1.PluginInstallation
 	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
 	assert.Equal(t, pluginNamespace(cr.Name), got.Status.Namespace)
+}
+
+// reconcileWithDefClient runs one Reconcile of a qualified, finalized CR
+// against the given definition client and returns the result, the error and
+// the CR as persisted afterwards. Each mutate runs on the CR before it is
+// stored, to give it the status an earlier reconcile would have left.
+func reconcileWithDefClient(t *testing.T, defClient defclient.Client, pin string, mutate ...func(*pluginsv1.PluginInstallation)) (ctrl.Result, pluginsv1.PluginInstallation, error) {
+	t.Helper()
+	scheme := newTestScheme()
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+	for _, m := range mutate {
+		m(cr)
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second},
+		statusPoller:        newStatusPoller().WithClient(unreachableHTTPClient()),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           defClient,
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	result, err := r.Reconcile(context.Background(), req)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	return result, got, err
+}
+
+// TestReconcile_PermanentDefinitionErrorMarksFailed verifies that a failure
+// retrying cannot fix ends in the Failed phase instead of leaving the CR
+// without one, which clients can only read as an install still starting.
+func TestReconcile_PermanentDefinitionErrorMarksFailed(t *testing.T) {
+	manifest, _ := sampleManifest(t)
+
+	tests := map[string]defclient.Client{
+		"hash mismatch": fakeDefClient{manifest: manifest},
+		"version not in catalog": fakeDefClient{
+			err: connect.NewError(connect.CodeNotFound, errors.New("no such version")),
+		},
+	}
+
+	for name, defClient := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, got, err := reconcileWithDefClient(t, defClient, "sha256:definitely-not-what-the-catalog-serves")
+			require.NoError(t, err, "a permanent failure must not be retried by the workqueue")
+			assert.Equal(t, failedRetryInterval, result.RequeueAfter, "a permanent failure is still checked again, slowly")
+			assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+			assert.False(t, got.Status.Ready)
+			assert.NotEmpty(t, got.Status.Message)
+		})
+	}
+}
+
+// runningOnGeneration gives the CR the status of a plugin that came up on the
+// given generation and is running.
+func runningOnGeneration(generation int64) func(*pluginsv1.PluginInstallation) {
+	return func(cr *pluginsv1.PluginInstallation) {
+		cr.Status.Phase = pluginsv1.PluginPhaseRunning
+		cr.Status.Ready = true
+		cr.Status.ObservedGeneration = generation
+		cr.Status.Conditions = []metav1.Condition{{
+			Type:               ConditionProgressing,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: generation,
+			Reason:             "Settled",
+			LastTransitionTime: metav1.Now(),
+		}}
+	}
+}
+
+// TestReconcile_StartedInstallKeepsRetrying verifies that an installation that
+// is running on its current spec is not flipped to Failed by a definition
+// lookup that now fails, such as after a restart emptied the cache, and that
+// its health is still polled meanwhile.
+func TestReconcile_StartedInstallKeepsRetrying(t *testing.T) {
+	manifest, _ := sampleManifest(t)
+
+	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest}, "sha256:definitely-not-what-the-catalog-serves", runningOnGeneration(1))
+	require.NoError(t, err, "a started install is retried at the poll pace, not the workqueue backoff")
+	assert.Equal(t, 30*time.Second, result.RequeueAfter)
+	// The test poller cannot reach the plugin, so a fresh poll reads Deploying.
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase, "health must still be polled")
+	assert.False(t, got.Status.Ready)
+	assert.Contains(t, got.Status.Message, "hash mismatch")
+}
+
+// TestReconcile_UpgradeToBrokenSpecMarksFailed verifies that a spec change to
+// a definition that cannot be verified fails, even though the status still
+// says the previous spec is running.
+func TestReconcile_UpgradeToBrokenSpecMarksFailed(t *testing.T) {
+	manifest, _ := sampleManifest(t)
+	upgraded := func(cr *pluginsv1.PluginInstallation) { cr.Generation = 2 }
+
+	tests := map[string]func(*pluginsv1.PluginInstallation){
+		"first reconcile of the new spec": runningOnGeneration(1),
+		"after a transient failure wrote the new generation": func(cr *pluginsv1.PluginInstallation) {
+			runningOnGeneration(1)(cr)
+			cr.Status.ObservedGeneration = 2
+		},
+	}
+
+	for name, status := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest}, "sha256:definitely-not-what-the-catalog-serves", status, upgraded)
+			require.NoError(t, err)
+			assert.Equal(t, pluginsv1.PluginPhaseFailed, got.Status.Phase)
+		})
+	}
+}
+
+// TestReconcile_TransientErrorOnUpgradeKeepsGeneration verifies that a
+// transient failure on a spec that never started does not stamp the new
+// generation over a status written before the Progressing condition existed:
+// the next pass would take the previous spec's Running phase for this one's,
+// count it started, and never mark a broken upgrade Failed.
+func TestReconcile_TransientErrorOnUpgradeKeepsGeneration(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+	legacyUpgrade := func(cr *pluginsv1.PluginInstallation) {
+		cr.Generation = 2
+		cr.Status.Phase = pluginsv1.PluginPhaseRunning
+		cr.Status.Ready = true
+		cr.Status.ObservedGeneration = 1
+	}
+
+	_, got, err := reconcileWithDefClient(t, defClient, "sha256:anything", legacyUpgrade)
+	require.Error(t, err, "a spec that never started is retried by the workqueue")
+	assert.Equal(t, int64(1), got.Status.ObservedGeneration)
+	assert.Nil(t, meta.FindStatusCondition(got.Status.Conditions, ConditionProgressing), "no health was polled for the new spec")
+	assert.False(t, hasStarted(&got), "the new spec has not started")
+	assert.Contains(t, got.Status.Message, "catalog unreachable")
+}
+
+// TestReconcile_StartedInstallRetriesAtSteadyPace verifies that a started
+// install whose reconcile keeps failing is not retried at the fast progress
+// pace: each retry repeats the definition lookup against a failing service.
+func TestReconcile_StartedInstallRetriesAtSteadyPace(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+	deploying := func(cr *pluginsv1.PluginInstallation) {
+		cr.Status.Phase = pluginsv1.PluginPhaseDeploying
+		cr.Status.ObservedGeneration = cr.Generation
+		cr.Status.Conditions = []metav1.Condition{{
+			Type:               ConditionProgressing,
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: cr.Generation,
+			Reason:             "Deploying",
+			LastTransitionTime: metav1.Now(),
+		}}
+	}
+
+	result, got, err := reconcileWithDefClient(t, defClient, "sha256:anything", deploying)
+	require.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
+	assert.Equal(t, 30*time.Second, result.RequeueAfter)
+}
+
+// TestReconcile_TransientDefinitionErrorStaysPending verifies that a failure
+// worth retrying is retried, and that the CR still gets a phase and a message
+// saying what it is waiting for.
+func TestReconcile_TransientDefinitionErrorStaysPending(t *testing.T) {
+	defClient := fakeDefClient{err: connect.NewError(connect.CodeUnavailable, errors.New("catalog unreachable"))}
+
+	_, got, err := reconcileWithDefClient(t, defClient, "sha256:anything")
+	require.Error(t, err, "a transient failure must be retried by the workqueue")
+	assert.Equal(t, pluginsv1.PluginPhasePending, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "catalog unreachable")
+}
+
+// TestReconcile_PollsFasterWhileDeploying verifies that an installation on its
+// way up is checked at the progress interval, so the switch to Running shows
+// within seconds rather than at the next steady-state poll.
+func TestReconcile_PollsFasterWhileDeploying(t *testing.T) {
+	manifest, pin := sampleManifest(t)
+
+	result, got, err := reconcileWithDefClient(t, fakeDefClient{manifest: manifest, hash: pin}, pin)
+	require.NoError(t, err)
+	assert.Equal(t, pluginsv1.PluginPhaseDeploying, got.Status.Phase)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter)
+}
+
+func TestPollInterval(t *testing.T) {
+	r := &Reconciler{cfg: config.Config{StatusPollInterval: 30 * time.Second, ProgressPollInterval: 5 * time.Second}}
+	start := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
+
+	// observe runs the given phases through setProgressingCondition a minute
+	// apart, as consecutive polls would, and returns the poll interval after
+	// the last one. Generation bumps with every "upgrade" entry.
+	observe := func(phases ...pluginsv1.PluginPhase) time.Duration {
+		cr := testCR()
+		now := start
+		for _, phase := range phases {
+			if phase == "upgrade" {
+				cr.Generation++
+				continue
+			}
+			cr.Status.Phase = phase
+			setProgressingCondition(cr, now)
+			now = now.Add(time.Minute)
+		}
+		return r.pollInterval(cr, now)
+	}
+
+	assert.Equal(t, 5*time.Second, observe(pluginsv1.PluginPhaseDeploying))
+	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseRunning))
+	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseDegraded))
+
+	// A plugin that was up on this spec and is now unreachable is not polled
+	// at the fast pace, however many polls later.
+	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseRunning, pluginsv1.PluginPhaseDeploying, pluginsv1.PluginPhaseDeploying))
+
+	// Neither is one that has been coming up for too long (a crash loop).
+	crashLoop := make([]pluginsv1.PluginPhase, 11)
+	for i := range crashLoop {
+		crashLoop[i] = pluginsv1.PluginPhaseDeploying
+	}
+	assert.Equal(t, 30*time.Second, observe(crashLoop...))
+
+	// An upgrade is on its way up again, however long the old spec ran, and
+	// the window restarts even when the old spec never came up.
+	assert.Equal(t, 5*time.Second, observe(pluginsv1.PluginPhaseRunning, "upgrade", pluginsv1.PluginPhaseDeploying))
+	assert.Equal(t, 5*time.Second, observe(append(crashLoop, "upgrade", pluginsv1.PluginPhaseDeploying)...))
+
+	// Unset falls back to the steady-state interval rather than a hot loop.
+	r.cfg.ProgressPollInterval = 0
+	assert.Equal(t, 30*time.Second, observe(pluginsv1.PluginPhaseDeploying))
 }
 
 func TestMapPhase(t *testing.T) {

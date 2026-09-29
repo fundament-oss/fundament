@@ -2,10 +2,12 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// BlockStorageSpec asks for an RBD StorageClass over the shared OSD set.
-// BlockStorage brings no disks; DiskPools do that.
+// BlockStorageSpec defines a block-volume (ReadWriteOnce) StorageClass on the
+// shared Ceph cluster, using the disks that DiskPools contribute.
 type BlockStorageSpec struct {
-	// Replication selects replica count; "auto" derives it from node count.
+	// Replication is how many copies Ceph keeps of each piece of data: an
+	// explicit count, or "auto" to derive it from the number of nodes
+	// contributing disks (capped at 3).
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
 	// +kubebuilder:default=auto
 	Replication string `json:"replication,omitempty"`
@@ -16,6 +18,13 @@ type BlockStorageSpec struct {
 	Default bool `json:"default,omitempty"`
 }
 
+// BlockStorage provides block volumes (ReadWriteOnce) over the shared Ceph
+// cluster: it derives a StorageClass, named in status.storageClassName, for
+// PersistentVolumeClaims to reference.
+//
+// The name-length limit exists because the derived objects are named
+// ceph-<name> and object names cap at 253 characters.
+//
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
@@ -23,9 +32,6 @@ type BlockStorageSpec struct {
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
 // +kubebuilder:printcolumn:name="Default",type=boolean,JSONPath=`.spec.default`
-// The derived CephBlockPool/StorageClass is named ceph-<name>; object names cap
-// at 253 characters, so a longer name would only fail at reconcile time,
-// wedging the object Degraded on a create that can never succeed.
 // +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 248",message="name must be at most 248 characters: the derived ceph-<name> object name caps at 253"
 type BlockStorage struct {
 	metav1.TypeMeta   `json:",inline"`

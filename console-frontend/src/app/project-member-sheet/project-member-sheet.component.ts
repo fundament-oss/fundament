@@ -13,6 +13,7 @@ import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import AutofocusDirective from '../autofocus.directive';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -33,7 +34,6 @@ import PageNavService from '../page-nav.service';
 import opensElsewhere from '../opens-elsewhere';
 
 import '@nldd/design-system/activity-indicator';
-import '@nldd/design-system/badge';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
@@ -82,7 +82,7 @@ const formatMemberDate = (member: ProjectMember): string =>
  */
 @Component({
   selector: 'app-project-member-sheet',
-  imports: [DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
+  imports: [DialogSyncDirective, SheetSyncDirective, AutofocusDirective, MockBadgeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-member-sheet.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -56,20 +56,22 @@
   <!-- Plugins Table -->
   @if (plugins().length === 0) {
     <nldd-box>
-      <nldd-inline-dialog
-        icon="puzzle-piece"
-        icon-color="secondary"
-        text="No plugins yet"
-        supporting-text="Push a plugin with functl, or sideload a build to get started."
-      >
-        <nldd-button
-          slot="actions"
-          routerLink="/manage/create"
-          text="Create a plugin"
-          start-icon="plus"
-          variant="primary"
-        ></nldd-button>
-      </nldd-inline-dialog>
+      <nldd-container padding="24">
+        <nldd-inline-dialog
+          icon="puzzle-piece"
+          icon-color="secondary"
+          text="No plugins yet"
+          supporting-text="Push a plugin with functl, or sideload a build to get started."
+        >
+          <nldd-button
+            slot="actions"
+            routerLink="/manage/create"
+            text="Create a plugin"
+            start-icon="plus"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-container>
     </nldd-box>
   } @else {
     <div class="table-container">

@@ -1,5 +1,9 @@
 import {
   Component,
+  DestroyRef,
+  afterNextRender,
+  computed,
+  effect,
   signal,
   inject,
   ChangeDetectionStrategy,
@@ -25,9 +29,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
 import DeveloperLinkComponent from './developer-link.component';
 import { ToastService } from './toast.service';
-import ThemeService from './theme.service';
+import ThemeService, { type ThemePreference } from './theme.service';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
+import SessionService from './session.service';
 import { VARIANT } from './variant';
 
 @Component({
@@ -49,6 +54,8 @@ import { VARIANT } from './variant';
 export default class App {
   private router = inject(Router);
 
+  private destroyRef = inject(DestroyRef);
+
   private route = inject(ActivatedRoute);
 
   private themeService = inject(ThemeService);
@@ -63,12 +70,37 @@ export default class App {
 
   protected readonly storefrontUrl = this.configService.getConfig().storefrontUrl ?? '';
 
+  protected readonly consoleUrl = this.configService.getConfig().consoleUrl ?? '';
+
+  // The portal's own pages by URL; '' where no portal is deployed alongside.
+  protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
+
+  private session = inject(SessionService);
+
+  /**
+   * Whether the storefront's visitor has a console session. 'unknown' until
+   * authn-api has answered, so the header does not flash "Sign in" at someone
+   * who is signed in. A build without a session surface (the demo) knows
+   * straight away: nobody can be signed in there.
+   */
+  protected readonly sessionState = signal<'unknown' | 'signed-in' | 'signed-out'>(
+    this.session.hasSessionSurface() ? 'unknown' : 'signed-out',
+  );
+
+  protected readonly user = this.session.user;
+
+  /** What the account button says: the user's name, or a generic label for an
+   *  account that has none. */
+  protected readonly accountLabel = computed(() => this.user()?.name || 'Signed in');
+
   // The organization the developer portal acts for; the picker only shows
   // when the session belongs to more than one.
   protected organizationContext = inject(OrganizationContextService);
 
   // Theme state, owned by ThemeService so the server can render it too.
   isDarkMode = this.themeService.isDarkMode;
+
+  themePreference = this.themeService.preference;
 
   // Search box value; submitting navigates to the marketplace filtered by query.
   searchQuery = signal('');
@@ -85,10 +117,55 @@ export default class App {
       // first registry call needs the header.
       this.organizationContext.ensureOrganizationId().catch(() => {});
     }
+
+    // The header's menus (account, organization) only exist for a signed-in
+    // visitor, so the menu element is fetched once one is needed rather than
+    // weighing on every anonymous first load. Until it is defined the buttons
+    // render as plain buttons; a custom element upgrades in place. The
+    // account menu's header needs identity and container, so they come along.
+    const menuLoad = effect(() => {
+      const needed =
+        this.sessionState() === 'signed-in' || this.organizationContext.organizations().length > 1;
+      if (!needed) return;
+      Promise.all([
+        import('@nldd/design-system/menu'),
+        import('@nldd/design-system/identity'),
+        import('@nldd/design-system/container'),
+      ]).catch(() => {});
+      menuLoad.destroy();
+    });
+
+    if (this.variant === 'catalog' && this.session.hasSessionSurface()) {
+      // In the browser only: the answer is per visitor, and a server render
+      // is shared by everyone who loads that page.
+      afterNextRender(() => this.watchSession());
+    }
   }
 
-  protected onOrganizationChange(event: Event) {
-    this.organizationContext.setOrganizationId((event.target as HTMLSelectElement).value);
+  /**
+   * Keeps the storefront header in step with the console session. Asked once
+   * on load, and again whenever the tab comes back into view: signing in and
+   * out happen in the console, usually in another tab, and the visitor
+   * returning here should not have to reload to see it.
+   */
+  private watchSession() {
+    const check = (lookup: Promise<unknown>) => {
+      lookup
+        .then((user) => this.sessionState.set(user ? 'signed-in' : 'signed-out'))
+        .catch(() => this.sessionState.set('signed-out'));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check(this.session.recheckUser());
+    };
+
+    check(this.session.ensureUser());
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+  }
+
+  protected onOrganizationSelect(id: string) {
+    if (id === this.organizationContext.organizationId()) return;
+    this.organizationContext.setOrganizationId(id);
     // A detail page's plugin belongs to the previous organization; the list
     // reloads itself when the org signal changes.
     this.router.navigateByUrl('/manage').catch(() => {});
@@ -130,5 +207,22 @@ export default class App {
 
   toggleTheme() {
     this.themeService.toggle();
+  }
+
+  setTheme(preference: ThemePreference) {
+    this.themeService.setPreference(preference);
+  }
+
+  /**
+   * Signs out of the console session. The storefront is public, so the
+   * visitor stays on the page it was on, now as a signed-out visitor.
+   */
+  async handleLogout() {
+    try {
+      await this.session.logout();
+      this.sessionState.set('signed-out');
+    } catch {
+      this.toastService.error('Logging out failed. Please try again.');
+    }
   }
 }

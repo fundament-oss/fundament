@@ -31,8 +31,9 @@ export const BLOCKSTORAGE = {
   noneSelected: 'No block storage selected.',
   storageClassPrefix: 'ceph-',
   detailHint: "Volumes are placed across all of the shared Ceph cluster's disks.",
-  createIntro: `Block storage provides ReadWriteOnce volumes over the shared Ceph cluster's disks.
-    It needs at least one DiskPool contributing disks; without one it stays Degraded.`,
+  createIntro: `Block storage provides ReadWriteOnce volumes, each mounted by one node at a
+    time, over the shared Ceph cluster's disks. It needs at least one DiskPool
+    contributing disks; without one it stays Degraded.`,
   metadataServers: false,
   defaultToggle: true,
   nameMaxLength: 63,
@@ -46,9 +47,9 @@ export const FILESTORAGE = {
   noneSelected: 'No file storage selected.',
   storageClassPrefix: 'cephfs-',
   detailHint: 'Volumes can be mounted by many pods across nodes.',
-  createIntro: `File storage provides shared ReadWriteMany volumes over the shared Ceph cluster's disks —
-    many pods on many nodes can mount the same volume. It needs at least one DiskPool
-    contributing disks; without one it stays Degraded.`,
+  createIntro: `File storage provides ReadWriteMany volumes over the shared Ceph cluster's
+    disks, which many pods on many nodes can mount at once. It needs at least one
+    DiskPool contributing disks; without one it stays Degraded.`,
   metadataServers: true,
   defaultToggle: false,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
@@ -137,7 +138,7 @@ export async function consumerDetailPage(cfg) {
       <h2 class="plugin-heading">Status</h2>
       ${renderDefList(pairs)}
       <p class="plugin-hint">
-        ${cfg.detailHint} Use <code>ceph df</code> for actual free space.
+        ${cfg.detailHint} <code>ceph df</code> shows free space.
       </p>
     `;
   }

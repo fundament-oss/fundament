@@ -72,7 +72,7 @@ deleting the k3d cluster, so its finalizers get cleared:
 
 ```bash
 deploy/k3d/rook-smoke.sh down          # if the leftovers came from the smoke script
-just plugins uninstall ceph-rook       # if they came from the plugin
+just plugins uninstall system--ceph-rook       # if they came from the plugin
 just plugins cluster-delete
 ```
 
@@ -252,8 +252,11 @@ Expect `plugin:…011 owner organization:…000` and `organization:…000 admin 
 Expected last line — **copy the hash, phase 4 needs it**:
 
 ```
-published plugin=ceph-rook version=v0.1.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
+published plugin=ceph-rook version=0.1.0 hash=sha256:... id=... version_id=... status=SUBMISSION_STATUS_DRAFT
 ```
+
+The registry stores versions without the `v` prefix, so `metadata.version: v0.1.0`
+publishes as `0.1.0`, which is what a `PluginInstallation` must reference.
 
 Versions are create-only on the registry — an approved version's hash is a
 consent record — so there is no `--replace`. To publish the same content again,
@@ -268,16 +271,23 @@ listing, seeded from the definition's metadata.
 The plugin needs local-development config: without it the default 3 mons never reach
 quorum on a single node, and the real-disk filter would ignore the loop devices.
 
+Three naming rules, all enforced at apply or reconcile time: `metadata.name` must be
+`<organizationName>--<pluginName>` (`system--ceph-rook`: first-party plugins are
+published by the seeded `system` org), `organizationName` is required, and
+`pluginVersion` is the registry's form without the `v` prefix (`0.1.0`, as printed by
+the publish in phase 3).
+
 ```bash
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: ceph-rook
+  name: system--ceph-rook
 spec:
   definitionRef:
+    organizationName: system
     pluginName: ceph-rook
-    pluginVersion: v0.1.0
+    pluginVersion: "0.1.0"
     definitionHash: sha256:PASTE_THE_HASH_FROM_PHASE_3
   config:
     DEV_LOOP_DEVICES: "true"        # discover ONLY /dev/loopNpN; ignore the host's real disks
@@ -313,7 +323,7 @@ Watch it come up:
 
 ```bash
 just plugins status
-just plugins logs ceph-rook
+just plugins logs system--ceph-rook
 ```
 
 Expect `PHASE=Running`, `READY=true`, and a log line `rook-ceph storage plugin running`.
@@ -606,8 +616,8 @@ them to confirm they hold against a real API server.
 Previously the pages were embedded but never routed, and the iframe 404'd.
 
 ```bash
-kubectl --context k3d-fundament-plugin -n plugin-ceph-rook \
-  port-forward deploy/ceph-rook 8080:8080 &
+kubectl --context k3d-fundament-plugin -n plugin-system--ceph-rook \
+  port-forward deploy/plugin 8080:8080 &
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/diskpools-list.html
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/diskpools-create.html
 kill %1
@@ -798,7 +808,7 @@ spec, and the unchanged `resourceVersion` proves no write was issued at all. The
 While you are here, skim the plugin logs from this whole phase:
 
 ```bash
-kubectl --context k3d-fundament-plugin -n plugin-ceph-rook logs deploy/ceph-rook --tail=200
+kubectl --context k3d-fundament-plugin -n plugin-system--ceph-rook logs deploy/plugin --tail=200
 ```
 
 No `Operation cannot be fulfilled` messages should appear as pool or consumer status —
@@ -891,7 +901,7 @@ install path re-bootstraps the CephCluster — and watch `orphan` move off the m
 cluster message within a poll:
 
 ```bash
-kubectl --context k3d-fundament-plugin -n plugin-ceph-rook rollout restart deploy/ceph-rook
+kubectl --context k3d-fundament-plugin -n plugin-system--ceph-rook rollout restart deploy/plugin
 ```
 
 ## Phase 9 · Teardown
@@ -900,7 +910,7 @@ Order matters. Ceph consumers must release volumes while Ceph is still running t
 the unmounts:
 
 ```bash
-just plugins uninstall ceph-rook
+just plugins uninstall system--ceph-rook
 just plugins cluster-delete            # drains first
 just plugins storage-disks purge       # detach and delete the backing images, freeing the space
 ```

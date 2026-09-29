@@ -21,6 +21,13 @@ cluster — from empty machine to a pod writing to a Ceph-backed volume — foll
 5. **Reconcile**: The plugin folds every `DiskPool`'s disks into the singleton `CephCluster` as OSDs, and for each `BlockStorage`/`FileStorage` creates a `CephBlockPool`/`CephFilesystem` and a `StorageClass` for in-cluster PVC provisioning
 6. **Console**: Serves list and detail HTML for `Disk`, `DiskPool`, `BlockStorage` and `FileStorage` resources, allowing operators to inspect discovered devices and manage storage
 
+## Object map
+
+How the plugin's objects relate: what an operator creates, what the plugin
+publishes and derives, and what everything feeds into:
+
+![Object map: Disks feed DiskPools into the singleton CephCluster; BlockStorage and FileStorage each derive a Rook object and a StorageClass](../../assets/ceph-rook-object-map.svg)
+
 ## File structure
 
 Decision logic lives in its own file next to its test, so the parts worth getting
@@ -186,8 +193,12 @@ The plugin follows a **singleton CephCluster** pattern: only one `CephCluster` i
 
 This design supports:
 - **Multi-tenancy**: Different `BlockStorage`/`FileStorage` objects can have different replication (and, for `FileStorage`, a different `metadataServers` count), allowing per-workload customization.
-- **Tiering**: You can create pools for different device types (e.g., one pool for SSD disks, another for HDD), and operators can select which pools their applications use.
 - **Shared infrastructure**: All storage in the cluster flows through a single Ceph cluster, simplifying backup, disaster recovery, and capacity planning.
+
+Tiering by device type is not supported: no renderer sets a `deviceClass` or a
+per-pool CRUSH rule, so a pool of SSD disks and a pool of HDD disks feed one OSD
+set that every volume spans; see
+[Pools share one OSD set](#pools-share-one-osd-set).
 
 ## Replication strategy
 
@@ -263,15 +274,18 @@ in-cluster config, which never traverses it. There is no separate `clusterRoles`
 
 ```yaml
 # Example PluginInstallation (references a published plugin version; see FUN-19)
+# metadata.name must be "<organizationName>--<pluginName>", and pluginVersion is
+# the registry's form without the "v" prefix.
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: ceph-rook
+  name: system--ceph-rook
 spec:
   definitionRef:
+    organizationName: system
     pluginName: ceph-rook
-    pluginVersion: v0.1.0
-    definitionHash: sha256:<hash printed by `just plugin-publish storage/ceph-rook`>
+    pluginVersion: "0.1.0"
+    definitionHash: sha256:<hash printed by `just plugins publish storage/ceph-rook`>
 ```
 
 ## Host prerequisites
