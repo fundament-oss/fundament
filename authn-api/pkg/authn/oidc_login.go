@@ -8,11 +8,40 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/authn-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 )
+
+// errEmailInUse is returned when the address an identity provider reports is
+// already the address of another live account (users_uq_email). Linking the
+// two by email alone is not something a sign-in may do on its own: it would
+// hand one person's account to whoever controls a second identity with the
+// same address at the provider.
+var errEmailInUse = errors.New("email address already belongs to another account")
+
+// upsertUser writes the identity provider's view of a user, turning a clash
+// on users_uq_email into errEmailInUse with the address logged for the operator.
+func (s *AuthnServer) upsertUser(ctx context.Context, queries *db.Queries, claims *oidcClaims) (db.UserUpsertRow, error) {
+	row, err := queries.UserUpsert(ctx, db.UserUpsertParams{
+		Name:        claims.Name,
+		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
+		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
+	})
+	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintUsersUqEmail {
+			s.logger.Warn("sign-in refused: email address already belongs to another account",
+				"email", claims.Email, "external_ref", claims.Sub)
+			return db.UserUpsertRow{}, errEmailInUse
+		}
+		s.logger.Error("failed to upsert user", "error", err)
+		return db.UserUpsertRow{}, fmt.Errorf("upserting user: %w", err)
+	}
+	return row, nil
+}
 
 // oidcClaims represents the claims extracted from an OIDC ID token.
 type oidcClaims struct {
@@ -76,15 +105,9 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 
 // handleExistingUser handles login for users with a matching external_ref.
 func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
-	params := db.UserUpsertParams{
-		Name:        claims.Name,
-		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
-		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
-	}
-	row, err := s.queries.UserUpsert(ctx, params)
+	row, err := s.upsertUser(ctx, s.queries, claims)
 	if err != nil {
-		s.logger.Error("failed to upsert user", "error", err)
-		return nil, "", fmt.Errorf("upserting user: %w", err)
+		return nil, "", err
 	}
 
 	organizationIDs, err := s.getUserOrganizationIDs(ctx, row.ID)
@@ -177,16 +200,9 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 // assigns users to them through funops (before or after this first login).
 // Memberships assigned later reach the session on the next token refresh.
 func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
-	params := db.UserUpsertParams{
-		Name:        claims.Name,
-		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
-		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
-	}
-
-	row, err := s.queries.UserUpsert(ctx, params)
+	row, err := s.upsertUser(ctx, s.queries, claims)
 	if err != nil {
-		s.logger.Error("failed to upsert user", "error", err)
-		return nil, "", fmt.Errorf("creating user: %w", err)
+		return nil, "", err
 	}
 
 	u := &user{

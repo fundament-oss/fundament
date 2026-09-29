@@ -38,7 +38,7 @@ func (c *OrgListCmd) Run(ctx *Context) error {
 	}
 
 	if len(orgs) == 0 {
-		fmt.Println("No organizations found")
+		fmt.Println(NoOrganizationsHint)
 		return nil
 	}
 
@@ -76,6 +76,10 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to list organizations: %w", err)
 	}
 
+	if len(resp.GetOrganizations()) == 0 {
+		return fmt.Errorf("organization %q not found or not accessible\n%s", c.OrgID, NoOrganizationsHint)
+	}
+
 	var match *organizationv1.Organization
 	for _, org := range resp.GetOrganizations() {
 		if org.GetId() == c.OrgID {
@@ -84,7 +88,7 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 		}
 	}
 	if match == nil {
-		return fmt.Errorf("organization %q not found or not accessible", c.OrgID)
+		return fmt.Errorf("organization %q not found or not accessible: run 'functl org list' to see your organizations", c.OrgID)
 	}
 
 	cfg, err := config.LoadConfig()
