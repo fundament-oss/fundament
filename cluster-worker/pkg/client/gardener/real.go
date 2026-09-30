@@ -324,26 +324,35 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
+		operation := OperationType(op.Type)
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description)}, nil
+			return &ShootStatus{
+				Status:    StatusProgressing,
+				Message:   fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation: operation,
+				Healthy:   r.isShootHealthy(shoot),
+			}, nil
 		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
+			healthy := r.isShootHealthy(shoot)
 			msg := MsgShootReady
-			if !r.isShootHealthy(shoot) {
-				msg = "Shoot reconciled but not all conditions healthy"
+			if !healthy {
+				msg = MsgShootUnhealthy
 				r.logger.Warn("shoot succeeded but conditions unhealthy",
 					"shoot", shoot.Name,
 					"namespace", shoot.Namespace)
 			}
 			return &ShootStatus{
-				Status:  StatusReady,
-				Message: msg,
+				Status:    StatusReady,
+				Message:   msg,
+				Operation: operation,
+				Healthy:   healthy,
 			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation}, nil
 		}
 	}
 

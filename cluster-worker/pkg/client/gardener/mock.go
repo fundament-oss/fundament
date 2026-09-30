@@ -79,8 +79,10 @@ type mockShoot struct {
 
 // StatusOverride allows tests to configure custom status for specific clusters.
 type StatusOverride struct {
-	Status  ShootStatusType
-	Message string
+	Status    ShootStatusType
+	Message   string
+	Operation OperationType
+	Healthy   bool
 }
 
 // NewMock creates a new MockClient with default settings.
@@ -294,7 +296,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	// Check for custom override (takes precedence)
 	if override, ok := m.StatusOverrides[cluster.ID]; ok {
-		return &ShootStatus{Status: override.Status, Message: override.Message}, nil
+		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy}, nil
 	}
 
 	// Look up shoot by cluster ID (not shoot name)
@@ -331,13 +333,16 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				progress = 100
 			}
 			status = &ShootStatus{
-				Status:  StatusProgressing,
-				Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+				Status:    StatusProgressing,
+				Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+				Operation: OperationCreate,
 			}
 		default:
 			status = &ShootStatus{
-				Status:  StatusReady,
-				Message: MsgShootReady,
+				Status:    StatusReady,
+				Message:   MsgShootReady,
+				Operation: OperationCreate,
+				Healthy:   true,
 			}
 		}
 	}

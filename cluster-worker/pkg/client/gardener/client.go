@@ -23,16 +23,35 @@ const (
 	StatusDeleted     ShootStatusType = "deleted"
 )
 
+// OperationType is the Gardener operation a status was derived from
+// (the Shoot's .status.lastOperation.type). Values mirror Gardener's.
+type OperationType string
+
+const (
+	OperationCreate    OperationType = "Create"
+	OperationReconcile OperationType = "Reconcile"
+	OperationDelete    OperationType = "Delete"
+	OperationMigrate   OperationType = "Migrate"
+	OperationRestore   OperationType = "Restore"
+)
+
 // ShootStatus contains the current status and a descriptive message.
 type ShootStatus struct {
 	Status  ShootStatusType
 	Message string
+	// Operation is empty when the Shoot has no last operation yet.
+	Operation OperationType
+	// Healthy reports whether all required Shoot conditions are True.
+	// Only meaningful for StatusReady and for a StatusProgressing reconcile of
+	// a shoot that is already running.
+	Healthy bool
 }
 
 // Status message constants for consistent messaging.
 const (
-	MsgShootNotFound = "Shoot not found in Gardener"
-	MsgShootReady    = "Shoot is ready"
+	MsgShootNotFound  = "Shoot not found in Gardener"
+	MsgShootReady     = "Shoot is ready"
+	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
 )
 
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
