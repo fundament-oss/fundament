@@ -1,8 +1,10 @@
 package organization_test
 
 import (
+	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -249,4 +251,63 @@ func Test_Cluster_List_OrderedByCreation(t *testing.T) {
 	}
 
 	assert.Equal(t, []string{"bravo", "delta", "alpha", "charlie"}, names)
+}
+
+// Two clusters with the same timestamp: only the id can put them in order. The
+// API gives every row its own timestamp, so the rows go in directly, and in the
+// order that a query without the tie-breaker would most likely hand back.
+func Test_Cluster_List_TieBreaksOnID(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	first, err := uuid.NewV7()
+	require.NoError(t, err)
+	second, err := uuid.NewV7()
+	require.NoError(t, err)
+	// UUIDv7 is time-ordered, but the order between two made this close
+	// together is decided by the counter bits, so it is read off, not assumed.
+	lower, higher := first, second
+	if bytes.Compare(first[:], second[:]) > 0 {
+		lower, higher = second, first
+	}
+
+	created := time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)
+	for _, cluster := range []struct {
+		id   uuid.UUID
+		name string
+	}{{lower, "lower-id"}, {higher, "higher-id"}} {
+		_, err = env.adminPool.Exec(t.Context(),
+			"INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, created) VALUES ($1, $2, $3, 'eu-west-1', '1.28', $4)",
+			cluster.id, orgID, cluster.name, created,
+		)
+		require.NoError(t, err)
+	}
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	res, err := client.ListClusters(listCtx, organizationv1.ListClustersRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(res.GetClusters()))
+	for _, cluster := range res.GetClusters() {
+		names = append(names, cluster.GetName())
+	}
+
+	assert.Equal(t, []string{"higher-id", "lower-id"}, names)
 }
