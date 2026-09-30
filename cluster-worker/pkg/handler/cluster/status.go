@@ -44,18 +44,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 		cluster := &clusters[i]
 
-		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
-		if err != nil {
-			h.logger.Error("failed to get project namespace",
-				"cluster_id", cluster.ID,
-				"error", err)
-			continue
-		}
-		if namespace == "" {
-			continue
-		}
-
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
+		// Status lookups find the Shoot by cluster-ID label across all namespaces, so
+		// they need no project namespace (and must not create a Project as a side effect).
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, "", cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
@@ -162,18 +153,9 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			deleted = &cluster.Deleted.Time
 		}
 
-		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
-		if err != nil {
-			h.logger.Error("failed to get project namespace",
-				"cluster_id", cluster.ID,
-				"error", err)
-			continue
-		}
-		if namespace == "" {
-			continue
-		}
-
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
+		// Status lookups find the Shoot by cluster-ID label across all namespaces, so
+		// they need no project namespace (and must not create a Project as a side effect).
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, "", cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 		clusterToSync.Deleted = deleted
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)

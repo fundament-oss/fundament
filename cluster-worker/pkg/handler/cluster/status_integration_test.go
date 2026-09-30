@@ -1,8 +1,10 @@
 package cluster_test
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
@@ -93,4 +95,54 @@ func TestCheckStatusErrorTransition(t *testing.T) {
 	require.Equal(t, "error", *status)
 
 	assertEventExists(t, db, clusterID, "status_error")
+}
+
+func TestCheckStatusSkipsProjectLookup(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-no-project")
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	err := h.Sync(t.Context(), clusterID, sc)
+	require.NoError(t, err)
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "progressing")
+
+	// A failing project lookup must not block the status poll.
+	callsBefore := len(mock.EnsureProjectCalls)
+	mock.EnsureProjectError = errors.New("garden unavailable")
+
+	err = h.CheckStatus(t.Context())
+	require.NoError(t, err)
+
+	assert.Len(t, mock.EnsureProjectCalls, callsBefore)
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "ready", *status)
+}
+
+func TestCheckStatusDeletedSkipsProjectLookup(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "status-deleted-no-project")
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "deleting")
+
+	// Confirming a deletion must neither need nor (re)create the org's project.
+	mock.EnsureProjectError = errors.New("garden unavailable")
+
+	err := h.CheckStatus(t.Context())
+	require.NoError(t, err)
+
+	assert.Empty(t, mock.EnsureProjectCalls)
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "deleted", *status)
 }
