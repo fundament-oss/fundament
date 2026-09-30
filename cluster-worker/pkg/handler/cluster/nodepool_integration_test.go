@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -110,6 +111,60 @@ func TestFanInTriggerPropagatesNodePoolStatus(t *testing.T) {
 		`SELECT outbox_status FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&outboxStatus)
 	require.NoError(t, err)
 	require.Equal(t, "completed", outboxStatus)
+}
+
+// A precondition deferral leaves the row pending with its reason in status_info;
+// that is waiting, not failing, so only retrying/failed rows set outbox_error.
+func TestFanInTriggerOnlySurfacesFailures(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		nodePool  bool
+		status    string
+		wantError *string
+	}{
+		{name: "deferred cluster row", status: "pending"},
+		{name: "deferred node pool row", nodePool: true, status: "pending"},
+		{name: "retrying cluster row", status: "retrying", wantError: new("boom")},
+		{name: "retrying node pool row", nodePool: true, status: "retrying", wantError: new("boom")},
+		{name: "failed node pool row", nodePool: true, status: "failed", wantError: new("boom")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			db := createTestDB(t)
+			clusterID := insertCluster(t, db, acmeCorpOrgID, "fanin-error")
+
+			rowFilter := `cluster_id = $1`
+			rowID := clusterID
+			if tt.nodePool {
+				rowFilter = `node_pool_id = $1`
+				rowID = insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+			}
+
+			_, err := db.adminPool.Exec(t.Context(),
+				`UPDATE tenant.cluster_outbox
+				 SET status = $2, status_info = 'boom'
+				 WHERE id = (
+				     SELECT id FROM tenant.cluster_outbox
+				     WHERE `+rowFilter+`
+				     ORDER BY id DESC
+				     LIMIT 1
+				 )`, rowID, tt.status)
+			require.NoError(t, err)
+
+			var outboxStatus string
+			var outboxError *string
+			err = db.adminPool.QueryRow(t.Context(),
+				`SELECT outbox_status, outbox_error FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&outboxStatus, &outboxError)
+			require.NoError(t, err)
+			assert.Equal(t, tt.status, outboxStatus)
+			assert.Equal(t, tt.wantError, outboxError)
+		})
+	}
 }
 
 // --- Group 4: Query tests ---
