@@ -66,8 +66,9 @@ spec:
     - port: 8080
       targetPort: http
       name: http
-      # gRPC clients need HTTP/2 end to end: the gateway speaks h2c to the pod.
-      appProtocol: kubernetes.io/h2c
+      {{- with $.Values.grpcAppProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-registry-api") | nindent 4 }}
 

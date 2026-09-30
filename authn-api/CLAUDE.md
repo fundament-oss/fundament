@@ -85,12 +85,12 @@ Optional with defaults:
 - `OIDC_ISSUER` (http://localhost:5556)
 - `OIDC_DISCOVERY_URL` (defaults to OIDC_ISSUER) - Internal URL for OIDC discovery in k8s
 - `OIDC_CLIENT_ID` (authn-api)
-- `OIDC_REDIRECT_URL` (http://authn.fundament.localhost:8080/callback)
-- `FRONTEND_URL` (http://console.fundament.localhost:8080)
+- `OIDC_REDIRECT_URL` (https://authn.fundament.localhost:8443/callback)
+- `FRONTEND_URL` (https://console.fundament.localhost:8443)
 - `DATABASE_URL` (postgres://authn_api:password@localhost:5432/fundament)
 - `LISTEN_ADDR` (:8080)
 - `LOG_LEVEL` (info)
-- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080)
+- `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,https://console.fundament.localhost:8443)
 - `PLUGIN_PROXY_INTERNAL_URL` (http://plugin-proxy:8081) - plugin-proxy internal RPC URL, called by `MintPluginToken`
 - `COOKIE_DOMAIN` (fundament.localhost)
 - `COOKIE_SECURE` (false)

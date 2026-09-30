@@ -10,3 +10,4 @@ resources:
   - certificate.yaml
   - gateway.yaml
   - backendtrafficpolicy.yaml
+  - clienttrafficpolicy.yaml

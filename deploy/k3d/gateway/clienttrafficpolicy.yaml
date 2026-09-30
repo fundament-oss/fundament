@@ -1,0 +1,17 @@
+# Keeps quiet kube-api-proxy streams open: an idle `kubectl exec` shell or
+# port-forward, and a `kubectl logs -f` or watch with nothing to report. Envoy
+# resets a stream after 5 minutes without traffic by default; 4h matches the
+# kubelet's default streaming-connection-idle-timeout.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: fundament-local
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: fundament-local
+  timeout:
+    http:
+      streamIdleTimeout: 4h

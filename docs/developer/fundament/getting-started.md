@@ -69,6 +69,8 @@ just dev-hotreload
 - Every deploy resets the databases to the test data.
 - `Ctrl-C` stops watching; the deployment keeps running.
 
+A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
+
 To check the production images (the Dockerfiles CI builds), run `just dev` once and stop it with `Ctrl-C`: it rebuilds and redeploys on every file change.
 
 ## Open the console
@@ -88,6 +90,13 @@ kubectl -n fundament get httproute
 ```
 
 See [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md) for the frontend commands.
+
+### Bruno
+
+The collection in `bruno/` calls the stack on `https://…:8443`. Bruno does not read the system trust store, so point it at the mkcert CA that `cluster-start` installed (`mkcert -CAROOT` prints its folder):
+
+- In the app: *Preferences → General → Use custom CA certificate*, select `rootCA.pem` and keep *Keep default CA certificates* on.
+- With the CLI: `bru run --env local --cacert "$(mkcert -CAROOT)/rootCA.pem"`.
 
 ## Edit the docs
 
