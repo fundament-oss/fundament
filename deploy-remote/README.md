@@ -94,7 +94,7 @@ and `down` runs `mkcert -uninstall` + deletes the local copy, so nothing lingers
 The box's fundament is hardwired to the `https://*.fundament.localhost:8443` origin
 (dex issuer, OIDC callbacks, API CORS), so it only works when reached at **exactly
 that origin** — an SSH tunnel on local **8443**. One forwarded port serves every
-`*.fundament.localhost` host (host-routed nginx; `*.localhost` → 127.0.0.1).
+`*.fundament.localhost` host (host-routed by the Envoy Gateway listener; `*.localhost` → 127.0.0.1).
 
 ```sh
 # a LOCAL k3d fundament owns 127.0.0.1:8443 — stop it first so the box can use that origin:

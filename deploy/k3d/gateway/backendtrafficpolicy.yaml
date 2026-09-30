@@ -1,0 +1,24 @@
+# Lets long-lived kube-api-proxy streams through. Envoy cuts every request at
+# 15s by default, which ends `kubectl get -w`, `kubectl logs -f` and gRPC server
+# streams; idle streams are still reclaimed by the stream idle timeout. Envoy
+# also only accepts WebSocket upgrades by default, and kubectl falls back to
+# SPDY/3.1 for exec and port-forward (older clients only speak SPDY).
+#
+# Targets the whole Gateway, so every local route gets this: a policy on the
+# kube-api-proxy HTTPRoute alone would have to live in the chart's namespace.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: fundament-local
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: fundament-local
+  timeout:
+    http:
+      requestTimeout: 0s
+  httpUpgrade:
+    - type: websocket
+    - type: spdy/3.1

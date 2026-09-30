@@ -15,10 +15,9 @@ fmt:
 
 # --- Cluster commands ---
 
-# Ensure the k3d docker network exists with a fixed subnet: off 172.18.0.0/16 (which
-# Gardener's local kind cluster reserves — auto-allocation would grab it) and on
-# 172.19.0.0/16 so the ingress-nginx externalIP (172.19.0.2, see
-# deploy/k3d/resources/ingress-nginx.yaml) stays valid. Fails loudly on subnet conflict.
+# Ensure the k3d docker network exists with a fixed subnet: 172.19.0.0/16 keeps it off
+# 172.18.0.0/16, which Gardener's local kind cluster reserves (auto-allocation would
+# grab it). Fails loudly on subnet conflict.
 _ensure-k3d-network:
     @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet=172.19.0.0/16 k3d-fundament > /dev/null
 
@@ -32,6 +31,7 @@ cluster-create:
     export PWD="$(pwd -W 2>/dev/null || pwd)"
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
+    just setup-gateway
 
 # Start the cluster (creates if it doesn't exist)
 cluster-start:
@@ -82,6 +82,24 @@ setup-certs:
         echo "Webhook not ready yet, retrying in 5s... ($i/12)"
         sleep 5
     done
+
+# Apply the local Envoy Gateway edge (GatewayClass, Gateway, wildcard Certificate)
+setup-gateway:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for Envoy Gateway to become available..."
+    deadline=$(( $(date +%s) + 120 ))
+    # Same reason as setup-certs: k3s's helm-install Job creates the Deployment and
+    # the CRDs some time after the cluster is up, and `kubectl wait` does not poll
+    # for a resource that does not exist yet.
+    until kubectl get deployment envoy-gateway -n envoy-gateway-system > /dev/null 2>&1 \
+        && kubectl get crd gateways.gateway.networking.k8s.io backendtrafficpolicies.gateway.envoyproxy.io > /dev/null 2>&1; do
+        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for the envoy-gateway deployment and Gateway API CRDs"; exit 1; }
+        sleep 5
+    done
+    kubectl wait --for=condition=Established crd/gateways.gateway.networking.k8s.io crd/backendtrafficpolicies.gateway.envoyproxy.io --timeout=60s
+    kubectl wait --for=condition=Available deployment/envoy-gateway -n envoy-gateway-system --timeout=300s
+    kubectl apply -k deploy/k3d/gateway
 
 # --- Deployment commands ---
 

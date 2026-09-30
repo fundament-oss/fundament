@@ -64,7 +64,7 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
+  endpoint = "https://organization.fundament.localhost:8443"
   api_key  = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
 }
 ```
@@ -85,7 +85,7 @@ API keys provide a convenient authentication method that automatically handles t
 
 ```hcl
 provider "fundament" {
-  endpoint = "http://organization.fundament.localhost:8080"
+  endpoint = "https://organization.fundament.localhost:8443"
   api_key  = var.fundament_api_key
 }
 ```
@@ -335,7 +335,7 @@ Acceptance tests run against a real Fundament API. To run them:
 
 ```bash
 export TF_ACC=1
-export FUNDAMENT_ENDPOINT="http://organization.fundament.localhost:8080"
+export FUNDAMENT_ENDPOINT="https://organization.fundament.localhost:8443"
 export FUNDAMENT_API_KEY="your-api-key"
 # Optional: for project filter tests
 export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"

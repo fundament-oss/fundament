@@ -1,0 +1,15 @@
+# An explicit Certificate rather than a cert-manager annotation on the Gateway:
+# that needs cert-manager's Gateway API feature gate, and enabling it before the
+# CRDs exist crashed the controller on fire-cp.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: fundament-local
+  namespace: gateway
+spec:
+  secretName: fundament-local-tls
+  dnsNames:
+    - "*.fundament.localhost"
+  issuerRef:
+    kind: ClusterIssuer
+    name: mkcert-local

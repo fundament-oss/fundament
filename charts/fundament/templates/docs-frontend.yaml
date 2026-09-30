@@ -39,37 +39,4 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "docs-frontend") | nindent 4 }}
 
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: docs-frontend
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "docs-frontend" "component" "frontend") | nindent 4 }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  annotations:
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-  {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - docs.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: docs-frontend-tls
-  {{- end }}
-  rules:
-    - host: docs.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: docs-frontend
-                port:
-                  name: http
-{{- end }}
-
 {{- end }}

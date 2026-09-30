@@ -87,37 +87,4 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "console-frontend") | nindent 4 }}
 
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: console-frontend
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "console-frontend" "component" "frontend") | nindent 4 }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  annotations:
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-  {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - console.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: console-frontend-tls
-  {{- end }}
-  rules:
-    - host: console.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: console-frontend
-                port:
-                  name: http
-{{- end }}
-
 {{- end }}

@@ -231,8 +231,3 @@ marketplaceRegistryApi:
 marketplaceAdminApi:
   enabled: true
   replicas: 2
-
-ingress:
-  enabled: false
-  tls:
-    clusterIssuer: letsencrypt-prod

@@ -28,9 +28,6 @@ openfga:
 dex:
   enabled: false
 
-ingress:
-  enabled: false
-
 pluginController:
   enabled: true
   logLevel: debug

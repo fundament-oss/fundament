@@ -62,7 +62,7 @@ just cluster-start
 just dev-hotreload
 ```
 
-- `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and switches the kubectl context to it.
+- `cluster-start` creates the `k3d-fundament` cluster on first run, installs the local CA and the Envoy Gateway that serves every `*.fundament.localhost` host on port 8443, and switches the kubectl context to it.
 - `dev-hotreload` builds and deploys every service, then stays attached.
   - Edits to existing files are synced into the running containers.
   - Adding, moving or deleting a file rebuilds the image and redeploys.
@@ -79,6 +79,13 @@ To check the production images (the Dockerfiles CI builds), run `just dev` once 
 |---|---|---|
 | `alice@acme-corp.com` | `password` | `acme-corp`, with cluster `acme-cluster` |
 | `platform-admin@fundament.io` | `password` | `system`, which owns the first-party plugins |
+
+If a host does not answer, check that the gateway is `PROGRAMMED` and every route is `Accepted`:
+
+```shell
+kubectl -n gateway get gateway,certificate
+kubectl -n fundament get httproute
+```
 
 See [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md) for the frontend commands.
 

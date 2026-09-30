@@ -276,7 +276,7 @@ cmd_ssh()    { ensure_hcloud; local ip; ip=$(box_ip); exec ssh -p "$SSH_PORT" "$
 # (dex issuer, OIDC callbacks, API CORS allowlists), so the UIs only work when reached
 # at EXACTLY that origin — forward local 8443, which a LOCAL k3d fundament usually owns
 # (the guard catches that). One forwarded port serves every *.fundament.localhost host
-# (host-routed nginx). *.localhost -> 127.0.0.1.
+# (host-routed by the Envoy Gateway listener). *.localhost -> 127.0.0.1.
 LCONSOLE_PORT=8443
 CONSOLE_URL="https://console.fundament.localhost:${LCONSOLE_PORT}"
 
