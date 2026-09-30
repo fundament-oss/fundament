@@ -1,0 +1,24 @@
+# The same shape the console's create form writes (console/clusters-body.js).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpg-test
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: test-db
+  namespace: cnpg-test
+  labels:
+    app.kubernetes.io/managed-by: fundament-cloudnativepg
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.4
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  storage:
+    size: 1Gi

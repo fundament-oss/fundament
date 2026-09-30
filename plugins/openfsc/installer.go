@@ -14,6 +14,7 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/helm"
+	"github.com/fundament-oss/fundament/plugins/internal/cnpg"
 )
 
 const (
@@ -25,9 +26,6 @@ const (
 	certManagerRepo    = "https://charts.jetstack.io"
 	certManagerChart   = "cert-manager"
 	certManagerVersion = "v1.17.2"
-	cnpgRepo           = "https://cloudnative-pg.github.io/charts"
-	cnpgChart          = "cloudnative-pg"
-	cnpgVersion        = "0.24.0" // ships CloudNativePG operator v1.25.1
 )
 
 var crdNames = []string{
@@ -80,7 +78,8 @@ func (i *installer) ensurePrerequisites(ctx context.Context) error {
 		return fmt.Errorf("install cert-manager: %w", err)
 	}
 
-	if err := helm.NewClient("cnpg-system").InstallFromRepo(ctx, "cnpg", cnpgChart, cnpgRepo, cnpgVersion, nil); err != nil {
+	// Shared with the cloudnativepg plugin; see plugins/internal/cnpg.
+	if err := cnpg.Install(ctx); err != nil {
 		return fmt.Errorf("install cloudnative-pg: %w", err)
 	}
 	return nil
