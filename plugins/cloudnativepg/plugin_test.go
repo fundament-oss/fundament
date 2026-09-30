@@ -82,19 +82,19 @@ func TestReconcileReportsStatus(t *testing.T) {
 			message: "CloudNativePG operator running; no databases yet",
 		},
 		{
-			name: "healthy and provisioning",
+			name: "healthy and not ready",
 			objs: []client.Object{
 				storageClass("local-path", true),
 				cluster("orders", healthyPhase),
 				cluster("billing", "Setting up primary"),
 				cluster("fresh", ""),
 			},
-			message: "3 databases: 1 healthy, 2 provisioning",
+			message: "3 databases: 1 healthy, 2 not ready",
 		},
 		{
 			name:    "no default StorageClass",
 			objs:    []client.Object{storageClass("ceph-block", false), cluster("orders", healthyPhase)},
-			message: "1 database: 1 healthy, 0 provisioning; no default StorageClass, pick one when creating a database",
+			message: "1 database: 1 healthy, 0 not ready; no default StorageClass, pick one when creating a database",
 		},
 	}
 	for _, tt := range tests {
@@ -163,8 +163,8 @@ func TestApplyUserRoles(t *testing.T) {
 	}
 }
 
-// Project admins must not be able to change or delete a database through any
-// path, including the console's generated views and kubectl.
+// Project admins must not be able to update or delete a Cluster, including
+// through the console's generated views and kubectl.
 func TestUserRolesGrantNoModification(t *testing.T) {
 	t.Parallel()
 	for _, role := range userRoles() {

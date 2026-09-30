@@ -60,7 +60,7 @@ func TestParseReleaseStatus(t *testing.T) {
 	out := []byte(`{
 		"name": "cnpg",
 		"info": {"status": "deployed", "description": "Install complete"},
-		"chart": {"metadata": {"name": "cloudnative-pg", "version": "0.24.0", "appVersion": "1.25.1"}},
+		"chart": {"metadata": {"name": "cloudnative-pg", "version": "0.24.0", "appVersion": "1.26.0"}},
 		"version": 3,
 		"namespace": "cnpg-system"
 	}`)

@@ -6,6 +6,7 @@ import {
   buildCluster,
   clusterNameError,
   namespaceError,
+  storageClassError,
   storageSizeError,
 } from './clusters-body.js';
 
@@ -76,29 +77,59 @@ function versionFieldHtml() {
     </div>`;
 }
 
+// Three cases:
+// - classes unknown (a project admin): a text field, empty for the default.
+// - no default class: a required choice, since "Cluster default" would leave
+//   the PVC Pending.
+// - a default class: a select that starts on it.
 function storageClassFieldHtml(classes) {
-  const defaultName = classes?.find((sc) => sc.isDefault)?.name;
-  const clusterDefault = defaultName ? `Cluster default (${defaultName})` : 'Cluster default';
-  const options = [`<option value="" selected>${escapeHtml(clusterDefault)}</option>`]
-    .concat(
-      (classes ?? []).map(
-        (sc) => `<option value="${escapeHtml(sc.name)}">${escapeHtml(sc.name)}${sc.isDefault ? ' (default)' : ''}</option>`,
-      ),
+  const label = '<label class="plugin-label" for="db-storage-class">StorageClass</label>';
+  const hint = (text) => `<span class="plugin-hint">${escapeHtml(text)}</span>`;
+
+  if (classes === null) {
+    return `
+    <div class="plugin-field">
+      ${label}
+      <input id="db-storage-class" name="storageClass" type="text" class="plugin-input"
+             placeholder="Cluster default" maxlength="253" />
+      ${hint('Leave empty for the cluster default. Only an organization admin can list the StorageClasses; ask one for a name if the cluster has no default.')}
+    </div>`;
+  }
+
+  const classOptions = classes
+    .map(
+      (sc) => `<option value="${escapeHtml(sc.name)}">${escapeHtml(sc.name)}${sc.isDefault ? ' (default)' : ''}</option>`,
     )
     .join('');
-  const hint =
-    classes === null
-      ? 'Only an organization admin can see the other StorageClasses, so this uses the cluster default.'
-      : 'Where the data is stored. The cluster default suits most databases.';
+  const defaultName = classes.find((sc) => sc.isDefault)?.name;
+
+  if (!defaultName) {
+    const text =
+      classes.length === 0
+        ? 'This cluster has no StorageClasses. Ask an organization admin to add one.'
+        : 'This cluster has no default StorageClass, so choose one.';
+    return `
+    <div class="plugin-field">
+      ${label}
+      <select id="db-storage-class" name="storageClass" class="plugin-select" required>
+        <option value="" disabled selected>Choose a StorageClass</option>${classOptions}
+      </select>
+      ${hint(text)}
+    </div>`;
+  }
+
   return `
     <div class="plugin-field">
-      <label class="plugin-label" for="db-storage-class">StorageClass</label>
-      <select id="db-storage-class" name="storageClass" class="plugin-select">${options}</select>
-      <span class="plugin-hint">${escapeHtml(hint)}</span>
+      ${label}
+      <select id="db-storage-class" name="storageClass" class="plugin-select">
+        <option value="" selected>${escapeHtml(`Cluster default (${defaultName})`)}</option>${classOptions}
+      </select>
+      ${hint('Where the data is stored. The cluster default suits most databases.')}
     </div>`;
 }
 
 const storageClasses = await loadStorageClasses();
+const storageClassRequired = Array.isArray(storageClasses) && !storageClasses.some((sc) => sc.isDefault);
 
 content.innerHTML = `
   <p class="plugin-text">
@@ -153,6 +184,7 @@ wireSubmit(form, {
       ['name', clusterNameError],
       ['namespace', namespaceError],
       ['size', storageSizeError],
+      ['storageClass', (value) => storageClassError(value, { required: storageClassRequired })],
     ]) {
       const invalid = check(field(name).value.trim());
       if (invalid) {
@@ -172,7 +204,7 @@ wireSubmit(form, {
         namespace,
         imageName: field('imageName').value,
         size: field('size').value.trim(),
-        storageClass: field('storageClass').value,
+        storageClass: field('storageClass').value.trim(),
       }),
     );
     navigateToDetail(name, namespace);

@@ -37,9 +37,23 @@ func TestNeedsInstall(t *testing.T) {
 
 func TestNeedsInstallPending(t *testing.T) {
 	t.Parallel()
-	install, err := needsInstall(&helm.ReleaseStatus{Status: "pending-upgrade", ChartVersion: "0.24.0"}, "0.24.0")
-	require.Error(t, err)
-	assert.False(t, install)
-	assert.Contains(t, err.Error(), "pending-upgrade")
-	assert.Contains(t, err.Error(), "helm -n cnpg-system rollback cnpg")
+	tests := []struct {
+		status   string
+		recovery string
+	}{
+		{"pending-upgrade", "helm -n cnpg-system rollback cnpg"},
+		{"pending-rollback", "helm -n cnpg-system rollback cnpg"},
+		// A first install has no earlier revision to roll back to.
+		{"pending-install", "helm -n cnpg-system uninstall cnpg"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.status, func(t *testing.T) {
+			t.Parallel()
+			install, err := needsInstall(&helm.ReleaseStatus{Status: tt.status, ChartVersion: "0.24.0"}, "0.24.0")
+			require.Error(t, err)
+			assert.False(t, install)
+			assert.Contains(t, err.Error(), tt.status)
+			assert.Contains(t, err.Error(), tt.recovery)
+		})
+	}
 }

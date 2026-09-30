@@ -22,7 +22,7 @@ const (
 	Namespace = "cnpg-system"
 	Repo      = "https://cloudnative-pg.github.io/charts"
 	Chart     = "cloudnative-pg"
-	Version   = "0.24.0" // ships CloudNativePG operator v1.25.1
+	Version   = "0.24.0" // ships CloudNativePG operator v1.26.0
 )
 
 // CRDNames are the CRDs a plugin verifies after Install.
@@ -60,11 +60,21 @@ func needsInstall(current *helm.ReleaseStatus, want string) (bool, error) {
 	if current.Pending() {
 		// Another plugin may be mid-install; retrying resolves that. A release
 		// whose install was killed during --wait stays pending for good.
-		return false, fmt.Errorf("release %s/%s is %s; if this persists, run `helm -n %s rollback %s`",
-			Namespace, Release, current.Status, Namespace, Release)
+		return false, fmt.Errorf("release %s/%s is %s; if this persists, run `%s`",
+			Namespace, Release, current.Status, pendingRecovery(current.Status))
 	}
 	if current.Status == "deployed" && semver.Compare("v"+current.ChartVersion, "v"+want) >= 0 {
 		return false, nil
 	}
 	return true, nil
+}
+
+// pendingRecovery is the command that clears a pending release. A first install
+// has no earlier revision to roll back to, so it is uninstalled instead; that
+// is safe because it never deployed, so no databases depend on it yet.
+func pendingRecovery(status string) string {
+	if status == "pending-install" {
+		return fmt.Sprintf("helm -n %s uninstall %s", Namespace, Release)
+	}
+	return fmt.Sprintf("helm -n %s rollback %s", Namespace, Release)
 }

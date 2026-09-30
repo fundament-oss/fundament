@@ -128,7 +128,7 @@ func statusMessage(ctx context.Context, kube client.Client) (string, error) {
 		if n == 1 {
 			noun = "database"
 		}
-		message = fmt.Sprintf("%d %s: %d healthy, %d provisioning", n, noun, healthy, n-healthy)
+		message = fmt.Sprintf("%d %s: %d healthy, %d not ready", n, noun, healthy, n-healthy)
 	}
 
 	hasDefault, err := hasDefaultStorageClass(ctx, kube)
