@@ -47,6 +47,8 @@ const (
 	ConstraintClusterOutboxFkProjectMember = "cluster_outbox_fk_project_member"
 	// ConstraintClusterOutboxUqNsReconcile is defined on tenant.cluster_outbox.
 	ConstraintClusterOutboxUqNsReconcile = "cluster_outbox_uq_ns_reconcile"
+	// ConstraintClustersCkShootHealth is defined on tenant.clusters.
+	ConstraintClustersCkShootHealth = "clusters_ck_shoot_health"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
 	// ConstraintClustersFkRegionVersion is defined on tenant.clusters.

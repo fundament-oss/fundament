@@ -693,12 +693,19 @@ END;]]> </definition>
 	</return-type>
 	<definition> <![CDATA[DECLARE
     resolved_cluster_id uuid;
+    resolved_error text;
 BEGIN
+    -- A pending row that carries status_info is deferred on a precondition
+    -- (waiting, not failing); only retrying/failed rows surface as an error.
+    IF NEW.status IN ('retrying', 'failed') THEN
+        resolved_error := NEW.status_info;
+    END IF;
+
     IF NEW.cluster_id IS NOT NULL THEN
         UPDATE tenant.clusters
         SET outbox_status = NEW.status,
             outbox_retries = NEW.retries,
-            outbox_error = NEW.status_info
+            outbox_error = resolved_error
         WHERE tenant.clusters.id = NEW.cluster_id;
     ELSIF NEW.node_pool_id IS NOT NULL THEN
         SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
@@ -709,7 +716,7 @@ BEGIN
             UPDATE tenant.clusters
             SET outbox_status = NEW.status,
                 outbox_retries = NEW.retries,
-                outbox_error = NEW.status_info
+                outbox_error = resolved_error
             WHERE tenant.clusters.id = resolved_cluster_id;
         END IF;
     END IF;
@@ -1233,6 +1240,12 @@ END;]]> </definition>
 	<column name="shoot_status_updated">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="shoot_health">
+		<type name="text" length="0"/>
+	</column>
+	<column name="shoot_updating" not-null="true" default-value="false">
+		<type name="boolean" length="0"/>
+	</column>
 	<column name="outbox_status">
 		<type name="text" length="0"/>
 	</column>
@@ -1253,6 +1266,9 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
 		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="clusters_ck_shoot_health" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[shoot_health IN ('healthy','unhealthy')]]> </expression>
 	</constraint>
 	<constraint name="clusters_fk_region_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_kubernetes_versions" table="tenant.clusters">
 		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
@@ -2110,7 +2126,7 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_events_ck_event_type" type="ck-constr" table="tenant.cluster_events">
-			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','user_sync_succeeded','user_sync_failed')]]> </expression>
+			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','user_sync_succeeded','user_sync_failed')]]> </expression>
 	</constraint>
 	<constraint name="cluster_events_ck_sync_action" type="ck-constr" table="tenant.cluster_events">
 			<expression> <![CDATA[sync_action IN ('sync','delete')]]> </expression>
