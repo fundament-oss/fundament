@@ -13,6 +13,7 @@ import {
 } from '../generated/v1/cluster_pb';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
+import sortByName from './utils/sort-by-name';
 
 export interface ProjectData {
   id: string;
@@ -125,6 +126,12 @@ export class OrganizationDataService {
 
   private cachedOrganizationId: string | null = null;
 
+  /** Bumped on every organization load and on logout. A response that comes
+   *  back under another generation than it left with belongs to a cache that
+   *  is gone by now and is dropped. Comparing organization ids alone would let
+   *  an A → B → A switch through, and would let a response land after logout. */
+  private generation = 0;
+
   private loadProjectsPromise: Promise<void> | null = null;
 
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
@@ -138,6 +145,8 @@ export class OrganizationDataService {
     const orgId = organizationId ?? this.cachedOrganizationId;
     if (!orgId) return;
     this.cachedOrganizationId = orgId;
+    this.generation += 1;
+    const { generation } = this;
 
     // Reset project cache so the next loadProjectsAndNamespaces() fetches fresh data.
     this.loadProjectsPromise = null;
@@ -153,14 +162,15 @@ export class OrganizationDataService {
         firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
       ]);
 
-      if (!orgResponse.organization) {
+      if (!orgResponse.organization || generation !== this.generation) {
         return;
       }
 
-      this.clusterSummaries.set(clustersResponse.clusters);
+      const clusters = sortByName(clustersResponse.clusters);
+      this.clusterSummaries.set(clusters);
       this.clustersLoaded.set(true);
 
-      const clustersData: ClusterData[] = clustersResponse.clusters.map((cluster) => ({
+      const clustersData: ClusterData[] = clusters.map((cluster) => ({
         id: cluster.id,
         name: cluster.name,
         projects: [],
@@ -219,14 +229,16 @@ export class OrganizationDataService {
   private async doLoadProjects(): Promise<boolean> {
     const orgData = this.organizations()[0];
     if (!orgData) return false;
+    const { generation } = this;
 
     this.loading.set(true);
     try {
       // Settled per cluster: one cluster the user cannot list yet (its authz
       // tuple may still be syncing right after it was created) must not hide
       // the projects of all the others. That cluster keeps what it had.
+      const requested = orgData.clusters;
       const results = await Promise.allSettled(
-        orgData.clusters.map((cluster) =>
+        requested.map((cluster) =>
           firstValueFrom(
             this.projectClient.listProjects(
               create(ListProjectsRequestSchema, { clusterId: cluster.id }),
@@ -234,6 +246,8 @@ export class OrganizationDataService {
           ),
         ),
       );
+
+      if (generation !== this.generation) return false;
 
       const failures = results.filter((result) => result.status === 'rejected');
       if (failures.length > 0) {
@@ -245,25 +259,40 @@ export class OrganizationDataService {
         if (failures.length === results.length) throw failures[0].reason;
       }
 
-      const clustersData: ClusterData[] = orgData.clusters.map((cluster, i) => {
+      const loaded = new Map<string, ProjectData[]>();
+      requested.forEach((cluster, i) => {
         const result = results[i];
-        if (result.status === 'rejected') return cluster;
+        if (result.status === 'rejected') return;
 
-        return {
-          id: cluster.id,
-          name: cluster.name,
-          projects: result.value.projects.map((project) => ({
+        loaded.set(
+          cluster.id,
+          result.value.projects.map((project) => ({
             id: project.id,
             name: project.name,
             alias: project.alias,
             namespaceCount: project.namespaceCount,
             memberCount: project.memberCount,
           })),
-        };
+        );
       });
 
+      // Merged into the list as it is now, not the one the requests went out
+      // with: reloadClusters() may have put a cluster in while they were in
+      // flight, and replacing the list wholesale would take it out again. A
+      // cluster that was not asked keeps what it has, which for a cluster that
+      // new is the empty list it was created with.
       this.organizations.update((orgs) =>
-        orgs.map((org) => (org.id === orgData.id ? { ...org, clusters: clustersData } : org)),
+        orgs.map((org) => {
+          if (org.id !== orgData.id) return org;
+
+          return {
+            ...org,
+            clusters: org.clusters.map((cluster) => {
+              const projects = loaded.get(cluster.id);
+              return projects ? { ...cluster, projects } : cluster;
+            }),
+          };
+        }),
       );
       return failures.length === 0;
     } finally {
@@ -293,28 +322,61 @@ export class OrganizationDataService {
   }
 
   /**
-   * Add a newly created cluster to the cache immediately (before a full reload).
-   * This ensures other views (e.g. Projects, plugins) reflect the new cluster right away.
+   * Refresh the cluster list from the server after a cluster was created, so
+   * every view built on the cache (Projects, plugins, the sidebar) shows the
+   * new cluster in its place. Projects already loaded for the other clusters
+   * stay in place.
+   *
+   * The cluster exists once the create came back, so the cache has to know it
+   * either way: the page it lands on takes its title and breadcrumb from here,
+   * the sidebar counts it, and the new-cluster form checks names against it.
+   * If the list cannot be fetched, the new cluster goes in by hand with the id
+   * and name the create returned, and the next poll fills in the rest.
    */
-  addCluster(id: string, name: string) {
+  async reloadClusters(created: { id: string; name: string }) {
     const activeOrgId = this.cachedOrganizationId;
+    if (!activeOrgId) return;
+    const { generation } = this;
+
+    let clusters: ClusterSummary[];
+    try {
+      const response = await firstValueFrom(
+        this.clusterClient.listClusters(create(ListClustersRequestSchema, {})),
+      );
+      clusters = response.clusters;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error reloading clusters:', error);
+      clusters = [
+        ...this.clusterSummaries().filter((cluster) => cluster.id !== created.id),
+        create(ListClustersResponse_ClusterSummarySchema, {
+          id: created.id,
+          name: created.name,
+          status: ClusterStatus.PROVISIONING,
+        }),
+      ];
+    }
+
+    // The user switched organization or logged out while the request was in
+    // flight; this response belongs to a cache that is gone.
+    if (generation !== this.generation) return;
+
+    clusters = sortByName(clusters);
+    this.clusterSummaries.set(clusters);
     this.organizations.update((orgs) =>
-      orgs.map((org) =>
-        org.id === activeOrgId
-          ? { ...org, clusters: [...org.clusters, { id, name, projects: [] }] }
-          : org,
-      ),
-    );
-    // First, not last: ListClusters returns newest first, so appending would put
-    // the card at the bottom until the next poll moves it to the top.
-    this.clusterSummaries.update((summaries) => [
-      create(ListClustersResponse_ClusterSummarySchema, {
-        id,
-        name,
-        status: ClusterStatus.PROVISIONING,
+      orgs.map((org) => {
+        if (org.id !== activeOrgId) return org;
+
+        const known = new Map(org.clusters.map((c) => [c.id, c]));
+        return {
+          ...org,
+          clusters: clusters.map(
+            (cluster) =>
+              known.get(cluster.id) ?? { id: cluster.id, name: cluster.name, projects: [] },
+          ),
+        };
       }),
-      ...summaries,
-    ]);
+    );
   }
 
   /**
@@ -365,6 +427,7 @@ export class OrganizationDataService {
    * Clear all organization data (used on logout).
    */
   clearAll() {
+    this.generation += 1;
     this.organizations.set([]);
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);

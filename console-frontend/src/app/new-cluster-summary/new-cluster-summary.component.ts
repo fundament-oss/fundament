@@ -133,9 +133,17 @@ export default class NewClusterSummaryComponent {
     }
 
     this.clusterId.set(clusterId);
-    this.organizationDataService.addCluster(clusterId, formState.clusterName);
 
+    // The reload and the node pools do not wait for each other: the pools go
+    // to the cluster by id, and the list comes back with the cluster in it
+    // regardless. One after the other, a slow ListClusters would hold up the
+    // pools for nothing.
+    const reloaded = this.organizationDataService.reloadClusters({
+      id: clusterId,
+      name: formState.clusterName,
+    });
     const notCreated = await this.createNodePools(clusterId, formState.nodePools ?? []);
+    await reloaded;
 
     this.stateService.reset();
     this.isCreating.set(false);
