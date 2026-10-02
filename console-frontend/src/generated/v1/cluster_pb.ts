@@ -554,7 +554,7 @@ export type ClusterEvent = Message<"organization.v1.ClusterEvent"> & {
   id: string;
 
   /**
-   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, user_sync_succeeded, user_sync_failed
    *
    * @generated from field: string event_type = 20;
    */
