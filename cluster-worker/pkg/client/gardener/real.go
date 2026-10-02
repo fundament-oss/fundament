@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"sync/atomic"
+	"time"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,6 +88,14 @@ type RealClient struct {
 	client   client.Client
 	provider ProviderConfig
 	logger   *slog.Logger
+
+	// statusCache serves GetShootStatus from a watch (see status_cache.go);
+	// nil means status reads always go to Gardener directly.
+	statusCache       shootStatusCache
+	statusCacheSynced atomic.Bool
+	lastWatchFailure  atomic.Int64 // unix nanoseconds; 0 when the watch never failed
+	lastProbeSuccess  atomic.Int64 // unix nanoseconds; 0 until the garden answered a probe
+	clock             func() time.Time
 }
 
 // NewReal creates a new RealClient that connects to Gardener.
@@ -130,11 +140,19 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		"provider", provider.Type,
 		"cloudProfile", provider.CloudProfile)
 
-	return &RealClient{
+	r := &RealClient{
 		client:   c,
 		provider: provider,
 		logger:   logger,
-	}, nil
+	}
+
+	statusCache, err := newShootStatusCache(cfg, scheme, r.recordWatchError)
+	if err != nil {
+		return nil, err
+	}
+	r.statusCache = statusCache
+
+	return r, nil
 }
 
 // EnsureProject creates the Gardener Project if it doesn't exist (idempotent).
@@ -303,7 +321,7 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 
 // GetShootStatus returns the current reconciliation status of a Shoot.
 func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
-	shoot, err := r.getShootByClusterID(ctx, cluster.ID)
+	shoot, err := r.getShootForStatus(ctx, cluster.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up shoot: %w", err)
 	}

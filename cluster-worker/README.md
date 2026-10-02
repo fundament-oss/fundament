@@ -179,7 +179,13 @@ Every `STATUS_INTERVAL` tick (30s) the poller checks one batch of `CLUSTER_STATU
 - **Every 30s**: clusters that are new, pending, progressing or in error, and ready clusters whose health is not known to be healthy yet.
 - **Every `CLUSTER_STATUS_READY_INTERVAL` (5m)**: healthy ready clusters.
 
-Clusters that are still being created are ordered first, so ready clusters never delay them. With the defaults one replica keeps about 500 healthy ready clusters current (50 per tick × 10 ticks per interval); beyond that the slow lane falls behind, but the fast lane is unaffected.
+Clusters that are still being created are ordered first, so ready clusters never delay them. With the defaults one replica keeps about 500 healthy ready clusters current (50 per tick × 10 ticks per interval); beyond that the slow lane falls behind, but the fast lane is unaffected. Raise `CLUSTER_STATUS_BATCH_SIZE` for larger fleets: with the status cache below, a poll costs one database update and no Gardener request.
+
+#### Status cache
+
+In real mode the status poller reads Shoots from a watch-backed cache instead of asking Gardener per cluster. One watch on Shoots with the `fundament.io/cluster-id` label (a standard Kubernetes watch on the virtual garden; the garden identity needs `list` and `watch` on shoots) keeps them in memory with their spec and managed fields trimmed off, indexed by cluster ID. On start the cache loads all Shoots once (streamed, or in pages of 500), then applies changes as Gardener pushes them; after a dropped watch it reconnects or re-lists by itself.
+
+Status reads fall back to direct Gardener requests (with a 10s timeout), the behaviour before the cache, while the cache has not synced yet, for a minute after the watch reports a real failure (such as an unreachable or unauthorized garden), and whenever the garden has not answered a probe for 30s. The probe is one cheap list request every 15s: a garden that hangs instead of refusing connections never makes the watch fail, so without it the cache would keep serving its last state. An outage therefore shows up as errors within about 30s instead of as silently stale status. Writes (`ApplyShoot`, deletes, kubeconfigs) never use the cache.
 
 Rules for a cluster that is already ready:
 
