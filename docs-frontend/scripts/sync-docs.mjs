@@ -56,16 +56,8 @@
  * a 404. That is what src/links-validator.ts exists to catch: it runs after
  * `astro build` and fails the build on any link that does not resolve.
  */
-import {
-  cpSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -138,24 +130,55 @@ function parseArgs(argv) {
 /** Hidden files are never content: .DS_Store, editor swap files and the like. */
 const isHidden = (path) => basename(path).startsWith('.');
 
-/** Replace `dest` with a copy of `src`, minus hidden files. Safe to re-run. */
-function replaceDir(src, dest, filter = () => true) {
-  rmSync(dest, { recursive: true, force: true });
-  mkdirSync(dirname(dest), { recursive: true });
-  cpSync(src, dest, {
-    recursive: true,
-    filter: (path) => path === src || (!isHidden(path) && filter(path)),
-  });
+/**
+ * Make `dest` match `src`, minus hidden files, rewriting files whose extension has
+ * rewrites. Only files whose content differs are written and only stale ones
+ * removed, so a dev server watching `dest` keeps its watches. Returns the number
+ * of files written.
+ */
+function mirrorDir(src, dest, filter = () => true) {
+  const wanted = new Set();
+  let written = 0;
+  const visit = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (isHidden(path) || !filter(path)) continue;
+      if (entry.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      const target = join(dest, relative(src, path));
+      wanted.add(target);
+      let content = readFileSync(path);
+      const ext = Object.keys(REWRITES).find((e) => entry.name.endsWith(e));
+      if (ext)
+        content = Buffer.from(
+          rewriteProse(content.toString('utf8'), REWRITES[ext], CODE_SEGMENTS[ext])
+        );
+      const current = statSync(target, { throwIfNoEntry: false }) ? readFileSync(target) : null;
+      if (current && current.equals(content)) continue;
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, content);
+      written += 1;
+    }
+  };
+  visit(src);
+  removeStale(dest, wanted);
+  return written;
 }
 
-/** Every file under `dir` whose name ends in `ext`. */
-function walk(dir, ext, found = []) {
+/** Remove files under `dir` that are not in `wanted`, then directories left empty. */
+function removeStale(dir, wanted) {
+  if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) walk(path, ext, found);
-    else if (entry.name.endsWith(ext)) found.push(path);
+    if (entry.isDirectory()) {
+      removeStale(path, wanted);
+      if (readdirSync(path).length === 0) rmSync(path, { recursive: true });
+    } else if (!wanted.has(path)) {
+      rmSync(path);
+    }
   }
-  return found;
 }
 
 /** Apply `rewrites` to the prose of `text`, leaving code spans untouched. */
@@ -168,20 +191,6 @@ function rewriteProse(text, rewrites, codeSegments) {
         : rewrites.reduce((prose, [pattern, to]) => prose.replace(pattern, to), segment)
     )
     .join('');
-}
-
-/** Rewrite every `ext` file under `dir` in place. Returns the number changed. */
-function rewriteDir(dir, ext) {
-  let rewritten = 0;
-  for (const file of walk(dir, ext)) {
-    const before = readFileSync(file, 'utf8');
-    const after = rewriteProse(before, REWRITES[ext], CODE_SEGMENTS[ext]);
-    if (after !== before) {
-      writeFileSync(file, after);
-      rewritten += 1;
-    }
-  }
-  return rewritten;
 }
 
 /** Path, size and modification time of every file under `dir`; changes when any file does. */
@@ -203,25 +212,19 @@ function fingerprint(dir) {
 }
 
 function sync(source) {
+  let written = 0;
   for (const [name, dest] of Object.entries(LIFTED)) {
     const from = join(source, name);
     if (!statSync(from, { throwIfNoEntry: false })?.isDirectory()) {
       throw new Error(`expected ${from} to exist`);
     }
-    replaceDir(from, join(root, dest));
+    written += mirrorDir(from, join(root, dest));
   }
 
-  const skipped = new Set(
-    [...Object.keys(LIFTED), ...EXCLUDED].map((name) => join(source, name))
-  );
-  replaceDir(source, join(root, DOCS_DEST), (path) => !skipped.has(path));
+  const skipped = new Set([...Object.keys(LIFTED), ...EXCLUDED].map((name) => join(source, name)));
+  written += mirrorDir(source, join(root, DOCS_DEST), (path) => !skipped.has(path));
 
-  const rewritten =
-    rewriteDir(join(root, DOCS_DEST), '.md') +
-    rewriteDir(join(root, LIFTED.adr), '.adoc') +
-    rewriteDir(join(root, LIFTED.funs), '.adoc');
-
-  process.stdout.write(`synced docs from ${source} (${rewritten} files rewritten)\n`);
+  process.stdout.write(`synced docs from ${source} (${written} files written)\n`);
 }
 
 function main() {
