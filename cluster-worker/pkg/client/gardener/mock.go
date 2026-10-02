@@ -83,6 +83,7 @@ type StatusOverride struct {
 	Message   string
 	Operation OperationType
 	Healthy   bool
+	Retrying  bool
 }
 
 // NewMock creates a new MockClient with default settings.
@@ -296,7 +297,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	// Check for custom override (takes precedence)
 	if override, ok := m.StatusOverrides[cluster.ID]; ok {
-		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy}, nil
+		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy, Retrying: override.Retrying}, nil
 	}
 
 	// Look up shoot by cluster ID (not shoot name)

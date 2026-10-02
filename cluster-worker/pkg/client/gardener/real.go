@@ -307,7 +307,10 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
 			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description), Operation: operation}, nil
-		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
+		case gardencorev1beta1.LastOperationStateError:
+			// "Completed with errors and will be retried" per Gardener's API.
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}, nil
+		case gardencorev1beta1.LastOperationStateFailed:
 			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
 			healthy := r.isShootHealthy(shoot)
@@ -325,7 +328,8 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				Healthy:   healthy,
 			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation}, nil
+			// Seen while the seed was not ready; Gardener resumed the operation by itself.
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}, nil
 		}
 	}
 
