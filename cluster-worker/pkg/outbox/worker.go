@@ -408,7 +408,7 @@ func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetA
 
 	if _, err := w.queries.OutboxDeferWithoutRetry(ctx, db.OutboxDeferWithoutRetryParams{
 		ID:         row.ID,
-		Delay:      durationToInterval(w.cfg.PreconditionDelay),
+		Delay:      durationToInterval(deferralDelay(w.cfg.PreconditionDelay, row.Deferrals, precondErr)),
 		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
 	}); err != nil {
 		return false, fmt.Errorf("defer outbox row: %w", err)
@@ -421,6 +421,15 @@ func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetA
 		"reason", precondErr.Reason)
 
 	return true, nil
+}
+
+// deferralDelay is the default precondition delay, or the precondition's own
+// shorter FirstRetryAfter on a row's first deferral.
+func deferralDelay(defaultDelay time.Duration, deferralsSoFar int32, precondErr *handler.PreconditionError) time.Duration {
+	if deferralsSoFar == 0 && precondErr.FirstRetryAfter > 0 && precondErr.FirstRetryAfter < defaultDelay {
+		return precondErr.FirstRetryAfter
+	}
+	return defaultDelay
 }
 
 func durationToInterval(d time.Duration) pgtype.Interval {

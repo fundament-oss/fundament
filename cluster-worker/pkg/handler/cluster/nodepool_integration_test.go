@@ -300,6 +300,7 @@ func TestSyncClusterPreconditionError_NamespaceNotReady(t *testing.T) {
 	var precondErr *handler.PreconditionError
 	require.ErrorAs(t, err, &precondErr)
 	require.Contains(t, precondErr.Reason, "project namespace not ready")
+	assert.Equal(t, 5*time.Second, precondErr.FirstRetryAfter, "a new project is rechecked quickly once")
 
 	// No ApplyShoot calls
 	require.Empty(t, mock.ApplyCalls)
