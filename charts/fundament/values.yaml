@@ -172,6 +172,13 @@ clusterWorker:
   replicas: 1
   logLevel: info
   gardenerMode: mock # mock or real
+  clusterDeletion:
+    # Delete clusters without waiting for what runs inside them: the timeouts that let
+    # it clean up are removed. Workloads, volumes and custom resources are removed
+    # immediately, so anything they manage outside the cluster (storage, load
+    # balancers, DNS records) can be left behind. Use only where nothing outside a
+    # cluster depends on it.
+    immediate: false
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
   # Provider wiring for real mode (defaults target the local provider in code).

@@ -32,6 +32,8 @@ type Config struct {
 	HealthPort      int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
+	ClusterDeletion ClusterDeletionConfig `envPrefix:"CLUSTER_DELETION_"`
+
 	Gardener GardenerConfig `envPrefix:"GARDENER_"`
 
 	Outbox    outbox.Config          `envPrefix:"OUTBOX_"`
@@ -39,6 +41,13 @@ type Config struct {
 	Reconcile reconcile.Config       `envPrefix:"RECONCILE_"`
 	Cluster   clusterhandler.Config  `envPrefix:"CLUSTER_"`
 	Plugin    pluginmachinery.Config `envPrefix:"PLUGIN_"`
+}
+
+// ClusterDeletionConfig controls how a cluster deletion treats what runs inside it.
+type ClusterDeletionConfig struct {
+	// Immediate makes Gardener remove blocking finalizers inside a cluster on the
+	// first cleanup pass of a deletion instead of waiting for them.
+	Immediate bool `env:"IMMEDIATE"`
 }
 
 // GardenerConfig configures the Gardener client and the provider defaults the
@@ -270,6 +279,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 			}
 			providerCfg.ShootAnnotations = anns
 		}
+		providerCfg.SkipCleanupWait = cfg.ClusterDeletion.Immediate
 
 		logger.Info("using real Gardener client",
 			"kubeconfig", g.Kubeconfig,

@@ -44,6 +44,10 @@ type ProviderConfig struct {
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
 	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
 
+	// SkipCleanupWait makes a shoot deletion strip a blocking finalizer on the
+	// first cleanup pass instead of waiting out Gardener's grace period.
+	SkipCleanupWait bool
+
 	// Networking CIDRs. NodesCIDR empty leaves spec.networking.nodes unset so the
 	// provider's IPAM allocates the node range (metal hands out a partition /24);
 	// the local provider falls back to 10.0.0.0/16. Pods/Services are set only when
@@ -509,6 +513,15 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	}
 	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
 
+	// Zero makes Gardener remove the finalizers of the objects it cleans up on the
+	// first pass, rather than 5m (Kubernetes resources, webhooks) or 1h (CRDs and
+	// other extended APIs) later. The annotations can only shorten those waits.
+	if r.provider.SkipCleanupWait {
+		shoot.Annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "0"
+		shoot.Annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "0"
+		shoot.Annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "0"
+	}
+
 	// Force-deletion can only be set when the shoot already has a deletionTimestamp.
 	if r.provider.Type == "local" && shoot.DeletionTimestamp != nil {
 		shoot.Annotations["confirmation.gardener.cloud/force-deletion"] = "true"
@@ -559,7 +572,6 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 // shootAnnotations returns the base annotations for a new Shoot.
-// For the local provider, adds cleanup grace period annotations to speed up deletion.
 func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 	annotations := map[string]string{
 		AnnotationClusterName: clusterName,
@@ -567,11 +579,6 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 	// Operator-supplied annotations (e.g. metal's cluster.metal-stack.io/tenant,
 	// required by the provider-metal admission validator).
 	maps.Copy(annotations, r.provider.ShootAnnotations)
-	if r.provider.Type == "local" {
-		annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "15"
-		annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "15"
-		annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "15"
-	}
 	return annotations
 }
 
