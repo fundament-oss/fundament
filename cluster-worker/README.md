@@ -140,6 +140,24 @@ settling does not stick, and a cluster that breaks later shows it.
   recorded as `status_warning` (once per distinct message) and does not change the
   status. Only `Failed` sets `error`.
 
+### Status cache
+
+In real mode the status loop reads Shoots from a watch-backed cache instead of asking
+Gardener per cluster, so a poll costs one database update and no Gardener request; raise
+`CLUSTER_STATUS_BATCH_SIZE` for large fleets. One watch on Shoots with the
+`fundament.io/cluster-id` label (the garden identity needs `list` and `watch` on shoots)
+keeps them in memory with their spec and managed fields trimmed off, indexed by cluster
+ID. On start the cache loads all Shoots once, then applies changes as Gardener pushes
+them; after a dropped watch it reconnects or re-lists by itself.
+
+Status reads go to Gardener directly (with a 10s timeout) while the cache has not synced
+yet, for a minute after the watch reports a real failure (such as an unreachable or
+unauthorized garden), and whenever the garden has not answered a probe for 30s. The probe
+is one cheap list request every 15s: a garden that hangs instead of refusing connections
+never makes the watch fail, so without it the cache would keep serving its last state.
+An outage therefore shows up as errors within about 30s instead of as silently stale
+status. Writes (`ApplyShoot`, deletes, kubeconfigs) never use the cache.
+
 ## Configuration
 
 Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
