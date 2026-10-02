@@ -33,5 +33,11 @@ says otherwise; a new membership defaults to viewer. An invitation is not
 membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
 
+`funops organization delete` soft-deletes the organization and revokes its
+memberships and API keys. It refuses while the organization still has clusters,
+including deleted ones whose shoot Gardener has not removed yet, or publishes
+plugins.
+
 Against the local development instance, run it as `just funops <args>` from the
-repo root.
+repo root. For other installations, see the
+[operator page](../docs/developer/fundament/funops.md) in the documentation.

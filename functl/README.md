@@ -63,18 +63,27 @@ Use `functl config dir` to see the resolved directory, or `functl config path` f
 ### Configuration file
 
 functl works without a config file: the built-in defaults point at the
-deployed environment (`https://organization-api.fundament-poc.nl` and
-`https://authn.fundament-poc.nl`). Create `~/.config/fundament/config.yaml`
-only to point at another environment or change other settings:
+`fundament-poc.nl` installation (`https://organization-api.fundament-poc.nl` and
+`https://authn.fundament-poc.nl`). An API key only works on the installation it
+was created on, so create `~/.config/fundament/config.yaml` to point at another
+installation or change other settings:
 
 ```yaml
 api_endpoint: https://organization-api.my-own-fundament.example
 authn_url: https://authn.my-own-fundament.example
+registry_url: https://marketplace-registry-api.my-own-fundament.example
 output: table
 ```
 
-For local development the repo's `mise.toml` sets `FUNCTL_API_ENDPOINT` and
-`FUNCTL_AUTHN_URL` to the local skaffold endpoints, which override both the
+For the sandbox the documentation site belongs to, the endpoints are
+`https://organization.fundament.projects.digilab.network`,
+`https://authn.fundament.projects.digilab.network` and
+`https://marketplace-registry-api.fundament.projects.digilab.network`.
+
+`registry_url` has no default; only `functl plugin publish` needs it.
+
+For local development the repo's `mise.toml` sets `FUNCTL_API_ENDPOINT`,
+`FUNCTL_AUTHN_URL` and `FUNCTL_REGISTRY_URL` to the local skaffold endpoints, which override both the
 defaults and the config file.
 
 ### Environment variables
@@ -84,6 +93,7 @@ defaults and the config file.
 | `FUNCTL_CONFIG_DIR` | Override the configuration directory path (must be absolute) |
 | `FUNCTL_API_ENDPOINT` | Override the organization API endpoint (takes precedence over config file) |
 | `FUNCTL_AUTHN_URL` | Override the authn API endpoint (takes precedence over config file) |
+| `FUNCTL_REGISTRY_URL` | Override the marketplace registry API endpoint used by `plugin publish` (takes precedence over config file) |
 | `FUNCTL_DEBUG` | Enable debug logging (same as `--debug`) |
 | `FUNDAMENT_API_KEY` | API key for authentication (takes precedence over credentials file) |
 
@@ -103,12 +113,18 @@ functl auth login <API_KEY>
 
 ## Commands
 
+Run `functl <command> --help` for the arguments and flags of any command. The
+[functl page](../docs/user/functl.md) in the user documentation lists the
+commands and what to know before running them. This section covers the global
+flags and `plugin create`.
+
 ### Global flags
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--debug` | `-d` | Enable debug logging |
 | `--output` | `-o` | Output format: `table` (default) or `json` |
+| `--org` | | Organization ID to use instead of the active one set with `functl org set` |
 | `--help` | `-h` | Show help |
 
 ### `functl plugin create`
@@ -154,29 +170,33 @@ Kubernetes' 63-character DNS-label limit.
 Human-readable tabular format:
 
 ```bash
-functl project list
+functl project list <CLUSTER_ID>
 ```
 
 ```
-ID                                      NAME            CREATED
-019424a8-1234-7000-8000-000000000001    my-project      2024-01-15 10:30:00
-019424a8-5678-7000-8000-000000000002    another-proj    2024-01-16 14:22:00
+ID                                    NAME        ALIAS       CLUSTER ID                            CREATED
+019424a8-1234-7000-8000-000000000001  my-project  My project  019424a8-0000-7000-8000-000000000001  2026-01-15T10:30:00Z
 ```
 
 ### JSON
 
-Machine-readable JSON format for scripting:
+Machine-readable JSON format for scripting. Field names follow the API, in
+snake_case, and every field is present even when it is empty:
 
 ```bash
-functl project list -o json
+functl project list <CLUSTER_ID> -o json
 ```
 
 ```json
 [
   {
     "id": "019424a8-1234-7000-8000-000000000001",
+    "cluster_id": "019424a8-0000-7000-8000-000000000001",
     "name": "my-project",
-    "created": "2024-01-15T10:30:00Z"
+    "alias": "My project",
+    "created": "2026-01-15T10:30:00Z",
+    "namespace_count": 2,
+    "member_count": 1
   }
 ]
 ```

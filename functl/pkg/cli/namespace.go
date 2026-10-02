@@ -24,7 +24,7 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 		return errors.New("either --cluster or --project is required")
 	}
 
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ type NamespaceCreateCmd struct {
 
 // Run executes the namespace create command.
 func (c *NamespaceCreateCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ type NamespaceDeleteCmd struct {
 
 // Run executes the namespace delete command.
 func (c *NamespaceDeleteCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
