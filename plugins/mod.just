@@ -55,13 +55,11 @@ storage-disks *args:
 
 # Deploy plugin-controller with file watching (auto-rebuild on changes)
 dev *flags:
-    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
-    skaffold dev -f sandbox/skaffold.yaml --cleanup=false {{ flags }}
+    skaffold dev -f sandbox/skaffold.yaml --default-repo=localhost:{{ registry_port }} --cleanup=false {{ flags }}
 
 # Deploy plugin-controller (one-time)
 deploy:
-    SKAFFOLD_DEFAULT_REPO="localhost:{{ registry_port }}" \
-    skaffold run -f sandbox/skaffold.yaml
+    skaffold run -f sandbox/skaffold.yaml --default-repo=localhost:{{ registry_port }}
 
 # Remove the deployment
 undeploy:
