@@ -31,7 +31,8 @@ func (h *Handler) CheckStatus(ctx context.Context) error {
 // pollActiveClusters checks Gardener status for active (non-deleted) clusters.
 func (h *Handler) pollActiveClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
-		LimitCount: h.cfg.StatusBatchSize,
+		ReadyInterval: pgtype.Interval{Microseconds: h.cfg.StatusReadyInterval.Microseconds(), Valid: true},
+		LimitCount:    h.cfg.StatusBatchSize,
 	})
 	if err != nil {
 		h.logger.Error("failed to list clusters for status check", "error", err)
@@ -56,15 +57,18 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		var oldStatus gardener.ShootStatusType
-		if cluster.ShootStatus.Valid {
-			oldStatus = gardener.ShootStatusType(cluster.ShootStatus.String)
+		stored := storedShootState{
+			Status:  gardener.ShootStatusType(cluster.ShootStatus.String),
+			Message: cluster.ShootStatusMessage.String,
+			Health:  dbconst.ClusterShootHealth(cluster.ShootHealth.String),
 		}
+		update := nextShootStatus(stored, shootStatus)
 
 		params := db.ClusterUpdateShootStatusParams{
 			ClusterID: cluster.ID,
-			Status:    pgtype.Text{String: string(shootStatus.Status), Valid: true},
-			Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
+			Status:    pgtype.Text{String: string(update.Status), Valid: true},
+			Message:   pgtype.Text{String: update.Message, Valid: true},
+			Health:    pgtype.Text{String: string(update.Health), Valid: update.Health != ""},
 		}
 
 		if err := h.queries.ClusterUpdateShootStatus(ctx, params); err != nil {
@@ -74,56 +78,45 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		if shootStatus.Status != oldStatus {
-			var eventType dbconst.ClusterEventEventType
-			switch shootStatus.Status {
-			case gardener.StatusProgressing:
-				eventType = dbconst.ClusterEventEventType_StatusProgressing
-			case gardener.StatusReady:
-				eventType = dbconst.ClusterEventEventType_StatusReady
-			case gardener.StatusError:
-				eventType = dbconst.ClusterEventEventType_StatusError
-			case gardener.StatusPending, gardener.StatusDeleting:
-				// No event for these transient states
-			case gardener.StatusDeleted:
-				// Handled in pollDeletedClusters
-			default:
-				panic(fmt.Sprintf("unhandled shoot status: %s", shootStatus.Status))
+		for _, event := range update.Events {
+			if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
+				ClusterID: cluster.ID,
+				EventType: string(event.Type),
+				Message:   pgtype.Text{String: event.Message, Valid: true},
+			}); err != nil {
+				h.logger.Warn("failed to create status event",
+					"cluster_id", cluster.ID,
+					"event_type", event.Type,
+					"error", err)
 			}
-
-			if eventType != "" {
-				if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
-					ClusterID: cluster.ID,
-					EventType: string(eventType),
-					Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
-				}); err != nil {
-					h.logger.Warn("failed to create status event",
-						"cluster_id", cluster.ID,
-						"event_type", eventType,
-						"error", err)
-				}
+			if event.Type == dbconst.ClusterEventEventType_StatusUnhealthy {
+				h.logger.Warn("ready shoot became unhealthy",
+					"cluster_id", cluster.ID,
+					"name", cluster.Name,
+					"message", event.Message)
 			}
+		}
 
-			// On transition to ready, insert a ready outbox row. Handlers that
-			// react to cluster-ready (usersync, namespace-sync) subscribe to this
-			// event via the registry — the status handler stays agnostic of them.
-			if shootStatus.Status == gardener.StatusReady {
-				if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
-					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
-				}); err != nil {
-					h.logger.Warn("failed to insert ready outbox row",
-						"cluster_id", cluster.ID,
-						"error", err)
-				}
+		// On transition to ready, insert a ready outbox row. Handlers that
+		// react to cluster-ready (usersync, namespace-sync) subscribe to this
+		// event via the registry — the status handler stays agnostic of them.
+		if update.InsertReady {
+			if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
+				ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+			}); err != nil {
+				h.logger.Warn("failed to insert ready outbox row",
+					"cluster_id", cluster.ID,
+					"error", err)
 			}
 		}
 
 		h.logger.Debug("updated shoot status",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
-			"status", shootStatus.Status)
+			"status", update.Status,
+			"health", update.Health)
 
-		if shootStatus.Status == gardener.StatusError {
+		if update.Status == gardener.StatusError {
 			h.logger.Error("ALERT: shoot reconciliation failed",
 				"cluster_id", cluster.ID,
 				"name", cluster.Name,
