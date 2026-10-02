@@ -114,17 +114,36 @@ deploy env:
 
 # --- Docs commands ---
 
-# Sync docs/ into docs-frontend and run the docs dev server
-docs-dev:
-    cd docs-frontend && bun install && node scripts/sync-docs.mjs && bun start
+# Run the docs dev server; edits under docs/ show up while it runs
+docs-dev: _docs-not-running
+    #!/usr/bin/env bash
+    set -e
+    cd docs-frontend
+    bun install
+    node scripts/sync-docs.mjs
+    node scripts/sync-docs.mjs --watch &
+    trap 'kill $! 2>/dev/null' EXIT
+    bun start
 
 # Sync docs/ and build the docs site; fails on broken links
-docs-build:
+docs-build: _docs-not-running
     cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && bun run build
 
 # Build the docs site and additionally verify external http(s) links
-docs-build-external:
+docs-build-external: _docs-not-running
     cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && DOCS_CHECK_EXTERNAL=1 bun run build
+
+# The docs recipes rewrite docs-frontend's content, which breaks a dev server that
+# is already running from it. Skipped where lsof is missing (Git Bash on Windows).
+_docs-not-running:
+    #!/usr/bin/env bash
+    command -v lsof > /dev/null || exit 0
+    pid=$(lsof -nP -t -iTCP:4321 -sTCP:LISTEN 2>/dev/null | head -1)
+    if [ -n "$pid" ]; then
+        echo "A docs server is already running on http://localhost:4321 (pid $pid)."
+        echo "Use that one, or stop it first: kill $pid"
+        exit 1
+    fi
 
 # Create/update the Secret plugin-proxy uses to reach the k3d-fundament-plugin
 # sandbox cluster. Bridges the two k3d Docker networks (each cluster runs on
