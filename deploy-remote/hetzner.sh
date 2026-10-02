@@ -317,7 +317,7 @@ cmd_stack() {
   log "staging box scripts onto $HZ_NAME @ $ip (branch: $ref — as pushed to origin)"
   ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'rm -rf ~/box && mkdir -p ~/box'
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap.sh box/run-stack.sh "$BOX_USER@$ip:box/" >/dev/null
-  log "running bootstrap + stack on the box (gardener-up takes ~10-15 min)"
+  log "running bootstrap + stack on the box (gardener-start takes ~10-15 min)"
   ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
     "chmod +x ~/box/*.sh && FUNDAMENT_REF='$ref' ~/box/bootstrap.sh && ~/box/run-stack.sh" \
     || die "stack failed on the box — inspect with ./hetzner.sh ssh"
