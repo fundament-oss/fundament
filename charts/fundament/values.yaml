@@ -39,6 +39,13 @@ externalUrls:
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
+# appProtocol on the Services of the Connect APIs (organization, dcim and the
+# marketplace APIs). `kubernetes.io/h2c` makes a Gateway API implementation
+# speak cleartext HTTP/2 to the pod, which gRPC clients need end to end. It is
+# an extended Gateway API feature, so it is off by default: the gateway then
+# uses HTTP/1.1, which carries Connect unary calls and streams.
+grpcAppProtocol: ""
+
 # Container images
 images:
   dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
@@ -155,6 +162,10 @@ kubeApiProxy:
     #    namespace: gateway-ns
     hostnames: []
     #  - k8s-api.example.com
+    # Gateway API route timeouts. Watches, `logs -f` and exec are long-lived, so
+    # a gateway with a default request timeout cuts them; `request: 0s` turns it
+    # off where the gateway supports it (an extended Gateway API feature).
+    timeouts: {}
 
 # Cluster Worker
 clusterWorker:
@@ -446,15 +457,6 @@ dex:
 
 # Host aliases for pods (useful for local development to resolve external URLs to internal services)
 hostAliases: []
-
-# Ingress
-ingress:
-  enabled: false
-  className: nginx
-  domain: ""
-  subdomainInfix: "" # e.g., "pr123." for PR environments → console.pr123.domain
-  tls:
-    clusterIssuer: ""
 
 # Gardener shoot proxy (local development only)
 shootProxy:

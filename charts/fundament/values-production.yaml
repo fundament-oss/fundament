@@ -44,6 +44,3 @@ dex:
       secret: "" # Set via secret management
       redirectURIs:
         - https://fundament.sandbox.example.com/callback
-
-ingress:
-  enabled: false

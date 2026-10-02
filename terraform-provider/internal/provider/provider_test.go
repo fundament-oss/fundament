@@ -23,8 +23,8 @@ func TestDeriveAuthnEndpoint(t *testing.T) {
 	}{
 		{
 			name:                 "replaces organization subdomain with authn",
-			organizationEndpoint: "http://organization.fundament.localhost:8080",
-			expected:             "http://authn.fundament.localhost:8080",
+			organizationEndpoint: "https://organization.fundament.localhost:8443",
+			expected:             "https://authn.fundament.localhost:8443",
 		},
 		{
 			name:                 "handles https scheme",

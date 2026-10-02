@@ -1,0 +1,21 @@
+# Lets kubectl exec and port-forward through to kube-api-proxy. Envoy only
+# accepts WebSocket upgrades by default, and kubectl falls back to SPDY/3.1 for
+# exec and port-forward (older clients only speak SPDY).
+#
+# Targets the whole Gateway: a policy on the kube-api-proxy HTTPRoute alone
+# would have to live in the chart's namespace. The request timeout for
+# long-lived streams is set on that route instead (timeouts.request in
+# values-local.yaml), so other routes keep Envoy's default.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: fundament-local
+  namespace: gateway
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: fundament-local
+  httpUpgrade:
+    - type: websocket
+    - type: spdy/3.1

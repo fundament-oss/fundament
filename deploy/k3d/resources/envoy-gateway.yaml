@@ -1,0 +1,14 @@
+# Envoy Gateway, the local cluster's edge. The chart bundles the Gateway API
+# CRDs, so no separate CRD manifest. Keep the version in step with
+# plugins/gateway-api/envoy-gateway/config.go. The GatewayClass and Gateway are
+# applied by `just setup-gateway` (deploy/k3d/gateway/) once the CRDs exist.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: envoy-gateway
+  namespace: kube-system
+spec:
+  chart: oci://docker.io/envoyproxy/gateway-helm
+  version: v1.8.3
+  targetNamespace: envoy-gateway-system
+  createNamespace: true

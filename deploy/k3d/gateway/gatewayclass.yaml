@@ -1,0 +1,9 @@
+# Binds the class to the Envoy Gateway controller installed by
+# deploy/k3d/resources/envoy-gateway.yaml. Moving the local edge to another
+# implementation is a gatewayClassName change in gateway.yaml.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

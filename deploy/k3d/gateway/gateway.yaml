@@ -1,0 +1,23 @@
+# One wildcard HTTPS listener for every *.fundament.localhost host. The Envoy
+# Service is type LoadBalancer, so klipper-lb binds hostPort 443 on the node
+# and k3d maps 127.0.0.1:8443 to it (deploy/k3d/config.yaml).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: fundament-local
+  namespace: gateway
+spec:
+  gatewayClassName: envoy
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.fundament.localhost"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: fundament-local-tls
+      allowedRoutes:
+        namespaces:
+          from: All

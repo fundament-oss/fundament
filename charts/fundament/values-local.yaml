@@ -6,6 +6,9 @@ development:
 
 jwtSecret: "local-dev-jwt-secret"
 
+# The local Envoy Gateway supports h2c backends, so gRPC clients work through it.
+grpcAppProtocol: kubernetes.io/h2c
+
 externalUrls:
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
@@ -44,12 +47,25 @@ authnApi:
   # Verify sandbox plugin-controller tokens against k3d-fundament-plugin.
   # Same Secret plugin-proxy uses — created by: just plugin-sandbox-kubeconfig
   sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
+  # Attaches to the local Envoy Gateway (deploy/k3d/gateway/).
+  httproute:
+    enabled: true
+    parentRefs: &localGateway
+      - name: fundament-local
+        namespace: gateway
+    hostnames:
+      - authn.fundament.localhost
 
 organizationApi:
   enabled: true
   replicas: 1
   logLevel: info
   prometheusURL: mock
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - organization.fundament.localhost
 
 kubeApiProxy:
   enabled: true
@@ -59,10 +75,25 @@ kubeApiProxy:
   # Point kube-api-proxy at the local k3d-fundament-plugin sandbox cluster.
   # Same Secret plugin-proxy uses — created by: just plugin-sandbox-kubeconfig
   sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - k8s-api.fundament.localhost
+    # Envoy cuts every request at 15s by default, which ends `kubectl get -w`,
+    # `kubectl logs -f` and gRPC server streams. Idle streams are still reclaimed
+    # by the stream idle timeout (deploy/k3d/gateway/clienttrafficpolicy.yaml).
+    timeouts:
+      request: 0s
 
 consoleFrontend:
   enabled: true
   replicas: 1
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - console.fundament.localhost
 
 clusterWorker:
   enabled: true
@@ -84,6 +115,11 @@ shootProxy:
 docsFrontend:
   enabled: true
   replicas: 1
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - docs.fundament.localhost
 
 dex:
   enabled: true
@@ -137,6 +173,11 @@ dex:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Platform Admin
       userID: "019b4000-1000-7000-8000-000000000008"
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - dex.fundament.localhost
 
 # plugin-controller runs on shoots (cluster-worker provisions it) and in the
 # plugin sandbox (plugins/sandbox/values.yaml), not in this cluster. These
@@ -154,23 +195,43 @@ pluginProxy:
   # Point plugin-proxy at the local k3d-fundament-plugin sandbox cluster.
   # Create the referenced Secret with: just plugin-sandbox-kubeconfig
   sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - plugin-proxy.fundament.localhost
 
 dcimApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - dcim-api.fundament.localhost
 
 dcimFrontend:
   enabled: true
   replicas: 1
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - dcim.fundament.localhost
 
 marketplaceFrontend:
   enabled: true
   replicas: 1
   # The renderer calls the catalog in-cluster rather than back in through the
-  # ingress.
+  # gateway.
   internalApiUrls:
     catalog: http://marketplace-catalog-api:8080
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace.fundament.localhost
 
 # Developer portal and review backoffice: the storefront image built for the
 # other two audiences (FUN-20).
@@ -179,12 +240,22 @@ marketplaceRegistryFrontend:
   replicas: 1
   internalApiUrls:
     registry: http://marketplace-registry-api:8080
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace-registry.fundament.localhost
 
 marketplaceAdminFrontend:
   enabled: true
   replicas: 1
   internalApiUrls:
     admin: http://marketplace-admin-api:8080
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace-admin.fundament.localhost
 
 dexDcim:
   enabled: true
@@ -236,6 +307,11 @@ dexDcim:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Platform Admin
       userID: "019b4000-1000-7000-8000-000000000008"
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - dex-dcim.fundament.localhost
 
 dcimAuthnApi:
   enabled: true
@@ -243,24 +319,44 @@ dcimAuthnApi:
   logLevel: debug
   # ROPC login against dex static passwords is convenient for local dev only.
   passwordLoginEnabled: true
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - dcim-authn.fundament.localhost
 
 # Anonymous storefront API: no auth, so no Dex client and no JWT secret.
 marketplaceCatalogApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace-catalog-api.fundament.localhost
 
 # Publisher API. Authenticated, so it picks up the shared jwtSecret above.
 marketplaceRegistryApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace-registry-api.fundament.localhost
 
 # Review backoffice. Authenticated, so it picks up the shared jwtSecret above.
 marketplaceAdminApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  httproute:
+    enabled: true
+    parentRefs: *localGateway
+    hostnames:
+      - marketplace-admin-api.fundament.localhost
 
 authzWorker:
   enabled: true
@@ -271,7 +367,8 @@ authzWorker:
 
 openfga:
   enabled: true
-  # Use a non-standard API port since 8080 is used by ingress.
+  # A non-standard API port, so the playground port-forward below does not
+  # take localhost:8080, which other local tools often use.
   # The playground auto-detects the API port from the URL it's served from.
   apiPort: 18080
   playground:
@@ -281,10 +378,3 @@ openfga:
     # This is due to CSP restrictions in the embedded play.fga.dev iframe.
     # See: https://github.com/openfga/openfga/issues/1174
     enabled: true
-
-ingress:
-  enabled: true
-  className: nginx
-  domain: fundament.localhost
-  tls:
-    clusterIssuer: mkcert-local

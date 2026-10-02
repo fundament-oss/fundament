@@ -105,7 +105,7 @@ func run() error {
 	outerMux.Handle(installServer.Path(), installServer.Handler())
 	outerMux.Handle("/", server.Handler())
 
-	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.
+	// Cleartext HTTP/2 with prior knowledge: the gateway speaks h2c to the pod.
 	// Replaces x/net/http2/h2c, whose Upgrade: handshake nothing here uses.
 	protocols := new(http.Protocols)
 	protocols.SetHTTP1(true)

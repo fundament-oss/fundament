@@ -108,37 +108,4 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "kube-api-proxy") | nindent 4 }}
 
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: kube-api-proxy
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "kube-api-proxy" "component" "backend") | nindent 4 }}
-  annotations:
-    {{- if $.Values.ingress.tls.clusterIssuer }}
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-    {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - k8s-api.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: kube-api-proxy-tls
-  {{- end }}
-  rules:
-    - host: k8s-api.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: kube-api-proxy
-                port:
-                  name: http
-{{- end }}
-
 {{- end }}

@@ -76,38 +76,4 @@ spec:
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "dcim-authn-api") | nindent 4 }}
 
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: dcim-authn-api
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "dcim-authn-api" "component" "backend") | nindent 4 }}
-  annotations:
-    nginx.ingress.kubernetes.io/enable-cors: "false"
-    {{- if $.Values.ingress.tls.clusterIssuer }}
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-    {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - dcim-authn.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: dcim-authn-api-tls
-  {{- end }}
-  rules:
-    - host: dcim-authn.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: dcim-authn-api
-                port:
-                  name: http
-{{- end }}
-
 {{- end }}
