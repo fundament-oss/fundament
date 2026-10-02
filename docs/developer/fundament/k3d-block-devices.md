@@ -1,7 +1,7 @@
 ---
 title: Block devices for k3d
 sidebar:
-  order: 2
+  order: 3
 ---
 
 :::danger[Run this on a virtual machine, not on your workstation]

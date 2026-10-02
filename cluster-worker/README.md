@@ -1,213 +1,171 @@
 # cluster-worker
 
-A background worker service that synchronizes cluster state from PostgreSQL to Gardener by creating, updating, and deleting Shoot cluster manifests.
+Keeps Gardener in line with the database. The APIs only write rows; cluster-worker turns
+them into Gardener Shoots and shoot-side resources, and writes each shoot's status back.
+Gardener operations take minutes, so none of this happens inside an API request.
 
-## Terms
+A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labelled
+`fundament.io/cluster-id` with the cluster's ID.
 
-| Term | Description |
-|------|-------------|
-| **Gardener** | Kubernetes cluster management platform that provisions and manages clusters across cloud providers |
-| **Shoot** | Gardener's term for a managed Kubernetes cluster (the workload cluster where applications run) |
-| **Reconciliation** | Gardener's process of making the actual cluster state match the desired Shoot manifest |
-| **Sync** | Pushing local database state (cluster definition) to Gardener as a Shoot manifest |
+## Handlers
 
-## What
+| Handler | Runs on | Does |
+|---|---|---|
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; deletes orphaned shoots |
+| `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
+| `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
+| `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
+| `proxyidentity` | cluster ready; reconcile | the ServiceAccount and impersonation RBAC kube-api-proxy uses on the shoot |
 
-The cluster-worker watches for changes to the `tenant.clusters` table and ensures that each cluster has a corresponding Shoot manifest in Gardener. It handles:
+Handlers are registered in `pkg/app/app.go`.
 
-- **Creation**: When a new cluster is added to the database, create a Shoot in Gardener
-- **Updates**: When cluster configuration changes, update the Shoot (future scope)
-- **Deletion**: When a cluster is soft-deleted, delete the Shoot from Gardener
-
-The worker also monitors Gardener to track the reconciliation status of each Shoot (pending, progressing, ready, error) and stores this in the `shoot_status` column. When a shoot becomes ready, the worker triggers user sync to create per-user service accounts on the cluster.
-
-The `tenant.cluster_outbox` table also tracks changes to `organizations_users` and `project_members` via database triggers, laying the groundwork for a future UserSyncHandler that will reconcile service accounts and RBAC on shoot clusters.
-
-## Why
-
-### Why not sync directly from the API?
-
-Synchronous API calls to Gardener would make the user-facing API slow and fragile. Gardener operations can take minutes. By decoupling via a background worker:
-
-- API responses are fast (just database writes)
-- Retries happen automatically without user intervention
-- Multiple workers can process clusters in parallel
-- The system is resilient to Gardener downtime
-
-### Why PostgreSQL LISTEN/NOTIFY?
-
-We use PostgreSQL's built-in pub/sub mechanism instead of a separate message queue (Redis, RabbitMQ, Kafka) because:
-
-1. **No additional infrastructure** - PostgreSQL is already required
-2. **Transactional guarantees** - Notifications are sent only when transactions commit
-3. **Proven at scale** - This pattern handles hundreds of thousands of syncs per day at production systems like Printeers
-4. **Simplicity** - One less system to operate, monitor, and secure
-
-### Why SKIP LOCKED + Visibility Timeout?
-
-The `SELECT ... FOR UPDATE SKIP LOCKED` pattern combined with a visibility timeout enables multiple workers to process clusters concurrently without conflicts:
-
-- Workers grab available work without blocking each other
-- Natural load distribution across workers
-- No coordinator needed
-- **Crash recovery**: If a worker dies mid-sync, the visibility timeout (10 min) allows another worker to reclaim the work
-- **Exponential backoff**: Failed syncs wait 30s × 2^(attempts-1) before retry, capped at 15 minutes
-- Each claim is tracked with `sync_claimed_at` and `sync_claimed_by` for debugging
-
-### Why a separate status poller?
-
-Gardener Shoot reconciliation is asynchronous - applying a manifest returns immediately, but the actual cluster creation takes minutes. A separate goroutine polls Gardener for status updates because:
-
-- The main sync loop stays fast (just applies manifests)
-- Users can see `shoot_status` to know if their cluster is actually ready
-- We can detect and alert on failed reconciliations
-- Deletion verification confirms Shoots are actually gone
-- Connection data (API server URL, CA cert) is extracted when a shoot becomes ready, enabling kubeconfig generation
-
-## How
-
-### Sequence Diagram
+## How it works
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend as Console Frontend
-    participant API as Fundament API
+    participant API as organization-api
     participant DB as PostgreSQL
     participant Worker as cluster-worker
     participant Gardener
 
-    User->>Frontend: Create/Update/Delete cluster
-    Frontend->>API: POST/PUT/DELETE /clusters
-    API->>DB: INSERT/UPDATE tenant.clusters
+    User->>API: Create / update / delete a cluster or node pool
+    API->>DB: write tenant.clusters / node_pools
+    Note over DB: trigger inserts a cluster_outbox row
+    DB-->>Worker: NOTIFY cluster_outbox
 
-    Note over DB: Trigger fires
-    DB->>DB: INSERT into cluster_outbox
-    DB-->>Worker: NOTIFY cluster_sync
-
-    Worker->>DB: Claim outbox row (SKIP LOCKED)
-    DB-->>Worker: Claimed outbox row
-
-    alt Cluster created/updated
-        Worker->>Gardener: ApplyShoot(manifest)
-        Gardener-->>Worker: OK / Error
-    else Cluster deleted
-        Worker->>Gardener: DeleteShoot(clusterID)
-        Gardener-->>Worker: OK / Error
+    Worker->>DB: claim row (FOR NO KEY UPDATE SKIP LOCKED)
+    alt created or changed
+        Worker->>Gardener: ApplyShoot
+    else deleted
+        Worker->>Gardener: DeleteShoot (cleanup annotations if immediate)
+    end
+    alt success
+        Worker->>DB: row completed, event sync_succeeded
+    else error
+        Worker->>DB: row retrying (backoff) or failed, event sync_failed
     end
 
-    alt Success
-        Worker->>DB: outbox_status = completed
-        Worker->>DB: INSERT cluster_events (sync_succeeded)
-    else Error
-        Worker->>DB: outbox_status = retrying, retries++
-        Worker->>DB: INSERT cluster_events (sync_failed)
-    end
-
-    Note over Worker,Gardener: Status Poller (separate goroutine)
-
-    loop Every 30s
-        Worker->>Gardener: GetShootStatus(clusters...)
-        Gardener-->>Worker: Status + API server URL
-        Worker->>DB: UPDATE shoot_status, shoot_status_message
-        opt Status changed
-            Worker->>DB: INSERT cluster_events
+    loop status loop, every 30s
+        Worker->>Gardener: shoot status (clusters not ready)
+        Worker->>DB: shoot_status, event on change
+        opt became ready
+            Worker->>DB: "ready" outbox row
+            Note over Worker: usersync, namespace, pluginmachinery, proxyidentity run
         end
     end
-
-    User->>Frontend: View cluster status
-    Frontend->>API: GET /clusters/{id}
-    API->>DB: SELECT cluster + sync status
-    DB-->>API: Cluster with shoot_status
-    API-->>Frontend: Cluster response
-    Frontend-->>User: Show status (provisioning/running/error)
 ```
 
-### State Diagram
+- **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
+  limits insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
+  claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
+  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
+  whose precondition is not met yet (for example, the project namespace does not exist)
+  is deferred instead of failed.
+- **Status loop.** Every 30s it polls Gardener for clusters stored as `pending`,
+  `progressing` or `error`, and for deleted clusters until their shoot is gone. A `ready`
+  cluster is not polled again: it stays `ready` through later node pool changes until it
+  is deleted.
+- **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
+  deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
+  resources.
 
-The cluster-worker has two goroutines managing related but distinct state machines:
+## Cluster status
 
-- **Sync Worker**: Pushes local database changes to Gardener (create/update/delete shoots)
-- **Status Poller**: Observes Gardener and writes shoot status back to the database
+Two state machines: the outbox row a change produces, and the cluster's `shoot_status`
+as the console shows it.
 
 ```mermaid
 stateDiagram-v2
     direction TB
 
-    state "Sync Worker → cluster_outbox table" as db {
-        [*] --> Pending: Trigger fires on clusters/org_users/project_members
-        Completed --> Pending: New change detected
-
-        Pending --> InProgress: Worker claims (SKIP LOCKED)
-        InProgress --> Completed: sync succeeded
-        InProgress --> Retrying: sync failed
-        Retrying --> Pending: backoff elapsed
-        InProgress --> Pending: visibility timeout (worker died)
-
-        Pending: status = pending
-        InProgress: status = pending, claimed
-        Retrying: status = retrying
-        Completed: status = completed
+    state "cluster_outbox row" as outbox {
+        [*] --> Pending: trigger, reconcile or status loop inserts it
+        Pending --> Claimed: worker locks it (SKIP LOCKED)
+        Claimed --> Completed: handler succeeded
+        Claimed --> Retrying: handler failed
+        Claimed --> Pending: precondition not met yet (deferred)
+        Claimed --> Pending: worker died, transaction rolled back
+        Retrying --> Claimed: backoff elapsed
+        Retrying --> Failed: retries exhausted
     }
 
-    state "Status Poller → shoot_status column" as poller {
-        [*] --> Pending2: Worker applied manifest
-        Pending2 --> Progressing: Poller observes Gardener
-        Progressing --> Ready: Reconciliation complete
-        Progressing --> Error: Reconciliation failed
-        Error --> Progressing: Gardener retrying
-        Ready --> Progressing: Update in progress
-        Ready --> Deleting: Worker deleted shoot
-        Deleting --> Deleted: Poller confirms removal
-
-        Pending2: pending
-        Progressing: progressing
-        Ready: ready (+ extract API server URL, CA data)
-        Error: error
-        Deleting: deleting
-        Deleted: deleted
+    state "tenant.clusters.shoot_status" as status {
+        [*] --> pending: shoot not in Gardener yet
+        pending --> progressing
+        progressing --> ready: last operation succeeded
+        progressing --> error: last operation failed
+        error --> progressing: Gardener retries
+        ready --> deleting: cluster deleted
+        progressing --> deleting: cluster deleted
+        deleting --> deleted: shoot gone
     }
 ```
 
-### Client Modes
+`tenant.clusters.shoot_status`, as the console shows it:
 
-The worker supports two Gardener client implementations:
+| Status | Meaning |
+|---|---|
+| `pending` | no shoot in Gardener yet |
+| `progressing` | Gardener is creating or changing the shoot |
+| `ready` | the last operation succeeded |
+| `error` | the last operation failed; Gardener retries |
+| `deleting` | the cluster is deleted, the shoot is going away |
+| `deleted` | the shoot is gone |
 
-| Mode | Use Case | Backend |
-|------|----------|---------|
-| `mock` | Unit/integration tests | In-memory map |
-| `real` | Production + local Gardener | Gardener API |
+Changes are recorded in `tenant.cluster_events`: `sync_succeeded` / `sync_failed` per
+outbox row, `status_progressing` / `status_ready` / `status_error` / `status_deleted` on a
+status change, `user_sync_succeeded` / `user_sync_failed` from usersync.
 
-### Event History
+## Configuration
 
-All sync and status changes are recorded in the `cluster_events` table for debugging and auditing:
+Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
+`charts/fundament/values.yaml`.
 
-| Event Type | Description |
-|------------|-------------|
-| `sync_requested` | Cluster created/updated/deleted via API, needs sync |
-| `sync_claimed` | Worker claimed the cluster for processing |
-| `sync_succeeded` | Gardener accepted the Shoot manifest |
-| `sync_failed` | Sync failed (with error message and attempt count) |
-| `status_progressing` | Shoot reconciliation in progress |
-| `status_ready` | Shoot reconciliation completed successfully |
-| `status_error` | Shoot reconciliation failed |
-| `status_deleted` | Shoot confirmed deleted from Gardener |
+| Variable | Default | |
+|---|---|---|
+| `DATABASE_URL` | required | |
+| `LOG_LEVEL` | `info` | |
+| `HEALTH_PORT` | `8097` | |
+| `SHUTDOWN_TIMEOUT` | `30s` | |
+| `CLUSTER_DELETION_IMMEDIATE` | `false` | see [Immediate cluster deletion](#immediate-cluster-deletion) |
+| `GARDENER_MODE` | | `mock` (in-memory, for tests and console work) or `real` |
+| `GARDENER_KUBECONFIG` | | path to the virtual garden kubeconfig; required in `real` mode |
+| `GARDENER_PROVIDER_TYPE`, `GARDENER_CLOUD_PROFILE`, `GARDENER_REGION`, `GARDENER_CREDENTIALS_BINDING_NAME` | local provider | shoot provider wiring |
+| `GARDENER_CREDENTIALS_REF`, `GARDENER_CREDENTIALS_REF_KIND`, `GARDENER_CREDENTIALS_REF_API_VERSION` | `garden-local/local` WorkloadIdentity | credentials the per-project CredentialsBindings point at; metal uses a Secret |
+| `GARDENER_MACHINE_IMAGE_NAME`, `GARDENER_MACHINE_IMAGE_VERSION`, `GARDENER_DEFAULT_MACHINE_TYPE` | | worker machines |
+| `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
+| `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
+| `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
+| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `1m` | retry backoff |
+| `OUTBOX_MAX_RETRIES` | `10` | |
+| `OUTBOX_BACKOFF_DELAY` | `5s` | reconnect delay after losing the database connection |
+| `OUTBOX_PRECONDITION_DELAY`, `OUTBOX_MAX_PRECONDITION_DEFERRALS` | `30s`, `100` | |
+| `STATUS_INTERVAL` | `30s` | |
+| `RECONCILE_INTERVAL` | `5m` | |
+| `CLUSTER_STATUS_BATCH_SIZE` | `50` | clusters polled per status tick |
+| `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
+| `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 
-### Outbox Sources
+## Immediate cluster deletion
 
-The `cluster_outbox` table tracks changes from multiple sources:
+`CLUSTER_DELETION_IMMEDIATE=true` (Helm: `clusterWorker.clusterDeletion.immediate`) stops a cluster
+deletion from waiting for what runs inside it. Before destroying a shoot's machines,
+Gardener deletes the objects inside it and waits for their finalizers: 5 minutes for
+webhooks and for workloads, Services, Ingresses and PVCs, an hour for custom resources.
+`deleteShoot` sets the three `shoot.gardener.cloud/cleanup-*-finalize-grace-period-seconds`
+annotations to `0`, so Gardener removes blocking finalizers on the first pass and runs
+every other teardown step as usual.
 
-| Source | Trigger |
-|--------|---------|
-| `trigger` | Database trigger on `clusters`, `organizations_users`, `project_members`, `node_pools`, `namespaces`, `organization_limits` (node-cap change → `cluster_id` rows; `default_*` change → `namespace_id` rows), or `project_limits` (`default_*` change → `namespace_id` rows) |
-| `reconcile` | Periodic reconciliation loop |
-| `manual` | Manual intervention |
-| `node_pool` | Node pool configuration change |
-| `status` | Status poller detected a state change |
+Whatever those finalizers were protecting outside the cluster — storage, load balancers,
+DNS records — can be left behind. Turn it on only where nothing outside a cluster
+depends on it. The `local-gardener` Skaffold profile turns it on; see
+[Running with a local Gardener](../docs/developer/fundament/local-gardener.md) for turning
+it off locally.
 
-### Organization Limits Enforcement
+## Organization limits
 
-The Limits page values are enforced by the cluster-worker:
+The Limits page values are enforced here:
 
 - **Node caps** (`tenant.organization_limits`) are applied at Shoot apply time.
   `max_nodes_per_node_pool` clamps each worker pool's autoscaler maximum (the
@@ -228,7 +186,7 @@ Write-time validation of limit values (rejecting e.g. an `autoscale_max` above
 the org cap when it is set) is an org-api concern and intentionally not handled
 here — the cluster-worker is the materialization/backstop layer.
 
-### Plugin Machinery Provisioning
+## Plugin machinery
 
 The console installs plugins by writing `PluginInstallation` CRs directly onto
 the target shoot (via kube-api-proxy). For those CRs to do anything, the shoot
@@ -262,7 +220,7 @@ Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
 When image or URL is unset the handler no-ops (one log line per process), so
 mock-Gardener and PR environments need no configuration.
 
-#### Verifying on a real shoot
+### Verifying on a real shoot
 
 Run this end-to-end check whenever the machinery or the CRD changes (it is
 deliberately not CI — see the repo's testing conventions):
@@ -284,94 +242,16 @@ deliberately not CI — see the repo's testing conventions):
 4. Heal check: `kubectl -n fundament-system delete deploy plugin-controller`
    and confirm the reconcile loop (5 min) restores it.
 
-#### Disabling is not uninstalling
+### Removal and CRD versions
 
-Disabling `pluginController.provisionShoots` stops the handler from provisioning or
-updating the machinery, but removes nothing: already-provisioned shoots keep
-running the plugin-controller Deployment with its ClusterRole, and the CRD
-stays installed. A per-cluster opt-out with a full, ordered teardown (drain
-`PluginInstallation`s through the still-running controller, then the CRD, then
-the controller and its RBAC) is designed and tracked as a follow-up issue.
-Until it lands, removing the machinery from a shoot is a manual operation in
-exactly that order — deleting the controller first strands the CRs behind
-their cleanup finalizer.
+- Turning `pluginController.provisionShoots` off stops provisioning but removes nothing:
+  shoots keep the plugin-controller, its RBAC and the CRD.
+- cluster-worker never updates a shoot's CRD in a way that drops a version the shoot
+  still stores objects under; it logs `refusing CRD update that would drop stored
+  versions` instead.
 
-#### Retiring a CRD version
+## Running it locally
 
-`EnsureCRD` converges each shoot's CRD onto the manifest embedded in the
-binary, but it will not drop a version the shoot still stores objects under.
-Kubernetes rejects such an update outright, and because the handler runs on
-every ready shoot, a chart revision that removed a stored version would fail
-fleet-wide on every tick. Instead the handler refuses that one update and logs:
-
-```
-refusing CRD update that would drop stored versions
-  crd=plugininstallations.plugins.fundament.io removed_stored_versions=[v1]
-```
-
-If you see that, the chart is ahead of the shoots. Retire the version properly
-([upstream procedure][crd-versioning]):
-
-1. Ship the new version **alongside** the old one and make it `storage: true`.
-2. Migrate the stored objects, so nothing remains persisted under the old
-   version — Kubernetes' [StorageVersionMigration][svm] does this, or touch
-   every `PluginInstallation` so the API server rewrites it.
-3. Confirm the old version has left `status.storedVersions` on each shoot:
-   `kubectl get crd plugininstallations.plugins.fundament.io -o jsonpath='{.status.storedVersions}'`
-4. Only then remove the version from `charts/fundament/crds/` and re-run
-   `go generate ./cluster-worker/...` so the embedded copy follows.
-
-Never "fix" this by deleting the CRD: that cascades to every tenant's
-`PluginInstallation` resources.
-
-[crd-versioning]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version
-[svm]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/storage-version-migration/
-
-## Quick Start: Full Local Development
-
-Run the complete stack with local Gardener (gardener-operator path):
-
-```bash
-# 1. Start k3d cluster
-just cluster-start
-
-# 2. Start local Gardener via gardener-operator (first time ~15 min)
-just cluster-worker gardener-up
-
-# 3. Deploy all services with local Gardener mode
-just dev -p local-gardener
-
-# 4. Access the console frontend
-open https://console.fundament.localhost:8443
-
-# 5. Create a test cluster via the console (https://console.fundament.localhost:8443)
-
-# Watch progress:
-just cluster-worker shoots    # shoots in Gardener
-just cluster-worker logs      # cluster-worker logs
-just cluster-worker gardener-status # overall status
-```
-
-**Troubleshooting:**
-```bash
-# Re-connect Docker networks (if k3d can't reach Gardener after restart)
-just cluster-worker gardener-connect
-
-# Re-create the kubeconfig secret (if cluster-worker can't authenticate to Gardener)
-just cluster-worker gardener-secret
-```
-
-**Prerequisites:**
-- Docker with 8+ CPUs and 8+ GB memory
-- `mise trust && mise install` (installs all tools)
-- macOS only: GNU tools (`brew install gnu-sed gnu-tar iproute2mac`)
-
-**Pinned versions** (for team consistency):
-- Gardener: `v1.138.0` (see `GARDENER_VERSION` in mod.just)
-- Other tools: see `mise.toml`
-
-**Skaffold profiles:**
-- `just dev` → mock mode (no Gardener needed)
-- `just dev -p local-gardener` → real local Gardener (requires step 2 first)
-
-First Gardener run takes ~15 minutes to build. Subsequent runs are instant.
+Real mode needs a local Gardener next to the platform: see
+[Running with a local Gardener](../docs/developer/fundament/local-gardener.md).
+`just cluster-worker` lists the recipes.
