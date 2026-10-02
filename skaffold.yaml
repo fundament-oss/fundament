@@ -186,7 +186,7 @@ profiles:
           - charts/fundament/values-production.yaml
 
   # Local Gardener profile - use real local Gardener instead of mock.
-  # Requires: just cluster-worker gardener-up (generates values-gardener-local.yaml)
+  # Requires: just cluster-worker gardener-start (generates values-gardener-local.yaml)
   - name: local-gardener
     patches:
       - op: add
