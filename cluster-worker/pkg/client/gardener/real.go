@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/fundament-oss/fundament/common/kubename"
@@ -198,12 +199,21 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		return fmt.Errorf("shoot name is required")
 	}
 
-	existing, err := r.getShootByClusterID(ctx, cluster.ID)
-	if err != nil {
-		return fmt.Errorf("failed to look up existing shoot: %w", err)
-	}
+	// Gardener keeps writing to a Shoot (status, finalizers, annotations), most of
+	// all right after it is created, which is exactly when the console's node
+	// pools arrive. Re-read and re-apply on a resourceVersion conflict instead of
+	// failing the sync.
+	found := false
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		existing, err := r.getShootByClusterID(ctx, cluster.ID)
+		if err != nil {
+			return fmt.Errorf("failed to look up existing shoot: %w", err)
+		}
+		if existing == nil {
+			return nil
+		}
+		found = true
 
-	if existing != nil {
 		if err := r.updateShootSpec(existing, cluster); err != nil {
 			return err
 		}
@@ -216,6 +226,12 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf("failed to update shoot: %w", err)
 		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("shoot %s: %w", cluster.ShootName, err)
+	}
+	if found {
 		return nil
 	}
 
