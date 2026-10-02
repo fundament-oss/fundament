@@ -56,6 +56,21 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 		}
 	}
 
+	// Errors Gardener will retry by itself are a warning, not a failure: keep the
+	// cluster where it was (ready, or progressing while it is being created),
+	// show Gardener's message and record one status_warning per distinct message.
+	if observed.Status == gardener.StatusError && observed.Retrying {
+		warning := shootStatusUpdate{Status: gardener.StatusProgressing, Message: observed.Message}
+		if stored.Status == gardener.StatusReady {
+			warning.Status = gardener.StatusReady
+			warning.Health = stored.Health
+		}
+		if observed.Message != stored.Message {
+			warning.Events = []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: observed.Message}}
+		}
+		return warning
+	}
+
 	update := shootStatusUpdate{Status: observed.Status, Message: observed.Message}
 	if observed.Status == gardener.StatusReady {
 		update.Health = shootHealth(observed.Healthy)

@@ -166,6 +166,30 @@ func TestNextShootStatus(t *testing.T) {
 			want:     shootStatusUpdate{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 		},
 		{
+			name:     "retried error during a create is a warning",
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: "etcd not ready. Operation will be retried."}},
+			},
+		},
+		{
+			name:     "same retried error again writes no second warning",
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried."},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
+			want:     shootStatusUpdate{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried."},
+		},
+		{
+			name:     "retried reconcile error keeps a ready cluster ready",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "Operation was aborted: seed is not yet ready", Operation: gardener.OperationReconcile, Retrying: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: "Operation was aborted: seed is not yet ready", Health: healthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: "Operation was aborted: seed is not yet ready"}},
+			},
+		},
+		{
 			name:     "never checked and shoot not visible yet",
 			stored:   storedShootState{},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},

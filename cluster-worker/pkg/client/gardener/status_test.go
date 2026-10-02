@@ -81,6 +81,7 @@ func TestRealClientGetShootStatus(t *testing.T) {
 		wantMsg    string
 		wantOp     OperationType
 		wantHealth bool
+		wantRetry  bool
 	}{
 		{
 			name: "create succeeded and all conditions true",
@@ -155,6 +156,7 @@ func TestRealClientGetShootStatus(t *testing.T) {
 			wantStatus: StatusError,
 			wantMsg:    "etcd unavailable",
 			wantOp:     OperationReconcile,
+			wantRetry:  true,
 		},
 		{
 			name: "create failed",
@@ -173,6 +175,7 @@ func TestRealClientGetShootStatus(t *testing.T) {
 			wantStatus: StatusError,
 			wantMsg:    "Operation was aborted: stopped",
 			wantOp:     OperationReconcile,
+			wantRetry:  true,
 		},
 		{
 			name: "no last operation yet",
@@ -210,6 +213,7 @@ func TestRealClientGetShootStatus(t *testing.T) {
 			assert.Equal(t, tt.wantMsg, got.Message)
 			assert.Equal(t, tt.wantOp, got.Operation)
 			assert.Equal(t, tt.wantHealth, got.Healthy)
+			assert.Equal(t, tt.wantRetry, got.Retrying)
 		})
 	}
 }

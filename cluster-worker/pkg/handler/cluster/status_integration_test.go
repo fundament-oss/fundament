@@ -249,6 +249,31 @@ func TestCheckStatusOrdersNonReadyFirst(t *testing.T) {
 	assert.Equal(t, 0, mock.StatusCallsFor(readyID))
 }
 
+// An error Gardener will retry (state Error or Aborted) is recorded as a
+// warning, not as a cluster error.
+func TestCheckStatusRetriedErrorIsWarning(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-retrying")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true,
+	})
+
+	err := h.CheckStatus(t.Context())
+	require.NoError(t, err)
+
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "progressing", *status)
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_warning"))
+	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_error"))
+}
+
 // Gardener reconciles every running shoot periodically; that must not flip a
 // ready cluster to progressing or re-run the ready fan-out.
 func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {

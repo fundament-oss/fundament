@@ -45,6 +45,9 @@ type ShootStatus struct {
 	// Only meaningful for StatusReady and for a StatusProgressing reconcile of
 	// a shoot that is already running.
 	Healthy bool
+	// Retrying marks a StatusError that Gardener will retry by itself
+	// (lastOperation state Error or Aborted), as opposed to Failed.
+	Retrying bool
 }
 
 // Status message constants for consistent messaging.

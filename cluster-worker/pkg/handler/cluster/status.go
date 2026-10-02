@@ -101,6 +101,12 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 					"name", cluster.Name,
 					"previous_status", stored.Status)
 			}
+			if event.Type == dbconst.ClusterEventEventType_StatusWarning {
+				h.logger.Warn("gardener is retrying a failed shoot operation",
+					"cluster_id", cluster.ID,
+					"name", cluster.Name,
+					"message", event.Message)
+			}
 		}
 
 		// On transition to ready, insert a ready outbox row. Handlers that
