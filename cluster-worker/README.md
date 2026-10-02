@@ -63,6 +63,7 @@ Gardener Shoot reconciliation is asynchronous - applying a manifest returns imme
 - We can detect and alert on failed reconciliations
 - Deletion verification confirms Shoots are actually gone
 - Connection data (API server URL, CA cert) is extracted when a shoot becomes ready, enabling kubeconfig generation
+- Ready clusters stay current: their health is re-checked, so a message recorded while conditions were still settling does not stick, and a cluster that breaks later shows it
 
 ## How
 
@@ -154,9 +155,11 @@ stateDiagram-v2
         [*] --> Pending2: Worker applied manifest
         Pending2 --> Progressing: Poller observes Gardener
         Progressing --> Ready: Reconciliation complete
-        Progressing --> Error: Reconciliation failed
+        Progressing --> Error: Reconciliation failed (won't be retried)
         Error --> Progressing: Gardener retrying
-        Ready --> Progressing: Update in progress
+        Ready --> Ready: Re-polled (health, routine reconcile, retried errors)
+        Ready --> Progressing: Migrate / restore in progress
+        Ready --> Error: Reconcile failed (won't be retried)
         Ready --> Deleting: Worker deleted shoot
         Deleting --> Deleted: Poller confirms removal
 
@@ -168,6 +171,21 @@ stateDiagram-v2
         Deleted: deleted
     }
 ```
+
+### Status polling cadence
+
+Every `STATUS_INTERVAL` tick (30s) the poller checks one batch of `CLUSTER_STATUS_BATCH_SIZE` (50) clusters, in two lanes:
+
+- **Every 30s**: clusters that are new, pending, progressing or in error, and ready clusters whose health is not known to be healthy yet.
+- **Every `CLUSTER_STATUS_READY_INTERVAL` (5m)**: healthy ready clusters.
+
+Clusters that are still being created are ordered first, so ready clusters never delay them. With the defaults one replica keeps about 500 healthy ready clusters current (50 per tick × 10 ticks per interval); beyond that the slow lane falls behind, but the fast lane is unaffected.
+
+Rules for a cluster that is already ready:
+
+- Gardener reconciles every shoot periodically (gardenlet `SyncPeriod`, 1h by default), and a node-pool edit is a reconcile too. A `Reconcile` in progress leaves status, message and health unchanged, so it does not re-run the ready fan-out.
+- `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change writes a `status_healthy` or `status_unhealthy` event.
+- A last operation in state `Error` or `Aborted` is one Gardener will retry: it is recorded as a `status_warning` event (once per distinct message) and does not change the status. Only `Failed` sets `error`.
 
 ### Client Modes
 
@@ -190,8 +208,11 @@ All sync and status changes are recorded in the `cluster_events` table for debug
 | `sync_failed` | Sync failed (with error message and attempt count) |
 | `status_progressing` | Shoot reconciliation in progress |
 | `status_ready` | Shoot reconciliation completed successfully |
-| `status_error` | Shoot reconciliation failed |
+| `status_error` | Shoot reconciliation failed and Gardener won't retry it |
 | `status_deleted` | Shoot confirmed deleted from Gardener |
+| `status_healthy` | A ready shoot's conditions all became healthy |
+| `status_unhealthy` | A ready shoot's conditions became unhealthy |
+| `status_warning` | Gardener reported an error it will retry by itself |
 
 ### Outbox Sources
 
