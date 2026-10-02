@@ -17,6 +17,8 @@ GARDENER_DIR := env_var_or_default("GARDENER_DIR", cache_directory() / "fundamen
 # KinD cluster name used by the operator path
 KIND_CLUSTER := "gardener-operator-local"
 KIND_CONTAINER := KIND_CLUSTER + "-control-plane"
+# kubeconfig context gardener-connect adds for the virtual garden
+GARDEN_CONTEXT := "kind-gardener-local-garden"
 
 # List available recipes
 default:
@@ -153,6 +155,14 @@ gardener-delete:
         kind delete cluster --name "{{KIND_CLUSTER}}"
     fi
     (cd "{{justfile_directory()}}" && GARDENER_DIR="{{GARDENER_DIR}}" just cluster-worker _gardener-infra-down)
+    TARGET_KC="${KUBECONFIG:-}"
+    TARGET_KC="${TARGET_KC%%:*}"
+    TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
+    for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}"; do
+        kubectl config --kubeconfig "$TARGET_KC" delete-context "$name" >/dev/null 2>&1 || true
+        kubectl config --kubeconfig "$TARGET_KC" delete-cluster "$name" >/dev/null 2>&1 || true
+        kubectl config --kubeconfig "$TARGET_KC" delete-user "$name" >/dev/null 2>&1 || true
+    done
     GARDENER_DIR="{{GARDENER_DIR}}"
     GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
     if [ -d "$GARDENER_DIR" ]; then
@@ -176,6 +186,18 @@ _gardener-infra-down:
         # The clone is gone; its containers are recognised by their compose directory.
         docker compose -p infra down --volumes
     fi
+
+# Deploy the platform against the local Gardener (just dev-hotreload -p local-gardener)
+dev *flags:
+    #!/usr/bin/env bash
+    set -e
+    if ! docker inspect -f '{{{{.State.Running}}' "{{KIND_CONTAINER}}" 2>/dev/null | grep -q true \
+        || ! kubectl --context k3d-fundament -n fundament get secret gardener-kubeconfig >/dev/null 2>&1; then
+        echo "Error: local Gardener is not running or not connected to k3d-fundament." >&2
+        echo "Start it first: just cluster-worker gardener-start" >&2
+        exit 1
+    fi
+    cd "{{justfile_directory()}}" && just dev-hotreload -p local-gardener {{flags}}
 
 # Check Gardener status
 gardener-status:
@@ -382,6 +404,27 @@ gardener-connect:
             reloader.stakater.com/auto=true --overwrite 2>/dev/null
         echo "- Annotated CoreDNS for Reloader auto-restart"
     fi
+
+    # Add Gardener's two clusters to the same kubeconfig as k3d-fundament, under
+    # fixed names. The kind cluster's port and certificates change when it is
+    # recreated, so read them fresh every time.
+    add_context() {
+        local name="$1" dir path
+        dir=$(mktemp -d)
+        cat > "$dir/kubeconfig"
+        for path in clusters[0].cluster.certificate-authority-data users[0].user.client-certificate-data users[0].user.client-key-data; do
+            kubectl --kubeconfig "$dir/kubeconfig" config view --raw -o jsonpath="{.$path}" | base64 -d > "$dir/${path##*.}"
+        done
+        kubectl config --kubeconfig "$TARGET_KC" set-cluster "$name" --embed-certs --certificate-authority "$dir/certificate-authority-data" \
+            --server "$(kubectl --kubeconfig "$dir/kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}')" >/dev/null
+        kubectl config --kubeconfig "$TARGET_KC" set-credentials "$name" --embed-certs \
+            --client-certificate "$dir/client-certificate-data" --client-key "$dir/client-key-data" >/dev/null
+        kubectl config --kubeconfig "$TARGET_KC" set-context "$name" --cluster "$name" --user "$name" >/dev/null
+        rm -rf "$dir"
+        echo "- Added kubeconfig context $name"
+    }
+    add_context "{{GARDEN_CONTEXT}}" < "$GARDENER_DIR/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+    kind get kubeconfig --name "{{KIND_CLUSTER}}" | add_context "kind-{{KIND_CLUSTER}}"
 
 # Create kubeconfig secret for cluster-worker to connect to Gardener
 gardener-secret: gardener-connect
