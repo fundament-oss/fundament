@@ -100,8 +100,12 @@ SELECT EXISTS (
 
 -- name: ClusterListNeedingStatusCheck :many
 -- Get clusters where we need to check Gardener status (active clusters).
--- Polls clusters in non-terminal states: NULL (never checked), pending,
--- progressing, error.
+-- Two speeds: clusters in non-terminal states (NULL, pending, progressing,
+-- error) and ready clusters that are not known to be healthy are polled every
+-- 30 seconds; healthy ready clusters every @ready_interval. Ready clusters are
+-- polled at all so their message and health stay current after the first
+-- ready reading. Clusters still being created are ordered first so a large
+-- ready fleet cannot crowd them out of the batch.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
@@ -109,6 +113,8 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -125,17 +131,31 @@ WHERE
     )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
-        tenant.clusters.shoot_status IS NULL -- Never checked
-        OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
-        OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
-        OR tenant.clusters.shoot_status = 'error'
-    ) -- Failed, might recover
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL -- Never checked
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-    ) -- Not checked recently
+        (
+            (
+                tenant.clusters.shoot_status IS NULL -- Never checked
+                OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
+                OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
+                OR tenant.clusters.shoot_status = 'error' -- Failed, might recover
+                OR (
+                    tenant.clusters.shoot_status = 'ready'
+                    AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
+                ) -- Ready but conditions still settling (or health not recorded yet)
+            )
+            AND (
+                tenant.clusters.shoot_status_updated IS NULL -- Never checked
+                OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
+            ) -- Not checked recently
+        )
+        OR (
+            tenant.clusters.shoot_status = 'ready'
+            AND tenant.clusters.shoot_health = 'healthy'
+            AND tenant.clusters.shoot_status_updated < now() - @ready_interval::interval
+        ) -- Healthy: slower refresh
+    )
 ORDER BY
-    shoot_status_updated NULLS FIRST
+    tenant.clusters.shoot_status IS NOT DISTINCT FROM 'ready', -- NULL status sorts with the non-ready ones
+    tenant.clusters.shoot_status_updated NULLS FIRST
 LIMIT
     @limit_count;
 
@@ -178,11 +198,12 @@ LIMIT
     @limit_count;
 
 -- name: ClusterUpdateShootStatus :exec
--- Update shoot status from Gardener polling.
+-- Update shoot status from Gardener polling. health is NULL unless ready.
 UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
+    shoot_health = @health,
     shoot_status_updated = now()
 WHERE
     id = @cluster_id;

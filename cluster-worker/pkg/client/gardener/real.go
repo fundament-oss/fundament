@@ -341,7 +341,7 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 			msg := MsgShootReady
 			if !healthy {
 				msg = MsgShootUnhealthy
-				r.logger.Warn("shoot succeeded but conditions unhealthy",
+				r.logger.Debug("shoot succeeded but conditions unhealthy",
 					"shoot", shoot.Name,
 					"namespace", shoot.Namespace)
 			}

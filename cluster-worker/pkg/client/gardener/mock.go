@@ -419,6 +419,26 @@ func (m *MockClient) SetStatusOverride(clusterID uuid.UUID, status ShootStatusTy
 	m.StatusOverrides[clusterID] = StatusOverride{Status: status, Message: message}
 }
 
+// SetShootStatusOverride is SetStatusOverride with the operation and health set too.
+func (m *MockClient) SetShootStatusOverride(clusterID uuid.UUID, override StatusOverride) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.StatusOverrides[clusterID] = override
+}
+
+// StatusCallsFor returns how many times GetShootStatus was called for the cluster.
+func (m *MockClient) StatusCallsFor(clusterID uuid.UUID) int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	count := 0
+	for i := range m.StatusCalls {
+		if m.StatusCalls[i].ID == clusterID {
+			count++
+		}
+	}
+	return count
+}
+
 // HasShootForCluster checks if a shoot exists for the given cluster ID (excludes deleted shoots).
 func (m *MockClient) HasShootForCluster(clusterID uuid.UUID) bool {
 	m.mu.RLock()

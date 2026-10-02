@@ -1,0 +1,145 @@
+package cluster
+
+import (
+	"fmt"
+
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/common/dbconst"
+)
+
+// storedShootState is what the database holds for a cluster before a poll.
+type storedShootState struct {
+	Status  gardener.ShootStatusType   // empty when never checked
+	Message string                     // empty when never checked
+	Health  dbconst.ClusterShootHealth // empty when unknown
+}
+
+// statusEvent is one activity-log entry a poll records.
+type statusEvent struct {
+	Type    dbconst.ClusterEventEventType
+	Message string
+}
+
+// shootStatusUpdate is what a poll writes back for one cluster.
+type shootStatusUpdate struct {
+	Status  gardener.ShootStatusType
+	Message string
+	Health  dbconst.ClusterShootHealth // empty writes NULL
+	Events  []statusEvent
+	// InsertReady is set on a transition into ready: the ready outbox row fans
+	// out to the handlers that provision a freshly ready cluster.
+	InsertReady bool
+}
+
+// nextShootStatus decides what a status poll writes, given the stored row and
+// what Gardener reports. It is pure so every rule can be tested without a
+// database.
+func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+	// Gardener reconciles running shoots periodically (gardenlet SyncPeriod, 1h
+	// by default). That is not a lifecycle change for a ready cluster, so it
+	// stays ready, but its health follows the conditions: a reconcile that
+	// breaks the cluster, or never finishes, must not look healthy.
+	if stored.Status == gardener.StatusReady &&
+		observed.Status == gardener.StatusProgressing &&
+		observed.Operation == gardener.OperationReconcile {
+		return readyDuringReconcile(stored, observed)
+	}
+
+	// A Shoot that disappears after fundament has seen it was lost, not "not
+	// created yet": record that, since drift reconciliation will recreate it
+	// and the history would otherwise show a fresh create with no reason.
+	if observed.Status == gardener.StatusPending && observed.Message == gardener.MsgShootNotFound && shootWasSeen(stored.Status) {
+		return shootStatusUpdate{
+			Status:  gardener.StatusPending,
+			Message: observed.Message,
+			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: observed.Message}},
+		}
+	}
+
+	update := shootStatusUpdate{Status: observed.Status, Message: observed.Message}
+	if observed.Status == gardener.StatusReady {
+		update.Health = shootHealth(observed.Healthy)
+	}
+
+	if observed.Status != stored.Status {
+		if eventType := statusTransitionEvent(observed.Status); eventType != "" {
+			update.Events = append(update.Events, statusEvent{Type: eventType, Message: observed.Message})
+		}
+		update.InsertReady = observed.Status == gardener.StatusReady
+		return update
+	}
+
+	// Still ready: record health changes. The first recorded health (stored NULL)
+	// has nothing to compare to; the status_ready event already carried it.
+	if observed.Status == gardener.StatusReady && stored.Health != "" && stored.Health != update.Health {
+		update.Events = append(update.Events, healthEvent(update.Health, observed.Message))
+	}
+
+	return update
+}
+
+// readyDuringReconcile keeps a ready cluster ready while Gardener reconciles
+// it. While it is healthy the stored message stays; while it is not, Gardener's
+// progress message says what the reconcile is waiting for.
+func readyDuringReconcile(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+	update := shootStatusUpdate{Status: gardener.StatusReady, Message: stored.Message, Health: shootHealth(observed.Healthy)}
+	switch {
+	case !observed.Healthy:
+		update.Message = observed.Message
+	case stored.Health != dbconst.ClusterShootHealth_Healthy:
+		update.Message = gardener.MsgShootReady
+	}
+	if stored.Health != "" && stored.Health != update.Health {
+		update.Events = []statusEvent{healthEvent(update.Health, update.Message)}
+	}
+	return update
+}
+
+// healthEvent is the event recorded when a ready cluster's health changes.
+func healthEvent(health dbconst.ClusterShootHealth, message string) statusEvent {
+	if health == dbconst.ClusterShootHealth_Unhealthy {
+		return statusEvent{Type: dbconst.ClusterEventEventType_StatusUnhealthy, Message: message}
+	}
+	return statusEvent{Type: dbconst.ClusterEventEventType_StatusHealthy, Message: message}
+}
+
+// shootWasSeen reports whether a stored status can only come from a poll that
+// found the Shoot in Gardener.
+func shootWasSeen(status gardener.ShootStatusType) bool {
+	switch status {
+	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError, gardener.StatusDeleting:
+		return true
+	case "", gardener.StatusPending, gardener.StatusDeleted:
+		return false
+	default:
+		panic(fmt.Sprintf("unhandled shoot status: %s", status))
+	}
+}
+
+func shootHealth(healthy bool) dbconst.ClusterShootHealth {
+	if healthy {
+		return dbconst.ClusterShootHealth_Healthy
+	}
+	return dbconst.ClusterShootHealth_Unhealthy
+}
+
+// statusTransitionEvent returns the event recorded when a cluster enters the
+// given status, or empty for statuses that record none.
+func statusTransitionEvent(status gardener.ShootStatusType) dbconst.ClusterEventEventType {
+	switch status {
+	case gardener.StatusProgressing:
+		return dbconst.ClusterEventEventType_StatusProgressing
+	case gardener.StatusReady:
+		return dbconst.ClusterEventEventType_StatusReady
+	case gardener.StatusError:
+		return dbconst.ClusterEventEventType_StatusError
+	case gardener.StatusPending, gardener.StatusDeleting:
+		// No event for these transient states
+		return ""
+	case gardener.StatusDeleted:
+		// Handled in pollDeletedClusters
+		return ""
+	default:
+		panic(fmt.Sprintf("unhandled shoot status: %s", status))
+	}
+}
