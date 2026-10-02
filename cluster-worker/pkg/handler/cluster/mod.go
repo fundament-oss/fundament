@@ -125,7 +125,9 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 					return fmt.Errorf("ensure project: %w", err)
 				}
 				if namespace == "" {
-					return handler.NewPreconditionError("project namespace not ready")
+					// A just-created Project usually has its namespace within
+					// seconds; recheck once quickly instead of waiting the full delay.
+					return handler.NewPreconditionErrorWithFirstRetry("project namespace not ready", 5*time.Second)
 				}
 				return nil
 			},
