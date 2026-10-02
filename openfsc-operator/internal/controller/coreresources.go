@@ -46,8 +46,8 @@ func groupCAResources(inst *openfscv1.FSCInstallation) []*unstructured.Unstructu
 		"subject":     map[string]any{"organizations": []any{peerOrganization(inst)}},
 		"secretName":  groupCASecret,
 		"privateKey":  map[string]any{"algorithm": "RSA", "size": int64(4096)},
-		"duration":    "87600h", // 10 years
-		"renewBefore": "8760h",  // 1 year
+		"duration":    "26280h", // 3 years; kept short to limit exposure of the quantum-vulnerable RSA key
+		"renewBefore": "2160h",  // 90 days
 		"issuerRef":   map[string]any{"name": groupSelfSignedIssuer, "kind": "Issuer"},
 	})
 
