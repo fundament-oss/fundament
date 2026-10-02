@@ -40,6 +40,9 @@ const (
 	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
 	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
 	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusHealthy     ClusterEventEventType = "status_healthy"
+	ClusterEventEventType_StatusUnhealthy   ClusterEventEventType = "status_unhealthy"
+	ClusterEventEventType_StatusWarning     ClusterEventEventType = "status_warning"
 	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
 	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
 )
@@ -81,6 +84,14 @@ const (
 	ClusterOutboxStatus_Completed ClusterOutboxStatus = "completed"
 	ClusterOutboxStatus_Retrying  ClusterOutboxStatus = "retrying"
 	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
+)
+
+// ClusterShootHealth represents valid values for tenant.clusters.shoot_health.
+type ClusterShootHealth string
+
+const (
+	ClusterShootHealth_Healthy   ClusterShootHealth = "healthy"
+	ClusterShootHealth_Unhealthy ClusterShootHealth = "unhealthy"
 )
 
 // DeviceCatalogCategory represents valid values for dcim.device_catalogs.category.

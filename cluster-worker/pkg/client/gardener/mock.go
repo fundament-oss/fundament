@@ -79,8 +79,11 @@ type mockShoot struct {
 
 // StatusOverride allows tests to configure custom status for specific clusters.
 type StatusOverride struct {
-	Status  ShootStatusType
-	Message string
+	Status    ShootStatusType
+	Message   string
+	Operation OperationType
+	Healthy   bool
+	Retrying  bool
 }
 
 // NewMock creates a new MockClient with default settings.
@@ -294,7 +297,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	// Check for custom override (takes precedence)
 	if override, ok := m.StatusOverrides[cluster.ID]; ok {
-		return &ShootStatus{Status: override.Status, Message: override.Message}, nil
+		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy, Retrying: override.Retrying}, nil
 	}
 
 	// Look up shoot by cluster ID (not shoot name)
@@ -331,13 +334,16 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				progress = 100
 			}
 			status = &ShootStatus{
-				Status:  StatusProgressing,
-				Message: fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+				Status:    StatusProgressing,
+				Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+				Operation: OperationCreate,
 			}
 		default:
 			status = &ShootStatus{
-				Status:  StatusReady,
-				Message: MsgShootReady,
+				Status:    StatusReady,
+				Message:   MsgShootReady,
+				Operation: OperationCreate,
+				Healthy:   true,
 			}
 		}
 	}
@@ -412,6 +418,26 @@ func (m *MockClient) SetStatusOverride(clusterID uuid.UUID, status ShootStatusTy
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.StatusOverrides[clusterID] = StatusOverride{Status: status, Message: message}
+}
+
+// SetShootStatusOverride is SetStatusOverride with the operation and health set too.
+func (m *MockClient) SetShootStatusOverride(clusterID uuid.UUID, override StatusOverride) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.StatusOverrides[clusterID] = override
+}
+
+// StatusCallsFor returns how many times GetShootStatus was called for the cluster.
+func (m *MockClient) StatusCallsFor(clusterID uuid.UUID) int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	count := 0
+	for i := range m.StatusCalls {
+		if m.StatusCalls[i].ID == clusterID {
+			count++
+		}
+	}
+	return count
 }
 
 // HasShootForCluster checks if a shoot exists for the given cluster ID (excludes deleted shoots).

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,15 @@ type ShootStatusChecker interface {
 // Config holds handler-specific configuration.
 type Config struct {
 	StatusBatchSize int32 `env:"STATUS_BATCH_SIZE" envDefault:"50"`
-	MaxRetries      int32 `env:"MAX_RETRIES" envDefault:"10"`
+	// StatusReadyInterval is how often a healthy ready cluster is re-checked;
+	// non-ready and not-yet-healthy clusters are re-checked every 30 seconds.
+	// One batch of StatusBatchSize per status tick bounds how many healthy
+	// clusters can be kept current: about StatusBatchSize per tick times the
+	// ticks in one interval (50 × 10 = 500 at the defaults). With the real
+	// client's status cache a poll is one DB update, so raising
+	// StatusBatchSize is the cheap way to support larger fleets.
+	StatusReadyInterval time.Duration `env:"STATUS_READY_INTERVAL" envDefault:"5m"`
+	MaxRetries          int32         `env:"MAX_RETRIES" envDefault:"10"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
@@ -118,7 +127,9 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 					return fmt.Errorf("ensure project: %w", err)
 				}
 				if namespace == "" {
-					return handler.NewPreconditionError("project namespace not ready")
+					// A just-created Project usually has its namespace within
+					// seconds; recheck once quickly instead of waiting the full delay.
+					return handler.NewPreconditionErrorWithFirstRetry("project namespace not ready", 5*time.Second)
 				}
 				return nil
 			},

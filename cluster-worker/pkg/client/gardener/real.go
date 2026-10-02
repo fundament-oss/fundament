@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"sync/atomic"
+	"time"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -16,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/fundament-oss/fundament/common/kubename"
@@ -85,6 +88,14 @@ type RealClient struct {
 	client   client.Client
 	provider ProviderConfig
 	logger   *slog.Logger
+
+	// statusCache serves GetShootStatus from a watch (see status_cache.go);
+	// nil means status reads always go to Gardener directly.
+	statusCache       shootStatusCache
+	statusCacheSynced atomic.Bool
+	lastWatchFailure  atomic.Int64 // unix nanoseconds; 0 when the watch never failed
+	lastProbeSuccess  atomic.Int64 // unix nanoseconds; 0 until the garden answered a probe
+	clock             func() time.Time
 }
 
 // NewReal creates a new RealClient that connects to Gardener.
@@ -129,11 +140,19 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		"provider", provider.Type,
 		"cloudProfile", provider.CloudProfile)
 
-	return &RealClient{
+	r := &RealClient{
 		client:   c,
 		provider: provider,
 		logger:   logger,
-	}, nil
+	}
+
+	statusCache, err := newShootStatusCache(cfg, scheme, r.recordWatchError)
+	if err != nil {
+		return nil, err
+	}
+	r.statusCache = statusCache
+
+	return r, nil
 }
 
 // EnsureProject creates the Gardener Project if it doesn't exist (idempotent).
@@ -198,12 +217,21 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		return fmt.Errorf("shoot name is required")
 	}
 
-	existing, err := r.getShootByClusterID(ctx, cluster.ID)
-	if err != nil {
-		return fmt.Errorf("failed to look up existing shoot: %w", err)
-	}
+	// Gardener keeps writing to a Shoot (status, finalizers, annotations), most of
+	// all right after it is created, which is exactly when the console's node
+	// pools arrive. Re-read and re-apply on a resourceVersion conflict instead of
+	// failing the sync.
+	found := false
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		existing, err := r.getShootByClusterID(ctx, cluster.ID)
+		if err != nil {
+			return fmt.Errorf("failed to look up existing shoot: %w", err)
+		}
+		if existing == nil {
+			return nil
+		}
+		found = true
 
-	if existing != nil {
 		if err := r.updateShootSpec(existing, cluster); err != nil {
 			return err
 		}
@@ -216,6 +244,12 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		if err := r.client.Update(ctx, existing); err != nil {
 			return fmt.Errorf("failed to update shoot: %w", err)
 		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("shoot %s: %w", cluster.ShootName, err)
+	}
+	if found {
 		return nil
 	}
 
@@ -287,7 +321,7 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 
 // GetShootStatus returns the current reconciliation status of a Shoot.
 func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
-	shoot, err := r.getShootByClusterID(ctx, cluster.ID)
+	shoot, err := r.getShootForStatus(ctx, cluster.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up shoot: %w", err)
 	}
@@ -302,26 +336,34 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
+		operation := OperationType(op.Type)
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description)}, nil
-		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
+			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description), Operation: operation}, nil
+		case gardencorev1beta1.LastOperationStateError:
+			// "Completed with errors and will be retried" per Gardener's API.
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}, nil
+		case gardencorev1beta1.LastOperationStateFailed:
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
+			healthy := r.isShootHealthy(shoot)
 			msg := MsgShootReady
-			if !r.isShootHealthy(shoot) {
-				msg = "Shoot reconciled but not all conditions healthy"
-				r.logger.Warn("shoot succeeded but conditions unhealthy",
+			if !healthy {
+				msg = MsgShootUnhealthy
+				r.logger.Debug("shoot succeeded but conditions unhealthy",
 					"shoot", shoot.Name,
 					"namespace", shoot.Namespace)
 			}
 			return &ShootStatus{
-				Status:  StatusReady,
-				Message: msg,
+				Status:    StatusReady,
+				Message:   msg,
+				Operation: operation,
+				Healthy:   healthy,
 			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
+			// Seen while the seed was not ready; Gardener resumed the operation by itself.
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}, nil
 		}
 	}
 
