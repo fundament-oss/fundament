@@ -57,8 +57,9 @@ async function configure(extraProviders: unknown[] = []) {
 const ORGANIZATION = { id: 'org-1', name: 'acme-corp', alias: 'acme' };
 
 /**
- * The shell with only what settling on an organization touches, and a router
- * that records where it was sent rather than going there. `arriving` is the
+ * The shell with only what settling on an organization touches: an authn
+ * service whose token refresh is a no-op, and a router that records where it
+ * was sent rather than going there. `arriving` is the
  * address of an arrival still under way, as `getCurrentNavigation()` reports
  * one; `url` is the page being left, which is all `router.url` knows until that
  * arrival lands.
@@ -67,6 +68,7 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
   const navigatedTo: string[] = [];
   const userOrganizations = signal<Organization[]>([ORGANIZATION as Organization]);
   await configure([
+    { provide: AuthnApiService, useValue: { refreshToken: async () => {} } },
     ...(extraProviders as never[]),
     {
       provide: Router,

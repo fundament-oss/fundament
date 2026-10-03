@@ -397,6 +397,13 @@ export default class App implements OnInit {
    * Projects and namespaces are loaded lazily on demand (selector open, project page visit).
    */
   private async selectAndLoadOrganization(orgId: string) {
+    // Refresh the JWT so the token includes up-to-date organization
+    // memberships, as selectOrganization does. The organizations come from
+    // the database, the token from sign-in; an operator adding someone after
+    // they signed in puts the two out of step, and every organization-scoped
+    // request would be refused with the token still naming no organization.
+    await this.apiService.refreshToken();
+
     const name = this.organizationNameOf(orgId);
     this.organizationContextService.setOrganizationId(orgId);
     this.organizationContextService.setOrganizationName(name);
