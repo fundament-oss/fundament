@@ -207,6 +207,10 @@ profiles:
           kubeApiProxy.sandboxKubeconfigSecret: ""
           authnApi.sandboxKubeconfigSecret: ""
           organizationApi.kubeApiProxyInsecure: "true"
+          # Read each shoot's own Prometheus and Vali in the seed, as an
+          # installation does, instead of generating metrics and logs.
+          organizationApi.prometheusURL: per-shoot
+          organizationApi.logsURL: per-shoot
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: charts/fundament/values-gardener-local.yaml
