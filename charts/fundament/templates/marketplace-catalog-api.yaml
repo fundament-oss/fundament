@@ -67,41 +67,10 @@ spec:
     - port: 8080
       targetPort: http
       name: http
+      {{- with $.Values.grpcAppProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-catalog-api") | nindent 4 }}
-
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: marketplace-catalog-api
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-catalog-api" "component" "backend") | nindent 4 }}
-  annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-    {{- if $.Values.ingress.tls.clusterIssuer }}
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-    {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - marketplace-catalog-api.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: marketplace-catalog-api-tls
-  {{- end }}
-  rules:
-    - host: marketplace-catalog-api.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: marketplace-catalog-api
-                port:
-                  name: http
-{{- end }}
 
 {{- end }}

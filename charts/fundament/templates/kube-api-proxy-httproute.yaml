@@ -15,4 +15,8 @@ spec:
     - backendRefs:
         - name: kube-api-proxy
           port: 8081
+      {{- with $.Values.kubeApiProxy.httproute.timeouts }}
+      timeouts:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}

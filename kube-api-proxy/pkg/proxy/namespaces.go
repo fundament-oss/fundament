@@ -92,6 +92,11 @@ func (v *visibilityResolver) resolve(ctx context.Context, userID, clusterID uuid
 	// list and a watch together and may drop either). Each waiter still stops
 	// on its own cancellation.
 	resCh := v.group.DoChan(userID.String()+"/"+clusterID.String(), func() (any, error) {
+		// A lookup that finished between our cache miss and joining the group
+		// has already cached its answer; don't ask OpenFGA again.
+		if item := v.cache.Get(key); item != nil {
+			return item.Value(), nil
+		}
 		lookupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), visibilityLookupTimeout)
 		defer cancel()
 		vis, err := v.lookup(lookupCtx, userID, clusterID)

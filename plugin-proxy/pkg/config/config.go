@@ -70,13 +70,13 @@ func FromEnv() (Config, error) {
 	switch cfg.Mode {
 	case "mock":
 		if cfg.PluginProxyOrigin == "" {
-			cfg.PluginProxyOrigin = "http://plugin-proxy.fundament.localhost:8080"
+			cfg.PluginProxyOrigin = "https://plugin-proxy.fundament.localhost:8443"
 		}
 		if cfg.KubeAPIProxyOrigin == "" {
-			cfg.KubeAPIProxyOrigin = "http://kube-api-proxy.fundament.localhost:8080"
+			cfg.KubeAPIProxyOrigin = "https://k8s-api.fundament.localhost:8443"
 		}
 		if cfg.ConsoleOrigin == "" {
-			cfg.ConsoleOrigin = "http://console.fundament.localhost:8080"
+			cfg.ConsoleOrigin = "https://console.fundament.localhost:8443"
 		}
 		// Local dev: the plugin-sdk build output lives in the console-frontend
 		// public dir. Default relative to the repo root so `just dev` works out

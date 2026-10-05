@@ -15,10 +15,9 @@ fmt:
 
 # --- Cluster commands ---
 
-# Ensure the k3d docker network exists with a fixed subnet: off 172.18.0.0/16 (which
-# Gardener's local kind cluster reserves — auto-allocation would grab it) and on
-# 172.19.0.0/16 so the ingress-nginx externalIP (172.19.0.2, see
-# deploy/k3d/resources/ingress-nginx.yaml) stays valid. Fails loudly on subnet conflict.
+# Ensure the k3d docker network exists with a fixed subnet: 172.19.0.0/16 keeps it off
+# 172.18.0.0/16, which Gardener's local kind cluster reserves (auto-allocation would
+# grab it). Fails loudly on subnet conflict.
 _ensure-k3d-network:
     @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet=172.19.0.0/16 k3d-fundament > /dev/null
 
@@ -32,11 +31,29 @@ cluster-create:
     export PWD="$(pwd -W 2>/dev/null || pwd)"
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
+    just setup-gateway
 
-# Start the cluster (creates if it doesn't exist)
+# Start the cluster (creates if it doesn't exist). On an existing cluster the certs and
+# gateway are re-applied, so a cluster-create that failed halfway, or a change to
+# deploy/k3d/gateway/, catches up.
 cluster-start:
-    @just _ensure-k3d-network
-    @k3d cluster list fundament > /dev/null 2>&1 && k3d cluster start fundament || just cluster-create
+    #!/usr/bin/env bash
+    set -e
+    just _ensure-k3d-network
+    if ! k3d cluster list fundament > /dev/null 2>&1; then
+        just cluster-create
+        exit 0
+    fi
+    # k3d fixes a cluster's volume mounts at create time. A cluster created before the
+    # move to Envoy Gateway still mounts ingress-nginx and has no Gateway API CRDs, so
+    # the chart's HTTPRoutes cannot deploy to it.
+    if ! docker inspect k3d-fundament-server-0 | grep -q '/manifests/envoy-gateway.yaml'; then
+        echo "This cluster predates the Envoy Gateway edge. Recreate it: just cluster-delete && just cluster-create" >&2
+        exit 1
+    fi
+    k3d cluster start fundament
+    kubectl --context k3d-fundament get clusterissuer mkcert-local > /dev/null 2>&1 || just setup-certs
+    just setup-gateway
 
 # Stop the cluster without deleting it
 cluster-stop:
@@ -60,21 +77,14 @@ setup-certs:
     which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/developer/fundament/getting-started.md for installation instructions."; exit 1; }
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
-    deadline=$(( $(date +%s) + 120 ))
-    # Wait for the Deployments themselves, not just the namespace: k3s creates the
-    # namespace before the helm-install Job creates their contents, and `kubectl wait`
-    # errors immediately on a resource that does not exist yet instead of polling.
-    until kubectl get deployment cert-manager cert-manager-webhook -n cert-manager > /dev/null 2>&1; do
-        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for the cert-manager deployments"; exit 1; }
-        sleep 5
-    done
-    kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
+    just _wait-helm-deployments cert-manager cert-manager cert-manager-webhook
     echo "Waiting for cert-manager webhook to be ready..."
     # On Windows the path mkcert returns is mangled and the file cannot be opened.
     # Normalise to forward slashes for Windows; a no-op on Linux and macOS.
     CAROOT="$(mkcert -CAROOT | tr '\\' '/')"
     for i in $(seq 1 12); do
         helm upgrade --install mkcert-setup charts/mkcert-setup \
+            --kube-context k3d-fundament \
             --namespace cert-manager \
             --set-file ca.cert="$CAROOT/rootCA.pem" \
             --set-file ca.key="$CAROOT/rootCA-key.pem" && break
@@ -82,6 +92,36 @@ setup-certs:
         echo "Webhook not ready yet, retrying in 5s... ($i/12)"
         sleep 5
     done
+
+# Apply the local Envoy Gateway edge (GatewayClass, Gateway, wildcard Certificate)
+setup-gateway:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for Envoy Gateway to become available..."
+    # The chart installs its CRDs before the Deployment, so they exist once it does.
+    just _wait-helm-deployments envoy-gateway-system envoy-gateway
+    kubectl --context k3d-fundament wait --for=condition=Established --timeout=60s \
+        crd/gateways.gateway.networking.k8s.io \
+        crd/backendtrafficpolicies.gateway.envoyproxy.io \
+        crd/clienttrafficpolicies.gateway.envoyproxy.io
+    kubectl --context k3d-fundament apply -k deploy/k3d/gateway
+    echo "Waiting for the wildcard certificate and the Gateway..."
+    kubectl --context k3d-fundament wait --for=condition=Ready certificate/fundament-local -n gateway --timeout=120s
+    kubectl --context k3d-fundament wait --for=condition=Programmed gateway/fundament-local -n gateway --timeout=300s
+
+# Wait until k3s's helm-install Job has created the given Deployments, then until they are
+# Available. `kubectl wait` errors at once on a resource that does not exist yet instead of
+# polling, and k3s creates the namespace well before the Deployments.
+_wait-helm-deployments namespace +deployments:
+    #!/usr/bin/env bash
+    set -e
+    deadline=$(( $(date +%s) + 120 ))
+    until kubectl --context k3d-fundament get deployment {{ deployments }} -n {{ namespace }} > /dev/null 2>&1; do
+        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for deployments in {{ namespace }}: {{ deployments }}"; exit 1; }
+        sleep 5
+    done
+    kubectl --context k3d-fundament wait --for=condition=Available -n {{ namespace }} --timeout=300s \
+        $(printf 'deployment/%s ' {{ deployments }})
 
 # --- Deployment commands ---
 

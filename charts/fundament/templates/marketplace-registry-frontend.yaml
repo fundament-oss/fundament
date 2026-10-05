@@ -29,9 +29,6 @@ data:
   what keeps a spoofed host header from steering server-side rendering.
 */}}
 {{- $allowedHosts := list }}
-{{- if $.Values.ingress.enabled }}
-{{- $allowedHosts = append $allowedHosts (printf "marketplace-registry.%s%s" (include "fundament.ingress.infix" .) $.Values.ingress.domain) }}
-{{- end }}
 {{- range $.Values.marketplaceRegistryFrontend.httproute.hostnames }}
 {{- $allowedHosts = append $allowedHosts . }}
 {{- end }}
@@ -127,38 +124,5 @@ spec:
       name: http
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "marketplace-registry-frontend") | nindent 4 }}
-
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: marketplace-registry-frontend
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "marketplace-registry-frontend" "component" "frontend") | nindent 4 }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  annotations:
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-  {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - marketplace-registry.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: marketplace-registry-frontend-tls
-  {{- end }}
-  rules:
-    - host: marketplace-registry.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: marketplace-registry-frontend
-                port:
-                  name: http
-{{- end }}
 
 {{- end }}

@@ -27,6 +27,8 @@ for i in $(seq 1 20); do
 done
 mise exec -- kubectl --context k3d-fundament get clusterissuer mkcert-local >/dev/null 2>&1 \
   || { log "FATAL: ClusterIssuer mkcert-local never came up — cluster-create/cert-manager is broken"; exit 1; }
+# cluster-create stops at a failed setup-certs, so the gateway may not be applied yet.
+mise exec -- just setup-gateway || log "setup-gateway returned nonzero (the UIs will be unreachable; non-fatal for the shoot path)"
 
 log "=== STAGE B: gardener-up (clones gardener, brings up seed; ~10-15 min) ==="
 mise exec -- just cluster-worker gardener-up || log "gardener-up returned nonzero"

@@ -131,7 +131,7 @@ func run() error {
 	outerMux := newHealthMux(logger, cfg.DeploymentVersion, database, authzStore)
 	outerMux.Handle("/", server.Handler())
 
-	// Cleartext HTTP/2 with prior knowledge: the ingress speaks h2c to the pod.
+	// Cleartext HTTP/2 with prior knowledge: the gateway speaks h2c to the pod.
 	// Uses the stdlib rather than x/net/http2/h2c, whose Upgrade: handshake
 	// nothing here uses.
 	protocols := new(http.Protocols)

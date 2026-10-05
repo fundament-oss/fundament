@@ -39,6 +39,12 @@ externalUrls:
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
+# appProtocol on the Services of the Connect APIs (organization, dcim and the
+# marketplace APIs). `kubernetes.io/h2c` makes the gateway speak cleartext
+# HTTP/2 to the pod, which gRPC clients need end to end; a gateway that does not
+# support it falls back to HTTP/1.1, which carries Connect and gRPC-Web.
+grpcAppProtocol: kubernetes.io/h2c
+
 # Container images
 images:
   dbMigrations: ghcr.io/fundament-oss/fundament/db-migrations:latest
@@ -155,6 +161,10 @@ kubeApiProxy:
     #    namespace: gateway-ns
     hostnames: []
     #  - k8s-api.example.com
+    # Watches, `logs -f` and exec are long-lived; Envoy Gateway cuts every
+    # request at 15s unless the route turns its request timeout off.
+    timeouts:
+      request: 0s
 
 # Cluster Worker
 clusterWorker:
@@ -446,15 +456,6 @@ dex:
 
 # Host aliases for pods (useful for local development to resolve external URLs to internal services)
 hostAliases: []
-
-# Ingress
-ingress:
-  enabled: false
-  className: nginx
-  domain: ""
-  subdomainInfix: "" # e.g., "pr123." for PR environments → console.pr123.domain
-  tls:
-    clusterIssuer: ""
 
 # Gardener shoot proxy (local development only)
 shootProxy:

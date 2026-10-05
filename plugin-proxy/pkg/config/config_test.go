@@ -19,9 +19,9 @@ func TestFromEnv_MockModeDefaultsOrigins(t *testing.T) {
 
 	cfg, err := FromEnv()
 	require.NoError(t, err)
-	assert.Equal(t, "http://plugin-proxy.fundament.localhost:8080", cfg.PluginProxyOrigin)
-	assert.Equal(t, "http://kube-api-proxy.fundament.localhost:8080", cfg.KubeAPIProxyOrigin)
-	assert.Equal(t, "http://console.fundament.localhost:8080", cfg.ConsoleOrigin)
+	assert.Equal(t, "https://plugin-proxy.fundament.localhost:8443", cfg.PluginProxyOrigin)
+	assert.Equal(t, "https://k8s-api.fundament.localhost:8443", cfg.KubeAPIProxyOrigin)
+	assert.Equal(t, "https://console.fundament.localhost:8443", cfg.ConsoleOrigin)
 	assert.Equal(t, "test-secret", cfg.JWTSecret)
 }
 

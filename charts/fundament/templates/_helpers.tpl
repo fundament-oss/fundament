@@ -102,21 +102,6 @@ JWT Secret environment variable - supports both direct value and secretRef
 {{- end }}
 
 {{/*
-Subdomain infix for ingress hostnames (e.g., "pr123." for PR environments)
-Inserted between service name and domain: service.pr123.domain
-*/}}
-{{- define "fundament.ingress.infix" -}}
-{{ $.Values.ingress.subdomainInfix | default "" }}
-{{- end }}
-
-{{/*
-Ingress controller service for internal access
-*/}}
-{{- define "fundament.ingressService" -}}
-ingress-nginx-controller.ingress-nginx.svc.cluster.local
-{{- end }}
-
-{{/*
 livenessProbe rendered with Air-friendly cadence in hotreload mode and
 production-tight cadence otherwise. In hotreload mode, failureThreshold *
 periodSeconds gives ~5 minutes for any `go build` (initial *or* mid-life

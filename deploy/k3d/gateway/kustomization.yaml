@@ -1,0 +1,13 @@
+# The local edge: one Envoy Gateway listener in front of every
+# *.fundament.localhost host. The chart's HTTPRoutes (values-local.yaml)
+# attach to it cross-namespace, like PR previews attach to digikluster's
+# ListenerSet. Applied by `just setup-gateway`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - gatewayclass.yaml
+  - certificate.yaml
+  - gateway.yaml
+  - backendtrafficpolicy.yaml
+  - clienttrafficpolicy.yaml

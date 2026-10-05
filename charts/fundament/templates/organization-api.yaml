@@ -123,41 +123,10 @@ spec:
     - port: 8080
       targetPort: http
       name: http
+      {{- with $.Values.grpcAppProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "organization-api") | nindent 4 }}
-
-{{- if $.Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: organization-api
-  labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "backend") | nindent 4 }}
-  annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-    {{- if $.Values.ingress.tls.clusterIssuer }}
-    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
-    {{- end }}
-spec:
-  ingressClassName: {{ $.Values.ingress.className }}
-  {{- if $.Values.ingress.tls.clusterIssuer }}
-  tls:
-    - hosts:
-        - organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      secretName: organization-api-tls
-  {{- end }}
-  rules:
-    - host: organization.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: organization-api
-                port:
-                  name: http
-{{- end }}
 
 {{- end }}
