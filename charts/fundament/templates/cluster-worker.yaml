@@ -114,6 +114,8 @@ spec:
             - name: GARDENER_SHOOT_ANNOTATIONS
               value: {{ . | toJson | quote }}
             {{- end }}
+            - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
+              value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:

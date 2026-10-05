@@ -76,6 +76,10 @@ type GardenerConfig struct {
 	InfrastructureConfig string `env:"INFRASTRUCTURE_CONFIG"`
 	ControlPlaneConfig   string `env:"CONTROL_PLANE_CONFIG"`
 	ShootAnnotations     string `env:"SHOOT_ANNOTATIONS"`
+
+	// ImmediateClusterDeletion deletes clusters without waiting for what runs
+	// inside them; see ProviderConfig.ImmediateClusterDeletion.
+	ImmediateClusterDeletion bool `env:"IMMEDIATE_CLUSTER_DELETION"`
 }
 
 // ReadyChecker reports whether a worker is ready to serve traffic.
@@ -270,6 +274,7 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 			}
 			providerCfg.ShootAnnotations = anns
 		}
+		providerCfg.ImmediateClusterDeletion = g.ImmediateClusterDeletion
 
 		logger.Info("using real Gardener client",
 			"kubeconfig", g.Kubeconfig,

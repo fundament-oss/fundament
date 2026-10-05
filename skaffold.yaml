@@ -194,6 +194,8 @@ profiles:
         value:
           clusterWorker.gardenerMode: real
           clusterWorker.gardenerKubeconfigSecret: gardener-kubeconfig
+          # Local clusters are throwaway; without it every blocked delete waits minutes.
+          clusterWorker.gardenerImmediateClusterDeletion: "true"
           shootProxy.enabled: true
           kubeApiProxy.mode: real
           kubeApiProxy.gardenerKubeconfigSecret: gardener-kubeconfig
