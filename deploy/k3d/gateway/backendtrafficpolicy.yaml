@@ -4,8 +4,8 @@
 #
 # Targets the whole Gateway: a policy on the kube-api-proxy HTTPRoute alone
 # would have to live in the chart's namespace. The request timeout for
-# long-lived streams is set on that route instead (timeouts.request in
-# values-local.yaml), so other routes keep Envoy's default.
+# long-lived streams is set on that route instead (kubeApiProxy.httproute.timeouts
+# in the chart), so other routes keep Envoy's default.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:

@@ -40,11 +40,10 @@ externalUrls:
   cookieDomain: "" # e.g., example.com
 
 # appProtocol on the Services of the Connect APIs (organization, dcim and the
-# marketplace APIs). `kubernetes.io/h2c` makes a Gateway API implementation
-# speak cleartext HTTP/2 to the pod, which gRPC clients need end to end. It is
-# an extended Gateway API feature, so it is off by default: the gateway then
-# uses HTTP/1.1, which carries Connect unary calls and streams.
-grpcAppProtocol: ""
+# marketplace APIs). `kubernetes.io/h2c` makes the gateway speak cleartext
+# HTTP/2 to the pod, which gRPC clients need end to end; a gateway that does not
+# support it falls back to HTTP/1.1, which carries Connect and gRPC-Web.
+grpcAppProtocol: kubernetes.io/h2c
 
 # Container images
 images:
@@ -162,10 +161,10 @@ kubeApiProxy:
     #    namespace: gateway-ns
     hostnames: []
     #  - k8s-api.example.com
-    # Gateway API route timeouts. Watches, `logs -f` and exec are long-lived, so
-    # a gateway with a default request timeout cuts them; `request: 0s` turns it
-    # off where the gateway supports it (an extended Gateway API feature).
-    timeouts: {}
+    # Watches, `logs -f` and exec are long-lived; Envoy Gateway cuts every
+    # request at 15s unless the route turns its request timeout off.
+    timeouts:
+      request: 0s
 
 # Cluster Worker
 clusterWorker:
