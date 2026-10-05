@@ -3,7 +3,7 @@
 
 export const CLUSTER_RESOURCE = { group: 'postgresql.cnpg.io', version: 'v1', resource: 'clusters' };
 
-// Operator 1.25 runs PostgreSQL 13 to 17; 18 needs operator 1.27. First is the
+// Operator 1.26 runs PostgreSQL 13 to 17; 18 needs operator 1.27. First is the
 // default. Exact minor tags, so a database never changes version on its own.
 export const POSTGRES_IMAGES = [
   { image: 'ghcr.io/cloudnative-pg/postgresql:17.4', label: 'PostgreSQL 17.4' },
@@ -45,6 +45,17 @@ export function namespaceError(namespace) {
 export function storageSizeError(size) {
   if (!/^[1-9][0-9]*(Mi|Gi|Ti)$/.test(size)) {
     return 'Enter the storage size as a whole number followed by Mi, Gi or Ti, for example 1Gi.';
+  }
+  return null;
+}
+
+// Empty means the cluster default, so it is an error only when the cluster has
+// none: the PVC would stay Pending, and the database cannot be deleted from
+// the console to try again.
+export function storageClassError(storageClass, { required }) {
+  if (!storageClass) return required ? 'Please choose a StorageClass.' : null;
+  if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(storageClass) || storageClass.length > 253) {
+    return 'Enter a valid StorageClass name.';
   }
   return null;
 }

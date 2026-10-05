@@ -79,10 +79,7 @@ func (i *installer) ensurePrerequisites(ctx context.Context) error {
 	}
 
 	// Shared with the cloudnativepg plugin; see plugins/internal/cnpg.
-	if err := cnpg.Install(ctx); err != nil {
-		return fmt.Errorf("install cloudnative-pg: %w", err)
-	}
-	return nil
+	return cnpg.Install(ctx) //nolint:wrapcheck // already prefixed "install cloudnative-pg"
 }
 
 func (i *installer) installOperator(ctx context.Context) error {

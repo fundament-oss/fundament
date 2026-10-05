@@ -99,7 +99,7 @@ Create PostgreSQL databases for your projects from the console. The plugin insta
 ## Use Cases
 
 - Development and test databases
-- Applications that need a relational database in their own namespace', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.25.1'),
+- Applications that need a relational database in their own namespace', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.26.0'),
     ('019b4000-3000-7000-8000-000000000004', '019b4000-0000-7000-8000-000000000000', 'eck-operator', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
 
 Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, management, and orchestration of Elasticsearch, Kibana, and the Elastic Stack on Kubernetes.

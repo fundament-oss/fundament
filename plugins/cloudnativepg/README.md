@@ -2,7 +2,7 @@
 
 Installs the CloudNativePG operator and lets project members create PostgreSQL databases from the console.
 
-- Helm chart `cloudnative-pg` 0.24.0 (operator v1.25.1) from `https://cloudnative-pg.github.io/charts`, release `cnpg` in `cnpg-system`, chart default values
+- Helm chart `cloudnative-pg` 0.24.0 (operator v1.26.0) from `https://cloudnative-pg.github.io/charts`, release `cnpg` in `cnpg-system`, chart default values
 - CRD: Cluster (`clusters.postgresql.cnpg.io`)
 - Console: create and read-only detail pages in `console/`; the list is the console's generated one, labelled Databases
 - Config: none
@@ -11,7 +11,13 @@ Installs the CloudNativePG operator and lets project members create PostgreSQL d
 
 A database is a CNPG `Cluster` with 1 instance, no backups, and CNPG's default bootstrap: database `app`, owned by user `app`, credentials in Secret `<name>-app`. The create form sets name, namespace, storage size, PostgreSQL version (17.4 or 16.8) and StorageClass.
 
-Project admins cannot change or delete a database, from the console or with kubectl. To change or delete one, an organization admin uses kubectl, or a later version of this plugin adds it.
+Project admins cannot update or delete the `Cluster` resource, from the console or with kubectl. To change or delete one, an organization admin uses kubectl, or a later version of this plugin adds it.
+
+That protects the resource, not the data. The built-in `admin` role still covers what the operator creates in the namespace, so a project admin can:
+
+- delete PVC `<name>-1` and pod `<name>-1`, which destroys a single-instance database;
+- edit or delete Secret `<name>-app`;
+- create a `Cluster` with kubectl, bypassing the form's limits: more instances, another image, backups, a custom bootstrap. Only a ResourceQuota on the namespace caps its size.
 
 ## Shared operator
 
@@ -19,7 +25,7 @@ openfsc installs the same `cnpg` release. Both call `plugins/internal/cnpg`, whi
 
 - keeps the chart's default values, so neither plugin flips the other's settings;
 - skips the install when the release is already deployed at its chart version or newer, so an older plugin never downgrades the operator or its CRDs;
-- refuses while the release is `pending-*`. When a pod is killed during `helm --wait`, the release stays pending. Recover with `helm -n cnpg-system rollback cnpg`.
+- refuses while the release is `pending-*`. When a pod is killed during `helm --wait`, the release stays pending. Recover a stuck upgrade with `helm -n cnpg-system rollback cnpg`. A stuck first install (`pending-install`) has no earlier revision to roll back to: run `helm -n cnpg-system uninstall cnpg`, which is safe because it never deployed.
 
 ## User RBAC
 
@@ -38,7 +44,7 @@ The plugin has no uninstall step. Uninstalling it removes only the console pages
 
 ## Known limitations
 
-- Only organization admins can list StorageClasses. For a project admin, the create form offers only the cluster default.
+- Only organization admins can list StorageClasses. A project admin gets a text field instead of a list: empty means the cluster default, or they type a StorageClass name an organization admin gave them.
 - The generated list lists databases across all namespaces, which only organization admins may do, so it fails to load for a project admin who is not also an organization admin. Every namespaced plugin kind shares this platform limitation.
 
 ## Flow
