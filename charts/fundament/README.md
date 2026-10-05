@@ -16,9 +16,10 @@ each environment adds one file on top.
 
 ## Immediate cluster deletion
 
-`clusterWorker.clusterDeletion.immediate` is off when unset. When on, deleting a cluster
-does not wait for what runs inside it: Gardener removes blocking finalizers on the first
-pass instead of after 5 minutes, or an hour for custom resources.
+`clusterWorker.gardenerImmediateClusterDeletion` is off when unset. When on, deleting a
+cluster does not wait for what runs inside it: Gardener removes blocking finalizers on the
+first pass instead of after 5 minutes, or an hour for custom resources, and stops pods
+without a grace period.
 
 Those finalizers exist so workloads can clean up what they manage outside the cluster:
 volumes on external storage, load balancers, DNS records. With the setting on, such

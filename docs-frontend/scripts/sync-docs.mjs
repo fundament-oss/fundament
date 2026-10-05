@@ -143,11 +143,16 @@ function mirrorDir(src, dest, filter = () => true) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
       if (isHidden(path) || !filter(path)) continue;
+      const target = join(dest, relative(src, path));
+      // A source path that switched between file and directory leaves the old type in
+      // `dest`, which would make every later sync throw; remove it first.
+      const existing = statSync(target, { throwIfNoEntry: false });
       if (entry.isDirectory()) {
+        if (existing && !existing.isDirectory()) rmSync(target);
         visit(path);
         continue;
       }
-      const target = join(dest, relative(src, path));
+      if (existing?.isDirectory()) rmSync(target, { recursive: true });
       wanted.add(target);
       let content = readFileSync(path);
       const ext = Object.keys(REWRITES).find((e) => entry.name.endsWith(e));
@@ -155,7 +160,7 @@ function mirrorDir(src, dest, filter = () => true) {
         content = Buffer.from(
           rewriteProse(content.toString('utf8'), REWRITES[ext], CODE_SEGMENTS[ext])
         );
-      const current = statSync(target, { throwIfNoEntry: false }) ? readFileSync(target) : null;
+      const current = existing?.isFile() ? readFileSync(target) : null;
       if (current && current.equals(content)) continue;
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, content);

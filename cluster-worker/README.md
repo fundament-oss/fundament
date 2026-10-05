@@ -128,7 +128,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `LOG_LEVEL` | `info` | |
 | `HEALTH_PORT` | `8097` | |
 | `SHUTDOWN_TIMEOUT` | `30s` | |
-| `CLUSTER_DELETION_IMMEDIATE` | `false` | see [Immediate cluster deletion](#immediate-cluster-deletion) |
+| `GARDENER_IMMEDIATE_CLUSTER_DELETION` | `false` | see [Immediate cluster deletion](#immediate-cluster-deletion) |
 | `GARDENER_MODE` | | `mock` (in-memory, for tests and console work) or `real` |
 | `GARDENER_KUBECONFIG` | | path to the virtual garden kubeconfig; required in `real` mode |
 | `GARDENER_PROVIDER_TYPE`, `GARDENER_CLOUD_PROFILE`, `GARDENER_REGION`, `GARDENER_CREDENTIALS_BINDING_NAME` | local provider | shoot provider wiring |
@@ -149,13 +149,14 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 
 ## Immediate cluster deletion
 
-`CLUSTER_DELETION_IMMEDIATE=true` (Helm: `clusterWorker.clusterDeletion.immediate`) stops a cluster
+`GARDENER_IMMEDIATE_CLUSTER_DELETION=true` (Helm: `clusterWorker.gardenerImmediateClusterDeletion`) stops a cluster
 deletion from waiting for what runs inside it. Before destroying a shoot's machines,
 Gardener deletes the objects inside it and waits for their finalizers: 5 minutes for
 webhooks and for workloads, Services, Ingresses and PVCs, an hour for custom resources.
 `deleteShoot` sets the three `shoot.gardener.cloud/cleanup-*-finalize-grace-period-seconds`
 annotations to `0`, so Gardener removes blocking finalizers on the first pass and runs
-every other teardown step as usual.
+every other teardown step as usual. The same value is the delete grace period, so pods
+get no SIGTERM window. Gardener reads these annotations only while it deletes a shoot.
 
 Whatever those finalizers were protecting outside the cluster — storage, load balancers,
 DNS records — can be left behind. Turn it on only where nothing outside a cluster
@@ -244,11 +245,47 @@ deliberately not CI — see the repo's testing conventions):
 
 ### Removal and CRD versions
 
-- Turning `pluginController.provisionShoots` off stops provisioning but removes nothing:
-  shoots keep the plugin-controller, its RBAC and the CRD.
-- cluster-worker never updates a shoot's CRD in a way that drops a version the shoot
-  still stores objects under; it logs `refusing CRD update that would drop stored
-  versions` instead.
+#### Disabling is not uninstalling
+
+Disabling `pluginController.provisionShoots` stops the handler from provisioning or
+updating the machinery, but removes nothing: already-provisioned shoots keep
+running the plugin-controller Deployment with its ClusterRole, and the CRD
+stays installed. There is no per-cluster opt-out with an ordered teardown yet,
+so removing the machinery from a shoot is a manual operation in exactly this
+order: drain `PluginInstallation`s through the still-running controller, then
+delete the CRD, then the controller and its RBAC. Deleting the controller first
+strands the CRs behind their cleanup finalizer.
+
+#### Retiring a CRD version
+
+`EnsureCRD` converges each shoot's CRD onto the manifest embedded in the
+binary, but it will not drop a version the shoot still stores objects under.
+Kubernetes rejects such an update outright, and because the handler runs on
+every ready shoot, a chart revision that removed a stored version would fail
+fleet-wide on every tick. Instead the handler refuses that one update and logs:
+
+```
+refusing CRD update that would drop stored versions
+  crd=plugininstallations.plugins.fundament.io removed_stored_versions=[v1]
+```
+
+If you see that, the chart is ahead of the shoots. Retire the version properly
+([upstream procedure][crd-versioning]):
+
+1. Ship the new version **alongside** the old one and make it `storage: true`.
+2. Migrate the stored objects, so nothing remains persisted under the old
+   version — Kubernetes' [StorageVersionMigration][svm] does this, or touch
+   every `PluginInstallation` so the API server rewrites it.
+3. Confirm the old version has left `status.storedVersions` on each shoot:
+   `kubectl get crd plugininstallations.plugins.fundament.io -o jsonpath='{.status.storedVersions}'`
+4. Only then remove the version from `charts/fundament/crds/` and re-run
+   `go generate ./cluster-worker/...` so the embedded copy follows.
+
+Never "fix" this by deleting the CRD: that cascades to every tenant's
+`PluginInstallation` resources.
+
+[crd-versioning]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version
+[svm]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/storage-version-migration/
 
 ## Running it locally
 

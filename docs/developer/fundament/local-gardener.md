@@ -114,10 +114,10 @@ just cluster-worker dev
 :::caution[A redeploy deletes your clusters]
 Every deploy resets the databases. cluster-worker then finds shoots without a cluster in the database and deletes them. While you have clusters you want to keep, stop it with `Ctrl-C` once the deploy is done. See [Change a service without a redeploy](#change-a-service-without-a-redeploy).
 :::
-- The profile turns on immediate cluster deletion (`clusterWorker.clusterDeletion.immediate`): deleting a cluster does not wait for what runs in it to clean up. To see how a deletion behaves without it, turn it off without redeploying:
+- The profile turns on immediate cluster deletion (`clusterWorker.gardenerImmediateClusterDeletion`): deleting a cluster does not wait for what runs in it to clean up. To see how a deletion behaves without it, turn it off without redeploying:
 
   ```shell
-  kubectl --context k3d-fundament -n fundament set env deploy/cluster-worker CLUSTER_DELETION_IMMEDIATE=false
+  kubectl --context k3d-fundament -n fundament set env deploy/cluster-worker GARDENER_IMMEDIATE_CLUSTER_DELETION=false
   ```
 
 ## 4. Create a cluster
