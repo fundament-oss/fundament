@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,11 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-const (
-	annCleanupKubernetesResources = "shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"
-	annCleanupExtendedAPIs        = "shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"
-	annCleanupWebhooks            = "shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"
-)
+var cleanupAnnotations = []string{
+	v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds,
+	v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds,
+	v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds,
+}
 
 // deletionTestShoot carries a finalizer, so the fake client's Delete leaves the
 // object behind for the annotations to be read off.
@@ -31,14 +32,14 @@ func deletionTestShoot() *gardencorev1beta1.Shoot {
 	}
 }
 
-func deletionTestClient(t *testing.T, skipCleanupWait bool, shoot *gardencorev1beta1.Shoot) *RealClient {
+func deletionTestClient(t *testing.T, immediate bool, shoot *gardencorev1beta1.Shoot) *RealClient {
 	t.Helper()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, gardencorev1beta1.AddToScheme(scheme))
 
 	provider := NewProviderConfig()
-	provider.SkipCleanupWait = skipCleanupWait
+	provider.ImmediateClusterDeletion = immediate
 
 	return &RealClient{
 		client:   fake.NewClientBuilder().WithScheme(scheme).WithObjects(shoot).Build(),
@@ -64,8 +65,8 @@ func TestDeleteShoot_CleanupGracePeriods(t *testing.T) {
 		require.NoError(t, r.client.Get(t.Context(), client.ObjectKeyFromObject(shoot), got))
 		require.NotNil(t, got.DeletionTimestamp)
 
-		assert.Equal(t, "true", got.Annotations["confirmation.gardener.cloud/deletion"])
-		for _, ann := range []string{annCleanupKubernetesResources, annCleanupExtendedAPIs, annCleanupWebhooks} {
+		assert.Equal(t, "true", got.Annotations[v1beta1constants.ConfirmationDeletion])
+		for _, ann := range cleanupAnnotations {
 			assert.Equal(t, "0", got.Annotations[ann], ann)
 		}
 	})
@@ -81,8 +82,8 @@ func TestDeleteShoot_CleanupGracePeriods(t *testing.T) {
 		got := &gardencorev1beta1.Shoot{}
 		require.NoError(t, r.client.Get(t.Context(), client.ObjectKeyFromObject(shoot), got))
 
-		assert.Equal(t, "true", got.Annotations["confirmation.gardener.cloud/deletion"])
-		for _, ann := range []string{annCleanupKubernetesResources, annCleanupExtendedAPIs, annCleanupWebhooks} {
+		assert.Equal(t, "true", got.Annotations[v1beta1constants.ConfirmationDeletion])
+		for _, ann := range cleanupAnnotations {
 			assert.NotContains(t, got.Annotations, ann)
 		}
 	})

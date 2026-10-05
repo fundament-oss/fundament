@@ -8,6 +8,7 @@ import (
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -44,9 +45,11 @@ type ProviderConfig struct {
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
 	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
 
-	// SkipCleanupWait makes a shoot deletion strip a blocking finalizer on the
-	// first cleanup pass instead of waiting out Gardener's grace period.
-	SkipCleanupWait bool
+	// ImmediateClusterDeletion makes a shoot deletion skip Gardener's cleanup
+	// waits: blocking finalizers are stripped on the first pass and pods are
+	// deleted with a zero grace period, so they get no SIGTERM window. Gardener
+	// reads these waits only while it deletes a shoot.
+	ImmediateClusterDeletion bool
 
 	// Networking CIDRs. NodesCIDR empty leaves spec.networking.nodes unset so the
 	// provider's IPAM allocates the node range (metal hands out a partition /24);
@@ -511,15 +514,17 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	if shoot.Annotations == nil {
 		shoot.Annotations = make(map[string]string)
 	}
-	shoot.Annotations["confirmation.gardener.cloud/deletion"] = "true"
+	shoot.Annotations[v1beta1constants.ConfirmationDeletion] = "true"
 
 	// Zero makes Gardener remove the finalizers of the objects it cleans up on the
 	// first pass, rather than 5m (Kubernetes resources, webhooks) or 1h (CRDs and
-	// other extended APIs) later. The annotations can only shorten those waits.
-	if r.provider.SkipCleanupWait {
-		shoot.Annotations["shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"] = "0"
-		shoot.Annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "0"
-		shoot.Annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "0"
+	// other extended APIs) later. The same value is the delete grace period, so
+	// pods are removed without a SIGTERM window. The annotations can only shorten
+	// those waits.
+	if r.provider.ImmediateClusterDeletion {
+		shoot.Annotations[v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds] = "0"
+		shoot.Annotations[v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds] = "0"
+		shoot.Annotations[v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds] = "0"
 	}
 
 	// Force-deletion can only be set when the shoot already has a deletionTimestamp.

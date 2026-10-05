@@ -32,10 +32,6 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
-            # Always rendered, so the manifest states whether cluster teardown waits
-            # for what runs inside a cluster. See clusterWorker.clusterDeletion.immediate.
-            - name: CLUSTER_DELETION_IMMEDIATE
-              value: {{ dig "clusterDeletion" "immediate" false $.Values.clusterWorker | quote }}
             {{- if $.Values.pluginController.provisionShoots }}
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.
@@ -118,6 +114,8 @@ spec:
             - name: GARDENER_SHOOT_ANNOTATIONS
               value: {{ . | toJson | quote }}
             {{- end }}
+            - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
+              value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:
