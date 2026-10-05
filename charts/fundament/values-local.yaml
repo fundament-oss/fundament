@@ -6,9 +6,6 @@ development:
 
 jwtSecret: "local-dev-jwt-secret"
 
-# The local Envoy Gateway supports h2c backends, so gRPC clients work through it.
-grpcAppProtocol: kubernetes.io/h2c
-
 externalUrls:
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
@@ -80,11 +77,6 @@ kubeApiProxy:
     parentRefs: *localGateway
     hostnames:
       - k8s-api.fundament.localhost
-    # Envoy cuts every request at 15s by default, which ends `kubectl get -w`,
-    # `kubectl logs -f` and gRPC server streams. Idle streams are still reclaimed
-    # by the stream idle timeout (deploy/k3d/gateway/clienttrafficpolicy.yaml).
-    timeouts:
-      request: 0s
 
 consoleFrontend:
   enabled: true
