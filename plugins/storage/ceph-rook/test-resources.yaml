@@ -35,6 +35,9 @@ metadata:
 spec:
   metadataServers: 1
 ---
+# The `just test` recipe claims a bucket against this store's StorageClass,
+# but only once the store is Ready: a claim created earlier sits in the OBC
+# provisioner's exponential backoff and can outlive any reasonable wait.
 apiVersion: ceph.fundament.io/v1alpha1
 kind: ObjectStorage
 metadata:
@@ -42,14 +45,3 @@ metadata:
 spec:
   # replicas omitted: automatic, derived from the contributing nodes.
   gatewayInstances: 1
----
-# Claim a bucket on test-object's StorageClass once it is Ready. Rook writes
-# the S3 endpoint to ConfigMap test-bucket and the credentials to Secret
-# test-bucket, both in this namespace.
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: test-bucket
-spec:
-  generateBucketName: test-bucket
-  storageClassName: cephobj-test-object

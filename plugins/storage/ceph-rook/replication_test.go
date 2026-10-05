@@ -21,6 +21,10 @@ func TestComputeReplication(t *testing.T) {
 		{"derived two nodes", nil, 2, 2, "host", ""},
 		{"derived one node uses osd domain", nil, 1, 1, "osd", ""},
 		{"derived zero nodes", nil, 0, 1, "osd", ""},
+		// Invalid requests (below the CRD minimum) fall back to derived with
+		// a message, never to unreplicated storage and never silently.
+		{"explicit 0 falls back to derived", ptr.To[int32](0), 3, 3, "host", "using auto"},
+		{"negative falls back to derived", ptr.To[int32](-1), 2, 2, "host", "using auto"},
 		{"explicit 3 on 2 nodes clamps", ptr.To[int32](3), 2, 2, "host", "clamped"},
 		{"explicit 3 on 3 nodes", ptr.To[int32](3), 3, 3, "host", ""},
 		{"explicit 2 on 1 node clamps to osd", ptr.To[int32](2), 1, 1, "osd", "clamped"},

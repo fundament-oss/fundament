@@ -29,10 +29,11 @@ func CephFSProvisioner(rookNamespace string) string {
 	return rookNamespace + ".cephfs.csi.ceph.com"
 }
 
-// BucketProvisioner is Rook's ObjectBucketClaim provisioner name for an
-// operator in rookNamespace; same registration rule as RBDProvisioner.
-func BucketProvisioner(rookNamespace string) string {
-	return rookNamespace + ".ceph.rook.io/bucket"
+// BucketProvisioner is Rook's ObjectBucketClaim provisioner name. Unlike the
+// CSI drivers it follows the CephCluster's namespace, not the operator's:
+// Rook builds it from clusterInfo.Namespace (GetObjectBucketProvisioner).
+func BucketProvisioner(clusterNamespace string) string {
+	return clusterNamespace + ".ceph.rook.io/bucket"
 }
 
 // cephStorageClass builds the scaffold both CSI StorageClasses share; the
@@ -96,18 +97,21 @@ func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace, mou
 }
 
 // RenderBucketStorageClass builds the StorageClass that ObjectBucketClaims
-// reference. It drives Rook's OBC provisioner rather than a CSI driver, so it
-// carries none of the CSI scaffold: no secrets, no expansion, no binding mode.
-// storeName is the CephObjectStore's name; clusterNamespace is where it lives.
-func RenderBucketStorageClass(name, clusterNamespace, storeName, rookNamespace string) *storagev1.StorageClass {
+// reference. It drives Rook's OBC provisioner rather than a CSI driver, so
+// it carries none of the CSI scaffold. The ignored trailing parameter exists
+// only to match the generic renderStorageClass signature.
+func RenderBucketStorageClass(name, clusterNamespace, storeName, _ string) *storagev1.StorageClass {
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Provisioner: BucketProvisioner(rookNamespace),
+		Provisioner: BucketProvisioner(clusterNamespace),
 		// Delete removes the bucket and its objects with the claim; the pools
 		// themselves are guarded by preservePoolsOnDelete.
 		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
+		// Meaningless for buckets, but nil reads back as the server default,
+		// which immutableStorageClassDrift would treat as drift forever.
+		VolumeBindingMode: ptr.To(storagev1.VolumeBindingImmediate),
 		Parameters: map[string]string{
 			"objectStoreName":      storeName,
 			"objectStoreNamespace": clusterNamespace,

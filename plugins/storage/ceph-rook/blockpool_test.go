@@ -23,9 +23,20 @@ func TestRenderCephBlockPool(t *testing.T) {
 	fd, _, _ := unstructured.NestedString(u.Object, "spec", "failureDomain")
 	assert.Equal(t, "host", fd)
 
-	_, found, err = unstructured.NestedBool(u.Object, "spec", "replicated", "requireSafeReplicaSize")
+	safe, found, err := unstructured.NestedBool(u.Object, "spec", "replicated", "requireSafeReplicaSize")
 	require.NoError(t, err)
-	assert.False(t, found)
+	require.True(t, found, "always emitted; see replicatedPoolSpec")
+	assert.True(t, safe)
+}
+
+// The key must be emitted at every size, or a size-1 waiver stays latched
+// after scaling up; replicatedPoolSpec documents why.
+func TestReplicatedPoolSpecAlwaysPinsSafeReplicaSize(t *testing.T) {
+	t.Parallel()
+	for replicas, want := range map[int]bool{1: false, 2: true, 3: true} {
+		safe := replicatedPoolSpec(replicas, "host")["replicated"].(map[string]any)["requireSafeReplicaSize"]
+		assert.Equal(t, want, safe, "replicas=%d", replicas)
+	}
 }
 
 // Ceph rejects a size-1 pool unless the safe-replica check is waived, which is

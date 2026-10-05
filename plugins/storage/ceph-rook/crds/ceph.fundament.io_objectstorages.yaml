@@ -33,8 +33,9 @@ spec:
           ObjectBucketClaims to reference; Rook provisions each claim's bucket and
           hands its credentials to the claim's Secret and ConfigMap.
 
-          The name-length limit exists because Rook labels the RGW deployment
-          rgw=<store name> and label values cap at 63 characters.
+          The name-length limit exists because Rook creates a Service named
+          rook-ceph-rgw-<store> with no truncation: 63 (DNS-1035) minus that prefix
+          and the cephobj- prefix leaves 41.
         properties:
           apiVersion:
             description: |-
@@ -79,8 +80,8 @@ spec:
             type: object
           status:
             description: |-
-              ConsumerStatus is the observed state of a BlockStorage or FileStorage and
-              the StorageClass it derives.
+              ConsumerStatus is the observed state of a storage consumer and the
+              StorageClass it derives.
             properties:
               conditions:
                 description: Conditions carries the Ready condition, keyed by condition
@@ -170,15 +171,16 @@ spec:
                 type: integer
               storageClassName:
                 description: |-
-                  StorageClassName is the name of the derived StorageClass, for
-                  PersistentVolumeClaims to reference.
+                  StorageClassName is the name of the derived StorageClass, which claims
+                  (PersistentVolumeClaims, or ObjectBucketClaims for an object store)
+                  reference.
                 type: string
             type: object
         type: object
         x-kubernetes-validations:
-        - message: 'name must be at most 55 characters: Rook derives a cephobj-<name>
-            label capped at 63'
-          rule: size(self.metadata.name) <= 55
+        - message: 'name must be at most 41 characters: Rook derives a Service named
+            rook-ceph-rgw-cephobj-<name> capped at 63'
+          rule: size(self.metadata.name) <= 41
     served: true
     storage: true
     subresources:

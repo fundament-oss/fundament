@@ -49,11 +49,50 @@ test:
         exit 1
     fi
 
+    # An ObjectStorage with no OSD capacity goes Degraded, not Ready: report why.
+    echo "Waiting for ObjectStorage to become Ready..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Ready objectstorage/test-object --timeout=300s; then
+        echo >&2
+        echo "ObjectStorage did not become Ready. Status:" >&2
+        kubectl get objectstorage test-object -o jsonpath='{.status.phase}: {.status.message}{"\n"}' >&2
+        exit 1
+    fi
+
+    # The claim goes in only after the store is Ready: applied earlier it sits
+    # in the OBC provisioner's exponential backoff (capped at ~17 min), which
+    # can outlast this wait on a healthy plugin.
+    kubectl apply -f - <<'YAML'
+    apiVersion: objectbucket.io/v1alpha1
+    kind: ObjectBucketClaim
+    metadata:
+      name: test-bucket
+    spec:
+      generateBucketName: test-bucket
+      storageClassName: cephobj-test-object
+    YAML
+
+    echo "Waiting for ObjectBucketClaim to bind..."
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Bound objectbucketclaim/test-bucket --timeout=300s; then
+        echo >&2
+        echo "ObjectBucketClaim did not bind. Status:" >&2
+        kubectl get objectbucketclaim test-bucket -o jsonpath='{.status.phase}{"\n"}' >&2
+        exit 1
+    fi
+
     kubectl get diskpool test-pool
     kubectl get blockstorage test-block
     kubectl get filestorage test-file
+    kubectl get objectstorage test-object
+    kubectl get objectbucketclaim test-bucket
     kubectl get storageclass
 
-# Remove sample DiskPool
+# Remove the sample resources
 test-cleanup:
-    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubectl() { command kubectl --context {{ kube_context }} "$@"; }
+    # The claim must be fully gone first: its finalizer needs the StorageClass
+    # and RGW still present to deprovision the bucket (rook#7351), so one-pass
+    # deletion wedges it forever.
+    kubectl delete objectbucketclaim test-bucket --ignore-not-found --wait=true
+    kubectl delete -f test-resources.yaml --ignore-not-found

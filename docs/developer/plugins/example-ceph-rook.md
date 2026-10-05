@@ -270,7 +270,7 @@ object, but never the underlying filesystem data.
 pair: a `CephObjectStore` running `spec.gatewayInstances` RGW pods behind the
 `rook-ceph-rgw-cephobj-<name>` Service (port 80; TLS is a gateway concern), and
 a `StorageClass` that drives Rook's ObjectBucketClaim provisioner
-(`<rook namespace>.ceph.rook.io/bucket`) rather than a CSI driver.
+(`<cluster namespace>.ceph.rook.io/bucket` — it follows the CephCluster's namespace, not the Rook operator's) rather than a CSI driver.
 
 Workloads consume it by creating an `ObjectBucketClaim` that references the
 class: Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and

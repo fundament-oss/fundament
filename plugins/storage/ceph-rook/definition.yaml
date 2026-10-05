@@ -180,8 +180,10 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
+    # The consumer kinds share one status vocabulary, so they alias one badge
+    # table; definition_test.go proves the alias resolves into every kind.
     blockstorages.ceph.fundament.io:
-      statusMapping:
+      statusMapping: &consumer-status-mapping
         jsonPath: ".status.phase"
         values:
           Ready:
@@ -194,31 +196,9 @@ spec:
             badge: danger
             label: Degraded
     filestorages.ceph.fundament.io:
-      statusMapping:
-        jsonPath: ".status.phase"
-        values:
-          Ready:
-            badge: success
-            label: Ready
-          Provisioning:
-            badge: warning
-            label: Provisioning
-          Degraded:
-            badge: danger
-            label: Degraded
+      statusMapping: *consumer-status-mapping
     objectstorages.ceph.fundament.io:
-      statusMapping:
-        jsonPath: ".status.phase"
-        values:
-          Ready:
-            badge: success
-            label: Ready
-          Provisioning:
-            badge: warning
-            label: Provisioning
-          Degraded:
-            badge: danger
-            label: Degraded
+      statusMapping: *consumer-status-mapping
   # Exactly the verbs the console pages issue, no more. Nothing enforces this
   # list at request time yet, so it is a declaration of intent.
   #

@@ -32,72 +32,45 @@ func TestDefinition(t *testing.T) {
 
 	assert.Equal(t, "ceph-rook", def.Metadata.Name)
 
-	t.Run("allowedResources/diskpools", func(t *testing.T) {
+	// patch, not update: the edit forms merge-patch. No delete: the console
+	// offers none, since the guards it would need (bound volumes, bound
+	// bucket claims) can only be meaningful server-side.
+	t.Run("allowedResources", func(t *testing.T) {
 		t.Parallel()
-		var found *pluginruntime.AllowedResource
-		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "diskpools" {
-				found = &def.Spec.AllowedResources[i]
-				break
+		for resource, verbs := range map[string][]string{
+			"disks":          {"list", "get"},
+			"diskpools":      {"list", "get", "create", "patch"},
+			"blockstorages":  {"list", "get", "create", "patch"},
+			"filestorages":   {"list", "get", "create", "patch"},
+			"objectstorages": {"list", "get", "create", "patch"},
+		} {
+			var found *pluginruntime.AllowedResource
+			for i := range def.Spec.AllowedResources {
+				if def.Spec.AllowedResources[i].Resource == resource {
+					found = &def.Spec.AllowedResources[i]
+					break
+				}
 			}
+			require.NotNil(t, found, "allowedResources must contain %s", resource)
+			assert.ElementsMatch(t, verbs, found.Verbs, resource)
 		}
-		require.NotNil(t, found, "allowedResources must contain diskpools")
-		// patch, not update: the edit form merge-patches. No delete: the console
-		// offers none, since the bound-volume guard it would need can only be
-		// meaningful server-side.
-		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
 	})
 
-	t.Run("allowedResources/disks", func(t *testing.T) {
+	// The three consumer kinds share one status vocabulary, expressed in the
+	// YAML as an anchor/alias; this proves the parser resolves it into every
+	// kind, so the badge tables cannot drift apart.
+	t.Run("uiHints/consumer-kinds-share-status-mapping", func(t *testing.T) {
 		t.Parallel()
-		var found *pluginruntime.AllowedResource
-		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "disks" {
-				found = &def.Spec.AllowedResources[i]
-				break
-			}
+		block, ok := def.Spec.UIHints["blockstorages.ceph.fundament.io"]
+		require.True(t, ok, "blockstorages must declare uiHints")
+		require.Contains(t, block.StatusMapping.Values, "Ready")
+		require.Contains(t, block.StatusMapping.Values, "Provisioning")
+		require.Contains(t, block.StatusMapping.Values, "Degraded")
+		for _, crd := range []string{"filestorages.ceph.fundament.io", "objectstorages.ceph.fundament.io"} {
+			hint, ok := def.Spec.UIHints[crd]
+			require.True(t, ok, "%s must declare uiHints", crd)
+			assert.Equal(t, block.StatusMapping, hint.StatusMapping, crd)
 		}
-		require.NotNil(t, found, "allowedResources must contain disks")
-		assert.ElementsMatch(t, []string{"list", "get"}, found.Verbs)
-	})
-
-	t.Run("allowedResources/blockstorages", func(t *testing.T) {
-		t.Parallel()
-		var found *pluginruntime.AllowedResource
-		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "blockstorages" {
-				found = &def.Spec.AllowedResources[i]
-				break
-			}
-		}
-		require.NotNil(t, found, "allowedResources must contain blockstorages")
-		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
-	})
-
-	t.Run("allowedResources/filestorages", func(t *testing.T) {
-		t.Parallel()
-		var found *pluginruntime.AllowedResource
-		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "filestorages" {
-				found = &def.Spec.AllowedResources[i]
-				break
-			}
-		}
-		require.NotNil(t, found, "allowedResources must contain filestorages")
-		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
-	})
-
-	t.Run("allowedResources/objectstorages", func(t *testing.T) {
-		t.Parallel()
-		var found *pluginruntime.AllowedResource
-		for i := range def.Spec.AllowedResources {
-			if def.Spec.AllowedResources[i].Resource == "objectstorages" {
-				found = &def.Spec.AllowedResources[i]
-				break
-			}
-		}
-		require.NotNil(t, found, "allowedResources must contain objectstorages")
-		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
 	})
 
 	t.Run("customComponents/html-files-exist", func(t *testing.T) {

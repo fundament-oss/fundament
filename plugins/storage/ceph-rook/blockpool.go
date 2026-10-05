@@ -8,14 +8,15 @@ import (
 // and both CephFilesystem pools, so a replication-policy change cannot land in
 // one renderer and miss the other.
 func replicatedPoolSpec(replicas int, failureDomain string) map[string]any {
-	replicated := map[string]any{"size": int64(replicas)}
-	// Ceph refuses a size-1 pool unless the safety check is waived.
-	if replicas < 2 {
-		replicated["requireSafeReplicaSize"] = false
-	}
 	return map[string]any{
 		"failureDomain": failureDomain,
-		"replicated":    replicated,
+		"replicated": map[string]any{
+			"size": int64(replicas),
+			// Ceph refuses a size-1 pool unless waived. Always emitted: the
+			// key-wise merge never prunes absent keys, so a waiver written at
+			// size 1 would stay latched after scaling up.
+			"requireSafeReplicaSize": replicas >= 2,
+		},
 	}
 }
 

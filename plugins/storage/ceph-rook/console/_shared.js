@@ -145,40 +145,23 @@ export function defaultFieldHtml(checked = false) {
     </div>`;
 }
 
-// Metadata-servers input shared by the FileStorage create and edit forms.
-export function metadataServersFieldHtml(value = 1) {
+// One integer input field, driven by a field descriptor (see the intFields
+// descriptors in consumer-pages.js), so each field's CRD bounds live in one
+// place instead of a copy per form and per validator.
+export function integerFieldHtml(field, value) {
   return `
     <div class="plugin-field">
-      <label class="plugin-label" for="mds-count">Metadata servers</label>
-      <input id="mds-count" name="metadataServers" type="number" class="plugin-input"
-             min="1" max="5" value="${escapeHtml(String(value))}" />
-      <span class="plugin-hint">Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.</span>
+      <label class="plugin-label" for="${field.id}">${escapeHtml(field.label)}</label>
+      <input id="${field.id}" name="${field.name}" type="number" class="plugin-input"
+             min="${field.min}" max="${field.max}" value="${escapeHtml(String(value))}" />
+      <span class="plugin-hint">${escapeHtml(field.hint)}</span>
     </div>`;
 }
 
-// Bounds mirror the CRD's validation; returns an error message or null.
-export function metadataServersError(value) {
-  if (!Number.isInteger(value) || value < 1 || value > 5) {
-    return 'Metadata servers must be a whole number from 1 to 5.';
-  }
-  return null;
-}
-
-// Gateway-instances input shared by the ObjectStorage create and edit forms.
-export function gatewayInstancesFieldHtml(value = 1) {
-  return `
-    <div class="plugin-field">
-      <label class="plugin-label" for="rgw-count">Gateway instances</label>
-      <input id="rgw-count" name="gatewayInstances" type="number" class="plugin-input"
-             min="1" max="5" value="${escapeHtml(String(value))}" />
-      <span class="plugin-hint">RGW pods serving the S3 API. 1 is right unless request throughput demands more.</span>
-    </div>`;
-}
-
-// Bounds mirror the CRD's validation; returns an error message or null.
-export function gatewayInstancesError(value) {
-  if (!Number.isInteger(value) || value < 1 || value > 5) {
-    return 'Gateway instances must be a whole number from 1 to 5.';
+// Bounds mirror the field's CRD validation; returns an error message or null.
+export function integerFieldError(field, value) {
+  if (!Number.isInteger(value) || value < field.min || value > field.max) {
+    return `${field.label} must be a whole number from ${field.min} to ${field.max}.`;
   }
   return null;
 }
@@ -191,17 +174,19 @@ export function wireSubmit(form, { button, errorBox, busyLabel, failPrefix, vali
     e.preventDefault();
     errorBox.hidden = true;
 
-    const invalid = validate?.();
-    if (invalid) {
-      errorBox.textContent = invalid;
-      errorBox.hidden = false;
-      return;
-    }
-
+    // validate runs inside the try: preventDefault() already suppressed the
+    // native submit, so a validator that throws would otherwise leave the
+    // form silently dead — no error box, no native validation, nothing.
     const idleLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = busyLabel;
     try {
+      const invalid = validate?.();
+      if (invalid) {
+        errorBox.textContent = invalid;
+        errorBox.hidden = false;
+        return;
+      }
+      button.disabled = true;
+      button.textContent = busyLabel;
       await action();
     } catch (err) {
       errorBox.textContent = `${failPrefix}: ${err?.message ?? err}`;

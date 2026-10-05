@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -96,7 +97,7 @@ func TestCephFSProvisioner(t *testing.T) {
 }
 
 // The bucket class drives Rook's OBC provisioner, not a CSI driver: no CSI
-// secret parameters, no volume expansion, no binding mode.
+// secret parameters, no volume expansion.
 func TestRenderBucketStorageClass(t *testing.T) {
 	t.Parallel()
 	sc := RenderBucketStorageClass("cephobj-main", "rook-ceph", "cephobj-main", "rook-ceph")
@@ -109,18 +110,25 @@ func TestRenderBucketStorageClass(t *testing.T) {
 	if assert.NotNil(t, sc.ReclaimPolicy) {
 		assert.Equal(t, corev1.PersistentVolumeReclaimDelete, *sc.ReclaimPolicy)
 	}
+	// Pinned, or server defaulting reads back as immutable drift; the
+	// renderer documents why.
+	if assert.NotNil(t, sc.VolumeBindingMode) {
+		assert.Equal(t, storagev1.VolumeBindingImmediate, *sc.VolumeBindingMode)
+	}
 }
 
-// Same namespace split as the CSI classes: the provisioner name follows the
-// operator's namespace, the objectStoreNamespace follows the CephCluster's.
-func TestRenderBucketStorageClassFollowsRookNamespace(t *testing.T) {
+// Unlike the CSI classes, the provisioner follows the CephCluster's
+// namespace (see BucketProvisioner); the two only coincide while both
+// default to rook-ceph.
+func TestRenderBucketStorageClassFollowsClusterNamespace(t *testing.T) {
 	t.Parallel()
 	sc := RenderBucketStorageClass("cephobj-main", "ceph-cluster", "cephobj-main", "rook-system")
-	assert.Equal(t, "rook-system.ceph.rook.io/bucket", sc.Provisioner)
+	assert.Equal(t, "ceph-cluster.ceph.rook.io/bucket", sc.Provisioner)
 	assert.Equal(t, "ceph-cluster", sc.Parameters["objectStoreNamespace"])
 }
 
 func TestBucketProvisioner(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "rook-ceph.ceph.rook.io/bucket", BucketProvisioner("rook-ceph"))
+	assert.Equal(t, "ceph-cluster.ceph.rook.io/bucket", BucketProvisioner("ceph-cluster"))
 }

@@ -17,15 +17,39 @@ import {
   replicasFieldHtml,
   replicasValue,
   defaultFieldHtml,
-  metadataServersFieldHtml,
-  metadataServersError,
-  gatewayInstancesFieldHtml,
-  gatewayInstancesError,
+  integerFieldHtml,
+  integerFieldError,
   resourceNameError,
   wireSubmit,
 } from './_shared.js';
 
 const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
+
+// Descriptors for the kind-specific integer spec fields. Everywhere a field
+// surfaces — forms, validation, spec building, list cells, detail pairs —
+// iterates cfg.intFields, so a field cannot be rendered in one form and
+// forgotten in another.
+const METADATA_SERVERS = {
+  name: 'metadataServers',
+  id: 'mds-count',
+  label: 'Metadata servers',
+  column: 'MDS',
+  hint: 'Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.',
+  min: 1,
+  max: 5,
+  default: 1,
+};
+
+const GATEWAY_INSTANCES = {
+  name: 'gatewayInstances',
+  id: 'rgw-count',
+  label: 'Gateway instances',
+  column: 'Gateways',
+  hint: 'RGW pods serving the S3 API. 1 is right unless request throughput demands more.',
+  min: 1,
+  max: 5,
+  default: 1,
+};
 
 export const BLOCKSTORAGE = {
   resource: 'blockstorages',
@@ -38,7 +62,7 @@ export const BLOCKSTORAGE = {
   createIntro: `Block storage provides ReadWriteOnce volumes, each mounted by one node at a
     time, over the shared Ceph cluster's disks. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
-  metadataServers: false,
+  intFields: [],
   defaultToggle: true,
   nameMaxLength: 63,
 };
@@ -54,7 +78,7 @@ export const FILESTORAGE = {
   createIntro: `File storage provides ReadWriteMany volumes over the shared Ceph cluster's
     disks, which many pods on many nodes can mount at once. It needs at least one
     DiskPool contributing disks; without one it stays Degraded.`,
-  metadataServers: true,
+  intFields: [METADATA_SERVERS],
   defaultToggle: false,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
   // capped at 63. Enforced here too so the form rejects it before the server.
@@ -75,51 +99,66 @@ export const OBJECTSTORAGE = {
   createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
     disks, served by RGW gateway pods. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
-  metadataServers: false,
+  intFields: [GATEWAY_INSTANCES],
   defaultToggle: false,
-  gatewayInstances: true,
-  // The CRD caps ObjectStorage names at 55: Rook derives a cephobj-<name>
-  // label capped at 63. Enforced here too so the form rejects it first.
-  nameMaxLength: 55,
+  intFields: [GATEWAY_INSTANCES],
+  // The CRD caps ObjectStorage names at 41: Rook derives a Service named
+  // rook-ceph-rgw-cephobj-<name>, a DNS-1035 label capped at 63. Enforced
+  // here too so the form rejects it first.
+  nameMaxLength: 41,
 };
 
-function metadataServersValue(form) {
-  return Number(form.querySelector('[name="metadataServers"]').value);
+function intFieldValue(form, field) {
+  return Number(form.querySelector(`[name="${field.name}"]`).value);
 }
 
-function gatewayInstancesValue(form) {
-  return Number(form.querySelector('[name="gatewayInstances"]').value);
-}
-
-// fieldsError validates the kind-specific numeric fields; first error wins.
+// fieldsError validates the kind's integer fields; first error wins.
 function fieldsError(cfg, form) {
-  if (cfg.metadataServers) {
-    const invalid = metadataServersError(metadataServersValue(form));
-    if (invalid) return invalid;
-  }
-  if (cfg.gatewayInstances) {
-    const invalid = gatewayInstancesError(gatewayInstancesValue(form));
+  for (const field of cfg.intFields) {
+    const invalid = integerFieldError(field, intFieldValue(form, field));
     if (invalid) return invalid;
   }
   return null;
 }
 
+// intFieldsHtml renders the kind's integer inputs for a create or edit form;
+// spec is undefined on create, so every field falls back to its default.
+function intFieldsHtml(cfg, spec) {
+  return cfg.intFields
+    .map((field) => integerFieldHtml(field, spec?.[field.name] ?? field.default))
+    .join('');
+}
+
 // specFrom reads the create/edit form into a spec object.
 function specFrom(cfg, form) {
   const spec = { replicas: replicasValue(form) };
-  if (cfg.metadataServers) spec.metadataServers = metadataServersValue(form);
-  if (cfg.gatewayInstances) spec.gatewayInstances = gatewayInstancesValue(form);
+  for (const field of cfg.intFields) spec[field.name] = intFieldValue(form, field);
   // Always sent, so unticking the box merge-patches the field back to false.
   if (cfg.defaultToggle) spec.default = form.querySelector('[name="default"]').checked;
   return spec;
 }
 
 export async function consumerListPage(cfg) {
+  // The header row comes from the same cfg.intFields the body cells do, so
+  // the two cannot drift; the HTML ships an empty table shell. Rendered
+  // before the SDK loads so the table never shows headerless.
+  const headers = [
+    'Name', 'Phase', 'Storage Class', 'Replicas',
+    ...cfg.intFields.map((field) => field.column),
+    'Failure Domain', 'Message',
+  ];
+  // Null-guarded: a stale cached pre-0.3.0 page has a static <thead> without
+  // id="head", and throwing here would kill the whole module.
+  const head = document.getElementById('head');
+  if (head) {
+    head.innerHTML = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+  }
+  const colspan = headers.length;
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = emptyRow(colspan, 'Loading…');
+
   await loadSdk();
   await fundament.init;
-
-  const tbody = document.getElementById('rows');
-  const colspan = 6 + (cfg.metadataServers ? 1 : 0) + (cfg.gatewayInstances ? 1 : 0);
 
   document.getElementById('create-btn').addEventListener('click', () => navigateToCreate());
 
@@ -134,20 +173,16 @@ export async function consumerListPage(cfg) {
       .map((item) => {
         const status = item.status ?? {};
         const name = item.metadata?.name ?? '';
-        const metadataServersCell = cfg.metadataServers
-          ? `<td>${escapeHtml(String(item.spec?.metadataServers ?? 1))}</td>`
-          : '';
-        const gatewayInstancesCell = cfg.gatewayInstances
-          ? `<td>${escapeHtml(String(item.spec?.gatewayInstances ?? 1))}</td>`
-          : '';
+        const intFieldCells = cfg.intFields
+          .map((field) => `<td>${escapeHtml(String(item.spec?.[field.name] ?? field.default))}</td>`)
+          .join('');
         return `
           <tr data-name="${escapeHtml(name)}">
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
             <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
             <td>${escapeHtml(status.storageClassName ?? '—')}</td>
             <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
-            ${metadataServersCell}
-            ${gatewayInstancesCell}
+            ${intFieldCells}
             <td>${escapeHtml(status.failureDomain ?? '—')}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
@@ -177,8 +212,9 @@ export async function consumerDetailPage(cfg) {
       ['Storage Class', status.storageClassName ?? '—'],
       ['Replicas', String(status.replicas ?? '—')],
     ];
-    if (cfg.metadataServers) pairs.push(['Metadata servers', String(item.spec?.metadataServers ?? 1)]);
-    if (cfg.gatewayInstances) pairs.push(['Gateway instances', String(item.spec?.gatewayInstances ?? 1)]);
+    for (const field of cfg.intFields) {
+      pairs.push([field.label, String(item.spec?.[field.name] ?? field.default)]);
+    }
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
     pairs.push(['Failure Domain', status.failureDomain ?? '—']);
     if (status.message) pairs.push(['Message', status.message]);
@@ -219,9 +255,7 @@ export async function consumerDetailPage(cfg) {
 
         ${replicasFieldHtml(item.spec?.replicas)}
 
-        ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
-
-        ${cfg.gatewayInstances ? gatewayInstancesFieldHtml(item.spec?.gatewayInstances ?? 1) : ''}
+        ${intFieldsHtml(cfg, item.spec)}
 
         ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
@@ -244,7 +278,7 @@ export async function consumerDetailPage(cfg) {
       validate: () => fieldsError(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
-        await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form, true) });
+        await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
         await showDetail();
       },
     });
@@ -281,7 +315,7 @@ export async function consumerCreatePage(cfg) {
 
       ${replicasFieldHtml()}
 
-      ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
+      ${intFieldsHtml(cfg)}
 
       ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
