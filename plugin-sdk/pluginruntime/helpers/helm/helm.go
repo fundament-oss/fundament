@@ -107,13 +107,15 @@ func isRBACForbidden(output string) bool {
 	return strings.Contains(output, "is forbidden")
 }
 
-// IsInstalled checks whether a Helm release exists in the client's namespace.
+// IsInstalled checks whether a Helm release exists in the client's namespace,
+// in any state. Only a missing release reports false; any other helm failure
+// (cluster unreachable, RBAC still forbidden after the retries) is an error.
 func (c *Client) IsInstalled(ctx context.Context, releaseName string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "helm", "status", releaseName, "--namespace", c.namespace) //nolint:gosec // args are constructed internally
-	if err := cmd.Run(); err != nil {
-		return false, nil //nolint:nilerr // non-zero exit means release not found, not an error
+	status, err := c.Status(ctx, releaseName)
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	return status != nil, nil
 }
 
 // ReleaseStatus is the part of `helm status -o json` a plugin needs to decide
@@ -124,6 +126,9 @@ type ReleaseStatus struct {
 	Status string
 	// ChartVersion is the deployed chart's version, e.g. "0.24.0".
 	ChartVersion string
+	// LastDeployed is when the latest operation on the release started; for a
+	// pending release, when that operation began. Zero when helm omits it.
+	LastDeployed time.Time
 }
 
 // Pending reports whether a Helm operation holds the release. Another install
@@ -170,7 +175,8 @@ func isReleaseNotFound(output string) bool {
 func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 	var release struct {
 		Info struct {
-			Status string `json:"status"`
+			Status       string `json:"status"`
+			LastDeployed string `json:"last_deployed"`
 		} `json:"info"`
 		Chart struct {
 			Metadata struct {
@@ -181,7 +187,14 @@ func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 	if err := json.Unmarshal(data, &release); err != nil {
 		return nil, fmt.Errorf("parse helm status: %w", err)
 	}
-	return &ReleaseStatus{Status: release.Info.Status, ChartVersion: release.Chart.Metadata.Version}, nil
+	// A missing or unparseable timestamp leaves LastDeployed zero, which a caller
+	// reads as "long ago".
+	lastDeployed, _ := time.Parse(time.RFC3339Nano, release.Info.LastDeployed)
+	return &ReleaseStatus{
+		Status:       release.Info.Status,
+		ChartVersion: release.Chart.Metadata.Version,
+		LastDeployed: lastDeployed,
+	}, nil
 }
 
 func appendSortedValues(args []string, values map[string]string) []string {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -49,16 +50,22 @@ func newPlugin() (*Plugin, error) {
 }
 
 func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
-	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing the CloudNativePG operator"})
-	if err := cnpg.Install(ctx); err != nil {
-		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
-		return fmt.Errorf("install operator: %w", pluginerrors.NewTransient(err))
-	}
-
 	kube, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: p.scheme})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("create kubernetes client: %w", pluginerrors.NewPermanent(err))
+	}
+
+	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing the CloudNativePG operator"})
+	if err := cnpg.Install(ctx, kube); err != nil {
+		// openfsc installs the same release; its install still running is not
+		// a fault, and the restart retries once it is done.
+		phase := pluginruntime.PhaseDegraded
+		if errors.Is(err, cnpg.ErrInProgress) {
+			phase = pluginruntime.PhaseInstalling
+		}
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: phase, Message: err.Error()})
+		return fmt.Errorf("install operator: %w", pluginerrors.NewTransient(err))
 	}
 
 	if err := crd.VerifyAll(ctx, kube, cnpg.CRDNames); err != nil {

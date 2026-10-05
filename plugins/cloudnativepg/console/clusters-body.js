@@ -42,10 +42,19 @@ export function namespaceError(namespace) {
   return null;
 }
 
+// A floor, not a sizing rule: the one volume holds the data and the WAL, which
+// PostgreSQL lets grow toward max_wal_size (1GB) between checkpoints. Below
+// 1Gi a database can fail to start or fill its disk at once, and one stuck
+// that way cannot be deleted from the console.
+const MIN_STORAGE_MI = 1024;
+const UNIT_MI = { Mi: 1, Gi: 1024, Ti: 1024 * 1024 };
+
 export function storageSizeError(size) {
-  if (!/^[1-9][0-9]*(Mi|Gi|Ti)$/.test(size)) {
+  const match = /^([1-9][0-9]*)(Mi|Gi|Ti)$/.exec(size);
+  if (!match) {
     return 'Enter the storage size as a whole number followed by Mi, Gi or Ti, for example 1Gi.';
   }
+  if (Number(match[1]) * UNIT_MI[match[2]] < MIN_STORAGE_MI) return 'Use at least 1Gi.';
   return null;
 }
 

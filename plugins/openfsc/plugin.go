@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/caarlos0/env/v11"
@@ -15,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	pluginerrors "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/errors"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
+	"github.com/fundament-oss/fundament/plugins/internal/cnpg"
 )
 
 // OpenFSCPlugin installs the standalone openfsc-operator (with its
@@ -76,7 +78,13 @@ func (p *OpenFSCPlugin) Start(ctx context.Context, host pluginruntime.Host) erro
 	}
 	if !installed {
 		if err := p.Install(ctx, host); err != nil {
-			host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
+			// The cloudnativepg plugin installs the same CNPG release; its
+			// install still running is not a fault, and the restart retries.
+			phase := pluginruntime.PhaseDegraded
+			if errors.Is(err, cnpg.ErrInProgress) {
+				phase = pluginruntime.PhaseInstalling
+			}
+			host.ReportStatus(pluginruntime.PluginStatus{Phase: phase, Message: err.Error()})
 			return fmt.Errorf("install OpenFSC operator: %w", pluginerrors.NewTransient(err))
 		}
 	}

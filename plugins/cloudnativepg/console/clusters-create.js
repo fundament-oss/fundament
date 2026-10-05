@@ -25,7 +25,9 @@ function isDefaultClass(sc) {
 
 // StorageClasses are cluster-scoped, and only organization admins may list
 // them; for a project admin the call is forbidden. null means "unknown", and
-// the form then offers only the cluster default.
+// the form then offers only the cluster default. Any other failure throws:
+// treating a timeout as "forbidden" would let an organization admin skip the
+// choice on a cluster without a default class.
 async function loadStorageClasses() {
   try {
     const { items } = await fundament.k8s.list({
@@ -37,8 +39,9 @@ async function loadStorageClasses() {
       .filter((sc) => sc.metadata?.name)
       .map((sc) => ({ name: sc.metadata.name, isDefault: isDefaultClass(sc) }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  } catch {
-    return null;
+  } catch (err) {
+    if (err?.code === 'forbidden') return null;
+    throw err;
   }
 }
 
@@ -128,85 +131,97 @@ function storageClassFieldHtml(classes) {
     </div>`;
 }
 
-const storageClasses = await loadStorageClasses();
-const storageClassRequired = Array.isArray(storageClasses) && !storageClasses.some((sc) => sc.isDefault);
+function showForm(storageClasses) {
+  const storageClassRequired = Array.isArray(storageClasses) && !storageClasses.some((sc) => sc.isDefault);
 
-content.innerHTML = `
-  <p class="plugin-text">
-    Creates a single-instance PostgreSQL database with database <code>app</code>, owned by
-    user <code>app</code>. It has no backups. After creation it cannot be changed or deleted
-    from the console.
-  </p>
+  content.innerHTML = `
+    <p class="plugin-text">
+      Creates a single-instance PostgreSQL database with database <code>app</code>, owned by
+      user <code>app</code>. It has no backups. After creation it cannot be changed or deleted
+      from the console.
+    </p>
 
-  <form id="create-form" class="plugin-form" novalidate>
-    <div class="plugin-error" id="error-box" hidden></div>
+    <form id="create-form" class="plugin-form" novalidate>
+      <div class="plugin-error" id="error-box" hidden></div>
 
-    <div class="plugin-field">
-      <label class="plugin-label" for="db-name">Name</label>
-      <input id="db-name" name="name" type="text" class="plugin-input"
-             placeholder="orders-db" required
-             pattern="[a-z]([a-z0-9\\-]*[a-z0-9])?" maxlength="50" />
-      <span class="plugin-hint">Starts with a letter; lowercase letters, digits and dashes.</span>
-    </div>
+      <div class="plugin-field">
+        <label class="plugin-label" for="db-name">Name</label>
+        <input id="db-name" name="name" type="text" class="plugin-input"
+               placeholder="orders-db" required
+               pattern="[a-z]([a-z0-9\\-]*[a-z0-9])?" maxlength="50" />
+        <span class="plugin-hint">Starts with a letter; lowercase letters, digits and dashes.</span>
+      </div>
 
-    ${namespaceFieldHtml(ctx.namespaces)}
+      ${namespaceFieldHtml(ctx.namespaces)}
 
-    <div class="plugin-field">
-      <label class="plugin-label" for="db-size">Storage size</label>
-      <input id="db-size" name="size" type="text" class="plugin-input"
-             value="${escapeHtml(DEFAULT_STORAGE_SIZE)}" required />
-      <span class="plugin-hint">For example 1Gi or 500Mi. The size cannot be changed after creation.</span>
-    </div>
+      <div class="plugin-field">
+        <label class="plugin-label" for="db-size">Storage size</label>
+        <input id="db-size" name="size" type="text" class="plugin-input"
+               value="${escapeHtml(DEFAULT_STORAGE_SIZE)}" required />
+        <span class="plugin-hint">At least 1Gi, for example 1Gi or 20Gi. The size cannot be changed after creation.</span>
+      </div>
 
-    ${versionFieldHtml()}
+      ${versionFieldHtml()}
 
-    ${storageClassFieldHtml(storageClasses)}
+      ${storageClassFieldHtml(storageClasses)}
 
-    <div class="plugin-actions">
-      <button id="submit-btn" type="submit" class="plugin-button">Create database</button>
-      <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
-    </div>
-  </form>
-`;
+      <div class="plugin-actions">
+        <button id="submit-btn" type="submit" class="plugin-button">Create database</button>
+        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
+      </div>
+    </form>
+  `;
 
-const form = document.getElementById('create-form');
-const field = (name) => form.querySelector(`[name="${name}"]`);
+  const form = document.getElementById('create-form');
+  const field = (name) => form.querySelector(`[name="${name}"]`);
 
-document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
+  document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
 
-wireSubmit(form, {
-  button: document.getElementById('submit-btn'),
-  errorBox: document.getElementById('error-box'),
-  busyLabel: 'Creating…',
-  failPrefix: 'Failed to create database',
-  validate: () => {
-    for (const [name, check] of [
-      ['name', clusterNameError],
-      ['namespace', namespaceError],
-      ['size', storageSizeError],
-      ['storageClass', (value) => storageClassError(value, { required: storageClassRequired })],
-    ]) {
-      const invalid = check(field(name).value.trim());
-      if (invalid) {
-        field(name).focus();
-        return invalid;
+  wireSubmit(form, {
+    button: document.getElementById('submit-btn'),
+    errorBox: document.getElementById('error-box'),
+    busyLabel: 'Creating…',
+    failPrefix: 'Failed to create database',
+    validate: () => {
+      for (const [name, check] of [
+        ['name', clusterNameError],
+        ['namespace', namespaceError],
+        ['size', storageSizeError],
+        ['storageClass', (value) => storageClassError(value, { required: storageClassRequired })],
+      ]) {
+        const invalid = check(field(name).value.trim());
+        if (invalid) {
+          field(name).focus();
+          return invalid;
+        }
       }
-    }
-    return null;
-  },
-  action: async () => {
-    const name = field('name').value.trim();
-    const namespace = field('namespace').value.trim();
-    await fundament.k8s.create(
-      { ...CLUSTER_RESOURCE, namespace },
-      buildCluster({
-        name,
-        namespace,
-        imageName: field('imageName').value,
-        size: field('size').value.trim(),
-        storageClass: field('storageClass').value.trim(),
-      }),
-    );
-    navigateToDetail(name, namespace);
-  },
-});
+      return null;
+    },
+    action: async () => {
+      const name = field('name').value.trim();
+      const namespace = field('namespace').value.trim();
+      await fundament.k8s.create(
+        { ...CLUSTER_RESOURCE, namespace },
+        buildCluster({
+          name,
+          namespace,
+          imageName: field('imageName').value,
+          size: field('size').value.trim(),
+          storageClass: field('storageClass').value.trim(),
+        }),
+      );
+      navigateToDetail(name, namespace);
+    },
+  });
+}
+
+// undefined: the load failed and the page shows why instead of the form.
+let storageClasses;
+try {
+  storageClasses = await loadStorageClasses();
+} catch (err) {
+  content.innerHTML = `<div class="plugin-error">${escapeHtml(
+    `Failed to load StorageClasses: ${err?.message ?? err}. Reload the page to try again.`,
+  )}</div>`;
+}
+if (storageClasses !== undefined) showForm(storageClasses);

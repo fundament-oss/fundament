@@ -2,6 +2,7 @@ package helm
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +60,7 @@ func TestParseReleaseStatus(t *testing.T) {
 	// Trimmed `helm status cnpg -n cnpg-system -o json`.
 	out := []byte(`{
 		"name": "cnpg",
-		"info": {"status": "deployed", "description": "Install complete"},
+		"info": {"status": "deployed", "last_deployed": "2026-10-05T09:14:03.123456+02:00", "description": "Install complete"},
 		"chart": {"metadata": {"name": "cloudnative-pg", "version": "0.24.0", "appVersion": "1.26.0"}},
 		"version": 3,
 		"namespace": "cnpg-system"
@@ -67,8 +68,16 @@ func TestParseReleaseStatus(t *testing.T) {
 
 	status, err := parseReleaseStatus(out)
 	require.NoError(t, err)
-	assert.Equal(t, &ReleaseStatus{Status: "deployed", ChartVersion: "0.24.0"}, status)
+	assert.Equal(t, "deployed", status.Status)
+	assert.Equal(t, "0.24.0", status.ChartVersion)
+	assert.True(t, time.Date(2026, 10, 5, 7, 14, 3, 123456000, time.UTC).Equal(status.LastDeployed))
 	assert.False(t, status.Pending())
+}
+
+func TestParseReleaseStatusNoTimestamp(t *testing.T) {
+	status, err := parseReleaseStatus([]byte(`{"info": {"status": "pending-install"}, "chart": {"metadata": {"version": "0.24.0"}}}`))
+	require.NoError(t, err)
+	assert.True(t, status.LastDeployed.IsZero())
 }
 
 func TestParseReleaseStatusInvalidJSON(t *testing.T) {

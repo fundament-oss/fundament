@@ -24,8 +24,9 @@ That protects the resource, not the data. The built-in `admin` role still covers
 openfsc installs the same `cnpg` release. Both call `plugins/internal/cnpg`, which:
 
 - keeps the chart's default values, so neither plugin flips the other's settings;
-- skips the install when the release is already deployed at its chart version or newer, so an older plugin never downgrades the operator or its CRDs;
-- refuses while the release is `pending-*`. When a pod is killed during `helm --wait`, the release stays pending. Recover a stuck upgrade with `helm -n cnpg-system rollback cnpg`. A stuck first install (`pending-install`) has no earlier revision to roll back to: run `helm -n cnpg-system uninstall cnpg`, which is safe because it never deployed.
+- never downgrades: it installs the newer of its pinned chart version and the release's own, whatever state the release is in, so an older plugin leaves a newer operator and its CRDs in place;
+- skips the install when the release is deployed at that version and the operator Deployment and CRDs exist. When one was deleted, it reinstalls at the deployed version to restore it;
+- waits while the release is `pending-*`. For up to 10 minutes that is the other plugin's install in progress, and the plugin reports Installing. Past that, the pod running the install was most likely killed during `helm --wait` and the release stays pending. Recover a stuck upgrade with `helm -n cnpg-system rollback cnpg`. A stuck first install (`pending-install`) has no earlier revision to roll back to: run `helm -n cnpg-system uninstall cnpg`, which is safe because it never deployed.
 
 ## User RBAC
 
