@@ -2,6 +2,7 @@ import {
   loadSdk,
   escapeHtml,
   humanizeBytes,
+  quantityBytes,
   emptyRow,
   errorRow,
   wireRowLinks,
@@ -51,9 +52,9 @@ try {
         const name = item.metadata?.name ?? '';
         return `
           <tr data-name="${escapeHtml(name)}">
-            <td>${escapeHtml(s.node ?? '(unknown node)')}</td>
+            <td>${escapeHtml(s.nodeName ?? '(unknown node)')}</td>
             <td><a href="#" class="row-link">${escapeHtml(s.path ?? name)}</a></td>
-            <td>${escapeHtml(humanizeBytes(s.sizeBytes ?? 0))}</td>
+            <td>${escapeHtml(humanizeBytes(quantityBytes(s.size)))}</td>
             <td>${escapeHtml(s.type ?? '')}</td>
             <td>${escapeHtml(claimText(s))}</td>
           </tr>`;

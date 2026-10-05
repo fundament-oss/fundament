@@ -12,6 +12,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,7 +65,7 @@ func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Dis
 	return &v1alpha1.Disk{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Status: v1alpha1.DiskStatus{
-			Node: node, Path: path, SizeBytes: size,
+			NodeName: node, Path: path, Size: *resource.NewQuantity(size, resource.BinarySI),
 			Type: v1alpha1.DiskTypeSSD, Available: available,
 		},
 	}
@@ -148,7 +149,7 @@ func TestReconcileContributesDisks(t *testing.T) {
 	pool := getPool(t, c, "pool")
 	assert.Equal(t, v1alpha1.PhaseReady, pool.Status.Phase)
 	assert.Equal(t, 2, pool.Status.SelectedDiskCount)
-	assert.Equal(t, int64(300), pool.Status.RawCapacityBytes)
+	assert.Equal(t, int64(300), pool.Status.RawCapacity.Value())
 }
 
 // Ready means "this pool's disks are recorded in the shared Ceph cluster".
@@ -170,7 +171,7 @@ func TestReconcileDegradedWithoutCephCluster(t *testing.T) {
 	assert.Contains(t, pool.Status.Message, "CephCluster")
 	assert.Equal(t, 1, pool.Status.SelectedDiskCount,
 		"selection resolved; only the contribution is pending")
-	assert.Zero(t, pool.Status.RawCapacityBytes, "nothing was contributed yet")
+	assert.Zero(t, pool.Status.RawCapacity.Value(), "nothing was contributed yet")
 	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
@@ -219,7 +220,7 @@ func TestReconcileSkipsDisksClaimedByAnotherPool(t *testing.T) {
 
 	pool := getPool(t, c, "newer")
 	assert.Equal(t, 1, pool.Status.SelectedDiskCount, "the contested disk is not counted")
-	assert.Equal(t, int64(50), pool.Status.RawCapacityBytes)
+	assert.Equal(t, int64(50), pool.Status.RawCapacity.Value())
 	assert.Contains(t, pool.Status.Message, "claimed by older")
 
 	// The union still carries the contested disk, because the older pool owns it.
@@ -360,7 +361,7 @@ func TestReconcileIsIdempotent(t *testing.T) {
 }
 
 // A disk repeated in spec.disks must not be counted twice: selectedDiskCount
-// and rawCapacityBytes are the numbers an operator sizes workloads against.
+// and rawCapacity are the numbers an operator sizes workloads against.
 // The CRD marks the field as a set, so this only bites an object written before
 // that marker existed -- but it bites silently.
 func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
@@ -377,7 +378,7 @@ func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
 
 	pool := getPool(t, c, "pool")
 	assert.Equal(t, 1, pool.Status.SelectedDiskCount)
-	assert.Equal(t, int64(100), pool.Status.RawCapacityBytes)
+	assert.Equal(t, int64(100), pool.Status.RawCapacity.Value())
 	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
 }
 
@@ -606,7 +607,7 @@ func TestReconcileRecordsObservedGeneration(t *testing.T) {
 	assert.EqualValues(t, 3, readyCondition(t, getPool(t, c, "pool")).ObservedGeneration)
 
 	live := getPool(t, c, "pool")
-	live.Spec.Disks = []string{"a", "b"}
+	live.Spec.Disks = poolDisks("a", "b")
 	live.Generation = 4
 	require.NoError(t, c.Update(context.Background(), live))
 	// Status still describes generation 3: this is the stale window the field exists to expose.

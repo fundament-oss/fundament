@@ -23,7 +23,8 @@ type ConsumerStatus struct {
 	// StorageClassName is the name of the derived StorageClass, for
 	// PersistentVolumeClaims to reference.
 	StorageClassName string `json:"storageClassName,omitempty"`
-	// Replicas is the replica count that spec.replication resolved to.
+	// Replicas is the replica count in effect: spec.replicas clamped to the
+	// contributing node count, or the derived count when spec.replicas is absent.
 	Replicas int `json:"replicas,omitempty"`
 	// FailureDomain is where Ceph places the replicas of each piece of data:
 	// "host" spreads them across nodes, "osd" only across disks.
@@ -41,11 +42,11 @@ type ConsumerStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// ConsumerStatus and ReplicationSpec let one generic reconciler drive every
+// ConsumerStatus and RequestedReplicas let one generic reconciler drive every
 // consumer kind.
 
 func (in *BlockStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
-func (in *BlockStorage) ReplicationSpec() string         { return in.Spec.Replication }
+func (in *BlockStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }
 
 func (in *FileStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
-func (in *FileStorage) ReplicationSpec() string         { return in.Spec.Replication }
+func (in *FileStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }

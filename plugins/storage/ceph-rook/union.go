@@ -17,8 +17,7 @@ import (
 // status (reconcilePool) and the CephCluster union (diskUnion), so the two can
 // never disagree on what a pool contributes.
 //
-// Skipped: duplicate names (spec.disks is a set, but an object written before
-// that CRD marker existed could repeat one), disks another pool has a stronger
+// Skipped: duplicate names, disks another pool has a stronger
 // claim to, disks that do not exist, and disks whose status has not been
 // written yet (upsertDisk's Create and Status().Update are two API calls; the
 // Disk watch re-enqueues once the status lands). Any other error (e.g. a
@@ -36,7 +35,8 @@ func resolvePoolDisks(ctx context.Context, c client.Client, pool *v1alpha1.DiskP
 		undiscovered []string
 	)
 	seen := make(map[string]struct{}, len(pool.Spec.Disks))
-	for _, name := range pool.Spec.Disks {
+	for _, ref := range pool.Spec.Disks {
+		name := ref.Name
 		if _, dup := seen[name]; dup {
 			continue
 		}
@@ -54,7 +54,7 @@ func resolvePoolDisks(ctx context.Context, c client.Client, pool *v1alpha1.DiskP
 		if err != nil {
 			return nil, nil, fmt.Errorf("get Disk %q: %w", name, err)
 		}
-		if disk.Status.Node == "" {
+		if disk.Status.NodeName == "" {
 			undiscovered = append(undiscovered, name)
 			continue
 		}
@@ -104,7 +104,7 @@ func diskUnionOver(ctx context.Context, c client.Client, pools []v1alpha1.DiskPo
 		}
 		for j := range selected {
 			st := &selected[j]
-			key := st.Node + "\x00" + DeviceRef(st)
+			key := st.NodeName + "\x00" + DeviceRef(st)
 			if _, ok := seen[key]; !ok {
 				seen[key] = struct{}{}
 				union = append(union, *st)

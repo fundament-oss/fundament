@@ -52,12 +52,24 @@ spec:
             properties:
               disks:
                 description: |-
-                  Disks are the names of the Disk objects to contribute. Ceph runs one
-                  storage daemon (OSD) per disk. Each name may appear once.
+                  Disks are the Disk objects to contribute. Ceph runs one storage daemon
+                  (OSD) per disk. Each name may appear once.
                 items:
-                  type: string
+                  description: |-
+                    PoolDisk selects one Disk for a DiskPool, in the shape of a Rook
+                    storage.nodes[].devices[] entry.
+                  properties:
+                    name:
+                      description: Name is the name of the Disk object.
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
                 type: array
-                x-kubernetes-list-type: set
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             type: object
           status:
             description: |-
@@ -137,13 +149,16 @@ spec:
                 type: integer
               phase:
                 type: string
-              rawCapacityBytes:
+              rawCapacity:
+                anyOf:
+                - type: integer
+                - type: string
                 description: |-
-                  RawCapacityBytes is the summed size of the disks this pool contributes,
+                  RawCapacity is the summed size of the disks this pool contributes,
                   before replication. Volumes are placed across every disk in the shared
                   cluster; `ceph df` shows free space.
-                format: int64
-                type: integer
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               selectedDiskCount:
                 description: |-
                   SelectedDiskCount is how many of spec.disks resolved to a usable Disk. Ceph

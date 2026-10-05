@@ -15,15 +15,15 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.node
+    - jsonPath: .status.nodeName
       name: Node
       type: string
     - jsonPath: .status.path
       name: Path
       type: string
-    - jsonPath: .status.sizeBytes
+    - jsonPath: .status.size
       name: Size
-      type: integer
+      type: string
     - jsonPath: .status.available
       name: Available
       type: boolean
@@ -82,9 +82,9 @@ spec:
               model:
                 description: Model is the device model the node reports.
                 type: string
-              node:
-                description: Node is the name of the cluster node the device is attached
-                  to.
+              nodeName:
+                description: NodeName is the name of the cluster node the device is
+                  attached to.
                 type: string
               path:
                 description: |-
@@ -97,10 +97,13 @@ spec:
               serial:
                 description: Serial is the device serial number the node reports.
                 type: string
-              sizeBytes:
-                description: SizeBytes is the device's size in bytes.
-                format: int64
-                type: integer
+              size:
+                anyOf:
+                - type: integer
+                - type: string
+                description: Size is the device's capacity.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               stablePath:
                 description: |-
                   StablePath is the device's /dev/disk/by-id link, empty when the node

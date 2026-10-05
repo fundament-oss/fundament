@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,7 +25,7 @@ import (
 func testBlockStorage(name string) *v1alpha1.BlockStorage {
 	return &v1alpha1.BlockStorage{
 		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID("uid-" + name)},
-		Spec:       v1alpha1.BlockStorageSpec{Replication: "auto"},
+		Spec:       v1alpha1.BlockStorageSpec{},
 	}
 }
 
@@ -287,7 +288,7 @@ func TestBlockStorageReadyWhenBlockPoolReady(t *testing.T) {
 func TestBlockStorageClampsReplicationToNodes(t *testing.T) {
 	t.Parallel()
 	bs := testBlockStorage("fast")
-	bs.Spec.Replication = "3"
+	bs.Spec.Replicas = ptr.To[int32](3)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),

@@ -105,8 +105,10 @@ export function resourceNameError(name, maxLength = 63) {
   return null;
 }
 
-// Replication <select> shared by every consumer create/edit form.
-export function replicationFieldHtml(selected = 'auto') {
+// Replicas <select> shared by every consumer create/edit form. "auto" stands
+// for an absent spec.replicas.
+export function replicasFieldHtml(replicas) {
+  const selected = replicas ? String(replicas) : 'auto';
   const label = (v) => (v === 'auto' ? 'auto (recommended)' : {
     1: '1 — no replication',
     2: '2 — two replicas',
@@ -117,10 +119,17 @@ export function replicationFieldHtml(selected = 'auto') {
     .join('');
   return `
     <div class="plugin-field">
-      <label class="plugin-label" for="replication">Replication</label>
-      <select id="replication" name="replication" class="plugin-select">${options}</select>
+      <label class="plugin-label" for="replicas">Replicas</label>
+      <select id="replicas" name="replicas" class="plugin-select">${options}</select>
       <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
     </div>`;
+}
+
+// Reads the replicas <select> into spec.replicas. null, not undefined, so a
+// merge-patch removes the field when the operator switches back to auto.
+export function replicasValue(form) {
+  const value = form.querySelector('[name="replicas"]').value;
+  return value === 'auto' ? null : Number(value);
 }
 
 // Default-StorageClass checkbox shared by the BlockStorage create and edit
@@ -182,6 +191,20 @@ export function wireSubmit(form, { button, errorBox, busyLabel, failPrefix, vali
       button.textContent = idleLabel;
     }
   });
+}
+
+const QUANTITY_SUFFIXES = {
+  '': 1,
+  Ki: 1024, Mi: 1024 ** 2, Gi: 1024 ** 3, Ti: 1024 ** 4, Pi: 1024 ** 5, Ei: 1024 ** 6,
+  k: 1e3, M: 1e6, G: 1e9, T: 1e12, P: 1e15, E: 1e18,
+};
+
+// Converts a Kubernetes Quantity string ("20478Mi", "21472739328") to bytes.
+// Exponent forms ("1e9") and milli units do not occur in byte quantities.
+export function quantityBytes(quantity) {
+  const match = /^(\d+(?:\.\d+)?)([KMGTPE]i|[kMGTPE])?$/.exec(String(quantity ?? '').trim());
+  if (!match) return 0;
+  return Number(match[1]) * QUANTITY_SUFFIXES[match[2] ?? ''];
 }
 
 export function humanizeBytes(bytes) {

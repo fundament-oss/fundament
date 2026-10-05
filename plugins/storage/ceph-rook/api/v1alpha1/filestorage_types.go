@@ -5,12 +5,13 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // FileStorageSpec defines a shared-filesystem (ReadWriteMany) StorageClass on
 // the shared Ceph cluster, using the disks that DiskPools contribute.
 type FileStorageSpec struct {
-	// Replication is how many copies Ceph keeps of each piece of data, for both
-	// the filesystem's metadata and its contents: an explicit count, or "auto"
-	// to derive it from the number of nodes contributing disks (capped at 3).
-	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
-	// +kubebuilder:default=auto
-	Replication string `json:"replication,omitempty"`
+	// Replicas is how many copies Ceph keeps of each piece of data, for both
+	// the filesystem's metadata and its contents. Absent derives it from the
+	// number of nodes contributing disks (capped at 3).
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=3
+	Replicas *int32 `json:"replicas,omitempty"`
 	// MetadataServers is the number of active filesystem metadata servers. Each
 	// active server gets its own standby for failover.
 	// +kubebuilder:validation:Minimum=1

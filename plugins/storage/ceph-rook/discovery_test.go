@@ -32,11 +32,11 @@ func TestParseDiscoveredDevices(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2) // the "part" entry is skipped
 
-	assert.Equal(t, "node-1", got[0].Node)
+	assert.Equal(t, "node-1", got[0].NodeName)
 	assert.Equal(t, "/dev/sdb", got[0].Path, "Path is the kernel name")
 	assert.Equal(t, "/dev/disk/by-id/wwn-0x5000c500a1b2c3d4", got[0].StablePath)
 	assert.Equal(t, "0x5000c500a1b2c3d4", got[0].WWN)
-	assert.Equal(t, int64(1073741824), got[0].SizeBytes)
+	assert.Equal(t, "1Gi", got[0].Size.String())
 	assert.Equal(t, v1alpha1.DiskTypeHDD, got[0].Type) // rotational=1
 	assert.True(t, got[0].Rotational)
 	assert.True(t, got[0].Available) // empty && no filesystem

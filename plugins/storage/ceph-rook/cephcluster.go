@@ -27,7 +27,7 @@ func BuildStorageNodes(disks []v1alpha1.DiskStatus) []map[string]any {
 	nodeMap := make(map[string][]string)
 	for i := range disks {
 		disk := &disks[i]
-		nodeMap[disk.Node] = append(nodeMap[disk.Node], DeviceRef(disk))
+		nodeMap[disk.NodeName] = append(nodeMap[disk.NodeName], DeviceRef(disk))
 	}
 
 	nodes := make([]string, 0, len(nodeMap))
@@ -65,7 +65,7 @@ func DistinctNodeCount(disks []v1alpha1.DiskStatus) int {
 
 	nodeSet := make(map[string]struct{})
 	for i := range disks {
-		nodeSet[disks[i].Node] = struct{}{}
+		nodeSet[disks[i].NodeName] = struct{}{}
 	}
 
 	return len(nodeSet)

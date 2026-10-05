@@ -51,7 +51,7 @@ describe('plugin-sdk k8s write verbs', () => {
   });
 
   it('patch sends a merge-patch to the named resource URL', async () => {
-    await window.fundament.k8s.patch(POOL, { spec: { replication: '2' } });
+    await window.fundament.k8s.patch(POOL, { spec: { replicas: 2 } });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -62,7 +62,7 @@ describe('plugin-sdk k8s write verbs', () => {
     );
     expect(init.method).toBe('PATCH');
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/merge-patch+json');
-    expect(init.body).toBe(JSON.stringify({ spec: { replication: '2' } }));
+    expect(init.body).toBe(JSON.stringify({ spec: { replicas: 2 } }));
   });
 
   it('delete sends DELETE with no body', async () => {

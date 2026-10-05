@@ -118,6 +118,25 @@ func TestDiskInventorySetsClaimedByFromPools(t *testing.T) {
 	assert.Equal(t, "pool", getDisk(t, c, diskName).Status.ClaimedBy)
 }
 
+// Every discovery ConfigMap event re-reconciles every disk on its node, so
+// an unchanged disk must not be rewritten. Size is a Quantity, whose decoded
+// form differs from a freshly built one under ==.
+func TestDiskInventoryDoesNotRewriteUnchangedDisk(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	cm := discoveryConfigMap(t, node, rawDevice{Name: "sdb", Size: 21472739328, Type: "disk", Empty: true})
+	diskName := DiskName(node, "path:/dev/sdb")
+
+	c := newFakeClient(t, cm)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	before := getDisk(t, c, diskName).ResourceVersion
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	assert.Equal(t, before, getDisk(t, c, diskName).ResourceVersion)
+}
+
 // A pool event has to reach every node's ConfigMap.
 func TestPoolToDiscoveryConfigMapsCoversEveryNode(t *testing.T) {
 	t.Parallel()
