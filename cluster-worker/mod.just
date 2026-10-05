@@ -10,12 +10,15 @@ set shell := ["bash", "-uc"]
 # Pin Gardener version for team consistency
 GARDENER_VERSION := "v1.138.0"
 
-# Gardener directory is in the repo root's .dev folder (shared infrastructure)
-GARDENER_DIR := env_var_or_default("GARDENER_DIR", justfile_directory() + "/.dev/gardener")
+# Gardener clone, outside the repository: Gardener keeps its registry cache and backup
+# buckets inside the clone, written as root by its containers.
+GARDENER_DIR := env_var_or_default("GARDENER_DIR", cache_directory() / "fundament" / "gardener")
 
 # KinD cluster name used by the operator path
 KIND_CLUSTER := "gardener-operator-local"
 KIND_CONTAINER := KIND_CLUSTER + "-control-plane"
+# kubeconfig context gardener-connect adds for the virtual garden
+GARDEN_CONTEXT := "kind-gardener-local-garden"
 
 # List available recipes
 default:
@@ -52,11 +55,21 @@ check-prerequisites:
     echo "All prerequisites installed"
 
 # Start local Gardener via gardener-operator (~15 min first time)
-gardener-up: check-prerequisites
+gardener-start: check-prerequisites _check-old-gardener-dir
     #!/usr/bin/env bash
     set -e
     GARDENER_DIR="{{GARDENER_DIR}}"
     GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+
+    # The clone is outside the repository, where mise's shims find no tool versions;
+    # put the repository's tools (Go for Gardener's build) on PATH before leaving it.
+    if command -v mise > /dev/null; then eval "$(mise env -s bash)"; fi
+
+    # The last steps connect Gardener to the platform cluster; fail now, not after the build.
+    if ! docker inspect -f '{{{{.State.Running}}' k3d-fundament-server-0 2>/dev/null | grep -q true; then
+        echo "Error: the k3d-fundament cluster is not running. Start it first: just cluster-start"
+        exit 1
+    fi
 
     # Ensure hosts entry (prompt for sudo early, before long-running steps)
     if ! grep -q "registry.local.gardener.cloud" /etc/hosts; then
@@ -64,11 +77,21 @@ gardener-up: check-prerequisites
         echo "127.0.0.1 registry.local.gardener.cloud" | sudo tee -a /etc/hosts
     fi
 
+    # A run that stopped part-way can leave a Garden without its kubeconfig or Seed, so
+    # only a registered Seed counts as running; otherwise continue the installation,
+    # whose make targets can be re-run.
+    KIND_EXISTS=false
     if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
+        KIND_EXISTS=true
+    fi
+    VIRTUAL_KC="$GARDENER_DIR/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+    if [ "$KIND_EXISTS" = true ] && [ -f "$VIRTUAL_KC" ] \
+        && kubectl --kubeconfig "$VIRTUAL_KC" --request-timeout=10s get seed local \
+            -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}' 2>/dev/null | grep -qx True; then
         echo "Gardener already running ({{KIND_CLUSTER}})"
         echo "Check status: just cluster-worker gardener-status"
-        GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect
-        GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret
+        (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect)
+        (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret)
         exit 0
     fi
 
@@ -104,6 +127,10 @@ gardener-up: check-prerequisites
         chmod +x "$HELM_DIR/helm"
     fi
 
+    # Publish the shoot bastion on host port 2222 instead of 22, where a local
+    # sshd would make the kind node fail to start.
+    sed -i 's/hostPort: 22$/hostPort: 2222/' example/gardener-local/kind/cluster/templates/_extra_port_mappings.tpl
+
     # Unset SKAFFOLD_DEFAULT_REPO so Gardener uses its own registry
     # (registry.local.gardener.cloud:5001), not the fundament k3d registry.
     # mise.toml exports the fundament registry, which would override the ?=
@@ -111,44 +138,82 @@ gardener-up: check-prerequisites
     # the operator/gardenlet pods would wedge in ImagePullBackOff. The same
     # applies when running Gardener make targets by hand: unset it first.
     unset SKAFFOLD_DEFAULT_REPO
-    make kind-single-node-up
+    if [ "$KIND_EXISTS" = false ]; then
+        make kind-single-node-up
+    fi
     make operator-up
     make operator-seed-up
 
     echo ""
-    GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect
-    GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret
+    (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect)
+    (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret)
     echo "Gardener started! (operator path)"
 
-# Stop local Gardener
-gardener-down:
+# TODO: remove this check once nobody runs Gardener from .dev/gardener in the repository,
+# GARDENER_DIR's old default.
+# A clone there belongs to a kind cluster and containers this justfile no longer finds.
+_check-old-gardener-dir:
     #!/usr/bin/env bash
-    set -e
-    GARDENER_DIR="{{GARDENER_DIR}}"
-    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
-
-    if ! kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
-        echo "Gardener is not running"
-        exit 0
+    OLD_DIR="{{justfile_directory()}}/.dev/gardener"
+    if [ -z "${GARDENER_DIR:-}" ] && [ -d "$OLD_DIR" ]; then
+        echo "Error: found a Gardener clone in $OLD_DIR, the old default location."
+        echo "Delete it and its kind cluster first, then run this again:"
+        echo "  GARDENER_DIR=$OLD_DIR just cluster-worker gardener-delete"
+        exit 1
     fi
 
-    cd "$GARDENER_DIR"
-    # Unset SKAFFOLD_DEFAULT_REPO so Gardener uses its own registry
-    # (registry.local.gardener.cloud:5001), not the fundament k3d registry.
-    # mise.toml exports the fundament registry, which would override the ?=
-    # default in Gardener's Makefile and break skaffold's render/delete.
-    unset SKAFFOLD_DEFAULT_REPO
-    make operator-seed-down 2>/dev/null || true
-    make kind-single-node-down
-    echo "Gardener stopped"
-
-# Delete Gardener kind cluster (for clean restart)
-gardener-delete:
+# Delete local Gardener completely: kind cluster, registry/DNS containers and clone
+gardener-delete: _check-old-gardener-dir
     #!/usr/bin/env bash
+    set -e
     if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
         echo "Deleting {{KIND_CLUSTER}} cluster..."
         kind delete cluster --name "{{KIND_CLUSTER}}"
     fi
+    (cd "{{justfile_directory()}}" && GARDENER_DIR="{{GARDENER_DIR}}" just cluster-worker _gardener-infra-down)
+    TARGET_KC="${KUBECONFIG:-}"
+    TARGET_KC="${TARGET_KC%%:*}"
+    TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
+    for name in "{{GARDEN_CONTEXT}}" "kind-{{KIND_CLUSTER}}"; do
+        kubectl config --kubeconfig "$TARGET_KC" delete-context "$name" >/dev/null 2>&1 || true
+        kubectl config --kubeconfig "$TARGET_KC" delete-cluster "$name" >/dev/null 2>&1 || true
+        kubectl config --kubeconfig "$TARGET_KC" delete-user "$name" >/dev/null 2>&1 || true
+    done
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    if [ -d "$GARDENER_DIR" ]; then
+        # Gardener's containers write the registry cache and backup buckets as root;
+        # a container removes them without sudo.
+        docker run --rm -v "$(dirname "$GARDENER_DIR"):/parent" alpine rm -rf "/parent/$(basename "$GARDENER_DIR")"
+        echo "Removed $GARDENER_DIR"
+    fi
+
+# Remove the registry and DNS containers kind-up starts with Docker Compose. They
+# outlive the kind cluster, so this also runs when the cluster is already gone.
+_gardener-infra-down:
+    #!/usr/bin/env bash
+    set -e
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    INFRA_DIR="$GARDENER_DIR/dev-setup/infra"
+    if [ -f "$INFRA_DIR/docker-compose.yaml" ]; then
+        docker compose -f "$INFRA_DIR/docker-compose.yaml" down --volumes
+    elif docker ps -aq --filter "label=com.docker.compose.project.working_dir=$INFRA_DIR" | grep -q .; then
+        # The clone is gone; its containers are recognised by their compose directory.
+        docker compose -p infra down --volumes
+    fi
+
+# Deploy the platform against the local Gardener (just dev-hotreload -p local-gardener)
+dev *flags:
+    #!/usr/bin/env bash
+    set -e
+    if ! docker inspect -f '{{{{.State.Running}}' "{{KIND_CONTAINER}}" 2>/dev/null | grep -q true \
+        || ! kubectl --context k3d-fundament -n fundament get secret gardener-kubeconfig >/dev/null 2>&1; then
+        echo "Error: local Gardener is not running or not connected to k3d-fundament." >&2
+        echo "Start it first: just cluster-worker gardener-start" >&2
+        exit 1
+    fi
+    cd "{{justfile_directory()}}" && just dev-hotreload -p local-gardener {{flags}}
 
 # Check Gardener status
 gardener-status:
@@ -163,7 +228,7 @@ gardener-status:
 
     if ! kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
         echo "Status: NOT RUNNING"
-        echo "Start with: just cluster-worker gardener-up"
+        echo "Start with: just cluster-worker gardener-start"
         exit 1
     fi
 
@@ -220,7 +285,7 @@ gardener-connect:
     KIND_NETWORK="kind"
 
     if ! docker ps --format '{{{{.Names}}' | grep -q "$KIND_CONTAINER"; then
-        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-up"
+        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-start"
         exit 1
     fi
 
@@ -345,7 +410,7 @@ gardener-connect:
     echo "Gardener API: https://$API_IP:6443"
 
     # Write discovered IPs to generated values file (used by local-gardener Skaffold profile)
-    GARDENER_VALUES="{{GARDENER_DIR}}/../../charts/fundament/values-gardener-local.yaml"
+    GARDENER_VALUES="{{source_directory()}}/../charts/fundament/values-gardener-local.yaml"
     printf '# Generated by: just cluster-worker gardener-connect\ngardener:\n  apiServerIP: "%s"\nshootProxy:\n  gardenerNodeIP: "%s"\n' "$API_IP" "$K3D_IP" > "$GARDENER_VALUES"
     echo "- Wrote gardener values: apiServerIP=$API_IP, shootProxy.gardenerNodeIP=$K3D_IP"
 
@@ -355,6 +420,27 @@ gardener-connect:
             reloader.stakater.com/auto=true --overwrite 2>/dev/null
         echo "- Annotated CoreDNS for Reloader auto-restart"
     fi
+
+    # Add Gardener's two clusters to the same kubeconfig as k3d-fundament, under
+    # fixed names. The kind cluster's port and certificates change when it is
+    # recreated, so read them fresh every time.
+    add_context() {
+        local name="$1" dir path
+        dir=$(mktemp -d)
+        cat > "$dir/kubeconfig"
+        for path in clusters[0].cluster.certificate-authority-data users[0].user.client-certificate-data users[0].user.client-key-data; do
+            kubectl --kubeconfig "$dir/kubeconfig" config view --raw -o jsonpath="{.$path}" | base64 -d > "$dir/${path##*.}"
+        done
+        kubectl config --kubeconfig "$TARGET_KC" set-cluster "$name" --embed-certs --certificate-authority "$dir/certificate-authority-data" \
+            --server "$(kubectl --kubeconfig "$dir/kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}')" >/dev/null
+        kubectl config --kubeconfig "$TARGET_KC" set-credentials "$name" --embed-certs \
+            --client-certificate "$dir/client-certificate-data" --client-key "$dir/client-key-data" >/dev/null
+        kubectl config --kubeconfig "$TARGET_KC" set-context "$name" --cluster "$name" --user "$name" >/dev/null
+        rm -rf "$dir"
+        echo "- Added kubeconfig context $name"
+    }
+    add_context "{{GARDEN_CONTEXT}}" < "$GARDENER_DIR/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+    kind get kubeconfig --name "{{KIND_CLUSTER}}" | add_context "kind-{{KIND_CLUSTER}}"
 
 # Create kubeconfig secret for cluster-worker to connect to Gardener
 gardener-secret: gardener-connect
@@ -371,7 +457,7 @@ gardener-secret: gardener-connect
     # via the shoot-proxy's CoreDNS + socat -> Istio NodePort on the kind node.
     if [ ! -f "$VIRTUAL_KC" ]; then
         echo "Error: Virtual garden kubeconfig not found at $VIRTUAL_KC"
-        echo "Is Gardener fully started? Run: just cluster-worker gardener-up"
+        echo "Is Gardener fully started? Run: just cluster-worker gardener-start"
         exit 1
     fi
 
@@ -400,7 +486,7 @@ shoots:
     VIRTUAL_KC="$GARDENER_DIR/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
 
     if ! docker ps --format '{{{{.Names}}' | grep -q "{{KIND_CONTAINER}}"; then
-        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-up"
+        echo "Error: Gardener is not running. Start with: just cluster-worker gardener-start"
         exit 1
     fi
 

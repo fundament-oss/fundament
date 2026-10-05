@@ -125,14 +125,13 @@ _wait-helm-deployments namespace +deployments:
 
 # --- Deployment commands ---
 
-# Deploy to local k3d cluster (development mode, keeps resources on exit)
+# Deploy to local k3d cluster and redeploy on every file change; each deploy resets the databases
 dev *flags:
-    SKAFFOLD_DEFAULT_REPO="localhost:5111" \
-    skaffold dev --kube-context k3d-fundament --profile env-local --cleanup=false {{ flags }}
+    skaffold dev --kube-context k3d-fundament --profile env-local --default-repo=localhost:5111 --cleanup=false {{ flags }}
 
-# Deploy to local k3d cluster with hot-reload
-dev-hotreload:
-    @just dev --profile hotreload
+# Like dev, but syncs edits into running containers; only adding, moving or deleting a file redeploys
+dev-hotreload *flags:
+    @just dev --profile hotreload {{ flags }}
 
 # Deploy with hot-reload and kube-api-proxy debugger (dlv on localhost:2345)
 dev-debug:

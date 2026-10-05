@@ -6,6 +6,8 @@ metadata:
   name: cluster-worker
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.clusterWorker.replicas }}
   selector:
