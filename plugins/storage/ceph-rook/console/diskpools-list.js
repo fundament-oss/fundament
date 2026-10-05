@@ -5,8 +5,7 @@ import {
   errorRow,
   wireRowLinks,
   navigateToCreate,
-  humanizeBytes,
-  quantityBytes,
+  humanizeQuantity,
 } from './_shared.js';
 
 await loadSdk();
@@ -35,7 +34,7 @@ try {
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
             <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
             <td>${escapeHtml(String(status.selectedDiskCount ?? '—'))}</td>
-            <td>${escapeHtml(humanizeBytes(quantityBytes(status.rawCapacity)))}</td>
+            <td>${escapeHtml(humanizeQuantity(status.rawCapacity))}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
       })

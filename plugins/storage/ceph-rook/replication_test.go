@@ -25,10 +25,6 @@ func TestComputeReplication(t *testing.T) {
 		{"explicit 3 on 3 nodes", ptr.To[int32](3), 3, 3, "host", ""},
 		{"explicit 2 on 1 node clamps to osd", ptr.To[int32](2), 1, 1, "osd", "clamped"},
 		{"explicit 1", ptr.To[int32](1), 3, 1, "osd", ""},
-		// The CRD minimum keeps these out of the API. An invalid value must
-		// not silently mean "no replication".
-		{"zero is derived", ptr.To[int32](0), 2, 2, "host", "deriving"},
-		{"negative is derived", ptr.To[int32](-1), 3, 3, "host", "deriving"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

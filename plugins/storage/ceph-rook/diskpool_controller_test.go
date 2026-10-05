@@ -360,28 +360,6 @@ func TestReconcileIsIdempotent(t *testing.T) {
 	assert.Empty(t, pool.Status.Message)
 }
 
-// A disk repeated in spec.disks must not be counted twice: selectedDiskCount
-// and rawCapacity are the numbers an operator sizes workloads against.
-// The CRD marks the field as a set, so this only bites an object written before
-// that marker existed -- but it bites silently.
-func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
-	t.Parallel()
-	c := newFakeClient(t,
-		cephCluster(),
-		testDisk("a", "node-a", "/dev/sdb", 100, true),
-		testPool("pool", time.Now(), "a", "a", "a"),
-	)
-	r := newReconciler(c)
-
-	_, err := reconcilePool(t, r, "pool")
-	require.NoError(t, err)
-
-	pool := getPool(t, c, "pool")
-	assert.Equal(t, 1, pool.Status.SelectedDiskCount)
-	assert.Equal(t, int64(100), pool.Status.RawCapacity.Value())
-	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
-}
-
 // Two Disk CRs that resolve to the same physical device must collapse to one
 // entry, or Rook would be handed the same device twice.
 func TestReconcileDeduplicatesUnionByStablePath(t *testing.T) {

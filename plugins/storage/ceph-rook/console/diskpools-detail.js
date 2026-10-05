@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, quantityBytes, renderDefList, wireSubmit } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeQuantity, renderDefList, wireSubmit } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
@@ -63,7 +63,7 @@ function renderReadOnly(item, byName) {
     ['Phase', status.phase ?? 'Unknown'],
     // Labelled as contributions, not capacity: the obvious reading is wrong.
     ['Disks contributed', String(status.selectedDiskCount ?? '—')],
-    ['Raw size of contributed disks', humanizeBytes(quantityBytes(status.rawCapacity))],
+    ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
   ];
   if (status.message) pairs.push(['Message', status.message]);
 
@@ -163,12 +163,8 @@ async function showEdit(item) {
 
   // Disjoint by construction: preserved is exactly what the picker did not
   // render, so this cannot produce the duplicate name the CRD's listType=map
-  // rejects. A kept entry is reused as is, not rebuilt from its name.
-  const byCurrentName = new Map(current.map((d) => [d.name, d]));
-  const selected = () => [
-    ...readSelectedDisks(form).map((diskName) => byCurrentName.get(diskName) ?? { name: diskName }),
-    ...preserved,
-  ];
+  // rejects.
+  const selected = () => [...readSelectedDisks(form, current), ...preserved];
 
   wireSubmit(form, {
     button: document.getElementById('save-btn'),

@@ -1,8 +1,7 @@
 import {
   loadSdk,
   escapeHtml,
-  humanizeBytes,
-  quantityBytes,
+  humanizeQuantity,
   emptyRow,
   errorRow,
   wireRowLinks,
@@ -54,7 +53,7 @@ try {
           <tr data-name="${escapeHtml(name)}">
             <td>${escapeHtml(s.nodeName ?? '(unknown node)')}</td>
             <td><a href="#" class="row-link">${escapeHtml(s.path ?? name)}</a></td>
-            <td>${escapeHtml(humanizeBytes(quantityBytes(s.size)))}</td>
+            <td>${escapeHtml(humanizeQuantity(s.size))}</td>
             <td>${escapeHtml(s.type ?? '')}</td>
             <td>${escapeHtml(claimText(s))}</td>
           </tr>`;

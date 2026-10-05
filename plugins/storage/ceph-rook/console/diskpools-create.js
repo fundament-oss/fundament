@@ -116,7 +116,7 @@ if (loadError) {
           apiVersion: 'ceph.fundament.io/v1alpha1',
           kind: 'DiskPool',
           metadata: { name },
-          spec: { disks: readSelectedDisks(form).map((diskName) => ({ name: diskName })) },
+          spec: { disks: readSelectedDisks(form) },
         },
       );
       navigateToDetail(name);

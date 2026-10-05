@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, quantityBytes, renderDefList } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeQuantity, renderDefList } from './_shared.js';
 
 await loadSdk();
 const ctx = await fundament.init;
@@ -26,7 +26,7 @@ if (!ctx.resource?.name) {
       ['Path (kernel)', s.path ?? '—'],
       ['Path (stable)', s.stablePath || 'none reported; tracked by its kernel path'],
       ['Node', s.nodeName ?? '—'],
-      ['Size', humanizeBytes(quantityBytes(s.size))],
+      ['Size', humanizeQuantity(s.size)],
       ['Type', s.type ?? '—'],
       ['Rotational', s.rotational ? 'yes' : 'no'],
       ['Model', s.model || '—'],

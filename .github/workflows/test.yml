@@ -446,6 +446,21 @@ jobs:
         working-directory: plugins/gateway-api/envoy-gateway/console-ui
         run: bun run build
 
+  # The ceph-rook console is plain ES modules with no package.json; bun test needs none.
+  ceph-rook-console:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Run tests
+        working-directory: plugins/storage/ceph-rook/console-test
+        run: bun test
+
   # The docs image build in build.yml is gated behind `should_deploy`, so it is
   # skipped on draft PRs and on PRs labelled no-preview-env. This job runs
   # unconditionally so broken links are caught on every PR.

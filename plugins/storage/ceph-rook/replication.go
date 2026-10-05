@@ -18,12 +18,6 @@ func ComputeReplication(requested *int32, nodeCount int) (replicas int, failureD
 	switch {
 	case requested == nil:
 		replicas = min(3, nodes)
-	case *requested < 1:
-		// The CRD minimum keeps this out of the API. Falling back to the
-		// derived count beats falling back to 1, which would silently make
-		// the pool unreplicated.
-		message = fmt.Sprintf("invalid replicas %d, deriving from node count", *requested)
-		replicas = min(3, nodes)
 	default:
 		replicas = int(*requested)
 		if replicas > nodes {
