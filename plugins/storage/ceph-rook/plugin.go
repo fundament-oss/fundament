@@ -106,8 +106,9 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 			Cache: &client.CacheOptions{
 				// Controller-runtime's default client bypasses the cache for
 				// unstructured objects, so every rookStub Get (CephCluster,
-				// CephBlockPool, CephFilesystem) would be a live API-server
-				// call despite the informers the Watches already run.
+				// CephBlockPool, CephFilesystem, CephObjectStore) would be a
+				// live API-server call despite the informers the Watches
+				// already run.
 				Unstructured: true,
 			},
 		},
@@ -141,6 +142,11 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	if err := NewFileStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace, p.cfg.CephFSMounter).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup filestorage reconciler: %w", pluginerrors.NewPermanent(err))
+	}
+
+	if err := NewObjectStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace).SetupWithManager(mgr); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("setup objectstorage reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
 	// Reports the CephCluster's health as the plugin's own status, so a broken

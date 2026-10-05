@@ -29,6 +29,12 @@ func CephFSProvisioner(rookNamespace string) string {
 	return rookNamespace + ".cephfs.csi.ceph.com"
 }
 
+// BucketProvisioner is Rook's ObjectBucketClaim provisioner name for an
+// operator in rookNamespace; same registration rule as RBDProvisioner.
+func BucketProvisioner(rookNamespace string) string {
+	return rookNamespace + ".ceph.rook.io/bucket"
+}
+
 // cephStorageClass builds the scaffold both CSI StorageClasses share; the
 // per-driver parameters are merged on top. secretInfix picks the Rook-managed
 // CSI Secrets ("rbd" or "cephfs"), so a secret-name change cannot land in one
@@ -87,4 +93,24 @@ func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace, mou
 		params["mounter"] = mounter
 	}
 	return cephStorageClass(name, CephFSProvisioner(rookNamespace), clusterNamespace, "cephfs", params)
+}
+
+// RenderBucketStorageClass builds the StorageClass that ObjectBucketClaims
+// reference. It drives Rook's OBC provisioner rather than a CSI driver, so it
+// carries none of the CSI scaffold: no secrets, no expansion, no binding mode.
+// storeName is the CephObjectStore's name; clusterNamespace is where it lives.
+func RenderBucketStorageClass(name, clusterNamespace, storeName, rookNamespace string) *storagev1.StorageClass {
+	return &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Provisioner: BucketProvisioner(rookNamespace),
+		// Delete removes the bucket and its objects with the claim; the pools
+		// themselves are guarded by preservePoolsOnDelete.
+		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
+		Parameters: map[string]string{
+			"objectStoreName":      storeName,
+			"objectStoreNamespace": clusterNamespace,
+		},
+	}
 }

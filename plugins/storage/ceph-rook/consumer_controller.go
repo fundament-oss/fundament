@@ -106,6 +106,25 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace, 
 	}
 }
 
+// NewObjectStorageReconciler reconciles ObjectStorage into a CephObjectStore
+// and a bucket StorageClass for ObjectBucketClaims.
+func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace string) *ConsumerReconciler[*v1alpha1.ObjectStorage] {
+	return &ConsumerReconciler[*v1alpha1.ObjectStorage]{
+		Client:           c,
+		ClusterNamespace: clusterNamespace,
+		RookNamespace:    rookNamespace,
+		kind:             "ObjectStorage",
+		rookKind:         "CephObjectStore",
+		derivedPrefix:    objectStoreDerivedNamePrefix,
+		newObject:        func() *v1alpha1.ObjectStorage { return &v1alpha1.ObjectStorage{} },
+		newList:          func() client.ObjectList { return &v1alpha1.ObjectStorageList{} },
+		renderRook: func(os *v1alpha1.ObjectStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
+			return RenderCephObjectStore(namespace, name, replicas, domain, int64(os.Spec.GatewayInstances))
+		},
+		renderStorageClass: RenderBucketStorageClass,
+	}
+}
+
 func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(r.newObject())

@@ -164,6 +164,25 @@ export function metadataServersError(value) {
   return null;
 }
 
+// Gateway-instances input shared by the ObjectStorage create and edit forms.
+export function gatewayInstancesFieldHtml(value = 1) {
+  return `
+    <div class="plugin-field">
+      <label class="plugin-label" for="rgw-count">Gateway instances</label>
+      <input id="rgw-count" name="gatewayInstances" type="number" class="plugin-input"
+             min="1" max="5" value="${escapeHtml(String(value))}" />
+      <span class="plugin-hint">RGW pods serving the S3 API. 1 is right unless request throughput demands more.</span>
+    </div>`;
+}
+
+// Bounds mirror the CRD's validation; returns an error message or null.
+export function gatewayInstancesError(value) {
+  if (!Number.isInteger(value) || value < 1 || value > 5) {
+    return 'Gateway instances must be a whole number from 1 to 5.';
+  }
+  return null;
+}
+
 // Wires the shared submit flow: validate, disable the button with busyLabel,
 // run action, surface failures in errorBox and restore the button. On success
 // the button stays disabled -- the action navigates or re-renders.

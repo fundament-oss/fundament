@@ -87,6 +87,19 @@ func TestDefinition(t *testing.T) {
 		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
 	})
 
+	t.Run("allowedResources/objectstorages", func(t *testing.T) {
+		t.Parallel()
+		var found *pluginruntime.AllowedResource
+		for i := range def.Spec.AllowedResources {
+			if def.Spec.AllowedResources[i].Resource == "objectstorages" {
+				found = &def.Spec.AllowedResources[i]
+				break
+			}
+		}
+		require.NotNil(t, found, "allowedResources must contain objectstorages")
+		assert.ElementsMatch(t, []string{"list", "get", "create", "patch"}, found.Verbs)
+	})
+
 	t.Run("customComponents/html-files-exist", func(t *testing.T) {
 		t.Parallel()
 		for kind, mapping := range def.Spec.CustomComponents {
@@ -154,6 +167,8 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/blockstorages-list.js",
 		"console/filestorages-detail.js",
 		"console/filestorages-list.js",
+		"console/objectstorages-detail.js",
+		"console/objectstorages-list.js",
 	} {
 		src, err := os.ReadFile(path)
 		require.NoError(t, err)

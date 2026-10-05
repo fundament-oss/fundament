@@ -3,8 +3,8 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.2.0
-  description: Block and shared file storage for in-cluster workloads, backed by Ceph and Rook.
+  version: v0.3.0
+  description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
   icon: external-hard-drives
@@ -16,6 +16,8 @@ metadata:
     - storage
     - block
     - file
+    - object
+    - s3
     - ceph
 spec:
   permissions:
@@ -40,6 +42,9 @@ spec:
           - filestorages
           - filestorages/status
           - filestorages/finalizers
+          - objectstorages
+          - objectstorages/status
+          - objectstorages/finalizers
         verbs:
           - get
           - list
@@ -55,6 +60,7 @@ spec:
           - cephclusters
           - cephblockpools
           - cephfilesystems
+          - cephobjectstores
         verbs:
           - get
           - list
@@ -129,6 +135,10 @@ spec:
         list: true
         detail: true
         icon: folder-open
+      - crd: objectstorages.ceph.fundament.io
+        list: true
+        detail: true
+        icon: boxes-3
       - crd: disks.ceph.fundament.io
         list: true
         detail: true
@@ -138,6 +148,7 @@ spec:
     - diskpools.ceph.fundament.io
     - blockstorages.ceph.fundament.io
     - filestorages.ceph.fundament.io
+    - objectstorages.ceph.fundament.io
   customComponents:
     DiskPool:
       list: diskpools-list.html
@@ -154,6 +165,10 @@ spec:
       list: filestorages-list.html
       detail: filestorages-detail.html
       create: filestorages-create.html
+    ObjectStorage:
+      list: objectstorages-list.html
+      detail: objectstorages-detail.html
+      create: objectstorages-create.html
   uiHints:
     diskpools.ceph.fundament.io:
       statusMapping:
@@ -191,6 +206,19 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
+    objectstorages.ceph.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Provisioning:
+            badge: warning
+            label: Provisioning
+          Degraded:
+            badge: danger
+            label: Degraded
   # Exactly the verbs the console pages issue, no more. Nothing enforces this
   # list at request time yet, so it is a declaration of intent.
   #
@@ -213,6 +241,10 @@ spec:
     - group: ceph.fundament.io
       version: v1alpha1
       resource: filestorages
+      verbs: [list, get, create, patch]
+    - group: ceph.fundament.io
+      version: v1alpha1
+      resource: objectstorages
       verbs: [list, get, create, patch]
     - group: ceph.rook.io
       version: v1

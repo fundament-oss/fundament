@@ -1,7 +1,8 @@
-// Page factory for the consumer kinds (BlockStorage, FileStorage): one
-// implementation of the list/detail/create flows, parameterized per kind. The
-// kinds differ only in labels/texts and the FileStorage-only metadataServers
-// field, so each page file reduces to a factory call with its kind's config.
+// Page factory for the consumer kinds (BlockStorage, FileStorage,
+// ObjectStorage): one implementation of the list/detail/create flows,
+// parameterized per kind. The kinds differ only in labels/texts and a few
+// kind-specific spec fields, so each page file reduces to a factory call with
+// its kind's config.
 
 import {
   loadSdk,
@@ -18,6 +19,8 @@ import {
   defaultFieldHtml,
   metadataServersFieldHtml,
   metadataServersError,
+  gatewayInstancesFieldHtml,
+  gatewayInstancesError,
   resourceNameError,
   wireSubmit,
 } from './_shared.js';
@@ -58,14 +61,54 @@ export const FILESTORAGE = {
   nameMaxLength: 56,
 };
 
+export const OBJECTSTORAGE = {
+  resource: 'objectstorages',
+  kind: 'ObjectStorage',
+  label: 'Object Storage',
+  emptyMessage: 'No object storage.',
+  noneSelected: 'No object storage selected.',
+  storageClassPrefix: 'cephobj-',
+  detailHint: `Create an ObjectBucketClaim referencing this StorageClass to provision a
+    bucket; its S3 endpoint and credentials land in a ConfigMap and Secret named
+    after the claim, and spec.additionalConfig (maxSize, maxObjects) caps a
+    claim's bucket.`,
+  createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
+    disks, served by RGW gateway pods. It needs at least one DiskPool
+    contributing disks; without one it stays Degraded.`,
+  metadataServers: false,
+  defaultToggle: false,
+  gatewayInstances: true,
+  // The CRD caps ObjectStorage names at 55: Rook derives a cephobj-<name>
+  // label capped at 63. Enforced here too so the form rejects it first.
+  nameMaxLength: 55,
+};
+
 function metadataServersValue(form) {
   return Number(form.querySelector('[name="metadataServers"]').value);
+}
+
+function gatewayInstancesValue(form) {
+  return Number(form.querySelector('[name="gatewayInstances"]').value);
+}
+
+// fieldsError validates the kind-specific numeric fields; first error wins.
+function fieldsError(cfg, form) {
+  if (cfg.metadataServers) {
+    const invalid = metadataServersError(metadataServersValue(form));
+    if (invalid) return invalid;
+  }
+  if (cfg.gatewayInstances) {
+    const invalid = gatewayInstancesError(gatewayInstancesValue(form));
+    if (invalid) return invalid;
+  }
+  return null;
 }
 
 // specFrom reads the create/edit form into a spec object.
 function specFrom(cfg, form) {
   const spec = { replicas: replicasValue(form) };
   if (cfg.metadataServers) spec.metadataServers = metadataServersValue(form);
+  if (cfg.gatewayInstances) spec.gatewayInstances = gatewayInstancesValue(form);
   // Always sent, so unticking the box merge-patches the field back to false.
   if (cfg.defaultToggle) spec.default = form.querySelector('[name="default"]').checked;
   return spec;
@@ -76,7 +119,7 @@ export async function consumerListPage(cfg) {
   await fundament.init;
 
   const tbody = document.getElementById('rows');
-  const colspan = cfg.metadataServers ? 7 : 6;
+  const colspan = 6 + (cfg.metadataServers ? 1 : 0) + (cfg.gatewayInstances ? 1 : 0);
 
   document.getElementById('create-btn').addEventListener('click', () => navigateToCreate());
 
@@ -94,6 +137,9 @@ export async function consumerListPage(cfg) {
         const metadataServersCell = cfg.metadataServers
           ? `<td>${escapeHtml(String(item.spec?.metadataServers ?? 1))}</td>`
           : '';
+        const gatewayInstancesCell = cfg.gatewayInstances
+          ? `<td>${escapeHtml(String(item.spec?.gatewayInstances ?? 1))}</td>`
+          : '';
         return `
           <tr data-name="${escapeHtml(name)}">
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
@@ -101,6 +147,7 @@ export async function consumerListPage(cfg) {
             <td>${escapeHtml(status.storageClassName ?? '—')}</td>
             <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
             ${metadataServersCell}
+            ${gatewayInstancesCell}
             <td>${escapeHtml(status.failureDomain ?? '—')}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
@@ -131,6 +178,7 @@ export async function consumerDetailPage(cfg) {
       ['Replicas', String(status.replicas ?? '—')],
     ];
     if (cfg.metadataServers) pairs.push(['Metadata servers', String(item.spec?.metadataServers ?? 1)]);
+    if (cfg.gatewayInstances) pairs.push(['Gateway instances', String(item.spec?.gatewayInstances ?? 1)]);
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
     pairs.push(['Failure Domain', status.failureDomain ?? '—']);
     if (status.message) pairs.push(['Message', status.message]);
@@ -173,6 +221,8 @@ export async function consumerDetailPage(cfg) {
 
         ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
 
+        ${cfg.gatewayInstances ? gatewayInstancesFieldHtml(item.spec?.gatewayInstances ?? 1) : ''}
+
         ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
         <div class="plugin-actions">
@@ -191,10 +241,10 @@ export async function consumerDetailPage(cfg) {
       errorBox: document.getElementById('edit-error'),
       busyLabel: 'Saving…',
       failPrefix: 'Failed to save',
-      validate: cfg.metadataServers ? () => metadataServersError(metadataServersValue(form)) : undefined,
+      validate: () => fieldsError(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
-        await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
+        await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form, true) });
         await showDetail();
       },
     });
@@ -258,7 +308,7 @@ export async function consumerCreatePage(cfg) {
         nameInput.focus();
         return invalid;
       }
-      return cfg.metadataServers ? metadataServersError(metadataServersValue(form)) : null;
+      return fieldsError(cfg, form);
     },
     action: async () => {
       const name = nameInput.value.trim();

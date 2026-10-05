@@ -24,7 +24,7 @@ OSDs.
 | 3 · Publish | The image builds and the definition reaches organization-api |
 | 4 · Install | The plugin's install path runs: Helm, CRDs, CephCluster bootstrap |
 | 5 · Discovery | The DiskInventory reconciler turns real probes into `Disk` CRs |
-| 6 · Pool | The DiskPool reconciler produces OSDs; BlockStorage/FileStorage each produce a StorageClass |
+| 6 · Pool | The DiskPool reconciler produces OSDs; BlockStorage/FileStorage/ObjectStorage each produce a StorageClass |
 | 7 · PVC | The whole chain actually stores data |
 | 8 · Regressions | The specific behaviours fixed in review hold on a real cluster |
 
@@ -381,7 +381,7 @@ Devices present but no `Disk` CRs means the filter rejected them: with
 `DEV_LOOP_DEVICES: "true"` only entries with `"type": "part"` on a `/dev/loopNpN` path
 survive.
 
-## Phase 6 · DiskPool → BlockStorage/FileStorage → StorageClass
+## Phase 6 · DiskPool → BlockStorage/FileStorage/ObjectStorage → StorageClass
 
 Disk names are cluster-specific (node name + a hash of the device's stable identity), so they cannot be
 hard-coded. Build the pool from whatever was discovered:
@@ -400,8 +400,9 @@ YAML
 ```
 
 A `DiskPool` only contributes disks; it derives no `StorageClass` on its own. Create a
-`BlockStorage` (RWO, RBD) and a `FileStorage` (RWX, CephFS) to turn that capacity into
-StorageClasses — both ride the OSD set the pool above just contributed to:
+`BlockStorage` (RWO, RBD), a `FileStorage` (RWX, CephFS) and an `ObjectStorage` (S3,
+RGW) to turn that capacity into StorageClasses — all three ride the OSD set the pool
+above just contributed to:
 
 ```bash
 kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
@@ -417,10 +418,18 @@ metadata:
   name: test-pool
 spec:
   metadataServers: 1
+---
+apiVersion: ceph.fundament.io/v1alpha1
+kind: ObjectStorage
+metadata:
+  name: test-pool
+spec:
+  # replicas omitted = automatic, like replication: auto above
+  gatewayInstances: 1
 YAML
 ```
 
-`BlockStorage` and `FileStorage` are named `test-pool` here too — a different kind, so no
+The consumer kinds are named `test-pool` here too — a different kind, so no
 collision with the `DiskPool` above — which is why every `ceph-test-pool` reference
 below still holds. Name it something else and the derived `StorageClass` follows: see
 [Derived object names](./example-ceph-rook.md#derived-object-names).
@@ -492,7 +501,19 @@ kubectl --context k3d-fundament-plugin get storageclass cephfs-test-pool
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephfilesystem cephfs-test-pool
 ```
 
-Phase 7 exercises both paths. CephFS mounting needs either the `ceph` kernel module or —
+`ObjectStorage` differs only in what the derived `StorageClass` is for: it drives Rook's
+ObjectBucketClaim provisioner (`rook-ceph.ceph.rook.io/bucket`), not a CSI driver, so
+nothing mounts it — Phase 7 claims a bucket instead. Verify the `cephobj-test-pool`
+pair and the RGW pod:
+
+```bash
+kubectl --context k3d-fundament-plugin get objectstorage test-pool -o yaml | yq .status
+kubectl --context k3d-fundament-plugin get storageclass cephobj-test-pool
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephobjectstore cephobj-test-pool
+kubectl --context k3d-fundament-plugin -n rook-ceph get pods -l app=rook-ceph-rgw
+```
+
+Phase 7 exercises all three paths. CephFS mounting needs either the `ceph` kernel module or —
 on a module-less local VM — `CEPHFS_MOUNTER: "fuse"` in the install config (Phase 4);
 without one of those a CephFS PVC hangs in `ContainerCreating` with `modprobe ceph`
 errors. RBD is unaffected either way.
@@ -600,11 +621,59 @@ and reinstall:
 kubectl --context k3d-fundament-plugin -n rook-ceph logs -l app=csi-cephfsplugin -c csi-cephfsplugin --tail=30
 ```
 
+Finally object storage, which is consumed through an `ObjectBucketClaim` rather than a
+PVC: Rook provisions the bucket and writes the endpoint to a ConfigMap and the
+credentials to a Secret, both named after the claim. The pod below round-trips an
+object through the S3 API with them:
+
+```bash
+kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata: { name: s3-verify }
+spec:
+  generateBucketName: s3-verify
+  storageClassName: cephobj-test-pool
+YAML
+
+kubectl --context k3d-fundament-plugin wait --for=jsonpath='{.status.phase}'=Bound \
+  objectbucketclaim/s3-verify --timeout=5m
+
+kubectl --context k3d-fundament-plugin apply -f - <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata: { name: s3-verify }
+spec:
+  restartPolicy: Never
+  containers:
+    - name: s3
+      image: amazon/aws-cli:2.22.35
+      command: ["sh","-c"]
+      args:
+        - |
+          echo PLUGIN-S3-OK > /tmp/blob
+          aws --endpoint-url "http://$BUCKET_HOST:$BUCKET_PORT" s3 cp /tmp/blob "s3://$BUCKET_NAME/blob"
+          aws --endpoint-url "http://$BUCKET_HOST:$BUCKET_PORT" s3 cp "s3://$BUCKET_NAME/blob" -
+      envFrom:
+        - configMapRef: { name: s3-verify }
+        - secretRef: { name: s3-verify }
+YAML
+
+kubectl --context k3d-fundament-plugin wait --for=jsonpath='{.status.phase}'=Succeeded \
+  pod/s3-verify --timeout=5m
+kubectl --context k3d-fundament-plugin logs pod/s3-verify   # PLUGIN-S3-OK
+```
+
+`PLUGIN-S3-OK` read back through the gateway proves bucket provisioning, credentials
+and the RGW data path. The ConfigMap carries `BUCKET_HOST`/`BUCKET_PORT`/`BUCKET_NAME`;
+the Secret carries `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`.
+
 Clean up before phase 8, so the pool can be deleted later:
 
 ```bash
 kubectl --context k3d-fundament-plugin delete pod/ceph-rook-verify pvc/ceph-rook-verify
 kubectl --context k3d-fundament-plugin delete pod/cephfs-writer pod/cephfs-reader pvc/cephfs-verify
+kubectl --context k3d-fundament-plugin delete pod/s3-verify objectbucketclaim/s3-verify
 ```
 
 ## Phase 8 · Regression checks
@@ -654,7 +723,7 @@ violation anywhere here is a failure, not cosmetic.
 3. **Edit** → uncheck every disk → Save is refused with "Select at least one disk."
 4. Re-check the disk and **Save** to restore the pool before phase 7/8d rely on it
    again.
-5. Note that none of `DiskPool`, `BlockStorage` or `FileStorage` offer delete
+5. Note that none of `DiskPool`, `BlockStorage`, `FileStorage` or `ObjectStorage` offer delete
    from the console — see
    [What the console can do](./example-ceph-rook.md#what-the-console-can-do).
    `kubectl delete` is the only way; phase 8d below uses it.
@@ -841,18 +910,21 @@ kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool   # still
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephblockpool ceph-test-pool  # still exists
 ```
 
-The `CephBlockPool`/`CephFilesystem` and their `StorageClass`es are owned by
-`BlockStorage`/`FileStorage`, not by the `DiskPool`, so they only disappear when those
-are deleted:
+The `CephBlockPool`/`CephFilesystem`/`CephObjectStore` and their `StorageClass`es are
+owned by `BlockStorage`/`FileStorage`/`ObjectStorage`, not by the `DiskPool`, so they
+only disappear when those are deleted:
 
 ```bash
 kubectl --context k3d-fundament-plugin delete blockstorage test-pool
 kubectl --context k3d-fundament-plugin delete filestorage test-pool
+kubectl --context k3d-fundament-plugin delete objectstorage test-pool
 
 kubectl --context k3d-fundament-plugin get storageclass ceph-test-pool     # NotFound (cascade)
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephblockpool ceph-test-pool  # NotFound
 kubectl --context k3d-fundament-plugin get storageclass cephfs-test-pool   # NotFound (cascade)
 kubectl --context k3d-fundament-plugin -n rook-ceph get cephfilesystem cephfs-test-pool  # NotFound
+kubectl --context k3d-fundament-plugin get storageclass cephobj-test-pool  # NotFound (cascade)
+kubectl --context k3d-fundament-plugin -n rook-ceph get cephobjectstore cephobj-test-pool  # NotFound
 ```
 
 :::caution[The OSDs stay]
