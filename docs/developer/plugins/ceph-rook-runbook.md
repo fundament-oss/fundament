@@ -117,8 +117,11 @@ idempotent and restarts both proxies). Skipping it surfaces later as
 :::
 
 :::note[After a reboot]
-The backing files survive reboots; the loop devices do not, because those are kernel
-state. Recovery is `just plugins storage-disks attach` and nothing else.
+The backing files survive reboots; the loop devices and loaded kernel modules do not,
+because those are kernel state. Recovery is `just plugins storage-disks attach` plus a
+`doctor` run, which reloads `rbd` as a side effect — without it, `csi-rbdplugin`
+CrashLoopBackOffs on `modprobe: FATAL: Module rbd not found` (it cannot load modules
+from inside the node).
 :::
 
 ## Phase 2 · Baseline without the plugin
@@ -169,7 +172,17 @@ just plugins storage-disks reset    # wipe stale OSD metadata, reattach
 ```
 
 `reset` is not optional between installs. Stale BlueStore metadata on the images, or Rook
-state under `dataDirHostPath`, is the usual reason a second install fails.
+state under `dataDirHostPath`, is the usual reason a second install fails: the OSD
+prepare job completes in seconds with `skipping osd.N: ... belonging to a different
+ceph cluster`, no OSDs appear, and every consumer eventually degrades (an
+`ObjectStorage` shows it as `CephObjectStore ... reports Failure` because
+`radosgw-admin` hangs without OSDs).
+
+Do not substitute a hand wipe for `reset`. Ceph v19 keeps backup BlueStore labels at
+the 1 GiB and 10 GiB offsets, so zeroing the start of a partition (or `wipefs`) leaves
+an OSD that `ceph-volume` still detects. `reset` deletes the backing files outright,
+which is immune — and it is also why it must not run against a live cluster: it
+removes `/var/lib/rook`, the running mons' store.
 
 ## Phase 3 · Build and publish
 
