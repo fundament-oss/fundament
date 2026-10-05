@@ -8,7 +8,8 @@ export PATH="$HOME/.nix-profile/bin:$PATH"
 export MISE_NODE_COMPILE=0  # prebuilt node (runs via nix-ld); never build V8 from source
 cd ~/fundament
 CLUSTER=${CLUSTER:-smoke}
-VKC="$(mise exec -- just --evaluate cluster-worker::GARDENER_DIR)/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+# GARDENER_DIR's default from cluster-worker/mod.just, as just resolves it on Linux.
+VKC="${GARDENER_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/fundament/gardener}/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 # No `set -e`: Stage A/B verify their real success and exit hard (a broken cluster or
@@ -32,6 +33,7 @@ mise exec -- just setup-gateway || log "setup-gateway returned nonzero (the UIs 
 
 log "=== STAGE B: gardener-start (clones gardener, brings up seed; ~10-15 min) ==="
 mise exec -- just cluster-worker gardener-start || log "gardener-start returned nonzero"
+[ -f "$VKC" ] || { log "FATAL: no virtual-garden kubeconfig at $VKC — gardener-start failed"; exit 1; }
 seed=$(mise exec -- kubectl --kubeconfig "$VKC" get seed local --no-headers 2>/dev/null)
 log "seed: $seed"
 echo "$seed" | grep -qw Ready || { log "FATAL: Gardener seed is not Ready — gardener-start failed"; exit 1; }

@@ -55,7 +55,7 @@ check-prerequisites:
     echo "All prerequisites installed"
 
 # Start local Gardener via gardener-operator (~15 min first time)
-gardener-start: check-prerequisites
+gardener-start: check-prerequisites _check-old-gardener-dir
     #!/usr/bin/env bash
     set -e
     GARDENER_DIR="{{GARDENER_DIR}}"
@@ -77,14 +77,17 @@ gardener-start: check-prerequisites
         echo "127.0.0.1 registry.local.gardener.cloud" | sudo tee -a /etc/hosts
     fi
 
-    # A run that stopped part-way leaves the kind cluster without Gardener in it, so
-    # only an existing Garden counts as running; otherwise continue the installation.
+    # A run that stopped part-way can leave a Garden without its kubeconfig or Seed, so
+    # only a registered Seed counts as running; otherwise continue the installation,
+    # whose make targets can be re-run.
     KIND_EXISTS=false
     if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
         KIND_EXISTS=true
     fi
-    if [ "$KIND_EXISTS" = true ] && kind get kubeconfig --name "{{KIND_CLUSTER}}" 2>/dev/null \
-        | kubectl --kubeconfig /dev/stdin --request-timeout=10s get garden local >/dev/null 2>&1; then
+    VIRTUAL_KC="$GARDENER_DIR/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
+    if [ "$KIND_EXISTS" = true ] && [ -f "$VIRTUAL_KC" ] \
+        && kubectl --kubeconfig "$VIRTUAL_KC" --request-timeout=10s get seed local \
+            -o jsonpath='{.status.conditions[?(@.type=="GardenletReady")].status}' 2>/dev/null | grep -qx True; then
         echo "Gardener already running ({{KIND_CLUSTER}})"
         echo "Check status: just cluster-worker gardener-status"
         (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-connect)
@@ -146,8 +149,21 @@ gardener-start: check-prerequisites
     (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just cluster-worker gardener-secret)
     echo "Gardener started! (operator path)"
 
+# TODO: remove this check once nobody runs Gardener from .dev/gardener in the repository,
+# GARDENER_DIR's old default.
+# A clone there belongs to a kind cluster and containers this justfile no longer finds.
+_check-old-gardener-dir:
+    #!/usr/bin/env bash
+    OLD_DIR="{{justfile_directory()}}/.dev/gardener"
+    if [ -z "${GARDENER_DIR:-}" ] && [ -d "$OLD_DIR" ]; then
+        echo "Error: found a Gardener clone in $OLD_DIR, the old default location."
+        echo "Delete it and its kind cluster first, then run this again:"
+        echo "  GARDENER_DIR=$OLD_DIR just cluster-worker gardener-delete"
+        exit 1
+    fi
+
 # Delete local Gardener completely: kind cluster, registry/DNS containers and clone
-gardener-delete:
+gardener-delete: _check-old-gardener-dir
     #!/usr/bin/env bash
     set -e
     if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
