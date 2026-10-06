@@ -6,131 +6,135 @@
   </head>
   <body class="light">
     <div class="plugin-card">
-      <h1 class="plugin-heading">Create TLSRoute</h1>
-      <p class="plugin-text" id="intro">Loading…</p>
+      <nldd-title size="3"><h1>Create TLSRoute</h1></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-text id="intro">Loading…</nldd-text>
+      <nldd-spacer size="12"></nldd-spacer>
 
-      <form id="form" class="plugin-form" hidden>
-        <div class="plugin-error" id="error" hidden></div>
+      <nldd-form>
+        <form id="form" hidden>
+          <nldd-banner id="error" variant="critical" hidden></nldd-banner>
 
-        <nldd-form-field label="Name">
-          <nldd-text-field
-            id="name"
-            name="name"
-            required
-            maxlength="63"
-            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
-            placeholder="tls"
-            unmet="name-error"
-          ></nldd-text-field>
-          <nldd-form-field-help-text
-            >Lowercase letters, digits and dashes.</nldd-form-field-help-text
-          >
-          <nldd-validation-list>
-            <nldd-validation-item id="name-error"
-              >Enter a valid name.</nldd-validation-item
-            >
-          </nldd-validation-list>
-        </nldd-form-field>
-
-        <div id="namespace-field"></div>
-
-        <fieldset class="plugin-fieldset">
-          <legend class="plugin-legend">Gateway</legend>
-          <nldd-form-field label="Gateway name">
+          <nldd-form-field label="Name">
             <nldd-text-field
-              id="parent-name"
-              name="parent-name"
+              id="name"
+              name="name"
               required
-              placeholder="demo"
-              unmet="parent-name-error"
+              maxlength="63"
+              pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+              placeholder="tls"
+              unmet="name-error"
             ></nldd-text-field>
             <nldd-form-field-help-text
-              >The Gateway this route attaches to (parentRef). Needs a TLS
-              Passthrough listener.</nldd-form-field-help-text
+              >Lowercase letters, digits and dashes.</nldd-form-field-help-text
             >
             <nldd-validation-list>
-              <nldd-validation-item id="parent-name-error"
-                >This field is required.</nldd-validation-item
+              <nldd-validation-item id="name-error"
+                >Enter a valid name.</nldd-validation-item
               >
             </nldd-validation-list>
           </nldd-form-field>
-          <nldd-form-field label="Listener (optional)">
-            <nldd-text-field
-              id="parent-section"
-              name="parent-section"
-              placeholder="tls"
-            ></nldd-text-field>
-            <nldd-form-field-help-text
-              >Listener name (sectionName) to attach to. Blank = all
-              listeners.</nldd-form-field-help-text
-            >
-          </nldd-form-field>
-        </fieldset>
 
-        <nldd-form-field label="SNI hostnames (optional)">
-          <nldd-text-field
-            id="hostnames"
-            name="hostnames"
-            placeholder="secure.example.com"
-          ></nldd-text-field>
-          <nldd-form-field-help-text
-            >Comma-separated SNI names to match. Blank = match
-            any.</nldd-form-field-help-text
-          >
-        </nldd-form-field>
+          <div id="namespace-field"></div>
 
-        <fieldset class="plugin-fieldset">
-          <legend class="plugin-legend">Backend</legend>
-          <div class="plugin-row">
-            <nldd-form-field label="Service" style="flex: 1 1 16rem">
+          <nldd-form-section text="Gateway">
+            <nldd-form-field label="Gateway name">
               <nldd-text-field
-                id="backend-name"
-                name="backend-name"
+                id="parent-name"
+                name="parent-name"
                 required
-                placeholder="secure"
-                unmet="backend-name-error"
+                placeholder="demo"
+                unmet="parent-name-error"
               ></nldd-text-field>
+              <nldd-form-field-help-text
+                >The Gateway this route attaches to (parentRef). Needs a TLS
+                Passthrough listener.</nldd-form-field-help-text
+              >
               <nldd-validation-list>
-                <nldd-validation-item id="backend-name-error"
+                <nldd-validation-item id="parent-name-error"
                   >This field is required.</nldd-validation-item
                 >
               </nldd-validation-list>
             </nldd-form-field>
-            <nldd-form-field label="Port" style="flex: 0 0 8rem">
+            <nldd-form-field label="Listener (optional)">
               <nldd-text-field
-                id="backend-port"
-                name="backend-port"
-                required
-                type="number"
-                min="1"
-                max="65535"
-                value="8443"
-                unmet="backend-port-error"
+                id="parent-section"
+                name="parent-section"
+                placeholder="tls"
               ></nldd-text-field>
-              <nldd-validation-list>
-                <nldd-validation-item id="backend-port-error"
-                  >Enter a valid port.</nldd-validation-item
-                >
-              </nldd-validation-list>
+              <nldd-form-field-help-text
+                >Listener name (sectionName) to attach to. Blank = all
+                listeners.</nldd-form-field-help-text
+              >
             </nldd-form-field>
-          </div>
-        </fieldset>
+          </nldd-form-section>
 
-        <div class="plugin-actions">
-          <nldd-button
-            id="submit"
-            type="button"
-            variant="primary"
-            text="Create TLSRoute"
-          ></nldd-button>
-          <nldd-button
-            id="back"
-            type="button"
-            variant="secondary"
-            text="Back"
-          ></nldd-button>
-        </div>
-      </form>
+          <nldd-form-field label="SNI hostnames (optional)">
+            <nldd-text-field
+              id="hostnames"
+              name="hostnames"
+              placeholder="secure.example.com"
+            ></nldd-text-field>
+            <nldd-form-field-help-text
+              >Comma-separated SNI names to match. Blank = match
+              any.</nldd-form-field-help-text
+            >
+          </nldd-form-field>
+
+          <nldd-form-section text="Backend">
+            <div class="plugin-row">
+              <nldd-form-field label="Service" style="flex: 1 1 16rem">
+                <nldd-text-field
+                  id="backend-name"
+                  name="backend-name"
+                  required
+                  placeholder="secure"
+                  unmet="backend-name-error"
+                ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="backend-name-error"
+                    >This field is required.</nldd-validation-item
+                  >
+                </nldd-validation-list>
+              </nldd-form-field>
+              <nldd-form-field label="Port" style="flex: 0 0 8rem">
+                <nldd-text-field
+                  id="backend-port"
+                  name="backend-port"
+                  required
+                  type="number"
+                  min="1"
+                  max="65535"
+                  value="8443"
+                  unmet="backend-port-error"
+                ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="backend-port-error"
+                    >Enter a valid port.</nldd-validation-item
+                  >
+                </nldd-validation-list>
+              </nldd-form-field>
+            </div>
+          </nldd-form-section>
+
+          <nldd-form-actions>
+            <nldd-button-group orientation="horizontal">
+              <nldd-button
+                id="submit"
+                type="button"
+                variant="primary"
+                text="Create TLSRoute"
+              ></nldd-button>
+              <nldd-button
+                id="back"
+                type="button"
+                variant="secondary"
+                text="Back"
+              ></nldd-button>
+            </nldd-button-group>
+          </nldd-form-actions>
+        </form>
+      </nldd-form>
     </div>
 
     <script type="module" src="/src/tlsroutes-create.ts"></script>

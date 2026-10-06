@@ -27,6 +27,8 @@ import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/page';
+import '@nldd/design-system/simple-section';
 
 @Component({
   selector: 'app-resource-create',

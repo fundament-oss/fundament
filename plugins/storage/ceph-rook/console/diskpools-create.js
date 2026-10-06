@@ -1,14 +1,18 @@
 import {
   loadSdk,
-  escapeHtml,
+  loadNlddDesignSystem,
   navigateToDetail,
   navigateBack,
   resourceNameError,
   wireSubmit,
+  formFieldHtml,
+  formActionsHtml,
+  errorBannerHtml,
+  loadErrorBanner,
 } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
-await loadSdk();
+await Promise.all([loadSdk(), loadNlddDesignSystem()]);
 await fundament.init;
 
 const content = document.getElementById('content');
@@ -32,59 +36,58 @@ try {
 }
 
 if (loadError) {
-  content.innerHTML = `<div class="plugin-error">${escapeHtml(
-    `Failed to load disks: ${loadError?.message ?? loadError}`,
-  )}</div>`;
+  content.replaceChildren(loadErrorBanner(`Failed to load disks: ${loadError?.message ?? loadError}`));
 } else if (availableDisks.length === 0) {
   content.innerHTML = `
-    <p class="plugin-text">
-      No disks to offer. A disk appears here when it is discovered, unclaimed, and empty
-      in the node's last probe. The probe can lag; <code>kubectl get disks</code> shows
-      what each disk reports.
-    </p>
-    <div class="plugin-actions">
-      <button type="button" class="plugin-button-secondary" id="back-btn">Back to Disk Pools</button>
-    </div>
+    <nldd-rich-text>
+      <p>
+        No disks to offer. A disk appears here when it is discovered, unclaimed, and empty
+        in the node's last probe. The probe can lag; <code>kubectl get disks</code> shows
+        what each disk reports.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-button id="back-btn" type="button" variant="secondary" text="Back to Disk Pools"></nldd-button>
   `;
   document.getElementById('back-btn').addEventListener('click', () => navigateBack());
 } else {
   const diskPicker = renderDiskPicker(availableDisks);
 
   content.innerHTML = `
-    <p class="plugin-text">
-      <strong>Recommendation:</strong> create a single DiskPool per cluster. All pools feed
-      one shared Ceph cluster and data is placed across every disk in it, so a second pool
-      only contributes more disks.
-    </p>
+    <nldd-rich-text>
+      <p>
+        <strong>Recommendation:</strong> create a single DiskPool per cluster. All pools feed
+        one shared Ceph cluster and data is placed across every disk in it, so a second pool
+        only contributes more disks.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="12"></nldd-spacer>
 
-    <form id="create-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="error-box" hidden></div>
+    <nldd-form>
+      <form id="create-form" novalidate>
+        ${errorBannerHtml('error-banner')}
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="pool-name">Name</label>
-        <input id="pool-name" name="name" type="text" class="plugin-input"
-               placeholder="default" required
-               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="63" />
-        <span class="plugin-hint">Lowercase letters, digits and dashes.</span>
-      </div>
+        ${formFieldHtml(
+          'Name',
+          `<nldd-text-field id="pool-name" name="name" placeholder="default"
+                            required maxlength="63" no-spellcheck></nldd-text-field>`,
+          { errorId: 'pool-name-error', hint: 'Lowercase letters, digits and dashes.' },
+        )}
 
-      <div class="plugin-field">
-        <span class="plugin-label">Disks</span>
-        ${diskPicker}
-        <span class="plugin-hint">
-          Each selected disk joins the shared Ceph cluster, which runs one storage daemon
-          (OSD) per disk. Disks spread over two or more nodes let volumes survive a node
-          failure. Fundament confirms only that a disk is unclaimed. A disk marked as
-          carrying a filesystem holds data, and one marked with nothing may still hold data
-          the last probe missed.
-        </span>
-      </div>
+        <nldd-form-section text="Disks">
+          ${diskPicker}
+          <nldd-text size="sm" color="secondary">
+            Each selected disk joins the shared Ceph cluster, which runs one storage daemon
+            (OSD) per disk. Disks spread over two or more nodes let volumes survive a node
+            failure. Fundament confirms only that a disk is unclaimed. A disk marked as
+            carrying a filesystem holds data, and one marked with nothing may still hold data
+            the last probe missed.
+          </nldd-text>
+        </nldd-form-section>
 
-      <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create DiskPool</button>
-        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
-      </div>
-    </form>
+        ${formActionsHtml({ submitId: 'submit-btn', submitText: 'Create DiskPool', cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
   `;
 
   const form = document.getElementById('create-form');
@@ -94,20 +97,15 @@ if (loadError) {
 
   wireSubmit(form, {
     button: document.getElementById('submit-btn'),
-    errorBox: document.getElementById('error-box'),
-    busyLabel: 'Creating…',
+    errorBanner: document.getElementById('error-banner'),
     failPrefix: 'Failed to create DiskPool',
-    validate: () => {
-      const invalid = resourceNameError(nameInput.value.trim());
-      if (invalid) {
-        nameInput.focus();
-        return invalid;
-      }
-      if (readSelectedDisks(form).length === 0) {
-        return 'Please select at least one disk.';
-      }
-      return null;
-    },
+    checks: [
+      [nameInput, resourceNameError],
+      [
+        document.getElementById('disk-picker'),
+        () => (readSelectedDisks(form).length === 0 ? 'Please select at least one disk.' : null),
+      ],
+    ],
     action: async () => {
       const name = nameInput.value.trim();
       await fundament.k8s.create(

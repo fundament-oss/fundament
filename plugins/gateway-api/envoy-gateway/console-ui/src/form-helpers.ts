@@ -30,7 +30,84 @@ export function namespaceFieldHtml(namespaces?: string[]): string {
       .join('');
     return `<nldd-form-field label="Namespace"><nldd-dropdown><select id="namespace" name="namespace" aria-label="Namespace">${options}</select></nldd-dropdown></nldd-form-field>`;
   }
-  return `<nldd-form-field label="Namespace"><nldd-text-field id="namespace" name="namespace" required placeholder="default"></nldd-text-field></nldd-form-field>`;
+  return `<nldd-form-field label="Namespace"><nldd-text-field id="namespace" name="namespace" required placeholder="default" unmet="namespace-error"></nldd-text-field><nldd-validation-list><nldd-validation-item id="namespace-error">This field is required.</nldd-validation-item></nldd-validation-list></nldd-form-field>`;
+}
+
+// --- Field validation ---
+//
+// The form is judged on submit, from each nldd-text-field's own attributes:
+// required, maxlength, pattern and, for type="number", min and max. A failure
+// marks the field invalid and puts the message in the validation item its
+// `unmet` names. A field inside a hidden section is not submitted, so it is
+// not judged either; that is how a field is required only while it shows.
+
+type TextField = HTMLElement & { value?: string };
+
+// Applies `pattern` the way a native <input> does: anchored at both ends. A
+// malformed pattern is a bug in the markup, so it counts as satisfied rather
+// than blocking every submit.
+function matchesPattern(value: string, pattern: string): boolean {
+  try {
+    return new RegExp(`^(?:${pattern})$`).test(value);
+  } catch {
+    return true;
+  }
+}
+
+// The message for a field, or null when it is valid.
+export function fieldError(el: TextField): string | null {
+  const value = (el.value ?? '').trim();
+  if (!value) {
+    return el.hasAttribute('required') ? 'This field is required.' : null;
+  }
+
+  const max = el.getAttribute('maxlength');
+  if (max && value.length > Number(max)) {
+    return `Use at most ${max} characters.`;
+  }
+  const pattern = el.getAttribute('pattern');
+  if (pattern && !matchesPattern(value, pattern)) {
+    // Falls back to the text the validation item was written with.
+    return el.getAttribute('data-error') ?? '';
+  }
+  if (el.getAttribute('type') === 'number') {
+    const num = Number(value);
+    const min = Number(el.getAttribute('min') ?? -Infinity);
+    const maxValue = Number(el.getAttribute('max') ?? Infinity);
+    if (!Number.isInteger(num)) return 'Enter a whole number.';
+    if (num < min || num > maxValue) {
+      return `Enter a number from ${el.getAttribute('min')} to ${el.getAttribute('max')}.`;
+    }
+  }
+  return null;
+}
+
+function showFieldError(el: TextField, message: string): void {
+  el.setAttribute('invalid', '');
+  const id = el.getAttribute('unmet');
+  const item = id ? el.ownerDocument.getElementById(id) : null;
+  if (!item) return;
+  // The markup's own text is the message for a failed pattern; keep it so a
+  // later "required" does not overwrite it for good.
+  item.dataset.message ??= item.textContent ?? '';
+  item.textContent = message || item.dataset.message;
+}
+
+// Judges every visible text field, marks the failing ones and focuses the
+// first. Returns whether all of them passed.
+export function validateFields(root: ParentNode): boolean {
+  const fields = [...root.querySelectorAll<TextField>('nldd-text-field')];
+  let firstInvalid: TextField | null = null;
+  for (const el of fields) {
+    el.removeAttribute('invalid');
+    if (el.closest('[hidden]')) continue;
+    const message = fieldError(el);
+    if (message === null) continue;
+    showFieldError(el, message);
+    firstInvalid ??= el;
+  }
+  firstInvalid?.focus();
+  return firstInvalid === null;
 }
 
 // --- Gateway API building blocks shared by the route/policy forms ---

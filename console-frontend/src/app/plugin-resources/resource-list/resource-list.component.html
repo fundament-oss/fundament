@@ -1,7 +1,8 @@
 @if (customUIUrl()) {
   <!-- Custom list UIs (iframe) render their own "Add" affordance and request
-       create navigation via the plugin:create message. Outside the section: the
-       plugin draws its own screen and wants the whole pane for it. -->
+       create navigation via the plugin:create message. Inside the section, so
+       the plugin's screen gets the same page padding and column as the
+       generated list below. -->
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
@@ -9,15 +10,17 @@
       [attr.back-text]="pageNav.backText()"
       (back)="pageNav.goTo(backPath())"
     ></nldd-top-title-bar>
-    <app-plugin-iframe
-      [src]="customUIUrl()!"
-      [pluginName]="pluginName()"
-      [pluginVersion]="installationVersion()"
-      [installationId]="installationId()"
-      [crdKind]="crdDef()!.kind"
-      view="list"
-      [clusterId]="clusterContext.selectedClusterId()!"
-    />
+    <nldd-simple-section>
+      <app-plugin-iframe
+        [src]="customUIUrl()!"
+        [pluginName]="pluginName()"
+        [pluginVersion]="installationVersion()"
+        [installationId]="installationId()"
+        [crdKind]="crdDef()!.kind"
+        view="list"
+        [clusterId]="clusterContext.selectedClusterId()!"
+      />
+    </nldd-simple-section>
   </nldd-page>
 } @else {
   <!-- Same outer layout as the other project pages: the pane owns the back

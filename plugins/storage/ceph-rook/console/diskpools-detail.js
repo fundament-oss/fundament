@@ -1,7 +1,17 @@
-import { loadSdk, escapeHtml, humanizeBytes, renderDefList, wireSubmit } from './_shared.js';
+import {
+  loadSdk,
+  loadNlddDesignSystem,
+  escapeHtml,
+  humanizeBytes,
+  renderDefList,
+  wireSubmit,
+  formActionsHtml,
+  errorBannerHtml,
+} from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
-await loadSdk();
+// The design system is for the edit form.
+await Promise.all([loadSdk(), loadNlddDesignSystem()]);
 const ctx = await fundament.init;
 
 const content = document.getElementById('content');
@@ -126,33 +136,31 @@ async function showEdit(item) {
   const preservedNote =
     preserved.length === 0
       ? ''
-      : `<p class="plugin-hint">
+      : `<nldd-text size="sm" color="secondary">
            Kept as they are, because this form cannot show them: a disk is listed here only
            when it exists and is either free or already claimed by this pool:
            ${escapeHtml(preserved.join(', '))}. Saving leaves them in the pool; use kubectl
            to remove one.
-         </p>`;
+         </nldd-text>`;
 
   content.innerHTML = `
-    <form id="edit-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="edit-error" hidden></div>
+    <nldd-form>
+      <form id="edit-form" novalidate>
+        ${errorBannerHtml('edit-error')}
 
-      <div class="plugin-field">
-        <span class="plugin-label">Disks</span>
-        ${renderDiskPicker(disks, current)}
-        ${preservedNote}
-        <span class="plugin-hint">
-          Unchecking a disk removes it from the shared Ceph cluster's device list, but its
-          storage daemon (OSD) keeps running until it is purged from Ceph manually, and
-          data may rebalance in the meantime.
-        </span>
-      </div>
+        <nldd-form-section text="Disks">
+          ${renderDiskPicker(disks, current)}
+          ${preservedNote}
+          <nldd-text size="sm" color="secondary">
+            Unchecking a disk removes it from the shared Ceph cluster's device list, but its
+            storage daemon (OSD) keeps running until it is purged from Ceph manually, and
+            data may rebalance in the meantime.
+          </nldd-text>
+        </nldd-form-section>
 
-      <div class="plugin-actions">
-        <button type="submit" class="plugin-button" id="save-btn">Save</button>
-        <button type="button" class="plugin-button-secondary" id="cancel-btn">Cancel</button>
-      </div>
-    </form>
+        ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
   `;
 
   const form = document.getElementById('edit-form');
@@ -165,10 +173,14 @@ async function showEdit(item) {
 
   wireSubmit(form, {
     button: document.getElementById('save-btn'),
-    errorBox: document.getElementById('edit-error'),
-    busyLabel: 'Saving…',
+    errorBanner: document.getElementById('edit-error'),
     failPrefix: 'Failed to save',
-    validate: () => (selected().length === 0 ? 'Select at least one disk.' : null),
+    checks: [
+      [
+        document.getElementById('disk-picker'),
+        () => (selected().length === 0 ? 'Select at least one disk.' : null),
+      ],
+    ],
     action: async () => {
       // Merge-patch of spec only: status is untouched and disks is replaced
       // wholesale, not merged element-wise.

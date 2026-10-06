@@ -5,6 +5,7 @@
 
 import {
   loadSdk,
+  loadNlddDesignSystem,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -19,6 +20,9 @@ import {
   metadataServersError,
   resourceNameError,
   wireSubmit,
+  formFieldHtml,
+  formActionsHtml,
+  errorBannerHtml,
 } from './_shared.js';
 
 const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
@@ -59,6 +63,12 @@ export const FILESTORAGE = {
 
 function metadataServersValue(form) {
   return Number(form.querySelector('[name="metadataServers"]').value);
+}
+
+// The metadata-servers check, for the kinds that have the field.
+function metadataServersChecks(cfg, form) {
+  if (!cfg.metadataServers) return [];
+  return [[form.querySelector('[name="metadataServers"]'), (value) => metadataServersError(Number(value))]];
 }
 
 // specFrom reads the create/edit form into a spec object.
@@ -112,7 +122,8 @@ export async function consumerListPage(cfg) {
 }
 
 export async function consumerDetailPage(cfg) {
-  await loadSdk();
+  // The design system is for the edit form.
+  await Promise.all([loadSdk(), loadNlddDesignSystem()]);
   const ctx = await fundament.init;
 
   const content = document.getElementById('content');
@@ -165,20 +176,19 @@ export async function consumerDetailPage(cfg) {
     actions.hidden = true;
 
     content.innerHTML = `
-      <form id="edit-form" class="plugin-form" novalidate>
-        <div class="plugin-error" id="edit-error" hidden></div>
+      <nldd-form>
+        <form id="edit-form" novalidate>
+          ${errorBannerHtml('edit-error')}
 
-        ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
+          ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
 
-        ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
+          ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
 
-        ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
+          ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
-        <div class="plugin-actions">
-          <button type="submit" class="plugin-button" id="save-btn">Save</button>
-          <button type="button" class="plugin-button-secondary" id="cancel-btn">Cancel</button>
-        </div>
-      </form>
+          ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
+        </form>
+      </nldd-form>
     `;
 
     const form = document.getElementById('edit-form');
@@ -187,10 +197,9 @@ export async function consumerDetailPage(cfg) {
 
     wireSubmit(form, {
       button: document.getElementById('save-btn'),
-      errorBox: document.getElementById('edit-error'),
-      busyLabel: 'Saving…',
+      errorBanner: document.getElementById('edit-error'),
       failPrefix: 'Failed to save',
-      validate: cfg.metadataServers ? () => metadataServersError(metadataServersValue(form)) : undefined,
+      checks: metadataServersChecks(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
         await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
@@ -207,38 +216,40 @@ export async function consumerDetailPage(cfg) {
 }
 
 export async function consumerCreatePage(cfg) {
-  await loadSdk();
+  await Promise.all([loadSdk(), loadNlddDesignSystem()]);
   await fundament.init;
 
   const content = document.getElementById('content');
 
   content.innerHTML = `
-    <p class="plugin-text">
-      ${cfg.createIntro}
-    </p>
+    <nldd-rich-text>
+      <p>${cfg.createIntro}</p>
+    </nldd-rich-text>
+    <nldd-spacer size="12"></nldd-spacer>
 
-    <form id="create-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="error-box" hidden></div>
+    <nldd-form>
+      <form id="create-form" novalidate>
+        ${errorBannerHtml('error-banner')}
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="consumer-name">Name</label>
-        <input id="consumer-name" name="name" type="text" class="plugin-input"
-               placeholder="default" required
-               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="${cfg.nameMaxLength}" />
-        <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).</span>
-      </div>
+        ${formFieldHtml(
+          'Name',
+          `<nldd-text-field id="consumer-name" name="name" placeholder="default"
+                            required maxlength="${cfg.nameMaxLength}" no-spellcheck></nldd-text-field>`,
+          {
+            errorId: 'consumer-name-error',
+            hint: `Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).`,
+          },
+        )}
 
-      ${replicationFieldHtml()}
+        ${replicationFieldHtml()}
 
-      ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
+        ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
 
-      ${cfg.defaultToggle ? defaultFieldHtml() : ''}
+        ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
-      <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create ${cfg.kind}</button>
-        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
-      </div>
-    </form>
+        ${formActionsHtml({ submitId: 'submit-btn', submitText: `Create ${cfg.kind}`, cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
   `;
 
   const form = document.getElementById('create-form');
@@ -248,17 +259,12 @@ export async function consumerCreatePage(cfg) {
 
   wireSubmit(form, {
     button: document.getElementById('submit-btn'),
-    errorBox: document.getElementById('error-box'),
-    busyLabel: 'Creating…',
+    errorBanner: document.getElementById('error-banner'),
     failPrefix: `Failed to create ${cfg.kind}`,
-    validate: () => {
-      const invalid = resourceNameError(nameInput.value.trim(), cfg.nameMaxLength);
-      if (invalid) {
-        nameInput.focus();
-        return invalid;
-      }
-      return cfg.metadataServers ? metadataServersError(metadataServersValue(form)) : null;
-    },
+    checks: [
+      [nameInput, (value) => resourceNameError(value, cfg.nameMaxLength)],
+      ...metadataServersChecks(cfg, form),
+    ],
     action: async () => {
       const name = nameInput.value.trim();
       await fundament.k8s.create(

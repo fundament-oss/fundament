@@ -62,12 +62,18 @@ function isPluginMessage(data: unknown): data is PluginMessage {
       allow-forms remains for plugin create UIs whose submits stay in-frame.
       allow-top-navigation and allow-popups stay ungranted.
     -->
+    <!--
+      The negative margins undo the 4px .plugin-card keeps around plugin content
+      for focus rings, so that content lines up with the Console's own.
+    -->
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
       sandbox="allow-scripts allow-same-origin allow-forms"
       [style.height.px]="frameHeight()"
-      [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
+      [class]="
+        status() === 'error' ? 'hidden' : '-mx-1 -mt-1 block w-[calc(100%+0.5rem)] border-none'
+      "
       title="Plugin custom UI"
     ></iframe>
   `,

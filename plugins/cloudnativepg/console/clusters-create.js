@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, navigateToDetail, navigateBack, wireSubmit } from './_shared.js';
+import { loadSdk, loadNlddDesignSystem, escapeHtml, navigateToDetail, navigateBack, wireSubmit } from './_shared.js';
 import {
   CLUSTER_RESOURCE,
   POSTGRES_IMAGES,
@@ -10,7 +10,7 @@ import {
   storageSizeError,
 } from './clusters-body.js';
 
-await loadSdk();
+await Promise.all([loadSdk(), loadNlddDesignSystem()]);
 const ctx = await fundament.init;
 
 const content = document.getElementById('content');
@@ -45,131 +45,144 @@ async function loadStorageClasses() {
   }
 }
 
+// One nldd-form-field. errorId names the empty validation item wireSubmit
+// fills when the field's check fails; a field without a check passes none.
+function formFieldHtml(label, control, { errorId, hint } = {}) {
+  const errors = errorId
+    ? `<nldd-validation-list><nldd-validation-item id="${errorId}"></nldd-validation-item></nldd-validation-list>`
+    : '';
+  const help = hint ? `<nldd-form-field-help-text>${escapeHtml(hint)}</nldd-form-field-help-text>` : '';
+  return `
+      <nldd-form-field label="${escapeHtml(label)}">
+        ${control}
+        ${errors}
+        ${help}
+      </nldd-form-field>`;
+}
+
+function optionHtml(value, label, { selected = false, disabled = false } = {}) {
+  return `<option value="${escapeHtml(value)}"${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}>${escapeHtml(label)}</option>`;
+}
+
 // The console passes the project's namespaces on a create view. Without them
 // (an organization-level route) the user types one.
 function namespaceFieldHtml(namespaces) {
   if (Array.isArray(namespaces) && namespaces.length > 0) {
-    const options = namespaces
-      .map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`)
-      .join('');
-    return `
-      <div class="plugin-field">
-        <label class="plugin-label" for="db-namespace">Namespace</label>
-        <select id="db-namespace" name="namespace" class="plugin-select">${options}</select>
-      </div>`;
+    const options = namespaces.map((n) => optionHtml(n, n)).join('');
+    return formFieldHtml(
+      'Namespace',
+      `<nldd-dropdown><select id="db-namespace" name="namespace">${options}</select></nldd-dropdown>`,
+      { errorId: 'db-namespace-error' },
+    );
   }
-  return `
-    <div class="plugin-field">
-      <label class="plugin-label" for="db-namespace">Namespace</label>
-      <input id="db-namespace" name="namespace" type="text" class="plugin-input"
-             placeholder="my-namespace" required
-             pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="63" />
-    </div>`;
+  return formFieldHtml(
+    'Namespace',
+    `<nldd-text-field id="db-namespace" name="namespace" placeholder="my-namespace"
+                      required maxlength="63" no-spellcheck></nldd-text-field>`,
+    { errorId: 'db-namespace-error' },
+  );
 }
 
 function versionFieldHtml() {
-  const options = POSTGRES_IMAGES.map(
-    ({ image, label }, i) =>
-      `<option value="${escapeHtml(image)}"${i === 0 ? ' selected' : ''}>${escapeHtml(label)}</option>`,
+  const options = POSTGRES_IMAGES.map(({ image, label }, i) =>
+    optionHtml(image, label, { selected: i === 0 }),
   ).join('');
-  return `
-    <div class="plugin-field">
-      <label class="plugin-label" for="db-version">PostgreSQL version</label>
-      <select id="db-version" name="imageName" class="plugin-select">${options}</select>
-      <span class="plugin-hint">The version cannot be changed after creation.</span>
-    </div>`;
+  return formFieldHtml(
+    'PostgreSQL version',
+    `<nldd-dropdown><select id="db-version" name="imageName">${options}</select></nldd-dropdown>`,
+    { hint: 'The version cannot be changed after creation.' },
+  );
 }
 
 // Three cases:
 // - classes unknown (a project admin): a text field, empty for the default.
 // - no default class: a required choice, since "Cluster default" would leave
 //   the PVC Pending.
-// - a default class: a select that starts on it.
+// - a default class: a dropdown that starts on it.
 function storageClassFieldHtml(classes) {
-  const label = '<label class="plugin-label" for="db-storage-class">StorageClass</label>';
-  const hint = (text) => `<span class="plugin-hint">${escapeHtml(text)}</span>`;
+  const field = (control, hint) =>
+    formFieldHtml('StorageClass', control, { errorId: 'db-storage-class-error', hint });
 
   if (classes === null) {
-    return `
-    <div class="plugin-field">
-      ${label}
-      <input id="db-storage-class" name="storageClass" type="text" class="plugin-input"
-             placeholder="Cluster default" maxlength="253" />
-      ${hint('Leave empty for the cluster default. Only an organization admin can list the StorageClasses; ask one for a name if the cluster has no default.')}
-    </div>`;
+    return field(
+      `<nldd-text-field id="db-storage-class" name="storageClass" placeholder="Cluster default"
+                        maxlength="253" no-spellcheck></nldd-text-field>`,
+      'Leave empty for the cluster default. Only an organization admin can list the StorageClasses; ask one for a name if the cluster has no default.',
+    );
   }
 
   const classOptions = classes
-    .map(
-      (sc) => `<option value="${escapeHtml(sc.name)}">${escapeHtml(sc.name)}${sc.isDefault ? ' (default)' : ''}</option>`,
-    )
+    .map((sc) => optionHtml(sc.name, `${sc.name}${sc.isDefault ? ' (default)' : ''}`))
     .join('');
   const defaultName = classes.find((sc) => sc.isDefault)?.name;
 
   if (!defaultName) {
-    const text =
+    const hint =
       classes.length === 0
         ? 'This cluster has no StorageClasses. Ask an organization admin to add one.'
         : 'This cluster has no default StorageClass, so choose one.';
-    return `
-    <div class="plugin-field">
-      ${label}
-      <select id="db-storage-class" name="storageClass" class="plugin-select" required>
-        <option value="" disabled selected>Choose a StorageClass</option>${classOptions}
-      </select>
-      ${hint(text)}
-    </div>`;
+    const placeholder = optionHtml('', 'Choose a StorageClass', { selected: true, disabled: true });
+    return field(
+      `<nldd-dropdown required><select id="db-storage-class" name="storageClass">${placeholder}${classOptions}</select></nldd-dropdown>`,
+      hint,
+    );
   }
 
-  return `
-    <div class="plugin-field">
-      ${label}
-      <select id="db-storage-class" name="storageClass" class="plugin-select">
-        <option value="" selected>${escapeHtml(`Cluster default (${defaultName})`)}</option>${classOptions}
-      </select>
-      ${hint('Where the data is stored. The cluster default suits most databases.')}
-    </div>`;
+  const clusterDefault = optionHtml('', `Cluster default (${defaultName})`, { selected: true });
+  return field(
+    `<nldd-dropdown><select id="db-storage-class" name="storageClass">${clusterDefault}${classOptions}</select></nldd-dropdown>`,
+    'Where the data is stored. The cluster default suits most databases.',
+  );
 }
 
 function showForm(storageClasses) {
   const storageClassRequired = Array.isArray(storageClasses) && !storageClasses.some((sc) => sc.isDefault);
 
   content.innerHTML = `
-    <p class="plugin-text">
-      Creates a single-instance PostgreSQL database with database <code>app</code>, owned by
-      user <code>app</code>. It has no backups. After creation it cannot be changed or deleted
-      from the console.
-    </p>
+    <nldd-rich-text>
+      <p>
+        Creates a single-instance PostgreSQL database with database <code>app</code>, owned by
+        user <code>app</code>. It has no backups. After creation it cannot be changed or deleted
+        from the console.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="12"></nldd-spacer>
 
-    <form id="create-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="error-box" hidden></div>
+    <nldd-form>
+      <form id="create-form" novalidate>
+        <nldd-banner id="error-banner" variant="critical" hidden></nldd-banner>
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="db-name">Name</label>
-        <input id="db-name" name="name" type="text" class="plugin-input"
-               placeholder="orders-db" required
-               pattern="[a-z]([a-z0-9\\-]*[a-z0-9])?" maxlength="50" />
-        <span class="plugin-hint">Starts with a letter; lowercase letters, digits and dashes.</span>
-      </div>
+        ${formFieldHtml(
+          'Name',
+          `<nldd-text-field id="db-name" name="name" placeholder="orders-db"
+                            required maxlength="50" no-spellcheck></nldd-text-field>`,
+          { errorId: 'db-name-error', hint: 'Starts with a letter; lowercase letters, digits and dashes.' },
+        )}
 
-      ${namespaceFieldHtml(ctx.namespaces)}
+        ${namespaceFieldHtml(ctx.namespaces)}
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="db-size">Storage size</label>
-        <input id="db-size" name="size" type="text" class="plugin-input"
-               value="${escapeHtml(DEFAULT_STORAGE_SIZE)}" required />
-        <span class="plugin-hint">At least 1Gi, for example 1Gi or 20Gi. The size cannot be changed after creation.</span>
-      </div>
+        ${formFieldHtml(
+          'Storage size',
+          `<nldd-text-field id="db-size" name="size" value="${escapeHtml(DEFAULT_STORAGE_SIZE)}"
+                            required no-spellcheck></nldd-text-field>`,
+          {
+            errorId: 'db-size-error',
+            hint: 'At least 1Gi, for example 1Gi or 20Gi. The size cannot be changed after creation.',
+          },
+        )}
 
-      ${versionFieldHtml()}
+        ${versionFieldHtml()}
 
-      ${storageClassFieldHtml(storageClasses)}
+        ${storageClassFieldHtml(storageClasses)}
 
-      <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create database</button>
-        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
-      </div>
-    </form>
+        <nldd-form-actions>
+          <nldd-button-group orientation="horizontal">
+            <nldd-button id="submit-btn" type="submit" variant="primary" text="Create database"></nldd-button>
+            <nldd-button id="cancel-btn" type="button" variant="secondary" text="Cancel"></nldd-button>
+          </nldd-button-group>
+        </nldd-form-actions>
+      </form>
+    </nldd-form>
   `;
 
   const form = document.getElementById('create-form');
@@ -179,24 +192,14 @@ function showForm(storageClasses) {
 
   wireSubmit(form, {
     button: document.getElementById('submit-btn'),
-    errorBox: document.getElementById('error-box'),
-    busyLabel: 'Creating…',
+    errorBanner: document.getElementById('error-banner'),
     failPrefix: 'Failed to create database',
-    validate: () => {
-      for (const [name, check] of [
-        ['name', clusterNameError],
-        ['namespace', namespaceError],
-        ['size', storageSizeError],
-        ['storageClass', (value) => storageClassError(value, { required: storageClassRequired })],
-      ]) {
-        const invalid = check(field(name).value.trim());
-        if (invalid) {
-          field(name).focus();
-          return invalid;
-        }
-      }
-      return null;
-    },
+    checks: [
+      [field('name'), clusterNameError],
+      [field('namespace'), namespaceError],
+      [field('size'), storageSizeError],
+      [field('storageClass'), (value) => storageClassError(value, { required: storageClassRequired })],
+    ],
     action: async () => {
       const name = field('name').value.trim();
       const namespace = field('namespace').value.trim();
@@ -220,8 +223,9 @@ let storageClasses;
 try {
   storageClasses = await loadStorageClasses();
 } catch (err) {
-  content.innerHTML = `<div class="plugin-error">${escapeHtml(
-    `Failed to load StorageClasses: ${err?.message ?? err}. Reload the page to try again.`,
-  )}</div>`;
+  const banner = document.createElement('nldd-banner');
+  banner.setAttribute('variant', 'critical');
+  banner.setAttribute('text', `Failed to load StorageClasses: ${err?.message ?? err}. Reload the page to try again.`);
+  content.replaceChildren(banner);
 }
 if (storageClasses !== undefined) showForm(storageClasses);

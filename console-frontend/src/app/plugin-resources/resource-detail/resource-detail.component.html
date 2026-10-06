@@ -1,15 +1,21 @@
 @if (customUIUrl()) {
-  <app-plugin-iframe
-    [src]="customUIUrl()!"
-    [pluginName]="pluginName()"
-    [pluginVersion]="installationVersion()"
-    [installationId]="installationId()"
-    [crdKind]="crdDef()!.kind"
-    view="detail"
-    [clusterId]="clusterContext.selectedClusterId()!"
-    [resourceName]="resourceId()"
-    [resourceNamespace]="resourceNamespace()"
-  />
+  <!-- The page padding and column of the generated detail page below, around
+       the plugin's own screen. -->
+  <nldd-page>
+    <nldd-simple-section>
+      <app-plugin-iframe
+        [src]="customUIUrl()!"
+        [pluginName]="pluginName()"
+        [pluginVersion]="installationVersion()"
+        [installationId]="installationId()"
+        [crdKind]="crdDef()!.kind"
+        view="detail"
+        [clusterId]="clusterContext.selectedClusterId()!"
+        [resourceName]="resourceId()"
+        [resourceNamespace]="resourceNamespace()"
+      />
+    </nldd-simple-section>
+  </nldd-page>
 } @else if (resource()) {
   <!-- Same outer layout as the other pages. The back button leads to the list
        this resource came from rather than to the menu, so it stays put when the
