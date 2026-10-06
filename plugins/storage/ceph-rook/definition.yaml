@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.3.0-2
+  version: v0.3.0
   description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0

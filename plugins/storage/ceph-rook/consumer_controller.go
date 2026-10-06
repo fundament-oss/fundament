@@ -119,7 +119,10 @@ func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace
 		newObject:        func() *v1alpha1.ObjectStorage { return &v1alpha1.ObjectStorage{} },
 		newList:          func() client.ObjectList { return &v1alpha1.ObjectStorageList{} },
 		renderRook: func(os *v1alpha1.ObjectStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
-			return RenderCephObjectStore(namespace, name, replicas, domain, int64(os.Spec.GatewayInstances))
+			// Floored like invalid replicas requests (see ComputeReplication):
+			// a zero bypassing API-server defaulting would render 0 RGW pods
+			// and a store that never serves.
+			return RenderCephObjectStore(namespace, name, replicas, domain, max(int64(os.Spec.GatewayInstances), 1))
 		},
 		renderStorageClass: RenderBucketStorageClass,
 	}

@@ -1,6 +1,7 @@
 import {
   loadSdk,
-  loadNldd,
+  ensureNldd,
+  showSheetError,
   openSheet,
   escapeHtml,
   emptyRow,
@@ -13,12 +14,20 @@ import {
 } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
-await Promise.all([loadSdk(), loadNldd()]);
+await loadSdk();
 await fundament.init;
 
 const tbody = document.getElementById('rows');
 
-document.getElementById('create-btn').addEventListener('click', () => openCreateSheet());
+document.getElementById('create-btn').addEventListener('click', async () => {
+  try {
+    await ensureNldd();
+  } catch (err) {
+    showSheetError(err);
+    return;
+  }
+  openCreateSheet();
+});
 
 // The create form lives in a sheet over the list. Disks are fetched at open
 // time, so the picker reflects the latest probe.

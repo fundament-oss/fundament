@@ -9,7 +9,10 @@
 // hook; the SDK is already loaded and initialized by then.
 
 import {
+  ensureNldd,
+  showSheetError,
   openSheet,
+  quantityError,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -24,7 +27,7 @@ const CONFIGMAPS = { group: '', version: 'v1', resource: 'configmaps' };
 
 // requestedBucket is the claim's own naming request; a Bound claim's real
 // name lives in its ConfigMap, which only the per-claim view fetches.
-function requestedBucket(spec) {
+export function requestedBucket(spec) {
   if (spec?.bucketName) return spec.bucketName;
   if (spec?.generateBucketName) return `${spec.generateBucketName}-…`;
   return '—';
@@ -33,7 +36,7 @@ function requestedBucket(spec) {
 // S3 bucket names: 3-63 chars, lowercase letters, digits and dashes, starting
 // and ending alphanumeric. Dots are legal in S3 but break TLS and path-style
 // assumptions, so the form does not offer them. Returns an error or null.
-function bucketNameError(name) {
+export function bucketNameError(name) {
   if (name.length < 3 || name.length > 63) {
     return 'Bucket names must be 3 to 63 characters.';
   }
@@ -43,8 +46,8 @@ function bucketNameError(name) {
   return null;
 }
 
-export function mountBucketsSection(container, item, ctx) {
-  const storageClassName = item.status?.storageClassName ?? `cephobj-${item.metadata?.name}`;
+export function mountBucketsSection(container, item, ctx, cfg) {
+  const storageClassName = item.status?.storageClassName ?? `${cfg.storageClassPrefix}${item.metadata?.name}`;
   const namespaces = ctx.namespaces ?? [];
 
   container.innerHTML = `
@@ -66,7 +69,15 @@ export function mountBucketsSection(container, item, ctx) {
         <tbody>${emptyRow(headers.length, 'Loading…')}</tbody>
       </table>
     `;
-    body.querySelector('[data-role="create"]').addEventListener('click', () => showCreate());
+    body.querySelector('[data-role="create"]').addEventListener('click', async () => {
+      try {
+        await ensureNldd();
+      } catch (err) {
+        showSheetError(err);
+        return;
+      }
+      showCreate();
+    });
     const tbody = body.querySelector('tbody');
 
     let claims;
@@ -92,9 +103,15 @@ export function mountBucketsSection(container, item, ctx) {
         </tr>`)
       .join('');
     tbody.querySelectorAll('a.row-link').forEach((link) => {
-      link.addEventListener('click', (e) => {
+      link.addEventListener('click', async (e) => {
         e.preventDefault();
         const row = link.closest('tr');
+        try {
+          await ensureNldd();
+        } catch (err) {
+          showSheetError(err);
+          return;
+        }
         showBucket(row.dataset.name, row.dataset.namespace);
       });
     });
@@ -237,11 +254,16 @@ export function mountBucketsSection(container, item, ctx) {
           return invalid;
         }
         if (modeSelect.value === 'exact') {
-          return bucketNameError(form.querySelector('[name="bucketName"]').value.trim());
+          const bad = bucketNameError(form.querySelector('[name="bucketName"]').value.trim());
+          if (bad) return bad;
         }
         const maxSize = form.querySelector('[name="maxSize"]').value.trim();
-        if (maxSize && !/^[0-9]+(\.[0-9]+)?(Ki|Mi|Gi|Ti|k|K|M|G|T)?$/.test(maxSize)) {
-          return 'Max size must be a quantity like 500Mi or 10Gi.';
+        if (maxSize && quantityError(maxSize)) {
+          return `Max size: ${quantityError(maxSize)}`;
+        }
+        const maxObjects = form.querySelector('[name="maxObjects"]').value.trim();
+        if (maxObjects && (!/^[0-9]+$/.test(maxObjects) || Number(maxObjects) < 1)) {
+          return 'Max objects must be a whole number of at least 1.';
         }
         return null;
       },
@@ -256,7 +278,11 @@ export function mountBucketsSection(container, item, ctx) {
           // Names taken outside Kubernetes are not in it; the provisioner is
           // the real referee and leaves such a claim Pending.
           const { items } = await fundament.k8s.list(OBJECTBUCKETS);
-          const taken = (items ?? []).some((ob) => ob.spec?.endpoint?.bucketName === bucketName);
+          // Scoped to this store's class: RGW bucket names are per-store, so
+          // a name on another ObjectStorage is no collision here.
+          const taken = (items ?? []).some((ob) =>
+            ob.spec?.storageClassName === storageClassName
+            && ob.spec?.endpoint?.bucketName === bucketName);
           if (taken) throw Error(`bucket name "${bucketName}" is already in use`);
           spec.bucketName = bucketName;
         } else {

@@ -47,6 +47,30 @@ func TestObjectStorageSuite(t *testing.T) {
 	})
 }
 
+// A zero gatewayInstances (reachable for Go-constructed objects or during
+// version skew, like the replicas guard) must not render a storeless RGW.
+func TestObjectStorageFloorsZeroGatewayInstances(t *testing.T) {
+	t.Parallel()
+	osObj := testObjectStorage()
+	osObj.Spec.GatewayInstances = 0
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "node-a-1"),
+		osObj,
+	)
+	r := newObjectReconciler(c)
+
+	_, err := r.Reconcile(context.Background(), reconcileRequest(objectName))
+	require.NoError(t, err)
+
+	cos := rookStub("CephObjectStore")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "cephobj-main"}, cos))
+	instances, _, _ := unstructured.NestedInt64(cos.Object, "spec", "gateway", "instances")
+	assert.Equal(t, int64(1), instances, "0 RGW pods would never serve; floor to 1")
+}
+
 // ObjectStorage-specific derived shape: spec.gatewayInstances reaches the
 // CephObjectStore, and the StorageClass drives Rook's OBC provisioner with
 // the store's name and namespace.

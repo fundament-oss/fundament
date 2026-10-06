@@ -26,37 +26,61 @@ export function loadSdk() {
 // Loads the shared NLDD Design System bundle the console serves next to the
 // SDK (FUN-18), registering the <nldd-*> elements, and mirrors the SDK's
 // light/dark body class into the data-scheme attribute the components read.
-export function loadNldd() {
-  const sync = () => {
-    document.documentElement.setAttribute(
-      'data-scheme',
-      document.body.classList.contains('dark') ? 'dark' : 'light',
-    );
-  };
-  sync();
-  new MutationObserver(sync).observe(document.body, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
+// Memoized and called lazily from the sheet-opening handlers, so a host
+// without the bundle still serves the read-only views. Both halves are
+// awaited: an unawaited stylesheet would render sheets unstyled and swallow
+// the error.
+let nlddLoad;
+export function ensureNldd() {
+  nlddLoad ??= (() => {
+    const sync = () => {
+      document.documentElement.setAttribute(
+        'data-scheme',
+        document.body.classList.contains('dark') ? 'dark' : 'light',
+      );
+    };
+    sync();
+    new MutationObserver(sync).observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = '/plugins/sdk/v1/nldd-design-system.css';
-  document.head.appendChild(link);
-
-  return new Promise((resolve, reject) => {
+    const settled = (el, what) => new Promise((resolve, reject) => {
+      el.addEventListener('load', () => resolve(), { once: true });
+      el.addEventListener('error', () => reject(new Error(`failed to load ${what}`)), { once: true });
+    });
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/plugins/sdk/v1/nldd-design-system.css';
+    const css = settled(link, 'nldd-design-system.css');
+    document.head.appendChild(link);
     const script = document.createElement('script');
     script.src = '/plugins/sdk/v1/nldd-design-system.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('failed to load nldd-design-system.js'));
+    const js = settled(script, 'nldd-design-system.js');
     document.head.appendChild(script);
-  });
+    return Promise.all([css, js]).then(() => undefined);
+  })();
+  return nlddLoad;
+}
+
+// Surfaces a sheet-open failure without killing the page: one reused
+// .plugin-error at the top of the page card.
+export function showSheetError(err) {
+  const card = document.querySelector('.plugin-card');
+  let box = card?.querySelector('[data-role="sheet-error"]');
+  if (!box && card) {
+    box = document.createElement('div');
+    box.className = 'plugin-error';
+    box.dataset.role = 'sheet-error';
+    card.prepend(box);
+  }
+  if (box) box.textContent = `Cannot open the editor: ${err?.message ?? err}`;
 }
 
 // Opens a right-hand <nldd-sheet> appended to the document root (it is a
 // <dialog>; inside the content flow it would steal layout height). Returns
 // the content container and a close(); the element removes itself after the
-// closing animation. Requires loadNldd() to have completed.
+// closing animation. Requires ensureNldd() to have resolved.
 //
 // The host sizes the iframe to this document's height, so on a short page
 // the sheet — confined to the iframe's viewport — would render a few rows
@@ -64,9 +88,18 @@ export function loadNldd() {
 // iframe; newer hosts also floor the iframe at the viewport remainder, which
 // usually dominates this. CSSOM property assignment, not style attributes:
 // the CSP blocks only the latter.
+let openSheetCount = 0;
+let preSheetMinHeight = '';
+
 export function openSheet({ label, width = '480px', minHeight = '640px' }) {
-  const previousMinHeight = document.body.style.minHeight;
-  document.body.style.minHeight = minHeight;
+  // Counted, not saved per sheet: chained sheets (close one, open the next
+  // in the same tick) would capture the inflated value as "previous" and
+  // latch it; only the outermost open/last close touch the body.
+  if (openSheetCount === 0) {
+    preSheetMinHeight = document.body.style.minHeight;
+    document.body.style.minHeight = minHeight;
+  }
+  openSheetCount += 1;
 
   const sheet = document.createElement('nldd-sheet');
   sheet.setAttribute('placement', 'right');
@@ -85,7 +118,8 @@ export function openSheet({ label, width = '480px', minHeight = '640px' }) {
   sheet.appendChild(body);
   document.body.appendChild(sheet);
   sheet.addEventListener('close', () => {
-    document.body.style.minHeight = previousMinHeight;
+    openSheetCount -= 1;
+    if (openSheetCount === 0) document.body.style.minHeight = preSheetMinHeight;
     sheet.remove();
   });
   sheet.show();
@@ -257,6 +291,11 @@ const QUANTITY_MULTIPLIERS = {
 // decimal SI suffix. The exponent is tried first, so "1E3" is 1000, not 1 exa
 // followed by garbage. Returns null for anything outside the grammar.
 const QUANTITY_PATTERN = /^([+-]?(?:\d+\.?\d*|\.\d+))(?:([KMGTPE]i)|[eE]([+-]?\d+)|([numkMGTPE]?))$/;
+
+// Returns an error message when value is not a Kubernetes quantity, else null.
+export function quantityError(value) {
+  return QUANTITY_PATTERN.test(value) ? null : 'Use a quantity like 500Mi or 10Gi.';
+}
 
 // Whole bytes, rounded up like Quantity.Value().
 function parseQuantity(quantity) {

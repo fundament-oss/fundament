@@ -1,6 +1,7 @@
 import {
   loadSdk,
-  loadNldd,
+  ensureNldd,
+  showSheetError,
   openSheet,
   escapeHtml,
   humanizeQuantity,
@@ -9,7 +10,7 @@ import {
 } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
-await Promise.all([loadSdk(), loadNldd()]);
+await loadSdk();
 const ctx = await fundament.init;
 
 const content = document.getElementById('content');
@@ -99,7 +100,15 @@ async function showDetail() {
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
-    document.getElementById('edit-btn').onclick = () => showEdit(item);
+    document.getElementById('edit-btn').onclick = async () => {
+      try {
+        await ensureNldd();
+      } catch (err) {
+        showSheetError(err);
+        return;
+      }
+      showEdit(item);
+    };
   } catch (err) {
     actions.hidden = true;
     content.innerHTML = `<div class="plugin-error">${escapeHtml(

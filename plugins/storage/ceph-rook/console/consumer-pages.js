@@ -6,7 +6,8 @@
 
 import {
   loadSdk,
-  loadNldd,
+  ensureNldd,
+  showSheetError,
   openSheet,
   escapeHtml,
   emptyRow,
@@ -102,7 +103,6 @@ export const OBJECTSTORAGE = {
     contributing disks; without one it stays Degraded.`,
   intFields: [GATEWAY_INSTANCES],
   defaultToggle: false,
-  intFields: [GATEWAY_INSTANCES],
   // The CRD caps ObjectStorage names at 41: Rook derives a Service named
   // rook-ceph-rgw-cephobj-<name>, a DNS-1035 label capped at 63. Enforced
   // here too so the form rejects it first.
@@ -161,10 +161,16 @@ export async function consumerListPage(cfg) {
   const tbody = document.getElementById('rows');
   tbody.innerHTML = emptyRow(colspan, 'Loading…');
 
-  await Promise.all([loadSdk(), loadNldd()]);
+  await loadSdk();
   await fundament.init;
 
-  document.getElementById('create-btn').addEventListener('click', () => {
+  document.getElementById('create-btn').addEventListener('click', async () => {
+    try {
+      await ensureNldd();
+    } catch (err) {
+      showSheetError(err);
+      return;
+    }
     const { body, close } = openSheet({ label: `Create ${cfg.label}` });
     renderCreateForm(cfg, body, close);
   });
@@ -202,7 +208,7 @@ export async function consumerListPage(cfg) {
 }
 
 export async function consumerDetailPage(cfg) {
-  await Promise.all([loadSdk(), loadNldd()]);
+  await loadSdk();
   const ctx = await fundament.init;
 
   const content = document.getElementById('content');
@@ -244,7 +250,15 @@ export async function consumerDetailPage(cfg) {
       // .onclick, not addEventListener: this button lives outside #content and
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
-      document.getElementById('edit-btn').onclick = () => showEdit(item);
+      document.getElementById('edit-btn').onclick = async () => {
+        try {
+          await ensureNldd();
+        } catch (err) {
+          showSheetError(err);
+          return;
+        }
+        showEdit(item);
+      };
       return item;
     } catch (err) {
       actions.hidden = true;
@@ -300,7 +314,7 @@ export async function consumerDetailPage(cfg) {
   // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
   // #extra, outside #content, so the edit form's re-renders never touch it.
   const extra = document.getElementById('extra');
-  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx);
+  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
 }
 
 // renderCreateForm fills a sheet with the kind's create form; the list page
