@@ -23,6 +23,22 @@ func TestLoadConfigOverride(t *testing.T) {
 	assert.Equal(t, "rook-ceph", cfg.RookNamespace, "the two namespaces are configured independently")
 }
 
+// The platform is a sovereign Dutch cloud; its buckets should not have to
+// claim to be in Virginia. The label is signing-only (RGW enforces nothing),
+// so any stable value works and nl-1 is the honest default.
+func TestS3RegionDefaultsDutch(t *testing.T) {
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "nl-1", cfg.S3Region)
+}
+
+func TestS3RegionOverride(t *testing.T) {
+	t.Setenv("FUNP_S3_REGION", "eu-west-1")
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "eu-west-1", cfg.S3Region)
+}
+
 // Defaulting this on would waive Rook's version guard for every install to spare
 // one development platform.
 func TestAllowUnsupportedCephDefaultsOff(t *testing.T) {

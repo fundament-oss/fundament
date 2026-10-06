@@ -144,7 +144,7 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		return fmt.Errorf("setup filestorage reconciler: %w", pluginerrors.NewPermanent(err))
 	}
 
-	if err := NewObjectStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace).SetupWithManager(mgr); err != nil {
+	if err := NewObjectStorageReconciler(mgr.GetClient(), p.cfg.ClusterNamespace, p.cfg.RookNamespace, p.cfg.S3Region).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup objectstorage reconciler: %w", pluginerrors.NewPermanent(err))
 	}

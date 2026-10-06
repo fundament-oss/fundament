@@ -118,7 +118,7 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace, 
 
 // NewObjectStorageReconciler reconciles ObjectStorage into a CephObjectStore
 // and a bucket StorageClass for ObjectBucketClaims.
-func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace string) *ConsumerReconciler[*v1alpha1.ObjectStorage] {
+func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace, s3Region string) *ConsumerReconciler[*v1alpha1.ObjectStorage] {
 	return &ConsumerReconciler[*v1alpha1.ObjectStorage]{
 		Client:           c,
 		ClusterNamespace: clusterNamespace,
@@ -134,9 +134,11 @@ func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace
 			// and a store that never serves.
 			return RenderCephObjectStore(namespace, name, replicas, domain, max(int64(os.Spec.GatewayInstances), 1))
 		},
-		renderStorageClass: RenderBucketStorageClass,
-		finalizer:          objectStorageFinalizer,
-		deletionBlocked:    objectBucketsBlockDeletion,
+		renderStorageClass: func(name, clusterNamespace, storeName, _ string) *storagev1.StorageClass {
+			return RenderBucketStorageClass(name, clusterNamespace, storeName, s3Region)
+		},
+		finalizer:       objectStorageFinalizer,
+		deletionBlocked: objectBucketsBlockDeletion,
 	}
 }
 

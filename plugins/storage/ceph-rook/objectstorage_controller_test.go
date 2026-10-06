@@ -29,7 +29,7 @@ func testObjectStorage() *v1alpha1.ObjectStorage {
 }
 
 func newObjectReconciler(c client.Client) *ConsumerReconciler[*v1alpha1.ObjectStorage] {
-	return NewObjectStorageReconciler(c, testNamespace, testNamespace)
+	return NewObjectStorageReconciler(c, testNamespace, testNamespace, "nl-1")
 }
 
 // The generic ConsumerReconciler contract is asserted by the shared suite;
@@ -101,6 +101,7 @@ func TestObjectStorageDerivesBucketPair(t *testing.T) {
 	assert.Equal(t, "rook-ceph.ceph.rook.io/bucket", sc.Provisioner)
 	assert.Equal(t, "cephobj-main", sc.Parameters["objectStoreName"])
 	assert.Equal(t, testNamespace, sc.Parameters["objectStoreNamespace"])
+	assert.Equal(t, "nl-1", sc.Parameters["region"], "the configured signing region reaches the class")
 }
 
 func testObjectBucket(name, storageClass string) *unstructured.Unstructured {

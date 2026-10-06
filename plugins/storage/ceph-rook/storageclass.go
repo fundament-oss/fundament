@@ -98,9 +98,9 @@ func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace, mou
 
 // RenderBucketStorageClass builds the StorageClass that ObjectBucketClaims
 // reference. It drives Rook's OBC provisioner rather than a CSI driver, so
-// it carries none of the CSI scaffold. The ignored trailing parameter exists
-// only to match the generic renderStorageClass signature.
-func RenderBucketStorageClass(name, clusterNamespace, storeName, _ string) *storagev1.StorageClass {
+// it carries none of the CSI scaffold. region is the signing-only S3 region
+// label (Config.S3Region).
+func RenderBucketStorageClass(name, clusterNamespace, storeName, region string) *storagev1.StorageClass {
 	return &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -117,8 +117,8 @@ func RenderBucketStorageClass(name, clusterNamespace, storeName, _ string) *stor
 			"objectStoreNamespace": clusterNamespace,
 			// Without it BUCKET_REGION is empty and S3 clients that require
 			// a region (distribution/registry) fail; immutable, so from the
-			// start. us-east-1 is RGW's implicit default zonegroup alias.
-			"region": "us-east-1",
+			// start.
+			"region": region,
 		},
 	}
 }

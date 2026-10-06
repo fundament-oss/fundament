@@ -296,6 +296,12 @@ spec:
       default: "rook-ceph"
       advanced: true
       description: Namespace for the CephCluster and its CSI secrets; the CSI clusterID.
+    - name: S3_REGION
+      displayName: S3 region label
+      type: string
+      default: "nl-1"
+      advanced: true
+      description: "Region label buckets advertise (BUCKET_REGION) and sign with. Signing-only: RGW enforces no region. Immutable per ObjectStorage once its StorageClass exists."
     - name: CEPHFS_MOUNTER
       displayName: CephFS mount client
       type: enum

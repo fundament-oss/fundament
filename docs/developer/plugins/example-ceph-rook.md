@@ -278,7 +278,9 @@ class — by hand, or through the Buckets section on the ObjectStorage detail
 page (list, create and inspect claims for that store, with optional per-claim
 quotas and an exact-name collision pre-check): Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and
 the credentials to a Secret, both named after the claim. A claim can cap its
-own bucket via `spec.additionalConfig` (`maxSize`, `maxObjects`).
+own bucket via `spec.additionalConfig` (`maxSize`, `maxObjects`). Buckets
+advertise the signing-only region label from the `S3_REGION` install config
+(default `nl-1`; RGW enforces no region).
 `preservePoolsOnDelete` is always `true`, same stance as `FileStorage`:
 deleting an `ObjectStorage` keeps its seven `cephobj-<name>.rgw.*` pools and
 their data. Reclaiming the space is a deliberate second step in the Ceph
