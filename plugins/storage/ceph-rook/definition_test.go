@@ -43,6 +43,14 @@ func TestDefinition(t *testing.T) {
 			"blockstorages":  {"list", "get", "create", "patch"},
 			"filestorages":   {"list", "get", "create", "patch"},
 			"objectstorages": {"list", "get", "create", "patch"},
+			// The bucket pages: claims are created and shown, objectbuckets
+			// back the create form's collision check, and the claim's
+			// ConfigMap carries the connection info the detail page shows.
+			// The Secret is deliberately absent: its name is derivable and
+			// its values must never reach the iframe.
+			"objectbucketclaims": {"list", "get", "create"},
+			"objectbuckets":      {"list"},
+			"configmaps":         {"get"},
 		} {
 			var found *pluginruntime.AllowedResource
 			for i := range def.Spec.AllowedResources {
@@ -142,6 +150,7 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/filestorages-list.js",
 		"console/objectstorages-detail.js",
 		"console/objectstorages-list.js",
+		"console/bucket-pages.js",
 	} {
 		src, err := os.ReadFile(path)
 		require.NoError(t, err)

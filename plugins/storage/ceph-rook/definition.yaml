@@ -3,7 +3,7 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.3.0
+  version: v0.3.0-2
   description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
@@ -153,22 +153,18 @@ spec:
     DiskPool:
       list: diskpools-list.html
       detail: diskpools-detail.html
-      create: diskpools-create.html
     Disk:
       list: disks-list.html
       detail: disks-detail.html
     BlockStorage:
       list: blockstorages-list.html
       detail: blockstorages-detail.html
-      create: blockstorages-create.html
     FileStorage:
       list: filestorages-list.html
       detail: filestorages-detail.html
-      create: filestorages-create.html
     ObjectStorage:
       list: objectstorages-list.html
       detail: objectstorages-detail.html
-      create: objectstorages-create.html
   uiHints:
     diskpools.ceph.fundament.io:
       statusMapping:
@@ -226,6 +222,24 @@ spec:
       version: v1alpha1
       resource: objectstorages
       verbs: [list, get, create, patch]
+    # The Buckets section on the ObjectStorage detail page. Claims list
+    # cluster-wide (they live wherever workloads do). No delete, same stance
+    # as the kinds above; no secrets: the claim's Secret name is derivable
+    # and its values must never reach the iframe, so only the ConfigMap's
+    # connection info is readable.
+    - group: objectbucket.io
+      version: v1alpha1
+      resource: objectbucketclaims
+      verbs: [list, get, create]
+    # Cluster-scoped bucket inventory, for the create form's collision check.
+    - group: objectbucket.io
+      version: v1alpha1
+      resource: objectbuckets
+      verbs: [list]
+    - group: ""
+      version: v1
+      resource: configmaps
+      verbs: [get]
     - group: ceph.rook.io
       version: v1
       resource: cephclusters

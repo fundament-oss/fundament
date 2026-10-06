@@ -1,18 +1,18 @@
 // Page factory for the consumer kinds (BlockStorage, FileStorage,
-// ObjectStorage): one implementation of the list/detail/create flows,
-// parameterized per kind. The kinds differ only in labels/texts and a few
-// kind-specific spec fields, so each page file reduces to a factory call with
-// its kind's config.
+// ObjectStorage): one implementation of the list and detail flows,
+// parameterized per kind; create and edit open in an <nldd-sheet> from those
+// pages. The kinds differ only in labels/texts and a few kind-specific spec
+// fields, so each page file reduces to a factory call with its kind's config.
 
 import {
   loadSdk,
+  loadNldd,
+  openSheet,
   escapeHtml,
   emptyRow,
   errorRow,
   wireRowLinks,
-  navigateToCreate,
   navigateToDetail,
-  navigateBack,
   renderDefList,
   replicasFieldHtml,
   replicasValue,
@@ -22,6 +22,7 @@ import {
   resourceNameError,
   wireSubmit,
 } from './_shared.js';
+import { mountBucketsSection } from './bucket-pages.js';
 
 const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
 
@@ -106,6 +107,9 @@ export const OBJECTSTORAGE = {
   // rook-ceph-rgw-cephobj-<name>, a DNS-1035 label capped at 63. Enforced
   // here too so the form rejects it first.
   nameMaxLength: 41,
+  // The detail page embeds the Buckets section: the ObjectBucketClaims
+  // provisioned against this store's StorageClass.
+  detailSection: mountBucketsSection,
 };
 
 function intFieldValue(form, field) {
@@ -157,10 +161,13 @@ export async function consumerListPage(cfg) {
   const tbody = document.getElementById('rows');
   tbody.innerHTML = emptyRow(colspan, 'Loading…');
 
-  await loadSdk();
+  await Promise.all([loadSdk(), loadNldd()]);
   await fundament.init;
 
-  document.getElementById('create-btn').addEventListener('click', () => navigateToCreate());
+  document.getElementById('create-btn').addEventListener('click', () => {
+    const { body, close } = openSheet({ label: `Create ${cfg.label}` });
+    renderCreateForm(cfg, body, close);
+  });
 
   try {
     const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: cfg.resource });
@@ -195,7 +202,7 @@ export async function consumerListPage(cfg) {
 }
 
 export async function consumerDetailPage(cfg) {
-  await loadSdk();
+  await Promise.all([loadSdk(), loadNldd()]);
   const ctx = await fundament.init;
 
   const content = document.getElementById('content');
@@ -238,20 +245,21 @@ export async function consumerDetailPage(cfg) {
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
       document.getElementById('edit-btn').onclick = () => showEdit(item);
+      return item;
     } catch (err) {
       actions.hidden = true;
       content.innerHTML = `<div class="plugin-error">${escapeHtml(
         `Failed to load: ${err?.message ?? err}`,
       )}</div>`;
+      return undefined;
     }
   }
 
-  async function showEdit(item) {
-    actions.hidden = true;
-
-    content.innerHTML = `
-      <form id="edit-form" class="plugin-form" novalidate>
-        <div class="plugin-error" id="edit-error" hidden></div>
+  function showEdit(item) {
+    const { body, close } = openSheet({ label: `Edit ${cfg.label}` });
+    body.insertAdjacentHTML('beforeend', `
+      <form class="plugin-form" novalidate>
+        <div class="plugin-error" data-role="error" hidden></div>
 
         ${replicasFieldHtml(item.spec?.replicas)}
 
@@ -260,25 +268,25 @@ export async function consumerDetailPage(cfg) {
         ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
         <div class="plugin-actions">
-          <button type="submit" class="plugin-button" id="save-btn">Save</button>
-          <button type="button" class="plugin-button-secondary" id="cancel-btn">Cancel</button>
+          <button type="submit" class="plugin-button" data-role="save">Save</button>
+          <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
         </div>
       </form>
-    `;
+    `);
 
-    const form = document.getElementById('edit-form');
-
-    document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
+    const form = body.querySelector('form');
+    body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 
     wireSubmit(form, {
-      button: document.getElementById('save-btn'),
-      errorBox: document.getElementById('edit-error'),
+      button: body.querySelector('[data-role="save"]'),
+      errorBox: body.querySelector('[data-role="error"]'),
       busyLabel: 'Saving…',
       failPrefix: 'Failed to save',
       validate: () => fieldsError(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
         await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
+        close();
         await showDetail();
       },
     });
@@ -286,24 +294,25 @@ export async function consumerDetailPage(cfg) {
 
   if (!name) {
     content.textContent = cfg.noneSelected;
-  } else {
-    await showDetail();
+    return;
   }
+  const item = await showDetail();
+  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
+  // #extra, outside #content, so the edit form's re-renders never touch it.
+  const extra = document.getElementById('extra');
+  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx);
 }
 
-export async function consumerCreatePage(cfg) {
-  await loadSdk();
-  await fundament.init;
-
-  const content = document.getElementById('content');
-
-  content.innerHTML = `
+// renderCreateForm fills a sheet with the kind's create form; the list page
+// opens it. On success it navigates to the new object's detail view.
+function renderCreateForm(cfg, body, close) {
+  body.insertAdjacentHTML('beforeend', `
     <p class="plugin-text">
       ${cfg.createIntro}
     </p>
 
-    <form id="create-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="error-box" hidden></div>
+    <form class="plugin-form" novalidate>
+      <div class="plugin-error" data-role="error" hidden></div>
 
       <div class="plugin-field">
         <label class="plugin-label" for="consumer-name">Name</label>
@@ -320,20 +329,20 @@ export async function consumerCreatePage(cfg) {
       ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
       <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create ${cfg.kind}</button>
-        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
+        <button type="submit" class="plugin-button" data-role="submit">Create ${cfg.kind}</button>
+        <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
       </div>
     </form>
-  `;
+  `);
 
-  const form = document.getElementById('create-form');
+  const form = body.querySelector('form');
   const nameInput = form.querySelector('[name="name"]');
 
-  document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
+  body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 
   wireSubmit(form, {
-    button: document.getElementById('submit-btn'),
-    errorBox: document.getElementById('error-box'),
+    button: body.querySelector('[data-role="submit"]'),
+    errorBox: body.querySelector('[data-role="error"]'),
     busyLabel: 'Creating…',
     failPrefix: `Failed to create ${cfg.kind}`,
     validate: () => {
@@ -355,6 +364,7 @@ export async function consumerCreatePage(cfg) {
           spec: specFrom(cfg, form),
         },
       );
+      close();
       navigateToDetail(name);
     },
   });

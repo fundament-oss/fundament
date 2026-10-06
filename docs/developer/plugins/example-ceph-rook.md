@@ -67,16 +67,15 @@ plugins/storage/ceph-rook/
 ├── storageclass_apply.go    # Create/reconcile a StorageClass its owner already owns
 ├── console/                 # Hand-written console pages (no build step)
 │   ├── _shared.js           # SDK loader, escaping, navigation helpers
-│   ├── consumer-pages.js    # List/detail/create page factory for the consumer kinds
+│   ├── consumer-pages.js    # List/detail page factory for the consumer kinds; create/edit open in sheets
+│   ├── bucket-pages.js      # Buckets section (ObjectBucketClaims) on the ObjectStorage detail page
 │   ├── disk-picker.js       # Shared disk-selection widget (pool/consumer create+edit)
 │   ├── disks-list.{html,js}
 │   ├── disks-detail.{html,js}
-│   ├── diskpools-list.{html,js}
-│   ├── diskpools-detail.{html,js}
-│   ├── diskpools-create.{html,js}
-│   ├── blockstorages-{list,detail,create}.{html,js}
-│   ├── filestorages-{list,detail,create}.{html,js}
-│   └── objectstorages-{list,detail,create}.{html,js}
+│   ├── diskpools-{list,detail}.{html,js}
+│   ├── blockstorages-{list,detail}.{html,js}
+│   ├── filestorages-{list,detail}.{html,js}
+│   └── objectstorages-{list,detail}.{html,js}
 ├── test-resources.yaml      # Sample DiskPool and consumer kinds for sandbox verification
 └── Dockerfile               # Multi-stage build (Go build + alpine with helm)
 ```
@@ -95,12 +94,13 @@ a test file of their own.
 | `DiskPool` | list, detail, create, **edit** |
 | `BlockStorage` | list, detail, create, **edit** |
 | `FileStorage` | list, detail, create, **edit** |
-| `ObjectStorage` | list, detail, create, **edit** |
+| `ObjectStorage` | list, detail, create, **edit**, embedded Buckets section |
 | `Disk` | list, **detail** |
 
-**Editing** lives on each kind's own detail page rather than a page of its own:
-`ComponentMapping` has `list`, `detail` and `create` slots but no `edit`, so an
-Edit button swaps the read-only view for a form. `DiskPool` edits its disk
+**Create and edit** both run in an `<nldd-sheet>` side panel over the list or
+detail page (the shared NLDD Design System bundle the console serves per
+FUN-18), so there are no routed create pages and `ComponentMapping`'s `create`
+slots go unused. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
 replicas and whether its StorageClass is the cluster default; `FileStorage`
 edits replicas and metadata server count; `ObjectStorage` edits replicas and
@@ -273,7 +273,9 @@ a `StorageClass` that drives Rook's ObjectBucketClaim provisioner
 (`<cluster namespace>.ceph.rook.io/bucket` — it follows the CephCluster's namespace, not the Rook operator's) rather than a CSI driver.
 
 Workloads consume it by creating an `ObjectBucketClaim` that references the
-class: Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and
+class — by hand, or through the Buckets section on the ObjectStorage detail
+page (list, create and inspect claims for that store, with optional per-claim
+quotas and an exact-name collision pre-check): Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and
 the credentials to a Secret, both named after the claim. A claim can cap its
 own bucket via `spec.additionalConfig` (`maxSize`, `maxObjects`).
 `preservePoolsOnDelete` is always `true`, same stance as `FileStorage`.

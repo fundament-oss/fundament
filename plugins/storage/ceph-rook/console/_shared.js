@@ -23,6 +23,75 @@ export function loadSdk() {
   });
 }
 
+// Loads the shared NLDD Design System bundle the console serves next to the
+// SDK (FUN-18), registering the <nldd-*> elements, and mirrors the SDK's
+// light/dark body class into the data-scheme attribute the components read.
+export function loadNldd() {
+  const sync = () => {
+    document.documentElement.setAttribute(
+      'data-scheme',
+      document.body.classList.contains('dark') ? 'dark' : 'light',
+    );
+  };
+  sync();
+  new MutationObserver(sync).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/plugins/sdk/v1/nldd-design-system.css';
+  document.head.appendChild(link);
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = '/plugins/sdk/v1/nldd-design-system.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('failed to load nldd-design-system.js'));
+    document.head.appendChild(script);
+  });
+}
+
+// Opens a right-hand <nldd-sheet> appended to the document root (it is a
+// <dialog>; inside the content flow it would steal layout height). Returns
+// the content container and a close(); the element removes itself after the
+// closing animation. Requires loadNldd() to have completed.
+//
+// The host sizes the iframe to this document's height, so on a short page
+// the sheet — confined to the iframe's viewport — would render a few rows
+// tall. Growing the body while the sheet is open makes the host grow the
+// iframe; newer hosts also floor the iframe at the viewport remainder, which
+// usually dominates this. CSSOM property assignment, not style attributes:
+// the CSP blocks only the latter.
+export function openSheet({ label, width = '480px', minHeight = '640px' }) {
+  const previousMinHeight = document.body.style.minHeight;
+  document.body.style.minHeight = minHeight;
+
+  const sheet = document.createElement('nldd-sheet');
+  sheet.setAttribute('placement', 'right');
+  sheet.setAttribute('width', width);
+  sheet.setAttribute('accessible-label', label);
+  const body = document.createElement('div');
+  body.className = 'plugin-card';
+  body.style.maxHeight = '100dvh';
+  body.style.overflowY = 'auto';
+  if (label) {
+    const heading = document.createElement('h2');
+    heading.className = 'plugin-heading';
+    heading.textContent = label;
+    body.appendChild(heading);
+  }
+  sheet.appendChild(body);
+  document.body.appendChild(sheet);
+  sheet.addEventListener('close', () => {
+    document.body.style.minHeight = previousMinHeight;
+    sheet.remove();
+  });
+  sheet.show();
+  return { body, close: () => sheet.hide() };
+}
+
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -48,25 +117,6 @@ export function errorRow(colspan, err) {
 export function navigateToDetail(name, namespace) {
   window.parent.postMessage(
     { type: 'plugin:navigate', name, namespace },
-    window.fundament?.parentOrigin ?? '*',
-  );
-}
-
-// Asks the host for this kind's create route. A custom list UI needs its own
-// "Add": the console only renders its built-in Create button for kinds without a
-// custom list component, so without this the create view is unreachable.
-export function navigateToCreate() {
-  window.parent.postMessage(
-    { type: 'plugin:create' },
-    window.fundament?.parentOrigin ?? '*',
-  );
-}
-
-// Returns to the resource-kind list. Only meaningful from a create or detail
-// view; the host ignores it on a list.
-export function navigateBack() {
-  window.parent.postMessage(
-    { type: 'plugin:navigate-back' },
     window.fundament?.parentOrigin ?? '*',
   );
 }

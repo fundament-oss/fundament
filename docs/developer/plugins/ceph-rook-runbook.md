@@ -702,7 +702,7 @@ Previously the pages were embedded but never routed, and the iframe 404'd.
 kubectl --context k3d-fundament-plugin -n plugin-system--ceph-rook \
   port-forward deploy/plugin 8080:8080 &
 curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/diskpools-list.html
-curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/diskpools-create.html
+curl -sS -o /dev/null -w '%{http_code}\n' localhost:8080/console/diskpools-detail.html
 kill %1
 ```
 
