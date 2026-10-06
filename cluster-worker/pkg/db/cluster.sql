@@ -203,6 +203,22 @@ ORDER BY
 LIMIT
     1;
 
+-- name: ClusterGetLastProgressEvent :one
+-- The cluster's most recent status_progressing event, which throttles how
+-- often Gardener's progress messages are recorded.
+SELECT
+    tenant.cluster_events.created,
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = @cluster_id
+    AND tenant.cluster_events.event_type = 'status_progressing'
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1;
+
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).
 INSERT INTO

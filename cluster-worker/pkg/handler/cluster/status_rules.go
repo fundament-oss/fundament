@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -20,6 +21,13 @@ type storedShootState struct {
 	LastWarning string
 }
 
+// progressRecord is the cluster's latest status_progressing event: when, and
+// which message. Zero when there is none.
+type progressRecord struct {
+	At      time.Time
+	Message string
+}
+
 // statusEvent is one activity-log entry a status check records.
 type statusEvent struct {
 	Type    dbconst.ClusterEventEventType
@@ -33,10 +41,40 @@ type shootStatusUpdate struct {
 	Health  dbconst.ClusterShootHealth // empty writes NULL
 	// Updating keeps a ready cluster marked as updating.
 	Updating bool
-	Events   []statusEvent
+	// Warning is set when the message is an error Gardener retries; it is
+	// recorded as a warning, never as progress.
+	Warning bool
+	Events  []statusEvent
 	// InsertReady is set on a transition into ready: the ready outbox row fans
 	// out to the handlers that provision a freshly ready cluster.
 	InsertReady bool
+}
+
+// addProgressEvent records Gardener's progress message while an operation
+// runs: while the cluster is progressing, or ready and updating. The
+// description names the running tasks and changes after every task, about a
+// hundred times per operation, so a new message is recorded at most once per
+// interval. A change inside the window is not dropped: the
+// result says how long to wait, and the check then records the message that
+// is current if it still differs, so a reconcile stuck on one task records
+// that task. A transition into progressing already records its message.
+func addProgressEvent(update *shootStatusUpdate, last progressRecord, now time.Time, interval time.Duration) (retryAfter time.Duration) {
+	// A warning's message is Gardener's error, recorded as the warning, also
+	// when the same error repeats and records no second one.
+	if (update.Status != gardener.StatusProgressing && !update.Updating) || update.Warning || update.Message == last.Message {
+		return 0
+	}
+	for _, event := range update.Events {
+		// A transition into progressing already records its message.
+		if event.Type == dbconst.ClusterEventEventType_StatusProgressing {
+			return 0
+		}
+	}
+	if wait := interval - now.Sub(last.At); wait > 0 {
+		return wait
+	}
+	update.Events = append(update.Events, statusEvent{Type: dbconst.ClusterEventEventType_StatusProgressing, Message: update.Message})
+	return 0
 }
 
 // unchanged reports whether writing the update would change nothing: same
@@ -84,7 +122,7 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 	// that the watch now sees, so the comparison is with the last recorded
 	// warning, not with the stored message.
 	if observed.Status == gardener.StatusError && observed.Retrying {
-		warning := shootStatusUpdate{Status: gardener.StatusProgressing, Message: observed.Message}
+		warning := shootStatusUpdate{Status: gardener.StatusProgressing, Message: observed.Message, Warning: true}
 		if stored.Status == gardener.StatusReady {
 			warning.Status = gardener.StatusReady
 			warning.Health = stored.Health

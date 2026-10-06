@@ -77,8 +77,9 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 	t.Helper()
 
 	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
-		StatusWorkers: 2,
-		MaxRetries:    10,
+		StatusWorkers:               2,
+		StatusProgressEventInterval: time.Minute,
+		MaxRetries:                  10,
 	})
 }
 

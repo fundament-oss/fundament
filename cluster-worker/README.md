@@ -126,10 +126,18 @@ stateDiagram-v2
 
 Changes are recorded in `tenant.cluster_events`: `sync_succeeded` / `sync_failed` per
 outbox row, `status_progressing` / `status_ready` / `status_error` / `status_deleted` on a
-status change, `status_healthy` / `status_unhealthy` when a ready cluster's health
+status change, `status_progressing` with Gardener's progress message while an operation
+runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
 shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
+
+While Gardener runs an operation, its message names the tasks it is running and changes
+after every task, about a hundred times per operation. A new message is recorded at most
+once per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` (1m). A change inside that window is
+recorded when the window ends, if the message is still new, so a reconcile stuck on one
+task always records that task. A create of 10 to 15 minutes records about 10 to 15
+progress events.
 
 ### Ready clusters
 
@@ -212,6 +220,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `STATUS_INTERVAL` | `30m` | how often the status sweep checks every cluster; it also runs at startup, in real mode once the status cache has synced |
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
+| `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 

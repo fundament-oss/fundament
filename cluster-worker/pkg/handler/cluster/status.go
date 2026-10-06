@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -47,15 +48,22 @@ func (h *Handler) CheckStatus(ctx context.Context) error {
 // A cluster that no longer exists or is confirmed deleted is left alone; one
 // that has not reached Gardener yet returns ErrClusterNotSynced.
 func (h *Handler) CheckCluster(ctx context.Context, id uuid.UUID) error {
+	_, err := h.checkCluster(ctx, id)
+	return err
+}
+
+// checkCluster is CheckCluster that also reports when the cluster should be
+// checked again to record a progress message held back by the throttle.
+func (h *Handler) checkCluster(ctx context.Context, id uuid.UUID) (retryAfter time.Duration, err error) {
 	cluster, err := h.queries.ClusterGetForStatusCheck(ctx, db.ClusterGetForStatusCheckParams{ClusterID: id})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
+			return 0, nil
 		}
-		return fmt.Errorf("load cluster %s: %w", id, err)
+		return 0, fmt.Errorf("load cluster %s: %w", id, err)
 	}
 	if !cluster.Synced {
-		return ErrClusterNotSynced
+		return 0, ErrClusterNotSynced
 	}
 
 	// Status lookups find the Shoot by cluster-ID label across all namespaces, so
@@ -64,20 +72,20 @@ func (h *Handler) CheckCluster(ctx context.Context, id uuid.UUID) error {
 
 	if cluster.Deleted.Valid {
 		if gardener.ShootStatusType(cluster.ShootStatus.String) == gardener.StatusDeleted {
-			return nil
+			return 0, nil
 		}
 		deleted := cluster.Deleted.Time
 		clusterToSync.Deleted = &deleted
-		return h.checkDeletedCluster(ctx, &cluster, clusterToSync)
+		return 0, h.checkDeletedCluster(ctx, &cluster, clusterToSync)
 	}
 	return h.checkActiveCluster(ctx, &cluster, clusterToSync)
 }
 
 // checkActiveCluster applies the status rules to an active cluster.
-func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) error {
+func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, clusterToSync *gardener.ClusterToSync) (time.Duration, error) {
 	shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 	if err != nil {
-		return fmt.Errorf("get shoot status: %w", err)
+		return 0, fmt.Errorf("get shoot status: %w", err)
 	}
 
 	stored := storedShootState{
@@ -89,26 +97,36 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	if shootStatus.Status == gardener.StatusError && shootStatus.Retrying {
 		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("load last warning: %w", err)
+			return 0, fmt.Errorf("load last warning: %w", err)
 		}
 		stored.LastWarning = lastWarning.String
 	}
 	update := nextShootStatus(stored, shootStatus)
+	var retryAfter time.Duration
+	if update.Status == gardener.StatusProgressing || update.Updating {
+		last, err := h.lastProgress(ctx, cluster.ID)
+		if err != nil {
+			return 0, err
+		}
+		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
+	}
 	if update.unchanged(stored) {
 		// Gardener writes a Shoot after every reconcile task; most of those
 		// leave what fundament records as it is.
-		return nil
+		return retryAfter, nil
 	}
 
 	written, err := h.writeShootStatus(ctx, cluster, &update)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if !written {
 		// The row changed after it was read (an update was marked in
-		// progress); the next check decides from the new state.
-		h.logger.Debug("shoot status changed during check, skipping", "cluster_id", cluster.ID)
-		return nil
+		// progress). The check runs again shortly and decides from the new
+		// state: the Shoot may already be in its final state, so no further
+		// event can be counted on to bring it back.
+		h.logger.Debug("shoot status changed during check, checking again", "cluster_id", cluster.ID)
+		return statusRetryBaseDelay, nil
 	}
 
 	for _, event := range update.Events {
@@ -135,7 +153,19 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 			"name", cluster.Name,
 			"message", shootStatus.Message)
 	}
-	return nil
+	return retryAfter, nil
+}
+
+// lastProgress loads the cluster's latest status_progressing event.
+func (h *Handler) lastProgress(ctx context.Context, clusterID uuid.UUID) (progressRecord, error) {
+	row, err := h.queries.ClusterGetLastProgressEvent(ctx, db.ClusterGetLastProgressEventParams{ClusterID: clusterID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return progressRecord{}, nil
+	}
+	if err != nil {
+		return progressRecord{}, fmt.Errorf("load last progress event: %w", err)
+	}
+	return progressRecord{At: row.Created.Time, Message: row.Message.String}, nil
 }
 
 // checkDeletedCluster confirms that a soft-deleted cluster's Shoot is gone.

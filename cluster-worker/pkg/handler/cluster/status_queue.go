@@ -60,9 +60,12 @@ func (h *Handler) processNextStatusCheck(ctx context.Context) bool {
 	}
 	defer h.statusQueue.Done(clusterID)
 
-	err := h.CheckCluster(ctx, clusterID)
+	retryAfter, err := h.checkCluster(ctx, clusterID)
 	if err == nil || ctx.Err() != nil {
 		h.statusQueue.Forget(clusterID)
+		if retryAfter > 0 {
+			h.statusQueue.AddAfter(clusterID, retryAfter)
+		}
 		return true
 	}
 	if h.statusQueue.NumRequeues(clusterID) < statusMaxRetries {

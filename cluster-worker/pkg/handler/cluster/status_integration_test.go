@@ -403,3 +403,31 @@ func TestCheckClusterRetriedErrorAfterReadyIsNewWarning(t *testing.T) {
 	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
 	assert.Equal(t, 2, countEvents(t, db, clusterID, "status_warning"))
 }
+
+// While Gardener runs an operation, a new progress message is recorded, and
+// another one that follows within the throttle window is not.
+func TestCheckClusterRecordsThrottledProgress(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-progress")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting for etcd", "", time.Minute)
+
+	report := func(message string) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: gardener.StatusProgressing, Message: message, Operation: gardener.OperationCreate,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report("Create: Deploying kube-apiserver")
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_progressing"))
+
+	report("Create: Waiting until the Kubernetes API server is ready")
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_progressing"), "inside the window")
+	message, _ := getShootState(t, db, clusterID)
+	assert.Equal(t, "Create: Waiting until the Kubernetes API server is ready", message, "the row still shows the live message")
+}

@@ -185,6 +185,39 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 	return i, err
 }
 
+const clusterGetLastProgressEvent = `-- name: ClusterGetLastProgressEvent :one
+SELECT
+    tenant.cluster_events.created,
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = $1
+    AND tenant.cluster_events.event_type = 'status_progressing'
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1
+`
+
+type ClusterGetLastProgressEventParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetLastProgressEventRow struct {
+	Created pgtype.Timestamptz
+	Message pgtype.Text
+}
+
+// The cluster's most recent status_progressing event, which throttles how
+// often Gardener's progress messages are recorded.
+func (q *Queries) ClusterGetLastProgressEvent(ctx context.Context, arg ClusterGetLastProgressEventParams) (ClusterGetLastProgressEventRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetLastProgressEvent, arg.ClusterID)
+	var i ClusterGetLastProgressEventRow
+	err := row.Scan(&i.Created, &i.Message)
+	return i, err
+}
+
 const clusterGetLastWarningMessage = `-- name: ClusterGetLastWarningMessage :one
 SELECT
     tenant.cluster_events.message

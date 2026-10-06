@@ -38,8 +38,11 @@ type Config struct {
 	// StatusWorkers is how many status checks run at once. The queue never
 	// hands one cluster to two workers, so this only adds parallelism across
 	// clusters.
-	StatusWorkers int   `env:"STATUS_WORKERS" envDefault:"2"`
-	MaxRetries    int32 `env:"MAX_RETRIES" envDefault:"10"`
+	StatusWorkers int `env:"STATUS_WORKERS" envDefault:"2"`
+	// StatusProgressEventInterval is the shortest time between two recorded
+	// progress messages of one cluster while Gardener runs an operation.
+	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
+	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
