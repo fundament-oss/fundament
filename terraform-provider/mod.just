@@ -19,22 +19,6 @@ install: build
     mkdir -p "$PLUGIN_DIR"
     cp terraform-provider-fundament "$PLUGIN_DIR/"
 
-    # Clean up terraform state in all examples so they pick up the new provider
-    EXAMPLES_DIR="{{ source_directory() }}/examples"
-    if [[ -d "$EXAMPLES_DIR" ]]; then
-        echo "Cleaning terraform state in ${EXAMPLES_DIR}..."
-        find "$EXAMPLES_DIR" -name '.terraform' -type d -exec rm -rf {} + 2>/dev/null || true
-        find "$EXAMPLES_DIR" -name '.terraform.lock.hcl' -type f -delete 2>/dev/null || true
-
-        # Run tofu init in each example directory containing .tf files
-        echo "Initializing examples..."
-        for dir in $(find "$EXAMPLES_DIR" -name '*.tf' -exec dirname {} \; | sort -u); do
-            echo "  tofu init in ${dir#$EXAMPLES_DIR/}..."
-            (cd "$dir" && tofu init -input=false > /dev/null)
-        done
-        echo "Done."
-    fi
-
 # Run terraform provider tests
 test:
     go test -v ./...
@@ -46,6 +30,65 @@ test-acc:
     TF_ACC_TERRAFORM_PATH=$(which tofu) \
     TF_ACC_PROVIDER_HOST=registry.opentofu.org \
     go test -v ./...
+
+# Generate the resource and data source reference in docs/ from the provider schema
+docs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+    go build -o "$TMP/terraform-provider-fundament" .
+    printf 'provider_installation {\n  dev_overrides {\n    "registry.opentofu.org/fundament/fundament" = "%s"\n  }\n  direct {}\n}\n' "$TMP" > "$TMP/tofurc"
+    printf 'terraform {\n  required_providers {\n    fundament = { source = "fundament/fundament" }\n  }\n}\n' > "$TMP/main.tf"
+    # tfplugindocs looks a schema up by the provider's short name, not by OpenTofu's registry address.
+    (cd "$TMP" && TF_CLI_CONFIG_FILE="$TMP/tofurc" tofu providers schema -json) \
+        | jq '.provider_schemas |= with_entries(.key = "fundament")' > "$TMP/schema.json"
+    tfplugindocs generate --provider-name fundament --providers-schema "$TMP/schema.json"
+
+# Validate every example, and every configuration on the OpenTofu docs page that declares its providers
+validate-examples:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+    # A filesystem mirror rather than dev_overrides: tofu init refuses overridden
+    # providers, and configurations that also use other providers need init.
+    PLUGIN_DIR="$TMP/mirror/registry.opentofu.org/fundament/fundament/0.1.0/$(go env GOOS)_$(go env GOARCH)"
+    go build -o "$PLUGIN_DIR/terraform-provider-fundament" .
+    printf 'provider_installation {\n  filesystem_mirror {\n    path    = "%s"\n    include = ["registry.opentofu.org/fundament/*"]\n  }\n  direct {\n    exclude = ["registry.opentofu.org/fundament/*"]\n  }\n}\n' "$TMP/mirror" > "$TMP/tofurc"
+    export TF_CLI_CONFIG_FILE="$TMP/tofurc"
+
+    mkdir "$TMP/configs"
+    for dir in examples/provider/ examples/*/*/; do
+        name="${dir%/}"
+        dest="$TMP/configs/${name//\//_}"
+        cp -r "$dir" "$dest"
+        # An example shows one resource; give it the provider requirement it leaves out.
+        grep -qs required_providers "$dest"/*.tf ||
+            printf 'terraform {\n  required_providers {\n    fundament = { source = "fundament/fundament" }\n  }\n}\n' > "$dest/versions.tf"
+    done
+    awk -v out="$TMP/configs/docs-page" '
+        /^```hcl/ { n++; block = ""; inblock = 1; next }
+        /^```/ && inblock {
+            inblock = 0
+            if (block ~ /required_providers/) { dir = out "-" n; system("mkdir -p " dir); printf "%s", block > (dir "/main.tf"); close(dir "/main.tf") }
+            next
+        }
+        inblock { block = block $0 "\n" }
+    ' ../docs/user/opentofu-provider.md
+
+    failed=0
+    for dir in "$TMP"/configs/*/; do
+        name=$(basename "$dir")
+        if (cd "$dir" && tofu init -input=false -backend=false -no-color > init.log 2>&1 && tofu validate -no-color > validate.log 2>&1); then
+            echo "ok    $name"
+        else
+            echo "FAIL  $name"
+            cat "$dir"/*.log
+            failed=1
+        fi
+    done
+    exit $failed
 
 # Clean terraform provider build artifacts
 clean:
