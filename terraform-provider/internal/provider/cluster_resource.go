@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,11 +28,12 @@ type ClusterResource struct {
 
 // ClusterResourceModel describes the resource data model.
 type ClusterResourceModel struct {
-	ID                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	Region            types.String `tfsdk:"region"`
-	KubernetesVersion types.String `tfsdk:"kubernetes_version"`
-	Status            types.String `tfsdk:"status"`
+	ID                types.String           `tfsdk:"id"`
+	Name              types.String           `tfsdk:"name"`
+	Region            types.String           `tfsdk:"region"`
+	KubernetesVersion types.String           `tfsdk:"kubernetes_version"`
+	Status            types.String           `tfsdk:"status"`
+	NodePools         []ClusterNodePoolModel `tfsdk:"node_pool"`
 }
 
 // NewClusterResource creates a new ClusterResource.
@@ -78,6 +80,9 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: "The current status of the cluster (e.g., provisioning, running, stopped).",
 				Computed:    true,
 			},
+		},
+		Blocks: map[string]schema.Block{
+			"node_pool": clusterNodePoolBlock(),
 		},
 	}
 }
@@ -130,6 +135,13 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
 	}.Build()
 
+	// Check the pools first: a pool the API refuses after the cluster exists
+	// would leave a tainted cluster, which the next apply replaces.
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, plan.Region.ValueString(), plan.NodePools)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	createResp, err := createIdempotent(ctx, r.client.ClusterService.CreateCluster, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -141,6 +153,21 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Set the ID from the response
 	plan.ID = types.StringValue(createResp.GetClusterId())
+	plan.Status = types.StringNull()
+
+	// Record the cluster now: if a later step fails, the apply marks it
+	// tainted instead of leaving it unmanaged.
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// cluster-worker may already have given the Shoot a default worker pool;
+	// created right away, the pools replace it before Gardener builds workers.
+	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), plan.NodePools)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Read the cluster to get the full state including status.
 	// Retry on permission_denied, OpenFGA needs time to sync
@@ -221,6 +248,13 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.KubernetesVersion = types.StringValue(cluster.GetKubernetesVersion())
 	state.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
 
+	nodePools, err := listNodePools(ctx, r.client, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.ID.ValueString(), err))
+		return
+	}
+	state.NodePools = orderNodePools(nodePools, state.NodePools)
+
 	tflog.Debug(ctx, "Read cluster successfully", map[string]any{
 		"id":     state.ID.ValueString(),
 		"status": state.Status.ValueString(),
@@ -254,42 +288,19 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		"kubernetes_version_new": plan.KubernetesVersion.ValueString(),
 	})
 
-	// Only kubernetes_version can be updated
-	kubernetesVersion := plan.KubernetesVersion.ValueString()
-	updateReq := organizationv1.UpdateClusterRequest_builder{
-		ClusterId:         state.ID.ValueString(),
-		KubernetesVersion: &kubernetesVersion,
-	}.Build()
-
-	_, err := r.client.ClusterService.UpdateCluster(ctx, updateReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			resp.Diagnostics.AddError(
-				"Cluster Not Found",
-				fmt.Sprintf("Cluster %q no longer exists. It may have been deleted outside of Terraform.", state.ID.ValueString()),
-			)
-		case connect.CodeFailedPrecondition:
-			resp.Diagnostics.AddError(
-				"Cluster Update Not Allowed",
-				fmt.Sprintf("Cluster %q cannot be updated in its current state: %s", state.ID.ValueString(), err.Error()),
-			)
-		case connect.CodeInvalidArgument:
-			resp.Diagnostics.AddError(
-				"Invalid Cluster Configuration",
-				fmt.Sprintf("Invalid update parameters: %s", err.Error()),
-			)
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to Update Cluster",
-				fmt.Sprintf("Unable to update cluster: %s", err.Error()),
-			)
+	if !plan.KubernetesVersion.Equal(state.KubernetesVersion) {
+		r.updateKubernetesVersion(ctx, state.ID.ValueString(), plan.KubernetesVersion.ValueString(), &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
 		}
+	}
+
+	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), plan.NodePools)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Read the cluster to get the updated state.
-	// Retry on permission_denied, OpenFGA needs time to sync.
 	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
 	}.Build()
@@ -326,6 +337,42 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// updateKubernetesVersion upgrades the cluster to version.
+func (r *ClusterResource) updateKubernetesVersion(ctx context.Context, clusterID, version string, diags *diag.Diagnostics) {
+	updateReq := organizationv1.UpdateClusterRequest_builder{
+		ClusterId:         clusterID,
+		KubernetesVersion: &version,
+	}.Build()
+
+	_, err := r.client.ClusterService.UpdateCluster(ctx, updateReq)
+	if err == nil {
+		return
+	}
+
+	switch connect.CodeOf(err) {
+	case connect.CodeNotFound:
+		diags.AddError(
+			"Cluster Not Found",
+			fmt.Sprintf("Cluster %q no longer exists. It may have been deleted outside of Terraform.", clusterID),
+		)
+	case connect.CodeFailedPrecondition:
+		diags.AddError(
+			"Cluster Update Not Allowed",
+			fmt.Sprintf("Cluster %q cannot be updated in its current state: %s", clusterID, err.Error()),
+		)
+	case connect.CodeInvalidArgument:
+		diags.AddError(
+			"Invalid Cluster Configuration",
+			fmt.Sprintf("Invalid update parameters: %s", err.Error()),
+		)
+	default:
+		diags.AddError(
+			"Unable to Update Cluster",
+			fmt.Sprintf("Unable to update cluster: %s", err.Error()),
+		)
+	}
 }
 
 // Delete deletes the cluster.
