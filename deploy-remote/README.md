@@ -17,7 +17,7 @@ deploy-remote/
 ├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
 ├── box/                          scripts pushed to the box by `hetzner.sh stack`
 │   ├── bootstrap.sh              clone fundament + checkout deployed ref + mise install
-│   └── run-stack.sh              cluster-create → gardener-up → skaffold → drive a shoot to 100%
+│   └── run-stack.sh              cluster-create → gardener-start → skaffold → drive a shoot to 100%
 ├── modules/
 │   ├── baseline.nix             functional system: docker, nix-ld, resolved+gardener DNS, tools
 │   └── ephemeral-scratch.nix    reformat the scratch partition before docker (reboot-to-clean)
@@ -57,7 +57,7 @@ Every recipe is also exposed at the repo root: `just deploy-remote up`, etc.
 
 **Time to ready:** ~35–45 min end-to-end from `just up` to a reachable
 console — `up` ~8–10 min (box create + NixOS install), `stack`
-~25–35 min (bootstrap + toolchain ~3, gardener-up ~10–15, fundament deploy ~5,
+~25–35 min (bootstrap + toolchain ~3, gardener-start ~10–15, fundament deploy ~5,
 shoot to `Create Succeeded` ~7).
 
 `up` needs `ssh` + `curl` + a running **Docker** daemon. It fetches a pinned
@@ -70,7 +70,7 @@ HZ_LOCATION=hel1 just up` (try another location on `resource_unavailable`).
 Works on macOS/Linux.
 
 `stack` pushes `box/*.sh` and runs bootstrap + the full cycle
-(gardener-up ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
+(gardener-start ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
 how to reach the UIs. Re-runs cleanly.
 
 > **The box runs your branch as PUSHED to origin — not your local working tree.**
@@ -138,4 +138,4 @@ flake is x86_64.)
 - **Legacy BIOS** — Hetzner Cloud x86_64 boots legacy BIOS; `hosts/hetzner` uses GRUB
   with a dual EF02 (BIOS) + ESP (UEFI-fallback) layout. Handled.
 - **Reproducibility** — `nixpkgs` pinned via `flake.lock`; the on-box mise toolchain
-  and Gardener (`v1.138.0`, cloned by gardener-up) are version-pinned.
+  and Gardener (`v1.138.0`, cloned by gardener-start) are version-pinned.

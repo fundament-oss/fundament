@@ -15,7 +15,14 @@ import (
 const clusterCreate = `-- name: ClusterCreate :one
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id, kubernetes_version_id)
 SELECT $1, $2, $3, $4, $5, $6
-WHERE NOT EXISTS (
+WHERE EXISTS (
+    SELECT 1
+    FROM tenant.organizations
+    WHERE id = $1
+      AND deleted IS NULL
+    FOR SHARE
+)
+AND NOT EXISTS (
     SELECT 1
     FROM tenant.clusters
     WHERE organization_id = $1
@@ -37,6 +44,10 @@ type ClusterCreateParams struct {
 // Create a cluster if no active or pending-delete cluster with the same name exists.
 // Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 // Returns NULL if blocked (caller should check for pgx.ErrNoRows).
+// The organization must be live. FOR SHARE waits for a funops organization
+// delete holding FOR UPDATE on the row; under read committed the deleted check
+// is then re-evaluated against the committed row, so the insert finds nothing
+// instead of creating a cluster nobody can manage.
 // region_id/kubernetes_version_id are the catalog references (expand phase: the
 // legacy text columns are written alongside them).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {

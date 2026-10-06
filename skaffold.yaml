@@ -186,7 +186,7 @@ profiles:
           - charts/fundament/values-production.yaml
 
   # Local Gardener profile - use real local Gardener instead of mock.
-  # Requires: just cluster-worker gardener-up (generates values-gardener-local.yaml)
+  # Requires: just cluster-worker gardener-start (generates values-gardener-local.yaml)
   - name: local-gardener
     patches:
       - op: add
@@ -194,6 +194,8 @@ profiles:
         value:
           clusterWorker.gardenerMode: real
           clusterWorker.gardenerKubeconfigSecret: gardener-kubeconfig
+          # Local clusters are throwaway; without it every blocked delete waits minutes.
+          clusterWorker.gardenerImmediateClusterDeletion: "true"
           shootProxy.enabled: true
           kubeApiProxy.mode: real
           kubeApiProxy.gardenerKubeconfigSecret: gardener-kubeconfig
@@ -205,6 +207,10 @@ profiles:
           kubeApiProxy.sandboxKubeconfigSecret: ""
           authnApi.sandboxKubeconfigSecret: ""
           organizationApi.kubeApiProxyInsecure: "true"
+          # Read each shoot's own Prometheus and Vali in the seed, as an
+          # installation does, instead of generating metrics and logs.
+          organizationApi.prometheusURL: per-shoot
+          organizationApi.logsURL: per-shoot
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: charts/fundament/values-gardener-local.yaml

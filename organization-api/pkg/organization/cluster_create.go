@@ -55,8 +55,18 @@ func (s *Server) CreateCluster(
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)
 	if err != nil {
-		// ErrNoRows means the WHERE NOT EXISTS condition was false: a cluster with this name already exists
+		// ErrNoRows means the WHERE condition was false: either a cluster with
+		// this name already exists, or funops deleted the organization after the
+		// request was authorised (OpenFGA lags until the authz-worker revokes the
+		// memberships).
 		if errors.Is(err, pgx.ErrNoRows) {
+			live, liveErr := s.queries.OrganizationIsLive(ctx, db.OrganizationIsLiveParams{ID: organizationID})
+			if liveErr != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check organization: %w", liveErr))
+			}
+			if !live {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("organization not found"))
+			}
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("a cluster with the name %q already exists", req.GetName()))
 		}
 		// Composite FK: the (region, version) pair vanished from the catalog

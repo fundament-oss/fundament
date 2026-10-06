@@ -6,6 +6,8 @@ metadata:
   name: cluster-worker
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: {{ $.Values.clusterWorker.replicas }}
   selector:
@@ -114,6 +116,8 @@ spec:
             - name: GARDENER_SHOOT_ANNOTATIONS
               value: {{ . | toJson | quote }}
             {{- end }}
+            - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
+              value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:

@@ -2,7 +2,7 @@
 title: Preview environments
 sidebar:
   label: Preview environments
-  order: 3
+  order: 4
 ---
 
 A pull request gets its own Fundament deployment on digikluster at

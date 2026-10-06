@@ -64,12 +64,12 @@ in
   # Gardener/fundament edit /etc/hosts at runtime (e.g. registry.local.gardener.cloud).
   # NixOS makes /etc/hosts a read-only /nix/store symlink by default; copy it instead
   # so runtime `sudo tee -a /etc/hosts` succeeds. Edits persist across reboot, which is
-  # fine here — the entries are deterministic and idempotently re-added by gardener-up.
+  # fine here — the entries are deterministic and idempotently re-added by gardener-start.
   environment.etc."hosts".mode = "0644";
 
   # registry.local.gardener.cloud is the host-side push target for Gardener's local
   # registry (HTTP, :5001). Bake it in so it survives nixos-rebuild (which regenerates
-  # /etc/hosts) and clean reboots; gardener-up otherwise adds it at runtime, but a
+  # /etc/hosts) and clean reboots; gardener-start otherwise adds it at runtime, but a
   # rebuild would wipe that. Other *.local.gardener.cloud names resolve inside the
   # clusters (k3d/kind CoreDNS), not on the host.
   networking.extraHosts = "127.0.0.1 registry.local.gardener.cloud";

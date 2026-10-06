@@ -22,3 +22,13 @@ FROM tenant.organizations
 WHERE tenant.organizations.id = authn.current_organization_id()
    OR authn.is_organization_member(tenant.organizations.id)
 ORDER BY created;
+
+-- name: OrganizationIsLive :one
+-- Tells a failed ClusterCreate apart: the organization was soft-deleted by
+-- funops after the request was authorised.
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.organizations
+    WHERE id = $1
+      AND deleted IS NULL
+);

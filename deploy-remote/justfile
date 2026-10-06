@@ -17,7 +17,7 @@ _default:
 up:
     ./hetzner.sh up
 
-# clone fundament + mise + gardener-up + skaffold + drive a shoot to 100%
+# clone fundament + mise + gardener-start + skaffold + drive a shoot to 100%
 stack:
     ./hetzner.sh stack
 

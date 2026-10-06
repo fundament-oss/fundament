@@ -12,7 +12,7 @@ type ClusterCmd struct {
 	List       ClusterListCmd       `cmd:"" help:"List all clusters."`
 	Get        ClusterGetCmd        `cmd:"" help:"Get cluster details."`
 	Kubeconfig ClusterKubeconfigCmd `cmd:"" help:"Generate kubeconfig for a cluster."`
-	Token      ClusterTokenCmd      `cmd:"" help:"Get a service account token for a cluster."`
+	Token      ClusterTokenCmd      `cmd:"" help:"Print a short-lived platform token as a kubectl ExecCredential (used by the kubeconfig from 'cluster kubeconfig')."`
 }
 
 // ClusterListCmd handles the cluster list command.

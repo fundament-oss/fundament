@@ -67,3 +67,46 @@ func Test_Cluster_Create(t *testing.T) {
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
 }
+
+func Test_Cluster_Create_DeletedOrganization(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "deleted-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, userID)
+	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+
+	// An already authorised request that lands after funops deleted the
+	// organization, before the membership revocation reached OpenFGA.
+	_, err := env.adminPool.Exec(context.Background(), `UPDATE tenant.organizations SET deleted = now() WHERE id = $1`, orgID)
+	require.NoError(t, err)
+
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	_, err = client.CreateCluster(createCtx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+
+	var clusters int
+	err = env.adminPool.QueryRow(context.Background(), `SELECT count(*) FROM tenant.clusters WHERE organization_id = $1`, orgID).Scan(&clusters)
+	require.NoError(t, err)
+	assert.Zero(t, clusters, "no cluster is created in a deleted organization")
+}

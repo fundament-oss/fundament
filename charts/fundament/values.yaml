@@ -198,6 +198,13 @@ clusterWorker:
   gardenerInfrastructureConfig: {} # -> spec.provider.infrastructureConfig
   gardenerControlPlaneConfig: {}   # -> spec.provider.controlPlaneConfig
   gardenerShootAnnotations: {}     # extra shoot annotations, e.g. cluster.metal-stack.io/tenant: fundament
+  # Delete clusters without waiting for what runs inside them: the timeouts that let
+  # it clean up are removed. Pods are stopped without a grace period, and volumes and
+  # custom resources are removed immediately, so anything they manage outside the
+  # cluster (storage, load balancers, DNS records) can be left behind. Applies to
+  # every shoot cluster-worker deletes, including shoots it finds without a cluster.
+  # Use only where nothing outside a cluster depends on it.
+  gardenerImmediateClusterDeletion: false
 
 # Console Frontend
 consoleFrontend:

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Runs ON the Hetzner NixOS box (after bootstrap.sh). Brings up the full
 # fundament + Gardener stack and drives one shoot to "Create Succeeded".
-# Re-runnable: cluster-create reuses an existing k3d cluster, gardener-up is
+# Re-runnable: cluster-create reuses an existing k3d cluster, gardener-start is
 # idempotent. Override the test cluster name with CLUSTER=... (default "smoke").
 set -uo pipefail
 export PATH="$HOME/.nix-profile/bin:$PATH"
 export MISE_NODE_COMPILE=0  # prebuilt node (runs via nix-ld); never build V8 from source
 cd ~/fundament
 CLUSTER=${CLUSTER:-smoke}
-VKC=.dev/gardener/dev-setup/kubeconfigs/virtual-garden/kubeconfig
+# GARDENER_DIR's default from cluster-worker/mod.just, as just resolves it on Linux.
+VKC="${GARDENER_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/fundament/gardener}/dev-setup/kubeconfigs/virtual-garden/kubeconfig"
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 # No `set -e`: Stage A/B verify their real success and exit hard (a broken cluster or
@@ -30,11 +31,12 @@ mise exec -- kubectl --context k3d-fundament get clusterissuer mkcert-local >/de
 # cluster-create stops at a failed setup-certs, so the gateway may not be applied yet.
 mise exec -- just setup-gateway || log "setup-gateway returned nonzero (the UIs will be unreachable; non-fatal for the shoot path)"
 
-log "=== STAGE B: gardener-up (clones gardener, brings up seed; ~10-15 min) ==="
-mise exec -- just cluster-worker gardener-up || log "gardener-up returned nonzero"
+log "=== STAGE B: gardener-start (clones gardener, brings up seed; ~10-15 min) ==="
+mise exec -- just cluster-worker gardener-start || log "gardener-start returned nonzero"
+[ -f "$VKC" ] || { log "FATAL: no virtual-garden kubeconfig at $VKC — gardener-start failed"; exit 1; }
 seed=$(mise exec -- kubectl --kubeconfig "$VKC" get seed local --no-headers 2>/dev/null)
 log "seed: $seed"
-echo "$seed" | grep -qw Ready || { log "FATAL: Gardener seed is not Ready — gardener-up failed"; exit 1; }
+echo "$seed" | grep -qw Ready || { log "FATAL: Gardener seed is not Ready — gardener-start failed"; exit 1; }
 
 log "=== STAGE C: fundament deploy (skaffold) ==="
 mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local --profile local-gardener' \
