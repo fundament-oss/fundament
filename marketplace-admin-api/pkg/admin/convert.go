@@ -44,6 +44,19 @@ func statusFromDB(status dbconst.PluginDefinitionStatus) marketplacev1.Submissio
 	}
 }
 
+func labelFromDB(name dbconst.PluginLabelName) marketplacev1.PluginLabel {
+	switch name {
+	case dbconst.PluginLabelName_Core:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_CORE
+	case dbconst.PluginLabelName_Rijksoverheid:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID
+	case dbconst.PluginLabelName_Support9To17:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17
+	default:
+		panic("unhandled PluginLabelName: " + string(name))
+	}
+}
+
 func rejectionReasonToDB(reason adminv1.RejectionReason) string {
 	switch reason {
 	case adminv1.RejectionReason_REJECTION_REASON_INCOMPLETE_METADATA:

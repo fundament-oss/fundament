@@ -520,6 +520,43 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 	return i, err
 }
 
+const pluginLabelsListByPluginIDs = `-- name: PluginLabelsListByPluginIDs :many
+SELECT plugin_labels.plugin_id, plugin_labels.name
+FROM appstore.plugin_labels
+WHERE plugin_labels.plugin_id = ANY($1::uuid[])
+ORDER BY plugin_labels.plugin_id ASC, plugin_labels.name ASC
+`
+
+type PluginLabelsListByPluginIDsParams struct {
+	PluginIds []uuid.UUID
+}
+
+type PluginLabelsListByPluginIDsRow struct {
+	PluginID uuid.UUID
+	Name     dbconst.PluginLabelName
+}
+
+// No deleted filter: the role's RLS policy already hides revoked labels.
+func (q *Queries) PluginLabelsListByPluginIDs(ctx context.Context, arg PluginLabelsListByPluginIDsParams) ([]PluginLabelsListByPluginIDsRow, error) {
+	rows, err := q.db.Query(ctx, pluginLabelsListByPluginIDs, arg.PluginIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginLabelsListByPluginIDsRow
+	for rows.Next() {
+		var i PluginLabelsListByPluginIDsRow
+		if err := rows.Scan(&i.PluginID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pluginList = `-- name: PluginList :many
 
 SELECT

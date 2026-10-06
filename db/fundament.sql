@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.2
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1611,6 +1611,15 @@ CREATE POLICY plugin_allowed_organizations_all_registry ON appstore.plugin_allow
 	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
 -- ddl-end --
 
+-- object: plugin_labels_select_registry | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_labels_select_registry ON appstore.plugin_labels CASCADE;
+CREATE POLICY plugin_labels_select_registry ON appstore.plugin_labels
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_registry_api
+	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
 -- object: plugins_select_admin | type: POLICY --
 -- DROP POLICY IF EXISTS plugins_select_admin ON appstore.plugins CASCADE;
 CREATE POLICY plugins_select_admin ON appstore.plugins
@@ -1674,6 +1683,15 @@ CREATE POLICY categories_plugins_select_admin ON appstore.categories_plugins
 	FOR SELECT
 	TO fun_marketplace_admin_api
 	USING (true);
+-- ddl-end --
+
+-- object: plugin_labels_select_admin | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_labels_select_admin ON appstore.plugin_labels CASCADE;
+CREATE POLICY plugin_labels_select_admin ON appstore.plugin_labels
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_marketplace_admin_api
+	USING (deleted IS NULL);
 -- ddl-end --
 
 -- object: plugin_allowed_organizations_select_api | type: POLICY --
@@ -4908,6 +4926,14 @@ GRANT SELECT,INSERT,DELETE
 -- ddl-end --
 
 
+-- object: grant_r_cc070fdcf7 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_labels
+   TO fun_marketplace_registry_api;
+
+-- ddl-end --
+
+
 -- object: grant_ra_478b81c02e | type: PERMISSION --
 GRANT SELECT,INSERT
    ON TABLE appstore.tags
@@ -5047,6 +5073,14 @@ GRANT SELECT
 -- object: grant_r_297c355a5c | type: PERMISSION --
 GRANT SELECT
    ON TABLE appstore.categories_plugins
+   TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_cec9f7e17e | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugin_labels
    TO fun_marketplace_admin_api;
 
 -- ddl-end --

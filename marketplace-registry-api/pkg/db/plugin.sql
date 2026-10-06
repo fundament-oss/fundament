@@ -109,6 +109,13 @@ WHERE plugins_tags.plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND tags.deleted IS NULL
 ORDER BY plugins_tags.plugin_id ASC, tags.name ASC;
 
+-- name: PluginLabelsListByPluginIDs :many
+-- No deleted filter: the role's RLS policy already hides revoked labels.
+SELECT plugin_labels.plugin_id, plugin_labels.name
+FROM appstore.plugin_labels
+WHERE plugin_labels.plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
+ORDER BY plugin_labels.plugin_id ASC, plugin_labels.name ASC;
+
 -- name: TagInsertIfMissing :exec
 -- DO NOTHING rather than DO UPDATE: tags are a vocabulary shared across every
 -- publisher, and DO UPDATE would need UPDATE on the table, letting one publisher

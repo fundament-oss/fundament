@@ -1887,6 +1887,10 @@ END;]]> </definition>
 	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_allowed_organizations.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
+<policy name="plugin_labels_select_registry" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_registry_api"/>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_labels.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
 <policy name="plugins_select_admin" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
@@ -1915,6 +1919,10 @@ END;]]> </definition>
 
 <policy name="categories_plugins_select_admin" table="appstore.categories_plugins" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_labels_select_admin" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
+	<expression type="using-exp"> <![CDATA[deleted IS NULL]]> </expression>
 </policy>
 
 <policy name="plugin_allowed_organizations_select_api" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
@@ -5457,6 +5465,11 @@ END;]]> </definition>
 	<privileges select="true" insert="true" delete="true"/>
 </permission>
 <permission>
+	<object name="appstore.plugin_labels" type="table"/>
+	<roles names="fun_marketplace_registry_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
 	<object name="appstore.tags" type="table"/>
 	<roles names="fun_marketplace_registry_api"/>
 	<privileges select="true" insert="true"/>
@@ -5543,6 +5556,11 @@ END;]]> </definition>
 </permission>
 <permission>
 	<object name="appstore.categories_plugins" type="table"/>
+	<roles names="fun_marketplace_admin_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_labels" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
 </permission>

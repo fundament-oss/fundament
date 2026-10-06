@@ -176,6 +176,27 @@ func TestGetPluginReturnsDetails(t *testing.T) {
 	assert.NotEmpty(t, resp.GetPlugin().GetDescription())
 }
 
+func TestPluginsCarryUpdatedTimestamp(t *testing.T) {
+	env := newTestEnv(t)
+	server := newServer(t, env)
+	seedPlugin(t, env, seedOptions{Name: "updated-timestamp", Visibility: "public", Published: true})
+
+	list, err := server.ListPlugins(context.Background(), &catalogv1.ListPluginsRequest{})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.GetPlugins())
+
+	summary := list.GetPlugins()[0]
+	require.NotNil(t, summary.GetUpdated(), "PluginSummary must carry plugins.updated")
+
+	resp, err := server.GetPlugin(context.Background(),
+		catalogv1.GetPluginRequest_builder{PluginId: summary.GetId()}.Build())
+	require.NoError(t, err)
+
+	require.NotNil(t, resp.GetPlugin().GetUpdated(), "PluginDetails must carry plugins.updated")
+	assert.Equal(t, summary.GetUpdated().AsTime(), resp.GetPlugin().GetUpdated().AsTime(),
+		"list and detail read the same row, so they must agree on updated")
+}
+
 func TestGetPluginNotFoundForHiddenPlugin(t *testing.T) {
 	env := newTestEnv(t)
 	id := seedPlugin(t, env, seedOptions{Name: "get-restricted", Visibility: "restricted", Published: true})

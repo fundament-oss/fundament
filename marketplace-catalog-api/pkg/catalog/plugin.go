@@ -57,7 +57,7 @@ func (s *Server) ListPlugins(
 	for _, category := range categories {
 		categoriesByPlugin[category.PluginID] = append(categoriesByPlugin[category.PluginID], category.ID.String())
 	}
-	labelsByPlugin := map[uuid.UUID][]catalogv1.PluginLabel{}
+	labelsByPlugin := map[uuid.UUID][]marketplacev1.PluginLabel{}
 	for _, label := range labels {
 		labelsByPlugin[label.PluginID] = append(labelsByPlugin[label.PluginID], labelFromDB(label.Name))
 	}
@@ -77,6 +77,7 @@ func (s *Server) ListPlugins(
 			Labels:           labelsByPlugin[row.ID],
 			LatestVersionId:  uuidOrEmpty(row.LatestVersionID),
 			Published:        timestampOrNil(row.Published),
+			Updated:          timestamptzOrNil(row.Updated),
 		}.Build())
 	}
 
@@ -167,7 +168,7 @@ func (s *Server) GetPlugin(
 	for _, category := range categories {
 		categoryIDs = append(categoryIDs, category.ID.String())
 	}
-	pluginLabels := make([]catalogv1.PluginLabel, 0, len(labels))
+	pluginLabels := make([]marketplacev1.PluginLabel, 0, len(labels))
 	for _, label := range labels {
 		pluginLabels = append(pluginLabels, labelFromDB(label.Name))
 	}
@@ -211,6 +212,7 @@ func (s *Server) GetPlugin(
 			Permissions:        permissions,
 			Features:           featureBlocks,
 			DocumentationLinks: documentationLinks,
+			Updated:            timestamptzOrNil(row.Updated),
 		}.Build(),
 	}.Build(), nil
 }

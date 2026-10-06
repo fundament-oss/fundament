@@ -55,12 +55,15 @@ message PluginSummary {
   repeated string category_ids = 70;
   // Free-form labels with no independent identity, unlike categories.
   repeated string tags = 80;
-  repeated PluginLabel labels = 90;
+  repeated marketplace.v1.PluginLabel labels = 90;
   // The newest published version, resolved through ListPluginVersions. Points
   // at the version rather than repeating its version string.
   string latest_version_id = 100;
   // When the listing was first published; drives "recently added".
   google.protobuf.Timestamp published = 110;
+  // When the listing's metadata last changed (appstore.plugins.updated), not
+  // when a version was published.
+  google.protobuf.Timestamp updated = 120;
 }
 
 // Full listing as it appears on a detail page.
@@ -76,7 +79,7 @@ message PluginDetails {
   string image = 60;
   repeated string category_ids = 70;
   repeated string tags = 80;
-  repeated PluginLabel labels = 90;
+  repeated marketplace.v1.PluginLabel labels = 90;
   // See PluginSummary.latest_version_id.
   string latest_version_id = 100;
   // When the listing was first published; drives "recently added".
@@ -92,6 +95,8 @@ message PluginDetails {
   repeated marketplace.v1.PluginPermission permissions = 180;
   repeated marketplace.v1.FeatureBlock features = 190;
   repeated marketplace.v1.DocumentationLink documentation_links = 200;
+  // See PluginSummary.updated.
+  google.protobuf.Timestamp updated = 210;
 }
 
 // A published version of a listing. Carries the id that

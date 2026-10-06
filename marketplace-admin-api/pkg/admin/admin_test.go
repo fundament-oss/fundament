@@ -452,6 +452,55 @@ func TestDecidingAClosedRoundIsRefused(t *testing.T) {
 	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 }
 
+// seedLabel writes appstore.plugin_labels directly: labels are
+// Fundament-assigned trust badges, and no RPC creates one yet.
+func seedLabel(t *testing.T, env *testEnv, pluginID uuid.UUID, name string, revoked bool) {
+	t.Helper()
+
+	_, err := env.superPool.Exec(context.Background(), `
+		INSERT INTO appstore.plugin_labels (plugin_id, name, deleted)
+		VALUES ($1, $2, CASE WHEN $3::bool THEN now() ELSE NULL END)`,
+		pluginID, name, revoked)
+	require.NoError(t, err)
+}
+
+// A revoked badge stays invisible, and a badge must never bleed onto another
+// listing in the batch read.
+func TestPluginsCarryAssignedLabels(t *testing.T) {
+	env := newTestEnv(t)
+	labeled := seedPendingSubmission(t, env, "cert-manager")
+	plain := seedPendingSubmission(t, env, "postgres-operator")
+
+	seedLabel(t, env, labeled.pluginID, "core", false)
+	seedLabel(t, env, labeled.pluginID, "rijksoverheid", false)
+	seedLabel(t, env, labeled.pluginID, "support_9_to_17", true)
+
+	client := newReviewer(t, env)
+
+	resp, err := client.GetPlugin(context.Background(),
+		adminv1.GetPluginRequest_builder{PluginId: labeled.pluginID.String()}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, []marketplacev1.PluginLabel{
+		marketplacev1.PluginLabel_PLUGIN_LABEL_CORE,
+		marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID,
+	}, resp.GetPlugin().GetLabels())
+
+	list, err := client.ListPlugins(context.Background(), adminv1.ListPluginsRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	byID := map[string]*adminv1.Plugin{}
+	for _, plugin := range list.GetPlugins() {
+		byID[plugin.GetId()] = plugin
+	}
+	require.Contains(t, byID, labeled.pluginID.String())
+	require.Contains(t, byID, plain.pluginID.String())
+	assert.Equal(t, []marketplacev1.PluginLabel{
+		marketplacev1.PluginLabel_PLUGIN_LABEL_CORE,
+		marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID,
+	}, byID[labeled.pluginID.String()].GetLabels())
+	assert.Empty(t, byID[plain.pluginID.String()].GetLabels())
+}
+
 func TestListPluginsSpansOrganizations(t *testing.T) {
 	env := newTestEnv(t)
 	first := seedPendingSubmission(t, env, "cert-manager")

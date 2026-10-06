@@ -22,7 +22,8 @@ SELECT
     SELECT MIN(appstore.plugin_definitions.published)
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-  ) AS published
+  ) AS published,
+  appstore.plugins.updated
 FROM appstore.plugins
 WHERE
   (
@@ -99,7 +100,8 @@ SELECT
     SELECT MIN(appstore.plugin_definitions.published)
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-  ) AS published
+  ) AS published,
+  appstore.plugins.updated
 FROM appstore.plugins
 WHERE appstore.plugins.id = sqlc.arg('id')::uuid
   AND EXISTS (

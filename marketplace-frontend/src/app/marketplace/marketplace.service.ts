@@ -2,13 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CATALOG_CLIENT } from '../../connect/tokens';
 import toIsoDate from '../../connect/timestamp';
-import { PluginLabel as ProtoPluginLabel } from '../../generated/catalog/v1/common_pb';
 import {
   type PluginSummary,
   type PluginDetails,
   type PublishedVersion,
 } from '../../generated/catalog/v1/catalog_pb';
 import {
+  PluginLabel as ProtoPluginLabel,
   type Category as ProtoCategory,
   type DocumentationLink as ProtoDocumentationLink,
   type PluginPermission as ProtoPluginPermission,

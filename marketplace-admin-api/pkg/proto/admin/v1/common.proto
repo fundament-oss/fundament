@@ -68,6 +68,8 @@ message Plugin {
   repeated string tags = 90;
   google.protobuf.Timestamp created = 100;
   google.protobuf.Timestamp updated = 110;
+  // Trust and support badges, Fundament-assigned.
+  repeated marketplace.v1.PluginLabel labels = 120;
 }
 
 // The version under review. Carries the review payload — what the plugin will

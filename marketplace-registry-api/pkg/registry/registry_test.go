@@ -219,6 +219,61 @@ func TestListPluginsKeepsChildRowsWithTheirOwnListing(t *testing.T) {
 	assert.Empty(t, byName["cert-manager"].GetFeatures())
 }
 
+// seedLabel writes appstore.plugin_labels directly: labels are
+// Fundament-assigned trust badges, so no registry RPC can create one.
+func seedLabel(t *testing.T, env *testEnv, pluginID uuid.UUID, name string, revoked bool) {
+	t.Helper()
+
+	_, err := env.adminPool.Exec(context.Background(), `
+		INSERT INTO appstore.plugin_labels (plugin_id, name, deleted)
+		VALUES ($1, $2, CASE WHEN $3::bool THEN now() ELSE NULL END)`,
+		pluginID, name, revoked)
+	require.NoError(t, err)
+}
+
+func TestGetPluginReturnsAssignedLabels(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	pluginID := uuid.MustParse(plugin.GetId())
+	seedLabel(t, env, pluginID, "core", false)
+	seedLabel(t, env, pluginID, "rijksoverheid", false)
+	// A revoked badge is a soft delete and must stay invisible.
+	seedLabel(t, env, pluginID, "support_9_to_17", true)
+
+	resp, err := client.GetPlugin(context.Background(),
+		registryv1.GetPluginRequest_builder{PluginId: plugin.GetId()}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, []marketplacev1.PluginLabel{
+		marketplacev1.PluginLabel_PLUGIN_LABEL_CORE,
+		marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID,
+	}, resp.GetPlugin().GetLabels())
+}
+
+func TestListPluginsKeepsLabelsWithTheirOwnListing(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	labeled := createPlugin(t, client, "postgres-operator")
+	createPlugin(t, client, "cert-manager")
+	seedLabel(t, env, uuid.MustParse(labeled.GetId()), "core", false)
+
+	resp, err := client.ListPlugins(context.Background(), registryv1.ListPluginsRequest_builder{}.Build())
+	require.NoError(t, err)
+
+	byName := map[string]*registryv1.Plugin{}
+	for _, plugin := range resp.GetPlugins() {
+		byName[plugin.GetName()] = plugin
+	}
+	require.Len(t, byName, 2)
+
+	assert.Equal(t, []marketplacev1.PluginLabel{marketplacev1.PluginLabel_PLUGIN_LABEL_CORE},
+		byName["postgres-operator"].GetLabels())
+	assert.Empty(t, byName["cert-manager"].GetLabels())
+}
+
 // RLS scopes the role to the caller's organization, so another organization's
 // plugin resolves to nothing and is indistinguishable from one that never
 // existed.

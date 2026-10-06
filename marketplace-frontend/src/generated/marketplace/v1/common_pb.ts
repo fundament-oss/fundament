@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file marketplace/v1/common.proto.
  */
 export const file_marketplace_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBkJpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
+  fileDesc("ChttYXJrZXRwbGFjZS92MS9jb21tb24ucHJvdG8SDm1hcmtldHBsYWNlLnYxIiQKCENhdGVnb3J5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkiSwoGUHJlc2V0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEwoLZGVzY3JpcHRpb24YHiABKAkSEgoKcGx1Z2luX2lkcxgoIAMoCSI7CglQdWJsaXNoZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxkaXNwbGF5X25hbWUYHiABKAkiNAoQUGx1Z2luUGVybWlzc2lvbhIQCghyZXNvdXJjZRgKIAEoCRIOCgZhY2Nlc3MYFCABKAkiRAoMRmVhdHVyZUJsb2NrEg0KBXRpdGxlGAogASgJEgwKBGJvZHkYFCABKAkSFwoCaWQYHiABKAlCC7pICNgBAXIDsAEBIloKEURvY3VtZW50YXRpb25MaW5rEhcKAmlkGAogASgJQgu6SAjYAQFyA7ABARINCgV0aXRsZRgUIAEoCRIQCgh1cmxfbmFtZRgeIAEoCRILCgN1cmwYKCABKAkq+wEKEFN1Ym1pc3Npb25TdGF0dXMSIQodU1VCTUlTU0lPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdTVUJNSVNTSU9OX1NUQVRVU19EUkFGVBABEh0KGVNVQk1JU1NJT05fU1RBVFVTX1BFTkRJTkcQAhInCiNTVUJNSVNTSU9OX1NUQVRVU19DSEFOR0VTX1JFUVVFU1RFRBADEh4KGlNVQk1JU1NJT05fU1RBVFVTX0FQUFJPVkVEEAQSHgoaU1VCTUlTU0lPTl9TVEFUVVNfUkVKRUNURUQQBRIfChtTVUJNSVNTSU9OX1NUQVRVU19XSVRIRFJBV04QBiqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQA0JpWl1naXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L21hcmtldHBsYWNlLWFwaS9wa2cvcHJvdG8vZ2VuL21hcmtldHBsYWNlL3YxO21hcmtldHBsYWNldjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * appstore.categories. A curated vocabulary: a developer picks from it rather
@@ -263,4 +263,40 @@ export enum SubmissionStatus {
  */
 export const SubmissionStatusSchema: GenEnum<SubmissionStatus> = /*@__PURE__*/
   enumDesc(file_marketplace_v1_common, 0);
+
+/**
+ * Trust and support badges a listing carries (appstore.plugin_labels).
+ * Fundament assigns them, so every surface serves them read-only. A listing may
+ * hold several at once: CORE and RIJKSOVERHEID say where a plugin comes from,
+ * SUPPORT_9_TO_17 what support it ships with.
+ *
+ * @generated from enum marketplace.v1.PluginLabel
+ */
+export enum PluginLabel {
+  /**
+   * @generated from enum value: PLUGIN_LABEL_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PLUGIN_LABEL_CORE = 1;
+   */
+  CORE = 1,
+
+  /**
+   * @generated from enum value: PLUGIN_LABEL_RIJKSOVERHEID = 2;
+   */
+  RIJKSOVERHEID = 2,
+
+  /**
+   * @generated from enum value: PLUGIN_LABEL_SUPPORT_9_TO_17 = 3;
+   */
+  SUPPORT_9_TO_17 = 3,
+}
+
+/**
+ * Describes the enum marketplace.v1.PluginLabel.
+ */
+export const PluginLabelSchema: GenEnum<PluginLabel> = /*@__PURE__*/
+  enumDesc(file_marketplace_v1_common, 1);
 
