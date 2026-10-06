@@ -11,6 +11,7 @@ import {
   ElementRef,
   DestroyRef,
   type OnInit,
+  type AfterViewInit,
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -67,12 +68,13 @@ function isPluginMessage(data: unknown): data is PluginMessage {
       [src]="trustedSrc()"
       sandbox="allow-scripts allow-same-origin allow-forms"
       [style.height.px]="frameHeight()"
+      [style.minHeight.px]="frameMinHeight()"
       [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
       title="Plugin custom UI"
     ></iframe>
   `,
 })
-export default class PluginIframeComponent implements OnInit {
+export default class PluginIframeComponent implements OnInit, AfterViewInit {
   src = input.required<string>();
 
   pluginName = input.required<string>();
@@ -133,6 +135,14 @@ export default class PluginIframeComponent implements OnInit {
 
   frameHeight = signal(150);
 
+  // Floor under frameHeight: the viewport's remaining column, measured from
+  // the iframe's own top. Plugin views render page-sized instead of
+  // shrink-wrapped to their content, and overlays the plugin renders inside
+  // the iframe (an <nldd-sheet> is a <dialog> confined to the iframe's
+  // viewport) get usable height on short pages. Content taller than the
+  // floor still grows the frame through plugin:resize.
+  frameMinHeight = signal(150);
+
   status = signal<'loading' | 'ready' | 'error'>('loading');
 
   // Required: Angular blocks all iframe [src] bindings by default. The bypass is safe here
@@ -142,6 +152,22 @@ export default class PluginIframeComponent implements OnInit {
   );
 
   private lastSentTheme: 'light' | 'dark' | null = null;
+
+  ngAfterViewInit(): void {
+    this.updateMinHeight();
+    const onResize = () => this.updateMinHeight();
+    window.addEventListener('resize', onResize);
+    this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
+  }
+
+  private updateMinHeight(): void {
+    const iframe = this.iframeRef()?.nativeElement;
+    if (!iframe) return;
+    // Bottom gutter matches the page padding under the frame.
+    const bottomGutter = 24;
+    const floor = Math.floor(window.innerHeight - iframe.getBoundingClientRect().top - bottomGutter);
+    this.frameMinHeight.set(Math.max(150, floor));
+  }
 
   ngOnInit(): void {
     const readyTimeout = setTimeout(() => {
