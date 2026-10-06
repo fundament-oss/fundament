@@ -325,3 +325,11 @@ func getShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID) bool {
 	require.NoError(t, err)
 	return updating
 }
+
+// checkStatus runs one status tick and then the checks it queued.
+func checkStatus(t *testing.T, h *cluster.Handler) error {
+	t.Helper()
+	err := h.CheckStatus(t.Context())
+	h.DrainStatusQueue(t.Context())
+	return err //nolint:wrapcheck // passes CheckStatus's result through unchanged
+}

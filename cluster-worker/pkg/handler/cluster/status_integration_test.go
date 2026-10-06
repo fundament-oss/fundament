@@ -33,7 +33,7 @@ func TestCheckStatusTransitionCreatesEvent(t *testing.T) {
 	setShootStatus(t, db, clusterID, "progressing")
 
 	// Mock returns Ready for this cluster (instant mock — shoot is immediately ready).
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	// DB should have shoot_status = ready.
@@ -60,7 +60,7 @@ func TestCheckStatusDeletedConfirmedGone(t *testing.T) {
 	// No shoot exists in mock — GetShootStatus will return {StatusPending, MsgShootNotFound}.
 	setShootStatus(t, db, clusterID, "deleting")
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	// DB should have shoot_status = deleted.
@@ -90,7 +90,7 @@ func TestCheckStatusErrorTransition(t *testing.T) {
 	// Override mock to return error status.
 	mock.SetStatusOverride(clusterID, gardener.StatusError, "shoot reconciliation failed")
 
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)
@@ -118,7 +118,7 @@ func TestCheckStatusSkipsProjectLookup(t *testing.T) {
 	callsBefore := len(mock.EnsureProjectCalls)
 	mock.EnsureProjectError = errors.New("garden unavailable")
 
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	assert.Len(t, mock.EnsureProjectCalls, callsBefore)
@@ -141,7 +141,7 @@ func TestCheckStatusDeletedSkipsProjectLookup(t *testing.T) {
 	// Confirming a deletion must neither need nor (re)create the org's project.
 	mock.EnsureProjectError = errors.New("garden unavailable")
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	assert.Empty(t, mock.EnsureProjectCalls)
@@ -176,7 +176,7 @@ func TestCheckStatusRefreshesUnhealthyReady(t *testing.T) {
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	message, health := getShootState(t, db, clusterID)
@@ -217,7 +217,7 @@ func TestCheckStatusReadyPollLanes(t *testing.T) {
 				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
 			})
 
-			err := h.CheckStatus(t.Context())
+			err := checkStatus(t, h)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantPolled, mock.StatusCallsFor(clusterID) > 0)
@@ -242,7 +242,7 @@ func TestCheckStatusOrdersNonReadyFirst(t *testing.T) {
 	newID := readyCluster(t, db, "status-order-new")
 	setShootState(t, db, newID, "progressing", "Create: Waiting", "", time.Minute)
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, mock.StatusCallsFor(newID))
@@ -264,7 +264,7 @@ func TestCheckStatusRetriedErrorIsWarning(t *testing.T) {
 		Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)
@@ -290,7 +290,7 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 		Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)

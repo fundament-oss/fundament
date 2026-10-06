@@ -99,6 +99,7 @@ type App struct {
 	registry        *handler.Registry
 	outboxWorker    *outbox.Worker
 	statusWorker    *status.Worker
+	statusChecks    *clusterhandler.Handler // runs the queued status checks
 	reconcileWorker *reconcile.Worker
 	statusCache     statusCacheRunner // nil when the client has no status cache
 	healthServer    *http.Server
@@ -173,6 +174,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 		registry:        registry,
 		outboxWorker:    outboxWorker,
 		statusWorker:    statusWorker,
+		statusChecks:    ch,
 		reconcileWorker: reconcileWorker,
 		statusCache:     statusCache,
 		healthServer:    healthServer,
@@ -194,6 +196,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	g.Go(func() error { return a.outboxWorker.Run(ctx) })
 	g.Go(func() error { return a.statusWorker.Run(ctx) })
+	g.Go(func() error { return a.statusChecks.RunStatusWorkers(ctx) })
 	g.Go(func() error { return a.reconcileWorker.Run(ctx) })
 	if a.statusCache != nil {
 		// Status reads fall back to direct Gardener requests until it has synced.

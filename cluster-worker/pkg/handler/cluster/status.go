@@ -18,7 +18,8 @@ import (
 // Shoot is gone from Gardener.
 const msgShootConfirmedDeleted = "Shoot confirmed deleted"
 
-// CheckStatus polls Gardener for shoot status and updates the database.
+// CheckStatus queues a status check for every cluster that is due; the
+// status workers run them (see status_queue.go).
 func (h *Handler) CheckStatus(ctx context.Context) error {
 	var errs []error
 	if err := h.pollActiveClusters(ctx); err != nil {
@@ -33,7 +34,7 @@ func (h *Handler) CheckStatus(ctx context.Context) error {
 	return nil
 }
 
-// pollActiveClusters checks the active (non-deleted) clusters that are due.
+// pollActiveClusters queues the active (non-deleted) clusters that are due.
 func (h *Handler) pollActiveClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
 		ReadyInterval: pgtype.Interval{Microseconds: h.cfg.StatusReadyInterval.Microseconds(), Valid: true},
@@ -45,17 +46,12 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 	}
 
 	for i := range clusters {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // graceful shutdown
-		}
-		if err := h.CheckCluster(ctx, clusters[i].ID); err != nil {
-			h.logger.Error("failed to check shoot status", "cluster_id", clusters[i].ID, "error", err)
-		}
+		h.EnqueueStatusCheck(clusters[i].ID)
 	}
 	return nil
 }
 
-// pollDeletedClusters checks the soft-deleted clusters whose Shoot is not
+// pollDeletedClusters queues the soft-deleted clusters whose Shoot is not
 // confirmed gone yet.
 func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
@@ -67,12 +63,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 	}
 
 	for i := range clusters {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // graceful shutdown
-		}
-		if err := h.CheckCluster(ctx, clusters[i].ID); err != nil {
-			h.logger.Error("failed to check deleted shoot status", "cluster_id", clusters[i].ID, "error", err)
-		}
+		h.EnqueueStatusCheck(clusters[i].ID)
 	}
 	return nil
 }

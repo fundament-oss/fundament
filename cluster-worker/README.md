@@ -67,7 +67,11 @@ sequenceDiagram
   `pending`, `progressing` or in `error`, and for ready clusters whose health is not known
   to be healthy yet; every `CLUSTER_STATUS_READY_INTERVAL` (5m) for healthy ready
   clusters. Clusters still being created are ordered first, so ready clusters never delay
-  them. Deleted clusters are polled until their shoot is gone. See
+  them. Deleted clusters are polled until their shoot is gone. The loop only queues
+  the clusters that are due; `CLUSTER_STATUS_WORKERS` workers take them off the queue
+  and check one cluster at a time each. A cluster queued twice is checked once, never by
+  two workers at the same time, and a failed check is retried with backoff. Each check
+  writes the status, its events and the ready outbox row in one transaction. See
   [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
   deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
@@ -198,6 +202,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_BATCH_SIZE` | `50` | clusters polled per status tick |
 | `CLUSTER_STATUS_READY_INTERVAL` | `5m` | how often a healthy ready cluster is re-checked |
+| `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 

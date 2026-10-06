@@ -150,7 +150,7 @@ func TestSyncUpdateShowsReadyClusterAsUpdating(t *testing.T) {
 
 	// The instant mock finishes the reconcile right away.
 	setShootState(t, db, clusterID, "ready", gardener.MsgShootUpdatePending, "healthy", time.Minute)
-	require.NoError(t, h.CheckStatus(t.Context()))
+	require.NoError(t, checkStatus(t, h))
 
 	status = getClusterShootStatus(t, db, clusterID)
 	require.NotNil(t, status)
