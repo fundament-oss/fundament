@@ -92,4 +92,6 @@ memberships and API keys with it. It refuses while the organization still has
 clusters or publishes plugins; delete those first. A deleted cluster still
 counts until Gardener confirms its shoot is gone. Nothing is thrown away: the
 organization is marked deleted, disappears from `funops organization list`,
-and its name can be used again.
+and its name can be used again, unless it ever had a cluster: its Gardener
+project is named after the organization and is not removed yet, so
+`funops organization create` refuses that name.

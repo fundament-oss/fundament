@@ -126,6 +126,25 @@ func TestOrganizationDelete_WaitsForClusterTeardown(t *testing.T) {
 	require.NoError(t, (&OrganizationDeleteCmd{Name: "globex"}).Run(ctx))
 }
 
+func TestOrganizationCreate_RefusesNameOfDeletedOrganizationWithClusters(t *testing.T) {
+	ctx := newTestContext(t)
+
+	// Globex has no clusters. Give it one Gardener has finished tearing down:
+	// the Gardener project named after globex is still there.
+	_, err := ctx.DB.Pool.Exec(t.Context(), `
+		INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted, shoot_status)
+		VALUES ('019b4000-0000-7000-8000-000000000002', 'torn-down', 'local', '1.31', now(), 'deleted')`)
+	require.NoError(t, err)
+
+	require.NoError(t, (&OrganizationDeleteCmd{Name: "globex"}).Run(ctx))
+
+	err = (&OrganizationCreateCmd{Name: "globex"}).Run(ctx)
+	require.EqualError(t, err, "organization name 'globex' is still held by a deleted organization that had clusters; its Gardener project is not cleaned up yet")
+
+	_, all := organizationRows(t, ctx, "globex")
+	assert.Equal(t, 1, all, "no new organization is created")
+}
+
 func TestOrganizationDelete_RefusesOrganizationWithPlugins(t *testing.T) {
 	ctx := newTestContext(t)
 

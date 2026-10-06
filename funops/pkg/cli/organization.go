@@ -47,6 +47,11 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			return fmt.Errorf("organization '%s' already exists", c.Name)
 		}
+		// No row: a deleted organization that had clusters still holds the
+		// name, because its Gardener project is named after it.
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("organization name '%s' is still held by a deleted organization that had clusters; its Gardener project is not cleaned up yet", c.Name)
+		}
 		return fmt.Errorf("failed to create organization: %w", err)
 	}
 

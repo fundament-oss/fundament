@@ -36,7 +36,8 @@ membership: `user list` shows it in its own column, and neither
 `funops organization delete` soft-deletes the organization and revokes its
 memberships and API keys. It refuses while the organization still has clusters,
 including deleted ones whose shoot Gardener has not removed yet, or publishes
-plugins.
+plugins. The name of a deleted organization that ever had a cluster cannot be
+reused, because its Gardener project is named after it and is not removed yet.
 
 Against the local development instance, run it as `just funops <args>` from the
 repo root. For other installations, see the

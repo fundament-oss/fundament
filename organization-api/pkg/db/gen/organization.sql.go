@@ -45,6 +45,28 @@ func (q *Queries) OrganizationGetByID(ctx context.Context, arg OrganizationGetBy
 	return i, err
 }
 
+const organizationIsLive = `-- name: OrganizationIsLive :one
+SELECT EXISTS (
+    SELECT 1
+    FROM tenant.organizations
+    WHERE id = $1
+      AND deleted IS NULL
+)
+`
+
+type OrganizationIsLiveParams struct {
+	ID uuid.UUID
+}
+
+// Tells a failed ClusterCreate apart: the organization was soft-deleted by
+// funops after the request was authorised.
+func (q *Queries) OrganizationIsLive(ctx context.Context, arg OrganizationIsLiveParams) (bool, error) {
+	row := q.db.QueryRow(ctx, organizationIsLive, arg.ID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const organizationList = `-- name: OrganizationList :many
 SELECT id, name, alias, created
 FROM tenant.organizations

@@ -25,9 +25,9 @@ type OrganizationCountLiveClustersParams struct {
 
 // Projects and namespaces live under clusters, so a live cluster is what still
 // depends on the organization. A deleted cluster counts until Gardener confirms
-// its shoot is gone (shoot_status = 'deleted'), as in ClusterCreate: the
-// organization name is free again once it is deleted, and the Gardener project
-// is named after it.
+// its shoot is gone (shoot_status = 'deleted'), as in ClusterCreate, so the
+// organization is not deleted while the cluster-worker is still tearing down
+// one of its shoots.
 func (q *Queries) OrganizationCountLiveClusters(ctx context.Context, arg OrganizationCountLiveClustersParams) (int64, error) {
 	row := q.db.QueryRow(ctx, organizationCountLiveClusters, arg.OrganizationID)
 	var count int64
@@ -55,7 +55,14 @@ func (q *Queries) OrganizationCountLivePlugins(ctx context.Context, arg Organiza
 
 const organizationCreate = `-- name: OrganizationCreate :one
 INSERT INTO tenant.organizations (name, alias)
-VALUES ($1, $2)
+SELECT $1::text, $2::text
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tenant.organizations
+    INNER JOIN tenant.clusters ON tenant.clusters.organization_id = tenant.organizations.id
+    WHERE tenant.organizations.name = $1::text
+      AND tenant.organizations.deleted IS NOT NULL
+)
 RETURNING
   id,
   name,
@@ -75,6 +82,14 @@ type OrganizationCreateRow struct {
 	Created pgtype.Timestamptz
 }
 
+// Refuses (no row) a name still held by a deleted organization that ever had a
+// cluster: its Gardener project is named after the organization and nothing
+// removes it on delete, so a new organization with that name could not create
+// a cluster.
+// Not safe against a concurrent `organization delete` of the same name: the
+// NOT EXISTS sees the old organization still live, the insert then waits on
+// organizations_uq_name until the delete commits, and succeeds. Accepted,
+// since it takes two operators acting on one name at the same moment.
 func (q *Queries) OrganizationCreate(ctx context.Context, arg OrganizationCreateParams) (OrganizationCreateRow, error) {
 	row := q.db.QueryRow(ctx, organizationCreate, arg.Name, arg.Alias)
 	var i OrganizationCreateRow
@@ -98,8 +113,9 @@ type OrganizationDeleteParams struct {
 	ID uuid.UUID
 }
 
-// Soft-deletes the organization; the name is free for a new one afterwards
-// (organizations_uq_name includes deleted).
+// Soft-deletes the organization. organizations_uq_name includes deleted, so the
+// name is free for a new one afterwards, unless the organization ever had a
+// cluster (see OrganizationCreate).
 func (q *Queries) OrganizationDelete(ctx context.Context, arg OrganizationDeleteParams) (int64, error) {
 	result, err := q.db.Exec(ctx, organizationDelete, arg.ID)
 	if err != nil {
@@ -140,9 +156,11 @@ type OrganizationGetIDByNameForUpdateParams struct {
 
 // Locks the live organization for the rest of the transaction. A cluster
 // insert still in flight holds a key share lock on this row for its foreign
-// key, so this waits for it to commit and the counts below then see it. It
-// does not stop an insert that starts after the lock: that one waits and then
-// succeeds, because the soft-deleted row still satisfies the foreign key.
+// key, so this waits for it to commit and the counts below then see it. A
+// cluster insert that starts after the lock waits on it too, and then finds
+// the organization deleted (see ClusterCreate in organization-api). A plugin
+// insert is not stopped: it waits and then succeeds, because the soft-deleted
+// row still satisfies the foreign key.
 func (q *Queries) OrganizationGetIDByNameForUpdate(ctx context.Context, arg OrganizationGetIDByNameForUpdateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, organizationGetIDByNameForUpdate, arg.Name)
 	var id uuid.UUID
