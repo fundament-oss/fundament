@@ -21,7 +21,7 @@
             name: ctx.resource.name,
             namespace: ctx.resource.namespace,
           });
-          heading.textContent = `Certificate request · ${item.metadata?.name ?? ctx.resource.name}`;
+          heading.textContent = `Certificate Request · ${item.metadata?.name ?? ctx.resource.name}`;
           const meta = {
             Name: item.metadata?.name,
             Namespace: item.metadata?.namespace,

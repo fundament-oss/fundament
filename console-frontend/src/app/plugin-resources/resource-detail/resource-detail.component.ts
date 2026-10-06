@@ -22,7 +22,7 @@ import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
-import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
+import { toDateValue, toSimpleValue, fieldNameToLabel, kindToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -204,11 +204,12 @@ export default class ResourceDetailComponent implements OnInit {
     return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
   }
 
-  /** Names the list the back button returns to: the plural the plugin's own
-   *  schema uses, so the button says where it goes. */
+  /** Names the list the back button returns to, so the button says where it
+   *  goes. Built from the CRD's kind, not its plural: the plural is lowercase by
+   *  Kubernetes' rules, which capitalized gave "Dnsendpoints". */
   kindLabel = computed(() => {
-    const plural = this.crdDef()?.plural;
-    return plural ? plural[0].toUpperCase() + plural.slice(1) : this.kind() || 'list';
+    const kind = this.crdDef()?.kind;
+    return kind ? kindToLabel(kind) : this.kind() || 'list';
   });
 
   /** Where the title bar's back button leads: the project this resource belongs

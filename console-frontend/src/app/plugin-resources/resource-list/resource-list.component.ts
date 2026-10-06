@@ -27,6 +27,7 @@ import {
   getListColumns,
   crdRefToLabel,
   kindToLabel,
+  labelMidSentence,
 } from '../crd-schema.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -166,6 +167,11 @@ export default class ResourceListComponent implements OnInit {
     // kind, so it must not go through kindToLabel — that would pluralize the group.
     return item?.label ?? crdRefToLabel(resourceKind);
   });
+
+  /** The list's name as it reads inside a sentence ("No DNS endpoints found").
+   *  A plain toLowerCase() on the label flattened the acronym too: "no dns
+   *  endpoints found". */
+  kindLabelMidSentence = computed(() => labelMidSentence(this.kindLabel()));
 
   constructor() {
     effect(() => {

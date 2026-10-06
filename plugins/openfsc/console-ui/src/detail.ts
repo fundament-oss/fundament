@@ -33,7 +33,7 @@ if (ctx && !ctx.resource?.name) {
       name: ctx.resource!.name as string,
       namespace: ctx.resource!.namespace ?? undefined,
     });
-    heading.textContent = `FSC installation · ${item.metadata?.name ?? ctx.resource!.name}`;
+    heading.textContent = `FSC Installation · ${item.metadata?.name ?? ctx.resource!.name}`;
 
     const directory = item.spec?.directory ?? {};
     const spec = {

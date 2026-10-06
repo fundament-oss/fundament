@@ -27,6 +27,19 @@ function installation(
   };
 }
 
+/** What the apiserver returns for the menu's CRD, cut down to what is read. */
+const CRD = { spec: { names: { kind: 'Certificate' } } };
+
+function isCrdRead(url: unknown): boolean {
+  return String(url).includes('customresourcedefinitions');
+}
+
+/** Reads of the installation list, apart from the CRD reads the menu's labels
+ *  need: those are a one-off per CRD and not on the list's clock. */
+function listReads(): number {
+  return vi.mocked(fetch).mock.calls.filter((call) => !isCrdRead(call[0])).length;
+}
+
 // Guards the sidebar picking up a plugin that finishes installing after the
 // project was opened: the menu is built on opening, which is usually while a
 // plugin just installed is still deploying.
@@ -40,7 +53,11 @@ describe('PluginRegistryService', () => {
     items = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ items }), { status: 200 })),
+      vi.fn(async (url: RequestInfo | URL) =>
+        isCrdRead(url)
+          ? new Response(JSON.stringify(CRD), { status: 200 })
+          : new Response(JSON.stringify({ items }), { status: 200 }),
+      ),
     );
     getPluginDefinition = vi.fn(() =>
       of({
@@ -105,8 +122,37 @@ describe('PluginRegistryService', () => {
 
     await vi.advanceTimersByTimeAsync(20000);
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(listReads()).toBe(1);
     expect(getPluginDefinition).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a menu entry's CRD by the kind the CRD declares", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+
+    // "certificates.cert-manager.io" alone can only give "Certificates"; the
+    // kind is what a label like "DNS Endpoints" needs.
+    expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
+  });
+
+  it('leaves the kind unknown when the CRD cannot be read', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      isCrdRead(url)
+        ? new Response('', { status: 403 })
+        : new Response(JSON.stringify({ items }), { status: 200 }),
+    );
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+
+    // The menu still stands: the label falls back to the CRD reference.
+    expect(registry.allPlugins()).toHaveLength(1);
+    expect(registry.crdKind('certificates.cert-manager.io')).toBeUndefined();
   });
 
   it('backs off a list that keeps failing', async () => {
@@ -115,11 +161,11 @@ describe('PluginRegistryService', () => {
 
     await registry.loadPlugins('cl-1');
     await vi.advanceTimersByTimeAsync(5000);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(listReads()).toBe(2);
     await vi.advanceTimersByTimeAsync(9999);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(listReads()).toBe(2);
     await vi.advanceTimersByTimeAsync(1);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(listReads()).toBe(3);
   });
 
   it('retries a definition that keeps failing no slower than the idle pace', async () => {
@@ -130,9 +176,9 @@ describe('PluginRegistryService', () => {
     await registry.loadPlugins('cl-1');
     // 5s, 10s, 20s, then capped at 30s.
     await vi.advanceTimersByTimeAsync(5000 + 10000 + 20000 + 30000);
-    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(listReads()).toBe(5);
     await vi.advanceTimersByTimeAsync(30000);
-    expect(fetch).toHaveBeenCalledTimes(6);
+    expect(listReads()).toBe(6);
   });
 
   it('backs off a failing definition while another installation is still on its way', async () => {
@@ -146,7 +192,7 @@ describe('PluginRegistryService', () => {
     await registry.loadPlugins('cl-1');
     // The list is read every 5s; the definition only at 5s, then 15s.
     await vi.advanceTimersByTimeAsync(5000 + 10000);
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(listReads()).toBe(4);
     expect(getPluginDefinition).toHaveBeenCalledTimes(3);
   });
 
@@ -159,12 +205,12 @@ describe('PluginRegistryService', () => {
     expect(registry.allPlugins()).toEqual([]);
 
     await registry.loadPlugins('cl-1');
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(listReads()).toBe(2);
     expect(registry.allPlugins()).toHaveLength(1);
 
     // A read that went through is not repeated on the next ask.
     await registry.loadPlugins('cl-1');
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(listReads()).toBe(2);
   });
 
   it('starts over after a first load that threw', async () => {
@@ -190,7 +236,7 @@ describe('PluginRegistryService', () => {
     items = [installation('Running')];
     await vi.advanceTimersByTimeAsync(20000);
 
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(listReads()).toBe(1);
     expect(registry.allPlugins()).toEqual([]);
   });
 });

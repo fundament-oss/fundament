@@ -1,7 +1,7 @@
 import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginNavGroup } from './types';
-import { crdRefToLabel } from './crd-schema.utils';
+import { crdRefToLabel, kindToLabel } from './crd-schema.utils';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginNavService {
@@ -26,12 +26,22 @@ export default class PluginNavService {
         ? `${plugin.label} (${plugin.organizationName})`
         : plugin.label,
       items: (plugin.menu[section] ?? []).map((menuItem) => ({
-        // menuItem.crd is a CRD reference ("certificates.cert-manager.io"),
-        // not a kind — see crdRefToLabel.
-        label: menuItem.label ?? crdRefToLabel(menuItem.crd),
+        label: menuItem.label ?? this.labelFor(menuItem.crd),
         crdPlural: menuItem.crd,
         icon: menuItem.icon,
       })),
     }));
+  }
+
+  /**
+   * Names a menu entry's CRD. menuItem.crd is a CRD reference
+   * ("dnsendpoints.externaldns.k8s.io"), not a kind, and its plural is lowercase
+   * by Kubernetes' rules — derived from it alone the entry reads "Dnsendpoints".
+   * So the CRD's own kind is used once the registry has read it ("DNSEndpoint" →
+   * "DNS Endpoints"), and the reference is the stand-in until then.
+   */
+  private labelFor(crdRef: string): string {
+    const kind = this.registry.crdKind(crdRef);
+    return kind ? kindToLabel(kind) : crdRefToLabel(crdRef);
   }
 }
