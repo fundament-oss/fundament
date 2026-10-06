@@ -13,7 +13,7 @@ import (
 const (
 	// A failed status check is retried with exponential backoff from
 	// statusRetryBaseDelay up to statusRetryMaxDelay, at most
-	// statusMaxRetries times; after that the next poll picks the cluster up.
+	// statusMaxRetries times; after that the next sweep picks the cluster up.
 	statusRetryBaseDelay = time.Second
 	statusRetryMaxDelay  = 5 * time.Minute
 	statusMaxRetries     = 10
@@ -74,7 +74,7 @@ func (h *Handler) processNextStatusCheck(ctx context.Context) bool {
 		h.statusQueue.AddRateLimited(clusterID)
 		return true
 	}
-	h.logger.Error("status check failed, giving up until the next poll", "cluster_id", clusterID, "error", err)
+	h.logger.Error("status check failed, giving up until the next sweep", "cluster_id", clusterID, "error", err)
 	h.statusQueue.Forget(clusterID)
 	return true
 }

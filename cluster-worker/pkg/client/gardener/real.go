@@ -100,8 +100,9 @@ type RealClient struct {
 	// nil means status reads always go to Gardener directly.
 	statusCache       shootStatusCache
 	statusCacheSynced atomic.Bool
-	lastWatchFailure  atomic.Int64 // unix nanoseconds; 0 when the watch never failed
-	lastProbeSuccess  atomic.Int64 // unix nanoseconds; 0 until the garden answered a probe
+	statusCacheReady  chan struct{} // closed when the cache first synced; nil without a cache
+	lastWatchFailure  atomic.Int64  // unix nanoseconds; 0 when the watch never failed
+	lastProbeSuccess  atomic.Int64  // unix nanoseconds; 0 until the garden answered a probe
 	clock             func() time.Time
 
 	// onStatusChange, when set, receives the cluster ID of each Shoot whose
@@ -162,6 +163,7 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		return nil, err
 	}
 	r.statusCache = statusCache
+	r.statusCacheReady = make(chan struct{})
 
 	return r, nil
 }

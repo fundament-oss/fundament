@@ -35,15 +35,6 @@ type ShootStatusChecker interface {
 
 // Config holds handler-specific configuration.
 type Config struct {
-	StatusBatchSize int32 `env:"STATUS_BATCH_SIZE" envDefault:"50"`
-	// StatusReadyInterval is how often a healthy ready cluster is re-checked;
-	// non-ready and not-yet-healthy clusters are re-checked every 30 seconds.
-	// One batch of StatusBatchSize per status tick bounds how many healthy
-	// clusters can be kept current: about StatusBatchSize per tick times the
-	// ticks in one interval (50 × 10 = 500 at the defaults). With the real
-	// client's status cache a poll is one DB update, so raising
-	// StatusBatchSize is the cheap way to support larger fleets.
-	StatusReadyInterval time.Duration `env:"STATUS_READY_INTERVAL" envDefault:"5m"`
 	// StatusWorkers is how many status checks run at once. The queue never
 	// hands one cluster to two workers, so this only adds parallelism across
 	// clusters.

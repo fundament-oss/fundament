@@ -67,6 +67,11 @@ type MockClient struct {
 	SimulateAsyncNamespace bool                 // If true, first EnsureProject call returns empty namespace
 	projectCreatedAt       map[string]time.Time // Track when projects were created
 	NamespaceReadyDelay    time.Duration        // Time before namespace becomes ready (default: 2s)
+
+	// Status change notifications, standing in for the real client's watch.
+	NotifyInterval time.Duration // How often RunStatusNotifier re-evaluates the shoots (default: 1s)
+	onStatusChange func(clusterID uuid.UUID)
+	notified       map[uuid.UUID]ShootStatus // Last status reported per cluster
 }
 
 // mockShoot tracks a shoot's state and creation time for status progression.
@@ -105,6 +110,8 @@ func NewMock(logger *slog.Logger) *MockClient {
 		ValidateSpecs:          true,
 		SimulateAsyncNamespace: false, // Default: instant namespace (backwards compatible)
 		NamespaceReadyDelay:    2 * time.Second,
+		NotifyInterval:         time.Second,
+		notified:               make(map[uuid.UUID]ShootStatus),
 	}
 }
 
@@ -303,68 +310,20 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		return nil, m.GetStatusError
 	}
 
-	// Check for custom override (takes precedence)
-	if override, ok := m.StatusOverrides[cluster.ID]; ok {
-		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy, Retrying: override.Retrying}, nil
-	}
-
-	// Look up shoot by cluster ID (not shoot name)
 	shoot, shootName := m.findShootByClusterID(cluster.ID)
-	if shoot == nil {
-		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
-	}
-
 	now := m.clock()
-	var status *ShootStatus
-
-	// Handle deletion status progression
-	if shoot.DeletedAt != nil {
-		elapsed := now.Sub(*shoot.DeletedAt)
-		if elapsed >= m.DeleteDelay {
-			// Fully deleted - clean up and return deleted status
-			delete(m.shoots, shootName)
-			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
-		}
-		status = &ShootStatus{
-			Status:  StatusDeleting,
-			Message: fmt.Sprintf("Shoot is being deleted (%.0fs remaining)", (m.DeleteDelay - elapsed).Seconds()),
-		}
-	} else {
-		// Handle creation status progression
-		elapsed := now.Sub(shoot.CreatedAt)
-
-		switch {
-		case elapsed < m.ProgressingDelay:
-			status = &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}
-		case elapsed < m.ProgressingDelay+m.ReadyDelay:
-			progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
-			if m.ReadyDelay == 0 {
-				progress = 100
-			}
-			status = &ShootStatus{
-				Status:    StatusProgressing,
-				Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
-				Operation: OperationCreate,
-			}
-		case shoot.UpdatedAt != nil && now.Sub(*shoot.UpdatedAt) < m.ReadyDelay:
-			status = &ShootStatus{
-				Status:    StatusProgressing,
-				Message:   "Reconcile: Shoot is being updated",
-				Operation: OperationReconcile,
-				Healthy:   true,
-			}
-		default:
-			status = &ShootStatus{
-				Status:    StatusReady,
-				Message:   MsgShootReady,
-				Operation: OperationCreate,
-				Healthy:   true,
-			}
-		}
+	status := m.statusFor(cluster.ID, shoot, now)
+	if _, overridden := m.StatusOverrides[cluster.ID]; overridden || shoot == nil {
+		return status, nil
+	}
+	if shoot.DeletedAt != nil && now.Sub(*shoot.DeletedAt) >= m.DeleteDelay {
+		// Fully deleted - clean up and return deleted status
+		delete(m.shoots, shootName)
+		return status, nil
 	}
 
 	// Record status_change event if status changed
-	if shoot.LastStatus != status.Status {
+	if previous := shoot.LastStatus; previous != status.Status {
 		m.EventHistory = append(m.EventHistory, MockEvent{
 			Time:      now,
 			Type:      "status_change",
@@ -377,11 +336,124 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 		m.logger.Debug("MOCK: status changed",
 			"cluster_id", cluster.ID,
 			"shoot", shootName,
-			"old_status", shoot.LastStatus,
+			"old_status", previous,
 			"new_status", status.Status)
 	}
 
 	return status, nil
+}
+
+// statusFor computes a shoot's status at now without changing anything:
+// a per-cluster override first, then the time-based progression.
+// Must be called with m.mu held.
+func (m *MockClient) statusFor(clusterID uuid.UUID, shoot *mockShoot, now time.Time) *ShootStatus {
+	if override, ok := m.StatusOverrides[clusterID]; ok {
+		return &ShootStatus{Status: override.Status, Message: override.Message, Operation: override.Operation, Healthy: override.Healthy, Retrying: override.Retrying}
+	}
+	if shoot == nil {
+		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
+	}
+
+	// Handle deletion status progression
+	if shoot.DeletedAt != nil {
+		elapsed := now.Sub(*shoot.DeletedAt)
+		if elapsed >= m.DeleteDelay {
+			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
+		}
+		return &ShootStatus{
+			Status:  StatusDeleting,
+			Message: fmt.Sprintf("Shoot is being deleted (%.0fs remaining)", (m.DeleteDelay - elapsed).Seconds()),
+		}
+	}
+
+	// Handle creation status progression
+	elapsed := now.Sub(shoot.CreatedAt)
+	switch {
+	case elapsed < m.ProgressingDelay:
+		return &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}
+	case elapsed < m.ProgressingDelay+m.ReadyDelay:
+		progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
+		if m.ReadyDelay == 0 {
+			progress = 100
+		}
+		return &ShootStatus{
+			Status:    StatusProgressing,
+			Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+			Operation: OperationCreate,
+		}
+	case shoot.UpdatedAt != nil && now.Sub(*shoot.UpdatedAt) < m.ReadyDelay:
+		return &ShootStatus{
+			Status:    StatusProgressing,
+			Message:   "Reconcile: Shoot is being updated",
+			Operation: OperationReconcile,
+			Healthy:   true,
+		}
+	default:
+		return &ShootStatus{
+			Status:    StatusReady,
+			Message:   MsgShootReady,
+			Operation: OperationCreate,
+			Healthy:   true,
+		}
+	}
+}
+
+// SetStatusChangeHandler registers fn to receive the cluster ID of each mock
+// shoot whose status changes; RunStatusNotifier drives it, the way the real
+// client's watch does. fn must not block.
+func (m *MockClient) SetStatusChangeHandler(fn func(clusterID uuid.UUID)) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onStatusChange = fn
+}
+
+// RunStatusNotifier reports status changes every NotifyInterval until ctx is
+// done. A zero interval, as a test that zeroes every mock delay may set, runs
+// the notifier as often as possible instead of failing.
+func (m *MockClient) RunStatusNotifier(ctx context.Context) error {
+	ticker := time.NewTicker(max(m.NotifyInterval, time.Millisecond))
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			m.NotifyStatusChanges()
+		}
+	}
+}
+
+// NotifyStatusChanges reports every cluster whose mock status changed since
+// the previous call, including shoots that are gone.
+func (m *MockClient) NotifyStatusChanges() {
+	m.mu.Lock()
+	fn := m.onStatusChange
+	now := m.clock()
+	var changed []uuid.UUID
+	present := make(map[uuid.UUID]bool, len(m.shoots))
+	for _, shoot := range m.shoots {
+		clusterID := shoot.Info.ClusterID
+		present[clusterID] = true
+		status := *m.statusFor(clusterID, shoot, now)
+		if last, ok := m.notified[clusterID]; !ok || last != status {
+			m.notified[clusterID] = status
+			changed = append(changed, clusterID)
+		}
+	}
+	for clusterID := range m.notified {
+		if !present[clusterID] {
+			delete(m.notified, clusterID)
+			changed = append(changed, clusterID)
+		}
+	}
+	m.mu.Unlock()
+
+	if fn == nil {
+		return
+	}
+	for _, clusterID := range changed {
+		fn(clusterID)
+	}
 }
 
 // SetClock sets a custom clock function for testing time-based behavior.
@@ -412,6 +484,7 @@ func (m *MockClient) Reset() {
 	m.ListError = nil
 	m.GetStatusError = nil
 	m.StatusOverrides = make(map[uuid.UUID]StatusOverride)
+	m.notified = make(map[uuid.UUID]ShootStatus)
 }
 
 // SetApplyError configures the mock to return an error on ApplyShoot.

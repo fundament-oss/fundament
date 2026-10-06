@@ -46,8 +46,8 @@ sequenceDiagram
         Worker->>DB: row retrying (backoff) or failed, event sync_failed
     end
 
-    loop status loop, every 30s
-        Worker->>Gardener: shoot status (clusters due in their lane)
+    loop status: on every Shoot change, and a sweep every 30m
+        Worker->>Gardener: shoot status (from the watch cache)
         Worker->>DB: shoot_status, event on change
         opt became ready
             Worker->>DB: "ready" outbox row
@@ -62,17 +62,20 @@ sequenceDiagram
   run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
   whose precondition is not met yet (for example, the project namespace does not exist)
   is deferred instead of failed.
-- **Status loop.** Every `STATUS_INTERVAL` (30s) it checks one batch of
-  `CLUSTER_STATUS_BATCH_SIZE` clusters, in two lanes: every 30s for clusters that are new,
-  `pending`, `progressing` or in `error`, and for ready clusters whose health is not known
-  to be healthy yet; every `CLUSTER_STATUS_READY_INTERVAL` (5m) for healthy ready
-  clusters. Clusters still being created are ordered first, so ready clusters never delay
-  them. Deleted clusters are polled until their shoot is gone. The loop only queues
-  the clusters that are due; `CLUSTER_STATUS_WORKERS` workers take them off the queue
-  and check one cluster at a time each. A cluster queued twice is checked once, never by
-  two workers at the same time, and a failed check is retried with backoff. Each check
-  writes the status, its events and the ready outbox row in one transaction. See
-  [Ready clusters](#ready-clusters).
+- **Status.** A cluster's status is checked when its Shoot changes (see
+  [Status cache](#status-cache); in mock mode the mock reports its own changes once a
+  second), and by a sweep of every cluster at startup and every `STATUS_INTERVAL` (30m).
+  The sweep catches what produces no event: a Shoot deleted while cluster-worker was not
+  running, or a cluster that never got a Shoot. Deleted clusters are checked until their
+  shoot is gone. Both only queue cluster IDs; `CLUSTER_STATUS_WORKERS` workers take them
+  off the queue. A cluster queued twice is checked once, never by two workers at the same
+  time, and a failed check is retried with backoff. In real mode the startup sweep waits
+  for the status cache to sync (at most two minutes), so its checks read from the cache
+  instead of sending one request per cluster to the garden; the readiness endpoint turns
+  ready after that first sweep has queued its checks. A check writes only when the
+  status, message or health changes, and then writes the status, its events and the
+  ready outbox row in one transaction, so `shoot_status_updated` (the console's "Status
+  changed") is the time of the last change. See [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
   deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
   resources.
@@ -130,7 +133,7 @@ shoot fundament had seen is no longer in Gardener (the reconcile loop recreates 
 
 ### Ready clusters
 
-Ready clusters keep being polled, so a message recorded while conditions were still
+Ready clusters keep being checked, so a message recorded while conditions were still
 settling does not stick, and a cluster that breaks later shows it.
 
 - Gardener reconciles every shoot periodically (gardenlet `syncPeriod`, 1h by default).
@@ -148,9 +151,9 @@ settling does not stick, and a cluster that breaks later shows it.
   on purpose. When Gardener's reconcile finishes, `shoot_updating` is cleared and
   `status_ready` is recorded; the ready fan-out does not run again. Until the gardenlet
   picks up the change (`generation` ahead of `observedGeneration`), the last operation
-  still describes the previous reconcile, so the poll reports the pending message
+  still describes the previous reconcile, so the check reports the pending message
   instead.
-- `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change
+- `shoot_health` (`healthy` / `unhealthy`) is recorded for every ready cluster; a change
   writes `status_healthy` or `status_unhealthy`.
 - A last operation in state `Error` or `Aborted` is one Gardener will retry: it is
   recorded as `status_warning` (once per distinct message: an error Gardener retries
@@ -159,9 +162,8 @@ settling does not stick, and a cluster that breaks later shows it.
 
 ### Status cache
 
-In real mode the status loop reads Shoots from a watch-backed cache instead of asking
-Gardener per cluster, so a poll costs one database update and no Gardener request; raise
-`CLUSTER_STATUS_BATCH_SIZE` for large fleets. One watch on Shoots with the
+In real mode status checks read Shoots from a watch-backed cache instead of asking
+Gardener per cluster, so a check costs no Gardener request. One watch on Shoots with the
 `fundament.io/cluster-id` label (the garden identity needs `list` and `watch` on shoots)
 keeps them in memory with their spec and managed fields trimmed off, indexed by cluster
 ID. On start the cache loads all Shoots once, then applies changes as Gardener pushes
@@ -176,7 +178,7 @@ An outage therefore shows up as errors within about 30s instead of as silently s
 status. Writes (`ApplyShoot`, deletes, kubeconfigs) never use the cache.
 
 The same watch queues a status check whenever a Shoot's status changes, so a change
-reaches the database within about a second instead of at the next poll. Every Shoot is
+reaches the database within about a second instead of at the next sweep. Every Shoot is
 queued once when the cache loads and once when it is deleted. An update is only queued
 when the status fundament derives from it changes: Gardener also rewrites a Shoot after
 every reconcile task, when a condition message changes and on the cache's periodic
@@ -207,10 +209,8 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `OUTBOX_MAX_RETRIES` | `10` | |
 | `OUTBOX_BACKOFF_DELAY` | `5s` | reconnect delay after losing the database connection |
 | `OUTBOX_PRECONDITION_DELAY`, `OUTBOX_MAX_PRECONDITION_DEFERRALS` | `30s`, `100` | |
-| `STATUS_INTERVAL` | `30s` | |
+| `STATUS_INTERVAL` | `30m` | how often the status sweep checks every cluster; it also runs at startup, in real mode once the status cache has synced |
 | `RECONCILE_INTERVAL` | `5m` | |
-| `CLUSTER_STATUS_BATCH_SIZE` | `50` | clusters polled per status tick |
-| `CLUSTER_STATUS_READY_INTERVAL` | `5m` | how often a healthy ready cluster is re-checked |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |

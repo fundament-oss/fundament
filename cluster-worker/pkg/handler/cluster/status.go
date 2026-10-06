@@ -24,53 +24,21 @@ const msgShootConfirmedDeleted = "Shoot confirmed deleted"
 // repeating shortly.
 var ErrClusterNotSynced = errors.New("cluster not synced to Gardener yet")
 
-// CheckStatus queues a status check for every cluster that is due; the
-// status workers run them (see status_queue.go).
+// CheckStatus is the status sweep: it queues a status check for every cluster
+// that has reached Gardener and is not confirmed deleted. Watch events cover
+// changes to Shoots that exist; the sweep covers what produces no event, such
+// as a Shoot deleted while cluster-worker was not running, or a cluster that
+// never got a Shoot.
 func (h *Handler) CheckStatus(ctx context.Context) error {
-	var errs []error
-	if err := h.pollActiveClusters(ctx); err != nil {
-		errs = append(errs, err)
-	}
-	if err := h.pollDeletedClusters(ctx); err != nil {
-		errs = append(errs, err)
-	}
-	if err := errors.Join(errs...); err != nil {
-		return fmt.Errorf("check status: %w", err)
-	}
-	return nil
-}
-
-// pollActiveClusters queues the active (non-deleted) clusters that are due.
-func (h *Handler) pollActiveClusters(ctx context.Context) error {
-	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
-		ReadyInterval: pgtype.Interval{Microseconds: h.cfg.StatusReadyInterval.Microseconds(), Valid: true},
-		LimitCount:    h.cfg.StatusBatchSize,
-	})
+	ids, err := h.queries.ClusterListForStatusSweep(ctx)
 	if err != nil {
-		h.logger.Error("failed to list clusters for status check", "error", err)
-		return fmt.Errorf("list clusters for status check: %w", err)
+		h.logger.Error("failed to list clusters for the status sweep", "error", err)
+		return fmt.Errorf("list clusters for status sweep: %w", err)
 	}
-
-	for i := range clusters {
-		h.EnqueueStatusCheck(clusters[i].ID)
+	for _, id := range ids {
+		h.EnqueueStatusCheck(id)
 	}
-	return nil
-}
-
-// pollDeletedClusters queues the soft-deleted clusters whose Shoot is not
-// confirmed gone yet.
-func (h *Handler) pollDeletedClusters(ctx context.Context) error {
-	clusters, err := h.queries.ClusterListDeletedNeedingVerification(ctx, db.ClusterListDeletedNeedingVerificationParams{
-		LimitCount: h.cfg.StatusBatchSize,
-	})
-	if err != nil {
-		h.logger.Error("failed to list deleted clusters for verification", "error", err)
-		return fmt.Errorf("list deleted clusters for verification: %w", err)
-	}
-
-	for i := range clusters {
-		h.EnqueueStatusCheck(clusters[i].ID)
-	}
+	h.logger.Debug("status sweep queued clusters", "count", len(ids))
 	return nil
 }
 
@@ -126,6 +94,11 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		stored.LastWarning = lastWarning.String
 	}
 	update := nextShootStatus(stored, shootStatus)
+	if update.unchanged(stored) {
+		// Gardener writes a Shoot after every reconcile task; most of those
+		// leave what fundament records as it is.
+		return nil
+	}
 
 	written, err := h.writeShootStatus(ctx, cluster, &update)
 	if err != nil {
@@ -173,7 +146,11 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 	}
 
 	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
-		if _, err := h.writeShootStatus(ctx, cluster, &shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message}); err != nil {
+		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message}
+		if deleting.unchanged(storedShootState{Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String}) {
+			return nil
+		}
+		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {
 			return err
 		}
 		h.logger.Debug("shoot still being deleted", "cluster_id", cluster.ID, "status", shootStatus.Status)

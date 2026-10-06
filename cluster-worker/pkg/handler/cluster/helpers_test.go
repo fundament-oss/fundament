@@ -77,9 +77,8 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 	t.Helper()
 
 	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
-		StatusBatchSize:     50,
-		StatusReadyInterval: 5 * time.Minute,
-		MaxRetries:          10,
+		StatusWorkers: 2,
+		MaxRetries:    10,
 	})
 }
 
@@ -332,4 +331,17 @@ func checkStatus(t *testing.T, h *cluster.Handler) error {
 	err := h.CheckStatus(t.Context())
 	h.DrainStatusQueue(t.Context())
 	return err //nolint:wrapcheck // passes CheckStatus's result through unchanged
+}
+
+// getShootStatusUpdated returns the cluster's shoot_status_updated.
+func getShootStatusUpdated(t *testing.T, db *testDB, clusterID uuid.UUID) time.Time {
+	t.Helper()
+
+	var updated time.Time
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT shoot_status_updated FROM tenant.clusters WHERE id = $1`,
+		clusterID,
+	).Scan(&updated)
+	require.NoError(t, err)
+	return updated
 }

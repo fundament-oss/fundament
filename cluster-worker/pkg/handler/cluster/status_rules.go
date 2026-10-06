@@ -7,7 +7,7 @@ import (
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
-// storedShootState is what the database holds for a cluster before a poll.
+// storedShootState is what the database holds for a cluster before a status check.
 type storedShootState struct {
 	Status  gardener.ShootStatusType   // empty when never checked
 	Message string                     // empty when never checked
@@ -20,13 +20,13 @@ type storedShootState struct {
 	LastWarning string
 }
 
-// statusEvent is one activity-log entry a poll records.
+// statusEvent is one activity-log entry a status check records.
 type statusEvent struct {
 	Type    dbconst.ClusterEventEventType
 	Message string
 }
 
-// shootStatusUpdate is what a poll writes back for one cluster.
+// shootStatusUpdate is what a status check writes back for one cluster.
 type shootStatusUpdate struct {
 	Status  gardener.ShootStatusType
 	Message string
@@ -39,7 +39,14 @@ type shootStatusUpdate struct {
 	InsertReady bool
 }
 
-// nextShootStatus decides what a status poll writes, given the stored row and
+// unchanged reports whether writing the update would change nothing: same
+// status, message and health as stored, and nothing to record.
+func (u *shootStatusUpdate) unchanged(stored storedShootState) bool {
+	return u.Status == stored.Status && u.Message == stored.Message && u.Health == stored.Health &&
+		len(u.Events) == 0 && !u.InsertReady
+}
+
+// nextShootStatus decides what a status check writes, given the stored row and
 // what Gardener reports. It is pure so every rule can be tested without a
 // database.
 func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
@@ -166,7 +173,7 @@ func healthEvent(health dbconst.ClusterShootHealth, message string) statusEvent 
 	return statusEvent{Type: dbconst.ClusterEventEventType_StatusHealthy, Message: message}
 }
 
-// shootWasSeen reports whether a stored status can only come from a poll that
+// shootWasSeen reports whether a stored status can only come from a check that
 // found the Shoot in Gardener.
 func shootWasSeen(status gardener.ShootStatusType) bool {
 	switch status {
@@ -200,7 +207,7 @@ func statusTransitionEvent(status gardener.ShootStatusType) dbconst.ClusterEvent
 		// No event for these transient states
 		return ""
 	case gardener.StatusDeleted:
-		// Handled in pollDeletedClusters
+		// Handled in checkDeletedCluster
 		return ""
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", status))

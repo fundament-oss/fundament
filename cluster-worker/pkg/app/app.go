@@ -92,12 +92,24 @@ type ReadyChecker interface {
 // from a watch-backed cache (the real client); the mock has none.
 type statusCacheRunner interface {
 	RunStatusCache(ctx context.Context) error
+	WaitForStatusCache(ctx context.Context, timeout time.Duration) bool
 }
+
+// statusCacheStartupWait bounds how long the startup status sweep waits for
+// the status cache to sync. Until it has, every check reads from the garden
+// directly, which for a large fleet is one request per cluster.
+const statusCacheStartupWait = 2 * time.Minute
 
 // statusChangeNotifier is implemented by Gardener clients that can report
 // Shoot status changes as they happen.
 type statusChangeNotifier interface {
 	SetStatusChangeHandler(fn func(clusterID uuid.UUID))
+}
+
+// statusNotifierRunner is the mock client's stand-in for the watch: it
+// re-evaluates its shoots on a timer and reports changes.
+type statusNotifierRunner interface {
+	RunStatusNotifier(ctx context.Context) error
 }
 
 // App holds the wired-up application components.
@@ -108,7 +120,8 @@ type App struct {
 	statusWorker    *status.Worker
 	statusChecks    *clusterhandler.Handler // runs the queued status checks
 	reconcileWorker *reconcile.Worker
-	statusCache     statusCacheRunner // nil when the client has no status cache
+	statusCache     statusCacheRunner    // nil when the client has no status cache
+	statusNotifier  statusNotifierRunner // nil when the client reports changes through a watch
 	healthServer    *http.Server
 	logger          *slog.Logger
 	cfg             *Config
@@ -125,8 +138,8 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 
 	// Cluster handler (sync, status, reconcile)
 	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, cfg.Cluster)
-	// In real mode the status cache's watch reports Shoot status changes;
-	// they queue a status check right away instead of waiting for a poll.
+	// Shoot status changes (the status cache's watch in real mode, a timer in
+	// mock mode) queue a status check right away; the sweep is the backstop.
 	if notifier, ok := gardenerClient.(statusChangeNotifier); ok {
 		notifier.SetStatusChangeHandler(ch.EnqueueStatusCheck)
 	}
@@ -180,6 +193,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	healthServer := startHealthServer(cfg.HealthPort, logger, outboxWorker, statusWorker, reconcileWorker)
 
 	statusCache, _ := gardenerClient.(statusCacheRunner)
+	statusNotifier, _ := gardenerClient.(statusNotifierRunner)
 
 	return &App{
 		pool:            pool,
@@ -189,6 +203,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 		statusChecks:    ch,
 		reconcileWorker: reconcileWorker,
 		statusCache:     statusCache,
+		statusNotifier:  statusNotifier,
 		healthServer:    healthServer,
 		logger:          logger,
 		cfg:             cfg,
@@ -207,12 +222,22 @@ func (a *App) Run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error { return a.outboxWorker.Run(ctx) })
-	g.Go(func() error { return a.statusWorker.Run(ctx) })
+	g.Go(func() error {
+		if a.statusCache != nil {
+			// The sweep checks every cluster; from the cache that costs no
+			// garden request. The cache load itself queues every Shoot it holds.
+			a.statusCache.WaitForStatusCache(ctx, statusCacheStartupWait)
+		}
+		return a.statusWorker.Run(ctx)
+	})
 	g.Go(func() error { return a.statusChecks.RunStatusWorkers(ctx) })
 	g.Go(func() error { return a.reconcileWorker.Run(ctx) })
 	if a.statusCache != nil {
 		// Status reads fall back to direct Gardener requests until it has synced.
 		g.Go(func() error { return a.statusCache.RunStatusCache(ctx) })
+	}
+	if a.statusNotifier != nil {
+		g.Go(func() error { return a.statusNotifier.RunStatusNotifier(ctx) })
 	}
 
 	err := g.Wait()

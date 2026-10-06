@@ -98,106 +98,25 @@ SELECT EXISTS (
       AND tenant.cluster_outbox.status = 'completed'
 )::boolean AS has_been_synced;
 
--- name: ClusterListNeedingStatusCheck :many
--- Get clusters where we need to check Gardener status (active clusters).
--- Two speeds: clusters in non-terminal states (NULL, pending, progressing,
--- error) and ready clusters that are not known to be healthy are polled every
--- 30 seconds; healthy ready clusters every @ready_interval. Ready clusters are
--- polled at all so their message and health stay current after the first
--- ready reading. Clusters still being created are ordered first so a large
--- ready fleet cannot crowd them out of the batch.
+-- name: ClusterListForStatusSweep :many
+-- IDs of every cluster the status sweep checks: it has reached Gardener (a
+-- status was recorded or an outbox row completed) and, if soft-deleted, its
+-- Shoot is not confirmed gone yet.
 SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.region,
-    tenant.clusters.kubernetes_version,
-    tenant.clusters.deleted,
-    tenant.clusters.shoot_status,
-    tenant.clusters.shoot_status_message,
-    tenant.clusters.shoot_health,
-    tenant.clusters.shoot_updating,
-    tenant.clusters.organization_id,
-    tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name,
-    catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
+    tenant.clusters.id
 FROM
     tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
-    ( -- Cluster has been synced: has shoot_status or a completed outbox row
+    (
         tenant.clusters.shoot_status IS NOT NULL
         OR tenant.clusters.outbox_status = 'completed'
     )
-    AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
-        (
-            (
-                tenant.clusters.shoot_status IS NULL -- Never checked
-                OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
-                OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
-                OR tenant.clusters.shoot_status = 'error' -- Failed, might recover
-                OR (
-                    tenant.clusters.shoot_status = 'ready'
-                    AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
-                ) -- Ready but conditions still settling (or health not recorded yet)
-                OR tenant.clusters.shoot_updating -- An update fundament pushed rolls out
-            )
-            AND (
-                tenant.clusters.shoot_status_updated IS NULL -- Never checked
-                OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-            ) -- Not checked recently
-        )
-        OR (
-            tenant.clusters.shoot_status = 'ready'
-            AND tenant.clusters.shoot_health = 'healthy'
-            AND tenant.clusters.shoot_status_updated < now() - @ready_interval::interval
-        ) -- Healthy: slower refresh
+        tenant.clusters.deleted IS NULL
+        OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted'
     )
 ORDER BY
-    tenant.clusters.shoot_status IS NOT DISTINCT FROM 'ready', -- NULL status sorts with the non-ready ones
-    tenant.clusters.shoot_status_updated NULLS FIRST
-LIMIT
-    @limit_count;
-
--- name: ClusterListDeletedNeedingVerification :many
--- Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
--- Polls until shoot_status = 'deleted' (confirmed removed).
-SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.region,
-    tenant.clusters.kubernetes_version,
-    tenant.clusters.deleted,
-    tenant.clusters.shoot_status,
-    tenant.clusters.organization_id,
-    tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name,
-    catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
-WHERE
-    ( -- Delete has been synced: has shoot_status or a completed outbox row
-        tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
-    )
-    AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
-    AND (
-        tenant.clusters.shoot_status IS NULL
-        OR tenant.clusters.shoot_status != 'deleted'
-    ) -- Not yet confirmed deleted
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-    )
-ORDER BY
-    shoot_status_updated NULLS FIRST
-LIMIT
-    @limit_count;
+    tenant.clusters.id;
 
 -- name: ClusterGetForStatusCheck :one
 -- Load one cluster for a status check, active or soft-deleted. synced says

@@ -134,6 +134,7 @@ func TestRunStatusCacheIndexesStartsAndSyncs(t *testing.T) {
 	r := newCachedStatusTestClient(t, shoot, shoot)
 	indexed := false
 	r.statusCache = fakeStatusCache{Client: r.statusCache.(fakeStatusCache).Client, indexed: &indexed}
+	r.statusCacheReady = make(chan struct{})
 
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
@@ -142,9 +143,31 @@ func TestRunStatusCacheIndexesStartsAndSyncs(t *testing.T) {
 	// Usable needs both the first sync and the first successful garden probe.
 	require.Eventually(t, r.statusCacheUsable, time.Second, 10*time.Millisecond)
 	assert.True(t, indexed)
+	assert.True(t, r.WaitForStatusCache(ctx, time.Second), "the sync is reported to waiters")
 
 	cancel()
 	require.NoError(t, <-done)
+}
+
+// Waiting for the cache gives up after the timeout or when the context ends,
+// and does not wait at all for a client without a cache.
+func TestWaitForStatusCache(t *testing.T) {
+	t.Parallel()
+
+	shoot := statusTestShoot(uuid.New(), nil)
+	r := newCachedStatusTestClient(t, shoot, shoot)
+	r.statusCacheReady = make(chan struct{})
+
+	assert.False(t, r.WaitForStatusCache(t.Context(), 20*time.Millisecond), "not synced within the timeout")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.False(t, r.WaitForStatusCache(ctx, time.Minute), "the context ended first")
+
+	close(r.statusCacheReady)
+	assert.True(t, r.WaitForStatusCache(t.Context(), 0), "synced")
+
+	assert.True(t, (&RealClient{}).WaitForStatusCache(t.Context(), 0), "no cache, nothing to wait for")
 }
 
 func TestProbeGardenOnce(t *testing.T) {

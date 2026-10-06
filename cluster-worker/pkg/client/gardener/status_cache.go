@@ -144,6 +144,9 @@ func (r *RealClient) RunStatusCache(ctx context.Context) error {
 	go func() {
 		if r.statusCache.WaitForCacheSync(ctx) {
 			r.statusCacheSynced.Store(true)
+			if r.statusCacheReady != nil {
+				close(r.statusCacheReady)
+			}
 			r.logger.Info("shoot status cache synced")
 		}
 	}()
@@ -153,6 +156,32 @@ func (r *RealClient) RunStatusCache(ctx context.Context) error {
 		return fmt.Errorf("run shoot status cache: %w", err)
 	}
 	return nil
+}
+
+// WaitForStatusCache waits until the status cache has synced, so a caller
+// about to check every cluster reads them from the cache instead of sending
+// one request per cluster to the garden. It returns false when ctx ends or
+// timeout passes first; status reads then go to the garden directly, as they
+// do whenever the cache is not usable.
+func (r *RealClient) WaitForStatusCache(ctx context.Context, timeout time.Duration) bool {
+	if r.statusCache == nil || r.statusCacheReady == nil {
+		return true
+	}
+	// A cache that has synced never makes a caller wait, whatever the timeout.
+	select {
+	case <-r.statusCacheReady:
+		return true
+	default:
+	}
+	select {
+	case <-r.statusCacheReady:
+		return true
+	case <-ctx.Done():
+		return false
+	case <-time.After(timeout):
+		r.logger.Warn("shoot status cache not synced yet, status reads go to the garden directly", "waited", timeout)
+		return false
+	}
 }
 
 // retryUntilGardenAnswers runs step until it succeeds; registering with the

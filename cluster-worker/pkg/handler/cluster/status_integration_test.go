@@ -187,66 +187,55 @@ func TestCheckStatusRefreshesUnhealthyReady(t *testing.T) {
 	assert.Equal(t, readyRowsBefore, countReadyOutboxRows(t, db, clusterID))
 }
 
-func TestCheckStatusReadyPollLanes(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		health     string
-		age        time.Duration
-		wantPolled bool
-	}{
-		{name: "healthy, checked recently", health: "healthy", age: time.Minute, wantPolled: false},
-		{name: "healthy, past the ready interval", health: "healthy", age: 6 * time.Minute, wantPolled: true},
-		{name: "unhealthy, past 30 seconds", health: "unhealthy", age: time.Minute, wantPolled: true},
-		{name: "unhealthy, checked just now", health: "unhealthy", age: 10 * time.Second, wantPolled: false},
-		{name: "health unknown, past 30 seconds", health: "", age: time.Minute, wantPolled: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			db := createTestDB(t)
-			mock := newMock(t)
-			h := newTestHandler(t, db, mock)
-
-			clusterID := readyCluster(t, db, "status-lanes")
-			setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, tt.health, tt.age)
-			mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
-				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
-			})
-
-			err := checkStatus(t, h)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.wantPolled, mock.StatusCallsFor(clusterID) > 0)
-		})
-	}
-}
-
-func TestCheckStatusOrdersNonReadyFirst(t *testing.T) {
+// The sweep checks every cluster that has reached Gardener, whatever its
+// status and however recently it was checked, plus soft-deleted clusters
+// whose Shoot is not confirmed gone.
+func TestCheckStatusSweepsEveryCluster(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
-	h := newTestHandlerWithConfig(t, db, mock, cluster.Config{
-		StatusBatchSize:     1,
-		StatusReadyInterval: 5 * time.Minute,
-		MaxRetries:          10,
+	h := newTestHandler(t, db, mock)
+
+	healthy := readyCluster(t, db, "sweep-healthy")
+	setShootState(t, db, healthy, "ready", gardener.MsgShootReady, "healthy", time.Second)
+	creating := readyCluster(t, db, "sweep-creating")
+	setShootState(t, db, creating, "progressing", "Create: Waiting", "", time.Second)
+	unsynced := insertCluster(t, db, acmeCorpOrgID, "sweep-unsynced")
+	deleting := insertDeletedCluster(t, db, acmeCorpOrgID, "sweep-deleting")
+	setShootState(t, db, deleting, "deleting", "Shoot is being deleted", "", time.Second)
+	gone := insertDeletedCluster(t, db, acmeCorpOrgID, "sweep-gone")
+	setShootState(t, db, gone, "deleted", "Shoot confirmed deleted", "", time.Second)
+
+	require.NoError(t, checkStatus(t, h))
+
+	assert.Equal(t, 1, mock.StatusCallsFor(healthy))
+	assert.Equal(t, 1, mock.StatusCallsFor(creating))
+	assert.Equal(t, 1, mock.StatusCallsFor(deleting))
+	assert.Equal(t, 0, mock.StatusCallsFor(unsynced), "no Shoot yet")
+	assert.Equal(t, 0, mock.StatusCallsFor(gone), "confirmed deleted")
+}
+
+// A check that would record nothing new writes nothing, so a routine
+// reconcile's many Shoot updates cost reads only.
+func TestCheckClusterUnchangedWritesNothing(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-unchanged")
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", time.Hour)
+	before := getShootStatusUpdated(t, db, clusterID)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
-	// The ready cluster is far older, so plain staleness order would pick it.
-	readyID := readyCluster(t, db, "status-order-ready")
-	setShootState(t, db, readyID, "ready", gardener.MsgShootReady, "healthy", time.Hour)
-	newID := readyCluster(t, db, "status-order-new")
-	setShootState(t, db, newID, "progressing", "Create: Waiting", "", time.Minute)
+	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
 
-	err := checkStatus(t, h)
-	require.NoError(t, err)
-
-	assert.Equal(t, 1, mock.StatusCallsFor(newID))
-	assert.Equal(t, 0, mock.StatusCallsFor(readyID))
+	assert.Equal(t, 1, mock.StatusCallsFor(clusterID))
+	assert.Equal(t, before, getShootStatusUpdated(t, db, clusterID))
 }
 
 // An error Gardener will retry (state Error or Aborted) is recorded as a
@@ -301,7 +290,7 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 	assert.Equal(t, "healthy", health)
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_progressing"))
 	assert.Equal(t, readyRowsBefore, countReadyOutboxRows(t, db, clusterID))
-	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the row was polled and its timestamp moved")
+	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the cluster was checked")
 }
 
 // A status check for a cluster row that does not exist does nothing.
