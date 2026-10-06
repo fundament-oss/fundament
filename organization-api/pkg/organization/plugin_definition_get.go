@@ -55,6 +55,7 @@ func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv
 		for _, e := range entries {
 			out = append(out, organizationv1.PluginMenuEntry_builder{
 				Crd: e.CRD, List: e.List, Detail: e.Detail, Icon: e.Icon, Label: e.Label,
+				SingularLabel: e.SingularLabel,
 			}.Build())
 		}
 		return out

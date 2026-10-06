@@ -128,6 +128,18 @@ Pods for `--wait`). Everything a chart might additionally create -- Deployments,
 Services, ServiceAccounts, ConfigMaps, CRDs, RBAC -- is there as commented-out
 rules: uncomment what your chart needs.
 
+Without labels, the console names a `menu` entry after its CRD: the sidebar
+uses the resource name, the list page and its "New …" button the kind. Set
+`label` (plural, for the sidebar and page title) and `singularLabel` (for the
+button) to choose the words yourself, for example when the CRD's name means
+something else to your users:
+
+```yaml
+      - crd: clusters.postgresql.cnpg.io
+        label: Databases
+        singularLabel: Database
+```
+
 `customComponents` maps a CRD kind to the HTML files your plugin ships under
 `console/`. It is optional: any menu entry without a custom component renders the
 console's generated read-only list and detail views from the CRD schema, so add

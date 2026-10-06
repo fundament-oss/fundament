@@ -80,6 +80,7 @@ spec:
         # A CNPG Cluster is one database server; "Clusters" would read as
         # Kubernetes clusters next to Fundament's own.
         label: Databases
+        singularLabel: Database
 
   # No list page: the generated one shows CNPG's printer columns (Instances,
   # Ready, Status), offers Create because a create page exists, and has no

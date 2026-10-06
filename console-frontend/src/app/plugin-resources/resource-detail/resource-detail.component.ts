@@ -204,9 +204,13 @@ export default class ResourceDetailComponent implements OnInit {
     return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
   }
 
-  /** Names the list the back button returns to: the plural the plugin's own
-   *  schema uses, so the button says where it goes. */
+  /** Names the list the back button returns to: the plugin's menu label, else
+   *  the plural its schema uses, so the button says where it goes. */
   kindLabel = computed(() => {
+    const resourceKind = this.resourceKind();
+    const item = this.plugin()?.menu.project?.find((i) => i.crd === resourceKind);
+    if (item?.label) return item.label;
+
     const plural = this.crdDef()?.plural;
     return plural ? plural[0].toUpperCase() + plural.slice(1) : this.kind() || 'list';
   });

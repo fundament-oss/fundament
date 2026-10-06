@@ -256,6 +256,7 @@ message PluginMenuEntry {
   bool detail = 30;
   string icon = 40;
   string label = 50;
+  string singular_label = 60;
 }
 message PluginComponentMapping {
   string list = 10;

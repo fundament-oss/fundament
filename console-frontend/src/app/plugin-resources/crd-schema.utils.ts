@@ -197,6 +197,17 @@ function isAcronym(word: string): boolean {
 }
 
 /**
+ * Convert a CRD kind (PascalCase) to a human-readable singular label in sentence case.
+ * Examples: "Certificate" → "Certificate", "ClusterIssuer" → "Cluster issuer",
+ * "FSCInstallation" → "FSC installation"
+ */
+export function kindToSingularLabel(kind: string): string {
+  return splitWords(kind)
+    .map((word, i) => (i === 0 || isAcronym(word) ? word : word.toLowerCase()))
+    .join(' ');
+}
+
+/**
  * Convert a CRD kind (PascalCase) to a human-readable plural label in sentence case.
  * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers",
  * "FSCInstallation" → "FSC installations"

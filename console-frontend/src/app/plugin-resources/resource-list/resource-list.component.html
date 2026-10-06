@@ -50,14 +50,14 @@
           <nldd-toolbar-item slot="start">
             <nldd-button
               [routerLink]="createLink"
-              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              [attr.text]="'New ' + singularKindLabel().toLowerCase() + '…'"
               start-icon="plus-small"
               variant="primary"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
               icon="plus-small"
-              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              [attr.text]="'New ' + singularKindLabel().toLowerCase() + '…'"
               [routerLink]="createLink"
             ></nldd-menu-item>
           </nldd-toolbar-item>
