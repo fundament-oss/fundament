@@ -34,7 +34,7 @@ func TestAccClusterResource_basic(t *testing.T) {
 	clusterName := "tf-acc-" + suffix
 	resourceName := "fundament_cluster.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing

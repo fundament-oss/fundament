@@ -32,7 +32,7 @@ func TestAccOrganizationMemberResource_basic(t *testing.T) {
 	email := fmt.Sprintf("tf-acc-om-%s@test.example.com", suffix)
 	resourceName := "fundament_organization_member.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create with viewer permission

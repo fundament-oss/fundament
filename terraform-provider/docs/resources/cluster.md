@@ -4,11 +4,17 @@ page_title: "fundament_cluster Resource - fundament"
 subcategory: ""
 description: |-
   Manages a Kubernetes cluster in Fundament.
+  A create waits until Gardener has built the cluster and its nodes; an update until Fundament has applied the change to Gardener, not until Gardener has rolled it out; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
+  When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run tofu untaint on its address to keep it, and set timeouts { create = ... } to wait longer next time. A cluster whose deletion did not finish stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 ---
 
 # fundament_cluster (Resource)
 
 Manages a Kubernetes cluster in Fundament.
+
+A create waits until Gardener has built the cluster and its nodes; an update until Fundament has applied the change to Gardener, not until Gardener has rolled it out; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
+
+When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 
 ## Example Usage
 
@@ -39,11 +45,12 @@ resource "fundament_cluster" "example" {
 ### Optional
 
 - `node_pool` (Block List) A node pool of the cluster. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. Without any node_pool block, Gardener runs a default worker pool that fundament does not list. (see [below for nested schema](#nestedblock--node_pool))
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
 - `id` (String) The unique identifier of the cluster.
-- `status` (String) The current status of the cluster (e.g., provisioning, running, stopped).
+- `status` (String) The current status of the cluster: provisioning, running, error (Gardener reports a problem, which it usually retries), deleting or stopped.
 
 <a id="nestedblock--node_pool"></a>
 ### Nested Schema for `node_pool`
@@ -54,6 +61,16 @@ Required:
 - `autoscale_min` (Number) The minimum number of nodes.
 - `machine_type` (String) The machine type of the nodes, one the cluster's region offers. Changing it replaces the node pool and its nodes.
 - `name` (String) The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter.
+
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String) How long to wait for a new cluster to run (default 30m).
+- `delete` (String) How long to wait for the cluster to be gone (default 30m).
+- `update` (String) How long to wait for a change to be applied (default 30m).
 
 ## Import
 
