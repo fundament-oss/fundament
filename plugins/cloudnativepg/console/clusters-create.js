@@ -64,11 +64,12 @@ function optionHtml(value, label, { selected = false, disabled = false } = {}) {
   return `<option value="${escapeHtml(value)}"${selected ? ' selected' : ''}${disabled ? ' disabled' : ''}>${escapeHtml(label)}</option>`;
 }
 
-// The console passes the project's namespaces on a create view. Without them
-// (an organization-level route) the user types one.
-function namespaceFieldHtml(namespaces) {
+// The console passes the project's namespaces on a create view, by their name
+// on the cluster, with the shorter name it shows for each as the label. Without
+// them (an organization-level route) the user types one.
+function namespaceFieldHtml(namespaces, displayNames = {}) {
   if (Array.isArray(namespaces) && namespaces.length > 0) {
-    const options = namespaces.map((n) => optionHtml(n, n)).join('');
+    const options = namespaces.map((n) => optionHtml(n, displayNames[n] ?? n)).join('');
     return formFieldHtml(
       'Namespace',
       `<nldd-dropdown><select id="db-namespace" name="namespace">${options}</select></nldd-dropdown>`,
@@ -159,7 +160,7 @@ function showForm(storageClasses) {
           { errorId: 'db-name-error', hint: 'Starts with a letter; lowercase letters, digits and dashes.' },
         )}
 
-        ${namespaceFieldHtml(ctx.namespaces)}
+        ${namespaceFieldHtml(ctx.namespaces, ctx.namespaceDisplayNames)}
 
         ${formFieldHtml(
           'Storage size',

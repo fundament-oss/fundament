@@ -19,6 +19,7 @@ import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
+import PageNavService from '../../page-nav.service';
 import { NAMESPACE } from '../../../connect/tokens';
 import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
 import type { ParsedCrd } from '../types';
@@ -52,6 +53,8 @@ export default class ResourceCreateComponent implements OnInit {
 
   private namespaceClient = inject(NAMESPACE);
 
+  protected pageNav = inject(PageNavService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -61,7 +64,7 @@ export default class ResourceCreateComponent implements OnInit {
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
   // Present only on the project-level route (projects/:id/...); empty at org level.
-  private projectId = computed(() => this.routeParams().get('id') ?? '');
+  protected projectId = computed(() => this.routeParams().get('id') ?? '');
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
@@ -83,11 +86,31 @@ export default class ResourceCreateComponent implements OnInit {
 
   crdDef = signal<ParsedCrd | undefined>(undefined);
 
+  // Cluster-side names ("tnt-<project>--<name>"): the plugin passes them to the
+  // Kubernetes API as is.
   namespaces = signal<string[]>([]);
+
+  // The project-level name for each of namespaces, which the form shows.
+  namespaceDisplayNames = signal<Record<string, string>>({});
 
   private crdLoaded = signal(false);
 
   private namespacesReady = signal(false);
+
+  protected namespacesFailed = signal(false);
+
+  // A namespaced resource on a project route can only go in one of the project's
+  // namespaces. With none there is nothing to pick, so the page points to where
+  // they are made instead of mounting a form that cannot succeed.
+  protected needsNamespace = computed(
+    () =>
+      !!this.projectId() &&
+      this.crdDef()?.scope === 'Namespaced' &&
+      !this.namespacesFailed() &&
+      this.namespaces().length === 0,
+  );
+
+  protected namespacesLink = computed(() => `/projects/${this.projectId()}/namespaces`);
 
   // True until the cluster list, CRD, and (project) namespaces have all settled.
   // Gating the iframe on this prevents two problems: flashing the "not available"
@@ -158,12 +181,16 @@ export default class ResourceCreateComponent implements OnInit {
     try {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
-      this.namespaces.set(response.namespaces.map((n) => n.name));
+      this.namespaces.set(response.namespaces.map((n) => n.clusterSideName));
+      this.namespaceDisplayNames.set(
+        Object.fromEntries(response.namespaces.map((n) => [n.clusterSideName, n.name])),
+      );
     } catch (err) {
-      // Transient failure: the plugin form falls back to a free-text namespace
-      // field when the list is empty.
+      // The plugin form's free-text fallback would take the project-level name,
+      // which is not the namespace's name on the cluster, so say what failed.
       // eslint-disable-next-line no-console
       console.error('[ResourceCreate] Failed to load namespaces:', err);
+      this.namespacesFailed.set(true);
     } finally {
       this.namespacesReady.set(true);
     }

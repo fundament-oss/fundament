@@ -261,6 +261,7 @@ export default function createDemoTransport(): Transport {
             create(NamespaceSchema, {
               id,
               name: req.name,
+              clusterSideName: `tnt-${project?.name ?? 'demo'}--${req.name}`,
               projectId: req.projectId,
               clusterId: project?.clusterId ?? 'cl-production',
               created: timestampFromDate(new Date()),

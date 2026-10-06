@@ -1342,3 +1342,57 @@ func TestReconcileChildren_ValidConfigStillInjected(t *testing.T) {
 	assert.Equal(t, "debug", values["FUNP_LOG_LEVEL"])
 	assert.Equal(t, "1", values["FUNP_MON_COUNT"])
 }
+
+// A reinstall right after an uninstall finds the old plugin namespace still
+// terminating. The installation waits as Pending instead of building in it: the
+// old Deployment's pod would answer the status poll as Running while nothing
+// serves the console assets.
+func TestReconcile_WaitsForTerminatingNamespace(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
+	cr := testCR()
+	cr.Name = "acme--cert-manager"
+	cr.Spec.DefinitionRef.OrganizationName = "acme"
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+
+	now := metav1.Now()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              pluginNamespace(cr.Name),
+		DeletionTimestamp: &now,
+		Finalizers:        []string{"kubernetes"},
+	}}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr, ns).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
+		statusPoller:        newStatusPoller(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           fakeDefClient{manifest: manifest, hash: pin},
+		defCache:            newDefinitionCache(),
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	res, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, namespaceTerminatingRetryInterval, res.RequeueAfter)
+
+	var got pluginsv1.PluginInstallation
+	require.NoError(t, fakeClient.Get(context.Background(), req.NamespacedName, &got))
+	assert.Equal(t, pluginsv1.PluginPhasePending, got.Status.Phase)
+	assert.False(t, got.Status.Ready)
+	assert.Equal(t, errNamespaceTerminating.Error(), got.Status.Message)
+
+	var svc corev1.Service
+	err = fakeClient.Get(context.Background(), types.NamespacedName{Namespace: ns.Name, Name: childResourceName}, &svc)
+	assert.True(t, apierrors.IsNotFound(err), "nothing is built in a terminating namespace")
+}

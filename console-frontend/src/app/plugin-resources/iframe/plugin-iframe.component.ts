@@ -99,6 +99,8 @@ export default class PluginIframeComponent implements OnInit {
 
   namespaces = input<string[] | undefined>(undefined);
 
+  namespaceDisplayNames = input<Record<string, string> | undefined>(undefined);
+
   private sanitizer = inject(DomSanitizer);
 
   private router = inject(Router);
@@ -323,6 +325,7 @@ export default class PluginIframeComponent implements OnInit {
     const name = this.resourceName();
     const namespace = this.resourceNamespace();
     const namespaces = this.namespaces();
+    const namespaceDisplayNames = this.namespaceDisplayNames();
     this.postToIframe(iframe, {
       type: 'fundament:init',
       protocolVersion: 1,
@@ -332,6 +335,7 @@ export default class PluginIframeComponent implements OnInit {
       view: this.view(),
       ...(name ? { resource: { name, namespace } } : {}),
       ...(namespaces ? { namespaces } : {}),
+      ...(namespaceDisplayNames ? { namespaceDisplayNames } : {}),
       kubeApiProxyUrl: this.configService.getConfig().kubeApiProxyUrl,
       clusterId: this.clusterId(),
       token: snap.token,

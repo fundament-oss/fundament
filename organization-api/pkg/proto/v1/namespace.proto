@@ -45,6 +45,9 @@ message ListClusterNamespacesResponse {
 message Namespace {
   string id = 10;
   string name = 20;
+  // The namespace's name on the cluster ("tnt-<project>--<name>"), which is
+  // what Kubernetes API calls take. name is only unique within the project.
+  string cluster_side_name = 25;
   string project_id = 30;
   string cluster_id = 35;
   google.protobuf.Timestamp created = 40;

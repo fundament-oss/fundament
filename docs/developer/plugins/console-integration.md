@@ -134,7 +134,8 @@ The SDK sends and handles most messages itself.
 | `crdKind` | The CRD kind being rendered |
 | `view` | `'list'`, `'detail'` or `'create'` |
 | `resource` | Detail views: `{ name, namespace? }` |
-| `namespaces` | Create views in a project: the project's namespaces |
+| `namespaces` | Create views in a project: the project's namespaces, by their name on the cluster (`tnt-<project>--<name>`), which is what Kubernetes calls take |
+| `namespaceDisplayNames` | Create views in a project: maps each entry of `namespaces` to the name the console shows for it, to use as the label |
 | `kubeApiProxyUrl`, `clusterId` | Base for Kubernetes calls |
 | `token`, `tokenExpiresAt` | The PluginToken |
 

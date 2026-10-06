@@ -125,3 +125,19 @@ func Test_Namespace_Create_LengthDependsOnProject(t *testing.T) {
 	requireCode(t, e.create(e.projectB, strings.Repeat("m", 55)), connect.CodeInvalidArgument, "max 54 (project name + namespace name may be at most 57)")
 	require.NoError(t, e.create(e.projectA, strings.Repeat("n", 56)), `"tnt-a--" leaves 56`)
 }
+
+// A listed namespace carries the name it has on the cluster, which is what a
+// Kubernetes API call (a plugin's create form, say) has to use.
+func Test_Namespace_List_ClusterSideName(t *testing.T) {
+	t.Parallel()
+	e := newNamespaceNamingEnv(t)
+	require.NoError(t, e.create(e.projectB, "c"))
+
+	res, err := e.client.ListProjectNamespaces(e.ctx(), organizationv1.ListProjectNamespacesRequest_builder{
+		ProjectId: e.projectB,
+	}.Build())
+	require.NoError(t, err)
+	require.Len(t, res.GetNamespaces(), 1)
+	assert.Equal(t, "c", res.GetNamespaces()[0].GetName())
+	assert.Equal(t, "tnt-a-b--c", res.GetNamespaces()[0].GetClusterSideName())
+}

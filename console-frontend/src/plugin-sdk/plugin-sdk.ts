@@ -50,7 +50,11 @@ interface InitContext {
   crdKind: string;
   view: 'list' | 'detail' | 'create';
   resource?: ResourceContext;
+  // Cluster-side namespace names: what Kubernetes calls take.
   namespaces?: string[];
+  // Optional label per entry of namespaces, the name the console shows for it
+  // ("tnt-acme--web" -> "web"). A namespace without one is shown as is.
+  namespaceDisplayNames?: Record<string, string>;
   // FUN-17: plugin JS builds fetch URLs against kube-api-proxy from these.
   // fundament.fetch() automatically attaches the bearer PluginToken.
   kubeApiProxyUrl: string;
@@ -128,6 +132,7 @@ type HostMessage =
       view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
       namespaces?: string[];
+      namespaceDisplayNames?: Record<string, string>;
       kubeApiProxyUrl: string;
       clusterId: string;
       token: string;
@@ -212,6 +217,7 @@ function handleHostMessage(data: HostMessage): void {
         view: data.view,
         resource: data.resource,
         namespaces: data.namespaces,
+        namespaceDisplayNames: data.namespaceDisplayNames,
         kubeApiProxyUrl: data.kubeApiProxyUrl,
         clusterId: data.clusterId,
       });
