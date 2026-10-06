@@ -199,6 +199,36 @@ ORDER BY
 LIMIT
     @limit_count;
 
+-- name: ClusterGetForStatusCheck :one
+-- Load one cluster for a status check, active or soft-deleted. synced says
+-- whether the cluster has reached Gardener at all (a status was recorded or
+-- an outbox row completed); before that there is no Shoot to check.
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.organization_id,
+    tenant.clusters.shoot_status_updated,
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region,
+    (
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )::boolean AS synced
+FROM
+    tenant.clusters
+    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
+WHERE
+    tenant.clusters.id = @cluster_id;
+
 -- name: ClusterUpdateShootStatus :execrows
 -- Update shoot status from Gardener polling. health is NULL unless ready;
 -- updating is set while an update fundament pushed rolls out. Writes nothing

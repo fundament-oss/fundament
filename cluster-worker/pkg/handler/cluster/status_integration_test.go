@@ -303,3 +303,58 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 	assert.Equal(t, readyRowsBefore, countReadyOutboxRows(t, db, clusterID))
 	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the row was polled and its timestamp moved")
 }
+
+// A status check for a cluster row that does not exist does nothing.
+func TestCheckClusterMissingRow(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	missing := uuid.New()
+	require.NoError(t, h.CheckCluster(t.Context(), missing))
+	assert.Equal(t, 0, mock.StatusCallsFor(missing))
+}
+
+// A cluster that has not reached Gardener yet has no Shoot to check.
+func TestCheckClusterNotSyncedYet(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-unsynced")
+	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	assert.Equal(t, 0, mock.StatusCallsFor(clusterID))
+	assert.Nil(t, getClusterShootStatus(t, db, clusterID))
+}
+
+// Two checks of the same transition racing on one row record it once: the
+// guarded update lets one of them write, and the events and the ready outbox
+// row are written in the same transaction as that update.
+func TestCheckClusterConcurrentTransitionRecordedOnce(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-race")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
+	})
+
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() { errs <- h.CheckCluster(t.Context(), clusterID) }()
+	}
+	require.NoError(t, <-errs)
+	require.NoError(t, <-errs)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
+	assert.Equal(t, readyRowsBefore+1, countReadyOutboxRows(t, db, clusterID))
+}

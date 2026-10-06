@@ -109,6 +109,82 @@ func (q *Queries) ClusterCreateSyncSucceededEvent(ctx context.Context, arg Clust
 	return id, err
 }
 
+const clusterGetForStatusCheck = `-- name: ClusterGetForStatusCheck :one
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.organization_id,
+    tenant.clusters.shoot_status_updated,
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region,
+    (
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )::boolean AS synced
+FROM
+    tenant.clusters
+    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
+WHERE
+    tenant.clusters.id = $1
+`
+
+type ClusterGetForStatusCheckParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetForStatusCheckRow struct {
+	ID                 uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Deleted            pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootHealth        pgtype.Text
+	ShootUpdating      bool
+	OrganizationID     uuid.UUID
+	ShootStatusUpdated pgtype.Timestamptz
+	OrganizationName   string
+	CloudProfile       pgtype.Text
+	CloudProfileRegion pgtype.Text
+	Synced             bool
+}
+
+// Load one cluster for a status check, active or soft-deleted. synced says
+// whether the cluster has reached Gardener at all (a status was recorded or
+// an outbox row completed); before that there is no Shoot to check.
+func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
+	var i ClusterGetForStatusCheckRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
+		&i.Deleted,
+		&i.ShootStatus,
+		&i.ShootStatusMessage,
+		&i.ShootHealth,
+		&i.ShootUpdating,
+		&i.OrganizationID,
+		&i.ShootStatusUpdated,
+		&i.OrganizationName,
+		&i.CloudProfile,
+		&i.CloudProfileRegion,
+		&i.Synced,
+	)
+	return i, err
+}
+
 const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
 SELECT EXISTS (
     SELECT 1
