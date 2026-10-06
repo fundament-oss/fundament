@@ -3,7 +3,10 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DiskType classifies a block device.
 // +kubebuilder:validation:Enum=hdd;ssd;nvme
@@ -20,8 +23,8 @@ type DiskSpec struct{}
 
 // DiskStatus is the discovered state of a block device on a cluster node.
 type DiskStatus struct {
-	// Node is the name of the cluster node the device is attached to.
-	Node string `json:"node,omitempty"`
+	// NodeName is the name of the cluster node the device is attached to.
+	NodeName string `json:"nodeName,omitempty"`
 	// Path is the kernel device name, e.g. /dev/sdb. The kernel may reassign it
 	// on reboot; StablePath identifies the device.
 	Path string `json:"path,omitempty"`
@@ -29,8 +32,8 @@ type DiskStatus struct {
 	// reports none (loop devices, some virtual disks). It survives reboots, so
 	// when set it is the name recorded in the Ceph cluster.
 	StablePath string `json:"stablePath,omitempty"`
-	// SizeBytes is the device's size in bytes.
-	SizeBytes int64 `json:"sizeBytes,omitempty"`
+	// Size is the device's capacity.
+	Size resource.Quantity `json:"size,omitempty"`
 	// Type classifies the device as hdd, ssd or nvme.
 	Type DiskType `json:"type,omitempty"`
 	// Rotational is true for spinning disks.
@@ -59,9 +62,9 @@ type DiskStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Node",type=string,JSONPath=`.status.node`
+// +kubebuilder:printcolumn:name="Node",type=string,JSONPath=`.status.nodeName`
 // +kubebuilder:printcolumn:name="Path",type=string,JSONPath=`.status.path`
-// +kubebuilder:printcolumn:name="Size",type=integer,JSONPath=`.status.sizeBytes`
+// +kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.status.size`
 // +kubebuilder:printcolumn:name="Available",type=boolean,JSONPath=`.status.available`
 // +kubebuilder:printcolumn:name="Filesystem",type=string,JSONPath=`.status.filesystem`
 // +kubebuilder:printcolumn:name="Claimed By",type=string,JSONPath=`.status.claimedBy`

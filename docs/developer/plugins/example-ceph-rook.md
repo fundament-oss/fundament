@@ -55,7 +55,7 @@ plugins/storage/ceph-rook/
 ├── consumer_controller.go       # Generic consumer reconciler: BlockStorage -> CephBlockPool + RBD StorageClass, FileStorage -> CephFilesystem + CephFS StorageClass
 ├── union.go                 # Shared disk union: every live DiskPool's disks, deduplicated
 ├── claims.go                # Derived names + which pool owns a contested disk
-├── replication.go           # "auto" -> replica count and CRUSH failure domain
+├── replication.go           # spec.replicas -> replica count and CRUSH failure domain
 ├── discovery.go             # Parses Rook's device JSON; deterministic Disk names
 ├── cephcluster.go           # Disk statuses -> spec.storage.nodes
 ├── rookvalues.go            # Helm values + the CephCluster bootstrap object
@@ -97,8 +97,8 @@ are exercised through the per-kind controller test files
 `ComponentMapping` has `list`, `detail` and `create` slots but no `edit`, so an
 Edit button swaps the read-only view for a form. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
-replication and whether its StorageClass is the cluster default; `FileStorage`
-edits replication and metadata server count. Every
+replicas and whether its StorageClass is the cluster default; `FileStorage`
+edits replicas and metadata server count. Every
 edit saves a merge-patch of `spec` only, so `status` is never clobbered, and
 `DiskPool`'s disk array is replaced wholesale rather than merged element-wise.
 
@@ -202,11 +202,11 @@ set that every volume spans; see
 
 ## Replication strategy
 
-`BlockStorage` and `FileStorage` each carry a `replication` field that controls how many copies Ceph maintains (for `FileStorage`, both its metadata and data pool replicate at the same size):
+`BlockStorage` and `FileStorage` each carry an optional `replicas` field that controls how many copies Ceph maintains (for `FileStorage`, both its metadata and data pool replicate at the same size):
 
-- `"auto"` (default): derives the replica count from the number of nodes contributing disks (via `DiskPool`), capped at 3 — `min(3, nodes)`. Two nodes give 2 replicas, five nodes still give 3.
+- absent (default): derives the replica count from the number of nodes contributing disks (via `DiskPool`), capped at 3 — `min(3, nodes)`. Two nodes give 2 replicas, five nodes still give 3.
 
-- `"1"`, `"2"`, `"3"`: explicit replica count, e.g. to sacrifice redundancy for capacity on a test cluster.
+- `1`, `2`, `3`: explicit replica count, e.g. to sacrifice redundancy for capacity on a test cluster.
 
 An explicit count is **clamped down** to the number of nodes contributing disks to the cluster rather than leaving the object unsatisfiable: asking for 3 replicas on a 2-node cluster yields 2, and the reason is recorded in `status.message`. The `BlockStorage`/`FileStorage` provisions either way; it does not sit degraded waiting for disks that may never arrive — unless no `DiskPool` contributes any disks at all, in which case it goes `Degraded` with "no DiskPool contributes disks".
 
@@ -227,7 +227,7 @@ A `BlockStorage`/`FileStorage`'s `status` describes its derived `StorageClass`, 
 A `DiskPool`'s `status` is different: it describes only its own disk *contribution*, not any derived object, and carries no replication of its own:
 
 - `selectedDiskCount` — how many of `spec.disks` resolved to a usable `Disk`. Not the number of OSDs Ceph is running; Rook creates those asynchronously.
-- `rawCapacityBytes` — the summed size of those disks. This is **not usable capacity**: see [Pools share one OSD set](#pools-share-one-osd-set). Use `ceph df` for real free space.
+- `rawCapacity` — the summed size of those disks. This is **not usable capacity**: see [Pools share one OSD set](#pools-share-one-osd-set). Use `ceph df` for real free space.
 - `phase` — `Ready` once it resolves at least one disk; `Degraded` when it resolves none. `DiskPool` has no `Provisioning` phase.
 
 ### Pools share one OSD set
@@ -237,7 +237,7 @@ Every `DiskPool` feeds the same `CephCluster`, and the `CephBlockPool`/`CephFile
 Three consequences, all of them load-bearing:
 
 - **Multiple pools do not isolate or tier storage.** A second `BlockStorage` or `FileStorage` gives you a second `StorageClass` over the same disks. Real separation needs a device class plus a per-pool CRUSH rule, which this version does not implement.
-- **`rawCapacityBytes / replicas` is not usable capacity.** With more than one `DiskPool` it is not even an upper bound.
+- **`rawCapacity / replicas` is not usable capacity.** With more than one `DiskPool` it is not even an upper bound.
 - **Replication is sized against the cluster, not any one pool.** `auto` uses the number of nodes contributing disks cluster-wide. This is deliberate: sizing off a single `DiskPool`'s disks would cap that pool's consumers at `replicas: 1` — waiving Ceph's size-1 safety check to advertise no redundancy — while Ceph replicated that data across all hosts regardless.
 
 ### Removing disks

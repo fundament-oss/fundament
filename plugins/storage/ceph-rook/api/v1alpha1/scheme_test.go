@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -18,8 +19,8 @@ func TestAddToScheme(t *testing.T) {
 }
 
 func TestDiskDeepCopy(t *testing.T) {
-	d := &Disk{Status: DiskStatus{Node: "n1", SizeBytes: 100}}
+	d := &Disk{Status: DiskStatus{NodeName: "n1", Size: resource.MustParse("100")}}
 	got := d.DeepCopy()
-	got.Status.Node = "n2"
-	assert.Equal(t, "n1", d.Status.Node) // original unchanged
+	got.Status.NodeName = "n2"
+	assert.Equal(t, "n1", d.Status.NodeName) // original unchanged
 }

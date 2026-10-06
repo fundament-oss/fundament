@@ -40,7 +40,7 @@ const rookPhaseFailure = "Failure"
 type consumer interface {
 	client.Object
 	ConsumerStatus() *v1alpha1.ConsumerStatus
-	ReplicationSpec() string
+	RequestedReplicas() *int32
 }
 
 // ConsumerReconciler reconciles one consumer kind into its derived Rook object
@@ -251,7 +251,7 @@ func (r *ConsumerReconciler[T]) reconcile(ctx context.Context, obj T) (ctrl.Resu
 		})
 	}
 
-	replicas, domain, msg := ComputeReplication(obj.ReplicationSpec(), DistinctNodeCount(union))
+	replicas, domain, msg := ComputeReplication(obj.RequestedReplicas(), DistinctNodeCount(union))
 	derived := r.derivedName(obj.GetName())
 
 	wantDefault := r.isDefault != nil && r.isDefault(obj)

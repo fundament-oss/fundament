@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -182,7 +183,7 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &current); err != nil {
 		return fmt.Errorf("get Disk %q for status update: %w", name, err)
 	}
-	if current.Status == *st {
+	if equality.Semantic.DeepEqual(current.Status, *st) {
 		return nil // nothing changed; skip the write
 	}
 	current.Status = *st
@@ -209,7 +210,7 @@ func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node stri
 
 	for i := range allDisks.Items {
 		disk := &allDisks.Items[i]
-		if disk.Status.Node != node {
+		if disk.Status.NodeName != node {
 			continue
 		}
 		if _, ok := seen[disk.Name]; ok {

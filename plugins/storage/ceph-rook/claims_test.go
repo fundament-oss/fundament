@@ -18,8 +18,19 @@ func poolAt(name string, created time.Time, disks ...string) v1alpha1.DiskPool {
 			UID:               types.UID("uid-" + name),
 			CreationTimestamp: metav1.NewTime(created),
 		},
-		Spec: v1alpha1.DiskPoolSpec{Disks: disks},
+		Spec: v1alpha1.DiskPoolSpec{Disks: poolDisks(disks...)},
 	}
+}
+
+func poolDisks(names ...string) []v1alpha1.PoolDisk {
+	if len(names) == 0 {
+		return nil
+	}
+	out := make([]v1alpha1.PoolDisk, len(names))
+	for i, name := range names {
+		out[i] = v1alpha1.PoolDisk{Name: name}
+	}
+	return out
 }
 
 func TestDerivedNameIsPrefixed(t *testing.T) {

@@ -29,7 +29,7 @@ func TestRenderCephBlockPool(t *testing.T) {
 }
 
 // Ceph rejects a size-1 pool unless the safe-replica check is waived, which is
-// what `replication: auto` yields on one node.
+// what an absent spec.replicas yields on one node.
 func TestRenderCephBlockPoolSingleReplica(t *testing.T) {
 	u := RenderCephBlockPool("rook-ceph", "pool-a", 1, "osd")
 

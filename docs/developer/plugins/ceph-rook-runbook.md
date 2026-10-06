@@ -351,8 +351,8 @@ kubectl --context k3d-fundament-plugin get disks
 Expect exactly three, one per loop partition:
 
 ```
-NAME                                  NODE                            SIZE          AVAILABLE
-k3d-fundament-plugin-server-0-1a2b3c  k3d-fundament-plugin-server-0   21472739328   true
+NAME                                  NODE                            PATH           SIZE      AVAILABLE
+k3d-fundament-plugin-server-0-1a2b3c  k3d-fundament-plugin-server-0   /dev/loop0p1   20478Mi   true
 ...
 ```
 
@@ -387,7 +387,7 @@ Disk names are cluster-specific (node name + a hash of the device's stable ident
 hard-coded. Build the pool from whatever was discovered:
 
 ```bash
-DISKS=$(kubectl --context k3d-fundament-plugin get disks -o jsonpath='{range .items[*]}      - {.metadata.name}{"\n"}{end}')
+DISKS=$(kubectl --context k3d-fundament-plugin get disks -o jsonpath='{range .items[*]}    - name: {.metadata.name}{"\n"}{end}')
 kubectl --context k3d-fundament-plugin apply -f - <<YAML
 apiVersion: ceph.fundament.io/v1alpha1
 kind: DiskPool
@@ -409,15 +409,13 @@ apiVersion: ceph.fundament.io/v1alpha1
 kind: BlockStorage
 metadata:
   name: test-pool
-spec:
-  replication: auto
+spec: {}
 ---
 apiVersion: ceph.fundament.io/v1alpha1
 kind: FileStorage
 metadata:
   name: test-pool
 spec:
-  replication: auto
   metadataServers: 1
 YAML
 ```
@@ -445,19 +443,19 @@ contribution:
 ```yaml
 phase: Ready
 selectedDiskCount: 3
-rawCapacityBytes: 64418217984        # this pool's contribution, before replication
+rawCapacity: 61434Mi                 # this pool's contribution, before replication
 ```
 
-The `BlockStorage` reports the derived `StorageClass` and the replication it resolved:
+The `BlockStorage` reports the derived `StorageClass` and the replica count it resolved:
 
 ```yaml
 phase: Ready
 storageClassName: ceph-test-pool     # note the ceph- prefix
-replicas: 1                          # auto = min(3, cluster nodes with disks); one node -> 1
+replicas: 1                          # no spec.replicas = min(3, cluster nodes with disks); one node -> 1
 failureDomain: osd                   # host domain needs >=2 replicas across >=2 nodes
 ```
 
-`rawCapacityBytes` is the raw size of the disks the pool contributes, **not** anyone's
+`rawCapacity` is the raw size of the disks the pool contributes, **not** anyone's
 capacity — all consumers share one OSD set and Ceph places data across every OSD in it.
 Ask Ceph for real free space (`ceph df` in the toolbox). A `BlockStorage`/`FileStorage`
 that finds no `DiskPool` contributing disks reports `Degraded` with `"no DiskPool
@@ -641,7 +639,7 @@ Check the browser console for CSP violations. There should be none.
 These exercise the console CRUD pages. Keep devtools open throughout — a CSP
 violation anywhere here is a failure, not cosmetic.
 
-1. Open the `BlockStorage` → **Edit** → change replication → **Save**. The detail
+1. Open the `BlockStorage` → **Edit** → change **Replicas** → **Save**. The detail
    view returns and `status.replicas` reflects the new value.
 2. Open the `DiskPool` → **Edit** → uncheck a disk. The OSD-retirement warning
    must be visible. Save, then confirm `status.selectedDiskCount` drops and the
@@ -682,8 +680,7 @@ apiVersion: ceph.fundament.io/v1alpha1
 kind: BlockStorage
 metadata:
   name: squatter
-spec:
-  replication: auto
+spec: {}
 YAML
 
 kubectl --context k3d-fundament-plugin get blockstorage squatter -o jsonpath='{.status.phase}{"\n"}{.status.message}{"\n"}'
@@ -883,8 +880,7 @@ apiVersion: ceph.fundament.io/v1alpha1
 kind: BlockStorage
 metadata:
   name: orphan
-spec:
-  replication: auto
+spec: {}
 YAML
 
 kubectl --context k3d-fundament-plugin get blockstorage orphan \

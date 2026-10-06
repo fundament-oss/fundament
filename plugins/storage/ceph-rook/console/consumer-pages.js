@@ -13,7 +13,8 @@ import {
   navigateToDetail,
   navigateBack,
   renderDefList,
-  replicationFieldHtml,
+  replicasFieldHtml,
+  replicasValue,
   defaultFieldHtml,
   metadataServersFieldHtml,
   metadataServersError,
@@ -63,7 +64,7 @@ function metadataServersValue(form) {
 
 // specFrom reads the create/edit form into a spec object.
 function specFrom(cfg, form) {
-  const spec = { replication: form.querySelector('[name="replication"]').value };
+  const spec = { replicas: replicasValue(form) };
   if (cfg.metadataServers) spec.metadataServers = metadataServersValue(form);
   // Always sent, so unticking the box merge-patches the field back to false.
   if (cfg.defaultToggle) spec.default = form.querySelector('[name="default"]').checked;
@@ -168,7 +169,7 @@ export async function consumerDetailPage(cfg) {
       <form id="edit-form" class="plugin-form" novalidate>
         <div class="plugin-error" id="edit-error" hidden></div>
 
-        ${replicationFieldHtml(item.spec?.replication ?? 'auto')}
+        ${replicasFieldHtml(item.spec?.replicas)}
 
         ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
 
@@ -228,7 +229,7 @@ export async function consumerCreatePage(cfg) {
         <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).</span>
       </div>
 
-      ${replicationFieldHtml()}
+      ${replicasFieldHtml()}
 
       ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
 

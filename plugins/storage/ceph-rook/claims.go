@@ -44,7 +44,7 @@ func ClaimOwner(pools []v1alpha1.DiskPool, diskName string) string {
 		if !pool.DeletionTimestamp.IsZero() {
 			continue
 		}
-		if slices.Contains(pool.Spec.Disks, diskName) {
+		if slices.ContainsFunc(pool.Spec.Disks, func(d v1alpha1.PoolDisk) bool { return d.Name == diskName }) {
 			claimants = append(claimants, pool)
 		}
 	}
@@ -70,11 +70,11 @@ func BuildClaimIndex(pools []v1alpha1.DiskPool) map[string]string {
 		if !pool.DeletionTimestamp.IsZero() {
 			continue
 		}
-		for _, diskName := range pool.Spec.Disks {
-			if _, done := index[diskName]; done {
+		for _, disk := range pool.Spec.Disks {
+			if _, done := index[disk.Name]; done {
 				continue
 			}
-			index[diskName] = ClaimOwner(pools, diskName)
+			index[disk.Name] = ClaimOwner(pools, disk.Name)
 		}
 	}
 	return index

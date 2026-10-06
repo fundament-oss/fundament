@@ -5,12 +5,12 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // BlockStorageSpec defines a block-volume (ReadWriteOnce) StorageClass on the
 // shared Ceph cluster, using the disks that DiskPools contribute.
 type BlockStorageSpec struct {
-	// Replication is how many copies Ceph keeps of each piece of data: an
-	// explicit count, or "auto" to derive it from the number of nodes
-	// contributing disks (capped at 3).
-	// +kubebuilder:validation:Enum=auto;"1";"2";"3"
-	// +kubebuilder:default=auto
-	Replication string `json:"replication,omitempty"`
+	// Replicas is how many copies Ceph keeps of each piece of data. Absent
+	// derives it from the number of nodes contributing disks (capped at 3).
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=3
+	Replicas *int32 `json:"replicas,omitempty"`
 	// Default marks the derived StorageClass as the cluster default
 	// (storageclass.kubernetes.io/is-default-class). If more than one
 	// BlockStorage sets it, none is marked default and each is Degraded.

@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,7 +26,7 @@ const fileName = "shared"
 func testFileStorage() *v1alpha1.FileStorage {
 	return &v1alpha1.FileStorage{
 		ObjectMeta: metav1.ObjectMeta{Name: fileName, UID: types.UID("uid-" + fileName)},
-		Spec:       v1alpha1.FileStorageSpec{Replication: "auto", MetadataServers: 1},
+		Spec:       v1alpha1.FileStorageSpec{MetadataServers: 1},
 	}
 }
 
@@ -221,7 +222,7 @@ func TestFileStorageDegradedWhenFilesystemFails(t *testing.T) {
 func TestFileStorageClampsReplicationToNodes(t *testing.T) {
 	t.Parallel()
 	fsObj := testFileStorage()
-	fsObj.Spec.Replication = "3"
+	fsObj.Spec.Replicas = ptr.To[int32](3)
 	c := newFakeClient(t,
 		cephCluster(),
 		testDisk("node-a-1", "node-a", "/dev/sdb", 100, true),

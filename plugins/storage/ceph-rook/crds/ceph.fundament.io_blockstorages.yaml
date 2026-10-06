@@ -66,18 +66,14 @@ spec:
                   (storageclass.kubernetes.io/is-default-class). If more than one
                   BlockStorage sets it, none is marked default and each is Degraded.
                 type: boolean
-              replication:
-                default: auto
+              replicas:
                 description: |-
-                  Replication is how many copies Ceph keeps of each piece of data: an
-                  explicit count, or "auto" to derive it from the number of nodes
-                  contributing disks (capped at 3).
-                enum:
-                - auto
-                - "1"
-                - "2"
-                - "3"
-                type: string
+                  Replicas is how many copies Ceph keeps of each piece of data. Absent
+                  derives it from the number of nodes contributing disks (capped at 3).
+                format: int32
+                maximum: 3
+                minimum: 1
+                type: integer
             type: object
           status:
             description: |-
@@ -166,8 +162,9 @@ spec:
                   Degraded when reconciliation needs operator action.
                 type: string
               replicas:
-                description: Replicas is the replica count that spec.replication resolved
-                  to.
+                description: |-
+                  Replicas is the replica count in effect: spec.replicas clamped to the
+                  contributing node count, or the derived count when spec.replicas is absent.
                 type: integer
               storageClassName:
                 description: |-

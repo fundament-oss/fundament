@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, renderDefList, wireSubmit } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeQuantity, renderDefList, wireSubmit } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
@@ -34,13 +34,14 @@ async function diskIndex() {
   }
 }
 
-// spec.disks holds Disk CR names — a node prefix plus a digest of the device's
+// spec.disks entries name Disk CRs — a node prefix plus a digest of the device's
 // stable identity — which match nothing an operator sees on the node or in the
 // Disks list. Resolve each to its device path and keep the CR name underneath,
 // so this page and the Disks list can be compared by eye. A name with no Disk CR
 // behind it has no path to show and says so rather than rendering bare.
-function renderDiskList(names, byName) {
-  if (!names || names.length === 0) return '<p class="plugin-text">No disks selected.</p>';
+function renderDiskList(entries, byName) {
+  const names = (entries ?? []).map((d) => d.name);
+  if (names.length === 0) return '<p class="plugin-text">No disks selected.</p>';
   const rows = names
     .map((diskName) => {
       const path = byName.get(diskName)?.status?.path;
@@ -62,7 +63,7 @@ function renderReadOnly(item, byName) {
     ['Phase', status.phase ?? 'Unknown'],
     // Labelled as contributions, not capacity: the obvious reading is wrong.
     ['Disks contributed', String(status.selectedDiskCount ?? '—')],
-    ['Raw size of contributed disks', humanizeBytes(status.rawCapacityBytes ?? 0)],
+    ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
   ];
   if (status.message) pairs.push(['Message', status.message]);
 
@@ -102,6 +103,7 @@ async function showDetail() {
 async function showEdit(item) {
   actions.hidden = true;
   const current = item.spec?.disks ?? [];
+  const currentNames = current.map((d) => d.name);
 
   let disks;
   try {
@@ -122,14 +124,14 @@ async function showEdit(item) {
   // detail page flagged that exact disk. Carry them through untouched, and name
   // them below rather than holding them silently.
   const rendered = new Set(disks.map((d) => d.metadata?.name).filter(Boolean));
-  const preserved = current.filter((d) => !rendered.has(d));
+  const preserved = current.filter((d) => !rendered.has(d.name));
   const preservedNote =
     preserved.length === 0
       ? ''
       : `<p class="plugin-hint">
            Kept as they are, because this form cannot show them: a disk is listed here only
            when it exists and is either free or already claimed by this pool:
-           ${escapeHtml(preserved.join(', '))}. Saving leaves them in the pool; use kubectl
+           ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving leaves them in the pool; use kubectl
            to remove one.
          </p>`;
 
@@ -139,7 +141,7 @@ async function showEdit(item) {
 
       <div class="plugin-field">
         <span class="plugin-label">Disks</span>
-        ${renderDiskPicker(disks, current)}
+        ${renderDiskPicker(disks, currentNames)}
         ${preservedNote}
         <span class="plugin-hint">
           Unchecking a disk removes it from the shared Ceph cluster's device list, but its
@@ -160,8 +162,9 @@ async function showEdit(item) {
   document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
 
   // Disjoint by construction: preserved is exactly what the picker did not
-  // render, so this cannot produce the duplicate the CRD's listType=set rejects.
-  const selected = () => [...readSelectedDisks(form), ...preserved];
+  // render, so this cannot produce the duplicate name the CRD's listType=map
+  // rejects.
+  const selected = () => [...readSelectedDisks(form, current), ...preserved];
 
   wireSubmit(form, {
     button: document.getElementById('save-btn'),

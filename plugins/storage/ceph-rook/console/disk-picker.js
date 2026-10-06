@@ -1,4 +1,4 @@
-import { escapeHtml, humanizeBytes } from './_shared.js';
+import { escapeHtml, humanizeQuantity } from './_shared.js';
 
 // Which disks a pool may choose from. A disk this pool already uses reports
 // available=false, since Ceph consumed it, so filtering on availability alone
@@ -19,7 +19,7 @@ export function renderDiskPicker(disks, selectedNames = []) {
   const selected = new Set(selectedNames);
   const byNode = new Map();
   for (const item of disks) {
-    const node = item.status?.node ?? '(unknown node)';
+    const node = item.status?.nodeName ?? '(unknown node)';
     if (!byNode.has(node)) byNode.set(node, []);
     byNode.get(node).push(item);
   }
@@ -36,7 +36,7 @@ export function renderDiskPicker(disks, selectedNames = []) {
           // from a dead cluster is exactly the one an operator needs to reuse,
           // and hiding it would leave no console path to reclaim it.
           const carries = s.filesystem ? ` — contains ${s.filesystem}` : '';
-          const label = `${s.path ?? name} — ${humanizeBytes(s.sizeBytes ?? 0)}${carries}`;
+          const label = `${s.path ?? name} — ${humanizeQuantity(s.size)}${carries}`;
           const checked = selected.has(name) ? ' checked' : '';
           return `
             <label class="plugin-checkbox">
@@ -54,6 +54,11 @@ export function renderDiskPicker(disks, selectedNames = []) {
     .join('');
 }
 
-export function readSelectedDisks(formEl) {
-  return Array.from(formEl.querySelectorAll('[name="disk"]:checked')).map((cb) => cb.value);
+// Reads the checked disks as spec.disks entries. An entry already in current
+// is reused as is, not rebuilt from its name.
+export function readSelectedDisks(formEl, current = []) {
+  const byName = new Map(current.map((d) => [d.name, d]));
+  return Array.from(formEl.querySelectorAll('[name="disk"]:checked')).map(
+    (cb) => byName.get(cb.value) ?? { name: cb.value },
+  );
 }

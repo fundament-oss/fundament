@@ -20,19 +20,17 @@ metadata:
 spec:
   # Replace with actual Disk CR names from `kubectl get disks`:
   disks:
-    - placeholder-node-loop0p1
+    - name: placeholder-node-loop0p1
 ---
 apiVersion: ceph.fundament.io/v1alpha1
 kind: BlockStorage
 metadata:
   name: test-block
-spec:
-  replication: auto
+spec: {}
 ---
 apiVersion: ceph.fundament.io/v1alpha1
 kind: FileStorage
 metadata:
   name: test-file
 spec:
-  replication: auto
   metadataServers: 1

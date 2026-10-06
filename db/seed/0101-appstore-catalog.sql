@@ -302,7 +302,7 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 - **Automatic disk discovery**: nodes are scanned for raw block devices, which appear in the console as Disks
 - **Declarative disk pools**: a DiskPool selects which discovered disks to contribute to the shared cluster
 - **Block and file storage classes**: a BlockStorage produces a ready-to-use ReadWriteOnce StorageClass; a FileStorage produces a ReadWriteMany StorageClass backed by a shared filesystem with active and standby metadata servers
-- **Tunable replication**: set replication to auto, 1, 2, or 3 per BlockStorage or FileStorage; auto derives the replica count from the number of nodes contributing disks
+- **Tunable replication**: set 1, 2 or 3 replicas per BlockStorage or FileStorage, or leave it unset to derive the count from the number of nodes contributing disks
 
 ## Use Cases
 
