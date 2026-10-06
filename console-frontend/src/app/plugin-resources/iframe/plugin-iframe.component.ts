@@ -152,6 +152,9 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.updateMinHeight();
+    // The first measurement can run before the content above the iframe has
+    // laid out; re-measure one frame later.
+    requestAnimationFrame(() => this.updateMinHeight());
     const onResize = () => this.updateMinHeight();
     window.addEventListener('resize', onResize);
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
@@ -160,9 +163,12 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
   private updateMinHeight(): void {
     const iframe = this.iframeRef()?.nativeElement;
     if (!iframe) return;
-    // Bottom gutter matches the page padding under the frame.
+    // Bottom gutter matches the page padding under the frame. top is clamped
+    // to [0, innerHeight]: when scrolled it goes negative, and unclamped it
+    // would inflate the floor past the viewport by the scroll offset.
     const bottomGutter = 24;
-    const floor = Math.floor(window.innerHeight - iframe.getBoundingClientRect().top - bottomGutter);
+    const top = Math.min(Math.max(iframe.getBoundingClientRect().top, 0), window.innerHeight);
+    const floor = Math.floor(window.innerHeight - top - bottomGutter);
     this.frameMinHeight.set(Math.max(150, floor));
   }
 

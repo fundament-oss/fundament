@@ -50,8 +50,4 @@ type ObjectStorageList struct {
 	Items           []ObjectStorage `json:"items"`
 }
 
-func (in *ObjectStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
-
-func (in *ObjectStorage) RequestedReplicas() *int32 { return in.Spec.Replicas }
-
 func init() { SchemeBuilder.Register(&ObjectStorage{}, &ObjectStorageList{}) }

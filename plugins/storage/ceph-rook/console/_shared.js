@@ -29,19 +29,23 @@ export function loadSdk() {
 // without the bundle still serves the read-only views; the stylesheet is
 // awaited too, or sheets render unstyled with the error swallowed.
 let nlddLoad;
+let nlddThemeSync = false;
 export function ensureNldd() {
   nlddLoad ??= (() => {
-    const sync = () => {
-      document.documentElement.setAttribute(
-        'data-scheme',
-        document.body.classList.contains('dark') ? 'dark' : 'light',
-      );
-    };
-    sync();
-    new MutationObserver(sync).observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
+    if (!nlddThemeSync) {
+      nlddThemeSync = true;
+      const sync = () => {
+        document.documentElement.setAttribute(
+          'data-scheme',
+          document.body.classList.contains('dark') ? 'dark' : 'light',
+        );
+      };
+      sync();
+      new MutationObserver(sync).observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+    }
 
     const settled = (el, what) => new Promise((resolve, reject) => {
       el.addEventListener('load', () => resolve(), { once: true });
@@ -57,7 +61,12 @@ export function ensureNldd() {
     const js = settled(script, 'nldd-design-system.js');
     document.head.appendChild(script);
     return Promise.all([css, js]).then(() => undefined);
-  })();
+  })().catch((err) => {
+    // Transient asset failures retry on the next click instead of
+    // disabling every sheet until a reload.
+    nlddLoad = undefined;
+    throw err;
+  });
   return nlddLoad;
 }
 
@@ -76,9 +85,11 @@ export function showSheetError(err) {
 }
 
 // Opens a right-hand <nldd-sheet> appended to the document root (it is a
-// <dialog>; inside the content flow it would steal layout height). Returns
+// <dialog>; inside the content flow it would steal layout height). Loads the
+// design-system bundle on first use; on failure it surfaces the error and
+// returns null, so callers bail with `if (!sheet) return`. Otherwise returns
 // the content container and a close(); the element removes itself after the
-// closing animation. Requires ensureNldd() to have resolved.
+// closing animation.
 //
 // The host sizes the iframe to this document's height, so on a short page
 // the sheet, confined to the iframe's viewport, would render a few rows
@@ -87,7 +98,13 @@ export function showSheetError(err) {
 let openSheetCount = 0;
 let preSheetMinHeight = '';
 
-export function openSheet({ label, width = '480px', minHeight = '640px' }) {
+export async function openSheet({ label, width = '480px', minHeight = '640px' }) {
+  try {
+    await ensureNldd();
+  } catch (err) {
+    showSheetError(err);
+    return null;
+  }
   // Only the outermost open/last close touch the body: chained sheets
   // would otherwise capture the inflated value as "previous" and latch it.
   if (openSheetCount === 0) {
@@ -138,6 +155,11 @@ export function emptyRow(colspan, message = 'No items.') {
 export function errorRow(colspan, err) {
   const message = err?.message ?? String(err);
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
+}
+
+// The block-level sibling of errorRow, for detail views and sheets.
+export function errorBox(err, prefix = 'Failed to load') {
+  return `<div class="plugin-error">${escapeHtml(`${prefix}: ${err?.message ?? err}`)}</div>`;
 }
 
 // Posts a navigate message to the parent, which resolves it relative to the

@@ -135,8 +135,9 @@ Pages are served under the plugin CSP (`script-src 'self'; style-src 'self'`,
 no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `style` attributes** — both are blocked. Events are wired with
 `addEventListener` and styling comes from the `.plugin-*` classes in
-`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()` /
-`navigateBack()`, which post to `window.fundament.parentOrigin` rather than `*`.
+`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()`,
+which posts to `window.fundament.parentOrigin` rather than `*`; create and
+edit never navigate, they open an `<nldd-sheet>` in place.
 
 ## Disk → DiskPool → consumer-kind flow
 

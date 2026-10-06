@@ -6,9 +6,8 @@
 
 import {
   loadSdk,
-  ensureNldd,
-  showSheetError,
   openSheet,
+  errorBox,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -165,14 +164,8 @@ export async function consumerListPage(cfg) {
   await fundament.init;
 
   document.getElementById('create-btn').addEventListener('click', async () => {
-    try {
-      await ensureNldd();
-    } catch (err) {
-      showSheetError(err);
-      return;
-    }
-    const { body, close } = openSheet({ label: `Create ${cfg.label}` });
-    renderCreateForm(cfg, body, close);
+    const sheet = await openSheet({ label: `Create ${cfg.label}` });
+    if (sheet) renderCreateForm(cfg, sheet.body, sheet.close);
   });
 
   try {
@@ -250,27 +243,19 @@ export async function consumerDetailPage(cfg) {
       // .onclick, not addEventListener: this button lives outside #content and
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
-      document.getElementById('edit-btn').onclick = async () => {
-        try {
-          await ensureNldd();
-        } catch (err) {
-          showSheetError(err);
-          return;
-        }
-        showEdit(item);
-      };
+      document.getElementById('edit-btn').onclick = () => showEdit(item);
       return item;
     } catch (err) {
       actions.hidden = true;
-      content.innerHTML = `<div class="plugin-error">${escapeHtml(
-        `Failed to load: ${err?.message ?? err}`,
-      )}</div>`;
+      content.innerHTML = errorBox(err);
       return undefined;
     }
   }
 
-  function showEdit(item) {
-    const { body, close } = openSheet({ label: `Edit ${cfg.label}` });
+  async function showEdit(item) {
+    const sheet = await openSheet({ label: `Edit ${cfg.label}` });
+    if (!sheet) return;
+    const { body, close } = sheet;
     body.insertAdjacentHTML('beforeend', `
       <form class="plugin-form" novalidate>
         <div class="plugin-error" data-role="error" hidden></div>

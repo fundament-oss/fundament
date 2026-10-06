@@ -1,8 +1,7 @@
 import {
   loadSdk,
-  ensureNldd,
-  showSheetError,
   openSheet,
+  errorBox,
   escapeHtml,
   humanizeQuantity,
   renderDefList,
@@ -100,25 +99,17 @@ async function showDetail() {
     // .onclick, not addEventListener: this button lives outside #content and
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
-    document.getElementById('edit-btn').onclick = async () => {
-      try {
-        await ensureNldd();
-      } catch (err) {
-        showSheetError(err);
-        return;
-      }
-      showEdit(item);
-    };
+    document.getElementById('edit-btn').onclick = () => showEdit(item);
   } catch (err) {
     actions.hidden = true;
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load: ${err?.message ?? err}`,
-    )}</div>`;
+    content.innerHTML = errorBox(err);
   }
 }
 
 async function showEdit(item) {
-  const { body, close } = openSheet({ label: 'Edit Disk Pool' });
+  const sheet = await openSheet({ label: 'Edit Disk Pool' });
+  if (!sheet) return;
+  const { body, close } = sheet;
   body.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading disks…</p>');
   const current = item.spec?.disks ?? [];
   const currentNames = current.map((d) => d.name);
@@ -128,9 +119,7 @@ async function showEdit(item) {
     const { items } = await fundament.k8s.list(RESOURCE_DISKS);
     disks = selectableDisks(items, name);
   } catch (err) {
-    body.lastElementChild.outerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load disks: ${err?.message ?? err}`,
-    )}</div>`;
+    body.lastElementChild.outerHTML = errorBox(err, 'Failed to load disks');
     return;
   }
 

@@ -99,6 +99,15 @@ func TestImmutableStorageClassDrift(t *testing.T) {
 	expandable := desired.DeepCopy()
 	expandable.AllowVolumeExpansion = new(false)
 	assert.Empty(t, immutableStorageClassDrift(expandable, desired))
+
+	// A renderer that leaves a pointer field nil has not specified it; the
+	// server default the live object carries is not drift. Without this, any
+	// unpinned defaulted field turns a byte-identical class into a terminal
+	// Degraded on the second reconcile.
+	unspecified := desired.DeepCopy()
+	unspecified.ReclaimPolicy = nil
+	unspecified.VolumeBindingMode = nil
+	assert.Empty(t, immutableStorageClassDrift(desired.DeepCopy(), unspecified))
 }
 
 // spec.default marks the derived StorageClass as the cluster default, so PVCs

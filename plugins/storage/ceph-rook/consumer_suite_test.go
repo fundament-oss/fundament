@@ -110,16 +110,6 @@ func runConsumerSuite[T consumer](t *testing.T, s consumerSuite[T]) {
 		assert.Equal(t, "host", status.FailureDomain)
 	})
 
-	// A nil reclaimPolicy or volumeBindingMode reads back as the server
-	// default, which the drift check treats as immutable drift forever; the
-	// fake client applies no defaulting, so only this invariant catches it.
-	t.Run("renders defaulted immutable StorageClass fields explicitly", func(t *testing.T) {
-		t.Parallel()
-		sc := renderOwnSC()
-		assert.NotNil(t, sc.ReclaimPolicy)
-		assert.NotNil(t, sc.VolumeBindingMode)
-	})
-
 	// No DiskPool contributes disks: Degraded, nothing created.
 	t.Run("degraded without OSDs", func(t *testing.T) {
 		t.Parallel()

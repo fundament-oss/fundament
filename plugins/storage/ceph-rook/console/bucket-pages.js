@@ -5,9 +5,8 @@
 // Mounted via the OBJECTSTORAGE detailSection hook, after the SDK loaded.
 
 import {
-  ensureNldd,
-  showSheetError,
   openSheet,
+  errorBox,
   quantityError,
   escapeHtml,
   emptyRow,
@@ -18,7 +17,6 @@ import {
 } from './_shared.js';
 
 const OBC = { group: 'objectbucket.io', version: 'v1alpha1', resource: 'objectbucketclaims' };
-const OBJECTBUCKETS = { group: 'objectbucket.io', version: 'v1alpha1', resource: 'objectbuckets' };
 const CONFIGMAPS = { group: '', version: 'v1', resource: 'configmaps' };
 
 // requestedBucket is the claim's own naming request; a Bound claim's real
@@ -65,15 +63,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         <tbody>${emptyRow(headers.length, 'Loading…')}</tbody>
       </table>
     `;
-    body.querySelector('[data-role="create"]').addEventListener('click', async () => {
-      try {
-        await ensureNldd();
-      } catch (err) {
-        showSheetError(err);
-        return;
-      }
-      showCreate();
-    });
+    body.querySelector('[data-role="create"]').addEventListener('click', () => showCreate());
     const tbody = body.querySelector('tbody');
 
     let claims;
@@ -99,25 +89,29 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         </tr>`)
       .join('');
     tbody.querySelectorAll('a.row-link').forEach((link) => {
-      link.addEventListener('click', async (e) => {
+      link.addEventListener('click', (e) => {
         e.preventDefault();
         const row = link.closest('tr');
-        try {
-          await ensureNldd();
-        } catch (err) {
-          showSheetError(err);
-          return;
-        }
         showBucket(row.dataset.name, row.dataset.namespace);
       });
     });
   }
 
-  async function showBucket(name, namespace) {
-    const { body: sheetBody } = openSheet({ label: `Bucket · ${name}` });
+  // preloaded carries the object a create just returned: it is never Bound
+  // yet, so both the claim get and the ConfigMap get would be wasted.
+  async function showBucket(name, namespace, preloaded) {
+    const sheet = await openSheet({ label: `Bucket · ${name}` });
+    if (!sheet) return;
+    const sheetBody = sheet.body;
     sheetBody.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading…</p>');
     try {
-      const claim = await fundament.k8s.get({ ...OBC, namespace, name });
+      const [claim, cm] = preloaded
+        ? [preloaded, undefined]
+        : await Promise.all([
+            fundament.k8s.get({ ...OBC, namespace, name }),
+            // The connection ConfigMap only appears once the claim binds.
+            fundament.k8s.get({ ...CONFIGMAPS, namespace, name }).catch(() => undefined),
+          ]);
       const spec = claim.spec ?? {};
       const pairs = [
         ['Phase', claim.status?.phase ?? 'Unknown'],
@@ -128,16 +122,23 @@ export function mountBucketsSection(container, item, ctx, cfg) {
       if (spec.additionalConfig?.maxSize) pairs.push(['Max size', spec.additionalConfig.maxSize]);
       if (spec.additionalConfig?.maxObjects) pairs.push(['Max objects', spec.additionalConfig.maxObjects]);
 
-      // The connection ConfigMap only appears once the claim binds.
       let connection = '<p class="plugin-text">Connection details appear once the claim is Bound.</p>';
-      try {
-        const cm = await fundament.k8s.get({ ...CONFIGMAPS, namespace, name });
+      if (cm) {
         connection = renderDefList([
           ['Endpoint', `http://${cm.data?.BUCKET_HOST ?? '?'}:${cm.data?.BUCKET_PORT ?? '?'}`],
           ['Bucket', cm.data?.BUCKET_NAME ?? '—'],
         ]);
-      } catch {
-        // keep the placeholder
+      }
+
+      // Without the client-side uniqueness pre-check, a taken exact name
+      // surfaces here: the provisioner leaves the claim Pending and retries
+      // with backoff, so say what Pending can mean.
+      const phase = claim.status?.phase ?? 'Unknown';
+      let pendingNote = '';
+      if (phase !== 'Bound') {
+        pendingNote = spec.bucketName
+          ? `<p class="plugin-hint">The provisioner has not fulfilled this claim yet and retries with backoff. For an exact bucket name this can mean the name is already taken on this store — in or outside Kubernetes. If it stays Pending, delete the claim and pick another name.</p>`
+          : `<p class="plugin-hint">The provisioner has not fulfilled this claim yet; it retries with backoff.</p>`;
       }
 
       // The Secret's name is shown; its values never reach this iframe.
@@ -146,6 +147,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
   - secretRef: { name: ${name} }`;
       sheetBody.lastElementChild.outerHTML = `
         ${renderDefList(pairs)}
+        ${pendingNote}
         ${connection}
         <p class="plugin-hint">
           Credentials are in the Secret <code>${escapeHtml(name)}</code> (same namespace),
@@ -154,12 +156,14 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         <pre class="plugin-text"><code>${escapeHtml(mount)}</code></pre>
       `;
     } catch (err) {
-      sheetBody.lastElementChild.outerHTML = `<div class="plugin-error">${escapeHtml(`Failed to load: ${err?.message ?? err}`)}</div>`;
+      sheetBody.lastElementChild.outerHTML = errorBox(err);
     }
   }
 
-  function showCreate() {
-    const { body: sheetBody, close } = openSheet({ label: 'Create Bucket' });
+  async function showCreate() {
+    const sheet = await openSheet({ label: 'Create Bucket' });
+    if (!sheet) return;
+    const { body: sheetBody, close } = sheet;
     // A project carries its namespaces; without any (dev sandbox), the
     // namespace is free text instead of a dropdown.
     const namespaceControl = namespaces.length > 0
@@ -203,7 +207,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         <div class="plugin-field" data-role="exact-name" hidden>
           <label class="plugin-label" for="bucket-name">Exact bucket name</label>
           <input id="bucket-name" name="bucketName" type="text" class="plugin-input" maxlength="63" />
-          <span class="plugin-hint">Bucket names are shared across the whole object store. Names taken outside Kubernetes are only caught by the provisioner: the claim then stays Pending.</span>
+          <span class="plugin-hint">Bucket names are shared across the whole object store. A taken name is only caught by the provisioner: the claim then stays Pending.</span>
         </div>
 
         <div class="plugin-field">
@@ -268,16 +272,10 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         const spec = { storageClassName };
 
         if (modeSelect.value === 'exact') {
-          const bucketName = form.querySelector('[name="bucketName"]').value.trim();
-          // Pre-check against this store's buckets only (RGW names are
-          // per-store). Names taken outside Kubernetes are not in the
-          // inventory; the provisioner leaves such a claim Pending.
-          const { items } = await fundament.k8s.list(OBJECTBUCKETS);
-          const taken = (items ?? []).some((ob) =>
-            ob.spec?.storageClassName === storageClassName
-            && ob.spec?.endpoint?.bucketName === bucketName);
-          if (taken) throw Error(`bucket name "${bucketName}" is already in use`);
-          spec.bucketName = bucketName;
+          // No uniqueness pre-check: it would be client-side and racy. The
+          // provisioner is authoritative; a taken name leaves the claim
+          // Pending, which the detail sheet explains.
+          spec.bucketName = form.querySelector('[name="bucketName"]').value.trim();
         } else {
           spec.generateBucketName = name;
         }
@@ -291,7 +289,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
           if (maxObjects) spec.additionalConfig.maxObjects = maxObjects;
         }
 
-        await fundament.k8s.create(
+        const created = await fundament.k8s.create(
           { ...OBC, namespace },
           {
             apiVersion: 'objectbucket.io/v1alpha1',
@@ -302,7 +300,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
         );
         close();
         showList();
-        await showBucket(name, namespace);
+        await showBucket(name, namespace, created);
       },
     });
   }

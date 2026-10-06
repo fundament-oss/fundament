@@ -43,13 +43,10 @@ func TestDefinition(t *testing.T) {
 			"blockstorages":  {"list", "get", "create", "patch"},
 			"filestorages":   {"list", "get", "create", "patch"},
 			"objectstorages": {"list", "get", "create", "patch"},
-			// The bucket pages: claims are created and shown, objectbuckets
-			// back the create form's collision check, and the claim's
+			// The bucket pages: claims are created and shown, and the claim's
 			// ConfigMap carries the connection info the detail page shows.
-			// The Secret is deliberately absent: its name is derivable and
-			// its values must never reach the iframe.
+			// No secrets: credentials must never reach the iframe.
 			"objectbucketclaims": {"list", "get", "create"},
-			"objectbuckets":      {"list"},
 			"configmaps":         {"get"},
 		} {
 			var found *pluginruntime.AllowedResource

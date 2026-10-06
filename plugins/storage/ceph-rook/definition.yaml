@@ -230,11 +230,6 @@ spec:
       version: v1alpha1
       resource: objectbucketclaims
       verbs: [list, get, create]
-    # Cluster-scoped bucket inventory, for the create form's collision check.
-    - group: objectbucket.io
-      version: v1alpha1
-      resource: objectbuckets
-      verbs: [list]
     - group: ""
       version: v1
       resource: configmaps

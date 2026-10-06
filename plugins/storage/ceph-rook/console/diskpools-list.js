@@ -1,8 +1,7 @@
 import {
   loadSdk,
-  ensureNldd,
-  showSheetError,
   openSheet,
+  errorBox,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -19,20 +18,14 @@ await fundament.init;
 
 const tbody = document.getElementById('rows');
 
-document.getElementById('create-btn').addEventListener('click', async () => {
-  try {
-    await ensureNldd();
-  } catch (err) {
-    showSheetError(err);
-    return;
-  }
-  openCreateSheet();
-});
+document.getElementById('create-btn').addEventListener('click', () => openCreateSheet());
 
 // The create form lives in a sheet over the list. Disks are fetched at open
 // time, so the picker reflects the latest probe.
 async function openCreateSheet() {
-  const { body, close } = openSheet({ label: 'Create Disk Pool' });
+  const sheet = await openSheet({ label: 'Create Disk Pool' });
+  if (!sheet) return;
+  const { body, close } = sheet;
   body.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading disks…</p>');
 
   let availableDisks;
@@ -45,9 +38,7 @@ async function openCreateSheet() {
     // Only unclaimed, available disks; null because no pool exists yet.
     availableDisks = selectableDisks(items, null);
   } catch (err) {
-    body.lastElementChild.outerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load disks: ${err?.message ?? err}`,
-    )}</div>`;
+    body.lastElementChild.outerHTML = errorBox(err, 'Failed to load disks');
     return;
   }
 

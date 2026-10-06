@@ -54,3 +54,6 @@ func (in *BlockStorage) RequestedReplicas() *int32       { return in.Spec.Replic
 
 func (in *FileStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
 func (in *FileStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }
+
+func (in *ObjectStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
+func (in *ObjectStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }

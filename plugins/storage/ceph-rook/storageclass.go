@@ -109,8 +109,8 @@ func RenderBucketStorageClass(name, clusterNamespace, storeName, _ string) *stor
 		// Delete removes the bucket and its objects with the claim; the pools
 		// themselves are guarded by preservePoolsOnDelete.
 		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
-		// Meaningless for buckets, but nil reads back as the server default,
-		// which immutableStorageClassDrift would treat as drift forever.
+		// Meaningless for buckets; pinned for explicitness (the drift check
+		// ignores nil desired pointers).
 		VolumeBindingMode: ptr.To(storagev1.VolumeBindingImmediate),
 		Parameters: map[string]string{
 			"objectStoreName":      storeName,
