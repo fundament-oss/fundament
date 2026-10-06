@@ -64,8 +64,9 @@ terraform {
 }
 
 provider "fundament" {
-  endpoint = "https://organization.fundament.localhost:8443"
-  api_key  = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
+  endpoint        = "https://organization.fundament.localhost:8443"
+  organization_id = "019b4000-0000-7000-8000-000000000001"
+  api_key         = var.fundament_api_key  # Or use FUNDAMENT_API_KEY environment variable
 }
 ```
 
@@ -73,9 +74,11 @@ provider "fundament" {
 
 | Name | Description | Required |
 |------|-------------|----------|
-| `endpoint` | The URL of the Fundament organization API | Yes |
-| `api_key` | API key for authentication. Can also be set via `FUNDAMENT_API_KEY` environment variable. | Yes |
-| `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's automatically derived from the organization endpoint. | No |
+| `endpoint` | The URL of the Fundament organization API. Can also be set via the `FUNDAMENT_ENDPOINT` environment variable. | Yes |
+| `organization_id` | The ID of the organization to manage, shown in the console under **General**. Can also be set via the `FUNDAMENT_ORGANIZATION_ID` environment variable. | Yes |
+| `api_key` | API key for authentication. Can also be set via the `FUNDAMENT_API_KEY` environment variable. | Yes |
+| `authn_endpoint` | The URL of the Fundament authentication API (for API key exchange). Can also be set via the `FUNDAMENT_AUTHN_ENDPOINT` environment variable. If not provided, it's derived from `endpoint` by replacing `organization` with `authn`. | No |
+| `kube_api_proxy_url` | The URL of the Kubernetes API proxy, needed only for `fundament_plugin_installation`. Can also be set via the `FUNDAMENT_KUBE_API_PROXY_URL` environment variable. | No |
 
 ### Authentication
 
@@ -85,8 +88,9 @@ API keys provide a convenient authentication method that automatically handles t
 
 ```hcl
 provider "fundament" {
-  endpoint = "https://organization.fundament.localhost:8443"
-  api_key  = var.fundament_api_key
+  endpoint        = "https://organization.fundament.localhost:8443"
+  organization_id = "019b4000-0000-7000-8000-000000000001"
+  api_key         = var.fundament_api_key
 }
 ```
 
@@ -98,217 +102,23 @@ export FUNDAMENT_API_KEY="your-api-key"
 
 The provider automatically exchanges the API key for a JWT token and refreshes it as needed.
 
-## Data Sources
 
-### fundament_clusters
+## Reference
 
-Fetches the list of clusters for your organization.
-
-#### Example Usage
-
-```hcl
-# List all clusters
-data "fundament_clusters" "all" {}
-
-output "cluster_names" {
-  value = [for c in data.fundament_clusters.all.clusters : c.name]
-}
-
-# Filter by project
-data "fundament_clusters" "project_clusters" {
-  project_id = "your-project-uuid"
-}
-```
-
-#### Argument Reference
-
-| Name | Description | Required |
-|------|-------------|----------|
-| `project_id` | Filter clusters by project ID | No |
-
-#### Attribute Reference
-
-| Name | Description |
-|------|-------------|
-| `clusters` | List of clusters |
-| `clusters.id` | The unique identifier of the cluster |
-| `clusters.name` | The name of the cluster |
-| `clusters.status` | The status of the cluster (`running`, `provisioning`, `stopped`, etc.) |
-| `clusters.region` | The region where the cluster is deployed |
-
-### fundament_cluster (data source)
-
-Fetches a single cluster by ID.
-
-#### Example Usage
-
-```hcl
-# Look up an existing cluster
-data "fundament_cluster" "existing" {
-  id = "your-cluster-uuid"
-}
-
-output "cluster_name" {
-  value = data.fundament_cluster.existing.name
-}
-```
-
-#### Argument Reference
-
-| Name | Description | Required |
-|------|-------------|----------|
-| `id` | The unique identifier of the cluster to look up | Yes |
-
-#### Attribute Reference
-
-| Name | Description |
-|------|-------------|
-| `name` | The name of the cluster |
-| `region` | The region where the cluster is deployed |
-| `kubernetes_version` | The Kubernetes version of the cluster |
-| `status` | The current status of the cluster (`provisioning`, `starting`, `running`, `upgrading`, `error`, `stopping`, `stopped`) |
-
-### fundament_project_members
-
-Fetches the list of members for a project.
-
-#### Example Usage
-
-```hcl
-data "fundament_project_members" "all" {
-  project_id = fundament_project.example.id
-}
-
-output "members" {
-  value = data.fundament_project_members.all.members
-}
-```
-
-#### Argument Reference
-
-| Name | Description | Required |
-|------|-------------|----------|
-| `project_id` | The ID of the project to list members for. | Yes |
-
-#### Attribute Reference
-
-| Name | Description |
-|------|-------------|
-| `members` | List of project members. |
-| `members.id` | The unique identifier of the project member. |
-| `members.project_id` | The ID of the project. |
-| `members.user_id` | The ID of the user. |
-| `members.user_name` | The name of the user. |
-| `members.permission` | The permission of the project member (`admin`, `viewer`). |
-| `members.created` | The timestamp when the member was added. |
-
-## Resources
-
-### fundament_cluster
-
-Manages a Kubernetes cluster in Fundament.
-
-#### Example Usage
-
-```hcl
-# Create a new cluster
-resource "fundament_cluster" "example" {
-  name               = "my-cluster"
-  region             = "eu-west-1"
-  kubernetes_version = "1.28"
-}
-
-# Reference the cluster ID
-output "cluster_id" {
-  value = fundament_cluster.example.id
-}
-```
-
-#### Argument Reference
-
-| Name | Description | Required | Forces Replacement |
-|------|-------------|----------|-------------------|
-| `name` | The name of the cluster. Must be unique within the organization. | Yes | Yes |
-| `region` | The region where the cluster will be deployed. | Yes | Yes |
-| `kubernetes_version` | The Kubernetes version for the cluster. Can be updated to upgrade the cluster. | Yes | No |
-
-#### Attribute Reference
-
-| Name | Description |
-|------|-------------|
-| `id` | The unique identifier of the cluster. |
-| `status` | The current status of the cluster (`provisioning`, `starting`, `running`, `upgrading`, `error`, `stopping`, `stopped`). |
-
-#### Import
-
-Clusters can be imported using the cluster ID:
-
-```bash
-tofu import fundament_cluster.example <cluster-id>
-```
-
-### fundament_project_member
-
-Manages a project member in Fundament. Assigns a user to a project with a specific role.
-
-> **Note:** When a project is created, the authenticated user is automatically added as an admin member. This implicit member cannot be managed by this resource. Attempting to add the project creator as a member will result in an `AlreadyExists` error.
-
-#### Example Usage
-
-```hcl
-resource "fundament_project" "example" {
-  name = "my-project"
-}
-
-resource "fundament_project_member" "admin" {
-  project_id = fundament_project.example.id
-  user_id    = "550e8400-e29b-41d4-a716-446655440000"
-  permission = "admin"
-}
-
-resource "fundament_project_member" "viewer" {
-  project_id = fundament_project.example.id
-  user_id    = "550e8400-e29b-41d4-a716-446655440001"
-  permission = "viewer"
-}
-```
-
-#### Argument Reference
-
-| Name | Description | Required | Forces Replacement |
-|------|-------------|----------|-------------------|
-| `project_id` | The ID of the project. | Yes | Yes |
-| `user_id` | The ID of the user to add as a member. | Yes | Yes |
-| `permission` | The permission of the project member. Valid values: `"admin"`, `"viewer"`. | Yes | No |
-
-#### Attribute Reference
-
-| Name | Description |
-|------|-------------|
-| `id` | The unique identifier of the project member. |
-| `user_name` | The name of the user. |
-| `created` | The timestamp when the member was added. |
-
-#### Import
-
-Import using the format `project_id:member_id`:
-
-```bash
-tofu import fundament_project_member.example <project-id>:<member-id>
-```
+The [reference](docs/index.md) describes every resource and data source with its arguments, attributes and an example. It is generated from the provider's schema and from [`examples/`](examples/) by `just terraform-provider::docs`, which `just generate` runs; CI fails when it is out of date. Describe a new argument in its schema `Description`, not here.
 
 ## Development
 
 ### Running Tests
 
 ```bash
-just terraform-test
+just terraform-provider::test
 ```
 
 ### Cleaning Build Artifacts
 
 ```bash
-just terraform-clean
+just terraform-provider::clean
 ```
 
 ### Testing Locally
@@ -323,29 +133,32 @@ just terraform-clean
    just terraform-provider::install
    ```
 
-3. Navigate to the example directory and run tofu:
+3. Put the provider configuration and an example in a directory and run tofu:
    ```bash
-   cd terraform-provider/examples/data-sources/clusters
+   mkdir /tmp/try-fundament
+   cp terraform-provider/examples/provider/provider.tf terraform-provider/examples/data-sources/fundament_clusters/data-source.tf /tmp/try-fundament
+   cd /tmp/try-fundament
+   FUNDAMENT_API_KEY=your-api-key tofu init
    FUNDAMENT_API_KEY=your-api-key tofu plan
    ```
 
-### Running Acceptance Tests
-
-Acceptance tests run against a real Fundament API. To run them:
+### Checking the Examples
 
 ```bash
-export TF_ACC=1
-export FUNDAMENT_ENDPOINT="https://organization.fundament.localhost:8443"
-export FUNDAMENT_API_KEY="your-api-key"
-# Optional: for project filter tests
-export FUNDAMENT_TEST_PROJECT_ID="your-project-uuid"
-# Optional: for cluster data source tests
-export FUNDAMENT_TEST_CLUSTER_NAME="your-cluster-name"
-# Optional: for project member tests
-export FUNDAMENT_TEST_USER_ID="your-user-uuid"
-
-just terraform-provider::test
+just terraform-provider::validate-examples
 ```
+
+This runs `tofu validate` on every example and on every configuration on the [docs page](../docs/user/opentofu-provider.md) that declares its providers; CI runs it on every pull request.
+
+### Running Acceptance Tests
+
+Acceptance tests run against a real Fundament API: the local development environment in mock mode (`just dev`). They log in as the test user alice, create an API key and use the first organization, so they need no further settings:
+
+```bash
+just terraform-provider::test-acc
+```
+
+They create clusters in the test region `eu-west-1`, which a local Gardener rejects; run them against mock mode.
 
 #### Debugging Acceptance Tests
 
@@ -363,11 +176,3 @@ TF_ACC=1 go test -v ./internal/provider/
 ```
 
 Available log levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`.
-
-## Future Development
-
-The following resources and data sources are planned for future releases:
-
-- `fundament_project` resource and data source
-- `fundament_node_pool` resource
-- `fundament_namespace` resource
