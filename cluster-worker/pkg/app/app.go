@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
@@ -93,6 +94,12 @@ type statusCacheRunner interface {
 	RunStatusCache(ctx context.Context) error
 }
 
+// statusChangeNotifier is implemented by Gardener clients that can report
+// Shoot status changes as they happen.
+type statusChangeNotifier interface {
+	SetStatusChangeHandler(fn func(clusterID uuid.UUID))
+}
+
 // App holds the wired-up application components.
 type App struct {
 	pool            *pgxpool.Pool
@@ -118,6 +125,11 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 
 	// Cluster handler (sync, status, reconcile)
 	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, cfg.Cluster)
+	// In real mode the status cache's watch reports Shoot status changes;
+	// they queue a status check right away instead of waiting for a poll.
+	if notifier, ok := gardenerClient.(statusChangeNotifier); ok {
+		notifier.SetStatusChangeHandler(ch.EnqueueStatusCheck)
+	}
 	registry.RegisterSync(handler.EntityCluster, ch)
 	registry.RegisterSync(handler.EntityNodePool, ch)
 	registry.RegisterStatus(ch)

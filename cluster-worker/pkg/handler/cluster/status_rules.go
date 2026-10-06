@@ -15,6 +15,9 @@ type storedShootState struct {
 	// Updating is set while an update fundament pushed rolls out on a ready
 	// cluster (the sync handler sets it).
 	Updating bool
+	// LastWarning is the message of the latest status_warning event. It is
+	// only loaded when Gardener reports an error it retries.
+	LastWarning string
 }
 
 // statusEvent is one activity-log entry a poll records.
@@ -70,6 +73,9 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 	// Errors Gardener will retry by itself are a warning, not a failure: keep the
 	// cluster where it was (ready, or progressing while it is being created),
 	// show Gardener's message and record one status_warning per distinct message.
+	// Gardener retries such an error again and again, with progress in between
+	// that the watch now sees, so the comparison is with the last recorded
+	// warning, not with the stored message.
 	if observed.Status == gardener.StatusError && observed.Retrying {
 		warning := shootStatusUpdate{Status: gardener.StatusProgressing, Message: observed.Message}
 		if stored.Status == gardener.StatusReady {
@@ -77,7 +83,7 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 			warning.Health = stored.Health
 			warning.Updating = stored.Updating
 		}
-		if observed.Message != stored.Message {
+		if observed.Message != stored.LastWarning {
 			warning.Events = []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: observed.Message}}
 		}
 		return warning

@@ -258,6 +258,32 @@ WHERE
     id = @cluster_id
     AND shoot_status = 'ready';
 
+-- name: ClusterGetLastWarningMessage :one
+-- The message of the cluster's most recent status_warning event since its last
+-- milestone (ready, healthy, error or lost), so an error Gardener retries again
+-- and again is recorded once, and the same error in a later incident is
+-- recorded again.
+SELECT
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = @cluster_id
+    AND tenant.cluster_events.event_type = 'status_warning'
+    AND tenant.cluster_events.created > COALESCE((
+        SELECT
+            max(tenant.cluster_events.created)
+        FROM
+            tenant.cluster_events
+        WHERE
+            tenant.cluster_events.cluster_id = @cluster_id
+            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
+    ), '-infinity'::timestamptz)
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1;
+
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).
 INSERT INTO

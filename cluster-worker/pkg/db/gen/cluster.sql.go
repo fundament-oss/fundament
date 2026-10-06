@@ -185,6 +185,44 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 	return i, err
 }
 
+const clusterGetLastWarningMessage = `-- name: ClusterGetLastWarningMessage :one
+SELECT
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = $1
+    AND tenant.cluster_events.event_type = 'status_warning'
+    AND tenant.cluster_events.created > COALESCE((
+        SELECT
+            max(tenant.cluster_events.created)
+        FROM
+            tenant.cluster_events
+        WHERE
+            tenant.cluster_events.cluster_id = $1
+            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
+    ), '-infinity'::timestamptz)
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1
+`
+
+type ClusterGetLastWarningMessageParams struct {
+	ClusterID uuid.UUID
+}
+
+// The message of the cluster's most recent status_warning event since its last
+// milestone (ready, healthy, error or lost), so an error Gardener retries again
+// and again is recorded once, and the same error in a later incident is
+// recorded again.
+func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterGetLastWarningMessageParams) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, clusterGetLastWarningMessage, arg.ClusterID)
+	var message pgtype.Text
+	err := row.Scan(&message)
+	return message, err
+}
+
 const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
 SELECT EXISTS (
     SELECT 1

@@ -153,8 +153,9 @@ settling does not stick, and a cluster that breaks later shows it.
 - `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change
   writes `status_healthy` or `status_unhealthy`.
 - A last operation in state `Error` or `Aborted` is one Gardener will retry: it is
-  recorded as `status_warning` (once per distinct message) and does not change the
-  status. Only `Failed` sets `error`.
+  recorded as `status_warning` (once per distinct message: an error Gardener retries
+  again and again, with progress in between, is compared with the last recorded warning)
+  and does not change the status. Only `Failed` sets `error`.
 
 ### Status cache
 
@@ -173,6 +174,14 @@ is one cheap list request every 15s: a garden that hangs instead of refusing con
 never makes the watch fail, so without it the cache would keep serving its last state.
 An outage therefore shows up as errors within about 30s instead of as silently stale
 status. Writes (`ApplyShoot`, deletes, kubeconfigs) never use the cache.
+
+The same watch queues a status check whenever a Shoot's status changes, so a change
+reaches the database within about a second instead of at the next poll. Every Shoot is
+queued once when the cache loads and once when it is deleted. An update is only queued
+when the status fundament derives from it changes: Gardener also rewrites a Shoot after
+every reconcile task, when a condition message changes and on the cache's periodic
+resync, and those are dropped. A Shoot event that arrives just before the cluster's
+first sync is marked completed is checked again shortly.
 
 ## Configuration
 

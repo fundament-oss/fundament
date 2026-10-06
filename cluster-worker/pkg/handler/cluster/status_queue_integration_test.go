@@ -78,3 +78,20 @@ func TestRunStatusWorkers(t *testing.T) {
 		t.Fatal("RunStatusWorkers did not return after the context ended")
 	}
 }
+
+// A Shoot event for a cluster whose first sync has not completed yet is
+// checked again shortly instead of being dropped.
+func TestStatusQueueRetriesClusterNotSyncedYet(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "queue-unsynced")
+	h.EnqueueStatusCheck(clusterID)
+	h.DrainStatusQueue(t.Context())
+
+	assert.Equal(t, 1, h.StatusRequeues(clusterID))
+	assert.Equal(t, 0, mock.StatusCallsFor(clusterID))
+}

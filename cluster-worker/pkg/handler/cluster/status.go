@@ -18,6 +18,12 @@ import (
 // Shoot is gone from Gardener.
 const msgShootConfirmedDeleted = "Shoot confirmed deleted"
 
+// ErrClusterNotSynced is returned by CheckCluster for a cluster whose first
+// sync to Gardener has not completed. A Shoot event can arrive just before the
+// outbox row that created the Shoot is marked completed; the check is worth
+// repeating shortly.
+var ErrClusterNotSynced = errors.New("cluster not synced to Gardener yet")
+
 // CheckStatus queues a status check for every cluster that is due; the
 // status workers run them (see status_queue.go).
 func (h *Handler) CheckStatus(ctx context.Context) error {
@@ -70,8 +76,8 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 
 // CheckCluster reads one cluster's Shoot status from Gardener and records it.
 // It is the single status step: every check, whatever triggered it, ends here.
-// A cluster that no longer exists, has not reached Gardener yet, or is
-// confirmed deleted is left alone.
+// A cluster that no longer exists or is confirmed deleted is left alone; one
+// that has not reached Gardener yet returns ErrClusterNotSynced.
 func (h *Handler) CheckCluster(ctx context.Context, id uuid.UUID) error {
 	cluster, err := h.queries.ClusterGetForStatusCheck(ctx, db.ClusterGetForStatusCheckParams{ClusterID: id})
 	if err != nil {
@@ -81,7 +87,7 @@ func (h *Handler) CheckCluster(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("load cluster %s: %w", id, err)
 	}
 	if !cluster.Synced {
-		return nil
+		return ErrClusterNotSynced
 	}
 
 	// Status lookups find the Shoot by cluster-ID label across all namespaces, so
@@ -111,6 +117,13 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		Message:  cluster.ShootStatusMessage.String,
 		Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
 		Updating: cluster.ShootUpdating,
+	}
+	if shootStatus.Status == gardener.StatusError && shootStatus.Retrying {
+		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("load last warning: %w", err)
+		}
+		stored.LastWarning = lastWarning.String
 	}
 	update := nextShootStatus(stored, shootStatus)
 

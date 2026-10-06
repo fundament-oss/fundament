@@ -317,7 +317,8 @@ func TestCheckClusterMissingRow(t *testing.T) {
 	assert.Equal(t, 0, mock.StatusCallsFor(missing))
 }
 
-// A cluster that has not reached Gardener yet has no Shoot to check.
+// A cluster that has not reached Gardener yet has no Shoot to check; the
+// caller is told to try again.
 func TestCheckClusterNotSyncedYet(t *testing.T) {
 	t.Parallel()
 
@@ -326,7 +327,7 @@ func TestCheckClusterNotSyncedYet(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-unsynced")
-	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	require.ErrorIs(t, h.CheckCluster(t.Context(), clusterID), cluster.ErrClusterNotSynced)
 	assert.Equal(t, 0, mock.StatusCallsFor(clusterID))
 	assert.Nil(t, getClusterShootStatus(t, db, clusterID))
 }
@@ -357,4 +358,59 @@ func TestCheckClusterConcurrentTransitionRecordedOnce(t *testing.T) {
 
 	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
 	assert.Equal(t, readyRowsBefore+1, countReadyOutboxRows(t, db, clusterID))
+}
+
+// Gardener retries a failing task again and again, with progress in between
+// that the watch sees; the same error is recorded as one warning.
+func TestCheckClusterRetriedErrorRecordedOnce(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-retry-once")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+
+	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
+	report := func(status gardener.ShootStatusType, message string, retrying bool) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report(gardener.StatusError, failure, true)
+	report(gardener.StatusProgressing, "Create: Deploying gardener-resource-manager", false)
+	report(gardener.StatusError, failure, true)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_warning"))
+}
+
+// The same error in a later incident is a new warning: once the cluster
+// reached ready, an earlier warning no longer counts as the one it repeats.
+func TestCheckClusterRetriedErrorAfterReadyIsNewWarning(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-retry-again")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+
+	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
+	report := func(status gardener.ShootStatusType, message string, retrying, healthy bool) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying, Healthy: healthy,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report(gardener.StatusError, failure, true, false)
+	report(gardener.StatusReady, gardener.MsgShootReady, false, true)
+	report(gardener.StatusError, failure, true, false)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
+	assert.Equal(t, 2, countEvents(t, db, clusterID, "status_warning"))
 }

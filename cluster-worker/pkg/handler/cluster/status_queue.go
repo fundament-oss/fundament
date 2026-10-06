@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -65,7 +66,11 @@ func (h *Handler) processNextStatusCheck(ctx context.Context) bool {
 		return true
 	}
 	if h.statusQueue.NumRequeues(clusterID) < statusMaxRetries {
-		h.logger.Warn("status check failed, retrying", "cluster_id", clusterID, "error", err)
+		if errors.Is(err, ErrClusterNotSynced) {
+			h.logger.Debug("cluster not synced yet, checking again shortly", "cluster_id", clusterID)
+		} else {
+			h.logger.Warn("status check failed, retrying", "cluster_id", clusterID, "error", err)
+		}
 		h.statusQueue.AddRateLimited(clusterID)
 		return true
 	}

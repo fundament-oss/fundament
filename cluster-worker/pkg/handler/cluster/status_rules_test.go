@@ -215,9 +215,24 @@ func TestNextShootStatus(t *testing.T) {
 		},
 		{
 			name:     "same retried error again writes no second warning",
-			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried."},
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried.", LastWarning: "etcd not ready. Operation will be retried."},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
 			want:     shootStatusUpdate{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried."},
+		},
+		{
+			name:     "same retried error after progress in between writes no second warning",
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Deploying gardener-resource-manager", LastWarning: "etcd not ready. Operation will be retried."},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
+			want:     shootStatusUpdate{Status: gardener.StatusProgressing, Message: "etcd not ready. Operation will be retried."},
+		},
+		{
+			name:     "a different retried error is a new warning",
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting", LastWarning: "etcd not ready. Operation will be retried."},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "token not yet generated. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusProgressing, Message: "token not yet generated. Operation will be retried.",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: "token not yet generated. Operation will be retried."}},
+			},
 		},
 		{
 			name:     "retried reconcile error keeps a ready cluster ready",
