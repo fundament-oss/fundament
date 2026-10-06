@@ -390,6 +390,75 @@ unfinalize() {
         -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
 }
 
+# Leftovers of the ceph-rook *plugin* that share this namespace and cluster
+# scope. Removing the PluginInstallation deletes none of them, and a wedged
+# ObjectBucketClaim or CephObjectStore finalizer outlives its operator, so a
+# half-removed plugin strands the namespace and blocks the next install.
+# Deleted here in dependency order; each step tolerates the kind's CRD being
+# absent (a cluster that never ran the plugin).
+delete_plugin_claims() {
+    # Bucket claims first, cluster-wide: their finalizer needs the
+    # StorageClass, RGW and provisioner still present to deprovision
+    # (lib-bucket-provisioner resolves the class before honouring deletion).
+    local ns name
+    "${KUBECTL[@]}" get objectbucketclaims -A \
+        -o jsonpath='{range .items[*]}{.metadata.namespace} {.metadata.name}{"\n"}{end}' 2>/dev/null |
+    while read -r ns name; do
+        [ -n "$name" ] || continue
+        "${KUBECTL[@]}" -n "$ns" delete objectbucketclaim "$name" --ignore-not-found --timeout=1m ||
+            "${KUBECTL[@]}" -n "$ns" patch "objectbucketclaim/$name" --type merge \
+                -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
+    done || true
+    # ObjectBuckets are cluster-scoped and carry the provisioner's finalizer;
+    # once the provisioner is gone nothing clears it, so fall back per object.
+    local ob
+    "${KUBECTL[@]}" get objectbuckets -o name 2>/dev/null | while read -r ob; do
+        [ -n "$ob" ] || continue
+        "${KUBECTL[@]}" delete "$ob" --ignore-not-found --timeout=1m ||
+            "${KUBECTL[@]}" patch "$ob" --type merge \
+                -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
+    done || true
+}
+
+delete_plugin_crs() {
+    # Cluster-scoped consumer kinds; deleting them cascades their derived
+    # Rook objects and StorageClasses through owner references.
+    local kind
+    for kind in objectstorages filestorages blockstorages diskpools disks; do
+        "${KUBECTL[@]}" delete "$kind.ceph.fundament.io" --all --ignore-not-found --timeout=1m 2>/dev/null || true
+    done
+    # The derived StorageClasses, matched by provisioner rather than name:
+    # the names are operator-chosen, the drivers are not.
+    "${KUBECTL[@]}" get storageclass \
+        -o jsonpath='{range .items[*]}{.metadata.name} {.provisioner}{"\n"}{end}' 2>/dev/null |
+    while read -r name provisioner; do
+        case "$provisioner" in
+            *.rbd.csi.ceph.com|*.cephfs.csi.ceph.com|*.ceph.rook.io/bucket)
+                "${KUBECTL[@]}" delete storageclass "$name" --ignore-not-found ;;
+        esac
+    done || true
+}
+
+delete_cluster_leftovers() {
+    # CRDs last: deleting one garbage-collects its remaining CRs, and a CR
+    # still holding a finalizer here would wedge the CRD instead.
+    local crds
+    crds=$("${KUBECTL[@]}" get crd -o name 2>/dev/null |
+        grep -E 'ceph\.rook\.io|ceph\.fundament\.io|objectbucket\.io' || true)
+    [ -n "$crds" ] && "${KUBECTL[@]}" delete $crds --ignore-not-found --timeout=2m || true
+
+    # Rook's cluster RBAC and CSI driver registrations; helm uninstall covers
+    # them only while its release secret still exists, which a wedged
+    # namespace deletion takes down first.
+    local rbac
+    rbac=$("${KUBECTL[@]}" get clusterrole,clusterrolebinding -o name 2>/dev/null |
+        grep -E '/(rook-ceph|cephfs-csi|rbd-csi|cephfs-external|rbd-external|objectstorage-provisioner)' || true)
+    [ -n "$rbac" ] && "${KUBECTL[@]}" delete $rbac --ignore-not-found || true
+    local drivers
+    drivers=$("${KUBECTL[@]}" get csidrivers -o name 2>/dev/null | grep 'csi\.ceph\.com' || true)
+    [ -n "$drivers" ] && "${KUBECTL[@]}" delete $drivers --ignore-not-found || true
+}
+
 # Deletes every instance of a namespaced Rook kind, clearing the finalizer if the
 # delete stalls. The guards are for an absent CRD, where `get` fails and pipefail
 # would abort the teardown.
@@ -416,7 +485,12 @@ down() {
 
     # Before the CephCluster: they are its tenants, and Rook tears them down
     # while the cluster is still serving.
+    log "deleting plugin bucket claims while the provisioner can still deprovision"
+    delete_plugin_claims
+    log "deleting plugin consumer CRs and their derived StorageClasses"
+    delete_plugin_crs
     log "deleting the Rook CRs while the operator can still finalize them"
+    delete_rook_kind cephobjectstore
     delete_rook_kind cephfilesystem
     delete_rook_kind cephblockpool
 
@@ -430,6 +504,9 @@ down() {
     unfinalize configmap/rook-ceph-mon-endpoints
     unfinalize secret/rook-ceph-mon
     "${KUBECTL[@]}" delete ns "$NS" --ignore-not-found --timeout=3m || true
+
+    log "removing plugin/Rook cluster-scoped leftovers (CRDs, RBAC, CSI drivers)"
+    delete_cluster_leftovers
     log "done -- run 'just storage-disks reset' before reinstalling"
 }
 
@@ -444,7 +521,9 @@ and a hand-written CephCluster. No fundament plugin involved, so it separates
   test      provision an RBD and a CephFS volume, write and verify a checksum
   soak      run a workload that keeps re-verifying both volumes, for restart testing
   soak-log  recent soak output plus a failure count
-  down      remove everything (leaves the disks alone)
+  down      remove everything, including leftovers of the ceph-rook plugin
+            (bucket claims, consumer CRs, StorageClasses, CRDs, Rook RBAC);
+            leaves the disks alone
 
 Environment: CLUSTER=$CLUSTER NS=$NS ROOK_VERSION=$ROOK_VERSION
              CEPH_IMAGE=$CEPH_IMAGE
