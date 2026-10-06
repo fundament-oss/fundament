@@ -437,7 +437,6 @@ kind: ObjectStorage
 metadata:
   name: test-pool
 spec:
-  # replicas omitted = automatic, like replication: auto above
   gatewayInstances: 1
 YAML
 ```
