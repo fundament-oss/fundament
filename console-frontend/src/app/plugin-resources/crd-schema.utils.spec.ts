@@ -63,6 +63,14 @@ describe('labelMidSentence', () => {
     expect(labelMidSentence('Certificate Requests')).toBe('certificate requests');
     expect(labelMidSentence('FSC Installations')).toBe('FSC installations');
   });
+
+  it('keeps a pluralized acronym intact', () => {
+    // The plural "s" kindToLabel appends leaves the acronym an acronym; reading
+    // "HTTPs" as an ordinary word wrote "cluster https".
+    expect(labelMidSentence(kindToLabel('ClusterHTTP'))).toBe('cluster HTTPs');
+    expect(labelMidSentence(kindToLabel('FSC'))).toBe('FSCs');
+    expect(labelMidSentence(kindToLabel('ClusterHTTPRoute'))).toBe('cluster HTTP routes');
+  });
 });
 
 describe('fieldNameToLabel', () => {

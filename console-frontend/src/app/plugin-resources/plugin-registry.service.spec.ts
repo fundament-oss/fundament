@@ -34,6 +34,11 @@ function isCrdRead(url: unknown): boolean {
   return String(url).includes('customresourcedefinitions');
 }
 
+/** Reads of a CRD, which the menu's labels need: one per CRD, not on a clock. */
+function crdReads(): number {
+  return vi.mocked(fetch).mock.calls.filter((call) => isCrdRead(call[0])).length;
+}
+
 /** Reads of the installation list, apart from the CRD reads the menu's labels
  *  need: those are a one-off per CRD and not on the list's clock. */
 function listReads(): number {
@@ -153,6 +158,39 @@ describe('PluginRegistryService', () => {
     // The menu still stands: the label falls back to the CRD reference.
     expect(registry.allPlugins()).toHaveLength(1);
     expect(registry.crdKind('certificates.cert-manager.io')).toBeUndefined();
+  });
+
+  it('reads a kind again on the next poll when the CRD was not there yet', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    // Right after an install the CRD is often not served yet. The menu does not
+    // change when it appears, so the read has to be retried on its own.
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      if (!isCrdRead(url)) return new Response(JSON.stringify({ items }), { status: 200 });
+      // mock.calls already holds this read, so the first one sees a count of 1.
+      return crdReads() > 1
+        ? new Response(JSON.stringify(CRD), { status: 200 })
+        : new Response('', { status: 404 });
+    });
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(registry.crdKind('certificates.cert-manager.io')).toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(30000);
+
+    expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
+  });
+
+  it('does not read a kind it already knows again', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(30000 * 3);
+
+    expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
+    expect(crdReads()).toBe(1);
   });
 
   it('backs off a list that keeps failing', async () => {

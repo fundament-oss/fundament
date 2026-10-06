@@ -191,9 +191,13 @@ function splitWords(name: string): string[] {
     .filter(Boolean);
 }
 
-/** A run of capitals is an acronym and keeps its own case in a label. */
+/**
+ * A run of capitals is an acronym and keeps its own case in a label, the plural
+ * "s" included: pluralizing "HTTP" gives "HTTPs", which is still the acronym and
+ * must not be flattened to "https" by the mid-sentence pass.
+ */
 function isAcronym(word: string): boolean {
-  return /^[A-Z0-9]{2,}$/.test(word);
+  return /^[A-Z0-9]{2,}s?$/.test(word);
 }
 
 /**
@@ -216,9 +220,9 @@ function titleCase(words: string[]): string[] {
 export function kindToLabel(kind: string): string {
   const words = titleCase(splitWords(kind));
   if (words.length === 0) return '';
-  // Pluralized last, on the word as written: a trailing acronym becomes "FSCs",
-  // which no longer reads as an acronym, so deciding its case afterwards would
-  // give "Cluster Fscs".
+  // Pluralized after the case of every word is settled, on the word as written:
+  // "FSC" and "FSCs" are the same acronym, but only the first says so by its
+  // shape alone.
   const last = words.length - 1;
   words[last] = pluralize(words[last]);
   return words.join(' ');

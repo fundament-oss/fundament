@@ -303,10 +303,6 @@ export default class PluginRegistryService {
       if (generation !== this.generation) return 'stale';
       this.plugins.set(fetched.definitions);
       this.runningKeys = keys;
-      // Not awaited: the sidebar must not wait on a CRD read to appear, and a
-      // menu entry falls back to a label derived from the CRD reference until
-      // its kind arrives.
-      this.loadCrdKinds(clusterId, generation).catch(() => {});
       if (fetched.complete) {
         this.definitionFailures = 0;
         this.definitionRetryAt = null;
@@ -320,6 +316,13 @@ export default class PluginRegistryService {
           );
       }
     }
+
+    // On every sync, not only the ones that rebuilt the menu: a CRD whose kind
+    // could not be read keeps a reference-derived label, and the read is worth
+    // another try — right after an install the CRD is often not served yet.
+    // Resolved kinds are never refetched, so a settled menu reads nothing here.
+    // Not awaited either: the sidebar must not wait on it.
+    this.loadCrdKinds(clusterId, generation).catch(() => {});
 
     // An installation that has no phase yet is one the controller has not
     // picked up, which is as much on its way as a Pending one.
