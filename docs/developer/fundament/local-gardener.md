@@ -108,7 +108,7 @@ About a minute after `gardener-start` finishes, the kind cluster restarts its co
 just cluster-worker dev
 ```
 
-- It runs `just dev-hotreload -p local-gardener` and stops right away if Gardener is not running. The `local-gardener` profile is real mode: cluster-worker, kube-api-proxy and plugin-proxy talk to Gardener instead of mocks. A plain `just dev-hotreload` deploys mock mode again.
+- It runs `just dev-hotreload -p local-gardener` and stops right away if Gardener is not running. The `local-gardener` profile is real mode: cluster-worker, kube-api-proxy and plugin-proxy talk to Gardener instead of mocks, and organization-api reads metrics and logs from the shoots. A plain `just dev-hotreload` deploys mock mode again.
 - It stays attached and syncs your edits into the running services. Adding, moving or deleting a file redeploys.
 
 :::caution[A redeploy deletes your clusters]
@@ -170,6 +170,14 @@ To work inside a shoot, request an admin kubeconfig for it, valid for a day:
 ```shell
 echo '{"apiVersion":"authentication.gardener.cloud/v1alpha1","kind":"AdminKubeconfigRequest","spec":{"expirationSeconds":86400}}' | kubectl --context kind-gardener-local-garden create --raw /apis/core.gardener.cloud/v1beta1/namespaces/<project-namespace>/shoots/<shoot>/adminkubeconfig -f - | jq -r .status.kubeconfig | base64 -d > shoot.kubeconfig
 ```
+
+## Metrics and logs
+
+The `local-gardener` profile reads each shoot's own Prometheus and Vali in the seed, as an installation does (`organizationApi.prometheusURL` and `organizationApi.logsURL` set to `per-shoot`). The console then shows a cluster's resource usage and logs without "Mock" labels.
+
+- They arrive once the shoot's monitoring runs, a few minutes after the cluster itself.
+- CPU and memory totals are the kind node's, because a shoot's nodes are pods on it.
+- Mock mode generates metrics and logs instead.
 
 ## Change a service without a redeploy
 
