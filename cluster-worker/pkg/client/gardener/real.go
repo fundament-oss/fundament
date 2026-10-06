@@ -367,11 +367,13 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
+			healthy, grace := shootHealthOf(shoot)
 			return &ShootStatus{
-				Status:    StatusProgressing,
-				Message:   fmt.Sprintf("%s: %s", op.Type, op.Description),
-				Operation: operation,
-				Healthy:   shootHealthy(shoot),
+				Status:      StatusProgressing,
+				Message:     fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
 			}
 		case gardencorev1beta1.LastOperationStateError:
 			// "Completed with errors and will be retried" per Gardener's API.
@@ -379,15 +381,16 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 		case gardencorev1beta1.LastOperationStateFailed:
 			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}
 		case gardencorev1beta1.LastOperationStateSucceeded:
-			healthy := shootHealthy(shoot)
+			healthy, grace := shootHealthOf(shoot)
 			// The gardenlet sets observedGeneration when it starts a reconcile.
 			// Until then lastOperation still describes the previous one.
 			if shoot.Generation != shoot.Status.ObservedGeneration {
 				return &ShootStatus{
-					Status:    StatusProgressing,
-					Message:   MsgShootUpdatePending,
-					Operation: OperationReconcile,
-					Healthy:   healthy,
+					Status:      StatusProgressing,
+					Message:     MsgShootUpdatePending,
+					Operation:   OperationReconcile,
+					Healthy:     healthy,
+					HealthGrace: grace,
 				}
 			}
 			msg := MsgShootReady
@@ -395,10 +398,11 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 				msg = MsgShootUnhealthy
 			}
 			return &ShootStatus{
-				Status:    StatusReady,
-				Message:   msg,
-				Operation: operation,
-				Healthy:   healthy,
+				Status:      StatusReady,
+				Message:     msg,
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
 			}
 		case gardencorev1beta1.LastOperationStateAborted:
 			// Seen while the seed was not ready; Gardener resumed the operation by itself.
@@ -624,6 +628,42 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	}
 
 	return nil
+}
+
+// Values of the shoot.gardener.cloud/status label, as gardener-controller-manager
+// sets them (gardener pkg/utils/gardener/shoot_status.go; not part of the API module).
+const (
+	shootStatusLabelHealthy     = "healthy"
+	shootStatusLabelProgressing = "progressing"
+	shootStatusLabelUnhealthy   = "unhealthy"
+	shootStatusLabelUnknown     = "unknown"
+)
+
+// shootHealthOf returns Gardener's own health verdict from the Shoot's
+// status label, which covers all conditions with Gardener's thresholds and
+// grace handling. grace is the label value "progressing". A Shoot the label
+// controller has not reached yet falls back to the required conditions.
+//
+// While the last operation is a Create, Gardener computes the label from the
+// last errors only, and the label is rewritten only after the Succeeded write
+// that makes the cluster ready. So until the first reconcile a "healthy" label
+// also needs the required conditions; otherwise a cluster whose conditions
+// are still settling would be recorded as healthy, and the grace period that
+// follows would keep it so.
+func shootHealthOf(shoot *gardencorev1beta1.Shoot) (healthy, grace bool) {
+	switch shoot.Labels[v1beta1constants.ShootStatus] {
+	case shootStatusLabelHealthy:
+		if op := shoot.Status.LastOperation; op != nil && op.Type == gardencorev1beta1.LastOperationTypeCreate {
+			return shootHealthy(shoot), false
+		}
+		return true, false
+	case shootStatusLabelProgressing:
+		return false, true
+	case shootStatusLabelUnhealthy, shootStatusLabelUnknown:
+		return false, false
+	default:
+		return shootHealthy(shoot), false
+	}
 }
 
 // shootHealthy checks if all key conditions are True.

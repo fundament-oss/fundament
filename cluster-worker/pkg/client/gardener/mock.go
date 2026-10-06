@@ -55,9 +55,13 @@ type MockClient struct {
 	GetStatusError     error
 	StatusOverrides    map[uuid.UUID]StatusOverride // Per-cluster status override
 
-	// Status progression timing (configurable for tests)
-	ProgressingDelay time.Duration // Time before pending → progressing (default: 1s)
-	ReadyDelay       time.Duration // Time before progressing → ready (default: 5s)
+	// Status progression timing (configurable for tests). A create runs through
+	// the steps of a real one, compressed: Gardener's first task, the rest of
+	// its tasks, then ready while the health checks still settle.
+	ProgressingDelay time.Duration // Time the first create task is shown (default: 1s)
+	ReadyDelay       time.Duration // Time the remaining create tasks take (default: 5s)
+	HealthGraceDelay time.Duration // Time after ready within Gardener's grace period (default: 1s)
+	HealthyDelay     time.Duration // Time after ready until all conditions pass (default: 3s)
 	DeleteDelay      time.Duration // Time before deleting → deleted (default: 3s)
 
 	// Validation settings
@@ -106,6 +110,8 @@ func NewMock(logger *slog.Logger) *MockClient {
 		StatusOverrides:        make(map[uuid.UUID]StatusOverride),
 		ProgressingDelay:       1 * time.Second,
 		ReadyDelay:             5 * time.Second,
+		HealthGraceDelay:       1 * time.Second,
+		HealthyDelay:           3 * time.Second,
 		DeleteDelay:            3 * time.Second,
 		ValidateSpecs:          true,
 		SimulateAsyncNamespace: false, // Default: instant namespace (backwards compatible)
@@ -121,6 +127,8 @@ func NewMockInstant(logger *slog.Logger) *MockClient {
 	m := NewMock(logger)
 	m.ProgressingDelay = 0
 	m.ReadyDelay = 0
+	m.HealthGraceDelay = 0
+	m.HealthyDelay = 0
 	m.DeleteDelay = 0
 	return m
 }
@@ -360,42 +368,56 @@ func (m *MockClient) statusFor(clusterID uuid.UUID, shoot *mockShoot, now time.T
 		if elapsed >= m.DeleteDelay {
 			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
 		}
-		return &ShootStatus{
-			Status:  StatusDeleting,
-			Message: fmt.Sprintf("Shoot is being deleted (%.0fs remaining)", (m.DeleteDelay - elapsed).Seconds()),
-		}
+		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}
 	}
 
 	// Handle creation status progression
 	elapsed := now.Sub(shoot.CreatedAt)
+	createdAfter := m.ProgressingDelay + m.ReadyDelay
 	switch {
-	case elapsed < m.ProgressingDelay:
-		return &ShootStatus{Status: StatusPending, Message: "Shoot creation initiated"}
-	case elapsed < m.ProgressingDelay+m.ReadyDelay:
-		progress := (elapsed - m.ProgressingDelay).Seconds() / m.ReadyDelay.Seconds() * 100
-		if m.ReadyDelay == 0 {
-			progress = 100
-		}
+	case elapsed < createdAfter:
 		return &ShootStatus{
 			Status:    StatusProgressing,
-			Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
+			Message:   "Create: " + mockCreateTask(elapsed, m.ProgressingDelay, m.ReadyDelay),
 			Operation: OperationCreate,
 		}
 	case shoot.UpdatedAt != nil && now.Sub(*shoot.UpdatedAt) < m.ReadyDelay:
 		return &ShootStatus{
 			Status:    StatusProgressing,
-			Message:   "Reconcile: Shoot is being updated",
+			Message:   "Reconcile: Waiting until shoot worker nodes have been reconciled",
 			Operation: OperationReconcile,
 			Healthy:   true,
 		}
+	case shoot.UpdatedAt != nil:
+		return &ShootStatus{Status: StatusReady, Message: MsgShootReady, Operation: OperationReconcile, Healthy: true}
+	case elapsed < createdAfter+m.HealthGraceDelay:
+		// Gardener labels a new shoot "progressing" right after the create.
+		return &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, HealthGrace: true}
+	case elapsed < createdAfter+m.HealthyDelay:
+		// Then "unhealthy", until the new cluster's conditions pass.
+		return &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate}
 	default:
-		return &ShootStatus{
-			Status:    StatusReady,
-			Message:   MsgShootReady,
-			Operation: OperationCreate,
-			Healthy:   true,
-		}
+		return &ShootStatus{Status: StatusReady, Message: MsgShootReady, Operation: OperationCreate, Healthy: true}
 	}
+}
+
+// mockCreateTasks are the tasks a real create reports, in order.
+var mockCreateTasks = []string{
+	"Reconciliation of Shoot cluster initialized.",
+	"Waiting until Kubernetes API server rolled out",
+	"Waiting until gardener-resource-manager reports readiness",
+	"Waiting until shoot worker nodes have been reconciled",
+}
+
+// mockCreateTask is the task a create shows after elapsed: the first one for
+// first, then the others spread evenly over rest.
+func mockCreateTask(elapsed, first, rest time.Duration) string {
+	if elapsed < first || rest <= 0 {
+		return mockCreateTasks[0]
+	}
+	others := len(mockCreateTasks) - 1
+	i := 1 + int(int64(elapsed-first)*int64(others)/int64(rest))
+	return mockCreateTasks[min(i, len(mockCreateTasks)-1)]
 }
 
 // SetStatusChangeHandler registers fn to receive the cluster ID of each mock

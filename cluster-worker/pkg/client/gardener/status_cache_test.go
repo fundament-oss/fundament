@@ -304,6 +304,9 @@ func TestShootStatusChanged(t *testing.T) {
 			s.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
 		}, want: true},
 		{name: "spec change accepted", change: func(s *gardencorev1beta1.Shoot) { s.Generation = s.Status.ObservedGeneration + 1 }, want: true},
+		{name: "status label changes", change: func(s *gardencorev1beta1.Shoot) {
+			s.Labels["shoot.gardener.cloud/status"] = "progressing"
+		}, want: true},
 		{name: "deletion starts", change: func(s *gardencorev1beta1.Shoot) {
 			now := metav1.Now()
 			s.DeletionTimestamp = &now

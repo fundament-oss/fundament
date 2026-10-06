@@ -64,7 +64,9 @@ sequenceDiagram
   is deferred instead of failed.
 - **Status.** A cluster's status is checked when its Shoot changes (see
   [Status cache](#status-cache); in mock mode the mock reports its own changes once a
-  second), and by a sweep of every cluster at startup and every `STATUS_INTERVAL` (30m).
+  second, and a mock create runs through a real one's steps in about 9 seconds:
+  Gardener's create tasks, ready while the health checks settle, then healthy), and by
+  a sweep of every cluster at startup and every `STATUS_INTERVAL` (30m).
   The sweep catches what produces no event: a Shoot deleted while cluster-worker was not
   running, or a cluster that never got a Shoot. Deleted clusters are checked until their
   shoot is gone. Both only queue cluster IDs; `CLUSTER_STATUS_WORKERS` workers take them
@@ -147,9 +149,9 @@ settling does not stick, and a cluster that breaks later shows it.
 - Gardener reconciles every shoot periodically (gardenlet `syncPeriod`, 1h by default).
   A `Reconcile` fundament did not start keeps the cluster `ready`, so it does not re-run
   the ready fan-out, but
-  health still follows the conditions: a condition that turns False records
-  `status_unhealthy`, and the message shows Gardener's progress until the cluster is
-  healthy again.
+  health still follows Gardener's verdict: when it turns unhealthy, `status_unhealthy` is
+  recorded and the message shows Gardener's progress until the cluster is healthy
+  again.
 - An update fundament pushes (Kubernetes version, node pools) that changes the Shoot's
   spec sets `shoot_updating` on the ready cluster, with a `status_progressing` event
   ("Waiting for Gardener to start the update"). The cluster stays `ready`, so everything
@@ -162,7 +164,25 @@ settling does not stick, and a cluster that breaks later shows it.
   still describes the previous reconcile, so the check reports the pending message
   instead.
 - `shoot_health` (`healthy` / `unhealthy`) is recorded for every ready cluster; a change
-  writes `status_healthy` or `status_unhealthy`.
+  writes `status_healthy` or `status_unhealthy`. It follows Gardener's own
+  `shoot.gardener.cloud/status` label, which gardener-controller-manager computes from
+  the last operation, its errors and all conditions (including `EveryNodeReady` and
+  `ObservabilityComponentsHealthy`), each with its threshold: `healthy` is healthy,
+  `unhealthy` and `unknown` are unhealthy, and `progressing` (a condition within its
+  grace period, or pardoned while an operation runs without errors) keeps the recorded
+  health, or counts as unhealthy for a cluster that was never healthy. A Shoot without
+  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy` and
+  `SystemComponentsHealthy`. While the last operation is still the Create, Gardener
+  computes the label from errors only and rewrites it just after the cluster becomes
+  ready, so until the first reconcile a `healthy` label also needs those three
+  conditions. So a routine reconcile that breaks a condition shows as
+  unhealthy only once Gardener stops pardoning it.
+- A new cluster's conditions take a few minutes to pass after the create succeeds,
+  and Gardener labels it unhealthy meanwhile. Until it is first healthy, a ready
+  cluster whose last operation is still the Create is recorded as `unhealthy` with the
+  message "Cluster is ready, waiting for health checks to pass" instead of "Shoot
+  reconciled but not all conditions healthy"; Gardener's first reconcile ends that,
+  so a cluster that never turns healthy gets the unhealthy message then.
 - A last operation in state `Error` or `Aborted` is one Gardener will retry: it is
   recorded as `status_warning` (once per distinct message: an error Gardener retries
   again and again, with progress in between, is compared with the last recorded warning)

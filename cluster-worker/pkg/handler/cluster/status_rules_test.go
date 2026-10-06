@@ -31,10 +31,31 @@ func TestNextShootStatus(t *testing.T) {
 			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting"},
 			observed: readyUnhealthy,
 			want: shootStatusUpdate{
-				Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Health: unhealthy,
-				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootUnhealthy}},
+				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
+				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
 				InsertReady: true,
 			},
+		},
+		{
+			name:     "new cluster not healthy yet stays settling",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+			observed: readyUnhealthy,
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+		},
+		{
+			name:     "new cluster turns healthy",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusHealthy, Message: gardener.MsgShootReady}},
+			},
+		},
+		{
+			name:     "new cluster still not healthy at its first reconcile is unhealthy",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Health: unhealthy},
 		},
 		{
 			name:     "conditions settle after ready",
@@ -46,7 +67,7 @@ func TestNextShootStatus(t *testing.T) {
 			},
 		},
 		{
-			name:     "healthy ready cluster degrades",
+			name:     "healthy ready cluster degrades, also before its first reconcile",
 			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
 			observed: readyUnhealthy,
 			want: shootStatusUpdate{
@@ -170,6 +191,52 @@ func TestNextShootStatus(t *testing.T) {
 			want: shootStatusUpdate{
 				Status: gardener.StatusError, Message: "quota exceeded",
 				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusError, Message: "quota exceeded"}},
+			},
+		},
+		{
+			name:     "grace period keeps a healthy ready cluster healthy",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile, HealthGrace: true},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+		},
+		{
+			name:     "grace period on a cluster never healthy is not healthy",
+			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting"},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationCreate, HealthGrace: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
+				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
+				InsertReady: true,
+			},
+		},
+		{
+			name:     "grace period during a reconcile keeps health and message",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Waiting until worker nodes are ready", Operation: gardener.OperationReconcile, HealthGrace: true},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+		},
+		{
+			name:     "grace period during an update keeps health",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Waiting until worker nodes are ready", Operation: gardener.OperationReconcile, HealthGrace: true},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: "Reconcile: Waiting until worker nodes are ready", Health: healthy, Updating: true},
+		},
+		{
+			name:     "update finishing within the grace period stays healthy",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: "Reconcile: Waiting until worker nodes are ready", Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile, HealthGrace: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootReady}},
+			},
+		},
+		{
+			name:     "grace period ends unhealthy",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Health: unhealthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusUnhealthy, Message: gardener.MsgShootUnhealthy}},
 			},
 		},
 		{
