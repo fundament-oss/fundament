@@ -265,8 +265,10 @@ The local sandbox does not apply step 4: kube-api-proxy's sandbox proxy builds i
 ```bash
 just dev-hotreload              # mock mode
 just plugin-sandbox-kubeconfig  # sandbox mode, see Local development
-just dev -p local-gardener      # real mode against a local Gardener
+just cluster-worker dev          # real mode against a local Gardener
 ```
+
+Real mode needs Gardener running first: [Local Gardener](../fundament/local-gardener.md).
 
 ## Plugin author's quick guide
 

@@ -44,8 +44,6 @@ Those `PATH` entries supply the `bash` and `cygpath` that `just` recipes need; t
 
 Use Edge or Chrome for the console: `mkcert` cannot install its CA into Firefox on Windows (no NSS `certutil`), so calls to `authn.fundament.localhost` fail.
 
-If `just dev` leaves pods in `ImagePullBackOff`, run `just dev --default-repo=localhost:5111`; Skaffold's k3d registry auto-detection can override the `SKAFFOLD_DEFAULT_REPO` the recipe sets.
-
 ## Install the tools
 
 ```shell
@@ -68,6 +66,7 @@ just dev-hotreload
   - Adding, moving or deleting a file rebuilds the image and redeploys.
 - Every deploy resets the databases to the test data.
 - `Ctrl-C` stops watching; the deployment keeps running.
+- It runs in mock mode: clusters exist only in the database. For real clusters, see [Local Gardener](./local-gardener.md).
 
 A cluster created before the local edge moved to Envoy Gateway cannot run the chart. `cluster-start` detects it and stops; recreate it with `just cluster-delete && just cluster-create`.
 
@@ -115,5 +114,6 @@ just cluster-delete
 
 ## Next
 
+- [Local Gardener](./local-gardener.md): create real clusters locally
 - [Plugins](/docs/developer/plugins): write a plugin, run it locally
 - [Block devices for k3d](./k3d-block-devices.md): storage plugin work
