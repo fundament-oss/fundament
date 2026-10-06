@@ -299,7 +299,6 @@ generate:
     cd e2e && buf generate
     cd dcim-frontend && buf generate
     cd marketplace-frontend && buf generate
-    just terraform-provider::docs
     just fmt
 
 # Lint all Go code

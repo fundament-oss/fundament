@@ -59,17 +59,17 @@ func (p *FundamentProvider) Metadata(ctx context.Context, req provider.MetadataR
 // Schema defines the provider-level schema for configuration data.
 func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages the clusters, projects, namespaces and members of a Fundament organization.",
+		Description: "Interact with Fundament organization API.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				Description: "The URL of the Fundament organization API, for example https://organization.fundament.example. Required: set it here or in the FUNDAMENT_ENDPOINT environment variable.",
+				Description: "The endpoint URL for the Fundament organization API. Can also be set via the FUNDAMENT_ENDPOINT environment variable. Example: https://api.fundament.example.com",
 				Optional:    true,
 				Validators: []validator.String{
 					httpURLValidator{},
 				},
 			},
 			"api_key": schema.StringAttribute{
-				Description: "The API key the provider authenticates with. Required: set it here or, to keep it out of the configuration, in the FUNDAMENT_API_KEY environment variable.",
+				Description: "API key for authenticating with the Fundament API. Can also be set via the FUNDAMENT_API_KEY environment variable.",
 				Optional:    true,
 				Sensitive:   true,
 				Validators: []validator.String{
@@ -84,7 +84,7 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				},
 			},
 			"organization_id": schema.StringAttribute{
-				Description: "The ID of the organization to manage, shown in the console under General. Required: set it here or in the FUNDAMENT_ORGANIZATION_ID environment variable.",
+				Description: "The ID of the organization to operate on. Can also be set via the FUNDAMENT_ORGANIZATION_ID environment variable.",
 				Optional:    true,
 				Validators: []validator.String{
 					uuidValidator{},

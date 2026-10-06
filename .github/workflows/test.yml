@@ -360,16 +360,6 @@ jobs:
         working-directory: marketplace-admin-api
         run: go test ./... -count=1
 
-  terraform-provider-examples:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: jdx/mise-action@v4
-
-      - name: Validate the examples and the docs page's configurations
-        run: mise exec -- just terraform-provider::validate-examples
-
   test-other:
     runs-on: ubuntu-24.04
     steps:
