@@ -115,6 +115,7 @@ SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -141,6 +142,7 @@ WHERE
                     tenant.clusters.shoot_status = 'ready'
                     AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
                 ) -- Ready but conditions still settling (or health not recorded yet)
+                OR tenant.clusters.shoot_updating -- An update fundament pushed rolls out
             )
             AND (
                 tenant.clusters.shoot_status_updated IS NULL -- Never checked
@@ -197,16 +199,34 @@ ORDER BY
 LIMIT
     @limit_count;
 
--- name: ClusterUpdateShootStatus :exec
--- Update shoot status from Gardener polling. health is NULL unless ready.
+-- name: ClusterUpdateShootStatus :execrows
+-- Update shoot status from Gardener polling. health is NULL unless ready;
+-- updating is set while an update fundament pushed rolls out. Writes nothing
+-- when the row changed since it was read (checked_at is the
+-- shoot_status_updated read then), such as the sync handler marking an update.
 UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
     shoot_health = @health,
+    shoot_updating = @updating,
     shoot_status_updated = now()
 WHERE
-    id = @cluster_id;
+    id = @cluster_id
+    AND shoot_status_updated IS NOT DISTINCT FROM @checked_at;
+
+-- name: ClusterMarkShootUpdating :execrows
+-- Mark a ready cluster as updating once Gardener accepted a spec change. It
+-- stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
+-- keeps working while the update rolls out.
+UPDATE tenant.clusters
+SET
+    shoot_updating = true,
+    shoot_status_message = @message,
+    shoot_status_updated = now()
+WHERE
+    id = @cluster_id
+    AND shoot_status = 'ready';
 
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).

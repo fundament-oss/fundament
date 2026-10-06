@@ -312,3 +312,16 @@ func getClusterShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID) *strin
 	require.NoError(t, err)
 	return status
 }
+
+// getShootUpdating returns whether the cluster is marked as updating.
+func getShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID) bool {
+	t.Helper()
+
+	var updating bool
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT shoot_updating FROM tenant.clusters WHERE id = $1`,
+		clusterID,
+	).Scan(&updating)
+	require.NoError(t, err)
+	return updating
+}

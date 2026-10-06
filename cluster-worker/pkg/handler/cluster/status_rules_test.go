@@ -133,6 +133,45 @@ func TestNextShootStatus(t *testing.T) {
 			},
 		},
 		{
+			name:     "update waiting for the gardenlet keeps the cluster ready and updating",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: gardener.MsgShootUpdatePending, Operation: gardener.OperationReconcile, Healthy: true},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+		},
+		{
+			name:     "update in progress shows Gardener's progress without health events",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Waiting until worker nodes are ready", Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: "Reconcile: Waiting until worker nodes are ready", Health: unhealthy, Updating: true},
+		},
+		{
+			name:     "finished update records ready without a second fan-out",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: "Reconcile: Waiting until worker nodes are ready", Health: unhealthy, Updating: true},
+			observed: readyHealthy,
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootReady}},
+			},
+		},
+		{
+			name:     "retried error during an update keeps the cluster updating",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "machine not ready. Operation will be retried.", Operation: gardener.OperationReconcile, Retrying: true},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: "machine not ready. Operation will be retried.", Health: healthy, Updating: true,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: "machine not ready. Operation will be retried."}},
+			},
+		},
+		{
+			name:     "failed update ends the update",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "quota exceeded", Operation: gardener.OperationReconcile},
+			want: shootStatusUpdate{
+				Status: gardener.StatusError, Message: "quota exceeded",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusError, Message: "quota exceeded"}},
+			},
+		},
+		{
 			name:     "ready cluster whose shoot disappears records the loss",
 			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},

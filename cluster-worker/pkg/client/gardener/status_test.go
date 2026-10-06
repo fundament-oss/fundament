@@ -112,6 +112,19 @@ func TestRealClientGetShootStatus(t *testing.T) {
 			wantOp:     OperationReconcile,
 		},
 		{
+			name: "spec change accepted but reconcile not started yet",
+			shoot: func(id uuid.UUID) *gardencorev1beta1.Shoot {
+				shoot := statusTestShoot(id, lastOp(gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationStateSucceeded, ""), healthyConditions()...)
+				shoot.Generation = 3
+				shoot.Status.ObservedGeneration = 2
+				return shoot
+			},
+			wantStatus: StatusProgressing,
+			wantMsg:    MsgShootUpdatePending,
+			wantOp:     OperationReconcile,
+			wantHealth: true,
+		},
+		{
 			name: "create processing",
 			shoot: func(id uuid.UUID) *gardencorev1beta1.Shoot {
 				return statusTestShoot(id, lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateProcessing, "Waiting for etcd"))

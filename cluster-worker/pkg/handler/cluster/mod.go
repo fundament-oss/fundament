@@ -21,7 +21,7 @@ import (
 // ShootSyncer provides the Gardener operations needed by the sync path.
 type ShootSyncer interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
-	ApplyShoot(ctx context.Context, cluster *gardener.ClusterToSync) error
+	ApplyShoot(ctx context.Context, cluster *gardener.ClusterToSync) (specChanged bool, err error)
 	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
 	ListShoots(ctx context.Context) ([]gardener.ShootInfo, error)
 }

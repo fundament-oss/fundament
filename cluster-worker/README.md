@@ -130,10 +130,22 @@ Ready clusters keep being polled, so a message recorded while conditions were st
 settling does not stick, and a cluster that breaks later shows it.
 
 - Gardener reconciles every shoot periodically (gardenlet `syncPeriod`, 1h by default).
-  A `Reconcile` keeps the cluster `ready`, so it does not re-run the ready fan-out, but
+  A `Reconcile` fundament did not start keeps the cluster `ready`, so it does not re-run
+  the ready fan-out, but
   health still follows the conditions: a condition that turns False records
   `status_unhealthy`, and the message shows Gardener's progress until the cluster is
   healthy again.
+- An update fundament pushes (Kubernetes version, node pools) that changes the Shoot's
+  spec sets `shoot_updating` on the ready cluster, with a `status_progressing` event
+  ("Waiting for Gardener to start the update"). The cluster stays `ready`, so everything
+  gated on a ready cluster (kubeconfig, member sync) keeps working, and the API reports
+  it as `CLUSTER_STATUS_UPGRADING`. While it updates, its message is Gardener's progress
+  and its health is tracked without events, since a rolling update takes conditions down
+  on purpose. When Gardener's reconcile finishes, `shoot_updating` is cleared and
+  `status_ready` is recorded; the ready fan-out does not run again. Until the gardenlet
+  picks up the change (`generation` ahead of `observedGeneration`), the last operation
+  still describes the previous reconcile, so the poll reports the pending message
+  instead.
 - `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change
   writes `status_healthy` or `status_unhealthy`.
 - A last operation in state `Error` or `Aborted` is one Gardener will retry: it is

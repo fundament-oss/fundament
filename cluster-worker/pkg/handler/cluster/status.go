@@ -58,9 +58,10 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 
 		stored := storedShootState{
-			Status:  gardener.ShootStatusType(cluster.ShootStatus.String),
-			Message: cluster.ShootStatusMessage.String,
-			Health:  dbconst.ClusterShootHealth(cluster.ShootHealth.String),
+			Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
+			Message:  cluster.ShootStatusMessage.String,
+			Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
+			Updating: cluster.ShootUpdating,
 		}
 		update := nextShootStatus(stored, shootStatus)
 
@@ -69,12 +70,21 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			Status:    pgtype.Text{String: string(update.Status), Valid: true},
 			Message:   pgtype.Text{String: update.Message, Valid: true},
 			Health:    pgtype.Text{String: string(update.Health), Valid: update.Health != ""},
+			Updating:  update.Updating,
+			CheckedAt: cluster.ShootStatusUpdated,
 		}
 
-		if err := h.queries.ClusterUpdateShootStatus(ctx, params); err != nil {
+		updated, err := h.queries.ClusterUpdateShootStatus(ctx, params)
+		if err != nil {
 			h.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
+			continue
+		}
+		if updated == 0 {
+			// The row changed after it was read (an update was marked in
+			// progress); the next poll decides from the new state.
+			h.logger.Debug("shoot status changed during poll, skipping", "cluster_id", cluster.ID)
 			continue
 		}
 
@@ -172,14 +182,19 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 
 		if shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound {
-			if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
+			updated, err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
 				Status:    pgtype.Text{String: string(gardener.StatusDeleted), Valid: true},
 				Message:   pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
-			}); err != nil {
+				CheckedAt: cluster.ShootStatusUpdated,
+			})
+			if err != nil {
 				h.logger.Error("failed to update deleted status",
 					"cluster_id", cluster.ID,
 					"error", err)
+				continue
+			}
+			if updated == 0 {
 				continue
 			}
 
@@ -197,10 +212,11 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 				"cluster_id", cluster.ID,
 				"name", cluster.Name)
 		} else {
-			if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
+			if _, err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
 				Status:    pgtype.Text{String: string(gardener.StatusDeleting), Valid: true},
 				Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
+				CheckedAt: cluster.ShootStatusUpdated,
 			}); err != nil {
 				h.logger.Error("failed to update deleting status",
 					"cluster_id", cluster.ID,

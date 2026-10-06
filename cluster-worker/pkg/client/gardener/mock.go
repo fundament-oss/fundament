@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"regexp"
 	"sync"
 	"time"
@@ -73,6 +74,7 @@ type mockShoot struct {
 	Info       ShootInfo
 	CreatedAt  time.Time
 	DeletedAt  *time.Time // Set when deletion starts
+	UpdatedAt  *time.Time // Set when an update changes the spec
 	Cluster    ClusterToSync
 	LastStatus ShootStatusType // Track last status for change detection
 }
@@ -158,26 +160,28 @@ func (m *MockClient) EnsureProject(ctx context.Context, projectName string, orgI
 
 // ApplyShoot records the call, validates the spec, and stores the shoot in memory.
 // Requires cluster.ShootName to be set (generated at cluster creation time by API).
-func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
+// An update that changes the cluster reports specChanged and is shown as a
+// reconcile in progress for ReadyDelay.
+func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.ApplyCalls = append(m.ApplyCalls, *cluster)
 
 	if m.ApplyError != nil {
-		return m.ApplyError
+		return false, m.ApplyError
 	}
 
 	// Validate spec if enabled
 	if m.ValidateSpecs {
 		if err := m.validateClusterSpec(cluster); err != nil {
-			return fmt.Errorf("failed to create shoot: %w", err)
+			return false, fmt.Errorf("failed to create shoot: %w", err)
 		}
 	}
 
 	shootName := cluster.ShootName
 	if shootName == "" {
-		return fmt.Errorf("shoot name is required (must be generated at cluster creation time)")
+		return false, fmt.Errorf("shoot name is required (must be generated at cluster creation time)")
 	}
 
 	now := m.clock()
@@ -185,7 +189,11 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	// Check if shoot already exists by cluster ID (mirrors real client's label-based lookup)
 	if existing, existingName := m.findShootByClusterID(cluster.ID); existing != nil {
 		// Update preserves creation time and existing shoot name
+		specChanged := !reflect.DeepEqual(existing.Cluster, *cluster)
 		existing.Cluster = *cluster
+		if specChanged {
+			existing.UpdatedAt = &now
+		}
 
 		// Record event
 		m.EventHistory = append(m.EventHistory, MockEvent{
@@ -196,8 +204,8 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 			Message:   "Shoot updated",
 		})
 
-		m.logger.Info("MOCK: updated shoot", "shoot", existingName, "cluster_id", cluster.ID)
-		return nil
+		m.logger.Info("MOCK: updated shoot", "shoot", existingName, "cluster_id", cluster.ID, "spec_changed", specChanged)
+		return specChanged, nil
 	}
 
 	// New shoot
@@ -225,7 +233,7 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	})
 
 	m.logger.Info("MOCK: applied shoot", "shoot", shootName, "cluster_id", cluster.ID)
-	return nil
+	return false, nil
 }
 
 // DeleteShootByClusterID records the call and marks the shoot for deletion by cluster ID.
@@ -337,6 +345,13 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 				Status:    StatusProgressing,
 				Message:   fmt.Sprintf("Shoot is being created (%.0f%% complete)", progress),
 				Operation: OperationCreate,
+			}
+		case shoot.UpdatedAt != nil && now.Sub(*shoot.UpdatedAt) < m.ReadyDelay:
+			status = &ShootStatus{
+				Status:    StatusProgressing,
+				Message:   "Reconcile: Shoot is being updated",
+				Operation: OperationReconcile,
+				Healthy:   true,
 			}
 		default:
 			status = &ShootStatus{

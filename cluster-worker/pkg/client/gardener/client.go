@@ -55,6 +55,9 @@ const (
 	MsgShootNotFound  = "Shoot not found in Gardener"
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
+	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
+	// change until the gardenlet starts reconciling it.
+	MsgShootUpdatePending = "Waiting for Gardener to start the update"
 )
 
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
@@ -72,8 +75,9 @@ type Client interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
 
 	// ApplyShoot creates or updates a Shoot in Gardener.
-	// Uses cluster ID label to find existing shoots.
-	ApplyShoot(ctx context.Context, cluster *ClusterToSync) error
+	// Uses cluster ID label to find existing shoots. specChanged reports that an
+	// existing Shoot's spec changed, so Gardener will reconcile it.
+	ApplyShoot(ctx context.Context, cluster *ClusterToSync) (specChanged bool, err error)
 
 	// DeleteShootByClusterID deletes a Shoot by cluster ID label.
 	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error

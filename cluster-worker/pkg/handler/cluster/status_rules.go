@@ -12,6 +12,9 @@ type storedShootState struct {
 	Status  gardener.ShootStatusType   // empty when never checked
 	Message string                     // empty when never checked
 	Health  dbconst.ClusterShootHealth // empty when unknown
+	// Updating is set while an update fundament pushed rolls out on a ready
+	// cluster (the sync handler sets it).
+	Updating bool
 }
 
 // statusEvent is one activity-log entry a poll records.
@@ -25,7 +28,9 @@ type shootStatusUpdate struct {
 	Status  gardener.ShootStatusType
 	Message string
 	Health  dbconst.ClusterShootHealth // empty writes NULL
-	Events  []statusEvent
+	// Updating keeps a ready cluster marked as updating.
+	Updating bool
+	Events   []statusEvent
 	// InsertReady is set on a transition into ready: the ready outbox row fans
 	// out to the handlers that provision a freshly ready cluster.
 	InsertReady bool
@@ -38,7 +43,13 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 	// Gardener reconciles running shoots periodically (gardenlet SyncPeriod, 1h
 	// by default). That is not a lifecycle change for a ready cluster, so it
 	// stays ready, but its health follows the conditions: a reconcile that
-	// breaks the cluster, or never finishes, must not look healthy.
+	// breaks the cluster, or never finishes, must not look healthy. Updates
+	// fundament pushes are marked updating by the sync handler instead.
+	if stored.Status == gardener.StatusReady && stored.Updating {
+		if update, ok := readyDuringUpdate(observed); ok {
+			return update
+		}
+	}
 	if stored.Status == gardener.StatusReady &&
 		observed.Status == gardener.StatusProgressing &&
 		observed.Operation == gardener.OperationReconcile {
@@ -64,6 +75,7 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 		if stored.Status == gardener.StatusReady {
 			warning.Status = gardener.StatusReady
 			warning.Health = stored.Health
+			warning.Updating = stored.Updating
 		}
 		if observed.Message != stored.Message {
 			warning.Events = []statusEvent{{Type: dbconst.ClusterEventEventType_StatusWarning, Message: observed.Message}}
@@ -91,6 +103,36 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 	}
 
 	return update
+}
+
+// readyDuringUpdate follows an update fundament pushed to a ready cluster.
+// The cluster stays ready, so it stays usable and the ready fan-out does not
+// run again, and stays marked as updating, with Gardener's progress as its
+// message, until the reconcile finishes; that records status_ready. Health is
+// tracked, but a rolling update takes conditions down on purpose, so its
+// changes record no events. Anything else (a failure, a lost or deleted
+// Shoot) is not handled here and ends the update.
+func readyDuringUpdate(observed *gardener.ShootStatus) (shootStatusUpdate, bool) {
+	switch observed.Status {
+	case gardener.StatusProgressing:
+		return shootStatusUpdate{
+			Status:   gardener.StatusReady,
+			Message:  observed.Message,
+			Health:   shootHealth(observed.Healthy),
+			Updating: true,
+		}, true
+	case gardener.StatusReady:
+		return shootStatusUpdate{
+			Status:  gardener.StatusReady,
+			Message: observed.Message,
+			Health:  shootHealth(observed.Healthy),
+			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: observed.Message}},
+		}, true
+	case gardener.StatusPending, gardener.StatusError, gardener.StatusDeleting, gardener.StatusDeleted:
+		return shootStatusUpdate{}, false
+	default:
+		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
+	}
 }
 
 // readyDuringReconcile keeps a ready cluster ready while Gardener reconciles

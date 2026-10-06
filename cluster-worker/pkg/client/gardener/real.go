@@ -216,17 +216,19 @@ func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgI
 
 // ApplyShoot creates or updates a Shoot in Gardener.
 // Uses cluster ID label to find existing shoots. ShootName is only used for creation.
-func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
+// specChanged is true when Gardener raised an existing Shoot's generation,
+// which it does for every spec change and which starts a reconcile.
+func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bool, error) {
 	if cluster.Namespace == "" {
-		return fmt.Errorf("namespace is required")
+		return false, fmt.Errorf("namespace is required")
 	}
 	if cluster.ShootName == "" {
-		return fmt.Errorf("shoot name is required")
+		return false, fmt.Errorf("shoot name is required")
 	}
 
 	existing, err := r.getShootByClusterID(ctx, cluster.ID)
 	if err != nil {
-		return fmt.Errorf("failed to look up existing shoot: %w", err)
+		return false, fmt.Errorf("failed to look up existing shoot: %w", err)
 	}
 
 	if existing != nil {
@@ -243,25 +245,31 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		// the shoot found above. Every error inside the closure keeps its API status
 		// (only %w wrapping) so RetryOnConflict still recognizes conflicts.
 		key := client.ObjectKeyFromObject(existing)
+		specChanged := false
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			shoot := &gardencorev1beta1.Shoot{}
 			if err := r.client.Get(ctx, key, shoot); err != nil {
 				return fmt.Errorf("re-read shoot: %w", err)
 			}
+			generation := shoot.Generation
 			if err := r.updateShootSpec(shoot, cluster); err != nil {
 				return err
 			}
-			return r.client.Update(ctx, shoot)
+			if err := r.client.Update(ctx, shoot); err != nil {
+				return fmt.Errorf("write shoot: %w", err)
+			}
+			specChanged = shoot.Generation != generation
+			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("failed to update shoot: %w", err)
+			return false, fmt.Errorf("failed to update shoot: %w", err)
 		}
-		return nil
+		return specChanged, nil
 	}
 
 	shoot, err := r.buildShootSpec(cluster)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	r.logger.Info("creating shoot",
@@ -270,9 +278,9 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		"namespace", cluster.Namespace)
 
 	if err := r.client.Create(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to create shoot: %w", err)
+		return false, fmt.Errorf("failed to create shoot: %w", err)
 	}
-	return nil
+	return false, nil
 }
 
 // DeleteShootByClusterID deletes a Shoot by cluster ID label.
@@ -359,6 +367,16 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
 			healthy := r.isShootHealthy(shoot)
+			// The gardenlet sets observedGeneration when it starts a reconcile.
+			// Until then lastOperation still describes the previous one.
+			if shoot.Generation != shoot.Status.ObservedGeneration {
+				return &ShootStatus{
+					Status:    StatusProgressing,
+					Message:   MsgShootUpdatePending,
+					Operation: OperationReconcile,
+					Healthy:   healthy,
+				}, nil
+			}
 			msg := MsgShootReady
 			if !healthy {
 				msg = MsgShootUnhealthy

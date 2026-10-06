@@ -57,7 +57,7 @@ func TestReconcileOrphanCleanup(t *testing.T) {
 	// Create a shoot in Gardener for a cluster ID that doesn't exist in the DB.
 	orphanClusterID := uuid.New()
 	orphanShootName := kubename.GenerateShootName("orphan", orphanClusterID)
-	err := mock.ApplyShoot(t.Context(), &gardener.ClusterToSync{
+	_, err := mock.ApplyShoot(t.Context(), &gardener.ClusterToSync{
 		ID:                orphanClusterID,
 		OrganizationID:    acmeCorpOrgID,
 		OrganizationName:  "acme-corp",

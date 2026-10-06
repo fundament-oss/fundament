@@ -116,14 +116,44 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)
 	clusterToSync.NodeLimits = toGardenerNodeLimits(limitsRow)
 
-	if err := h.gardener.ApplyShoot(ctx, clusterToSync); err != nil {
+	specChanged, err := h.gardener.ApplyShoot(ctx, clusterToSync)
+	if err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "apply shoot", err)
 	}
 
-	// 7. Success
+	// 8. Success
 	h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.EntityType))
+	if specChanged {
+		h.markShootUpdating(ctx, cluster.ID)
+	}
 	h.logger.Info("synced cluster to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 	return nil
+}
+
+// markShootUpdating marks a ready cluster as updating once Gardener accepted
+// a spec change, so the reconcile it starts is visible; the cluster stays
+// ready and usable meanwhile. A routine reconcile Gardener starts by itself
+// is not an update. The sync has succeeded either way, so failures are only
+// logged.
+func (h *Handler) markShootUpdating(ctx context.Context, clusterID uuid.UUID) {
+	marked, err := h.queries.ClusterMarkShootUpdating(ctx, db.ClusterMarkShootUpdatingParams{
+		ClusterID: clusterID,
+		Message:   pgtype.Text{String: gardener.MsgShootUpdatePending, Valid: true},
+	})
+	if err != nil {
+		h.logger.Warn("failed to mark cluster as updating", "cluster_id", clusterID, "error", err)
+		return
+	}
+	if marked == 0 {
+		return
+	}
+	if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
+		ClusterID: clusterID,
+		EventType: string(dbconst.ClusterEventEventType_StatusProgressing),
+		Message:   pgtype.Text{String: gardener.MsgShootUpdatePending, Valid: true},
+	}); err != nil {
+		h.logger.Warn("failed to create status_progressing event", "cluster_id", clusterID, "error", err)
+	}
 }
 
 // toGardenerNodePools converts DB rows to the gardener.NodePool slice expected by ClusterToSync.
