@@ -38,11 +38,16 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, clientgoscheme.AddToScheme(s))
 	require.NoError(t, apiextensionsv1.AddToScheme(s))
 	require.NoError(t, v1alpha1.AddToScheme(s))
-	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem", "CephObjectStore"} {
-		gvk := schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}
+	for _, gvk := range []schema.GroupVersionKind{
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephCluster"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephBlockPool"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephFilesystem"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephObjectStore"},
+		{Group: "objectbucket.io", Version: "v1alpha1", Kind: "ObjectBucket"},
+	} {
 		s.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 		listGVK := gvk
-		listGVK.Kind = kind + "List"
+		listGVK.Kind += "List"
 		s.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
 	}
 	return s

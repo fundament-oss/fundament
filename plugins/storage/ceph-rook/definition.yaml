@@ -69,6 +69,16 @@ spec:
           - update
           - patch
           - delete
+      # --- ObjectBuckets: read-only, for the ObjectStorage deletion guard
+      # (the finalizer holds until no bucket references the store's class).
+      - apiGroups:
+          - objectbucket.io
+        resources:
+          - objectbuckets
+        verbs:
+          - get
+          - list
+          - watch
       # --- StorageClasses: created/updated by the BlockStorage/FileStorage
       # controllers and watched as owned objects. No delete verb: removal
       # happens through owner references and the garbage collector. ---
@@ -234,10 +244,12 @@ spec:
       version: v1
       resource: configmaps
       verbs: [get]
+    # list as well as get: the detail pages read status.ceph.capacity to
+    # show free space, and the console does not know the cluster namespace.
     - group: ceph.rook.io
       version: v1
       resource: cephclusters
-      verbs: [get]
+      verbs: [get, list]
   configSchema:
     - name: MON_COUNT
       displayName: Monitor count

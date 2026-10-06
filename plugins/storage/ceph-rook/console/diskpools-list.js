@@ -2,6 +2,7 @@ import {
   loadSdk,
   openSheet,
   errorBox,
+  ensureNldd,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -15,6 +16,8 @@ import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-pic
 
 await loadSdk();
 await fundament.init;
+// Warm the sheet bundle so the first Create click opens instantly.
+ensureNldd().catch(() => {});
 
 const tbody = document.getElementById('rows');
 

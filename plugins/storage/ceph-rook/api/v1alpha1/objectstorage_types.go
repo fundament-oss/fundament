@@ -24,9 +24,10 @@ type ObjectStorageSpec struct {
 // ObjectBucketClaims to reference; Rook provisions each claim's bucket and
 // hands its credentials to the claim's Secret and ConfigMap.
 //
-// The name-length limit exists because Rook creates a Service named
-// rook-ceph-rgw-<store> with no truncation: 63 (DNS-1035) minus that prefix
-// and the cephobj- prefix leaves 41.
+// The name-length limit exists because Rook rejects CephObjectStore names
+// over 38 (its rook-ceph-rgw-<store>-mime-types ConfigMap must fit in 63),
+// and it validates deletes the same way, so an overlong store also wedges
+// on removal. 38 minus the cephobj- prefix leaves 30.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
@@ -34,7 +35,7 @@ type ObjectStorageSpec struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
-// +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 41",message="name must be at most 41 characters: Rook derives a Service named rook-ceph-rgw-cephobj-<name> capped at 63"
+// +kubebuilder:validation:XValidation:rule="size(self.metadata.name) <= 30",message="name must be at most 30 characters: Rook caps CephObjectStore names at 38 and the derived name is cephobj-<name>"
 type ObjectStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

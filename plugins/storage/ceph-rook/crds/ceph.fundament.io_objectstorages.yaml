@@ -33,9 +33,10 @@ spec:
           ObjectBucketClaims to reference; Rook provisions each claim's bucket and
           hands its credentials to the claim's Secret and ConfigMap.
 
-          The name-length limit exists because Rook creates a Service named
-          rook-ceph-rgw-<store> with no truncation: 63 (DNS-1035) minus that prefix
-          and the cephobj- prefix leaves 41.
+          The name-length limit exists because Rook rejects CephObjectStore names
+          over 38 (its rook-ceph-rgw-<store>-mime-types ConfigMap must fit in 63),
+          and it validates deletes the same way, so an overlong store also wedges
+          on removal. 38 minus the cephobj- prefix leaves 30.
         properties:
           apiVersion:
             description: |-
@@ -178,9 +179,9 @@ spec:
             type: object
         type: object
         x-kubernetes-validations:
-        - message: 'name must be at most 41 characters: Rook derives a Service named
-            rook-ceph-rgw-cephobj-<name> capped at 63'
-          rule: size(self.metadata.name) <= 41
+        - message: 'name must be at most 30 characters: Rook caps CephObjectStore
+            names at 38 and the derived name is cephobj-<name>'
+          rule: size(self.metadata.name) <= 30
     served: true
     storage: true
     subresources:

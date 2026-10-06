@@ -14,6 +14,10 @@ const ReasonRookFailure = "RookFailure"
 // of them marks its StorageClass as the cluster default.
 const ReasonDefaultConflict = "DefaultConflict"
 
+// ReasonDeletionBlocked: buckets still reference the ObjectStorage's derived
+// StorageClass, which their claims' finalizers need to deprovision.
+const ReasonDeletionBlocked = "DeletionBlocked"
+
 // Detached from the doc comment below so it stays out of the CRDs: these
 // docs publish into every consumer kind, so name no kind-specific field.
 

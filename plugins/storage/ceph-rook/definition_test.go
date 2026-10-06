@@ -48,6 +48,7 @@ func TestDefinition(t *testing.T) {
 			// No secrets: credentials must never reach the iframe.
 			"objectbucketclaims": {"list", "get", "create"},
 			"configmaps":         {"get"},
+			"cephclusters":       {"get", "list"},
 		} {
 			var found *pluginruntime.AllowedResource
 			for i := range def.Spec.AllowedResources {

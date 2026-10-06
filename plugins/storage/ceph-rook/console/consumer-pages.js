@@ -8,6 +8,9 @@ import {
   loadSdk,
   openSheet,
   errorBox,
+  ensureNldd,
+  fetchCephCapacity,
+  humanizeQuantity,
   escapeHtml,
   emptyRow,
   errorRow,
@@ -46,7 +49,7 @@ const GATEWAY_INSTANCES = {
   id: 'rgw-count',
   label: 'Gateway instances',
   column: 'Gateways',
-  hint: 'RGW pods serving the S3 API. 1 is right unless request throughput demands more.',
+  hint: 'Gateway pods serving the S3 API. 1 is right unless request throughput demands more.',
   min: 1,
   max: 5,
   default: 1,
@@ -93,19 +96,17 @@ export const OBJECTSTORAGE = {
   emptyMessage: 'No object storage.',
   noneSelected: 'No object storage selected.',
   storageClassPrefix: 'cephobj-',
-  detailHint: `Create an ObjectBucketClaim referencing this StorageClass to provision a
-    bucket; its S3 endpoint and credentials land in a ConfigMap and Secret named
-    after the claim, and spec.additionalConfig (maxSize, maxObjects) caps a
-    claim's bucket.`,
+  detailHint: `Create buckets below; each bucket's endpoint and credentials are
+    stored in its namespace, named after the bucket.`,
   createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
-    disks, served by RGW gateway pods. It needs at least one DiskPool
-    contributing disks; without one it stays Degraded.`,
+    disks. It needs at least one DiskPool contributing disks; without one it
+    stays Degraded.`,
   intFields: [GATEWAY_INSTANCES],
   defaultToggle: false,
-  // The CRD caps ObjectStorage names at 41: Rook derives a Service named
-  // rook-ceph-rgw-cephobj-<name>, a DNS-1035 label capped at 63. Enforced
-  // here too so the form rejects it first.
-  nameMaxLength: 41,
+  // The CRD caps ObjectStorage names at 30: Rook rejects CephObjectStore
+  // names over 38 and the derived name is cephobj-<name>. Enforced here too
+  // so the form rejects it first.
+  nameMaxLength: 30,
   // The detail page embeds the Buckets section: the ObjectBucketClaims
   // provisioned against this store's StorageClass.
   detailSection: mountBucketsSection,
@@ -162,6 +163,8 @@ export async function consumerListPage(cfg) {
 
   await loadSdk();
   await fundament.init;
+  // Warm the sheet bundle so the first Create click opens instantly.
+  ensureNldd().catch(() => {});
 
   document.getElementById('create-btn').addEventListener('click', async () => {
     const sheet = await openSheet({ label: `Create ${cfg.label}` });
@@ -203,6 +206,7 @@ export async function consumerListPage(cfg) {
 export async function consumerDetailPage(cfg) {
   await loadSdk();
   const ctx = await fundament.init;
+  ensureNldd().catch(() => {});
 
   const content = document.getElementById('content');
   const heading = document.getElementById('heading');
@@ -228,9 +232,8 @@ export async function consumerDetailPage(cfg) {
     return `
       <h2 class="plugin-heading">Status</h2>
       ${renderDefList(pairs)}
-      <p class="plugin-hint">
-        ${cfg.detailHint} <code>ceph df</code> shows free space.
-      </p>
+      <p class="plugin-hint">${cfg.detailHint}</p>
+      <p class="plugin-hint" data-role="capacity"></p>
     `;
   }
 
@@ -244,6 +247,15 @@ export async function consumerDetailPage(cfg) {
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
       document.getElementById('edit-btn').onclick = () => showEdit(item);
+      // Filled in after the fact: users cannot run ceph df, but the
+      // CephCluster status carries the raw numbers.
+      fetchCephCapacity().then((cap) => {
+        const el = content.querySelector('[data-role="capacity"]');
+        if (!cap || !el) return;
+        el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+          + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster; `
+          + 'divide by the replica count for usable space.';
+      });
       return item;
     } catch (err) {
       actions.hidden = true;
@@ -328,7 +340,7 @@ function renderCreateForm(cfg, body, close) {
       ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
       <div class="plugin-actions">
-        <button type="submit" class="plugin-button" data-role="submit">Create ${cfg.kind}</button>
+        <button type="submit" class="plugin-button" data-role="submit">Create ${cfg.label}</button>
         <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
       </div>
     </form>
@@ -343,7 +355,7 @@ function renderCreateForm(cfg, body, close) {
     button: body.querySelector('[data-role="submit"]'),
     errorBox: body.querySelector('[data-role="error"]'),
     busyLabel: 'Creating…',
-    failPrefix: `Failed to create ${cfg.kind}`,
+    failPrefix: `Failed to create ${cfg.label}`,
     validate: () => {
       const invalid = resourceNameError(nameInput.value.trim(), cfg.nameMaxLength);
       if (invalid) {

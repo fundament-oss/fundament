@@ -340,6 +340,18 @@ function formatSize(bytes) {
 
 // Renders a byte Quantity ("20478Mi") as "19.9 GiB". A value outside the
 // Quantity grammar is shown as written rather than as a misleading 0 GiB.
+// Raw capacity from the CephCluster's own status (status.ceph.capacity);
+// null when no cluster reports one or the viewer may not read it.
+export async function fetchCephCapacity() {
+  try {
+    const { items } = await fundament.k8s.list({ group: 'ceph.rook.io', version: 'v1', resource: 'cephclusters' });
+    const cap = items?.[0]?.status?.ceph?.capacity;
+    return cap?.bytesTotal ? cap : null;
+  } catch {
+    return null;
+  }
+}
+
 export function humanizeQuantity(quantity) {
   if (quantity === undefined || quantity === null || quantity === '') return '—';
   const bytes = parseQuantity(String(quantity).trim());

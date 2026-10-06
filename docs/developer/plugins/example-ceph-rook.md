@@ -279,7 +279,11 @@ page (list, create and inspect claims for that store, with optional per-claim
 quotas and an exact-name collision pre-check): Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and
 the credentials to a Secret, both named after the claim. A claim can cap its
 own bucket via `spec.additionalConfig` (`maxSize`, `maxObjects`).
-`preservePoolsOnDelete` is always `true`, same stance as `FileStorage`.
+`preservePoolsOnDelete` is always `true`, same stance as `FileStorage`:
+deleting an `ObjectStorage` keeps its seven `cephobj-<name>.rgw.*` pools and
+their data. Reclaiming the space is a deliberate second step in the Ceph
+toolbox: `ceph osd pool ls | grep cephobj-<name>`, then `ceph osd pool rm`
+per pool (requires `mon_allow_pool_delete=true`).
 
 The S3 endpoint is in-cluster only. External exposure (a Gateway/HTTPRoute via
 the gateway-api plugin) and standalone S3 users (`CephObjectStoreUser`) are

@@ -106,6 +106,11 @@ func TestRenderBucketStorageClass(t *testing.T) {
 	assert.Equal(t, "cephobj-main", sc.Parameters["objectStoreName"])
 	assert.Equal(t, "rook-ceph", sc.Parameters["objectStoreNamespace"])
 	assert.NotContains(t, sc.Parameters, "clusterID")
+	// An empty BUCKET_REGION in the claim's ConfigMap breaks S3 clients that
+	// require one (distribution/registry panics on it); parameters are
+	// immutable, so it must ship from the start. us-east-1 is the ODF
+	// convention and RGW's implicit default zonegroup alias.
+	assert.Equal(t, "us-east-1", sc.Parameters["region"])
 	assert.Nil(t, sc.AllowVolumeExpansion, "buckets are not volumes")
 	if assert.NotNil(t, sc.ReclaimPolicy) {
 		assert.Equal(t, corev1.PersistentVolumeReclaimDelete, *sc.ReclaimPolicy)

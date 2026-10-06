@@ -24,6 +24,14 @@ func RookValues(cfg *Config) map[string]string {
 	values := map[string]string{
 		"enableDiscoveryDaemon":   "true",
 		"discoveryDaemonInterval": discoveryInterval,
+		// The bucket StorageClass names the provisioner with the namespace
+		// prefix; without this the chart could register it bare and no claim
+		// would ever bind. Pinned rather than trusted as a chart default.
+		"enableOBCWatchOperatorNamespace": "true",
+		// Aggregates ObjectBucketClaim rights into the built-in
+		// admin/edit/view roles, so project members can create buckets in
+		// their namespaces.
+		"rbacAggregate.enableOBCs": "true",
 	}
 	if cfg.DevLoopDevices {
 		values["allowLoopDevices"] = "true"

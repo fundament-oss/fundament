@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	storagev1 "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -100,4 +101,63 @@ func TestObjectStorageDerivesBucketPair(t *testing.T) {
 	assert.Equal(t, "rook-ceph.ceph.rook.io/bucket", sc.Provisioner)
 	assert.Equal(t, "cephobj-main", sc.Parameters["objectStoreName"])
 	assert.Equal(t, testNamespace, sc.Parameters["objectStoreNamespace"])
+}
+
+func testObjectBucket(name, storageClass string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetAPIVersion("objectbucket.io/v1alpha1")
+	u.SetKind("ObjectBucket")
+	u.SetName(name)
+	require := map[string]any{"storageClassName": storageClass}
+	u.Object["spec"] = require
+	return u
+}
+
+// The finalizer is added on reconcile, so deletion ordering can be enforced.
+func TestObjectStorageAddsFinalizer(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t, cephCluster(), testObjectStorage())
+	r := newObjectReconciler(c)
+
+	_, err := r.Reconcile(context.Background(), reconcileRequest(objectName))
+	require.NoError(t, err)
+
+	got := &v1alpha1.ObjectStorage{}
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: objectName}, got))
+	assert.Contains(t, got.Finalizers, objectStorageFinalizer)
+}
+
+// Deleting while buckets still reference the derived StorageClass must not
+// cascade the CephObjectStore and class away: the claims' finalizers need
+// both to deprovision, and losing them first wedges every claim forever.
+func TestObjectStorageDeleteBlockedByBuckets(t *testing.T) {
+	t.Parallel()
+	osObj := testObjectStorage()
+	osObj.Finalizers = []string{objectStorageFinalizer}
+	now := metav1.Now()
+	osObj.DeletionTimestamp = &now
+	c := newFakeClient(t,
+		cephCluster(),
+		osObj,
+		testObjectBucket("obc-ns-bucket-1", "cephobj-main"),
+	)
+	r := newObjectReconciler(c)
+
+	res, err := r.Reconcile(context.Background(), reconcileRequest(objectName))
+	require.NoError(t, err)
+	assert.Equal(t, provisioningRequeue, res.RequeueAfter, "poll until the buckets are gone")
+
+	got := &v1alpha1.ObjectStorage{}
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: objectName}, got))
+	assert.Contains(t, got.Finalizers, objectStorageFinalizer, "still blocked")
+	assert.Equal(t, v1alpha1.PhaseDegraded, got.Status.Phase)
+	assert.Contains(t, got.Status.Message, "bucket")
+
+	// A bucket on another store does not block; with the referencing one
+	// gone the finalizer is released and the object deletes.
+	require.NoError(t, c.Delete(context.Background(), testObjectBucket("obc-ns-bucket-1", "cephobj-main")))
+	_, err = r.Reconcile(context.Background(), reconcileRequest(objectName))
+	require.NoError(t, err)
+	getErr := c.Get(context.Background(), types.NamespacedName{Name: objectName}, got)
+	assert.True(t, apierrors.IsNotFound(getErr), "finalizer released, object gone")
 }

@@ -67,16 +67,34 @@ export function mountBucketsSection(container, item, ctx, cfg) {
     const tbody = body.querySelector('tbody');
 
     let claims;
+    let failedNamespaces = [];
     try {
-      const { items } = await fundament.k8s.list(OBC);
-      claims = (items ?? []).filter((c) => c.spec?.storageClassName === storageClassName);
+      // Project members may only list in their namespaces; without project
+      // namespaces (org admin, dev sandbox) one cluster-wide list works.
+      if (namespaces.length > 0) {
+        const results = await Promise.allSettled(
+          namespaces.map((ns) => fundament.k8s.list({ ...OBC, namespace: ns })),
+        );
+        claims = [];
+        results.forEach((res, i) => {
+          if (res.status === 'fulfilled') claims.push(...(res.value.items ?? []));
+          else failedNamespaces.push(namespaces[i]);
+        });
+        if (failedNamespaces.length === results.length) throw results[0].reason;
+      } else {
+        const { items } = await fundament.k8s.list(OBC);
+        claims = items ?? [];
+      }
+      claims = claims.filter((c) => c.spec?.storageClassName === storageClassName);
     } catch (err) {
       tbody.innerHTML = errorRow(headers.length, err);
       return;
     }
 
+    const failureNote = failedNamespaces.length === 0 ? '' : errorRow(
+      headers.length, Error(`listing failed in ${failedNamespaces.join(', ')}`));
     if (claims.length === 0) {
-      tbody.innerHTML = emptyRow(headers.length, 'No buckets on this storage yet.');
+      tbody.innerHTML = failureNote || emptyRow(headers.length, 'No buckets on this storage yet.');
       return;
     }
     tbody.innerHTML = claims
@@ -87,7 +105,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
           <td>${escapeHtml(c.status?.phase ?? 'Unknown')}</td>
           <td>${escapeHtml(requestedBucket(c.spec))}</td>
         </tr>`)
-      .join('');
+      .join('') + failureNote;
     tbody.querySelectorAll('a.row-link').forEach((link) => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -103,6 +121,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
     const sheet = await openSheet({ label: `Bucket · ${name}` });
     if (!sheet) return;
     const sheetBody = sheet.body;
+    const closeSheet = sheet.close;
     sheetBody.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading…</p>');
     try {
       const [claim, cm] = preloaded
@@ -154,7 +173,11 @@ export function mountBucketsSection(container, item, ctx, cfg) {
           as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Give a pod both with:
         </p>
         <pre class="plugin-text"><code>${escapeHtml(mount)}</code></pre>
+        <div class="plugin-actions">
+          <button type="button" class="plugin-button-secondary" data-role="close">Close</button>
+        </div>
       `;
+      sheetBody.querySelector('[data-role="close"]').addEventListener('click', () => closeSheet());
     } catch (err) {
       sheetBody.lastElementChild.outerHTML = errorBox(err);
     }
@@ -204,7 +227,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
           <span class="plugin-hint">Generated names get a random suffix, so they cannot collide.</span>
         </div>
 
-        <div class="plugin-field" data-role="exact-name" hidden>
+        <div class="plugin-field" data-role="exact-name">
           <label class="plugin-label" for="bucket-name">Exact bucket name</label>
           <input id="bucket-name" name="bucketName" type="text" class="plugin-input" maxlength="63" />
           <span class="plugin-hint">Bucket names are shared across the whole object store. A taken name is only caught by the provisioner: the claim then stays Pending.</span>
@@ -232,9 +255,18 @@ export function mountBucketsSection(container, item, ctx, cfg) {
     const form = sheetBody.querySelector('form');
     const nameInput = form.querySelector('[name="name"]');
     const modeSelect = form.querySelector('[name="namingMode"]');
+    // style.display, not the hidden attribute: .plugin-field sets
+    // display:flex, which overrides hidden's UA display:none.
     const exactField = sheetBody.querySelector('[data-role="exact-name"]');
-    modeSelect.addEventListener('change', () => {
-      exactField.hidden = modeSelect.value !== 'exact';
+    const syncExactField = () => {
+      exactField.style.display = modeSelect.value === 'exact' ? '' : 'none';
+    };
+    syncExactField();
+    modeSelect.addEventListener('change', syncExactField);
+    // Enter in a <select> submits the form natively; a half-filled bucket
+    // form should not submit from the naming dropdown.
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName === 'SELECT') e.preventDefault();
     });
     sheetBody.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 

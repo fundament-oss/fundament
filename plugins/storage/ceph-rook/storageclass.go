@@ -115,6 +115,10 @@ func RenderBucketStorageClass(name, clusterNamespace, storeName, _ string) *stor
 		Parameters: map[string]string{
 			"objectStoreName":      storeName,
 			"objectStoreNamespace": clusterNamespace,
+			// Without it BUCKET_REGION is empty and S3 clients that require
+			// a region (distribution/registry) fail; immutable, so from the
+			// start. us-east-1 is RGW's implicit default zonegroup alias.
+			"region": "us-east-1",
 		},
 	}
 }

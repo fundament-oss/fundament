@@ -73,6 +73,16 @@ func TestRookValuesShortensDiscoveryInterval(t *testing.T) {
 	assert.NotEqual(t, "60m", v["discoveryDaemonInterval"])
 }
 
+// Both pins back the bucket path. The provisioner name the bucket
+// StorageClass references only exists while the chart registers it with the
+// namespace prefix, and OBC rights only reach project members while the
+// chart aggregates them into the built-in admin/edit/view roles.
+func TestRookValuesPinBucketProvisioning(t *testing.T) {
+	v := RookValues(testConfig())
+	assert.Equal(t, "true", v["enableOBCWatchOperatorNamespace"])
+	assert.Equal(t, "true", v["rbacAggregate.enableOBCs"])
+}
+
 func TestRookValuesLoopDevices(t *testing.T) {
 	cfg := testConfig()
 	cfg.DevLoopDevices = true

@@ -2,6 +2,8 @@ import {
   loadSdk,
   openSheet,
   errorBox,
+  ensureNldd,
+  fetchCephCapacity,
   escapeHtml,
   humanizeQuantity,
   renderDefList,
@@ -11,6 +13,7 @@ import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-pic
 
 await loadSdk();
 const ctx = await fundament.init;
+ensureNldd().catch(() => {});
 
 const content = document.getElementById('content');
 const heading = document.getElementById('heading');
@@ -82,9 +85,9 @@ function renderReadOnly(item, byName) {
       Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
       turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
       are placed across all of the cluster's disks, so the raw size above is this pool's
-      contribution. Use
-      <code>ceph df</code> for free space.
+      contribution.
     </p>
+    <p class="plugin-hint" data-role="capacity"></p>
     <h2 class="plugin-heading">Contributed Disks</h2>
     ${renderDiskList(spec.disks, byName)}
   `;
@@ -100,6 +103,12 @@ async function showDetail() {
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
     document.getElementById('edit-btn').onclick = () => showEdit(item);
+    fetchCephCapacity().then((cap) => {
+      const el = content.querySelector('[data-role="capacity"]');
+      if (!cap || !el) return;
+      el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`;
+    });
   } catch (err) {
     actions.hidden = true;
     content.innerHTML = errorBox(err);
