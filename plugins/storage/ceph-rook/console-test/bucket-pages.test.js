@@ -1,6 +1,4 @@
 // Outside console/, which console.go embeds and serves to the browser.
-// Pins the bucket-form validators behind review findings: quota checks must
-// hold in every naming mode, and the quantity grammar is the shared one.
 
 import { describe, expect, test } from 'bun:test';
 import { quantityError } from '../console/_shared.js';
@@ -11,8 +9,7 @@ describe('quantityError', () => {
     expect(quantityError(q)).toBeNull();
   });
   test.each([
-    // Uppercase K is not a Kubernetes quantity suffix; the old ad-hoc regex
-    // accepted it and Rook then failed the claim server-side.
+    // Uppercase K is not a Kubernetes quantity suffix.
     ['10K'],
     ['10 gigs'],
     ['Gi'],

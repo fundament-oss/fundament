@@ -136,11 +136,8 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
   frameHeight = signal(150);
 
   // Floor under frameHeight: the viewport's remaining column, measured from
-  // the iframe's own top. Plugin views render page-sized instead of
-  // shrink-wrapped to their content, and overlays the plugin renders inside
-  // the iframe (an <nldd-sheet> is a <dialog> confined to the iframe's
-  // viewport) get usable height on short pages. Content taller than the
-  // floor still grows the frame through plugin:resize.
+  // the iframe's own top, so in-iframe overlays (nldd-sheet dialogs) get
+  // usable height on short pages. plugin:resize still grows past the floor.
   frameMinHeight = signal(150);
 
   status = signal<'loading' | 'ready' | 'error'>('loading');

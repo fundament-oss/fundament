@@ -23,13 +23,11 @@ export function loadSdk() {
   });
 }
 
-// Loads the shared NLDD Design System bundle the console serves next to the
-// SDK (FUN-18), registering the <nldd-*> elements, and mirrors the SDK's
-// light/dark body class into the data-scheme attribute the components read.
-// Memoized and called lazily from the sheet-opening handlers, so a host
-// without the bundle still serves the read-only views. Both halves are
-// awaited: an unawaited stylesheet would render sheets unstyled and swallow
-// the error.
+// Loads the shared NLDD Design System bundle served next to the SDK
+// (FUN-18) and mirrors the body's light/dark class into data-scheme.
+// Memoized and loaded lazily from the sheet-opening handlers, so a host
+// without the bundle still serves the read-only views; the stylesheet is
+// awaited too, or sheets render unstyled with the error swallowed.
 let nlddLoad;
 export function ensureNldd() {
   nlddLoad ??= (() => {
@@ -83,18 +81,15 @@ export function showSheetError(err) {
 // closing animation. Requires ensureNldd() to have resolved.
 //
 // The host sizes the iframe to this document's height, so on a short page
-// the sheet — confined to the iframe's viewport — would render a few rows
-// tall. Growing the body while the sheet is open makes the host grow the
-// iframe; newer hosts also floor the iframe at the viewport remainder, which
-// usually dominates this. CSSOM property assignment, not style attributes:
-// the CSP blocks only the latter.
+// the sheet, confined to the iframe's viewport, would render a few rows
+// tall; growing the body makes the host grow the iframe. CSSOM property
+// assignment, not style attributes: the CSP blocks only the latter.
 let openSheetCount = 0;
 let preSheetMinHeight = '';
 
 export function openSheet({ label, width = '480px', minHeight = '640px' }) {
-  // Counted, not saved per sheet: chained sheets (close one, open the next
-  // in the same tick) would capture the inflated value as "previous" and
-  // latch it; only the outermost open/last close touch the body.
+  // Only the outermost open/last close touch the body: chained sheets
+  // would otherwise capture the inflated value as "previous" and latch it.
   if (openSheetCount === 0) {
     preSheetMinHeight = document.body.style.minHeight;
     document.body.style.minHeight = minHeight;

@@ -317,8 +317,8 @@ export async function consumerDetailPage(cfg) {
   if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
 }
 
-// renderCreateForm fills a sheet with the kind's create form; the list page
-// opens it. On success it navigates to the new object's detail view.
+// renderCreateForm fills a sheet with the kind's create form; the list
+// page opens it.
 function renderCreateForm(cfg, body, close) {
   body.insertAdjacentHTML('beforeend', `
     <p class="plugin-text">

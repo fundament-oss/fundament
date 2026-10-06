@@ -25,9 +25,9 @@ import (
 // the generic ConsumerReconciler's contract is asserted once for all of them;
 // per-kind test files keep only kind-specific assertions.
 type consumerSuite[T consumer] struct {
-	// newObject returns the consumer with default spec and a stable UID. The
+	// newObject returns the consumer with default spec and a stable UID; the
 	// kind, CR name and derived name are read off the reconciler and this
-	// object, so the suite asserts against exactly the names production uses.
+	// object, so the suite asserts against the names production uses.
 	newObject func() T
 	// withReplication3 returns the consumer explicitly requesting 3 replicas.
 	withReplication3 func() T

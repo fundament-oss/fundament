@@ -224,9 +224,8 @@ spec:
       verbs: [list, get, create, patch]
     # The Buckets section on the ObjectStorage detail page. Claims list
     # cluster-wide (they live wherever workloads do). No delete, same stance
-    # as the kinds above; no secrets: the claim's Secret name is derivable
-    # and its values must never reach the iframe, so only the ConfigMap's
-    # connection info is readable.
+    # as above; no secrets: credentials must never reach the iframe, only
+    # the ConfigMap's connection info is readable.
     - group: objectbucket.io
       version: v1alpha1
       resource: objectbucketclaims

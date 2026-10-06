@@ -1,12 +1,8 @@
-// Buckets section for the ObjectStorage detail page: lists the
-// ObjectBucketClaims provisioned against one store's StorageClass, with
-// inline per-claim detail and an inline create form. Claims are namespaced
-// and live wherever workloads do, so the list queries cluster-wide and
-// shows the namespace — per-project-namespace scoping would hide claims in
-// namespaces the project does not own (on a dev sandbox, all of them).
-//
-// Mounted by consumer-pages.js via the OBJECTSTORAGE config's detailSection
-// hook; the SDK is already loaded and initialized by then.
+// Buckets section for the ObjectStorage detail page: the ObjectBucketClaims
+// provisioned against one store's StorageClass, with per-claim detail and a
+// create form in sheets. Claims live wherever workloads do, so the list
+// queries cluster-wide; per-project-namespace scoping would hide them.
+// Mounted via the OBJECTSTORAGE detailSection hook, after the SDK loaded.
 
 import {
   ensureNldd,
@@ -132,8 +128,7 @@ export function mountBucketsSection(container, item, ctx, cfg) {
       if (spec.additionalConfig?.maxSize) pairs.push(['Max size', spec.additionalConfig.maxSize]);
       if (spec.additionalConfig?.maxObjects) pairs.push(['Max objects', spec.additionalConfig.maxObjects]);
 
-      // The connection ConfigMap appears when the claim binds; before that
-      // its absence is the expected state, not an error.
+      // The connection ConfigMap only appears once the claim binds.
       let connection = '<p class="plugin-text">Connection details appear once the claim is Bound.</p>';
       try {
         const cm = await fundament.k8s.get({ ...CONFIGMAPS, namespace, name });
@@ -274,12 +269,10 @@ export function mountBucketsSection(container, item, ctx, cfg) {
 
         if (modeSelect.value === 'exact') {
           const bucketName = form.querySelector('[name="bucketName"]').value.trim();
-          // Collision pre-check against the cluster's bucket inventory.
-          // Names taken outside Kubernetes are not in it; the provisioner is
-          // the real referee and leaves such a claim Pending.
+          // Pre-check against this store's buckets only (RGW names are
+          // per-store). Names taken outside Kubernetes are not in the
+          // inventory; the provisioner leaves such a claim Pending.
           const { items } = await fundament.k8s.list(OBJECTBUCKETS);
-          // Scoped to this store's class: RGW bucket names are per-store, so
-          // a name on another ObjectStorage is no collision here.
           const taken = (items ?? []).some((ob) =>
             ob.spec?.storageClassName === storageClassName
             && ob.spec?.endpoint?.bucketName === bucketName);
@@ -308,7 +301,6 @@ export function mountBucketsSection(container, item, ctx, cfg) {
           },
         );
         close();
-        // The new claim appears in the refreshed list; its sheet opens on top.
         showList();
         await showBucket(name, namespace);
       },

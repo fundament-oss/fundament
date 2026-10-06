@@ -44,9 +44,8 @@ func getBlock(t *testing.T, c client.Client) *v1alpha1.BlockStorage {
 	return &bs
 }
 
-// The generic ConsumerReconciler contract — derived-object ownership,
-// degradation, adoption refusal, drift, status discipline — is asserted by
-// the shared suite; this file keeps only BlockStorage-specific behavior.
+// The generic ConsumerReconciler contract is asserted by the shared suite;
+// this file keeps only BlockStorage-specific behavior.
 func TestBlockStorageSuite(t *testing.T) {
 	t.Parallel()
 	runConsumerSuite(t, consumerSuite[*v1alpha1.BlockStorage]{
