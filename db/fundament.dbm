@@ -1922,7 +1922,7 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugin_labels_select_admin" table="appstore.plugin_labels" command="SELECT" permissive="true">	<roles names="fun_marketplace_admin_api"/>
-	<expression type="using-exp"> <![CDATA[deleted IS NULL]]> </expression>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
 <policy name="plugin_allowed_organizations_select_api" table="appstore.plugin_allowed_organizations" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>

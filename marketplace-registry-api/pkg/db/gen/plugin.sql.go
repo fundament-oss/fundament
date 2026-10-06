@@ -524,6 +524,7 @@ const pluginLabelsListByPluginIDs = `-- name: PluginLabelsListByPluginIDs :many
 SELECT plugin_labels.plugin_id, plugin_labels.name
 FROM appstore.plugin_labels
 WHERE plugin_labels.plugin_id = ANY($1::uuid[])
+  AND plugin_labels.deleted IS NULL
 ORDER BY plugin_labels.plugin_id ASC, plugin_labels.name ASC
 `
 
@@ -536,7 +537,6 @@ type PluginLabelsListByPluginIDsRow struct {
 	Name     dbconst.PluginLabelName
 }
 
-// No deleted filter: the role's RLS policy already hides revoked labels.
 func (q *Queries) PluginLabelsListByPluginIDs(ctx context.Context, arg PluginLabelsListByPluginIDsParams) ([]PluginLabelsListByPluginIDsRow, error) {
 	rows, err := q.db.Query(ctx, pluginLabelsListByPluginIDs, arg.PluginIds)
 	if err != nil {

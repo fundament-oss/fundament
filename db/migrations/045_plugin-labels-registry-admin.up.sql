@@ -8,7 +8,7 @@ CREATE POLICY "plugin_labels_select_admin" ON "appstore"."plugin_labels"
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_admin_api
-	USING ((deleted IS NULL));
+	USING (true);
 
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.

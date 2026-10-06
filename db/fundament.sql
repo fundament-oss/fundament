@@ -1691,7 +1691,7 @@ CREATE POLICY plugin_labels_select_admin ON appstore.plugin_labels
 	AS PERMISSIVE
 	FOR SELECT
 	TO fun_marketplace_admin_api
-	USING (deleted IS NULL);
+	USING (true);
 -- ddl-end --
 
 -- object: plugin_allowed_organizations_select_api | type: POLICY --
