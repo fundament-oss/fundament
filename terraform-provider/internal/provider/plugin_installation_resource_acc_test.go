@@ -40,7 +40,7 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	pluginName := "grafana"
 	resourceName := "fundament_plugin_installation.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read

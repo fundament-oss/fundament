@@ -34,7 +34,7 @@ func TestAccClusterDataSource(t *testing.T) {
 	suffix := acctest.RandString(6)
 	clusterName := "tf-acc-" + suffix
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
