@@ -43,19 +43,21 @@ func (s *Server) GetClusterByName(
 	}
 
 	row := &db.ClusterGetByIDRow{
-		ID:                 cluster.ID,
-		OrganizationID:     cluster.OrganizationID,
-		Name:               cluster.Name,
-		Region:             cluster.Region,
-		KubernetesVersion:  cluster.KubernetesVersion,
-		Created:            cluster.Created,
-		Deleted:            cluster.Deleted,
-		ShootStatus:        cluster.ShootStatus,
-		ShootStatusMessage: cluster.ShootStatusMessage,
-		ShootStatusUpdated: cluster.ShootStatusUpdated,
-		OutboxStatus:       cluster.OutboxStatus,
-		OutboxRetries:      cluster.OutboxRetries,
-		OutboxError:        cluster.OutboxError,
+		ID:                  cluster.ID,
+		OrganizationID:      cluster.OrganizationID,
+		Name:                cluster.Name,
+		Region:              cluster.Region,
+		KubernetesVersion:   cluster.KubernetesVersion,
+		Created:             cluster.Created,
+		Deleted:             cluster.Deleted,
+		ShootStatus:         cluster.ShootStatus,
+		ShootStatusMessage:  cluster.ShootStatusMessage,
+		ShootStatusUpdated:  cluster.ShootStatusUpdated,
+		OutboxStatus:        cluster.OutboxStatus,
+		OutboxRetries:       cluster.OutboxRetries,
+		OutboxError:         cluster.OutboxError,
+		FailedNodePoolName:  cluster.FailedNodePoolName,
+		FailedNodePoolError: cluster.FailedNodePoolError,
 	}
 	details := clusterDetailsFromRow(row)
 
@@ -186,6 +188,8 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.OutboxStatus,
 			row.OutboxRetries,
 			row.OutboxError,
+			row.FailedNodePoolName,
+			row.FailedNodePoolError,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,

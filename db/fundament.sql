@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -525,54 +525,6 @@ $function$;
 ALTER FUNCTION tenant.cluster_outbox_notify() OWNER TO fun_owner;
 -- ddl-end --
 
--- object: tenant.cluster_outbox_update_cluster_status | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.cluster_outbox_update_cluster_status() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-DECLARE
-    resolved_cluster_id uuid;
-    resolved_error text;
-BEGIN
-    -- A pending row that carries status_info is deferred on a precondition
-    -- (waiting, not failing); only retrying/failed rows surface as an error.
-    IF NEW.status IN ('retrying', 'failed') THEN
-        resolved_error := NEW.status_info;
-    END IF;
-
-    IF NEW.cluster_id IS NOT NULL THEN
-        UPDATE tenant.clusters
-        SET outbox_status = NEW.status,
-            outbox_retries = NEW.retries,
-            outbox_error = resolved_error
-        WHERE tenant.clusters.id = NEW.cluster_id;
-    ELSIF NEW.node_pool_id IS NOT NULL THEN
-        SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
-        FROM tenant.node_pools
-        WHERE tenant.node_pools.id = NEW.node_pool_id;
-
-        IF resolved_cluster_id IS NOT NULL THEN
-            UPDATE tenant.clusters
-            SET outbox_status = NEW.status,
-                outbox_retries = NEW.retries,
-                outbox_error = resolved_error
-            WHERE tenant.clusters.id = resolved_cluster_id;
-        END IF;
-    END IF;
-    RETURN NULL;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.cluster_outbox_update_cluster_status() OWNER TO fun_owner;
--- ddl-end --
-
 -- object: authn.current_user_id | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.current_user_id() CASCADE;
 CREATE OR REPLACE FUNCTION authn.current_user_id ()
@@ -972,9 +924,6 @@ CREATE TABLE tenant.clusters (
 	shoot_status_updated timestamptz,
 	shoot_health text,
 	shoot_updating boolean NOT NULL DEFAULT false,
-	outbox_status text,
-	outbox_retries integer NOT NULL DEFAULT 0,
-	outbox_error text,
 	region_id uuid,
 	kubernetes_version_id uuid,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
@@ -2531,15 +2480,6 @@ CREATE OR REPLACE TRIGGER cluster_outbox_notify
 	EXECUTE PROCEDURE tenant.cluster_outbox_notify();
 -- ddl-end --
 
--- object: cluster_outbox_update_cluster_status | type: TRIGGER --
--- DROP TRIGGER IF EXISTS cluster_outbox_update_cluster_status ON tenant.cluster_outbox CASCADE;
-CREATE OR REPLACE TRIGGER cluster_outbox_update_cluster_status
-	AFTER INSERT OR UPDATE
-	ON tenant.cluster_outbox
-	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.cluster_outbox_update_cluster_status();
--- ddl-end --
-
 -- object: tenant.organizations_users | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.organizations_users CASCADE;
 CREATE TABLE tenant.organizations_users (
@@ -3174,6 +3114,55 @@ USING btree
 	ordinal
 )
 WHERE (deleted IS NULL);
+-- ddl-end --
+
+-- object: tenant.cluster_sync_state | type: VIEW --
+-- DROP VIEW IF EXISTS tenant.cluster_sync_state CASCADE;
+CREATE OR REPLACE VIEW tenant.cluster_sync_state
+AS 
+SELECT DISTINCT ON (tenant.cluster_outbox.cluster_id)
+    tenant.cluster_outbox.cluster_id,
+    tenant.cluster_outbox.event AS outbox_event,
+    tenant.cluster_outbox.status AS outbox_status,
+    tenant.cluster_outbox.retries AS outbox_retries,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.created AS outbox_created
+FROM tenant.cluster_outbox
+WHERE tenant.cluster_outbox.cluster_id IS NOT NULL
+  AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+ORDER BY tenant.cluster_outbox.cluster_id, tenant.cluster_outbox.created DESC, tenant.cluster_outbox.id DESC;
+-- ddl-end --
+ALTER VIEW tenant.cluster_sync_state OWNER TO fun_fundament_api;
+-- ddl-end --
+COMMENT ON VIEW tenant.cluster_sync_state IS E'A cluster''s own latest sync row in cluster_outbox: created, updated, deleted or reconcile; the ready fan-out row is not a sync. outbox_error is the row''s status_info: an error for a retrying or failed row, the awaited precondition for a pending one.';
+-- ddl-end --
+
+-- object: tenant.cluster_node_pool_sync_failure | type: VIEW --
+-- DROP VIEW IF EXISTS tenant.cluster_node_pool_sync_failure CASCADE;
+CREATE OR REPLACE VIEW tenant.cluster_node_pool_sync_failure
+AS 
+SELECT DISTINCT ON (tenant.node_pools.cluster_id)
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.id AS node_pool_id,
+    tenant.node_pools.name AS node_pool_name,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.created AS failed_at
+FROM tenant.node_pools
+JOIN tenant.cluster_outbox ON tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.deleted IS NULL
+  AND tenant.cluster_outbox.status = 'failed'
+  AND tenant.cluster_outbox.id = (
+      SELECT tenant.cluster_outbox.id
+      FROM tenant.cluster_outbox
+      WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+      ORDER BY tenant.cluster_outbox.created DESC, tenant.cluster_outbox.id DESC
+      LIMIT 1
+  )
+ORDER BY tenant.node_pools.cluster_id, tenant.cluster_outbox.created DESC;
+-- ddl-end --
+ALTER VIEW tenant.cluster_node_pool_sync_failure OWNER TO fun_fundament_api;
+-- ddl-end --
+COMMENT ON VIEW tenant.cluster_node_pool_sync_failure IS E'Per cluster, the active node pool whose own latest sync row is a failed one, with that row''s error; the pool that failed most recently when several did. A node pool''s failure is shown next to the cluster''s own sync state, never as the cluster''s.';
 -- ddl-end --
 
 -- object: organization_limits_fk_organization | type: CONSTRAINT --

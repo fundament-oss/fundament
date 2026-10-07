@@ -52,6 +52,8 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 			row.OutboxStatus,
 			row.OutboxRetries,
 			row.OutboxError,
+			row.FailedNodePoolName,
+			row.FailedNodePoolError,
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
