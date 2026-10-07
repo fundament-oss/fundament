@@ -6,11 +6,19 @@
   </head>
   <body class="light">
     <div class="plugin-card">
-      <h1 class="plugin-heading" id="heading">Database</h1>
+      <!-- The iframe sits under no title bar of its own, so the way back to the
+           list is a button here. -->
+      <nldd-button id="back-btn" type="button" variant="secondary" start-icon="arrow-left"
+                   text="All databases"></nldd-button>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="2"><h1 id="heading">Database</h1></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
       <!-- Read-only by design: a database cannot be edited or deleted from the
            console. The generated detail view would offer Delete, which is why
            this page exists. -->
-      <div id="content"><p class="plugin-text">Loading…</p></div>
+      <div id="content">
+        <nldd-activity-indicator show-text text="Loading…"></nldd-activity-indicator>
+      </div>
     </div>
     <script type="module" src="./clusters-detail.js"></script>
   </body>

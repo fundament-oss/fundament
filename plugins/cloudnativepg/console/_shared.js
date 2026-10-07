@@ -52,13 +52,21 @@ export function navigateBack() {
   );
 }
 
-// Renders a key/value definition list from [key, value] pairs. Both halves are
-// escaped here, so pass raw values: pre-escaped ones render as "&amp;".
-export function renderDefList(pairs) {
+// Renders [key, value] pairs as an nldd-list, label left and value right: the
+// same rows the Console's generated detail page draws. Both halves are escaped
+// here, so pass raw values: pre-escaped ones render as "&amp;".
+export function renderKeyValueList(pairs, accessibleLabel) {
   const rows = pairs
-    .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
+    .map(
+      ([k, v]) => `
+        <nldd-list-item>
+          <nldd-text-cell text="${escapeHtml(k)}"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell width="fit-content" horizontal-alignment="right" text="${escapeHtml(v)}"></nldd-text-cell>
+        </nldd-list-item>`,
+    )
     .join('');
-  return `<dl class="plugin-deflist">${rows}</dl>`;
+  return `<nldd-list variant="simple" accessible-label="${escapeHtml(accessibleLabel)}">${rows}</nldd-list>`;
 }
 
 // Loads the NLDD Design System bundle the Console serves next to the SDK, which
