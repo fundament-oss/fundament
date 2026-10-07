@@ -612,6 +612,7 @@
     type="button"
     (click)="deleteCluster()"
     text="Delete cluster"
+    [loading]="isDeleting()"
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

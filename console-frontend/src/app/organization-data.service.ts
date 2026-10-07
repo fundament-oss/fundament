@@ -37,6 +37,18 @@ export interface OrganizationData {
   clusters: ClusterData[];
 }
 
+/**
+ * Minted before a cluster list is fetched and handed back to `setClusters()`
+ * with the response. It carries the organization the request went out under and
+ * its place in the order the requests were made, so a list that belongs to an
+ * organization that is gone — or that a later one has already overtaken — is
+ * dropped rather than applied.
+ */
+export interface ClusterListTicket {
+  readonly generation: number;
+  readonly seq: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -131,6 +143,22 @@ export class OrganizationDataService {
    *  is gone by now and is dropped. Comparing organization ids alone would let
    *  an A → B → A switch through, and would let a response land after logout. */
   private generation = 0;
+
+  /** Every cluster list ever asked for, and the newest one that made it into
+   *  the cache. The clusters page polls on a timer that does not wait for the
+   *  response before asking again, and a delete asks in the middle of all that,
+   *  so the responses do not necessarily come back in the order they were
+   *  asked for. */
+  private clusterListRequests = 0;
+
+  private appliedClusterList = 0;
+
+  /** Mint a ticket for a cluster list about to be fetched. Read before asking,
+   *  handed back to setClusters() with the response. */
+  beginClusterListFetch(): ClusterListTicket {
+    this.clusterListRequests += 1;
+    return { generation: this.generation, seq: this.clusterListRequests };
+  }
 
   private loadProjectsPromise: Promise<void> | null = null;
 
@@ -322,21 +350,29 @@ export class OrganizationDataService {
   }
 
   /**
-   * Refresh the cluster list from the server after a cluster was created, so
-   * every view built on the cache (Projects, plugins, the sidebar) shows the
-   * new cluster in its place. Projects already loaded for the other clusters
-   * stay in place.
+   * Refresh the cluster list from the server after a cluster was created or
+   * deleted, so every view built on the cache (Projects, plugins, the sidebar)
+   * shows it in its place. Projects already loaded for the other clusters stay
+   * in place.
    *
-   * The cluster exists once the create came back, so the cache has to know it
-   * either way: the page it lands on takes its title and breadcrumb from here,
-   * the sidebar counts it, and the new-cluster form checks names against it.
-   * If the list cannot be fetched, the new cluster goes in by hand with the id
-   * and name the create returned, and the next poll fills in the rest.
+   * The server is the one that says what the list holds, in both directions. A
+   * created cluster exists once the create came back, and the cache has to know
+   * it either way: the page it lands on takes its title and breadcrumb from
+   * here, the sidebar counts it, and the new-cluster form checks names against
+   * it. A delete is a soft one, so the opposite holds — ListClusters goes on
+   * returning the cluster as DELETING until it is really gone, and taking the
+   * entry out by hand makes the list disagree with the server: the cluster is
+   * back on the next page load, and in the meantime nothing in the list is
+   * transitional, so the clusters page never starts the poll that would have
+   * reported the deletion finishing.
+   *
+   * `fallback` is the cluster the call that just succeeded was about, and the
+   * status it put it in. It is used only if the list cannot be fetched, so that
+   * the cache still reflects what happened; the next poll fills in the rest.
    */
-  async reloadClusters(created: { id: string; name: string }) {
-    const activeOrgId = this.cachedOrganizationId;
-    if (!activeOrgId) return;
-    const { generation } = this;
+  async reloadClusters(fallback?: { id: string; name: string; status: ClusterStatus }) {
+    if (!this.cachedOrganizationId) return;
+    const ticket = this.beginClusterListFetch();
 
     let clusters: ClusterSummary[];
     try {
@@ -347,22 +383,41 @@ export class OrganizationDataService {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error reloading clusters:', error);
-      clusters = [
-        ...this.clusterSummaries().filter((cluster) => cluster.id !== created.id),
-        create(ListClustersResponse_ClusterSummarySchema, {
-          id: created.id,
-          name: created.name,
-          status: ClusterStatus.PROVISIONING,
-        }),
-      ];
+      clusters = this.clustersWithFallback(fallback);
     }
 
-    // The user switched organization or logged out while the request was in
-    // flight; this response belongs to a cache that is gone.
-    if (generation !== this.generation) return;
+    this.applyClusters(clusters, ticket);
+  }
 
-    clusters = sortByName(clusters);
-    this.clusterSummaries.set(clusters);
+  /**
+   * Take a cluster list someone else has just fetched as the cache's own. The
+   * clusters page polls for one every few seconds while a cluster is still
+   * moving, and it is the only thing watching: without this the cache would go
+   * on holding a cluster that has finished deleting until the next full
+   * organization load, and the sidebar counts clusters and groups the projects
+   * under them.
+   *
+   * `ticket` is the one `beginClusterListFetch()` handed out before the list was
+   * asked for. Returns whether the list was applied: false means a newer one
+   * already was, or the organization it belongs to is gone, and the cache holds
+   * something the caller should prefer to its own response.
+   */
+  setClusters(clusters: readonly ClusterSummary[], ticket: ClusterListTicket): boolean {
+    return this.applyClusters([...clusters], ticket);
+  }
+
+  private applyClusters(clusters: ClusterSummary[], ticket: ClusterListTicket): boolean {
+    const activeOrgId = this.cachedOrganizationId;
+    // The user switched organization or logged out while the request was in
+    // flight, so this list belongs to a cache that is gone; or a list asked for
+    // later has landed first, which leaves this one behind the cache rather
+    // than ahead of it.
+    if (!activeOrgId || ticket.generation !== this.generation) return false;
+    if (ticket.seq <= this.appliedClusterList) return false;
+    this.appliedClusterList = ticket.seq;
+
+    const sorted = sortByName(clusters);
+    this.clusterSummaries.set(sorted);
     this.organizations.update((orgs) =>
       orgs.map((org) => {
         if (org.id !== activeOrgId) return org;
@@ -370,23 +425,41 @@ export class OrganizationDataService {
         const known = new Map(org.clusters.map((c) => [c.id, c]));
         return {
           ...org,
-          clusters: clusters.map(
+          clusters: sorted.map(
             (cluster) =>
               known.get(cluster.id) ?? { id: cluster.id, name: cluster.name, projects: [] },
           ),
         };
       }),
     );
+    return true;
   }
 
-  /**
-   * Remove a deleted cluster from the cache immediately.
-   */
-  removeCluster(id: string) {
-    this.organizations.update((orgs) =>
-      orgs.map((org) => ({ ...org, clusters: org.clusters.filter((c) => c.id !== id) })),
-    );
-    this.clusterSummaries.update((summaries) => summaries.filter((c) => c.id !== id));
+  /** The list as it stands with `fallback` applied, for when ListClusters could
+   *  not be reached. A cluster that is already in the list keeps the region and
+   *  the counts it was listed with and only takes the new status; one that is
+   *  not there yet — a cluster just created — goes in with the little the
+   *  caller knows about it. */
+  private clustersWithFallback(
+    fallback: { id: string; name: string; status: ClusterStatus } | undefined,
+  ): ClusterSummary[] {
+    const current = this.clusterSummaries();
+    if (!fallback) return current;
+
+    if (current.some((cluster) => cluster.id === fallback.id)) {
+      return current.map((cluster) =>
+        cluster.id === fallback.id ? { ...cluster, status: fallback.status } : cluster,
+      );
+    }
+
+    return [
+      ...current,
+      create(ListClustersResponse_ClusterSummarySchema, {
+        id: fallback.id,
+        name: fallback.name,
+        status: fallback.status,
+      }),
+    ];
   }
 
   /**

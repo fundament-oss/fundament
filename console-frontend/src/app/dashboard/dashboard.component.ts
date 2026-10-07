@@ -74,7 +74,13 @@ export default class DashboardComponent implements OnInit, OnDestroy {
     this.titleService.setTitle('Clusters');
   }
 
+  /** A request in flight outlives the page it was asked from, and its answer
+   *  must not land on a page that is gone: clearing the timer is not enough,
+   *  because the answer starts a new one. */
+  private destroyed = false;
+
   ngOnDestroy() {
+    this.destroyed = true;
     this.stopPolling();
   }
 
@@ -93,34 +99,62 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private async loadClusters() {
+    // Minted before the request: the timer asks again without waiting for the
+    // answer, and a delete asks in between, so the answers do not necessarily
+    // come back in the order they were asked for.
+    const ticket = this.organizationDataService.beginClusterListFetch();
+
+    let fetched: ClusterSummary[];
     try {
       const response = await firstValueFrom(this.client.listClusters({}));
-      const previousClusters = this.clusters();
-      this.clusters.set(sortByName(response.clusters));
-
-      // Check if any previously-DELETING cluster has disappeared
-      previousClusters
-        .filter(
-          (prev) =>
-            prev.status === ClusterStatus.DELETING &&
-            !response.clusters.some((c) => c.id === prev.id),
-        )
-        .forEach((prev) => {
-          this.notificationService.success(`Cluster '${prev.name}' has been deleted`);
-        });
-
-      const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));
-      if (needsPolling && !this.pollingTimer) {
-        this.pollingTimer = setInterval(() => this.loadClusters(), 5000);
-      } else if (!needsPolling) {
-        this.stopPolling();
-      }
+      fetched = response.clusters;
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to load clusters: ${error.message}`
           : 'Failed to load clusters. Please try again later.',
       );
+      return;
+    }
+
+    // The poll is the only thing watching a cluster that is being deleted, so
+    // the shared cache hears about it from here: it holds the cluster until the
+    // server stops listing it, and the sidebar counts what it holds.
+    const applied = this.organizationDataService.setClusters(fetched, ticket);
+
+    // The cache still wanted the list, but there is no page here any more to
+    // show it, and starting a poll now would leave behind an interval that
+    // ngOnDestroy has stopped looking for.
+    if (this.destroyed) return;
+
+    // A refused list was overtaken, so the cache holds the newer of the two and
+    // that is what the page shows. It says nothing about what changed: the list
+    // that won reported on itself when it landed, and a refusal can also mean
+    // the organization was switched, whose clusters are nobody's news here.
+    const clusters = applied
+      ? sortByName(fetched)
+      : this.organizationDataService.clusterSummaries();
+
+    const previousClusters = this.clusters();
+    this.clusters.set(clusters);
+
+    // Check if any previously-DELETING cluster has disappeared
+    if (applied) {
+      previousClusters
+        .filter(
+          (prev) =>
+            prev.status === ClusterStatus.DELETING && !clusters.some((c) => c.id === prev.id),
+        )
+        .forEach((prev) => {
+          this.notificationService.success(`Cluster '${prev.name}' has been deleted`);
+        });
+    }
+
+    const needsPolling = clusters.some((c) => isTransitionalStatus(c.status));
+    if (needsPolling && !this.pollingTimer) {
+      this.pollingTimer = setInterval(() => this.loadClusters(), 5000);
+    } else if (!needsPolling) {
+      this.stopPolling();
     }
   }
 
