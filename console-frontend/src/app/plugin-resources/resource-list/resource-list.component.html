@@ -50,14 +50,14 @@
           <nldd-toolbar-item slot="start">
             <nldd-button
               [routerLink]="createLink"
-              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              [attr.text]="'New ' + kindLabelMidSentence() + '…'"
               start-icon="plus-small"
               variant="primary"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
               icon="plus-small"
-              [attr.text]="'New ' + kindLabel().toLowerCase() + '…'"
+              [attr.text]="'New ' + kindLabelMidSentence() + '…'"
               [routerLink]="createLink"
             ></nldd-menu-item>
           </nldd-toolbar-item>
@@ -75,7 +75,7 @@
       @if (isLoading() || clusterContext.isLoadingClusters()) {
         <nldd-activity-indicator
           show-text
-          [attr.text]="'Loading ' + kindLabel().toLowerCase() + '...'"
+          [attr.text]="'Loading ' + kindLabelMidSentence() + '...'"
         ></nldd-activity-indicator>
       } @else if (resources().length > 0) {
         <!-- A card per resource rather than a table: how many columns a plugin
@@ -165,7 +165,7 @@
         <nldd-inline-dialog
           icon="cylinder-split-slash"
           icon-color="secondary"
-          [text]="'No ' + kindLabel().toLowerCase() + ' found'"
+          [text]="'No ' + kindLabelMidSentence() + ' found'"
         ></nldd-inline-dialog>
       }
     </nldd-simple-section>

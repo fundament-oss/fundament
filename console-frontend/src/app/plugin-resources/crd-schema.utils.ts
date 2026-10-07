@@ -191,50 +191,57 @@ function splitWords(name: string): string[] {
     .filter(Boolean);
 }
 
-/** A run of capitals is an acronym and keeps its case in sentence case. */
+/**
+ * A run of capitals is an acronym and keeps its own case in a label, the plural
+ * "s" included: pluralizing "HTTP" gives "HTTPs", which is still the acronym and
+ * must not be flattened to "https" by the mid-sentence pass.
+ */
 function isAcronym(word: string): boolean {
-  return /^[A-Z0-9]{2,}$/.test(word);
+  return /^[A-Z0-9]{2,}s?$/.test(word);
 }
 
 /**
- * Convert a CRD kind (PascalCase) to a human-readable plural label in sentence case.
- * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers",
- * "FSCInstallation" → "FSC installations"
+ * Capitalize every word of a split identifier, leaving an acronym the case it
+ * was written in: "DNS Endpoint" keeps "DNS" rather than becoming "Dns", and
+ * "tls CA Bundle" keeps "CA".
+ */
+function titleCase(words: string[]): string[] {
+  return words.map((word) =>
+    isAcronym(word) ? word : word.charAt(0).toUpperCase() + word.slice(1),
+  );
+}
+
+/**
+ * Convert a CRD kind (PascalCase) to a human-readable plural label, one word per
+ * case transition and acronyms intact.
+ * Examples: "Certificate" → "Certificates", "CertificateRequest" → "Certificate
+ * Requests", "DNSEndpoint" → "DNS Endpoints", "FSCInstallation" → "FSC Installations"
  */
 export function kindToLabel(kind: string): string {
-  const words = splitWords(kind);
+  const words = titleCase(splitWords(kind));
   if (words.length === 0) return '';
-  // Sentence case: only the first word is capitalized — but an acronym keeps its
-  // case wherever it appears, so "ClusterHTTPRoute" stays "Cluster HTTP routes".
-  //
-  // Case is decided on the word as written, before pluralizing: a trailing acronym
-  // becomes "FSCs", which no longer looks like an acronym, and lowercasing it would
-  // give "Cluster fscs".
-  const sentenceCased = words.map((word, i) =>
-    i === 0 || isAcronym(word) ? word : word.toLowerCase(),
-  );
-  const last = sentenceCased.length - 1;
-  sentenceCased[last] = pluralize(sentenceCased[last]);
-  return sentenceCased.join(' ');
+  // Pluralized after the case of every word is settled, on the word as written:
+  // "FSC" and "FSCs" are the same acronym, but only the first says so by its
+  // shape alone.
+  const last = words.length - 1;
+  words[last] = pluralize(words[last]);
+  return words.join(' ');
 }
 
 /**
  * Convert a CRD reference as it appears in a plugin menu ("certificates.cert-manager.io")
  * to a human-readable label: "Certificates".
  *
- * Unlike kindToLabel this must not pluralize — the reference already carries the
- * plural resource name, so running it through kindToLabel would yield
- * "certificates.cert-manager.ios". The group suffix is dropped; a plural is
- * lowercase by Kubernetes' rules, so its words cannot be recovered any further.
+ * This is a last resort, not the preferred label: a CRD's plural is lowercase by
+ * Kubernetes' rules, so "dnsendpoints" can only ever become "Dnsendpoints" — the
+ * word boundaries and the acronym's case are not in the reference to recover.
+ * Prefer the CRD's own kind through kindToLabel, or a label the plugin manifest
+ * states outright. Unlike kindToLabel this must not pluralize: the reference
+ * already carries the plural, so it would yield "certificates.cert-manager.ios".
  */
 export function crdRefToLabel(crdRef: string): string {
-  const words = splitWords(crdRef.split('.')[0]);
-  if (words.length === 0) return '';
-  const sentenceCased = words.map((word, i) =>
-    i === 0 || isAcronym(word) ? word : word.toLowerCase(),
-  );
-  sentenceCased[0] = sentenceCased[0].charAt(0).toUpperCase() + sentenceCased[0].slice(1);
-  return sentenceCased.join(' ');
+  const words = titleCase(splitWords(crdRef.split('.')[0]));
+  return words.join(' ');
 }
 
 /**
@@ -243,7 +250,17 @@ export function crdRefToLabel(crdRef: string): string {
  * "controllerURL" → "Controller URL"
  */
 export function fieldNameToLabel(name: string): string {
-  const words = splitWords(name);
-  if (words.length === 0) return '';
-  return [words[0].charAt(0).toUpperCase() + words[0].slice(1), ...words.slice(1)].join(' ');
+  return titleCase(splitWords(name)).join(' ');
+}
+
+/**
+ * Lowercase a label for use mid-sentence ("No DNS endpoints found", "New
+ * certificate request…"), leaving an acronym its case: a plain toLowerCase()
+ * would write "no dns endpoints found".
+ */
+export function labelMidSentence(label: string): string {
+  return label
+    .split(' ')
+    .map((word) => (isAcronym(word) ? word : word.toLowerCase()))
+    .join(' ');
 }
