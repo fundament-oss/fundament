@@ -25,6 +25,17 @@ enum SubmissionStatus {
   SUBMISSION_STATUS_WITHDRAWN = 6;
 }
 
+// Trust and support badges a listing carries (appstore.plugin_labels).
+// Fundament assigns them, so every surface serves them read-only. A listing may
+// hold several at once: CORE and RIJKSOVERHEID say where a plugin comes from,
+// SUPPORT_9_TO_17 what support it ships with.
+enum PluginLabel {
+  PLUGIN_LABEL_UNSPECIFIED = 0;
+  PLUGIN_LABEL_CORE = 1;
+  PLUGIN_LABEL_RIJKSOVERHEID = 2;
+  PLUGIN_LABEL_SUPPORT_9_TO_17 = 3;
+}
+
 // appstore.categories. A curated vocabulary: a developer picks from it rather
 // than creating entries, and a listing references it by id.
 message Category {

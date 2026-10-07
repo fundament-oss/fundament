@@ -10,6 +10,8 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
+import { create } from '@bufbuild/protobuf';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
@@ -21,8 +23,10 @@ import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
+import { NAMESPACE } from '../../../connect/tokens';
+import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
-import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
+import { toDateValue, toSimpleValue, fieldNameToLabel, kindToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -154,6 +158,9 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
+    const projectId = this.route.snapshot.parent?.params['id'];
+    if (projectId) this.loadNamespaces(projectId).catch(() => {});
+
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
       const clusterId = this.clusterContext.selectedClusterId();
@@ -205,14 +212,16 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   /** Names the list the back button returns to: the plugin's menu label, else
-   *  the plural its schema uses, so the button says where it goes. */
+   *  the CRD's kind, so the button says where it goes. Built from the kind, not
+   *  its plural: the plural is lowercase by Kubernetes' rules, which capitalized
+   *  gave "Dnsendpoints". */
   kindLabel = computed(() => {
     const resourceKind = this.resourceKind();
     const item = this.plugin()?.menu.project?.find((i) => i.crd === resourceKind);
     if (item?.label) return item.label;
 
-    const plural = this.crdDef()?.plural;
-    return plural ? plural[0].toUpperCase() + plural.slice(1) : this.kind() || 'list';
+    const kind = this.crdDef()?.kind;
+    return kind ? kindToLabel(kind) : this.kind() || 'list';
   });
 
   /** Where the title bar's back button leads: the project this resource belongs
@@ -222,6 +231,25 @@ export default class ResourceDetailComponent implements OnInit {
     const projectId = this.route.snapshot.parent?.params['id'];
     return projectId ? `/projects/${projectId}` : '/';
   });
+
+  private namespaceClient = inject(NAMESPACE);
+
+  // The project's namespaces, forwarded to the plugin iframe: custom detail
+  // UIs embed create flows (the ceph-rook Buckets section), which need the
+  // same namespace choices the create view gets.
+  namespaces = signal<string[]>([]);
+
+  private async loadNamespaces(projectId: string): Promise<void> {
+    try {
+      const request = create(ListProjectNamespacesRequestSchema, { projectId });
+      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
+      this.namespaces.set(response.namespaces.map((n) => n.name));
+    } catch (err) {
+      // Transient failure: plugin UIs fall back to a free-text namespace field.
+      // eslint-disable-next-line no-console
+      console.error('[ResourceDetail] Failed to load namespaces:', err);
+    }
+  }
 
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears

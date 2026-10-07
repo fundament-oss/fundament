@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -93,4 +94,45 @@ func TestRenderCephFSStorageClassSetsFuseMounter(t *testing.T) {
 func TestCephFSProvisioner(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "rook-ceph.cephfs.csi.ceph.com", CephFSProvisioner("rook-ceph"))
+}
+
+// The bucket class drives Rook's OBC provisioner, not a CSI driver: no CSI
+// secret parameters, no volume expansion.
+func TestRenderBucketStorageClass(t *testing.T) {
+	t.Parallel()
+	sc := RenderBucketStorageClass("cephobj-main", "rook-ceph", "cephobj-main", "nl-1")
+	assert.Equal(t, "cephobj-main", sc.Name)
+	assert.Equal(t, "rook-ceph.ceph.rook.io/bucket", sc.Provisioner)
+	assert.Equal(t, "cephobj-main", sc.Parameters["objectStoreName"])
+	assert.Equal(t, "rook-ceph", sc.Parameters["objectStoreNamespace"])
+	assert.NotContains(t, sc.Parameters, "clusterID")
+	// An empty BUCKET_REGION in the claim's ConfigMap breaks S3 clients that
+	// require one (distribution/registry panics on it); parameters are
+	// immutable, so it must ship from the start.
+	assert.Equal(t, "nl-1", sc.Parameters["region"])
+	assert.Nil(t, sc.AllowVolumeExpansion, "buckets are not volumes")
+	if assert.NotNil(t, sc.ReclaimPolicy) {
+		assert.Equal(t, corev1.PersistentVolumeReclaimDelete, *sc.ReclaimPolicy)
+	}
+	// Pinned, or server defaulting reads back as immutable drift; the
+	// renderer documents why.
+	if assert.NotNil(t, sc.VolumeBindingMode) {
+		assert.Equal(t, storagev1.VolumeBindingImmediate, *sc.VolumeBindingMode)
+	}
+}
+
+// Unlike the CSI classes, the provisioner follows the CephCluster's
+// namespace (see BucketProvisioner); the two only coincide while both
+// default to rook-ceph.
+func TestRenderBucketStorageClassFollowsClusterNamespace(t *testing.T) {
+	t.Parallel()
+	sc := RenderBucketStorageClass("cephobj-main", "ceph-cluster", "cephobj-main", "nl-1")
+	assert.Equal(t, "ceph-cluster.ceph.rook.io/bucket", sc.Provisioner)
+	assert.Equal(t, "ceph-cluster", sc.Parameters["objectStoreNamespace"])
+}
+
+func TestBucketProvisioner(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "rook-ceph.ceph.rook.io/bucket", BucketProvisioner("rook-ceph"))
+	assert.Equal(t, "ceph-cluster.ceph.rook.io/bucket", BucketProvisioner("ceph-cluster"))
 }

@@ -28,6 +28,7 @@ import {
   crdRefToLabel,
   kindToLabel,
   kindToSingularLabel,
+  labelMidSentence,
 } from '../crd-schema.utils';
 import opensElsewhere from '../../opens-elsewhere';
 
@@ -173,10 +174,17 @@ export default class ResourceListComponent implements OnInit {
     return crdRefToLabel(this.resourceKind());
   });
 
+  /** The list's name as it reads inside a sentence ("No DNS endpoints found").
+   *  A plain toLowerCase() on the label flattened the acronym too: "no dns
+   *  endpoints found". */
+  kindLabelMidSentence = computed(() => labelMidSentence(this.kindLabel()));
+
   /** One item, for the create button: "New database…", not "New databases…".
    *  Only shown once the CRD is loaded, so the kind is always there to fall back on. */
-  singularKindLabel = computed(
-    () => this.menuItem()?.singularLabel ?? kindToSingularLabel(this.crdDef()?.kind ?? ''),
+  singularKindLabelMidSentence = computed(() =>
+    labelMidSentence(
+      this.menuItem()?.singularLabel ?? kindToSingularLabel(this.crdDef()?.kind ?? ''),
+    ),
   );
 
   constructor() {

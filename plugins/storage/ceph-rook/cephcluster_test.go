@@ -10,9 +10,9 @@ import (
 
 func TestBuildStorageNodes(t *testing.T) {
 	disks := []v1alpha1.DiskStatus{
-		{Node: "n2", Path: "/dev/disk/by-id/z"},
-		{Node: "n1", Path: "/dev/disk/by-id/b"},
-		{Node: "n1", Path: "/dev/disk/by-id/a"},
+		{NodeName: "n2", Path: "/dev/disk/by-id/z"},
+		{NodeName: "n1", Path: "/dev/disk/by-id/b"},
+		{NodeName: "n1", Path: "/dev/disk/by-id/a"},
 	}
 	nodes := BuildStorageNodes(disks)
 	assert.Equal(t, []map[string]any{

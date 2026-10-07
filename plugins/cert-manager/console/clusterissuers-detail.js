@@ -20,7 +20,7 @@
             resource: 'clusterissuers',
             name: ctx.resource.name,
           });
-          heading.textContent = `Cluster issuer · ${item.metadata?.name ?? ctx.resource.name}`;
+          heading.textContent = `Cluster Issuer · ${item.metadata?.name ?? ctx.resource.name}`;
           const meta = {
             Name: item.metadata?.name,
             Created: item.metadata?.creationTimestamp,

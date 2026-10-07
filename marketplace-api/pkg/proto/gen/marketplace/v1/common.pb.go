@@ -84,6 +84,57 @@ func (x SubmissionStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// Trust and support badges a listing carries (appstore.plugin_labels).
+// Fundament assigns them, so every surface serves them read-only. A listing may
+// hold several at once: CORE and RIJKSOVERHEID say where a plugin comes from,
+// SUPPORT_9_TO_17 what support it ships with.
+type PluginLabel int32
+
+const (
+	PluginLabel_PLUGIN_LABEL_UNSPECIFIED     PluginLabel = 0
+	PluginLabel_PLUGIN_LABEL_CORE            PluginLabel = 1
+	PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID   PluginLabel = 2
+	PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17 PluginLabel = 3
+)
+
+// Enum value maps for PluginLabel.
+var (
+	PluginLabel_name = map[int32]string{
+		0: "PLUGIN_LABEL_UNSPECIFIED",
+		1: "PLUGIN_LABEL_CORE",
+		2: "PLUGIN_LABEL_RIJKSOVERHEID",
+		3: "PLUGIN_LABEL_SUPPORT_9_TO_17",
+	}
+	PluginLabel_value = map[string]int32{
+		"PLUGIN_LABEL_UNSPECIFIED":     0,
+		"PLUGIN_LABEL_CORE":            1,
+		"PLUGIN_LABEL_RIJKSOVERHEID":   2,
+		"PLUGIN_LABEL_SUPPORT_9_TO_17": 3,
+	}
+)
+
+func (x PluginLabel) Enum() *PluginLabel {
+	p := new(PluginLabel)
+	*p = x
+	return p
+}
+
+func (x PluginLabel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PluginLabel) Descriptor() protoreflect.EnumDescriptor {
+	return file_marketplace_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (PluginLabel) Type() protoreflect.EnumType {
+	return &file_marketplace_v1_common_proto_enumTypes[1]
+}
+
+func (x PluginLabel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
 // appstore.categories. A curated vocabulary: a developer picks from it rather
 // than creating entries, and a listing references it by id.
 type Category struct {
@@ -660,18 +711,24 @@ const file_marketplace_v1_common_proto_rawDesc = "" +
 	"#SUBMISSION_STATUS_CHANGES_REQUESTED\x10\x03\x12\x1e\n" +
 	"\x1aSUBMISSION_STATUS_APPROVED\x10\x04\x12\x1e\n" +
 	"\x1aSUBMISSION_STATUS_REJECTED\x10\x05\x12\x1f\n" +
-	"\x1bSUBMISSION_STATUS_WITHDRAWN\x10\x06BiZ]github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x1bSUBMISSION_STATUS_WITHDRAWN\x10\x06*\x84\x01\n" +
+	"\vPluginLabel\x12\x1c\n" +
+	"\x18PLUGIN_LABEL_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11PLUGIN_LABEL_CORE\x10\x01\x12\x1e\n" +
+	"\x1aPLUGIN_LABEL_RIJKSOVERHEID\x10\x02\x12 \n" +
+	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03BiZ]github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_marketplace_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_marketplace_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_marketplace_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_marketplace_v1_common_proto_goTypes = []any{
 	(SubmissionStatus)(0),     // 0: marketplace.v1.SubmissionStatus
-	(*Category)(nil),          // 1: marketplace.v1.Category
-	(*Preset)(nil),            // 2: marketplace.v1.Preset
-	(*Publisher)(nil),         // 3: marketplace.v1.Publisher
-	(*PluginPermission)(nil),  // 4: marketplace.v1.PluginPermission
-	(*FeatureBlock)(nil),      // 5: marketplace.v1.FeatureBlock
-	(*DocumentationLink)(nil), // 6: marketplace.v1.DocumentationLink
+	(PluginLabel)(0),          // 1: marketplace.v1.PluginLabel
+	(*Category)(nil),          // 2: marketplace.v1.Category
+	(*Preset)(nil),            // 3: marketplace.v1.Preset
+	(*Publisher)(nil),         // 4: marketplace.v1.Publisher
+	(*PluginPermission)(nil),  // 5: marketplace.v1.PluginPermission
+	(*FeatureBlock)(nil),      // 6: marketplace.v1.FeatureBlock
+	(*DocumentationLink)(nil), // 7: marketplace.v1.DocumentationLink
 }
 var file_marketplace_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -691,7 +748,7 @@ func file_marketplace_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_marketplace_v1_common_proto_rawDesc), len(file_marketplace_v1_common_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,

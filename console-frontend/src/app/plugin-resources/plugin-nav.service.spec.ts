@@ -5,14 +5,20 @@ import PluginNavService from './plugin-nav.service';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginDefinition } from './types';
 
-function definition(organizationName: string, name: string, label: string): PluginDefinition {
+function definition(
+  organizationName: string,
+  name: string,
+  label: string,
+  crd = 'certificates.cert-manager.io',
+  menuLabel?: string,
+): PluginDefinition {
   return {
     name,
     label,
     version: 'v1',
     description: '',
-    menu: { project: [{ crd: 'certificates.cert-manager.io' }] },
-    crds: ['certificates.cert-manager.io'],
+    menu: { project: [{ crd, label: menuLabel }] },
+    crds: [crd],
     allowedResources: [],
     installationId: `${organizationName}-${name}-uid`,
     installationName: `${organizationName}--${name}`,
@@ -21,13 +27,23 @@ function definition(organizationName: string, name: string, label: string): Plug
   };
 }
 
-function navFor(plugins: PluginDefinition[]): PluginNavService {
+function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {}): PluginNavService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [{ provide: PluginRegistryService, useValue: { allPlugins: signal(plugins) } }],
+    providers: [
+      {
+        provide: PluginRegistryService,
+        useValue: {
+          allPlugins: signal(plugins),
+          crdKind: (crdRef: string) => kinds[crdRef],
+        },
+      },
+    ],
   });
   return TestBed.inject(PluginNavService);
 }
+
+const CRD = 'dnsendpoints.externaldns.k8s.io';
 
 describe('PluginNavService', () => {
   it('routes on the installation name, not the plugin name', () => {
@@ -57,6 +73,29 @@ describe('PluginNavService', () => {
       'system--cert-manager',
       'acme-corp--cert-manager',
     ]);
+  });
+
+  it("names an item after the CRD's kind once the registry has read it", () => {
+    const nav = navFor([definition('system', 'external-dns', 'External DNS', CRD)], {
+      [CRD]: 'DNSEndpoint',
+    });
+
+    expect(nav.projectNav()[0].items.map((i) => i.label)).toEqual(['DNS Endpoints']);
+  });
+
+  it('falls back to the CRD reference until the kind is known', () => {
+    // All a reference can give: a plural is lowercase by Kubernetes' rules.
+    const nav = navFor([definition('system', 'external-dns', 'External DNS', CRD)]);
+
+    expect(nav.projectNav()[0].items.map((i) => i.label)).toEqual(['Dnsendpoints']);
+  });
+
+  it('prefers the label the manifest states over the kind', () => {
+    const nav = navFor([definition('system', 'external-dns', 'External DNS', CRD, 'DNS records')], {
+      [CRD]: 'DNSEndpoint',
+    });
+
+    expect(nav.projectNav()[0].items.map((i) => i.label)).toEqual(['DNS records']);
   });
 
   it('qualifies only the ambiguous group', () => {

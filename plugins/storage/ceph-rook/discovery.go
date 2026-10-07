@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
@@ -125,10 +127,10 @@ func ParseDiscoveredDevices(node, raw string, loopDevices bool) ([]v1alpha1.Disk
 			dt = v1alpha1.DiskTypeNVMe
 		}
 		out = append(out, v1alpha1.DiskStatus{
-			Node:       node,
+			NodeName:   node,
 			Path:       path,
 			StablePath: byIDPath(d.DevLinks),
-			SizeBytes:  d.Size,
+			Size:       *resource.NewQuantity(d.Size, resource.BinarySI),
 			Type:       dt,
 			Rotational: d.Rotational,
 			Model:      d.Model,

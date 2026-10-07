@@ -1,18 +1,22 @@
 import {
   loadSdk,
-  loadNlddDesignSystem,
+  openSheet,
+  errorBox,
+  ensureNldd,
+  fetchCephCapacity,
   escapeHtml,
-  humanizeBytes,
+  humanizeQuantity,
   renderDefList,
   wireSubmit,
   formActionsHtml,
   errorBannerHtml,
+  loadErrorBanner,
 } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
-// The design system is for the edit form.
-await Promise.all([loadSdk(), loadNlddDesignSystem()]);
+await loadSdk();
 const ctx = await fundament.init;
+ensureNldd().catch(() => {});
 
 const content = document.getElementById('content');
 const heading = document.getElementById('heading');
@@ -44,13 +48,14 @@ async function diskIndex() {
   }
 }
 
-// spec.disks holds Disk CR names — a node prefix plus a digest of the device's
+// spec.disks entries name Disk CRs — a node prefix plus a digest of the device's
 // stable identity — which match nothing an operator sees on the node or in the
 // Disks list. Resolve each to its device path and keep the CR name underneath,
 // so this page and the Disks list can be compared by eye. A name with no Disk CR
 // behind it has no path to show and says so rather than rendering bare.
-function renderDiskList(names, byName) {
-  if (!names || names.length === 0) return '<p class="plugin-text">No disks selected.</p>';
+function renderDiskList(entries, byName) {
+  const names = (entries ?? []).map((d) => d.name);
+  if (names.length === 0) return '<p class="plugin-text">No disks selected.</p>';
   const rows = names
     .map((diskName) => {
       const path = byName.get(diskName)?.status?.path;
@@ -72,7 +77,7 @@ function renderReadOnly(item, byName) {
     ['Phase', status.phase ?? 'Unknown'],
     // Labelled as contributions, not capacity: the obvious reading is wrong.
     ['Disks contributed', String(status.selectedDiskCount ?? '—')],
-    ['Raw size of contributed disks', humanizeBytes(status.rawCapacityBytes ?? 0)],
+    ['Raw size of contributed disks', humanizeQuantity(status.rawCapacity)],
   ];
   if (status.message) pairs.push(['Message', status.message]);
 
@@ -83,9 +88,9 @@ function renderReadOnly(item, byName) {
       Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
       turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
       are placed across all of the cluster's disks, so the raw size above is this pool's
-      contribution. Use
-      <code>ceph df</code> for free space.
+      contribution.
     </p>
+    <p class="plugin-hint" data-role="capacity"></p>
     <h2 class="plugin-heading">Contributed Disks</h2>
     ${renderDiskList(spec.disks, byName)}
   `;
@@ -101,27 +106,35 @@ async function showDetail() {
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
     document.getElementById('edit-btn').onclick = () => showEdit(item);
+    fetchCephCapacity().then((cap) => {
+      const el = content.querySelector('[data-role="capacity"]');
+      if (!cap || !el) return;
+      el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`;
+    });
   } catch (err) {
     actions.hidden = true;
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load: ${err?.message ?? err}`,
-    )}</div>`;
+    content.innerHTML = errorBox(err);
   }
 }
 
 async function showEdit(item) {
-  actions.hidden = true;
+  const sheet = await openSheet({ label: 'Edit Disk Pool' });
+  if (!sheet) return;
+  const { body, close } = sheet;
+  body.insertAdjacentHTML(
+    'beforeend',
+    '<nldd-activity-indicator show-text text="Loading disks…"></nldd-activity-indicator>',
+  );
   const current = item.spec?.disks ?? [];
+  const currentNames = current.map((d) => d.name);
 
   let disks;
   try {
     const { items } = await fundament.k8s.list(RESOURCE_DISKS);
     disks = selectableDisks(items, name);
   } catch (err) {
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load disks: ${err?.message ?? err}`,
-    )}</div>`;
-    actions.hidden = false;
+    body.lastElementChild.replaceWith(loadErrorBanner(`Failed to load disks: ${err?.message ?? err}`));
     return;
   }
 
@@ -132,24 +145,24 @@ async function showEdit(item) {
   // detail page flagged that exact disk. Carry them through untouched, and name
   // them below rather than holding them silently.
   const rendered = new Set(disks.map((d) => d.metadata?.name).filter(Boolean));
-  const preserved = current.filter((d) => !rendered.has(d));
+  const preserved = current.filter((d) => !rendered.has(d.name));
   const preservedNote =
     preserved.length === 0
       ? ''
       : `<nldd-text size="sm" color="secondary">
            Kept as they are, because this form cannot show them: a disk is listed here only
            when it exists and is either free or already claimed by this pool:
-           ${escapeHtml(preserved.join(', '))}. Saving leaves them in the pool; use kubectl
+           ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving leaves them in the pool; use kubectl
            to remove one.
          </nldd-text>`;
 
-  content.innerHTML = `
+  body.lastElementChild.outerHTML = `
     <nldd-form>
-      <form id="edit-form" novalidate>
+      <form novalidate>
         ${errorBannerHtml('edit-error')}
 
         <nldd-form-section text="Disks">
-          ${renderDiskPicker(disks, current)}
+          ${renderDiskPicker(disks, currentNames)}
           ${preservedNote}
           <nldd-text size="sm" color="secondary">
             Unchecking a disk removes it from the shared Ceph cluster's device list, but its
@@ -163,21 +176,22 @@ async function showEdit(item) {
     </nldd-form>
   `;
 
-  const form = document.getElementById('edit-form');
+  const form = body.querySelector('form');
 
-  document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
+  body.querySelector('#cancel-btn').addEventListener('click', () => close());
 
   // Disjoint by construction: preserved is exactly what the picker did not
-  // render, so this cannot produce the duplicate the CRD's listType=set rejects.
-  const selected = () => [...readSelectedDisks(form), ...preserved];
+  // render, so this cannot produce the duplicate name the CRD's listType=map
+  // rejects.
+  const selected = () => [...readSelectedDisks(form, current), ...preserved];
 
   wireSubmit(form, {
-    button: document.getElementById('save-btn'),
-    errorBanner: document.getElementById('edit-error'),
+    button: body.querySelector('#save-btn'),
+    errorBanner: body.querySelector('#edit-error'),
     failPrefix: 'Failed to save',
     checks: [
       [
-        document.getElementById('disk-picker'),
+        body.querySelector('#disk-picker'),
         () => (selected().length === 0 ? 'Select at least one disk.' : null),
       ],
     ],
@@ -190,6 +204,7 @@ async function showEdit(item) {
           spec: { disks: selected() },
         },
       );
+      close();
       await showDetail();
     },
   });

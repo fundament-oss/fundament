@@ -13,7 +13,7 @@ import * as fx from './fixtures';
 @Injectable({ providedIn: 'root' })
 export default class FakePluginRegistryService implements Pick<
   PluginRegistryService,
-  'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'allPlugins'
+  'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'crdKind' | 'allPlugins'
 > {
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
   // reflects the install the walkthrough performs on its plugin slide.
@@ -112,6 +112,16 @@ export default class FakePluginRegistryService implements Pick<
     return (fx.pluginCrds[pluginName] ?? []).find(
       (crd) => key === crd.plural || key === crd.kind || key === `${crd.plural}.${crd.group}`,
     );
+  }
+
+  /** The kind of the CRD a menu entry points at, as in the real service — which
+   *  reads it from the cluster. The sidebar spells a resource the way its CRD
+   *  does, so the fixtures must answer this too. */
+  // eslint-disable-next-line class-methods-use-this
+  crdKind(crdRef: string): string | undefined {
+    return Object.values(fx.pluginCrds)
+      .flat()
+      .find((crd) => crdRef === `${crd.plural}.${crd.group}`)?.kind;
   }
 
   allPlugins = this.plugins.asReadonly();

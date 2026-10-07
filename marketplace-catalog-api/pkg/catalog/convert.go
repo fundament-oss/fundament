@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	marketplacev1 "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1"
 	catalogv1 "github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1"
 )
 
@@ -28,14 +29,14 @@ func sortKey(sort catalogv1.PluginSort) string {
 	}
 }
 
-func labelFromDB(name dbconst.PluginLabelName) catalogv1.PluginLabel {
+func labelFromDB(name dbconst.PluginLabelName) marketplacev1.PluginLabel {
 	switch name {
 	case dbconst.PluginLabelName_Core:
-		return catalogv1.PluginLabel_PLUGIN_LABEL_CORE
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_CORE
 	case dbconst.PluginLabelName_Rijksoverheid:
-		return catalogv1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID
 	case dbconst.PluginLabelName_Support9To17:
-		return catalogv1.PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17
 	default:
 		panic("unhandled PluginLabelName: " + string(name))
 	}

@@ -42,6 +42,13 @@ WHERE plugins_tags.plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
   AND tags.deleted IS NULL
 ORDER BY plugins_tags.plugin_id ASC, tags.name ASC;
 
+-- name: PluginLabelsListByPluginIDs :many
+SELECT plugin_labels.plugin_id, plugin_labels.name
+FROM appstore.plugin_labels
+WHERE plugin_labels.plugin_id = ANY(sqlc.arg('plugin_ids')::uuid[])
+  AND plugin_labels.deleted IS NULL
+ORDER BY plugin_labels.plugin_id ASC, plugin_labels.name ASC;
+
 -- name: PluginCategoriesListByPluginIDs :many
 -- Joined to the vocabulary so a category soft-deleted after it was attached
 -- stops being handed out: ListCategories would never resolve the id.

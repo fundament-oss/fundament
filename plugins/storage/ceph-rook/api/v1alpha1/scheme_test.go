@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -15,11 +16,21 @@ func TestAddToScheme(t *testing.T) {
 	assert.True(t, s.Recognizes(GroupVersion.WithKind("DiskPool")))
 	assert.True(t, s.Recognizes(GroupVersion.WithKind("BlockStorage")))
 	assert.True(t, s.Recognizes(GroupVersion.WithKind("FileStorage")))
+	assert.True(t, s.Recognizes(GroupVersion.WithKind("ObjectStorage")))
+}
+
+func TestObjectStorageRequestedReplicas(t *testing.T) {
+	os := &ObjectStorage{}
+	assert.Nil(t, os.RequestedReplicas(), "absent replicas means auto")
+
+	two := int32(2)
+	os.Spec.Replicas = &two
+	assert.Equal(t, &two, os.RequestedReplicas())
 }
 
 func TestDiskDeepCopy(t *testing.T) {
-	d := &Disk{Status: DiskStatus{Node: "n1", SizeBytes: 100}}
+	d := &Disk{Status: DiskStatus{NodeName: "n1", Size: resource.MustParse("100")}}
 	got := d.DeepCopy()
-	got.Status.Node = "n2"
-	assert.Equal(t, "n1", d.Status.Node) // original unchanged
+	got.Status.NodeName = "n2"
+	assert.Equal(t, "n1", d.Status.NodeName) // original unchanged
 }

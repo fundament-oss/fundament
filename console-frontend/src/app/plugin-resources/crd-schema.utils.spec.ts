@@ -3,6 +3,7 @@ import {
   fieldNameToLabel,
   kindToLabel,
   kindToSingularLabel,
+  labelMidSentence,
 } from './crd-schema.utils';
 
 describe('kindToLabel', () => {
@@ -10,29 +11,32 @@ describe('kindToLabel', () => {
     expect(kindToLabel('Certificate')).toBe('Certificates');
   });
 
-  it('splits PascalCase into sentence case', () => {
-    expect(kindToLabel('ClusterIssuer')).toBe('Cluster issuers');
-    expect(kindToLabel('CertificateRequest')).toBe('Certificate requests');
+  it('splits PascalCase on every word boundary', () => {
+    expect(kindToLabel('ClusterIssuer')).toBe('Cluster Issuers');
+    expect(kindToLabel('CertificateRequest')).toBe('Certificate Requests');
   });
 
   it('keeps a leading acronym intact', () => {
-    // Splitting on every capital gave "F s c installations".
-    expect(kindToLabel('FSCInstallation')).toBe('FSC installations');
+    // Splitting on every capital gave "F S C Installations"; not splitting at all
+    // gave "Fscinstallations".
+    expect(kindToLabel('FSCInstallation')).toBe('FSC Installations');
+    expect(kindToLabel('DNSEndpoint')).toBe('DNS Endpoints');
   });
 
   it('keeps an acronym intact wherever it appears', () => {
-    expect(kindToLabel('HTTPRoute')).toBe('HTTP routes');
-    expect(kindToLabel('ClusterHTTPRoute')).toBe('Cluster HTTP routes');
+    expect(kindToLabel('HTTPRoute')).toBe('HTTP Routes');
+    expect(kindToLabel('ClusterHTTPRoute')).toBe('Cluster HTTP Routes');
+    expect(kindToLabel('MyXYZ')).toBe('My XYZs');
   });
 
   it('applies the pluralization rules to the last word', () => {
-    expect(kindToLabel('NetworkPolicy')).toBe('Network policies');
-    expect(kindToLabel('IngressClass')).toBe('Ingress classes');
+    expect(kindToLabel('NetworkPolicy')).toBe('Network Policies');
+    expect(kindToLabel('IngressClass')).toBe('Ingress Classes');
   });
 
   it('keeps a trailing acronym intact once pluralized', () => {
-    // Pluralizing first gave "HTTPs", which no longer reads as an acronym, so the
-    // sentence-case pass lowercased it to "Cluster https".
+    // Pluralizing first gave "HTTPs", which no longer reads as an acronym, so
+    // deciding the case afterwards wrote "Cluster Https".
     expect(kindToLabel('ClusterHTTP')).toBe('Cluster HTTPs');
     expect(kindToLabel('FSC')).toBe('FSCs');
   });
@@ -43,14 +47,14 @@ describe('kindToLabel', () => {
 });
 
 describe('kindToSingularLabel', () => {
-  it('keeps the kind singular in sentence case', () => {
+  it('keeps the kind singular, split on every word boundary', () => {
     expect(kindToSingularLabel('Certificate')).toBe('Certificate');
-    expect(kindToSingularLabel('ClusterIssuer')).toBe('Cluster issuer');
+    expect(kindToSingularLabel('ClusterIssuer')).toBe('Cluster Issuer');
   });
 
   it('keeps acronyms intact', () => {
-    expect(kindToSingularLabel('FSCInstallation')).toBe('FSC installation');
-    expect(kindToSingularLabel('ClusterHTTPRoute')).toBe('Cluster HTTP route');
+    expect(kindToSingularLabel('FSCInstallation')).toBe('FSC Installation');
+    expect(kindToSingularLabel('ClusterHTTPRoute')).toBe('Cluster HTTP Route');
   });
 
   it('returns an empty string for an empty kind', () => {
@@ -71,6 +75,23 @@ describe('crdRefToLabel', () => {
 
   it('returns an empty string for an empty reference', () => {
     expect(crdRefToLabel('')).toBe('');
+  });
+});
+
+describe('labelMidSentence', () => {
+  it('lowercases the words that are not acronyms', () => {
+    // A plain toLowerCase() wrote "no dns endpoints found".
+    expect(labelMidSentence('DNS Endpoints')).toBe('DNS endpoints');
+    expect(labelMidSentence('Certificate Requests')).toBe('certificate requests');
+    expect(labelMidSentence('FSC Installations')).toBe('FSC installations');
+  });
+
+  it('keeps a pluralized acronym intact', () => {
+    // The plural "s" kindToLabel appends leaves the acronym an acronym; reading
+    // "HTTPs" as an ordinary word wrote "cluster https".
+    expect(labelMidSentence(kindToLabel('ClusterHTTP'))).toBe('cluster HTTPs');
+    expect(labelMidSentence(kindToLabel('FSC'))).toBe('FSCs');
+    expect(labelMidSentence(kindToLabel('ClusterHTTPRoute'))).toBe('cluster HTTP routes');
   });
 });
 

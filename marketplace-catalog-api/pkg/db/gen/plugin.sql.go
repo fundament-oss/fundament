@@ -261,7 +261,8 @@ SELECT
     SELECT MIN(appstore.plugin_definitions.published)
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-  ) AS published
+  ) AS published,
+  appstore.plugins.updated
 FROM appstore.plugins
 WHERE appstore.plugins.id = $1::uuid
   AND EXISTS (
@@ -292,6 +293,7 @@ type PluginGetByIDRow struct {
 	License          string
 	LatestVersionID  uuid.UUID
 	Published        interface{}
+	Updated          pgtype.Timestamptz
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
@@ -311,6 +313,7 @@ func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (P
 		&i.License,
 		&i.LatestVersionID,
 		&i.Published,
+		&i.Updated,
 	)
 	return i, err
 }
@@ -427,7 +430,8 @@ SELECT
     SELECT MIN(appstore.plugin_definitions.published)
     FROM appstore.plugin_definitions
     WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id
-  ) AS published
+  ) AS published,
+  appstore.plugins.updated
 FROM appstore.plugins
 WHERE
   (
@@ -495,6 +499,7 @@ type PluginListRow struct {
 	Image            string
 	LatestVersionID  uuid.UUID
 	Published        interface{}
+	Updated          pgtype.Timestamptz
 }
 
 // The ILIKE filter is deliberate rather than full-text search: the catalog is
@@ -519,6 +524,7 @@ func (q *Queries) PluginList(ctx context.Context, arg PluginListParams) ([]Plugi
 			&i.Image,
 			&i.LatestVersionID,
 			&i.Published,
+			&i.Updated,
 		); err != nil {
 			return nil, err
 		}

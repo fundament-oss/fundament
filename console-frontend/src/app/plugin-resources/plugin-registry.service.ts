@@ -165,6 +165,15 @@ export default class PluginRegistryService {
   // Parsed CRDs indexed by plural; key: "${pluginName}/${clusterId}/${plural}"
   private parsedCrdByPlural = new Map<string, ParsedCrd>();
 
+  // The kinds of the CRDs the menus point at, by CRD reference
+  // ("dnsendpoints.externaldns.k8s.io" -> "DNSEndpoint"). A CRD's plural is
+  // lowercase by Kubernetes' rules, so a label derived from the reference reads
+  // "Dnsendpoints"; the kind is the only place the word boundaries and the
+  // acronym's case survive. A signal, so the sidebar redraws when they arrive:
+  // it is built from the definitions alone, which name the CRDs but do not say
+  // how they are spelled.
+  private crdKinds = signal<ReadonlyMap<string, string>>(new Map());
+
   private configService = inject(ConfigService);
 
   private pluginClient = inject(PLUGIN);
@@ -184,6 +193,7 @@ export default class PluginRegistryService {
     this.stopPolling();
     this.generation += 1;
     this.runningKeys = null;
+    this.crdKinds.set(new Map());
     this.failures = 0;
     this.definitionFailures = 0;
     this.definitionRetryAt = null;
@@ -308,6 +318,13 @@ export default class PluginRegistryService {
       }
     }
 
+    // On every sync, not only the ones that rebuilt the menu: a CRD whose kind
+    // could not be read keeps a reference-derived label, and the read is worth
+    // another try — right after an install the CRD is often not served yet.
+    // Resolved kinds are never refetched, so a settled menu reads nothing here.
+    // Not awaited either: the sidebar must not wait on it.
+    this.loadCrdKinds(clusterId, generation).catch(() => {});
+
     // An installation that has no phase yet is one the controller has not
     // picked up, which is as much on its way as a Pending one.
     if (items.some((item) => isInstallInProgress(installPhase(item.status?.phase)))) {
@@ -370,6 +387,53 @@ export default class PluginRegistryService {
     return { definitions, complete: results.every((r) => r.status === 'fulfilled') };
   }
 
+  /**
+   * Reads the kind of every CRD the menus point at, so the sidebar can spell a
+   * resource the way the CRD does. A read that fails is skipped silently: the
+   * reference-derived label stands in, and a CRD the user may not read must not
+   * take the menu with it.
+   */
+  private async loadCrdKinds(clusterId: string, generation: number): Promise<void> {
+    const known = this.crdKinds();
+    const refs = [
+      ...new Set(
+        this.plugins()
+          .flatMap((plugin) => plugin.menu.project ?? [])
+          .map((entry) => entry.crd)
+          .filter((ref) => ref && !known.has(ref)),
+      ),
+    ];
+    if (refs.length === 0) return;
+
+    const base = this.configService.getConfig().kubeApiProxyUrl.replace(/\/$/, '');
+    const found = await Promise.all(
+      refs.map(async (ref): Promise<[string, string] | null> => {
+        try {
+          const response = await fetch(
+            `${base}/clusters/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${ref}`,
+            { credentials: 'include' },
+          );
+          if (!response.ok) return null;
+          const raw = (await response.json()) as RawCrdYaml;
+          const kind = raw.spec?.names?.kind;
+          return kind ? [ref, kind] : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    if (generation !== this.generation) return;
+
+    const resolved = found.filter((entry): entry is [string, string] => entry !== null);
+    if (resolved.length === 0) return;
+    this.crdKinds.set(new Map([...this.crdKinds(), ...resolved]));
+  }
+
+  /** The kind of the CRD a menu entry points at, once it has been read. */
+  crdKind(crdRef: string): string | undefined {
+    return this.crdKinds().get(crdRef);
+  }
+
   private stopPolling(): void {
     if (this.pollTimer) {
       clearTimeout(this.pollTimer);
@@ -422,6 +486,7 @@ export default class PluginRegistryService {
     this.runningKeys = null;
     this.plugins.set([]);
     this.parsedCrdByPlural.clear();
+    this.crdKinds.set(new Map());
   }
 
   // Keyed on the installation name, not the definition's `name`: two

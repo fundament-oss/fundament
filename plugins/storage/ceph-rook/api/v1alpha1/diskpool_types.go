@@ -1,15 +1,27 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DiskPoolSpec selects the disks this pool contributes to the shared Ceph
 // cluster.
 type DiskPoolSpec struct {
-	// Disks are the names of the Disk objects to contribute. Ceph runs one
-	// storage daemon (OSD) per disk. Each name may appear once.
+	// Disks are the Disk objects to contribute. Ceph runs one storage daemon
+	// (OSD) per disk. Each name may appear once.
 	// +optional
-	// +listType=set
-	Disks []string `json:"disks,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	Disks []PoolDisk `json:"disks,omitempty"`
+}
+
+// PoolDisk selects one Disk for a DiskPool, in the shape of a Rook
+// storage.nodes[].devices[] entry.
+type PoolDisk struct {
+	// Name is the name of the Disk object.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 }
 
 // Pool phases. PhaseProvisioning is used by consumer kinds only; DiskPool
@@ -53,10 +65,10 @@ type DiskPoolStatus struct {
 	// creates their storage daemons (OSDs) asynchronously, and removing a disk
 	// from spec keeps its OSD until a manual Ceph purge.
 	SelectedDiskCount int `json:"selectedDiskCount,omitempty"`
-	// RawCapacityBytes is the summed size of the disks this pool contributes,
+	// RawCapacity is the summed size of the disks this pool contributes,
 	// before replication. Volumes are placed across every disk in the shared
 	// cluster; `ceph df` shows free space.
-	RawCapacityBytes int64 `json:"rawCapacityBytes,omitempty"`
+	RawCapacity resource.Quantity `json:"rawCapacity,omitempty"`
 	// Message explains the current phase, naming the operator action needed
 	// when the pool is Degraded.
 	Message string `json:"message,omitempty"`

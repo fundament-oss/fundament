@@ -34,14 +34,14 @@ func (s *Server) ListPlugins(
 		pluginIDs = append(pluginIDs, rows[i].ID)
 	}
 
-	tags, categories, err := s.loadPluginChildren(ctx, pluginIDs)
+	children, err := s.loadPluginChildren(ctx, pluginIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	plugins := make([]*adminv1.Plugin, 0, len(rows))
 	for i := range rows {
-		plugins = append(plugins, pluginFromRow(pluginRowFromList(&rows[i]), tags, categories))
+		plugins = append(plugins, pluginFromRow(pluginRowFromList(&rows[i]), children))
 	}
 
 	return adminv1.ListPluginsResponse_builder{Plugins: plugins}.Build(), nil
@@ -58,13 +58,13 @@ func (s *Server) GetPlugin(
 		return nil, pluginLookupError(err)
 	}
 
-	tags, categories, err := s.loadPluginChildren(ctx, []uuid.UUID{row.ID})
+	children, err := s.loadPluginChildren(ctx, []uuid.UUID{row.ID})
 	if err != nil {
 		return nil, err
 	}
 
 	return adminv1.GetPluginResponse_builder{
-		Plugin: pluginFromRow(pluginRowFromGet(&row), tags, categories),
+		Plugin: pluginFromRow(pluginRowFromGet(&row), children),
 	}.Build(), nil
 }
 
@@ -192,11 +192,7 @@ func pluginRowFromGet(row *db.PluginGetByIDRow) *adminPluginRow {
 	}
 }
 
-func pluginFromRow(
-	row *adminPluginRow,
-	tags map[uuid.UUID][]string,
-	categories map[uuid.UUID][]string,
-) *adminv1.Plugin {
+func pluginFromRow(row *adminPluginRow, children *pluginChildren) *adminv1.Plugin {
 	return adminv1.Plugin_builder{
 		Id:               row.ID.String(),
 		Name:             row.Name,
@@ -205,46 +201,67 @@ func pluginFromRow(
 		Description:      row.Description,
 		OrganizationId:   row.OrganizationID.String(),
 		Image:            row.Image,
-		CategoryIds:      categories[row.ID],
-		Tags:             tags[row.ID],
+		CategoryIds:      children.categories[row.ID],
+		Tags:             children.tags[row.ID],
 		Created:          timestamptzOrNil(row.Created),
 		Updated:          timestamptzOrNil(row.Updated),
+		Labels:           children.labels[row.ID],
 	}.Build()
 }
 
-// loadPluginChildren reads every listing's tags and category ids in two
-// queries rather than two per listing.
+// pluginChildren is the child rows of a set of listings, keyed by plugin id.
+type pluginChildren struct {
+	tags       map[uuid.UUID][]string
+	categories map[uuid.UUID][]string
+	labels     map[uuid.UUID][]marketplacev1.PluginLabel
+}
+
+// loadPluginChildren reads every listing's tags, category ids and labels in
+// three queries rather than three per listing.
 func (s *Server) loadPluginChildren(
 	ctx context.Context,
 	pluginIDs []uuid.UUID,
-) (tags, categories map[uuid.UUID][]string, err error) {
-	tags = map[uuid.UUID][]string{}
-	categories = map[uuid.UUID][]string{}
+) (*pluginChildren, error) {
+	children := &pluginChildren{
+		tags:       map[uuid.UUID][]string{},
+		categories: map[uuid.UUID][]string{},
+		labels:     map[uuid.UUID][]marketplacev1.PluginLabel{},
+	}
 	if len(pluginIDs) == 0 {
-		return tags, categories, nil
+		return children, nil
 	}
 
 	tagRows, err := s.queries.PluginTagsListByPluginIDs(ctx, db.PluginTagsListByPluginIDsParams{
 		PluginIds: pluginIDs,
 	})
 	if err != nil {
-		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin tags: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin tags: %w", err))
 	}
 	for _, row := range tagRows {
-		tags[row.PluginID] = append(tags[row.PluginID], row.Name)
+		children.tags[row.PluginID] = append(children.tags[row.PluginID], row.Name)
 	}
 
 	categoryRows, err := s.queries.PluginCategoriesListByPluginIDs(ctx, db.PluginCategoriesListByPluginIDsParams{
 		PluginIds: pluginIDs,
 	})
 	if err != nil {
-		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin categories: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin categories: %w", err))
 	}
 	for _, row := range categoryRows {
-		categories[row.PluginID] = append(categories[row.PluginID], row.CategoryID.String())
+		children.categories[row.PluginID] = append(children.categories[row.PluginID], row.CategoryID.String())
 	}
 
-	return tags, categories, nil
+	labelRows, err := s.queries.PluginLabelsListByPluginIDs(ctx, db.PluginLabelsListByPluginIDsParams{
+		PluginIds: pluginIDs,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin labels: %w", err))
+	}
+	for _, row := range labelRows {
+		children.labels[row.PluginID] = append(children.labels[row.PluginID], labelFromDB(row.Name))
+	}
+
+	return children, nil
 }
 
 // pluginLookupError maps a miss to NOT_FOUND. Unlike the registry's, there is

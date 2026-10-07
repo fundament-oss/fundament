@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
@@ -174,6 +175,39 @@ func TestGetPluginReturnsDetails(t *testing.T) {
 
 	assert.Equal(t, id, resp.GetPlugin().GetId())
 	assert.NotEmpty(t, resp.GetPlugin().GetDescription())
+}
+
+func TestPluginsCarryUpdatedTimestamp(t *testing.T) {
+	env := newTestEnv(t)
+	server := newServer(t, env)
+	pluginID := seedPlugin(t, env, seedOptions{Name: "updated-timestamp", Visibility: "public", Published: true})
+
+	// A value the column defaults can't produce, so mapping created (or any
+	// other now()-defaulted column) into updated would fail the comparison.
+	updated := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	_, err := env.adminPool.Exec(context.Background(),
+		`UPDATE appstore.plugins SET updated = $1 WHERE id = $2`, updated, pluginID)
+	require.NoError(t, err)
+
+	list, err := server.ListPlugins(context.Background(), &catalogv1.ListPluginsRequest{})
+	require.NoError(t, err)
+
+	var summary *catalogv1.PluginSummary
+	for _, plugin := range list.GetPlugins() {
+		if plugin.GetId() == pluginID.String() {
+			summary = plugin
+		}
+	}
+	require.NotNil(t, summary, "the seeded plugin must appear in the list")
+	require.NotNil(t, summary.GetUpdated(), "PluginSummary must carry plugins.updated")
+	assert.Equal(t, updated, summary.GetUpdated().AsTime())
+
+	resp, err := server.GetPlugin(context.Background(),
+		catalogv1.GetPluginRequest_builder{PluginId: summary.GetId()}.Build())
+	require.NoError(t, err)
+
+	require.NotNil(t, resp.GetPlugin().GetUpdated(), "PluginDetails must carry plugins.updated")
+	assert.Equal(t, updated, resp.GetPlugin().GetUpdated().AsTime())
 }
 
 func TestGetPluginNotFoundForHiddenPlugin(t *testing.T) {

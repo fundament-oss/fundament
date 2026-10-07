@@ -57,3 +57,6 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 ## Content
 
 - Do not capitalize every word. The first letter of a sentence or label is fine.
+- A resource type's own name is the exception: spell it the way its Kubernetes
+  kind is, split into words and with acronyms intact (`DNSEndpoint` → `DNS
+  Endpoints`). See FUN-10 and `plugin-resources/crd-schema.utils.ts`.

@@ -66,23 +66,19 @@ spec:
                   (storageclass.kubernetes.io/is-default-class). If more than one
                   BlockStorage sets it, none is marked default and each is Degraded.
                 type: boolean
-              replication:
-                default: auto
+              replicas:
                 description: |-
-                  Replication is how many copies Ceph keeps of each piece of data: an
-                  explicit count, or "auto" to derive it from the number of nodes
-                  contributing disks (capped at 3).
-                enum:
-                - auto
-                - "1"
-                - "2"
-                - "3"
-                type: string
+                  Replicas is how many copies Ceph keeps of each piece of data. Absent
+                  derives it from the number of nodes contributing disks (capped at 3).
+                format: int32
+                maximum: 3
+                minimum: 1
+                type: integer
             type: object
           status:
             description: |-
-              ConsumerStatus is the observed state of a BlockStorage or FileStorage and
-              the StorageClass it derives.
+              ConsumerStatus is the observed state of a storage consumer and the
+              StorageClass it derives.
             properties:
               conditions:
                 description: Conditions carries the Ready condition, keyed by condition
@@ -166,13 +162,15 @@ spec:
                   Degraded when reconciliation needs operator action.
                 type: string
               replicas:
-                description: Replicas is the replica count that spec.replication resolved
-                  to.
+                description: |-
+                  Replicas is the replica count in effect: spec.replicas clamped to the
+                  contributing node count, or the derived count when spec.replicas is absent.
                 type: integer
               storageClassName:
                 description: |-
-                  StorageClassName is the name of the derived StorageClass, for
-                  PersistentVolumeClaims to reference.
+                  StorageClassName is the name of the derived StorageClass, which claims
+                  (PersistentVolumeClaims, or ObjectBucketClaims for an object store)
+                  reference.
                 type: string
             type: object
         type: object

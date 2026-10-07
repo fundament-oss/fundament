@@ -329,6 +329,7 @@ type Plugin struct {
 	xxx_hidden_Tags             []string               `protobuf:"bytes,90,rep,name=tags"`
 	xxx_hidden_Created          *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=created"`
 	xxx_hidden_Updated          *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=updated"`
+	xxx_hidden_Labels           []v1.PluginLabel       `protobuf:"varint,120,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -435,6 +436,13 @@ func (x *Plugin) GetUpdated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Plugin) GetLabels() []v1.PluginLabel {
+	if x != nil {
+		return x.xxx_hidden_Labels
+	}
+	return nil
+}
+
 func (x *Plugin) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -479,6 +487,10 @@ func (x *Plugin) SetUpdated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Updated = v
 }
 
+func (x *Plugin) SetLabels(v []v1.PluginLabel) {
+	x.xxx_hidden_Labels = v
+}
+
 func (x *Plugin) HasCreated() bool {
 	if x == nil {
 		return false
@@ -518,6 +530,8 @@ type Plugin_builder struct {
 	Tags        []string
 	Created     *timestamppb.Timestamp
 	Updated     *timestamppb.Timestamp
+	// Trust and support badges, Fundament-assigned.
+	Labels []v1.PluginLabel
 }
 
 func (b0 Plugin_builder) Build() *Plugin {
@@ -535,6 +549,7 @@ func (b0 Plugin_builder) Build() *Plugin {
 	x.xxx_hidden_Tags = b.Tags
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Updated = b.Updated
+	x.xxx_hidden_Labels = b.Labels
 	return m0
 }
 
@@ -826,7 +841,7 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\breviewed\x18P \x01(\v2\x1a.google.protobuf.TimestampR\breviewed\x12(\n" +
 	"\x10reviewer_user_id\x18Z \x01(\tR\x0ereviewerUserId\x12D\n" +
 	"\x10rejection_reason\x18d \x01(\x0e2\x19.admin.v1.RejectionReasonR\x0frejectionReason\x12\x1a\n" +
-	"\bfeedback\x18n \x01(\tR\bfeedback\"\x80\x03\n" +
+	"\bfeedback\x18n \x01(\tR\bfeedback\"\xb5\x03\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -839,7 +854,8 @@ const file_admin_v1_common_proto_rawDesc = "" +
 	"\fcategory_ids\x18P \x03(\tR\vcategoryIds\x12\x12\n" +
 	"\x04tags\x18Z \x03(\tR\x04tags\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
-	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xae\x04\n" +
+	"\aupdated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x123\n" +
+	"\x06labels\x18x \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xae\x04\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -873,7 +889,8 @@ var file_admin_v1_common_proto_goTypes = []any{
 	(*PluginVersion)(nil),         // 3: admin.v1.PluginVersion
 	(v1.SubmissionStatus)(0),      // 4: marketplace.v1.SubmissionStatus
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(*v1.PluginPermission)(nil),   // 6: marketplace.v1.PluginPermission
+	(v1.PluginLabel)(0),           // 6: marketplace.v1.PluginLabel
+	(*v1.PluginPermission)(nil),   // 7: marketplace.v1.PluginPermission
 }
 var file_admin_v1_common_proto_depIdxs = []int32{
 	4,  // 0: admin.v1.Submission.status:type_name -> marketplace.v1.SubmissionStatus
@@ -882,16 +899,17 @@ var file_admin_v1_common_proto_depIdxs = []int32{
 	0,  // 3: admin.v1.Submission.rejection_reason:type_name -> admin.v1.RejectionReason
 	5,  // 4: admin.v1.Plugin.created:type_name -> google.protobuf.Timestamp
 	5,  // 5: admin.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
-	4,  // 6: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
-	6,  // 7: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
-	5,  // 8: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
-	5,  // 9: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
-	5,  // 10: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	6,  // 6: admin.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
+	4,  // 7: admin.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
+	7,  // 8: admin.v1.PluginVersion.permissions:type_name -> marketplace.v1.PluginPermission
+	5,  // 9: admin.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
+	5,  // 10: admin.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
+	5,  // 11: admin.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_admin_v1_common_proto_init() }

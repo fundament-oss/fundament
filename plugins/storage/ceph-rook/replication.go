@@ -1,36 +1,33 @@
 package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
 // ComputeReplication resolves the replica count and CRUSH failure domain for a
-// pool. "auto" derives replicas from the number of contributing nodes (capped
-// at 3). An explicit request is clamped to the node count so a pool never asks
-// for more host-domain replicas than there are nodes to place them on. The
-// failure domain is "host" only when the result spans >=2 nodes; otherwise
-// "osd", so single-node clusters still provision.
+// pool. A nil request derives replicas from the number of contributing nodes
+// (capped at 3). An explicit request is clamped to the node count so a pool
+// never asks for more host-domain replicas than there are nodes to place them
+// on. The failure domain is "host" only when the result spans >=2 nodes;
+// otherwise "osd", so single-node clusters still provision.
 //
 // nodeCount is cluster-wide, not per-pool: a CephBlockPool has no CRUSH rule
 // confining it to one pool's disks. See the call sites in the BlockStorage and
 // FileStorage reconcilers.
-func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain, message string) {
+func ComputeReplication(requested *int32, nodeCount int) (replicas int, failureDomain, message string) {
 	nodes := max(nodeCount, 1)
 
-	switch want, err := strconv.Atoi(requested); {
-	case requested == "" || requested == "auto":
+	switch {
+	case requested == nil:
 		replicas = min(3, nodes)
-	case err != nil || want < 1:
-		// The CRD enum keeps this out of the API today. If it ever widens,
-		// falling back to auto beats falling back to 1: a typo would otherwise
-		// silently turn a pool into unreplicated storage.
-		message = fmt.Sprintf("unrecognised replication %q, using auto", requested)
+	case *requested < 1:
+		// Below the CRD minimum (reachable for Go-constructed objects or
+		// during version skew): auto beats honoring it, which would mean
+		// unreplicated storage, and the message keeps the fallback visible.
+		message = "unrecognised replication request, using auto"
 		replicas = min(3, nodes)
 	default:
-		replicas = want
+		replicas = int(*requested)
 		if replicas > nodes {
-			message = fmt.Sprintf("requested %d, clamped to %d: only %d node(s) in the cluster contribute disks", want, nodes, nodes)
+			message = fmt.Sprintf("requested %d, clamped to %d: only %d node(s) in the cluster contribute disks", replicas, nodes, nodes)
 			replicas = nodes
 		}
 	}

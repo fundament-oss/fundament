@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -133,7 +134,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 	}
 
 	// Step 2: Resolve this pool's spec.disks. This is its contribution to the
-	// shared OSD set, and what selectedDiskCount/rawCapacityBytes report.
+	// shared OSD set, and what selectedDiskCount/rawCapacity report.
 	selected, notes, err := resolvePoolDisks(ctx, r.Client, pool, pools.Items)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve disks for DiskPool %s: %w", pool.Name, err)
@@ -156,7 +157,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 	if len(selected) == 0 {
 		status := pool.Status
 		status.Phase = v1alpha1.PhaseDegraded
-		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
+		status.SelectedDiskCount, status.RawCapacity = 0, resource.Quantity{}
 		status.Message = emptyPoolMessage(pool, notes)
 		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
@@ -171,9 +172,9 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 	if !clusterExists {
 		status := pool.Status
 		status.Phase = v1alpha1.PhaseDegraded
-		// Selection succeeded, so selectedDiskCount reports it. RawCapacityBytes
+		// Selection succeeded, so selectedDiskCount reports it. RawCapacity
 		// stays 0: it counts contributed disks, and nothing was recorded.
-		status.SelectedDiskCount, status.RawCapacityBytes = len(selected), 0
+		status.SelectedDiskCount, status.RawCapacity = len(selected), resource.Quantity{}
 		status.Message = fmt.Sprintf("CephCluster %s/%s not found: disks are contributed once it exists", r.ClusterNamespace, cephClusterName)
 		return ctrl.Result{}, r.writeStatus(ctx, pool, &status, &metav1.Condition{
 			Status:  metav1.ConditionFalse,
@@ -182,9 +183,9 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 		})
 	}
 
-	var rawCapacity int64
+	rawCapacity := resource.NewQuantity(0, resource.BinarySI)
 	for i := range selected {
-		rawCapacity += selected[i].SizeBytes
+		rawCapacity.Add(selected[i].Size)
 	}
 
 	message := strings.Join(notes, "; ")
@@ -199,7 +200,7 @@ func (r *DiskPoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.D
 	return ctrl.Result{}, r.writeStatus(ctx, pool, &v1alpha1.DiskPoolStatus{
 		Phase:             v1alpha1.PhaseReady,
 		SelectedDiskCount: len(selected),
-		RawCapacityBytes:  rawCapacity,
+		RawCapacity:       *rawCapacity,
 		Message:           message,
 	}, &ready)
 }
