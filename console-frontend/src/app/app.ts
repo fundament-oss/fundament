@@ -378,17 +378,11 @@ export default class App implements OnInit {
 
   /**
    * A user in no organization can only wait for an operator to add them. The
-   * membership reaches the session on a token refresh, so checking again is a
-   * refresh and a reload of the organizations rather than a full page load.
+   * organizations are the database's answer rather than the token's, so
+   * checking again is a reload of the organizations rather than a full page
+   * load; settling on one refreshes the token on the way in.
    */
   async handleOrganizationsRecheck() {
-    try {
-      await this.apiService.refreshToken();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to refresh token:', error);
-      return;
-    }
     await this.loadUserOrganizations();
   }
 
@@ -397,6 +391,17 @@ export default class App implements OnInit {
    * Projects and namespaces are loaded lazily on demand (selector open, project page visit).
    */
   private async selectAndLoadOrganization(orgId: string) {
+    // Refresh the JWT so the token includes up-to-date organization
+    // memberships, as selectOrganization does. The organizations come from
+    // the database, the token from sign-in; an operator adding someone after
+    // they signed in puts the two out of step, and every organization-scoped
+    // request would be refused with the token still naming no organization.
+    //
+    // Every way into an organization but the sidebar switcher comes through
+    // here, so this is the only refresh those paths need: a caller that
+    // refreshed first would only pay for the same request twice.
+    await this.apiService.refreshToken();
+
     const name = this.organizationNameOf(orgId);
     this.organizationContextService.setOrganizationId(orgId);
     this.organizationContextService.setOrganizationName(name);
@@ -473,8 +478,8 @@ export default class App implements OnInit {
     try {
       await firstValueFrom(this.inviteClient.acceptInvitation({ id: invitation.id }));
       this.pendingInvitations.update((invs) => invs.filter((i) => i.id !== invitation.id));
-      // Refresh the JWT so the token includes the newly accepted membership
-      await this.apiService.refreshToken();
+      // The newly accepted membership reaches the token on the refresh that
+      // settling on the organization does.
       await this.selectAndLoadOrganization(invitation.organizationId);
       // To the front of the organization you just joined rather than to the page
       // you were reading in another one.
