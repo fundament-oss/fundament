@@ -20,6 +20,14 @@ SELECT
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
     tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener,
     (SELECT COUNT(*)
      FROM tenant.projects
      WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
@@ -49,7 +57,15 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
-    tenant.cluster_sync_state.outbox_error
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.id = $1;
@@ -71,7 +87,15 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
-    tenant.cluster_sync_state.outbox_error
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL;

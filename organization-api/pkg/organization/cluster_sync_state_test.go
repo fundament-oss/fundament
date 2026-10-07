@@ -43,11 +43,12 @@ func Test_Cluster_SyncState_IsTheClustersOwnRow(t *testing.T) {
 		 VALUES ($1, 'workers', 'n1-standard-1', 1, 3)`, clusterID)
 	require.NoError(t, err)
 
-	syncState := func() *organizationv1.SyncState {
+	getCluster := func() *organizationv1.ClusterDetails {
 		res, err := client.GetCluster(ctx, organizationv1.GetClusterRequest_builder{ClusterId: clusterID}.Build())
 		require.NoError(t, err)
-		return res.GetCluster().GetSyncState()
+		return res.GetCluster()
 	}
+	syncState := func() *organizationv1.SyncState { return getCluster().GetSyncState() }
 	setClusterRow := func(status, info string) {
 		_, err := env.adminPool.Exec(t.Context(),
 			`UPDATE tenant.cluster_outbox SET status = $2, status_info = $3 WHERE cluster_id = $1`, clusterID, status, info)
@@ -67,12 +68,15 @@ func Test_Cluster_SyncState_IsTheClustersOwnRow(t *testing.T) {
 	state := syncState()
 	assert.Equal(t, "pending", state.GetOutboxStatus())
 	assert.False(t, state.HasOutboxError(), "a pending row's status_info is not an error")
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, getCluster().GetStatus())
 
-	// The cluster's own sync fails for good: that is what shows, with its own error.
+	// The cluster's own sync fails for good: that is what shows, with its own
+	// error, and a cluster Gardener never got is in error.
 	setClusterRow("failed", `Unsupported value: "1.31.0"`)
 	state = syncState()
 	assert.Equal(t, "failed", state.GetOutboxStatus())
 	assert.Equal(t, `Unsupported value: "1.31.0"`, state.GetOutboxError())
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, getCluster().GetStatus())
 
 	// A node pool whose own sync failed leaves the cluster's state alone.
 	setNodePoolRow("failed", "machine type m1.small is not offered")

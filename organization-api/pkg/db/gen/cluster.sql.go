@@ -190,7 +190,15 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
-    tenant.cluster_sync_state.outbox_error
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.id = $1
@@ -216,6 +224,7 @@ type ClusterGetByIDRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
+	ReachedGardener    bool
 }
 
 // Get cluster by ID, including deleted clusters for direct access. Sync state
@@ -239,6 +248,7 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
+		&i.ReachedGardener,
 	)
 	return i, err
 }
@@ -259,7 +269,15 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
-    tenant.cluster_sync_state.outbox_error
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
     LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL
@@ -285,6 +303,7 @@ type ClusterGetByNameRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
+	ReachedGardener    bool
 }
 
 // Sync state as in ClusterList.
@@ -307,6 +326,7 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
+		&i.ReachedGardener,
 	)
 	return i, err
 }
@@ -377,6 +397,14 @@ SELECT
     tenant.cluster_sync_state.outbox_status,
     COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
     tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener,
     (SELECT COUNT(*)
      FROM tenant.projects
      WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
@@ -405,6 +433,7 @@ type ClusterListRow struct {
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
+	ReachedGardener    bool
 	ProjectCount       int64
 	NodePoolCount      int64
 }
@@ -439,6 +468,7 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.OutboxStatus,
 			&i.OutboxRetries,
 			&i.OutboxError,
+			&i.ReachedGardener,
 			&i.ProjectCount,
 			&i.NodePoolCount,
 		); err != nil {
