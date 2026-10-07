@@ -14,6 +14,7 @@ func TestClusterStatusFromDB(t *testing.T) {
 	t.Parallel()
 
 	shoot := func(status string) pgtype.Text { return pgtype.Text{String: status, Valid: true} }
+	sync := func(status string) pgtype.Text { return pgtype.Text{String: status, Valid: true} }
 	active := pgtype.Timestamptz{}
 	deleted := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 
@@ -22,20 +23,27 @@ func TestClusterStatusFromDB(t *testing.T) {
 		deleted  pgtype.Timestamptz
 		status   pgtype.Text
 		updating bool
+		sync     pgtype.Text
 		want     organizationv1.ClusterStatus
 	}{
 		{name: "not checked yet", deleted: active, want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
+		{name: "sync pending", deleted: active, sync: sync("pending"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
+		{name: "sync retrying", deleted: active, sync: sync("retrying"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
+		{name: "sync failed before the shoot existed", deleted: active, sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
+		{name: "sync failed while the shoot is lost", deleted: active, status: shoot("pending"), sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
 		{name: "being created", deleted: active, status: shoot("progressing"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
 		{name: "ready", deleted: active, status: shoot("ready"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
+		{name: "ready, a later sync failed", deleted: active, status: shoot("ready"), sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
 		{name: "ready while an update rolls out", deleted: active, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING},
 		{name: "failed", deleted: active, status: shoot("error"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
 		{name: "deleted while updating", deleted: deleted, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
+		{name: "deleted after its sync failed", deleted: deleted, sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, clusterStatusFromDB(tt.deleted, tt.status, tt.updating))
+			assert.Equal(t, tt.want, clusterStatusFromDB(tt.deleted, tt.status, tt.updating, tt.sync))
 		})
 	}
 }

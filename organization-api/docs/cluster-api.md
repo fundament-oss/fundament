@@ -285,7 +285,7 @@ curl -X POST http://localhost:8081/organization.v1.ClusterService/GetKubeconfig 
 | `CLUSTER_STATUS_STARTING` | Cluster is starting up |
 | `CLUSTER_STATUS_RUNNING` | Cluster is healthy and running |
 | `CLUSTER_STATUS_UPGRADING` | Cluster is being upgraded |
-| `CLUSTER_STATUS_ERROR` | Cluster encountered an error |
+| `CLUSTER_STATUS_ERROR` | Gardener reported a failure, or the sync failed for good before the cluster existed; `syncState` has the error. Updating the cluster, for example to a supported Kubernetes version, queues a new sync |
 | `CLUSTER_STATUS_STOPPING` | Cluster is shutting down |
 | `CLUSTER_STATUS_STOPPED` | Cluster is stopped |
 
