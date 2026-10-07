@@ -57,6 +57,9 @@ message Plugin {
   string latest_published_version_id = 190;
   google.protobuf.Timestamp created = 200;
   google.protobuf.Timestamp updated = 210;
+  // Trust and support badges. Fundament assigns them, so CreatePlugin and
+  // UpdatePlugin do not accept them; the developer only reads them back.
+  repeated marketplace.v1.PluginLabel labels = 220;
 }
 
 // A pushed build (appstore.plugin_definitions plus review state).

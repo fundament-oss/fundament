@@ -11,42 +11,7 @@ import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
  * Describes the file catalog/v1/common.proto.
  */
 export const file_catalog_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXRhbG9nL3YxL2NvbW1vbi5wcm90bxIKY2F0YWxvZy52MSqEAQoLUGx1Z2luTGFiZWwSHAoYUExVR0lOX0xBQkVMX1VOU1BFQ0lGSUVEEAASFQoRUExVR0lOX0xBQkVMX0NPUkUQARIeChpQTFVHSU5fTEFCRUxfUklKS1NPVkVSSEVJRBACEiAKHFBMVUdJTl9MQUJFTF9TVVBQT1JUXzlfVE9fMTcQAypfCgpQbHVnaW5Tb3J0EhsKF1BMVUdJTl9TT1JUX1VOU1BFQ0lGSUVEEAASHgoaUExVR0lOX1NPUlRfUkVDRU5UTFlfQURERUQQARIUChBQTFVHSU5fU09SVF9OQU1FEAJCaVpdZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1jYXRhbG9nLWFwaS9wa2cvcHJvdG8vZ2VuL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
-
-/**
- * Trust and support badges a listing carries. A listing may hold several at once:
- * CORE and RIJKSOVERHEID say where a plugin comes from, SUPPORT_9_TO_17 what
- * support it ships with.
- *
- * @generated from enum catalog.v1.PluginLabel
- */
-export enum PluginLabel {
-  /**
-   * @generated from enum value: PLUGIN_LABEL_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: PLUGIN_LABEL_CORE = 1;
-   */
-  CORE = 1,
-
-  /**
-   * @generated from enum value: PLUGIN_LABEL_RIJKSOVERHEID = 2;
-   */
-  RIJKSOVERHEID = 2,
-
-  /**
-   * @generated from enum value: PLUGIN_LABEL_SUPPORT_9_TO_17 = 3;
-   */
-  SUPPORT_9_TO_17 = 3,
-}
-
-/**
- * Describes the enum catalog.v1.PluginLabel.
- */
-export const PluginLabelSchema: GenEnum<PluginLabel> = /*@__PURE__*/
-  enumDesc(file_catalog_v1_common, 0);
+  fileDesc("ChdjYXRhbG9nL3YxL2NvbW1vbi5wcm90bxIKY2F0YWxvZy52MSpfCgpQbHVnaW5Tb3J0EhsKF1BMVUdJTl9TT1JUX1VOU1BFQ0lGSUVEEAASHgoaUExVR0lOX1NPUlRfUkVDRU5UTFlfQURERUQQARIUChBQTFVHSU5fU09SVF9OQU1FEAJCaVpdZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9tYXJrZXRwbGFjZS1jYXRhbG9nLWFwaS9wa2cvcHJvdG8vZ2VuL2NhdGFsb2cvdjE7Y2F0YWxvZ3YxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
 
 /**
  * Ordering applied by ListPlugins. UNSPECIFIED sorts as NAME.
@@ -74,5 +39,5 @@ export enum PluginSort {
  * Describes the enum catalog.v1.PluginSort.
  */
 export const PluginSortSchema: GenEnum<PluginSort> = /*@__PURE__*/
-  enumDesc(file_catalog_v1_common, 1);
+  enumDesc(file_catalog_v1_common, 0);
 

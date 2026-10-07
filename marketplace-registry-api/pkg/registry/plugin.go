@@ -358,6 +358,7 @@ type pluginChildren struct {
 	allowedOrgs map[uuid.UUID][]string
 	links       map[uuid.UUID][]*marketplacev1.DocumentationLink
 	features    map[uuid.UUID][]*marketplacev1.FeatureBlock
+	labels      map[uuid.UUID][]marketplacev1.PluginLabel
 }
 
 func (s *Server) loadPluginChildren(ctx context.Context, pluginIDs []uuid.UUID) (*pluginChildren, error) {
@@ -367,6 +368,7 @@ func (s *Server) loadPluginChildren(ctx context.Context, pluginIDs []uuid.UUID) 
 		allowedOrgs: map[uuid.UUID][]string{},
 		links:       map[uuid.UUID][]*marketplacev1.DocumentationLink{},
 		features:    map[uuid.UUID][]*marketplacev1.FeatureBlock{},
+		labels:      map[uuid.UUID][]marketplacev1.PluginLabel{},
 	}
 	if len(pluginIDs) == 0 {
 		return children, nil
@@ -417,6 +419,16 @@ func (s *Server) loadPluginChildren(ctx context.Context, pluginIDs []uuid.UUID) 
 		}.Build())
 	}
 
+	labelRows, err := s.queries.PluginLabelsListByPluginIDs(ctx, db.PluginLabelsListByPluginIDsParams{
+		PluginIds: pluginIDs,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("listing plugin labels: %w", err))
+	}
+	for _, row := range labelRows {
+		children.labels[row.PluginID] = append(children.labels[row.PluginID], labelFromDB(row.Name))
+	}
+
 	featureRows, err := s.queries.PluginFeaturesListByPluginIDs(ctx, db.PluginFeaturesListByPluginIDsParams{
 		PluginIds: pluginIDs,
 	})
@@ -456,6 +468,7 @@ func pluginFromRow(row *registryPluginRow, children *pluginChildren) *registryv1
 		LatestPublishedVersionId: uuidOrEmpty(row.LatestPublishedVersionID),
 		Created:                  row.Created,
 		Updated:                  row.Updated,
+		Labels:                   children.labels[row.ID],
 	}.Build()
 }
 

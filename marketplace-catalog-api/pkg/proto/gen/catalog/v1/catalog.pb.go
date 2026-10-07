@@ -86,9 +86,10 @@ type PluginSummary struct {
 	xxx_hidden_Image            string                 `protobuf:"bytes,60,opt,name=image"`
 	xxx_hidden_CategoryIds      []string               `protobuf:"bytes,70,rep,name=category_ids,json=categoryIds"`
 	xxx_hidden_Tags             []string               `protobuf:"bytes,80,rep,name=tags"`
-	xxx_hidden_Labels           []PluginLabel          `protobuf:"varint,90,rep,packed,name=labels,enum=catalog.v1.PluginLabel"`
+	xxx_hidden_Labels           []v1.PluginLabel       `protobuf:"varint,90,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
 	xxx_hidden_LatestVersionId  string                 `protobuf:"bytes,100,opt,name=latest_version_id,json=latestVersionId"`
 	xxx_hidden_Published        *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=published"`
+	xxx_hidden_Updated          *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -174,7 +175,7 @@ func (x *PluginSummary) GetTags() []string {
 	return nil
 }
 
-func (x *PluginSummary) GetLabels() []PluginLabel {
+func (x *PluginSummary) GetLabels() []v1.PluginLabel {
 	if x != nil {
 		return x.xxx_hidden_Labels
 	}
@@ -191,6 +192,13 @@ func (x *PluginSummary) GetLatestVersionId() string {
 func (x *PluginSummary) GetPublished() *timestamppb.Timestamp {
 	if x != nil {
 		return x.xxx_hidden_Published
+	}
+	return nil
+}
+
+func (x *PluginSummary) GetUpdated() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Updated
 	}
 	return nil
 }
@@ -227,7 +235,7 @@ func (x *PluginSummary) SetTags(v []string) {
 	x.xxx_hidden_Tags = v
 }
 
-func (x *PluginSummary) SetLabels(v []PluginLabel) {
+func (x *PluginSummary) SetLabels(v []v1.PluginLabel) {
 	x.xxx_hidden_Labels = v
 }
 
@@ -239,6 +247,10 @@ func (x *PluginSummary) SetPublished(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Published = v
 }
 
+func (x *PluginSummary) SetUpdated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Updated = v
+}
+
 func (x *PluginSummary) HasPublished() bool {
 	if x == nil {
 		return false
@@ -246,8 +258,19 @@ func (x *PluginSummary) HasPublished() bool {
 	return x.xxx_hidden_Published != nil
 }
 
+func (x *PluginSummary) HasUpdated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Updated != nil
+}
+
 func (x *PluginSummary) ClearPublished() {
 	x.xxx_hidden_Published = nil
+}
+
+func (x *PluginSummary) ClearUpdated() {
+	x.xxx_hidden_Updated = nil
 }
 
 type PluginSummary_builder struct {
@@ -267,12 +290,15 @@ type PluginSummary_builder struct {
 	CategoryIds []string
 	// Free-form labels with no independent identity, unlike categories.
 	Tags   []string
-	Labels []PluginLabel
+	Labels []v1.PluginLabel
 	// The newest published version, resolved through ListPluginVersions. Points
 	// at the version rather than repeating its version string.
 	LatestVersionId string
 	// When the listing was first published; drives "recently added".
 	Published *timestamppb.Timestamp
+	// When the listing's metadata last changed (appstore.plugins.updated), not
+	// when a version was published.
+	Updated *timestamppb.Timestamp
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -290,6 +316,7 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_Labels = b.Labels
 	x.xxx_hidden_LatestVersionId = b.LatestVersionId
 	x.xxx_hidden_Published = b.Published
+	x.xxx_hidden_Updated = b.Updated
 	return m0
 }
 
@@ -304,7 +331,7 @@ type PluginDetails struct {
 	xxx_hidden_Image              string                   `protobuf:"bytes,60,opt,name=image"`
 	xxx_hidden_CategoryIds        []string                 `protobuf:"bytes,70,rep,name=category_ids,json=categoryIds"`
 	xxx_hidden_Tags               []string                 `protobuf:"bytes,80,rep,name=tags"`
-	xxx_hidden_Labels             []PluginLabel            `protobuf:"varint,90,rep,packed,name=labels,enum=catalog.v1.PluginLabel"`
+	xxx_hidden_Labels             []v1.PluginLabel         `protobuf:"varint,90,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
 	xxx_hidden_LatestVersionId    string                   `protobuf:"bytes,100,opt,name=latest_version_id,json=latestVersionId"`
 	xxx_hidden_Published          *timestamppb.Timestamp   `protobuf:"bytes,110,opt,name=published"`
 	xxx_hidden_Description        string                   `protobuf:"bytes,120,opt,name=description"`
@@ -316,6 +343,7 @@ type PluginDetails struct {
 	xxx_hidden_Permissions        *[]*v1.PluginPermission  `protobuf:"bytes,180,rep,name=permissions"`
 	xxx_hidden_Features           *[]*v1.FeatureBlock      `protobuf:"bytes,190,rep,name=features"`
 	xxx_hidden_DocumentationLinks *[]*v1.DocumentationLink `protobuf:"bytes,200,rep,name=documentation_links,json=documentationLinks"`
+	xxx_hidden_Updated            *timestamppb.Timestamp   `protobuf:"bytes,210,opt,name=updated"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -401,7 +429,7 @@ func (x *PluginDetails) GetTags() []string {
 	return nil
 }
 
-func (x *PluginDetails) GetLabels() []PluginLabel {
+func (x *PluginDetails) GetLabels() []v1.PluginLabel {
 	if x != nil {
 		return x.xxx_hidden_Labels
 	}
@@ -491,6 +519,13 @@ func (x *PluginDetails) GetDocumentationLinks() []*v1.DocumentationLink {
 	return nil
 }
 
+func (x *PluginDetails) GetUpdated() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Updated
+	}
+	return nil
+}
+
 func (x *PluginDetails) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -523,7 +558,7 @@ func (x *PluginDetails) SetTags(v []string) {
 	x.xxx_hidden_Tags = v
 }
 
-func (x *PluginDetails) SetLabels(v []PluginLabel) {
+func (x *PluginDetails) SetLabels(v []v1.PluginLabel) {
 	x.xxx_hidden_Labels = v
 }
 
@@ -571,6 +606,10 @@ func (x *PluginDetails) SetDocumentationLinks(v []*v1.DocumentationLink) {
 	x.xxx_hidden_DocumentationLinks = &v
 }
 
+func (x *PluginDetails) SetUpdated(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Updated = v
+}
+
 func (x *PluginDetails) HasPublished() bool {
 	if x == nil {
 		return false
@@ -578,8 +617,19 @@ func (x *PluginDetails) HasPublished() bool {
 	return x.xxx_hidden_Published != nil
 }
 
+func (x *PluginDetails) HasUpdated() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Updated != nil
+}
+
 func (x *PluginDetails) ClearPublished() {
 	x.xxx_hidden_Published = nil
+}
+
+func (x *PluginDetails) ClearUpdated() {
+	x.xxx_hidden_Updated = nil
 }
 
 type PluginDetails_builder struct {
@@ -596,7 +646,7 @@ type PluginDetails_builder struct {
 	Image       string
 	CategoryIds []string
 	Tags        []string
-	Labels      []PluginLabel
+	Labels      []v1.PluginLabel
 	// See PluginSummary.latest_version_id.
 	LatestVersionId string
 	// When the listing was first published; drives "recently added".
@@ -612,6 +662,8 @@ type PluginDetails_builder struct {
 	Permissions        []*v1.PluginPermission
 	Features           []*v1.FeatureBlock
 	DocumentationLinks []*v1.DocumentationLink
+	// See PluginSummary.updated.
+	Updated *timestamppb.Timestamp
 }
 
 func (b0 PluginDetails_builder) Build() *PluginDetails {
@@ -638,6 +690,7 @@ func (b0 PluginDetails_builder) Build() *PluginDetails {
 	x.xxx_hidden_Permissions = &b.Permissions
 	x.xxx_hidden_Features = &b.Features
 	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
+	x.xxx_hidden_Updated = b.Updated
 	return m0
 }
 
@@ -2000,7 +2053,7 @@ var File_catalog_v1_catalog_proto protoreflect.FileDescriptor
 const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"\x18catalog/v1/catalog.proto\x12\n" +
-	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\x90\x03\n" +
+	"catalog.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17catalog/v1/common.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xca\x03\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2010,10 +2063,11 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x0forganization_id\x182 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05image\x18< \x01(\tR\x05image\x12!\n" +
 	"\fcategory_ids\x18F \x03(\tR\vcategoryIds\x12\x12\n" +
-	"\x04tags\x18P \x03(\tR\x04tags\x12/\n" +
-	"\x06labels\x18Z \x03(\x0e2\x17.catalog.v1.PluginLabelR\x06labels\x12*\n" +
+	"\x04tags\x18P \x03(\tR\x04tags\x123\n" +
+	"\x06labels\x18Z \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\x12*\n" +
 	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x128\n" +
-	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\"\xb1\x06\n" +
+	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x124\n" +
+	"\aupdated\x18x \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xec\x06\n" +
 	"\rPluginDetails\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2023,8 +2077,8 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x0forganization_id\x182 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05image\x18< \x01(\tR\x05image\x12!\n" +
 	"\fcategory_ids\x18F \x03(\tR\vcategoryIds\x12\x12\n" +
-	"\x04tags\x18P \x03(\tR\x04tags\x12/\n" +
-	"\x06labels\x18Z \x03(\x0e2\x17.catalog.v1.PluginLabelR\x06labels\x12*\n" +
+	"\x04tags\x18P \x03(\tR\x04tags\x123\n" +
+	"\x06labels\x18Z \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\x12*\n" +
 	"\x11latest_version_id\x18d \x01(\tR\x0flatestVersionId\x128\n" +
 	"\tpublished\x18n \x01(\v2\x1a.google.protobuf.TimestampR\tpublished\x12 \n" +
 	"\vdescription\x18x \x01(\tR\vdescription\x12 \n" +
@@ -2037,7 +2091,8 @@ const file_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fcapabilities\x18\xaa\x01 \x03(\tR\fcapabilities\x12C\n" +
 	"\vpermissions\x18\xb4\x01 \x03(\v2 .marketplace.v1.PluginPermissionR\vpermissions\x129\n" +
 	"\bfeatures\x18\xbe\x01 \x03(\v2\x1c.marketplace.v1.FeatureBlockR\bfeatures\x12S\n" +
-	"\x13documentation_links\x18\xc8\x01 \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\"\xc4\x01\n" +
+	"\x13documentation_links\x18\xc8\x01 \x03(\v2!.marketplace.v1.DocumentationLinkR\x12documentationLinks\x125\n" +
+	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xc4\x01\n" +
 	"\x10PublishedVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x18\n" +
@@ -2148,7 +2203,7 @@ var file_catalog_v1_catalog_proto_goTypes = []any{
 	(*PluginRef)(nil),                   // 17: catalog.v1.PluginRef
 	(*ConfigSchemaEntry)(nil),           // 18: catalog.v1.ConfigSchemaEntry
 	(*GetPluginDefinitionResponse)(nil), // 19: catalog.v1.GetPluginDefinitionResponse
-	(PluginLabel)(0),                    // 20: catalog.v1.PluginLabel
+	(v1.PluginLabel)(0),                 // 20: marketplace.v1.PluginLabel
 	(*timestamppb.Timestamp)(nil),       // 21: google.protobuf.Timestamp
 	(*v1.PluginPermission)(nil),         // 22: marketplace.v1.PluginPermission
 	(*v1.FeatureBlock)(nil),             // 23: marketplace.v1.FeatureBlock
@@ -2159,43 +2214,45 @@ var file_catalog_v1_catalog_proto_goTypes = []any{
 	(*v1.Preset)(nil),                   // 28: marketplace.v1.Preset
 }
 var file_catalog_v1_catalog_proto_depIdxs = []int32{
-	20, // 0: catalog.v1.PluginSummary.labels:type_name -> catalog.v1.PluginLabel
+	20, // 0: catalog.v1.PluginSummary.labels:type_name -> marketplace.v1.PluginLabel
 	21, // 1: catalog.v1.PluginSummary.published:type_name -> google.protobuf.Timestamp
-	20, // 2: catalog.v1.PluginDetails.labels:type_name -> catalog.v1.PluginLabel
-	21, // 3: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
-	22, // 4: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
-	23, // 5: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
-	24, // 6: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
-	21, // 7: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
-	25, // 8: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
-	1,  // 9: catalog.v1.ListPluginsResponse.plugins:type_name -> catalog.v1.PluginSummary
-	2,  // 10: catalog.v1.GetPluginResponse.plugin:type_name -> catalog.v1.PluginDetails
-	3,  // 11: catalog.v1.ListPluginVersionsResponse.versions:type_name -> catalog.v1.PublishedVersion
-	26, // 12: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
-	27, // 13: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
-	28, // 14: catalog.v1.ListPresetsResponse.presets:type_name -> marketplace.v1.Preset
-	17, // 15: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
-	0,  // 16: catalog.v1.ConfigSchemaEntry.type:type_name -> catalog.v1.ConfigType
-	18, // 17: catalog.v1.GetPluginDefinitionResponse.config_schema:type_name -> catalog.v1.ConfigSchemaEntry
-	4,  // 18: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
-	6,  // 19: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
-	8,  // 20: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
-	10, // 21: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
-	12, // 22: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
-	14, // 23: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
-	16, // 24: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
-	5,  // 25: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
-	7,  // 26: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
-	9,  // 27: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
-	11, // 28: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
-	13, // 29: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
-	15, // 30: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
-	19, // 31: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
-	25, // [25:32] is the sub-list for method output_type
-	18, // [18:25] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	21, // 2: catalog.v1.PluginSummary.updated:type_name -> google.protobuf.Timestamp
+	20, // 3: catalog.v1.PluginDetails.labels:type_name -> marketplace.v1.PluginLabel
+	21, // 4: catalog.v1.PluginDetails.published:type_name -> google.protobuf.Timestamp
+	22, // 5: catalog.v1.PluginDetails.permissions:type_name -> marketplace.v1.PluginPermission
+	23, // 6: catalog.v1.PluginDetails.features:type_name -> marketplace.v1.FeatureBlock
+	24, // 7: catalog.v1.PluginDetails.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	21, // 8: catalog.v1.PluginDetails.updated:type_name -> google.protobuf.Timestamp
+	21, // 9: catalog.v1.PublishedVersion.published:type_name -> google.protobuf.Timestamp
+	25, // 10: catalog.v1.ListPluginsRequest.sort:type_name -> catalog.v1.PluginSort
+	1,  // 11: catalog.v1.ListPluginsResponse.plugins:type_name -> catalog.v1.PluginSummary
+	2,  // 12: catalog.v1.GetPluginResponse.plugin:type_name -> catalog.v1.PluginDetails
+	3,  // 13: catalog.v1.ListPluginVersionsResponse.versions:type_name -> catalog.v1.PublishedVersion
+	26, // 14: catalog.v1.ListCategoriesResponse.categories:type_name -> marketplace.v1.Category
+	27, // 15: catalog.v1.ListPublishersResponse.publishers:type_name -> marketplace.v1.Publisher
+	28, // 16: catalog.v1.ListPresetsResponse.presets:type_name -> marketplace.v1.Preset
+	17, // 17: catalog.v1.GetPluginDefinitionRequest.name:type_name -> catalog.v1.PluginRef
+	0,  // 18: catalog.v1.ConfigSchemaEntry.type:type_name -> catalog.v1.ConfigType
+	18, // 19: catalog.v1.GetPluginDefinitionResponse.config_schema:type_name -> catalog.v1.ConfigSchemaEntry
+	4,  // 20: catalog.v1.CatalogService.ListPlugins:input_type -> catalog.v1.ListPluginsRequest
+	6,  // 21: catalog.v1.CatalogService.GetPlugin:input_type -> catalog.v1.GetPluginRequest
+	8,  // 22: catalog.v1.CatalogService.ListPluginVersions:input_type -> catalog.v1.ListPluginVersionsRequest
+	10, // 23: catalog.v1.CatalogService.ListCategories:input_type -> catalog.v1.ListCategoriesRequest
+	12, // 24: catalog.v1.CatalogService.ListPublishers:input_type -> catalog.v1.ListPublishersRequest
+	14, // 25: catalog.v1.CatalogService.ListPresets:input_type -> catalog.v1.ListPresetsRequest
+	16, // 26: catalog.v1.CatalogService.GetPluginDefinition:input_type -> catalog.v1.GetPluginDefinitionRequest
+	5,  // 27: catalog.v1.CatalogService.ListPlugins:output_type -> catalog.v1.ListPluginsResponse
+	7,  // 28: catalog.v1.CatalogService.GetPlugin:output_type -> catalog.v1.GetPluginResponse
+	9,  // 29: catalog.v1.CatalogService.ListPluginVersions:output_type -> catalog.v1.ListPluginVersionsResponse
+	11, // 30: catalog.v1.CatalogService.ListCategories:output_type -> catalog.v1.ListCategoriesResponse
+	13, // 31: catalog.v1.CatalogService.ListPublishers:output_type -> catalog.v1.ListPublishersResponse
+	15, // 32: catalog.v1.CatalogService.ListPresets:output_type -> catalog.v1.ListPresetsResponse
+	19, // 33: catalog.v1.CatalogService.GetPluginDefinition:output_type -> catalog.v1.GetPluginDefinitionResponse
+	27, // [27:34] is the sub-list for method output_type
+	20, // [20:27] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_catalog_v1_catalog_proto_init() }

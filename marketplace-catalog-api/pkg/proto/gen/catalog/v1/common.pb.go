@@ -21,56 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Trust and support badges a listing carries. A listing may hold several at once:
-// CORE and RIJKSOVERHEID say where a plugin comes from, SUPPORT_9_TO_17 what
-// support it ships with.
-type PluginLabel int32
-
-const (
-	PluginLabel_PLUGIN_LABEL_UNSPECIFIED     PluginLabel = 0
-	PluginLabel_PLUGIN_LABEL_CORE            PluginLabel = 1
-	PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID   PluginLabel = 2
-	PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17 PluginLabel = 3
-)
-
-// Enum value maps for PluginLabel.
-var (
-	PluginLabel_name = map[int32]string{
-		0: "PLUGIN_LABEL_UNSPECIFIED",
-		1: "PLUGIN_LABEL_CORE",
-		2: "PLUGIN_LABEL_RIJKSOVERHEID",
-		3: "PLUGIN_LABEL_SUPPORT_9_TO_17",
-	}
-	PluginLabel_value = map[string]int32{
-		"PLUGIN_LABEL_UNSPECIFIED":     0,
-		"PLUGIN_LABEL_CORE":            1,
-		"PLUGIN_LABEL_RIJKSOVERHEID":   2,
-		"PLUGIN_LABEL_SUPPORT_9_TO_17": 3,
-	}
-)
-
-func (x PluginLabel) Enum() *PluginLabel {
-	p := new(PluginLabel)
-	*p = x
-	return p
-}
-
-func (x PluginLabel) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (PluginLabel) Descriptor() protoreflect.EnumDescriptor {
-	return file_catalog_v1_common_proto_enumTypes[0].Descriptor()
-}
-
-func (PluginLabel) Type() protoreflect.EnumType {
-	return &file_catalog_v1_common_proto_enumTypes[0]
-}
-
-func (x PluginLabel) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
 // Ordering applied by ListPlugins. UNSPECIFIED sorts as NAME.
 type PluginSort int32
 
@@ -105,11 +55,11 @@ func (x PluginSort) String() string {
 }
 
 func (PluginSort) Descriptor() protoreflect.EnumDescriptor {
-	return file_catalog_v1_common_proto_enumTypes[1].Descriptor()
+	return file_catalog_v1_common_proto_enumTypes[0].Descriptor()
 }
 
 func (PluginSort) Type() protoreflect.EnumType {
-	return &file_catalog_v1_common_proto_enumTypes[1]
+	return &file_catalog_v1_common_proto_enumTypes[0]
 }
 
 func (x PluginSort) Number() protoreflect.EnumNumber {
@@ -121,22 +71,16 @@ var File_catalog_v1_common_proto protoreflect.FileDescriptor
 const file_catalog_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"\x17catalog/v1/common.proto\x12\n" +
-	"catalog.v1\x1a!google/protobuf/go_features.proto*\x84\x01\n" +
-	"\vPluginLabel\x12\x1c\n" +
-	"\x18PLUGIN_LABEL_UNSPECIFIED\x10\x00\x12\x15\n" +
-	"\x11PLUGIN_LABEL_CORE\x10\x01\x12\x1e\n" +
-	"\x1aPLUGIN_LABEL_RIJKSOVERHEID\x10\x02\x12 \n" +
-	"\x1cPLUGIN_LABEL_SUPPORT_9_TO_17\x10\x03*_\n" +
+	"catalog.v1\x1a!google/protobuf/go_features.proto*_\n" +
 	"\n" +
 	"PluginSort\x12\x1b\n" +
 	"\x17PLUGIN_SORT_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aPLUGIN_SORT_RECENTLY_ADDED\x10\x01\x12\x14\n" +
 	"\x10PLUGIN_SORT_NAME\x10\x02BiZ]github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/proto/gen/catalog/v1;catalogv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_catalog_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_catalog_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_catalog_v1_common_proto_goTypes = []any{
-	(PluginLabel)(0), // 0: catalog.v1.PluginLabel
-	(PluginSort)(0),  // 1: catalog.v1.PluginSort
+	(PluginSort)(0), // 0: catalog.v1.PluginSort
 }
 var file_catalog_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -156,7 +100,7 @@ func file_catalog_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_catalog_v1_common_proto_rawDesc), len(file_catalog_v1_common_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

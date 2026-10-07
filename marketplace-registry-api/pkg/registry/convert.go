@@ -86,6 +86,19 @@ func statusFromDB(status dbconst.PluginDefinitionStatus) marketplacev1.Submissio
 	}
 }
 
+func labelFromDB(name dbconst.PluginLabelName) marketplacev1.PluginLabel {
+	switch name {
+	case dbconst.PluginLabelName_Core:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_CORE
+	case dbconst.PluginLabelName_Rijksoverheid:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_RIJKSOVERHEID
+	case dbconst.PluginLabelName_Support9To17:
+		return marketplacev1.PluginLabel_PLUGIN_LABEL_SUPPORT_9_TO_17
+	default:
+		panic("unhandled PluginLabelName: " + string(name))
+	}
+}
+
 // normalizeVersion strips the optional leading v so a request's "v1.2.3" and a
 // manifest's "1.2.3" compare equal.
 func normalizeVersion(version string) string {

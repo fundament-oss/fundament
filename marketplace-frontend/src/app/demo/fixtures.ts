@@ -15,8 +15,8 @@ import {
   type PluginDetails,
   type PublishedVersion,
 } from '../../generated/catalog/v1/catalog_pb';
-import { PluginLabel } from '../../generated/catalog/v1/common_pb';
 import {
+  PluginLabel,
   CategorySchema,
   PublisherSchema,
   PluginPermissionSchema,

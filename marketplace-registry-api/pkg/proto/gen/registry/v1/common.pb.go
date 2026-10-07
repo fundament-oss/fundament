@@ -94,6 +94,7 @@ type Plugin struct {
 	xxx_hidden_LatestPublishedVersionId string                   `protobuf:"bytes,190,opt,name=latest_published_version_id,json=latestPublishedVersionId"`
 	xxx_hidden_Created                  *timestamppb.Timestamp   `protobuf:"bytes,200,opt,name=created"`
 	xxx_hidden_Updated                  *timestamppb.Timestamp   `protobuf:"bytes,210,opt,name=updated"`
+	xxx_hidden_Labels                   []v1.PluginLabel         `protobuf:"varint,220,rep,packed,name=labels,enum=marketplace.v1.PluginLabel"`
 	unknownFields                       protoimpl.UnknownFields
 	sizeCache                           protoimpl.SizeCache
 }
@@ -267,6 +268,13 @@ func (x *Plugin) GetUpdated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Plugin) GetLabels() []v1.PluginLabel {
+	if x != nil {
+		return x.xxx_hidden_Labels
+	}
+	return nil
+}
+
 func (x *Plugin) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -347,6 +355,10 @@ func (x *Plugin) SetUpdated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Updated = v
 }
 
+func (x *Plugin) SetLabels(v []v1.PluginLabel) {
+	x.xxx_hidden_Labels = v
+}
+
 func (x *Plugin) HasCreated() bool {
 	if x == nil {
 		return false
@@ -407,6 +419,9 @@ type Plugin_builder struct {
 	LatestPublishedVersionId string
 	Created                  *timestamppb.Timestamp
 	Updated                  *timestamppb.Timestamp
+	// Trust and support badges. Fundament assigns them, so CreatePlugin and
+	// UpdatePlugin do not accept them; the developer only reads them back.
+	Labels []v1.PluginLabel
 }
 
 func (b0 Plugin_builder) Build() *Plugin {
@@ -433,6 +448,7 @@ func (b0 Plugin_builder) Build() *Plugin {
 	x.xxx_hidden_LatestPublishedVersionId = b.LatestPublishedVersionId
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Updated = b.Updated
+	x.xxx_hidden_Labels = b.Labels
 	return m0
 }
 
@@ -677,7 +693,7 @@ var File_registry_v1_common_proto protoreflect.FileDescriptor
 
 const file_registry_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\xd0\x06\n" +
+	"\x18registry/v1/common.proto\x12\vregistry.v1\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bmarketplace/v1/common.proto\"\x86\a\n" +
 	"\x06Plugin\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -703,7 +719,8 @@ const file_registry_v1_common_proto_rawDesc = "" +
 	"\x18allowed_organization_ids\x18\xb4\x01 \x03(\tR\x16allowedOrganizationIds\x12>\n" +
 	"\x1blatest_published_version_id\x18\xbe\x01 \x01(\tR\x18latestPublishedVersionId\x125\n" +
 	"\acreated\x18\xc8\x01 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x125\n" +
-	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xc7\x03\n" +
+	"\aupdated\x18\xd2\x01 \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\x124\n" +
+	"\x06labels\x18\xdc\x01 \x03(\x0e2\x1b.marketplace.v1.PluginLabelR\x06labels\"\xc7\x03\n" +
 	"\rPluginVersion\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +
@@ -731,23 +748,25 @@ var file_registry_v1_common_proto_goTypes = []any{
 	(*v1.DocumentationLink)(nil),  // 3: marketplace.v1.DocumentationLink
 	(*v1.FeatureBlock)(nil),       // 4: marketplace.v1.FeatureBlock
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(v1.SubmissionStatus)(0),      // 6: marketplace.v1.SubmissionStatus
+	(v1.PluginLabel)(0),           // 6: marketplace.v1.PluginLabel
+	(v1.SubmissionStatus)(0),      // 7: marketplace.v1.SubmissionStatus
 }
 var file_registry_v1_common_proto_depIdxs = []int32{
-	3, // 0: registry.v1.Plugin.documentation_links:type_name -> marketplace.v1.DocumentationLink
-	4, // 1: registry.v1.Plugin.features:type_name -> marketplace.v1.FeatureBlock
-	0, // 2: registry.v1.Plugin.visibility:type_name -> registry.v1.PluginVisibility
-	5, // 3: registry.v1.Plugin.created:type_name -> google.protobuf.Timestamp
-	5, // 4: registry.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
-	6, // 5: registry.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
-	5, // 6: registry.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
-	5, // 7: registry.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
-	5, // 8: registry.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	3,  // 0: registry.v1.Plugin.documentation_links:type_name -> marketplace.v1.DocumentationLink
+	4,  // 1: registry.v1.Plugin.features:type_name -> marketplace.v1.FeatureBlock
+	0,  // 2: registry.v1.Plugin.visibility:type_name -> registry.v1.PluginVisibility
+	5,  // 3: registry.v1.Plugin.created:type_name -> google.protobuf.Timestamp
+	5,  // 4: registry.v1.Plugin.updated:type_name -> google.protobuf.Timestamp
+	6,  // 5: registry.v1.Plugin.labels:type_name -> marketplace.v1.PluginLabel
+	7,  // 6: registry.v1.PluginVersion.status:type_name -> marketplace.v1.SubmissionStatus
+	5,  // 7: registry.v1.PluginVersion.created:type_name -> google.protobuf.Timestamp
+	5,  // 8: registry.v1.PluginVersion.submitted:type_name -> google.protobuf.Timestamp
+	5,  // 9: registry.v1.PluginVersion.published:type_name -> google.protobuf.Timestamp
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_registry_v1_common_proto_init() }
