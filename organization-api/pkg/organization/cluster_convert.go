@@ -8,18 +8,25 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
-// A ready cluster that an update fundament pushed is rolling out on is
-// upgrading; it stays usable meanwhile.
-func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, updating bool) organizationv1.ClusterStatus {
+// clusterStatusFromDB derives cluster status from the deleted flag, Gardener's
+// shoot status and the cluster's own sync. A ready cluster that an update
+// fundament pushed is rolling out on is upgrading; it stays usable meanwhile.
+// A cluster whose Shoot Gardener does not have (never created, or lost) and
+// whose sync failed for good is in error: nothing will create it. A sync that
+// fails for a cluster that already runs leaves the status alone; the failure
+// shows in the sync state.
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, updating bool, outboxStatus pgtype.Text) organizationv1.ClusterStatus {
 	if deleted.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	}
-	if !shootStatus.Valid {
+	if !shootStatus.Valid || shootStatus.String == "pending" {
+		if outboxStatus.Valid && outboxStatus.String == "failed" {
+			return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR
+		}
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	}
 	switch shootStatus.String {
-	case "pending", "progressing":
+	case "progressing":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	case "ready":
 		if updating {
