@@ -39,13 +39,13 @@ RETURNING
     id;
 
 -- name: ClusterListActive :many
--- Used by periodic reconciliation to compare with Gardener state.
+-- Used by periodic reconciliation to compare with Gardener state. Whether a
+-- cluster missing in Gardener is repaired is OutboxInsertReconcile's decision.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.organizations.name AS organization_name,
-    COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
+    tenant.organizations.name AS organization_name
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -99,9 +99,35 @@ ORDER BY
 -- commits together with its cluster_outbox row, so any pool the list returned
 -- has its outbox row visible here. The state read with the cluster row at the
 -- start of a check is stale for pools inserted since.
+-- sync_pending: a change was saved but its sync has not applied it to Gardener:
+-- the cluster's own latest sync row has not completed, or a node pool's latest
+-- row (its create, update or delete) is still queued, or failed for a pool that
+-- is still active.
 SELECT
     tenant.clusters.shoot_updating,
-    tenant.clusters.outbox_status
+    (
+        COALESCE((
+            SELECT tenant.cluster_outbox.status
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+            ORDER BY tenant.cluster_outbox.id DESC
+            LIMIT 1
+        ) <> 'completed', false)
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.node_pools
+            WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+              AND COALESCE((
+                  SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+                      OR (tenant.cluster_outbox.status = 'failed' AND tenant.node_pools.deleted IS NULL)
+                  FROM tenant.cluster_outbox
+                  WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+                  ORDER BY tenant.cluster_outbox.id DESC
+                  LIMIT 1
+              ), false)
+        )
+    )::boolean AS sync_pending
 FROM
     tenant.clusters
 WHERE
@@ -134,6 +160,9 @@ WHERE
 -- Returns whether a cluster has been successfully synced to Gardener at least once.
 -- Checks outbox history directly (EXISTS on completed rows with cluster_id set).
 -- This remains true even if the latest outbox row is retrying or failed.
+-- The same "completed outbox row" test is spelled in ClusterListForStatusSweep,
+-- ClusterGetForStatusCheck (synced) and organization-api's cluster queries
+-- (reached_gardener); change them together.
 SELECT EXISTS (
     SELECT 1
     FROM tenant.cluster_outbox
@@ -152,7 +181,13 @@ FROM
 WHERE
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        -- reached Gardener: the test ClusterHasEverBeenSynced spells out
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )
     AND (
         tenant.clusters.deleted IS NULL
@@ -176,7 +211,6 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
     tenant.clusters.shoot_api_available,
-    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -184,7 +218,13 @@ SELECT
     catalog.regions.cloud_profile_region,
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        -- reached Gardener: the test ClusterHasEverBeenSynced spells out
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )::boolean AS synced
 FROM
     tenant.clusters

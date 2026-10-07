@@ -176,22 +176,23 @@ func (q *Queries) ClusterDelete(ctx context.Context, arg ClusterDeleteParams) (i
 
 const clusterGetByID = `-- name: ClusterGetByID :one
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error
 FROM tenant.clusters
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.id = $1
 `
 
@@ -217,7 +218,8 @@ type ClusterGetByIDRow struct {
 	OutboxError        pgtype.Text
 }
 
-// Get cluster by ID, including deleted clusters for direct access.
+// Get cluster by ID, including deleted clusters for direct access. Sync state
+// as in ClusterList.
 func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) (ClusterGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetByID, arg.ID)
 	var i ClusterGetByIDRow
@@ -243,23 +245,24 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 
 const clusterGetByName = `-- name: ClusterGetByName :one
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error
 FROM tenant.clusters
-WHERE name = $1 AND deleted IS NULL
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL
 `
 
 type ClusterGetByNameParams struct {
@@ -284,6 +287,7 @@ type ClusterGetByNameRow struct {
 	OutboxError        pgtype.Text
 }
 
+// Sync state as in ClusterList.
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetByName, arg.Name)
 	var i ClusterGetByNameRow
@@ -358,21 +362,21 @@ func (q *Queries) ClusterGetEvents(ctx context.Context, arg ClusterGetEventsPara
 
 const clusterList = `-- name: ClusterList :many
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
     (SELECT COUNT(*)
      FROM tenant.projects
      WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
@@ -380,8 +384,9 @@ SELECT
      FROM tenant.node_pools
      WHERE node_pools.cluster_id = clusters.id AND node_pools.deleted IS NULL) AS node_pool_count
 FROM tenant.clusters
-WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
-ORDER BY created DESC, id DESC
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+ORDER BY tenant.clusters.created DESC, tenant.clusters.id DESC
 `
 
 type ClusterListRow struct {
@@ -406,6 +411,9 @@ type ClusterListRow struct {
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
 // Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
+// The sync state is the cluster's own latest sync row (view cluster_sync_state);
+// a node pool's sync state is the pool's own (node pool queries), never the
+// cluster's.
 func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 	rows, err := q.db.Query(ctx, clusterList)
 	if err != nil {

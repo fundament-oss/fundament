@@ -868,6 +868,10 @@ type NodePool struct {
 	xxx_hidden_Status        NodePoolStatus         `protobuf:"varint,70,opt,name=status,enum=organization.v1.NodePoolStatus"`
 	xxx_hidden_Version       string                 `protobuf:"bytes,80,opt,name=version"`
 	xxx_hidden_StatusMessage string                 `protobuf:"bytes,90,opt,name=status_message,json=statusMessage"`
+	xxx_hidden_SyncStatus    *string                `protobuf:"bytes,100,opt,name=sync_status,json=syncStatus"`
+	xxx_hidden_SyncError     *string                `protobuf:"bytes,110,opt,name=sync_error,json=syncError"`
+	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
+	XXX_presence             [1]uint32
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -960,6 +964,26 @@ func (x *NodePool) GetStatusMessage() string {
 	return ""
 }
 
+func (x *NodePool) GetSyncStatus() string {
+	if x != nil {
+		if x.xxx_hidden_SyncStatus != nil {
+			return *x.xxx_hidden_SyncStatus
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *NodePool) GetSyncError() string {
+	if x != nil {
+		if x.xxx_hidden_SyncError != nil {
+			return *x.xxx_hidden_SyncError
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *NodePool) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -996,6 +1020,40 @@ func (x *NodePool) SetStatusMessage(v string) {
 	x.xxx_hidden_StatusMessage = v
 }
 
+func (x *NodePool) SetSyncStatus(v string) {
+	x.xxx_hidden_SyncStatus = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 11)
+}
+
+func (x *NodePool) SetSyncError(v string) {
+	x.xxx_hidden_SyncError = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 11)
+}
+
+func (x *NodePool) HasSyncStatus() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 9)
+}
+
+func (x *NodePool) HasSyncError() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 10)
+}
+
+func (x *NodePool) ClearSyncStatus() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 9)
+	x.xxx_hidden_SyncStatus = nil
+}
+
+func (x *NodePool) ClearSyncError() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 10)
+	x.xxx_hidden_SyncError = nil
+}
+
 type NodePool_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1008,6 +1066,11 @@ type NodePool_builder struct {
 	Status        NodePoolStatus
 	Version       string
 	StatusMessage string
+	// The pool's own latest sync, fundament applying its last change to
+	// Gardener: pending, retrying, completed or failed. sync_error is set while
+	// that sync retries or after it failed for good.
+	SyncStatus *string
+	SyncError  *string
 }
 
 func (b0 NodePool_builder) Build() *NodePool {
@@ -1023,6 +1086,14 @@ func (b0 NodePool_builder) Build() *NodePool {
 	x.xxx_hidden_Status = b.Status
 	x.xxx_hidden_Version = b.Version
 	x.xxx_hidden_StatusMessage = b.StatusMessage
+	if b.SyncStatus != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 11)
+		x.xxx_hidden_SyncStatus = b.SyncStatus
+	}
+	if b.SyncError != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 11)
+		x.xxx_hidden_SyncError = b.SyncError
+	}
 	return m0
 }
 
@@ -3377,7 +3448,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
 	"\x06memory\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x06memory\x122\n" +
 	"\x04disk\x18\x1e \x01(\v2\x1e.organization.v1.ResourceUsageR\x04disk\x122\n" +
-	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xaa\x02\n" +
+	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xf8\x02\n" +
 	"\bNodePool\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3388,7 +3459,11 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\tmax_nodes\x18< \x01(\x05R\bmaxNodes\x127\n" +
 	"\x06status\x18F \x01(\x0e2\x1f.organization.v1.NodePoolStatusR\x06status\x12\x18\n" +
 	"\aversion\x18P \x01(\tR\aversion\x12%\n" +
-	"\x0estatus_message\x18Z \x01(\tR\rstatusMessage\"\x8f\x01\n" +
+	"\x0estatus_message\x18Z \x01(\tR\rstatusMessage\x12&\n" +
+	"\vsync_status\x18d \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
+	"syncStatus\x12$\n" +
+	"\n" +
+	"sync_error\x18n \x01(\tB\x05\xaa\x01\x02\b\x01R\tsyncError\"\x8f\x01\n" +
 	"\x14CreateClusterRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +

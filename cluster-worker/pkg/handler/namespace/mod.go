@@ -48,26 +48,22 @@ const (
 // Handler reconciles tenant.namespaces rows to v1/Namespace resources on the
 // owning shoot cluster.
 type Handler struct {
-	pool       *pgxpool.Pool
-	queries    *db.Queries
-	shoot      shoot.ShootAccess
-	rbac       *projectrbac.Converger
-	maxRetries int32
-	logger     *slog.Logger
+	pool    *pgxpool.Pool
+	queries *db.Queries
+	shoot   shoot.ShootAccess
+	rbac    *projectrbac.Converger
+	logger  *slog.Logger
 }
 
-// New constructs a namespace handler. maxRetries mirrors the outbox worker's
-// MaxRetries so reconcile's conditional enqueue uses the same exhaustion
-// threshold as cluster reconcile.
-func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, maxRetries int32, logger *slog.Logger) *Handler {
+// New constructs a namespace handler.
+func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, logger *slog.Logger) *Handler {
 	queries := db.New(pool)
 	return &Handler{
-		pool:       pool,
-		queries:    queries,
-		shoot:      shootAccess,
-		rbac:       projectrbac.NewConverger(queries, shootAccess, logger),
-		maxRetries: maxRetries,
-		logger:     logger.With("handler", "namespace"),
+		pool:    pool,
+		queries: queries,
+		shoot:   shootAccess,
+		rbac:    projectrbac.NewConverger(queries, shootAccess, logger),
+		logger:  logger.With("handler", "namespace"),
 	}
 }
 
@@ -277,7 +273,8 @@ func (h *Handler) enqueueClusterNamespaces(ctx context.Context, clusterID uuid.U
 	for _, nsID := range namespaceIDs {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: nsID, Valid: true},
-			MaxRetries:  h.maxRetries,
+			// A cluster whose API server became available retries a failed namespace too.
+			SkipIfFailed: false,
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", nsID, err))
 		}
@@ -327,7 +324,8 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	for _, id := range plan.CreateIDs {
 		if err := h.queries.OutboxInsertReconcileForNamespace(ctx, db.OutboxInsertReconcileForNamespaceParams{
 			NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
-			MaxRetries:  h.maxRetries,
+			// A namespace whose sync failed for good would fail again every round.
+			SkipIfFailed: true,
 		}); err != nil {
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", id, err))
 		}

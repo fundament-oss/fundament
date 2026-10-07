@@ -49,6 +49,18 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, sh
 	}
 }
 
+// syncError is a sync row's status_info when it is an error. A pending row's
+// status_info is the precondition it waits on (waiting, not failing); only a
+// retrying or failed row carries an error.
+func syncError(status, info pgtype.Text) (string, bool) {
+	if !info.Valid || (status.String != "retrying" && status.String != "failed") {
+		return "", false
+	}
+	return info.String, true
+}
+
+// syncStateFromRow builds the sync state from the cluster's own latest sync
+// row. A node pool's sync is the pool's own (nodePoolFromRow).
 func syncStateFromRow(
 	outboxStatus pgtype.Text,
 	outboxRetries int32,
@@ -66,8 +78,9 @@ func syncStateFromRow(
 	if outboxStatus.Valid {
 		state.SetOutboxStatus(outboxStatus.String)
 	}
-	if outboxError.Valid {
-		state.SetOutboxError(outboxError.String)
+	message, isError := syncError(outboxStatus, outboxError)
+	if isError {
+		state.SetOutboxError(message)
 	}
 	if shootStatus.Valid {
 		state.SetShootStatus(shootStatus.String)

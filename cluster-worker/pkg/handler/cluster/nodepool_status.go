@@ -36,9 +36,9 @@ type nodePoolUpdate struct {
 }
 
 // updating says shoot_updating is set: a change fundament sent reached Gardener
-// and rolls out on a ready cluster. syncPending says the cluster's outbox row
-// has not completed: a change was saved but the sync has not (yet) applied it
-// to Gardener, so what Gardener reports predates the change. Together they gate
+// and rolls out on a ready cluster. syncPending says a change was saved but
+// its sync has not (yet) applied it to Gardener (see ClusterGetPushState), so
+// what Gardener reports predates the change. Together they gate
 // what an operation can explain: only a change of ours explains a
 // never-classified pool — without one, a NULL status during an operation is an
 // existing pool meeting this feature for the first time mid-reconcile, and
@@ -240,9 +240,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		h.logger.Warn("failed to load cluster push state for node pool status", "cluster_id", cluster.ID, "error", err)
 		return
 	}
-	syncPending := push.OutboxStatus.Valid && push.OutboxStatus.String != string(dbconst.ClusterOutboxStatus_Completed)
-
-	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, syncPending) {
+	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, push.SyncPending) {
 		if err := h.writeNodePoolStatus(ctx, cluster.ID, update); err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
