@@ -34,6 +34,7 @@ const (
 	ClusterStatus_CLUSTER_STATUS_STOPPING     ClusterStatus = 6
 	ClusterStatus_CLUSTER_STATUS_STOPPED      ClusterStatus = 7
 	ClusterStatus_CLUSTER_STATUS_DELETING     ClusterStatus = 8 // Cluster deletion in progress
+	ClusterStatus_CLUSTER_STATUS_UNHEALTHY    ClusterStatus = 9 // Ready in Gardener, but health conditions failing (e.g. nodes missing)
 )
 
 // Enum value maps for ClusterStatus.
@@ -48,6 +49,7 @@ var (
 		6: "CLUSTER_STATUS_STOPPING",
 		7: "CLUSTER_STATUS_STOPPED",
 		8: "CLUSTER_STATUS_DELETING",
+		9: "CLUSTER_STATUS_UNHEALTHY",
 	}
 	ClusterStatus_value = map[string]int32{
 		"CLUSTER_STATUS_UNSPECIFIED":  0,
@@ -59,6 +61,7 @@ var (
 		"CLUSTER_STATUS_STOPPING":     6,
 		"CLUSTER_STATUS_STOPPED":      7,
 		"CLUSTER_STATUS_DELETING":     8,
+		"CLUSTER_STATUS_UNHEALTHY":    9,
 	}
 )
 
@@ -88,10 +91,13 @@ func (x ClusterStatus) Number() protoreflect.EnumNumber {
 type NodePoolStatus int32
 
 const (
-	NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED NodePoolStatus = 0
-	NodePoolStatus_NODE_POOL_STATUS_HEALTHY     NodePoolStatus = 1
-	NodePoolStatus_NODE_POOL_STATUS_DEGRADED    NodePoolStatus = 2
-	NodePoolStatus_NODE_POOL_STATUS_UNHEALTHY   NodePoolStatus = 3
+	NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED          NodePoolStatus = 0
+	NodePoolStatus_NODE_POOL_STATUS_HEALTHY              NodePoolStatus = 1
+	NodePoolStatus_NODE_POOL_STATUS_DEGRADED             NodePoolStatus = 2
+	NodePoolStatus_NODE_POOL_STATUS_UNHEALTHY            NodePoolStatus = 3
+	NodePoolStatus_NODE_POOL_STATUS_PROVISIONING         NodePoolStatus = 4 // Change applied, machines being created
+	NodePoolStatus_NODE_POOL_STATUS_WAITING_FOR_MACHINES NodePoolStatus = 5 // Gardener cannot get machines; see status_message
+	NodePoolStatus_NODE_POOL_STATUS_FAILED               NodePoolStatus = 6 // Gardener gave up; see status_message
 )
 
 // Enum value maps for NodePoolStatus.
@@ -101,12 +107,18 @@ var (
 		1: "NODE_POOL_STATUS_HEALTHY",
 		2: "NODE_POOL_STATUS_DEGRADED",
 		3: "NODE_POOL_STATUS_UNHEALTHY",
+		4: "NODE_POOL_STATUS_PROVISIONING",
+		5: "NODE_POOL_STATUS_WAITING_FOR_MACHINES",
+		6: "NODE_POOL_STATUS_FAILED",
 	}
 	NodePoolStatus_value = map[string]int32{
-		"NODE_POOL_STATUS_UNSPECIFIED": 0,
-		"NODE_POOL_STATUS_HEALTHY":     1,
-		"NODE_POOL_STATUS_DEGRADED":    2,
-		"NODE_POOL_STATUS_UNHEALTHY":   3,
+		"NODE_POOL_STATUS_UNSPECIFIED":          0,
+		"NODE_POOL_STATUS_HEALTHY":              1,
+		"NODE_POOL_STATUS_DEGRADED":             2,
+		"NODE_POOL_STATUS_UNHEALTHY":            3,
+		"NODE_POOL_STATUS_PROVISIONING":         4,
+		"NODE_POOL_STATUS_WAITING_FOR_MACHINES": 5,
+		"NODE_POOL_STATUS_FAILED":               6,
 	}
 )
 
@@ -227,7 +239,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x01R\x05total\x12\x12\n" +
-	"\x04unit\x18\x1e \x01(\tR\x04unit*\x97\x02\n" +
+	"\x04unit\x18\x1e \x01(\tR\x04unit*\xb5\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\x01\x12\x1b\n" +
@@ -237,12 +249,16 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x14CLUSTER_STATUS_ERROR\x10\x05\x12\x1b\n" +
 	"\x17CLUSTER_STATUS_STOPPING\x10\x06\x12\x1a\n" +
 	"\x16CLUSTER_STATUS_STOPPED\x10\a\x12\x1b\n" +
-	"\x17CLUSTER_STATUS_DELETING\x10\b*\x8f\x01\n" +
+	"\x17CLUSTER_STATUS_DELETING\x10\b\x12\x1c\n" +
+	"\x18CLUSTER_STATUS_UNHEALTHY\x10\t*\xfa\x01\n" +
 	"\x0eNodePoolStatus\x12 \n" +
 	"\x1cNODE_POOL_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18NODE_POOL_STATUS_HEALTHY\x10\x01\x12\x1d\n" +
 	"\x19NODE_POOL_STATUS_DEGRADED\x10\x02\x12\x1e\n" +
-	"\x1aNODE_POOL_STATUS_UNHEALTHY\x10\x03B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x1aNODE_POOL_STATUS_UNHEALTHY\x10\x03\x12!\n" +
+	"\x1dNODE_POOL_STATUS_PROVISIONING\x10\x04\x12)\n" +
+	"%NODE_POOL_STATUS_WAITING_FOR_MACHINES\x10\x05\x12\x1b\n" +
+	"\x17NODE_POOL_STATUS_FAILED\x10\x06B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)

@@ -131,7 +131,9 @@ outbox row, `status_progressing` / `status_ready` / `status_error` / `status_del
 status change, `status_progressing` with Gardener's progress message while an operation
 runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
-shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it),
+`nodepool_waiting` / `nodepool_error` (once per distinct reason) and `nodepool_ready`
+when a node pool's machines get stuck or recover (see "Node pool status" below), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes
@@ -171,11 +173,11 @@ settling does not stick, and a cluster that breaks later shows it.
   `unhealthy` and `unknown` are unhealthy, and `progressing` (a condition within its
   grace period, or pardoned while an operation runs without errors) keeps the recorded
   health, or counts as unhealthy for a cluster that was never healthy. A Shoot without
-  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy` and
-  `SystemComponentsHealthy`. While the last operation is still the Create, Gardener
-  computes the label from errors only and rewrites it just after the cluster becomes
-  ready, so until the first reconcile a `healthy` label also needs those three
-  conditions. So a routine reconcile that breaks a condition shows as
+  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy`,
+  `SystemComponentsHealthy` and `EveryNodeReady`. While the last operation is still the
+  Create, Gardener computes the label from errors only and rewrites it just after the
+  cluster becomes ready, so until the first reconcile a `healthy` label also needs those
+  four conditions. So a routine reconcile that breaks a condition shows as
   unhealthy only once Gardener stops pardoning it.
 - A new cluster's conditions take a few minutes to pass after the create succeeds,
   and Gardener labels it unhealthy meanwhile. Until it is first healthy, a ready
@@ -187,6 +189,30 @@ settling does not stick, and a cluster that breaks later shows it.
   recorded as `status_warning` (once per distinct message: an error Gardener retries
   again and again, with progress in between, is compared with the last recorded warning)
   and does not change the status. Only `Failed` sets `error`.
+
+### Node pool status
+
+A node pool row is a desired shape; whether Gardener can stand machines under it only
+shows in the Shoot's `EveryNodeReady` condition and `lastErrors`, which name the pool's
+machine deployments (`<shoot>-<pool>-z<zone>`). Every status check classifies each active
+pool from the same report the cluster rules read and stores the outcome on
+`tenant.node_pools` (`status`, `status_message`, `status_updated`):
+
+| Status | Meaning |
+|---|---|
+| `progressing` | an operation runs and nothing complains about this pool |
+| `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
+| `error` | the operation failed for good, naming this pool |
+| `ready` | the shoot settled and nothing names the pool |
+
+The `-<pool>-z` fragment anchors the match, so a pool name that prefixes another
+(`web`, `web2`) cannot match the wrong text. A failure that names no pool stays
+cluster-level; a `pending`/`deleting` shoot leaves pool rows untouched. Transitions
+record `nodepool_waiting` / `nodepool_error` (once per distinct reason) and
+`nodepool_ready` on recovery; a pool classified for the first time records nothing.
+organization-api serves the stored status and reason until a pool is `ready`, then its
+live node metrics take over. The watch treats a change in the worker detail as a status
+change, so a new reason reaches the pool row without waiting for the sweep.
 
 ### Status cache
 

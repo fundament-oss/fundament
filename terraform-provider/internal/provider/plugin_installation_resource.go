@@ -464,7 +464,8 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	clusterStatus := clusterResp.GetCluster().GetStatus()
 	switch clusterStatus {
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
-		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
 		// API server is reachable; proceed with read.
 	default:
 		tflog.Info(ctx, "Cluster Kubernetes API unreachable, skipping plugin installation read", map[string]any{
@@ -618,7 +619,8 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	clusterStatus := clusterResp.GetCluster().GetStatus()
 	switch clusterStatus {
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
-		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
 		// API server is reachable; proceed with deletion.
 	default:
 		tflog.Info(ctx, "Cluster Kubernetes API unreachable, skipping CRD deletion", map[string]any{

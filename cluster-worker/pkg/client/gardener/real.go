@@ -361,6 +361,12 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}
 	}
 
+	// Worker detail travels with every status: the EveryNodeReady message and
+	// lastErrors name the machine deployments that cannot get machines, which
+	// the handler attributes to node pools.
+	enrMessage := everyNodeReadyMessage(shoot)
+	lastErrors := shootLastErrors(shoot)
+
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
 		operation := OperationType(op.Type)
@@ -369,28 +375,32 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
 			healthy, grace := shootHealthOf(shoot)
 			return &ShootStatus{
-				Status:      StatusProgressing,
-				Message:     fmt.Sprintf("%s: %s", op.Type, op.Description),
-				Operation:   operation,
-				Healthy:     healthy,
-				HealthGrace: grace,
+				Status:                StatusProgressing,
+				Message:               fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation:             operation,
+				Healthy:               healthy,
+				HealthGrace:           grace,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
 			}
 		case gardencorev1beta1.LastOperationStateError:
 			// "Completed with errors and will be retried" per Gardener's API.
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
 		case gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
 		case gardencorev1beta1.LastOperationStateSucceeded:
 			healthy, grace := shootHealthOf(shoot)
 			// The gardenlet sets observedGeneration when it starts a reconcile.
 			// Until then lastOperation still describes the previous one.
 			if shoot.Generation != shoot.Status.ObservedGeneration {
 				return &ShootStatus{
-					Status:      StatusProgressing,
-					Message:     MsgShootUpdatePending,
-					Operation:   OperationReconcile,
-					Healthy:     healthy,
-					HealthGrace: grace,
+					Status:                StatusProgressing,
+					Message:               MsgShootUpdatePending,
+					Operation:             OperationReconcile,
+					Healthy:               healthy,
+					HealthGrace:           grace,
+					EveryNodeReadyMessage: enrMessage,
+					LastErrors:            lastErrors,
 				}
 			}
 			msg := MsgShootReady
@@ -398,20 +408,51 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 				msg = MsgShootUnhealthy
 			}
 			return &ShootStatus{
-				Status:      StatusReady,
-				Message:     msg,
-				Operation:   operation,
-				Healthy:     healthy,
-				HealthGrace: grace,
+				Status:                StatusReady,
+				Message:               msg,
+				Operation:             operation,
+				Healthy:               healthy,
+				HealthGrace:           grace,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
 			}
 		case gardencorev1beta1.LastOperationStateAborted:
 			// Seen while the seed was not ready; Gardener resumed the operation by itself.
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
 		}
 	}
 
 	// No last operation, likely still being created
-	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}
+	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created", EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
+}
+
+// everyNodeReadyMessage returns the EveryNodeReady condition's message while
+// the condition is not satisfied; it names the machine deployments that wait.
+// Progressing counts as satisfied: it means "was True, currently
+// transitioning", and surfacing a reason then would flag routine scale-ups.
+func everyNodeReadyMessage(shoot *gardencorev1beta1.Shoot) string {
+	for i := range shoot.Status.Conditions {
+		c := &shoot.Status.Conditions[i]
+		if c.Type != gardencorev1beta1.ShootEveryNodeReady {
+			continue
+		}
+		if c.Status == gardencorev1beta1.ConditionTrue || c.Status == gardencorev1beta1.ConditionProgressing {
+			return ""
+		}
+		return c.Message
+	}
+	return ""
+}
+
+func shootLastErrors(shoot *gardencorev1beta1.Shoot) []string {
+	if len(shoot.Status.LastErrors) == 0 {
+		return nil
+	}
+	errs := make([]string, len(shoot.Status.LastErrors))
+	for i := range shoot.Status.LastErrors {
+		errs[i] = shoot.Status.LastErrors[i].Description
+	}
+	return errs
 }
 
 // RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
@@ -672,6 +713,7 @@ func shootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
+		gardencorev1beta1.ShootEveryNodeReady,
 	}
 
 	conditionMap := make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.ConditionStatus)

@@ -26,6 +26,7 @@ enum ClusterStatus {
   CLUSTER_STATUS_STOPPING = 6;
   CLUSTER_STATUS_STOPPED = 7;
   CLUSTER_STATUS_DELETING = 8; // Cluster deletion in progress
+  CLUSTER_STATUS_UNHEALTHY = 9; // Ready in Gardener, but health conditions failing (e.g. nodes missing)
 }
 
 // Node pool status
@@ -34,4 +35,7 @@ enum NodePoolStatus {
   NODE_POOL_STATUS_HEALTHY = 1;
   NODE_POOL_STATUS_DEGRADED = 2;
   NODE_POOL_STATUS_UNHEALTHY = 3;
+  NODE_POOL_STATUS_PROVISIONING = 4; // Change applied, machines being created
+  NODE_POOL_STATUS_WAITING_FOR_MACHINES = 5; // Gardener cannot get machines; see status_message
+  NODE_POOL_STATUS_FAILED = 6; // Gardener gave up; see status_message
 }

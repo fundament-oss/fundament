@@ -6,6 +6,7 @@ package gardener
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,6 +54,24 @@ type ShootStatus struct {
 	// Retrying marks a StatusError that Gardener will retry by itself
 	// (lastOperation state Error or Aborted), as opposed to Failed.
 	Retrying bool
+	// EveryNodeReadyMessage is the EveryNodeReady condition's message while the
+	// condition is not satisfied; it names the machine deployments that wait.
+	EveryNodeReadyMessage string
+	// LastErrors are the Shoot's .status.lastErrors descriptions.
+	LastErrors []string
+}
+
+// equal compares field by field; ShootStatus is not comparable as a value
+// because LastErrors is a slice.
+func (s *ShootStatus) equal(other *ShootStatus) bool {
+	return s.Status == other.Status &&
+		s.Message == other.Message &&
+		s.Operation == other.Operation &&
+		s.Healthy == other.Healthy &&
+		s.HealthGrace == other.HealthGrace &&
+		s.Retrying == other.Retrying &&
+		s.EveryNodeReadyMessage == other.EveryNodeReadyMessage &&
+		slices.Equal(s.LastErrors, other.LastErrors)
 }
 
 // Status message constants for consistent messaging.

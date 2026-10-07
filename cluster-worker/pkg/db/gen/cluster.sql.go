@@ -468,7 +468,9 @@ SELECT
     COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
-    tenant.node_pools.created
+    tenant.node_pools.created,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
 FROM
     tenant.node_pools
     LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
@@ -486,12 +488,14 @@ type NodePoolListByClusterIDParams struct {
 }
 
 type NodePoolListByClusterIDRow struct {
-	ID           uuid.UUID
-	Name         string
-	MachineType  string
-	AutoscaleMin int32
-	AutoscaleMax int32
-	Created      pgtype.Timestamptz
+	ID            uuid.UUID
+	Name          string
+	MachineType   string
+	AutoscaleMin  int32
+	AutoscaleMax  int32
+	Created       pgtype.Timestamptz
+	Status        pgtype.Text
+	StatusMessage pgtype.Text
 }
 
 // Fetch active (non-deleted) node pools for a cluster.
@@ -514,6 +518,8 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.AutoscaleMin,
 			&i.AutoscaleMax,
 			&i.Created,
+			&i.Status,
+			&i.StatusMessage,
 		); err != nil {
 			return nil, err
 		}
@@ -523,4 +529,35 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 		return nil, err
 	}
 	return items, nil
+}
+
+const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :exec
+UPDATE tenant.node_pools
+SET
+    status = $1,
+    status_message = $2,
+    status_updated = now()
+WHERE
+    cluster_id = $3
+    AND name = $4
+    AND deleted IS NULL
+`
+
+type NodePoolUpdateStatusParams struct {
+	Status    pgtype.Text
+	Message   pgtype.Text
+	ClusterID uuid.UUID
+	PoolName  string
+}
+
+// Record what Gardener reports about one pool's machines. Keyed by name:
+// classification works from Gardener's machine-deployment names.
+func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) error {
+	_, err := q.db.Exec(ctx, nodePoolUpdateStatus,
+		arg.Status,
+		arg.Message,
+		arg.ClusterID,
+		arg.PoolName,
+	)
+	return err
 }

@@ -115,6 +115,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
@@ -138,6 +139,7 @@ type ClusterGetByIDRow struct {
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 	ShootUpdating      bool
+	ShootHealth        pgtype.Text
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
@@ -159,6 +161,7 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
 		&i.ShootUpdating,
+		&i.ShootHealth,
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
@@ -179,6 +182,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
@@ -202,6 +206,7 @@ type ClusterGetByNameRow struct {
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 	ShootUpdating      bool
+	ShootHealth        pgtype.Text
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
@@ -222,6 +227,7 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
 		&i.ShootUpdating,
+		&i.ShootHealth,
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
@@ -291,6 +297,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
@@ -317,6 +324,7 @@ type ClusterListRow struct {
 	ShootStatusMessage pgtype.Text
 	ShootStatusUpdated pgtype.Timestamptz
 	ShootUpdating      bool
+	ShootHealth        pgtype.Text
 	OutboxStatus       pgtype.Text
 	OutboxRetries      int32
 	OutboxError        pgtype.Text
@@ -347,6 +355,7 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
 			&i.ShootUpdating,
+			&i.ShootHealth,
 			&i.OutboxStatus,
 			&i.OutboxRetries,
 			&i.OutboxError,

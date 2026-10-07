@@ -65,7 +65,9 @@ SELECT
     COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
-    tenant.node_pools.created
+    tenant.node_pools.created,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
 FROM
     tenant.node_pools
     LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
@@ -76,6 +78,19 @@ WHERE
 ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
+
+-- name: NodePoolUpdateStatus :exec
+-- Record what Gardener reports about one pool's machines. Keyed by name:
+-- classification works from Gardener's machine-deployment names.
+UPDATE tenant.node_pools
+SET
+    status = @status,
+    status_message = @message,
+    status_updated = now()
+WHERE
+    cluster_id = @cluster_id
+    AND name = @pool_name
+    AND deleted IS NULL;
 
 -- name: NodePoolGetClusterID :one
 -- Returns the cluster_id for a node pool (including soft-deleted node pools).

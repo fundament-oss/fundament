@@ -53,6 +53,8 @@ func (s *Server) GetClusterByName(
 		ShootStatus:        cluster.ShootStatus,
 		ShootStatusMessage: cluster.ShootStatusMessage,
 		ShootStatusUpdated: cluster.ShootStatusUpdated,
+		ShootUpdating:      cluster.ShootUpdating,
+		ShootHealth:        cluster.ShootHealth,
 		OutboxStatus:       cluster.OutboxStatus,
 		OutboxRetries:      cluster.OutboxRetries,
 		OutboxError:        cluster.OutboxError,
@@ -180,7 +182,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootUpdating),
+		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootHealth, row.ShootUpdating),
 		Created:           timestamppb.New(row.Created.Time),
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,

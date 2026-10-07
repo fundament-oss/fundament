@@ -71,6 +71,7 @@ export function getStatusBadgeColor(status: ClusterStatus): string {
     [ClusterStatus.STOPPED]: 'neutral',
     [ClusterStatus.UNSPECIFIED]: 'neutral',
     [ClusterStatus.DELETING]: 'robijnrood',
+    [ClusterStatus.UNHEALTHY]: 'critical',
   };
   return colors[status];
 }
@@ -80,12 +81,13 @@ export function getStatusLabel(status: ClusterStatus): string {
     [ClusterStatus.PROVISIONING]: 'Provisioning',
     [ClusterStatus.STARTING]: 'Starting',
     [ClusterStatus.RUNNING]: 'Running',
-    [ClusterStatus.UPGRADING]: 'Upgrading',
+    [ClusterStatus.UPGRADING]: 'Updating',
     [ClusterStatus.ERROR]: 'Error',
     [ClusterStatus.STOPPING]: 'Stopping',
     [ClusterStatus.STOPPED]: 'Stopped',
     [ClusterStatus.UNSPECIFIED]: 'Unknown status',
     [ClusterStatus.DELETING]: 'Deleting',
+    [ClusterStatus.UNHEALTHY]: 'Unhealthy',
   };
   return labels[status];
 }
@@ -94,11 +96,18 @@ export function getStatusLabel(status: ClusterStatus): string {
  * Whether a kubeconfig can be downloaded for a cluster in this status.
  *
  * Mirrors the organization-api gate in `GetKubeconfig`: it only serves a
- * kubeconfig once the shoot reports `ready`, which maps to `RUNNING`, or to
- * `UPGRADING` while an update rolls out on the ready cluster. Any other status
- * would be rejected with "cluster not ready yet", so the UI should not offer
- * the download.
+ * kubeconfig once the shoot reports `ready`. That maps to `RUNNING`, to
+ * `UPGRADING` while an update rolls out on the ready cluster, and to
+ * `UNHEALTHY` while a ready cluster's health conditions fail. Any other
+ * status would be rejected with "cluster not ready yet", so the UI should
+ * not offer the download.
  */
+const KUBECONFIG_AVAILABLE: ReadonlySet<ClusterStatus> = new Set([
+  ClusterStatus.RUNNING,
+  ClusterStatus.UPGRADING,
+  ClusterStatus.UNHEALTHY,
+]);
+
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
-  return status === ClusterStatus.RUNNING || status === ClusterStatus.UPGRADING;
+  return KUBECONFIG_AVAILABLE.has(status);
 }
