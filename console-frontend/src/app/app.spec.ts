@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
@@ -11,7 +12,13 @@ import {
   ListOrganizationsResponseSchema,
   type Organization,
 } from '../generated/v1/organization_pb';
-import { InviteService, ListInvitationsResponseSchema } from '../generated/v1/invite_pb';
+import {
+  InviteService,
+  ListInvitationsResponseSchema,
+  AcceptInvitationResponseSchema,
+  InvitationSchema,
+  type Invitation,
+} from '../generated/v1/invite_pb';
 import { ConfigService, type AppConfiguration } from './config.service';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
@@ -58,18 +65,26 @@ const ORGANIZATION = { id: 'org-1', name: 'acme-corp', alias: 'acme' };
 
 /**
  * The shell with only what settling on an organization touches: an authn
- * service whose token refresh is a no-op, and a router that records where it
- * was sent rather than going there. `arriving` is the
- * address of an arrival still under way, as `getCurrentNavigation()` reports
- * one; `url` is the page being left, which is all `router.url` knows until that
- * arrival lands.
+ * service whose token refresh records the call and does nothing else, and a
+ * router that records where it was sent rather than going there. `arriving` is
+ * the address of an arrival still under way, as `getCurrentNavigation()`
+ * reports one; `url` is the page being left, which is all `router.url` knows
+ * until that arrival lands.
+ *
+ * `calls` is the refresh and the organization load in the order they happened:
+ * the token has to carry the membership before anything organization-scoped is
+ * asked for, and which came first is the only way to see that.
  */
 async function setUpShell(url: string, arriving: string | null, extraProviders: unknown[] = []) {
   const navigatedTo: string[] = [];
+  const calls: string[] = [];
+  const refreshToken = vi.fn(async () => {
+    calls.push('refreshToken');
+  });
   const userOrganizations = signal<Organization[]>([ORGANIZATION as Organization]);
   await configure([
-    { provide: AuthnApiService, useValue: { refreshToken: async () => {} } },
     ...(extraProviders as never[]),
+    { provide: AuthnApiService, useValue: { refreshToken } },
     {
       provide: Router,
       useValue: {
@@ -92,7 +107,9 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
         getOrganizationById: () => ORGANIZATION,
         getProjectById: () => undefined,
         getClusterById: () => undefined,
-        loadOrganizationData: async () => {},
+        loadOrganizationData: async () => {
+          calls.push('loadOrganizationData');
+        },
       },
     },
     {
@@ -106,27 +123,30 @@ async function setUpShell(url: string, arriving: string | null, extraProviders: 
     },
   ]);
 
-  return { app: TestBed.createComponent(App).componentInstance, navigatedTo };
+  return {
+    app: TestBed.createComponent(App).componentInstance,
+    navigatedTo,
+    refreshToken,
+    calls,
+  };
 }
 
 /**
- * The organization-api as a user with these memberships sees it, and an authn
- * service whose token refresh is a no-op. What `handleOrganizationsRecheck`
- * touches, and nothing else.
+ * The organization-api as a user with these memberships and invitations sees
+ * it. What `handleOrganizationsRecheck` and answering an invitation touch, and
+ * nothing else.
  */
-function memberOf(organizations: Organization[]): unknown[] {
+function memberOf(organizations: Organization[], invitations: Invitation[] = []): unknown[] {
   const transport = createRouterTransport(({ service }) => {
     service(OrganizationService, {
       listOrganizations: () => create(ListOrganizationsResponseSchema, { organizations }),
     });
     service(InviteService, {
-      listInvitations: () => create(ListInvitationsResponseSchema, { invitations: [] }),
+      listInvitations: () => create(ListInvitationsResponseSchema, { invitations }),
+      acceptInvitation: () => create(AcceptInvitationResponseSchema, {}),
     });
   });
-  return [
-    { provide: ORGANIZATION_TRANSPORT, useValue: transport },
-    { provide: AuthnApiService, useValue: { refreshToken: async () => {} } },
-  ];
+  return [{ provide: ORGANIZATION_TRANSPORT, useValue: transport }];
 }
 
 describe('App', () => {
@@ -191,5 +211,42 @@ describe('App', () => {
     expect(app.showOrgPicker()).toBe(false);
     expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
     expect(navigatedTo).toEqual(['/organizations/acme-corp/clusters']);
+  });
+
+  // The organizations are the database's answer and the token is sign-in's: a
+  // membership added in between leaves the two out of step, and loading the
+  // organization with the token that still names none is refused outright. So
+  // the refresh has to come first, and once is enough.
+  it('refreshes the token once, before loading the organization it settles on', async () => {
+    const { app, refreshToken, calls } = await setUpShell(
+      '/clusters',
+      null,
+      memberOf([ORGANIZATION as Organization]),
+    );
+    app.showOrgPicker.set(true);
+
+    await app.handleOrganizationsRecheck();
+
+    expect(calls).toEqual(['refreshToken', 'loadOrganizationData']);
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes the token once when an accepted invitation settles the organization', async () => {
+    const invitation = create(InvitationSchema, {
+      id: 'inv-1',
+      organizationId: ORGANIZATION.id,
+      organizationAlias: ORGANIZATION.alias,
+    });
+    const { app, refreshToken, calls } = await setUpShell(
+      '/clusters',
+      null,
+      memberOf([ORGANIZATION as Organization], [invitation]),
+    );
+
+    await app.handleAcceptInvitation(invitation);
+
+    expect(calls).toEqual(['refreshToken', 'loadOrganizationData']);
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
   });
 });
