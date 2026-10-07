@@ -79,7 +79,6 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
 		StatusWorkers:               2,
 		StatusProgressEventInterval: time.Minute,
-		MaxRetries:                  10,
 	})
 }
 
@@ -97,7 +96,7 @@ func newMock(t *testing.T) *gardener.MockClient {
 }
 
 // insertCluster inserts a cluster into the test DB. The trigger auto-creates an
-// outbox row with status=pending (which propagates to clusters.outbox_status).
+// outbox row with status=pending.
 func insertCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string) uuid.UUID {
 	t.Helper()
 
@@ -156,7 +155,6 @@ func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, na
 }
 
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.
-// The trigger propagates this to clusters.outbox_status.
 func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 
@@ -298,6 +296,34 @@ func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	).Scan(&count)
 	require.NoError(t, err)
 	require.Equalf(t, 0, count, "expected no reconcile outbox row for cluster %s", clusterID)
+}
+
+// insertFailedReconcile inserts a reconcile outbox row that failed for good
+// before exhausting its retries, as a non-retryable error does.
+func insertFailedReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, retries, failed, status_info)
+		 VALUES ($1, 'reconcile', 'reconcile', 'failed', 1, now(), 'shoot not found')`,
+		clusterID,
+	)
+	require.NoError(t, err)
+}
+
+// countOutboxReconcile returns the number of reconcile outbox rows for the cluster.
+func countOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) int {
+	t.Helper()
+
+	var count int
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox
+		 WHERE cluster_id = $1 AND event = 'reconcile'`,
+		clusterID,
+	).Scan(&count)
+	require.NoError(t, err)
+
+	return count
 }
 
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).

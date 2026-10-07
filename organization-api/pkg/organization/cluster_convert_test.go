@@ -39,3 +39,37 @@ func TestClusterStatusFromDB(t *testing.T) {
 		})
 	}
 }
+
+// A sync row's status_info is an error only while the row is retrying or
+// failed; a pending row's status_info names the precondition it waits on.
+func TestSyncStateFromRowErrorOnlyForFailures(t *testing.T) {
+	t.Parallel()
+
+	text := func(s string) pgtype.Text { return pgtype.Text{String: s, Valid: true} }
+	none := pgtype.Text{}
+
+	tests := []struct {
+		name      string
+		status    pgtype.Text
+		info      pgtype.Text
+		wantError bool
+	}{
+		{name: "never synced", status: none, info: none},
+		{name: "pending without info", status: text("pending"), info: none},
+		{name: "pending on a precondition", status: text("pending"), info: text("parent cluster not synced to Gardener")},
+		{name: "completed", status: text("completed"), info: none},
+		{name: "retrying", status: text("retrying"), info: text("boom"), wantError: true},
+		{name: "failed", status: text("failed"), info: text("boom"), wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			state := syncStateFromRow(tt.status, 0, tt.info, none, none, none, none, pgtype.Timestamptz{})
+			assert.Equal(t, tt.wantError, state.HasOutboxError())
+			if tt.wantError {
+				assert.Equal(t, tt.info.String, state.GetOutboxError())
+			}
+		})
+	}
+}

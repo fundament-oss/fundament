@@ -37,10 +37,15 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, up
 	}
 }
 
+// syncStateFromRow builds the sync state from the cluster's own latest sync
+// row and, when one of its node pools has a sync that failed for good, that
+// pool's name and error.
 func syncStateFromRow(
 	outboxStatus pgtype.Text,
 	outboxRetries int32,
 	outboxError pgtype.Text,
+	failedNodePoolName pgtype.Text,
+	failedNodePoolError pgtype.Text,
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
@@ -52,8 +57,16 @@ func syncStateFromRow(
 	if outboxStatus.Valid {
 		state.SetOutboxStatus(outboxStatus.String)
 	}
-	if outboxError.Valid {
+	// A pending row's status_info is the precondition it waits on (waiting,
+	// not failing); only a retrying or failed row carries an error.
+	if outboxError.Valid && (outboxStatus.String == "retrying" || outboxStatus.String == "failed") {
 		state.SetOutboxError(outboxError.String)
+	}
+	if failedNodePoolName.Valid {
+		state.SetFailedNodePoolName(failedNodePoolName.String)
+	}
+	if failedNodePoolError.Valid {
+		state.SetFailedNodePoolError(failedNodePoolError.String)
 	}
 	if shootStatus.Valid {
 		state.SetShootStatus(shootStatus.String)

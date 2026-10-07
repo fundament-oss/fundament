@@ -54,8 +54,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 				h.logger.Warn("drift detected: shoot missing in Gardener",
 					"cluster_id", cluster.ID, "name", cluster.Name)
 				if err := h.queries.OutboxInsertReconcile(ctx, db.OutboxInsertReconcileParams{
-					ClusterID:  pgtype.UUID{Bytes: cluster.ID, Valid: true},
-					MaxRetries: h.cfg.MaxRetries,
+					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
 				}); err != nil {
 					h.logger.Error("failed to insert reconcile outbox row", "cluster_id", cluster.ID, "error", err)
 				}

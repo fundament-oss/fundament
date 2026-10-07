@@ -42,7 +42,6 @@ type Config struct {
 	// StatusProgressEventInterval is the shortest time between two recorded
 	// progress messages of one cluster while Gardener runs an operation.
 	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
-	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
