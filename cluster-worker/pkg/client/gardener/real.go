@@ -222,13 +222,13 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		// events sync back to back), so a plain get-modify-update regularly loses
 		// the optimistic-concurrency race. Re-read and re-apply on conflict,
 		// re-reading by name/namespace so every attempt deterministically targets
-		// the shoot found above. Errors are returned unwrapped inside the closure
-		// so RetryOnConflict can recognize conflicts.
+		// the shoot found above. Every error inside the closure keeps its API status
+		// (only %w wrapping) so RetryOnConflict still recognizes conflicts.
 		key := client.ObjectKeyFromObject(existing)
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			shoot := &gardencorev1beta1.Shoot{}
 			if err := r.client.Get(ctx, key, shoot); err != nil {
-				return err
+				return fmt.Errorf("re-read shoot: %w", err)
 			}
 			if err := r.updateShootSpec(shoot, cluster); err != nil {
 				return err
