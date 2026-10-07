@@ -159,7 +159,7 @@ export default class ResourceDetailComponent implements OnInit {
     });
 
     const projectId = this.route.snapshot.parent?.params['id'];
-    if (projectId) void this.loadNamespaces(projectId);
+    if (projectId) this.loadNamespaces(projectId).catch(() => {});
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
