@@ -287,7 +287,7 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", 6*time.Minute)
 	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
 	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
-		Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile,
+		Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
 	err := h.CheckStatus(t.Context())

@@ -12,6 +12,16 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
@@ -38,6 +48,16 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
@@ -56,11 +76,21 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
 FROM tenant.clusters
-WHERE name = $1 AND deleted IS NULL;
+WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL;
 
 -- name: ClusterCreate :one
 -- Create a cluster if no active or pending-delete cluster with the same name exists.

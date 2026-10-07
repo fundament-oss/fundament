@@ -32,6 +32,10 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 		switch lastStatus {
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:
 			return true, false, nil
+		case organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+			// Ready in Gardener; health (e.g. machines still waiting) is a runtime
+			// property. Before UNHEALTHY existed this state reported RUNNING.
+			return true, false, nil
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
 			return false, true, fmt.Errorf("cluster %s entered ERROR state", clusterID)
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING,
@@ -39,7 +43,7 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 			organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 			return false, true, fmt.Errorf("cluster %s is in a terminal state and will not reach RUNNING", clusterID)
 		default:
-			// CREATING, UPGRADING, UNSPECIFIED, and any future transient states — keep polling.
+			// PROVISIONING, UPGRADING, UNSPECIFIED, and any future transient states — keep polling.
 			return false, false, nil
 		}
 	})

@@ -1,12 +1,12 @@
 
 -- name: NodePoolListByClusterID :many
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
+SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id, status, status_message, status_updated
 FROM tenant.node_pools
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC;
 
 -- name: NodePoolGetByID :one
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
+SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id, status, status_message, status_updated
 FROM tenant.node_pools
 WHERE id = $1 AND deleted IS NULL;
 

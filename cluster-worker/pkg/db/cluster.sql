@@ -65,7 +65,9 @@ SELECT
     COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
-    tenant.node_pools.created
+    tenant.node_pools.created,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
 FROM
     tenant.node_pools
     LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
@@ -76,6 +78,19 @@ WHERE
 ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
+
+-- name: NodePoolUpdateStatus :exec
+-- Record what Gardener reports about one pool's machines. Keyed by name:
+-- classification works from Gardener's machine-deployment names.
+UPDATE tenant.node_pools
+SET
+    status = @status,
+    status_message = @message,
+    status_updated = now()
+WHERE
+    cluster_id = @cluster_id
+    AND name = @pool_name
+    AND deleted IS NULL;
 
 -- name: NodePoolGetClusterID :one
 -- Returns the cluster_id for a node pool (including soft-deleted node pools).
@@ -105,7 +120,8 @@ SELECT EXISTS (
 -- 30 seconds; healthy ready clusters every @ready_interval. Ready clusters are
 -- polled at all so their message and health stay current after the first
 -- ready reading. Clusters still being created are ordered first so a large
--- ready fleet cannot crowd them out of the batch.
+-- ready fleet cannot crowd them out of the batch. A pending node-pool change
+-- keeps a ready cluster on the 30s lane until its pools are 'ready'.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
@@ -141,6 +157,18 @@ WHERE
                     tenant.clusters.shoot_status = 'ready'
                     AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
                 ) -- Ready but conditions still settling (or health not recorded yet)
+                OR EXISTS (
+                    SELECT 1
+                    FROM tenant.node_pools
+                    WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+                      AND tenant.node_pools.deleted IS NULL
+                      AND (
+                          tenant.node_pools.status IS NULL -- new pool, never classified
+                          OR tenant.node_pools.status = 'progressing'
+                          OR tenant.node_pools.status = 'waiting'
+                          OR tenant.node_pools.status = 'error'
+                      )
+                ) -- A pool whose machines are not settled keeps the cluster on the fast lane
             )
             AND (
                 tenant.clusters.shoot_status_updated IS NULL -- Never checked

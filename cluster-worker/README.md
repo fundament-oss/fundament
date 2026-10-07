@@ -176,7 +176,7 @@ stateDiagram-v2
 
 Every `STATUS_INTERVAL` tick (30s) the poller checks one batch of `CLUSTER_STATUS_BATCH_SIZE` (50) clusters, in two lanes:
 
-- **Every 30s**: clusters that are new, pending, progressing or in error, and ready clusters whose health is not known to be healthy yet.
+- **Every 30s**: clusters that are new, pending, progressing or in error, ready clusters whose health is not known to be healthy yet, and ready clusters with an active node pool whose status is still NULL, `progressing`, `waiting`, or `error`.
 - **Every `CLUSTER_STATUS_READY_INTERVAL` (5m)**: healthy ready clusters.
 
 Clusters that are still being created are ordered first, so ready clusters never delay them. With the defaults one replica keeps about 500 healthy ready clusters current (50 per tick × 10 ticks per interval); beyond that the slow lane falls behind, but the fast lane is unaffected. Raise `CLUSTER_STATUS_BATCH_SIZE` for larger fleets: with the status cache below, a poll costs one database update and no Gardener request.
@@ -189,9 +189,23 @@ Status reads fall back to direct Gardener requests (with a 10s timeout), the beh
 
 Rules for a cluster that is already ready:
 
-- Gardener reconciles every shoot periodically (gardenlet `SyncPeriod`, 1h by default), and a node-pool edit is a reconcile too. A `Reconcile` in progress leaves status, message and health unchanged, so it does not re-run the ready fan-out.
-- `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change writes a `status_healthy` or `status_unhealthy` event.
+- Gardener reconciles every shoot periodically (gardenlet `SyncPeriod`, 1h by default), and a node-pool edit is a reconcile too. A `Reconcile` in progress leaves status and message unchanged, so it does not re-run the ready fan-out — but health is re-read on every such poll, so a reconcile stuck on unprovisionable workers surfaces instead of freezing the last healthy reading.
+- `shoot_health` (`healthy` / `unhealthy`) reflects four Shoot conditions — `APIServerAvailable`, `ControlPlaneHealthy`, `SystemComponentsHealthy`, `EveryNodeReady` — all of which must hold. A condition holds at `True` or `Progressing`; treating `Progressing` as holding (rather than as a failure) keeps health from flapping on every routine reconcile, where a condition briefly transitions without anything actually being wrong. `shoot_health` is recorded on every ready poll; a change writes a `status_healthy` or `status_unhealthy` event.
 - A last operation in state `Error` or `Aborted` is one Gardener will retry: it is recorded as a `status_warning` event (once per distinct message) and does not change the status. Only `Failed` sets `error`.
+- Node pool status (below) is classified from the same poll, independently of `shoot_health`.
+
+### Node pool status
+
+Alongside `shoot_status`, each poll also classifies every active node pool, from the same Shoot report. Gardener names a pool's machine deployments `<shoot>-<pool>-z<zone>`; when something is stuck, that name shows up in the `EveryNodeReady` condition's message or in `.status.lastErrors`, so a `-<pool>-z` fragment in either text identifies which pool is at fault. Four values land in `tenant.node_pools.status` (Gardener's text in `status_message`, `status_updated` stamped on every write):
+
+- `waiting` — this pool is named, and Gardener is not failing the shoot outright over it (still progressing, retrying, or even stale on an otherwise-ready shoot)
+- `error` — this pool is named, and the shoot's last operation is `Failed` (won't be retried)
+- `progressing` — no pool is named and the shoot itself is still being created, updated, or retrying a failure that isn't this pool's
+- `ready` — no pool is named and the shoot itself is `ready`
+
+A shoot that is pending, deleting, deleted, or failed without naming any pool leaves existing pool rows untouched that poll.
+
+A transition into `waiting` or `error` records the matching event, once per distinct message rather than on every poll that repeats the same complaint. Recovering into `ready` from a prior non-ready status records `nodepool_ready`; a pool classified for the first time does not, so backfilling status onto an existing fleet doesn't fire an event storm saying nothing happened.
 
 ### Client Modes
 
@@ -219,6 +233,9 @@ All sync and status changes are recorded in the `cluster_events` table for debug
 | `status_healthy` | A ready shoot's conditions all became healthy |
 | `status_unhealthy` | A ready shoot's conditions became unhealthy |
 | `status_warning` | Gardener reported an error it will retry by itself |
+| `nodepool_waiting` | A node pool's machines are not provisioning yet, but Gardener is still retrying |
+| `nodepool_error` | A node pool's machines failed to provision and Gardener won't retry |
+| `nodepool_ready` | A node pool's machines became ready after waiting or erroring |
 
 ### Outbox Sources
 

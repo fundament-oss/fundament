@@ -1331,6 +1331,15 @@ END;]]> </definition>
 	<column name="region_machine_type_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status_message">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status_updated">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<constraint name="node_pools_pk" type="pk-constr" table="tenant.node_pools">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -1341,6 +1350,9 @@ END;]]> </definition>
 		<columns names="region_machine_type_id" ref-type="src-columns"/>
 		<columns names="id" ref-type="dst-columns"/>
 	</constraint>
+	<constraint name="node_pools_ck_status" type="ck-constr" table="tenant.node_pools">
+			<expression> <![CDATA[status IN ('progressing','waiting','error','ready')]]> </expression>
+	</constraint>
 </table>
 
 <policy name="node_pools_organization_policy" table="tenant.node_pools" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
@@ -1348,6 +1360,10 @@ END;]]> </definition>
 </policy>
 
 <policy name="node_pools_cluster_worker_read" table="tenant.node_pools" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="node_pools_cluster_worker_update" table="tenant.node_pools" command="UPDATE" permissive="true">	<roles names="fun_cluster_worker"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
@@ -2115,7 +2131,7 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_events_ck_event_type" type="ck-constr" table="tenant.cluster_events">
-			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','user_sync_succeeded','user_sync_failed')]]> </expression>
+			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','user_sync_succeeded','user_sync_failed','nodepool_waiting','nodepool_error','nodepool_ready')]]> </expression>
 	</constraint>
 	<constraint name="cluster_events_ck_sync_action" type="ck-constr" table="tenant.cluster_events">
 			<expression> <![CDATA[sync_action IN ('sync','delete')]]> </expression>
@@ -4932,7 +4948,7 @@ END;]]> </definition>
 <permission>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_cluster_worker"/>
-	<privileges select="true"/>
+	<privileges select="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_documentation_links" type="table"/>

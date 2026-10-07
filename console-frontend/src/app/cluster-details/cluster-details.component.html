@@ -357,15 +357,7 @@
                         <nldd-badge
                           slot="end"
                           size="sm"
-                          [attr.color]="
-                            pool.status === NodePoolStatus.HEALTHY
-                              ? 'success'
-                              : pool.status === NodePoolStatus.UNHEALTHY
-                                ? 'critical'
-                                : pool.status === NodePoolStatus.DEGRADED
-                                  ? 'warning'
-                                  : 'neutral'
-                          "
+                          [attr.color]="getNodePoolStatusColor(pool.status)"
                           [attr.text]="getNodePoolStatusLabel(pool.status)"
                         ></nldd-badge>
                       </nldd-title>
@@ -411,6 +403,10 @@
                           </nldd-list-item>
                         }
                       </nldd-list>
+                      @if (pool.statusMessage) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text size="sm">{{ pool.statusMessage }}</nldd-text>
+                      }
                     </nldd-container>
                   </nldd-card>
                 }

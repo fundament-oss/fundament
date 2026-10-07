@@ -37,11 +37,21 @@ type shootStatusUpdate struct {
 func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	// Gardener reconciles running shoots periodically (gardenlet SyncPeriod, 1h
 	// by default), and a node-pool edit is a reconcile too. Neither is a
-	// lifecycle change for a ready cluster: keep status, message and health.
+	// lifecycle change for a ready cluster: keep status and message. Health is
+	// re-read, so a reconcile stuck on unprovisionable workers surfaces instead
+	// of freezing the last healthy reading.
 	if stored.Status == gardener.StatusReady &&
 		observed.Status == gardener.StatusProgressing &&
 		observed.Operation == gardener.OperationReconcile {
-		return shootStatusUpdate{Status: stored.Status, Message: stored.Message, Health: stored.Health}
+		update := shootStatusUpdate{Status: stored.Status, Message: stored.Message, Health: shootHealth(observed.Healthy)}
+		if stored.Health != "" && stored.Health != update.Health {
+			eventType := dbconst.ClusterEventEventType_StatusHealthy
+			if update.Health == dbconst.ClusterShootHealth_Unhealthy {
+				eventType = dbconst.ClusterEventEventType_StatusUnhealthy
+			}
+			update.Events = []statusEvent{{Type: eventType, Message: observed.Message}}
+		}
+		return update
 	}
 
 	// Errors Gardener will retry by itself are a warning, not a failure: keep the

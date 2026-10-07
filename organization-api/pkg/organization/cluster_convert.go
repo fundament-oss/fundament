@@ -8,8 +8,9 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
-func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) organizationv1.ClusterStatus {
+// clusterStatusFromDB derives cluster status from deleted flag + Gardener
+// shoot status, refined for ready shoots by health and pending pool changes.
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, shootHealth pgtype.Text, hasPendingNodePools bool) organizationv1.ClusterStatus {
 	if deleted.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	}
@@ -20,6 +21,12 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) or
 	case "pending", "progressing":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	case "ready":
+		if shootHealth.Valid && shootHealth.String == "unhealthy" {
+			return organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY
+		}
+		if hasPendingNodePools {
+			return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
+		}
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR

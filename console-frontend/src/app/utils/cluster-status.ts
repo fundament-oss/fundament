@@ -71,6 +71,7 @@ export function getStatusBadgeColor(status: ClusterStatus): string {
     [ClusterStatus.STOPPED]: 'neutral',
     [ClusterStatus.UNSPECIFIED]: 'neutral',
     [ClusterStatus.DELETING]: 'robijnrood',
+    [ClusterStatus.UNHEALTHY]: 'critical',
   };
   return colors[status];
 }
@@ -80,24 +81,33 @@ export function getStatusLabel(status: ClusterStatus): string {
     [ClusterStatus.PROVISIONING]: 'Provisioning',
     [ClusterStatus.STARTING]: 'Starting',
     [ClusterStatus.RUNNING]: 'Running',
-    [ClusterStatus.UPGRADING]: 'Upgrading',
+    [ClusterStatus.UPGRADING]: 'Updating',
     [ClusterStatus.ERROR]: 'Error',
     [ClusterStatus.STOPPING]: 'Stopping',
     [ClusterStatus.STOPPED]: 'Stopped',
     [ClusterStatus.UNSPECIFIED]: 'Unknown status',
     [ClusterStatus.DELETING]: 'Deleting',
+    [ClusterStatus.UNHEALTHY]: 'Unhealthy',
   };
   return labels[status];
 }
 
+const KUBECONFIG_AVAILABLE: ReadonlySet<ClusterStatus> = new Set([
+  ClusterStatus.RUNNING,
+  ClusterStatus.UPGRADING,
+  ClusterStatus.UNHEALTHY,
+]);
+
 /**
  * Whether a kubeconfig can be downloaded for a cluster in this status.
  *
- * Mirrors the organization-api gate in `GetKubeconfig`: it only serves a
- * kubeconfig once the shoot reports `ready`, which is the sole shoot status
- * that maps to `RUNNING`. Any other status would be rejected with
- * "cluster not ready yet", so the UI should not offer the download.
+ * Mirrors the organization-api gate in `GetKubeconfig`: it serves a
+ * kubeconfig whenever the shoot reports `ready` underneath, which maps to
+ * `RUNNING`, `UPGRADING`, or `UNHEALTHY` — the shoot keeps serving a
+ * kubeconfig while updating or degraded. Any other status would be
+ * rejected with "cluster not ready yet", so the UI should not offer the
+ * download.
  */
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
-  return status === ClusterStatus.RUNNING;
+  return KUBECONFIG_AVAILABLE.has(status);
 }

@@ -231,7 +231,7 @@ func TestTrimShootForStatus(t *testing.T) {
 	assert.Equal(t, clusterID.String(), trimmed.Labels[LabelClusterID])
 	assert.NotNil(t, trimmed.DeletionTimestamp)
 	assert.Equal(t, gardencorev1beta1.LastOperationStateSucceeded, trimmed.Status.LastOperation.State)
-	assert.Len(t, trimmed.Status.Conditions, 3)
+	assert.Len(t, trimmed.Status.Conditions, 4)
 }
 
 func TestShootClusterIDValue(t *testing.T) {

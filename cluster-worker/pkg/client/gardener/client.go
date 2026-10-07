@@ -41,12 +41,17 @@ type ShootStatus struct {
 	Message string
 	// Operation is empty when the Shoot has no last operation yet.
 	Operation OperationType
-	// Healthy reports whether all required Shoot conditions are True.
-	// Only meaningful for StatusReady.
+	// Healthy reports whether all required Shoot conditions hold. Set for
+	// StatusReady and StatusProgressing; false otherwise.
 	Healthy bool
 	// Retrying marks a StatusError that Gardener will retry by itself
 	// (lastOperation state Error or Aborted), as opposed to Failed.
 	Retrying bool
+	// EveryNodeReadyMessage is the EveryNodeReady condition's message while the
+	// condition is not satisfied; it names the machine deployments that wait.
+	EveryNodeReadyMessage string
+	// LastErrors are the Shoot's .status.lastErrors descriptions.
+	LastErrors []string
 }
 
 // Status message constants for consistent messaging.

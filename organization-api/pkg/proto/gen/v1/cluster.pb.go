@@ -839,17 +839,18 @@ func (b0 ResourceUsageInfo_builder) Build() *ResourceUsageInfo {
 
 // Node pool information
 type NodePool struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id           string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name         string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_MachineType  string                 `protobuf:"bytes,30,opt,name=machine_type,json=machineType"`
-	xxx_hidden_CurrentNodes int32                  `protobuf:"varint,40,opt,name=current_nodes,json=currentNodes"`
-	xxx_hidden_MinNodes     int32                  `protobuf:"varint,50,opt,name=min_nodes,json=minNodes"`
-	xxx_hidden_MaxNodes     int32                  `protobuf:"varint,60,opt,name=max_nodes,json=maxNodes"`
-	xxx_hidden_Status       NodePoolStatus         `protobuf:"varint,70,opt,name=status,enum=organization.v1.NodePoolStatus"`
-	xxx_hidden_Version      string                 `protobuf:"bytes,80,opt,name=version"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id            string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name          string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_MachineType   string                 `protobuf:"bytes,30,opt,name=machine_type,json=machineType"`
+	xxx_hidden_CurrentNodes  int32                  `protobuf:"varint,40,opt,name=current_nodes,json=currentNodes"`
+	xxx_hidden_MinNodes      int32                  `protobuf:"varint,50,opt,name=min_nodes,json=minNodes"`
+	xxx_hidden_MaxNodes      int32                  `protobuf:"varint,60,opt,name=max_nodes,json=maxNodes"`
+	xxx_hidden_Status        NodePoolStatus         `protobuf:"varint,70,opt,name=status,enum=organization.v1.NodePoolStatus"`
+	xxx_hidden_Version       string                 `protobuf:"bytes,80,opt,name=version"`
+	xxx_hidden_StatusMessage string                 `protobuf:"bytes,90,opt,name=status_message,json=statusMessage"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *NodePool) Reset() {
@@ -933,6 +934,13 @@ func (x *NodePool) GetVersion() string {
 	return ""
 }
 
+func (x *NodePool) GetStatusMessage() string {
+	if x != nil {
+		return x.xxx_hidden_StatusMessage
+	}
+	return ""
+}
+
 func (x *NodePool) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -965,17 +973,22 @@ func (x *NodePool) SetVersion(v string) {
 	x.xxx_hidden_Version = v
 }
 
+func (x *NodePool) SetStatusMessage(v string) {
+	x.xxx_hidden_StatusMessage = v
+}
+
 type NodePool_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id           string
-	Name         string
-	MachineType  string
-	CurrentNodes int32
-	MinNodes     int32
-	MaxNodes     int32
-	Status       NodePoolStatus
-	Version      string
+	Id            string
+	Name          string
+	MachineType   string
+	CurrentNodes  int32
+	MinNodes      int32
+	MaxNodes      int32
+	Status        NodePoolStatus
+	Version       string
+	StatusMessage string
 }
 
 func (b0 NodePool_builder) Build() *NodePool {
@@ -990,6 +1003,7 @@ func (b0 NodePool_builder) Build() *NodePool {
 	x.xxx_hidden_MaxNodes = b.MaxNodes
 	x.xxx_hidden_Status = b.Status
 	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_StatusMessage = b.StatusMessage
 	return m0
 }
 
@@ -3058,7 +3072,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
 	"\x06memory\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x06memory\x122\n" +
 	"\x04disk\x18\x1e \x01(\v2\x1e.organization.v1.ResourceUsageR\x04disk\x122\n" +
-	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\x83\x02\n" +
+	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xaa\x02\n" +
 	"\bNodePool\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3068,7 +3082,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\tmin_nodes\x182 \x01(\x05R\bminNodes\x12\x1b\n" +
 	"\tmax_nodes\x18< \x01(\x05R\bmaxNodes\x127\n" +
 	"\x06status\x18F \x01(\x0e2\x1f.organization.v1.NodePoolStatusR\x06status\x12\x18\n" +
-	"\aversion\x18P \x01(\tR\aversion\"\x8f\x01\n" +
+	"\aversion\x18P \x01(\tR\aversion\x12%\n" +
+	"\x0estatus_message\x18Z \x01(\tR\rstatusMessage\"\x8f\x01\n" +
 	"\x14CreateClusterRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +

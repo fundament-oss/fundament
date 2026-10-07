@@ -140,6 +140,7 @@ message NodePool {
   int32 max_nodes = 60;
   NodePoolStatus status = 70;
   string version = 80;
+  string status_message = 90; // Gardener's reason while status is WAITING_FOR_MACHINES or FAILED
 }
 
 // Create cluster request. Region and kubernetes version are the catalog
@@ -199,7 +200,7 @@ message GetClusterActivityResponse {
 // Cluster event from cluster_events table
 message ClusterEvent {
   string id = 10;
-  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, user_sync_succeeded, user_sync_failed
+  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, user_sync_succeeded, user_sync_failed, nodepool_waiting, nodepool_error, nodepool_ready
   google.protobuf.Timestamp created_at = 30;
   string sync_action = 40 [features.field_presence = EXPLICIT]; // sync, delete (for sync events)
   string message = 50 [features.field_presence = EXPLICIT];

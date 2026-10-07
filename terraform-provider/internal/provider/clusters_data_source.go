@@ -181,6 +181,8 @@ func clusterStatusToString(status organizationv1.ClusterStatus) string {
 		return "running"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
 		return "upgrading"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+		return "unhealthy"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
 		return "error"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING:

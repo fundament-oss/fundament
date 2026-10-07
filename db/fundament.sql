@@ -1045,8 +1045,12 @@ CREATE TABLE tenant.node_pools (
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	region_machine_type_id uuid,
+	status text,
+	status_message text,
+	status_updated timestamptz,
 	CONSTRAINT node_pools_pk PRIMARY KEY (id),
-	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
+	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted),
+	CONSTRAINT node_pools_ck_status CHECK (status IN ('progressing','waiting','error','ready'))
 );
 -- ddl-end --
 ALTER TABLE tenant.node_pools OWNER TO fun_owner;
@@ -1068,6 +1072,15 @@ CREATE POLICY node_pools_organization_policy ON tenant.node_pools
 CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
 	AS PERMISSIVE
 	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: node_pools_cluster_worker_update | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_cluster_worker_update ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_cluster_worker_update ON tenant.node_pools
+	AS PERMISSIVE
+	FOR UPDATE
 	TO fun_cluster_worker
 	USING (true);
 -- ddl-end --
@@ -1969,7 +1982,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','user_sync_succeeded','user_sync_failed')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','user_sync_succeeded','user_sync_failed','nodepool_waiting','nodepool_error','nodepool_ready')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
@@ -4053,8 +4066,8 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: grant_r_428efc5f74 | type: PERMISSION --
-GRANT SELECT
+-- object: grant_rw_428efc5f74 | type: PERMISSION --
+GRANT SELECT,UPDATE
    ON TABLE tenant.node_pools
    TO fun_cluster_worker;
 

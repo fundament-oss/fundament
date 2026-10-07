@@ -45,6 +45,9 @@ type TenantNodePool struct {
 	Created             pgtype.Timestamptz
 	Deleted             pgtype.Timestamptz
 	RegionMachineTypeID pgtype.UUID
+	Status              pgtype.Text
+	StatusMessage       pgtype.Text
+	StatusUpdated       pgtype.Timestamptz
 }
 
 type TenantProject struct {

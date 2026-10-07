@@ -68,8 +68,41 @@ func TestNextShootStatus(t *testing.T) {
 		{
 			name:     "routine reconcile keeps the row",
 			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
-			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile, Healthy: true},
 			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+		},
+		{
+			name:   "stuck worker reconcile degrades a ready cluster",
+			stored: storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+				Message: "Reconcile: Waiting until worker resource status is updated",
+			},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: unhealthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusUnhealthy, Message: "Reconcile: Waiting until worker resource status is updated"}},
+			},
+		},
+		{
+			name:   "routine reconcile on a healthy cluster stays quiet",
+			stored: storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+				Message: "Reconcile: 10% done", Healthy: true,
+			},
+			want: shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
+		},
+		{
+			name:   "reconcile health recovery records status_healthy",
+			stored: storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: unhealthy},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+				Message: "Reconcile: 50% done", Healthy: true,
+			},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusHealthy, Message: "Reconcile: 50% done"}},
+			},
 		},
 		{
 			name:     "create in progress is not sticky",

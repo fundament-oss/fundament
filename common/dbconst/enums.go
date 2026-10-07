@@ -45,6 +45,9 @@ const (
 	ClusterEventEventType_StatusWarning     ClusterEventEventType = "status_warning"
 	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
 	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_NodepoolWaiting   ClusterEventEventType = "nodepool_waiting"
+	ClusterEventEventType_NodepoolError     ClusterEventEventType = "nodepool_error"
+	ClusterEventEventType_NodepoolReady     ClusterEventEventType = "nodepool_ready"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
@@ -155,6 +158,16 @@ const (
 	LogicalDeviceRole_ConsoleServer LogicalDeviceRole = "console_server"
 	LogicalDeviceRole_CableManager  LogicalDeviceRole = "cable_manager"
 	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
+)
+
+// NodePoolStatus represents valid values for tenant.node_pools.status.
+type NodePoolStatus string
+
+const (
+	NodePoolStatus_Progressing NodePoolStatus = "progressing"
+	NodePoolStatus_Waiting     NodePoolStatus = "waiting"
+	NodePoolStatus_Error       NodePoolStatus = "error"
+	NodePoolStatus_Ready       NodePoolStatus = "ready"
 )
 
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.

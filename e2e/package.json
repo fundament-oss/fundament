@@ -11,6 +11,7 @@
     "test:api": "NODE_OPTIONS='--import tsx' cucumber-js --tags @api",
     "test:apikey": "NODE_OPTIONS='--import tsx' cucumber-js --tags @apikey",
     "test:token": "NODE_OPTIONS='--import tsx' cucumber-js --tags @token",
+    "test:real-gardener": "NODE_OPTIONS='--import tsx' cucumber-js -p real-gardener",
     "report": "open reports/cucumber-report.html"
   },
   "dependencies": {

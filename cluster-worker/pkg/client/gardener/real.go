@@ -337,17 +337,39 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
 		operation := OperationType(op.Type)
+		healthy := r.isShootHealthy(shoot)
+		enrMessage := everyNodeReadyMessage(shoot)
+		lastErrors := shootLastErrors(shoot)
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description), Operation: operation}, nil
+			return &ShootStatus{
+				Status:                StatusProgressing,
+				Message:               fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation:             operation,
+				Healthy:               healthy,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
+			}, nil
 		case gardencorev1beta1.LastOperationStateError:
 			// "Completed with errors and will be retried" per Gardener's API.
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}, nil
+			return &ShootStatus{
+				Status:                StatusError,
+				Message:               op.Description,
+				Operation:             operation,
+				Retrying:              true,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
+			}, nil
 		case gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}, nil
+			return &ShootStatus{
+				Status:                StatusError,
+				Message:               op.Description,
+				Operation:             operation,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
+			}, nil
 		case gardencorev1beta1.LastOperationStateSucceeded:
-			healthy := r.isShootHealthy(shoot)
 			msg := MsgShootReady
 			if !healthy {
 				msg = MsgShootUnhealthy
@@ -356,14 +378,23 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 					"namespace", shoot.Namespace)
 			}
 			return &ShootStatus{
-				Status:    StatusReady,
-				Message:   msg,
-				Operation: operation,
-				Healthy:   healthy,
+				Status:                StatusReady,
+				Message:               msg,
+				Operation:             operation,
+				Healthy:               healthy,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
 			}, nil
 		case gardencorev1beta1.LastOperationStateAborted:
 			// Seen while the seed was not ready; Gardener resumed the operation by itself.
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}, nil
+			return &ShootStatus{
+				Status:                StatusError,
+				Message:               "Operation was aborted: " + op.Description,
+				Operation:             operation,
+				Retrying:              true,
+				EveryNodeReadyMessage: enrMessage,
+				LastErrors:            lastErrors,
+			}, nil
 		}
 	}
 
@@ -576,12 +607,13 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	return nil
 }
 
-// isShootHealthy checks if all key conditions are True.
+// isShootHealthy checks if all key conditions hold (True or Progressing).
 func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 	requiredConditions := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
+		gardencorev1beta1.ShootEveryNodeReady,
 	}
 
 	conditionMap := make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.ConditionStatus)
@@ -592,12 +624,43 @@ func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 
 	for _, required := range requiredConditions {
 		status, exists := conditionMap[required]
-		if !exists || status != gardencorev1beta1.ConditionTrue {
+		if !exists || !conditionHolds(status) {
 			return false
 		}
 	}
 
 	return true
+}
+
+// everyNodeReadyMessage returns the EveryNodeReady condition's message while
+// the condition is not satisfied; it names the machine deployments that wait.
+func everyNodeReadyMessage(shoot *gardencorev1beta1.Shoot) string {
+	for i := range shoot.Status.Conditions {
+		c := &shoot.Status.Conditions[i]
+		if c.Type == gardencorev1beta1.ShootEveryNodeReady && !conditionHolds(c.Status) {
+			return c.Message
+		}
+	}
+	return ""
+}
+
+// shootLastErrors returns the Shoot's .status.lastErrors descriptions.
+func shootLastErrors(shoot *gardencorev1beta1.Shoot) []string {
+	if len(shoot.Status.LastErrors) == 0 {
+		return nil
+	}
+	errs := make([]string, len(shoot.Status.LastErrors))
+	for i := range shoot.Status.LastErrors {
+		errs[i] = shoot.Status.LastErrors[i].Description
+	}
+	return errs
+}
+
+// conditionHolds treats Progressing as holding: it means "was True, currently
+// transitioning", and counting it as a failure would flap health on every
+// routine reconcile.
+func conditionHolds(status gardencorev1beta1.ConditionStatus) bool {
+	return status == gardencorev1beta1.ConditionTrue || status == gardencorev1beta1.ConditionProgressing
 }
 
 // shootAnnotations returns the base annotations for a new Shoot.

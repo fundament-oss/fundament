@@ -124,8 +124,24 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
     [NodePoolStatus.HEALTHY]: 'Healthy',
     [NodePoolStatus.DEGRADED]: 'Degraded',
     [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
+    [NodePoolStatus.PROVISIONING]: 'Creating machines',
+    [NodePoolStatus.WAITING_FOR_MACHINES]: 'Waiting for machines',
+    [NodePoolStatus.FAILED]: 'Failed',
   };
   return labels[status];
+};
+
+const getNodePoolStatusColor = (status: NodePoolStatus): string => {
+  const colors: Record<NodePoolStatus, string> = {
+    [NodePoolStatus.UNSPECIFIED]: 'neutral',
+    [NodePoolStatus.HEALTHY]: 'success',
+    [NodePoolStatus.DEGRADED]: 'warning',
+    [NodePoolStatus.UNHEALTHY]: 'critical',
+    [NodePoolStatus.PROVISIONING]: 'mintgroen',
+    [NodePoolStatus.WAITING_FOR_MACHINES]: 'warning',
+    [NodePoolStatus.FAILED]: 'critical',
+  };
+  return colors[status];
 };
 
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
@@ -185,6 +201,9 @@ const getEventTypeLabel = (eventType: string): string => {
     status_warning: 'Cluster warning',
     user_sync_succeeded: 'Users synced',
     user_sync_failed: 'User sync failed',
+    nodepool_waiting: 'Node pool waiting',
+    nodepool_error: 'Node pool failed',
+    nodepool_ready: 'Node pool ready',
   };
   return labels[eventType] || eventType;
 };
@@ -194,15 +213,19 @@ const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
   'status_error',
   'status_unhealthy',
   'user_sync_failed',
+  'nodepool_error',
 ]);
+
+/** Gardener is already retrying these by itself, so they stay a notch below
+ *  critical even though something is amiss. */
+const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set(['status_warning', 'nodepool_waiting']);
 
 /** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and
- *  the event label names it too, so color is never the sole signal. A warning is
- *  something Gardener is already retrying by itself, so it is not critical. */
+ *  the event label names it too, so color is never the sole signal. */
 const getEventTypeColor = (eventType: string): string => {
   if (CRITICAL_EVENT_TYPES.has(eventType)) return 'critical';
-  if (eventType === 'status_warning') return 'warning';
+  if (WARNING_EVENT_TYPES.has(eventType)) return 'warning';
   return 'default';
 };
 
@@ -292,9 +315,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private usageRetryTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Expose enums for use in template
-  NodePoolStatus = NodePoolStatus;
-
+  // Expose enum for use in template
   ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
@@ -629,6 +650,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   getNodePoolStatusLabel = getNodePoolStatusLabel;
+
+  getNodePoolStatusColor = getNodePoolStatusColor;
 
   deleteConfirmationInput = signal<string>('');
 

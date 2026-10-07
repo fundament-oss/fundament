@@ -103,6 +103,16 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
@@ -115,19 +125,21 @@ type ClusterGetByIDParams struct {
 }
 
 type ClusterGetByIDRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       pgtype.Text
-	OutboxRetries      int32
-	OutboxError        pgtype.Text
+	ID                  uuid.UUID
+	OrganizationID      uuid.UUID
+	Name                string
+	Region              string
+	KubernetesVersion   string
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	ShootStatus         pgtype.Text
+	ShootStatusMessage  pgtype.Text
+	ShootStatusUpdated  pgtype.Timestamptz
+	ShootHealth         pgtype.Text
+	HasPendingNodePools bool
+	OutboxStatus        pgtype.Text
+	OutboxRetries       int32
+	OutboxError         pgtype.Text
 }
 
 // Get cluster by ID, including deleted clusters for direct access.
@@ -145,6 +157,8 @@ func (q *Queries) ClusterGetByID(ctx context.Context, arg ClusterGetByIDParams) 
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
+		&i.ShootHealth,
+		&i.HasPendingNodePools,
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
@@ -164,11 +178,21 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
 FROM tenant.clusters
-WHERE name = $1 AND deleted IS NULL
+WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL
 `
 
 type ClusterGetByNameParams struct {
@@ -176,19 +200,21 @@ type ClusterGetByNameParams struct {
 }
 
 type ClusterGetByNameRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       pgtype.Text
-	OutboxRetries      int32
-	OutboxError        pgtype.Text
+	ID                  uuid.UUID
+	OrganizationID      uuid.UUID
+	Name                string
+	Region              string
+	KubernetesVersion   string
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	ShootStatus         pgtype.Text
+	ShootStatusMessage  pgtype.Text
+	ShootStatusUpdated  pgtype.Timestamptz
+	ShootHealth         pgtype.Text
+	HasPendingNodePools bool
+	OutboxStatus        pgtype.Text
+	OutboxRetries       int32
+	OutboxError         pgtype.Text
 }
 
 func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNameParams) (ClusterGetByNameRow, error) {
@@ -205,6 +231,8 @@ func (q *Queries) ClusterGetByName(ctx context.Context, arg ClusterGetByNamePara
 		&i.ShootStatus,
 		&i.ShootStatusMessage,
 		&i.ShootStatusUpdated,
+		&i.ShootHealth,
+		&i.HasPendingNodePools,
 		&i.OutboxStatus,
 		&i.OutboxRetries,
 		&i.OutboxError,
@@ -273,6 +301,16 @@ SELECT
     shoot_status,
     shoot_status_message,
     shoot_status_updated,
+    shoot_health,
+    EXISTS (
+        SELECT 1
+        FROM tenant.node_pools
+        WHERE node_pools.cluster_id = clusters.id
+          AND node_pools.deleted IS NULL
+          AND (node_pools.status IS NULL
+               OR node_pools.status = 'progressing'
+               OR node_pools.status = 'waiting')
+    ) AS has_pending_node_pools,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
@@ -288,21 +326,23 @@ ORDER BY created DESC, id DESC
 `
 
 type ClusterListRow struct {
-	ID                 uuid.UUID
-	OrganizationID     uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Created            pgtype.Timestamptz
-	Deleted            pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootStatusUpdated pgtype.Timestamptz
-	OutboxStatus       pgtype.Text
-	OutboxRetries      int32
-	OutboxError        pgtype.Text
-	ProjectCount       int64
-	NodePoolCount      int64
+	ID                  uuid.UUID
+	OrganizationID      uuid.UUID
+	Name                string
+	Region              string
+	KubernetesVersion   string
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	ShootStatus         pgtype.Text
+	ShootStatusMessage  pgtype.Text
+	ShootStatusUpdated  pgtype.Timestamptz
+	ShootHealth         pgtype.Text
+	HasPendingNodePools bool
+	OutboxStatus        pgtype.Text
+	OutboxRetries       int32
+	OutboxError         pgtype.Text
+	ProjectCount        int64
+	NodePoolCount       int64
 }
 
 // List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
@@ -327,6 +367,8 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 			&i.ShootStatus,
 			&i.ShootStatusMessage,
 			&i.ShootStatusUpdated,
+			&i.ShootHealth,
+			&i.HasPendingNodePools,
 			&i.OutboxStatus,
 			&i.OutboxRetries,
 			&i.OutboxError,
