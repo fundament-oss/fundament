@@ -14,6 +14,7 @@ type CLI struct {
 	Output OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 
 	Organization OrganizationCmd `cmd:"" help:"Manage organizations and their members."`
+	Plugin       PluginCmd       `cmd:"" help:"Review published plugin versions."`
 	User         UserCmd         `cmd:"" help:"Manage users."`
 }
 
