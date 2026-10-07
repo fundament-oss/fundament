@@ -85,6 +85,17 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Region", cluster.GetRegion())
 	PrintKeyValue(w, "Kubernetes Version", cluster.GetKubernetesVersion())
 	PrintKeyValue(w, "Status", formatClusterStatus(cluster.GetStatus()))
+	if sync := cluster.GetSyncState(); sync != nil {
+		if sync.HasOutboxStatus() {
+			PrintKeyValue(w, "Sync Status", sync.GetOutboxStatus())
+		}
+		if sync.HasOutboxError() {
+			PrintKeyValue(w, "Sync Error", sync.GetOutboxError())
+		}
+		if sync.HasFailedNodePoolName() {
+			PrintKeyValue(w, "Node Pool Sync Error", fmt.Sprintf("%s: %s", sync.GetFailedNodePoolName(), sync.GetFailedNodePoolError()))
+		}
+	}
 	if cluster.GetCreated() != nil {
 		PrintKeyValue(w, "Created", cluster.GetCreated().AsTime().Format(TimeFormat))
 	}
