@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -50,6 +51,10 @@ type Config struct {
 type GardenerConfig struct {
 	Mode       string `env:"MODE"`       // mock or real
 	Kubeconfig string `env:"KUBECONFIG"` // required when Mode == real
+	// SandboxKubeconfig, in mock mode, is a kubeconfig for the local plugin
+	// sandbox: project namespaces are created there instead of in memory, so
+	// plugins can use them. Local development only.
+	SandboxKubeconfig string `env:"SANDBOX_KUBECONFIG"`
 
 	ProviderType           string `env:"PROVIDER_TYPE"`            // e.g. local, metal
 	CloudProfile           string `env:"CLOUD_PROFILE"`            // e.g. local, metal
@@ -116,7 +121,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.Gardener.Mode, gardenerClient, logger)
+	shootAccess, err := createShootAccess(cfg.Gardener, gardenerClient, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -291,16 +296,30 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func createShootAccess(gardenerMode string, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
-	switch gardenerMode {
+func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
+	switch g.Mode {
 	case "mock":
+		if g.SandboxKubeconfig != "" {
+			kubeconfig, err := os.ReadFile(g.SandboxKubeconfig)
+			switch {
+			case err == nil:
+				logger.Info("using mock shoot access with namespaces on the plugin sandbox", "kubeconfig", g.SandboxKubeconfig)
+				return shoot.NewSandboxShootAccess(kubeconfig, logger)
+			case errors.Is(err, os.ErrNotExist):
+				// The Secret is created after the platform comes up (just
+				// plugin-sandbox-kubeconfig); Reloader restarts the pod then.
+				logger.Warn("sandbox kubeconfig not there yet, keeping namespaces in memory", "kubeconfig", g.SandboxKubeconfig)
+			default:
+				return nil, fmt.Errorf("read sandbox kubeconfig: %w", err)
+			}
+		}
 		logger.Info("using mock shoot access (in-memory)")
 		return shoot.NewMockShootAccess(logger), nil
 	case "real":
 		logger.Info("using real shoot access (AdminKubeconfigRequest)")
 		return shoot.NewRealShootAccess(gardenerClient, logger), nil
 	default:
-		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", gardenerMode)
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", g.Mode)
 	}
 }
 
