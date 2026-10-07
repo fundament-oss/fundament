@@ -1,28 +1,59 @@
-// Page factory for the consumer kinds (BlockStorage, FileStorage): one
-// implementation of the list/detail/create flows, parameterized per kind. The
-// kinds differ only in labels/texts and the FileStorage-only metadataServers
-// field, so each page file reduces to a factory call with its kind's config.
+// Page factory for the consumer kinds (BlockStorage, FileStorage,
+// ObjectStorage): one implementation of the list and detail flows,
+// parameterized per kind; create and edit open in an <nldd-sheet> from those
+// pages. The kinds differ only in labels/texts and a few kind-specific spec
+// fields, so each page file reduces to a factory call with its kind's config.
 
 import {
   loadSdk,
+  openSheet,
+  errorBox,
+  ensureNldd,
+  fetchCephCapacity,
+  humanizeQuantity,
   escapeHtml,
   emptyRow,
   errorRow,
   wireRowLinks,
-  navigateToCreate,
   navigateToDetail,
-  navigateBack,
   renderDefList,
   replicasFieldHtml,
   replicasValue,
   defaultFieldHtml,
-  metadataServersFieldHtml,
-  metadataServersError,
+  integerFieldHtml,
+  integerFieldError,
   resourceNameError,
   wireSubmit,
 } from './_shared.js';
+import { mountBucketsSection } from './bucket-pages.js';
 
 const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
+
+// Descriptors for the kind-specific integer spec fields. Everywhere a field
+// surfaces — forms, validation, spec building, list cells, detail pairs —
+// iterates cfg.intFields, so a field cannot be rendered in one form and
+// forgotten in another.
+const METADATA_SERVERS = {
+  name: 'metadataServers',
+  id: 'mds-count',
+  label: 'Metadata servers',
+  column: 'MDS',
+  hint: 'Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.',
+  min: 1,
+  max: 5,
+  default: 1,
+};
+
+const GATEWAY_INSTANCES = {
+  name: 'gatewayInstances',
+  id: 'rgw-count',
+  label: 'Gateway instances',
+  column: 'Gateways',
+  hint: 'Gateway pods serving the S3 API. 1 is right unless request throughput demands more.',
+  min: 1,
+  max: 5,
+  default: 1,
+};
 
 export const BLOCKSTORAGE = {
   resource: 'blockstorages',
@@ -35,7 +66,7 @@ export const BLOCKSTORAGE = {
   createIntro: `Block storage provides ReadWriteOnce volumes, each mounted by one node at a
     time, over the shared Ceph cluster's disks. It needs at least one DiskPool
     contributing disks; without one it stays Degraded.`,
-  metadataServers: false,
+  intFields: [],
   defaultToggle: true,
   nameMaxLength: 63,
 };
@@ -51,34 +82,94 @@ export const FILESTORAGE = {
   createIntro: `File storage provides ReadWriteMany volumes over the shared Ceph cluster's
     disks, which many pods on many nodes can mount at once. It needs at least one
     DiskPool contributing disks; without one it stays Degraded.`,
-  metadataServers: true,
+  intFields: [METADATA_SERVERS],
   defaultToggle: false,
   // The CRD caps FileStorage names at 56: Rook derives a cephfs-<name> label
   // capped at 63. Enforced here too so the form rejects it before the server.
   nameMaxLength: 56,
 };
 
-function metadataServersValue(form) {
-  return Number(form.querySelector('[name="metadataServers"]').value);
+export const OBJECTSTORAGE = {
+  resource: 'objectstorages',
+  kind: 'ObjectStorage',
+  label: 'Object Storage',
+  emptyMessage: 'No object storage.',
+  noneSelected: 'No object storage selected.',
+  storageClassPrefix: 'cephobj-',
+  detailHint: `Create buckets below; each bucket's endpoint and credentials are
+    stored in its namespace, named after the bucket.`,
+  createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
+    disks. It needs at least one DiskPool contributing disks; without one it
+    stays Degraded.`,
+  intFields: [GATEWAY_INSTANCES],
+  defaultToggle: false,
+  // The CRD caps ObjectStorage names at 30: Rook rejects CephObjectStore
+  // names over 38 and the derived name is cephobj-<name>. Enforced here too
+  // so the form rejects it first.
+  nameMaxLength: 30,
+  // The detail page embeds the Buckets section: the ObjectBucketClaims
+  // provisioned against this store's StorageClass.
+  detailSection: mountBucketsSection,
+};
+
+function intFieldValue(form, field) {
+  return Number(form.querySelector(`[name="${field.name}"]`).value);
+}
+
+// fieldsError validates the kind's integer fields; first error wins.
+function fieldsError(cfg, form) {
+  for (const field of cfg.intFields) {
+    const invalid = integerFieldError(field, intFieldValue(form, field));
+    if (invalid) return invalid;
+  }
+  return null;
+}
+
+// intFieldsHtml renders the kind's integer inputs for a create or edit form;
+// spec is undefined on create, so every field falls back to its default.
+function intFieldsHtml(cfg, spec) {
+  return cfg.intFields
+    .map((field) => integerFieldHtml(field, spec?.[field.name] ?? field.default))
+    .join('');
 }
 
 // specFrom reads the create/edit form into a spec object.
 function specFrom(cfg, form) {
   const spec = { replicas: replicasValue(form) };
-  if (cfg.metadataServers) spec.metadataServers = metadataServersValue(form);
+  for (const field of cfg.intFields) spec[field.name] = intFieldValue(form, field);
   // Always sent, so unticking the box merge-patches the field back to false.
   if (cfg.defaultToggle) spec.default = form.querySelector('[name="default"]').checked;
   return spec;
 }
 
 export async function consumerListPage(cfg) {
+  // The header row comes from the same cfg.intFields the body cells do, so
+  // the two cannot drift; the HTML ships an empty table shell. Rendered
+  // before the SDK loads so the table never shows headerless.
+  const headers = [
+    'Name', 'Phase', 'Storage Class', 'Replicas',
+    ...cfg.intFields.map((field) => field.column),
+    'Failure Domain', 'Message',
+  ];
+  // Null-guarded: a stale cached pre-0.3.0 page has a static <thead> without
+  // id="head", and throwing here would kill the whole module.
+  const head = document.getElementById('head');
+  if (head) {
+    head.innerHTML = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+  }
+  const colspan = headers.length;
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = emptyRow(colspan, 'Loading…');
+
   await loadSdk();
   await fundament.init;
+  // Warm the sheet bundle so the first Create click opens instantly.
+  ensureNldd().catch(() => {});
 
-  const tbody = document.getElementById('rows');
-  const colspan = cfg.metadataServers ? 7 : 6;
-
-  document.getElementById('create-btn').addEventListener('click', () => navigateToCreate());
+  document.getElementById('create-btn').addEventListener('click', async () => {
+    const sheet = await openSheet({ label: `Create ${cfg.label}` });
+    if (sheet) renderCreateForm(cfg, sheet.body, sheet.close);
+  });
 
   try {
     const { items } = await fundament.k8s.list({ ...GROUP_VERSION, resource: cfg.resource });
@@ -91,16 +182,16 @@ export async function consumerListPage(cfg) {
       .map((item) => {
         const status = item.status ?? {};
         const name = item.metadata?.name ?? '';
-        const metadataServersCell = cfg.metadataServers
-          ? `<td>${escapeHtml(String(item.spec?.metadataServers ?? 1))}</td>`
-          : '';
+        const intFieldCells = cfg.intFields
+          .map((field) => `<td>${escapeHtml(String(item.spec?.[field.name] ?? field.default))}</td>`)
+          .join('');
         return `
           <tr data-name="${escapeHtml(name)}">
             <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
             <td>${escapeHtml(status.phase ?? 'Unknown')}</td>
             <td>${escapeHtml(status.storageClassName ?? '—')}</td>
             <td>${escapeHtml(String(status.replicas ?? '—'))}</td>
-            ${metadataServersCell}
+            ${intFieldCells}
             <td>${escapeHtml(status.failureDomain ?? '—')}</td>
             <td>${escapeHtml(status.message ?? '')}</td>
           </tr>`;
@@ -115,6 +206,7 @@ export async function consumerListPage(cfg) {
 export async function consumerDetailPage(cfg) {
   await loadSdk();
   const ctx = await fundament.init;
+  ensureNldd().catch(() => {});
 
   const content = document.getElementById('content');
   const heading = document.getElementById('heading');
@@ -130,7 +222,9 @@ export async function consumerDetailPage(cfg) {
       ['Storage Class', status.storageClassName ?? '—'],
       ['Replicas', String(status.replicas ?? '—')],
     ];
-    if (cfg.metadataServers) pairs.push(['Metadata servers', String(item.spec?.metadataServers ?? 1)]);
+    for (const field of cfg.intFields) {
+      pairs.push([field.label, String(item.spec?.[field.name] ?? field.default)]);
+    }
     if (cfg.defaultToggle) pairs.push(['Default StorageClass', item.spec?.default ? 'Yes' : 'No']);
     pairs.push(['Failure Domain', status.failureDomain ?? '—']);
     if (status.message) pairs.push(['Message', status.message]);
@@ -138,9 +232,8 @@ export async function consumerDetailPage(cfg) {
     return `
       <h2 class="plugin-heading">Status</h2>
       ${renderDefList(pairs)}
-      <p class="plugin-hint">
-        ${cfg.detailHint} <code>ceph df</code> shows free space.
-      </p>
+      <p class="plugin-hint">${cfg.detailHint}</p>
+      <p class="plugin-hint" data-role="capacity"></p>
     `;
   }
 
@@ -154,47 +247,57 @@ export async function consumerDetailPage(cfg) {
       // survives every re-render, so listeners would stack. (CSP restricts inline
       // handler *attributes*, not this.)
       document.getElementById('edit-btn').onclick = () => showEdit(item);
+      // Filled in after the fact: users cannot run ceph df, but the
+      // CephCluster status carries the raw numbers.
+      fetchCephCapacity().then((cap) => {
+        const el = content.querySelector('[data-role="capacity"]');
+        if (!cap || !el) return;
+        el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+          + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster; `
+          + 'divide by the replica count for usable space.';
+      });
+      return item;
     } catch (err) {
       actions.hidden = true;
-      content.innerHTML = `<div class="plugin-error">${escapeHtml(
-        `Failed to load: ${err?.message ?? err}`,
-      )}</div>`;
+      content.innerHTML = errorBox(err);
+      return undefined;
     }
   }
 
   async function showEdit(item) {
-    actions.hidden = true;
-
-    content.innerHTML = `
-      <form id="edit-form" class="plugin-form" novalidate>
-        <div class="plugin-error" id="edit-error" hidden></div>
+    const sheet = await openSheet({ label: `Edit ${cfg.label}` });
+    if (!sheet) return;
+    const { body, close } = sheet;
+    body.insertAdjacentHTML('beforeend', `
+      <form class="plugin-form" novalidate>
+        <div class="plugin-error" data-role="error" hidden></div>
 
         ${replicasFieldHtml(item.spec?.replicas)}
 
-        ${cfg.metadataServers ? metadataServersFieldHtml(item.spec?.metadataServers ?? 1) : ''}
+        ${intFieldsHtml(cfg, item.spec)}
 
         ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
         <div class="plugin-actions">
-          <button type="submit" class="plugin-button" id="save-btn">Save</button>
-          <button type="button" class="plugin-button-secondary" id="cancel-btn">Cancel</button>
+          <button type="submit" class="plugin-button" data-role="save">Save</button>
+          <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
         </div>
       </form>
-    `;
+    `);
 
-    const form = document.getElementById('edit-form');
-
-    document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
+    const form = body.querySelector('form');
+    body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 
     wireSubmit(form, {
-      button: document.getElementById('save-btn'),
-      errorBox: document.getElementById('edit-error'),
+      button: body.querySelector('[data-role="save"]'),
+      errorBox: body.querySelector('[data-role="error"]'),
       busyLabel: 'Saving…',
       failPrefix: 'Failed to save',
-      validate: cfg.metadataServers ? () => metadataServersError(metadataServersValue(form)) : undefined,
+      validate: () => fieldsError(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
         await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
+        close();
         await showDetail();
       },
     });
@@ -202,24 +305,25 @@ export async function consumerDetailPage(cfg) {
 
   if (!name) {
     content.textContent = cfg.noneSelected;
-  } else {
-    await showDetail();
+    return;
   }
+  const item = await showDetail();
+  // The kind-specific extra section (e.g. ObjectStorage's Buckets) lives in
+  // #extra, outside #content, so the edit form's re-renders never touch it.
+  const extra = document.getElementById('extra');
+  if (item && extra && cfg.detailSection) cfg.detailSection(extra, item, ctx, cfg);
 }
 
-export async function consumerCreatePage(cfg) {
-  await loadSdk();
-  await fundament.init;
-
-  const content = document.getElementById('content');
-
-  content.innerHTML = `
+// renderCreateForm fills a sheet with the kind's create form; the list
+// page opens it.
+function renderCreateForm(cfg, body, close) {
+  body.insertAdjacentHTML('beforeend', `
     <p class="plugin-text">
       ${cfg.createIntro}
     </p>
 
-    <form id="create-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="error-box" hidden></div>
+    <form class="plugin-form" novalidate>
+      <div class="plugin-error" data-role="error" hidden></div>
 
       <div class="plugin-field">
         <label class="plugin-label" for="consumer-name">Name</label>
@@ -231,34 +335,34 @@ export async function consumerCreatePage(cfg) {
 
       ${replicasFieldHtml()}
 
-      ${cfg.metadataServers ? metadataServersFieldHtml() : ''}
+      ${intFieldsHtml(cfg)}
 
       ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
       <div class="plugin-actions">
-        <button id="submit-btn" type="submit" class="plugin-button">Create ${cfg.kind}</button>
-        <button id="cancel-btn" type="button" class="plugin-button-secondary">Cancel</button>
+        <button type="submit" class="plugin-button" data-role="submit">Create ${cfg.label}</button>
+        <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
       </div>
     </form>
-  `;
+  `);
 
-  const form = document.getElementById('create-form');
+  const form = body.querySelector('form');
   const nameInput = form.querySelector('[name="name"]');
 
-  document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
+  body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 
   wireSubmit(form, {
-    button: document.getElementById('submit-btn'),
-    errorBox: document.getElementById('error-box'),
+    button: body.querySelector('[data-role="submit"]'),
+    errorBox: body.querySelector('[data-role="error"]'),
     busyLabel: 'Creating…',
-    failPrefix: `Failed to create ${cfg.kind}`,
+    failPrefix: `Failed to create ${cfg.label}`,
     validate: () => {
       const invalid = resourceNameError(nameInput.value.trim(), cfg.nameMaxLength);
       if (invalid) {
         nameInput.focus();
         return invalid;
       }
-      return cfg.metadataServers ? metadataServersError(metadataServersValue(form)) : null;
+      return fieldsError(cfg, form);
     },
     action: async () => {
       const name = nameInput.value.trim();
@@ -271,6 +375,7 @@ export async function consumerCreatePage(cfg) {
           spec: specFrom(cfg, form),
         },
       );
+      close();
       navigateToDetail(name);
     },
   });

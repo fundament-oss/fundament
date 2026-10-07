@@ -3,8 +3,8 @@ kind: PluginDefinition
 metadata:
   name: ceph-rook
   displayName: Ceph Storage (Rook)
-  version: v0.2.0
-  description: Block and shared file storage for in-cluster workloads, backed by Ceph and Rook.
+  version: v0.3.0
+  description: Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook.
   author: Fundament
   license: Apache-2.0
   icon: external-hard-drives
@@ -16,6 +16,8 @@ metadata:
     - storage
     - block
     - file
+    - object
+    - s3
     - ceph
 spec:
   permissions:
@@ -40,6 +42,9 @@ spec:
           - filestorages
           - filestorages/status
           - filestorages/finalizers
+          - objectstorages
+          - objectstorages/status
+          - objectstorages/finalizers
         verbs:
           - get
           - list
@@ -55,6 +60,7 @@ spec:
           - cephclusters
           - cephblockpools
           - cephfilesystems
+          - cephobjectstores
         verbs:
           - get
           - list
@@ -63,6 +69,16 @@ spec:
           - update
           - patch
           - delete
+      # --- ObjectBuckets: read-only, for the ObjectStorage deletion guard
+      # (the finalizer holds until no bucket references the store's class).
+      - apiGroups:
+          - objectbucket.io
+        resources:
+          - objectbuckets
+        verbs:
+          - get
+          - list
+          - watch
       # --- StorageClasses: created/updated by the BlockStorage/FileStorage
       # controllers and watched as owned objects. No delete verb: removal
       # happens through owner references and the garbage collector. ---
@@ -129,6 +145,10 @@ spec:
         list: true
         detail: true
         icon: folder-open
+      - crd: objectstorages.ceph.fundament.io
+        list: true
+        detail: true
+        icon: boxes-3
       - crd: disks.ceph.fundament.io
         list: true
         detail: true
@@ -138,22 +158,23 @@ spec:
     - diskpools.ceph.fundament.io
     - blockstorages.ceph.fundament.io
     - filestorages.ceph.fundament.io
+    - objectstorages.ceph.fundament.io
   customComponents:
     DiskPool:
       list: diskpools-list.html
       detail: diskpools-detail.html
-      create: diskpools-create.html
     Disk:
       list: disks-list.html
       detail: disks-detail.html
     BlockStorage:
       list: blockstorages-list.html
       detail: blockstorages-detail.html
-      create: blockstorages-create.html
     FileStorage:
       list: filestorages-list.html
       detail: filestorages-detail.html
-      create: filestorages-create.html
+    ObjectStorage:
+      list: objectstorages-list.html
+      detail: objectstorages-detail.html
   uiHints:
     diskpools.ceph.fundament.io:
       statusMapping:
@@ -165,8 +186,10 @@ spec:
           Degraded:
             badge: danger
             label: Degraded
+    # The consumer kinds share one status vocabulary, so they alias one badge
+    # table; definition_test.go proves the alias resolves into every kind.
     blockstorages.ceph.fundament.io:
-      statusMapping:
+      statusMapping: &consumer-status-mapping
         jsonPath: ".status.phase"
         values:
           Ready:
@@ -179,18 +202,9 @@ spec:
             badge: danger
             label: Degraded
     filestorages.ceph.fundament.io:
-      statusMapping:
-        jsonPath: ".status.phase"
-        values:
-          Ready:
-            badge: success
-            label: Ready
-          Provisioning:
-            badge: warning
-            label: Provisioning
-          Degraded:
-            badge: danger
-            label: Degraded
+      statusMapping: *consumer-status-mapping
+    objectstorages.ceph.fundament.io:
+      statusMapping: *consumer-status-mapping
   # Exactly the verbs the console pages issue, no more. Nothing enforces this
   # list at request time yet, so it is a declaration of intent.
   #
@@ -214,10 +228,28 @@ spec:
       version: v1alpha1
       resource: filestorages
       verbs: [list, get, create, patch]
+    - group: ceph.fundament.io
+      version: v1alpha1
+      resource: objectstorages
+      verbs: [list, get, create, patch]
+    # The Buckets section on the ObjectStorage detail page. Claims list
+    # cluster-wide (they live wherever workloads do). No delete, same stance
+    # as above; no secrets: credentials must never reach the iframe, only
+    # the ConfigMap's connection info is readable.
+    - group: objectbucket.io
+      version: v1alpha1
+      resource: objectbucketclaims
+      verbs: [list, get, create]
+    - group: ""
+      version: v1
+      resource: configmaps
+      verbs: [get]
+    # list as well as get: the detail pages read status.ceph.capacity to
+    # show free space, and the console does not know the cluster namespace.
     - group: ceph.rook.io
       version: v1
       resource: cephclusters
-      verbs: [get]
+      verbs: [get, list]
   configSchema:
     - name: MON_COUNT
       displayName: Monitor count
@@ -264,6 +296,12 @@ spec:
       default: "rook-ceph"
       advanced: true
       description: Namespace for the CephCluster and its CSI secrets; the CSI clusterID.
+    - name: S3_REGION
+      displayName: S3 region label
+      type: string
+      default: "nl-1"
+      advanced: true
+      description: "Region label buckets advertise (BUCKET_REGION) and sign with. Signing-only: RGW enforces no region. Immutable per ObjectStorage once its StorageClass exists."
     - name: CEPHFS_MOUNTER
       displayName: CephFS mount client
       type: enum

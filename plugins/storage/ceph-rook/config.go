@@ -51,6 +51,12 @@ type Config struct {
 	// Real clusters leave it empty. Only FileStorage's StorageClass reads it;
 	// RBD is unaffected.
 	CephFSMounter string `env:"CEPHFS_MOUNTER"`
+
+	// S3Region is the region label buckets advertise (BUCKET_REGION) and the
+	// bucket StorageClass's immutable region parameter. Signing-only: RGW
+	// enforces no region, so any stable value works; the default is honest
+	// about where this platform runs instead of borrowing AWS's us-east-1.
+	S3Region string `env:"S3_REGION" envDefault:"nl-1"`
 }
 
 // cephFSMounters are the values ceph-csi accepts for the StorageClass "mounter"

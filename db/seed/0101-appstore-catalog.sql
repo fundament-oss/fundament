@@ -293,21 +293,22 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
 - Ingress for Kubernetes workloads via the Gateway API
 - Advanced traffic management with Envoy
 - Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', ''),
-    ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block and shared file storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
+    ('019b4000-3000-7000-8000-000000000011', '019b4000-0000-7000-8000-000000000000', 'ceph-rook', 'Ceph Storage (Rook)', 'Block, shared file and S3-compatible object storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
 
-The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes and turns their spare raw disks into block and shared file storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference.
+The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes and turns their spare raw disks into block, shared file and object storage. Once installed, create a DiskPool to contribute disks, then a BlockStorage or FileStorage to provision a StorageClass that any PersistentVolumeClaim can reference, or an ObjectStorage to provision S3-compatible buckets through ObjectBucketClaims.
 
 ## Key Features
 
 - **Automatic disk discovery**: nodes are scanned for raw block devices, which appear in the console as Disks
 - **Declarative disk pools**: a DiskPool selects which discovered disks to contribute to the shared cluster
-- **Block and file storage classes**: a BlockStorage produces a ready-to-use ReadWriteOnce StorageClass; a FileStorage produces a ReadWriteMany StorageClass backed by a shared filesystem with active and standby metadata servers
-- **Tunable replication**: set 1, 2 or 3 replicas per BlockStorage or FileStorage, or leave it unset to derive the count from the number of nodes contributing disks
+- **Block, file and object storage classes**: a BlockStorage produces a ready-to-use ReadWriteOnce StorageClass; a FileStorage produces a ReadWriteMany StorageClass backed by a shared filesystem with active and standby metadata servers; an ObjectStorage produces an S3-compatible object store (Ceph RGW) whose StorageClass provisions buckets for ObjectBucketClaims
+- **Tunable replication**: set 1, 2 or 3 replicas per storage object, or leave it unset to derive the count from the number of nodes contributing disks
 
 ## Use Cases
 
 - Persistent block volumes for stateful workloads (databases, message queues)
 - Shared volumes many pods can mount at once (shared caches, content repositories)
+- S3-compatible buckets for in-cluster workloads (artifacts, backups, media)
 - ReadWriteOnce and ReadWriteMany volumes on bare-metal or VM clusters
 - Cost-effective in-cluster storage using spare raw disks
 
@@ -318,8 +319,8 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 
 ## Limitations
 
-- Block storage (ReadWriteOnce) and shared file storage (ReadWriteMany) are supported; object storage (S3-style, RGW) is not yet.
-- All disk pools feed one shared Ceph cluster, and data is placed across every disk in it. Additional BlockStorage/FileStorage objects give you additional StorageClasses over the same disks.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
+- The S3 endpoint is reachable in-cluster only; exposing it externally (and standalone S3 users) is not offered yet.
+- All disk pools feed one shared Ceph cluster, and data is placed across every disk in it. Additional BlockStorage/FileStorage/ObjectStorage objects give you additional StorageClasses over the same disks.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,

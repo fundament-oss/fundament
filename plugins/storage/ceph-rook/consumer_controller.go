@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -34,8 +35,13 @@ const provisioningRequeue = 30 * time.Second
 // its other phases (Progressing, Connecting, ...) all map to Provisioning.
 const rookPhaseFailure = "Failure"
 
+// objectStorageFinalizer defers ObjectStorage deletion until no bucket
+// references its StorageClass: the claims' finalizers need the class and the
+// RGW to deprovision, and cascading them away first wedges every claim.
+const objectStorageFinalizer = "ceph.fundament.io/objectstorage-protection"
+
 // consumer is a cluster-scoped kind that turns the shared OSD set into a
-// StorageClass (BlockStorage, FileStorage). It derives exactly one Rook object
+// StorageClass. It derives exactly one Rook object
 // and one StorageClass, and brings no disks of its own.
 type consumer interface {
 	client.Object
@@ -59,6 +65,10 @@ type ConsumerReconciler[T consumer] struct {
 	newList            func() client.ObjectList
 	renderRook         func(obj T, namespace, name string, replicas int, domain string) *unstructured.Unstructured
 	renderStorageClass func(name, clusterNamespace, poolOrFSName, rookNamespace string) *storagev1.StorageClass
+	// finalizer, when set, is added on reconcile; deletion then waits until
+	// deletionBlocked returns "" (a message names what still blocks it).
+	finalizer       string
+	deletionBlocked func(ctx context.Context, c client.Client, derivedName string) (string, error)
 	// isDefault reports whether obj asks for the cluster-default StorageClass
 	// annotation; nil for kinds without a spec.default field (FileStorage).
 	isDefault func(obj T) bool
@@ -104,6 +114,58 @@ func NewFileStorageReconciler(c client.Client, clusterNamespace, rookNamespace, 
 			return RenderCephFSStorageClass(name, clusterNamespace, poolOrFSName, rookNamespace, cephFSMounter)
 		},
 	}
+}
+
+// NewObjectStorageReconciler reconciles ObjectStorage into a CephObjectStore
+// and a bucket StorageClass for ObjectBucketClaims.
+func NewObjectStorageReconciler(c client.Client, clusterNamespace, rookNamespace, s3Region string) *ConsumerReconciler[*v1alpha1.ObjectStorage] {
+	return &ConsumerReconciler[*v1alpha1.ObjectStorage]{
+		Client:           c,
+		ClusterNamespace: clusterNamespace,
+		RookNamespace:    rookNamespace,
+		kind:             "ObjectStorage",
+		rookKind:         "CephObjectStore",
+		derivedPrefix:    objectStoreDerivedNamePrefix,
+		newObject:        func() *v1alpha1.ObjectStorage { return &v1alpha1.ObjectStorage{} },
+		newList:          func() client.ObjectList { return &v1alpha1.ObjectStorageList{} },
+		renderRook: func(os *v1alpha1.ObjectStorage, namespace, name string, replicas int, domain string) *unstructured.Unstructured {
+			// Floored like invalid replicas requests (see ComputeReplication):
+			// a zero bypassing API-server defaulting would render 0 RGW pods
+			// and a store that never serves.
+			return RenderCephObjectStore(namespace, name, replicas, domain, max(int64(os.Spec.GatewayInstances), 1))
+		},
+		renderStorageClass: func(name, clusterNamespace, storeName, _ string) *storagev1.StorageClass {
+			return RenderBucketStorageClass(name, clusterNamespace, storeName, s3Region)
+		},
+		finalizer:       objectStorageFinalizer,
+		deletionBlocked: objectBucketsBlockDeletion,
+	}
+}
+
+// objectBucketsBlockDeletion names the deletion blocker: buckets still
+// provisioned against the store's StorageClass. An absent ObjectBucket CRD
+// (claims never used) must not wedge deletion.
+func objectBucketsBlockDeletion(ctx context.Context, c client.Client, derivedName string) (string, error) {
+	list := &unstructured.UnstructuredList{}
+	list.SetAPIVersion("objectbucket.io/v1alpha1")
+	list.SetKind("ObjectBucketList")
+	if err := c.List(ctx, list); err != nil {
+		if meta.IsNoMatchError(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("list ObjectBuckets: %w", err)
+	}
+	n := 0
+	for i := range list.Items {
+		class, _, _ := unstructured.NestedString(list.Items[i].Object, "spec", "storageClassName")
+		if class == derivedName {
+			n++
+		}
+	}
+	if n == 0 {
+		return "", nil
+	}
+	return fmt.Sprintf("%d bucket(s) still exist on StorageClass %s; delete their ObjectBucketClaims first", n, derivedName), nil
 }
 
 func (r *ConsumerReconciler[T]) SetupWithManager(mgr manager.Manager) error {
@@ -183,7 +245,15 @@ func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("get %s %s: %w", r.kind, req.Name, err)
 	}
 	if !obj.GetDeletionTimestamp().IsZero() {
-		return ctrl.Result{}, nil
+		return r.finalizeDeletion(ctx, obj)
+	}
+	if r.finalizer != "" && controllerutil.AddFinalizer(obj, r.finalizer) {
+		if err := r.Client.Update(ctx, obj); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("add finalizer to %s %s: %w", r.kind, req.Name, err)
+		}
 	}
 
 	result, err := r.reconcile(ctx, obj)
@@ -198,6 +268,40 @@ func (r *ConsumerReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 	return result, nil
+}
+
+// finalizeDeletion holds the finalizer while deletionBlocked names a
+// blocker, reporting it in status, and releases it once clear. Kinds
+// without a finalizer delete immediately; owner refs GC their derived pair.
+func (r *ConsumerReconciler[T]) finalizeDeletion(ctx context.Context, obj T) (ctrl.Result, error) {
+	if r.finalizer == "" || !controllerutil.ContainsFinalizer(obj, r.finalizer) {
+		return ctrl.Result{}, nil
+	}
+	blocked, err := r.deletionBlocked(ctx, r.Client, r.derivedName(obj.GetName()))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if blocked != "" {
+		status := *obj.ConsumerStatus()
+		status.Phase = v1alpha1.PhaseDegraded
+		status.Message = blocked
+		if err := r.writeStatus(ctx, obj, &status, &metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.ReasonDeletionBlocked,
+			Message: blocked,
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: provisioningRequeue}, nil
+	}
+	controllerutil.RemoveFinalizer(obj, r.finalizer)
+	if err := r.Client.Update(ctx, obj); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("remove finalizer from %s %s: %w", r.kind, obj.GetName(), err)
+	}
+	return ctrl.Result{}, nil
 }
 
 // derivedName names this consumer's derived Rook object and StorageClass.

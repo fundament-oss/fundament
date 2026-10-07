@@ -29,6 +29,13 @@ func CephFSProvisioner(rookNamespace string) string {
 	return rookNamespace + ".cephfs.csi.ceph.com"
 }
 
+// BucketProvisioner is Rook's ObjectBucketClaim provisioner name. Unlike the
+// CSI drivers it follows the CephCluster's namespace, not the operator's:
+// Rook builds it from clusterInfo.Namespace (GetObjectBucketProvisioner).
+func BucketProvisioner(clusterNamespace string) string {
+	return clusterNamespace + ".ceph.rook.io/bucket"
+}
+
 // cephStorageClass builds the scaffold both CSI StorageClasses share; the
 // per-driver parameters are merged on top. secretInfix picks the Rook-managed
 // CSI Secrets ("rbd" or "cephfs"), so a secret-name change cannot land in one
@@ -87,4 +94,31 @@ func RenderCephFSStorageClass(name, clusterNamespace, fsName, rookNamespace, mou
 		params["mounter"] = mounter
 	}
 	return cephStorageClass(name, CephFSProvisioner(rookNamespace), clusterNamespace, "cephfs", params)
+}
+
+// RenderBucketStorageClass builds the StorageClass that ObjectBucketClaims
+// reference. It drives Rook's OBC provisioner rather than a CSI driver, so
+// it carries none of the CSI scaffold. region is the signing-only S3 region
+// label (Config.S3Region).
+func RenderBucketStorageClass(name, clusterNamespace, storeName, region string) *storagev1.StorageClass {
+	return &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Provisioner: BucketProvisioner(clusterNamespace),
+		// Delete removes the bucket and its objects with the claim; the pools
+		// themselves are guarded by preservePoolsOnDelete.
+		ReclaimPolicy: ptr.To(corev1.PersistentVolumeReclaimDelete),
+		// Meaningless for buckets; pinned for explicitness (the drift check
+		// ignores nil desired pointers).
+		VolumeBindingMode: ptr.To(storagev1.VolumeBindingImmediate),
+		Parameters: map[string]string{
+			"objectStoreName":      storeName,
+			"objectStoreNamespace": clusterNamespace,
+			// Without it BUCKET_REGION is empty and S3 clients that require
+			// a region (distribution/registry) fail; immutable, so from the
+			// start.
+			"region": region,
+		},
+	}
 }

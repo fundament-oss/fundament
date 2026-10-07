@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: filestorages.ceph.fundament.io
+  name: objectstorages.ceph.fundament.io
 spec:
   group: ceph.fundament.io
   names:
-    kind: FileStorage
-    listKind: FileStorageList
-    plural: filestorages
-    singular: filestorage
+    kind: ObjectStorage
+    listKind: ObjectStorageList
+    plural: objectstorages
+    singular: objectstorage
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -28,14 +28,15 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          FileStorage provides shared volumes (ReadWriteMany), which many pods on many
-          nodes can mount at once, over the shared Ceph cluster. It derives a
-          StorageClass, named in status.storageClassName, for PersistentVolumeClaims
-          to reference.
+          ObjectStorage provides S3-compatible buckets over the shared Ceph cluster.
+          It derives a StorageClass, named in status.storageClassName, for
+          ObjectBucketClaims to reference; Rook provisions each claim's bucket and
+          hands its credentials to the claim's Secret and ConfigMap.
 
-          The name-length limit exists because Rook labels the metadata-server
-          deployment rook_file_system=cephfs-<name> and label values cap at 63
-          characters.
+          The name-length limit exists because Rook rejects CephObjectStore names
+          over 38 (its rook-ceph-rgw-<store>-mime-types ConfigMap must fit in 63),
+          and it validates deletes the same way, so an overlong store also wedges
+          on removal. 38 minus the cephobj- prefix leaves 30.
         properties:
           apiVersion:
             description: |-
@@ -57,14 +58,13 @@ spec:
           spec:
             default: {}
             description: |-
-              FileStorageSpec defines a shared-filesystem (ReadWriteMany) StorageClass on
-              the shared Ceph cluster, using the disks that DiskPools contribute.
+              ObjectStorageSpec defines an S3-compatible object store (Ceph RGW) on the
+              shared Ceph cluster, using the disks that DiskPools contribute.
             properties:
-              metadataServers:
+              gatewayInstances:
                 default: 1
-                description: |-
-                  MetadataServers is the number of active filesystem metadata servers. Each
-                  active server gets its own standby for failover.
+                description: GatewayInstances is the number of RGW gateway pods serving
+                  the S3 API.
                 format: int32
                 maximum: 5
                 minimum: 1
@@ -72,8 +72,8 @@ spec:
               replicas:
                 description: |-
                   Replicas is how many copies Ceph keeps of each piece of data, for both
-                  the filesystem's metadata and its contents. Absent derives it from the
-                  number of nodes contributing disks (capped at 3).
+                  the store's metadata and its contents. Absent means automatic: derived
+                  from the number of nodes contributing disks (capped at 3).
                 format: int32
                 maximum: 3
                 minimum: 1
@@ -179,9 +179,9 @@ spec:
             type: object
         type: object
         x-kubernetes-validations:
-        - message: 'name must be at most 56 characters: Rook derives a cephfs-<name>
-            label capped at 63'
-          rule: size(self.metadata.name) <= 56
+        - message: 'name must be at most 30 characters: Rook caps CephObjectStore
+            names at 38 and the derived name is cephobj-<name>'
+          rule: size(self.metadata.name) <= 30
     served: true
     storage: true
     subresources:

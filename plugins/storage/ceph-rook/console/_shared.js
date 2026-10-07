@@ -23,6 +23,121 @@ export function loadSdk() {
   });
 }
 
+// Loads the shared NLDD Design System bundle served next to the SDK
+// (FUN-18) and mirrors the body's light/dark class into data-scheme.
+// Memoized and loaded lazily from the sheet-opening handlers, so a host
+// without the bundle still serves the read-only views; the stylesheet is
+// awaited too, or sheets render unstyled with the error swallowed.
+let nlddLoad;
+let nlddThemeSync = false;
+export function ensureNldd() {
+  nlddLoad ??= (() => {
+    if (!nlddThemeSync) {
+      nlddThemeSync = true;
+      const sync = () => {
+        document.documentElement.setAttribute(
+          'data-scheme',
+          document.body.classList.contains('dark') ? 'dark' : 'light',
+        );
+      };
+      sync();
+      new MutationObserver(sync).observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+    }
+
+    const settled = (el, what) => new Promise((resolve, reject) => {
+      el.addEventListener('load', () => resolve(), { once: true });
+      el.addEventListener('error', () => reject(new Error(`failed to load ${what}`)), { once: true });
+    });
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/plugins/sdk/v1/nldd-design-system.css';
+    const css = settled(link, 'nldd-design-system.css');
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = '/plugins/sdk/v1/nldd-design-system.js';
+    const js = settled(script, 'nldd-design-system.js');
+    document.head.appendChild(script);
+    return Promise.all([css, js]).then(() => undefined);
+  })().catch((err) => {
+    // Transient asset failures retry on the next click instead of
+    // disabling every sheet until a reload.
+    nlddLoad = undefined;
+    throw err;
+  });
+  return nlddLoad;
+}
+
+// Surfaces a sheet-open failure without killing the page: one reused
+// .plugin-error at the top of the page card.
+export function showSheetError(err) {
+  const card = document.querySelector('.plugin-card');
+  let box = card?.querySelector('[data-role="sheet-error"]');
+  if (!box && card) {
+    box = document.createElement('div');
+    box.className = 'plugin-error';
+    box.dataset.role = 'sheet-error';
+    card.prepend(box);
+  }
+  if (box) box.textContent = `Cannot open the editor: ${err?.message ?? err}`;
+}
+
+// Opens a right-hand <nldd-sheet> appended to the document root (it is a
+// <dialog>; inside the content flow it would steal layout height). Loads the
+// design-system bundle on first use; on failure it surfaces the error and
+// returns null, so callers bail with `if (!sheet) return`. Otherwise returns
+// the content container and a close(); the element removes itself after the
+// closing animation.
+//
+// The host sizes the iframe to this document's height, so on a short page
+// the sheet, confined to the iframe's viewport, would render a few rows
+// tall; growing the body makes the host grow the iframe. CSSOM property
+// assignment, not style attributes: the CSP blocks only the latter.
+let openSheetCount = 0;
+let preSheetMinHeight = '';
+
+export async function openSheet({ label, width = '480px', minHeight = '640px' }) {
+  try {
+    await ensureNldd();
+  } catch (err) {
+    showSheetError(err);
+    return null;
+  }
+  // Only the outermost open/last close touch the body: chained sheets
+  // would otherwise capture the inflated value as "previous" and latch it.
+  if (openSheetCount === 0) {
+    preSheetMinHeight = document.body.style.minHeight;
+    document.body.style.minHeight = minHeight;
+  }
+  openSheetCount += 1;
+
+  const sheet = document.createElement('nldd-sheet');
+  sheet.setAttribute('placement', 'right');
+  sheet.setAttribute('width', width);
+  sheet.setAttribute('accessible-label', label);
+  const body = document.createElement('div');
+  body.className = 'plugin-card';
+  body.style.maxHeight = '100dvh';
+  body.style.overflowY = 'auto';
+  if (label) {
+    const heading = document.createElement('h2');
+    heading.className = 'plugin-heading';
+    heading.textContent = label;
+    body.appendChild(heading);
+  }
+  sheet.appendChild(body);
+  document.body.appendChild(sheet);
+  sheet.addEventListener('close', () => {
+    openSheetCount -= 1;
+    if (openSheetCount === 0) document.body.style.minHeight = preSheetMinHeight;
+    sheet.remove();
+  });
+  sheet.show();
+  return { body, close: () => sheet.hide() };
+}
+
 export function escapeHtml(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -42,31 +157,17 @@ export function errorRow(colspan, err) {
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
 }
 
+// The block-level sibling of errorRow, for detail views and sheets.
+export function errorBox(err, prefix = 'Failed to load') {
+  return `<div class="plugin-error">${escapeHtml(`${prefix}: ${err?.message ?? err}`)}</div>`;
+}
+
 // Posts a navigate message to the parent, which resolves it relative to the
 // iframe's current route — so this sends only the resource identity, and works
 // from a create view too. parentOrigin falls back to '*' before init.
 export function navigateToDetail(name, namespace) {
   window.parent.postMessage(
     { type: 'plugin:navigate', name, namespace },
-    window.fundament?.parentOrigin ?? '*',
-  );
-}
-
-// Asks the host for this kind's create route. A custom list UI needs its own
-// "Add": the console only renders its built-in Create button for kinds without a
-// custom list component, so without this the create view is unreachable.
-export function navigateToCreate() {
-  window.parent.postMessage(
-    { type: 'plugin:create' },
-    window.fundament?.parentOrigin ?? '*',
-  );
-}
-
-// Returns to the resource-kind list. Only meaningful from a create or detail
-// view; the host ignores it on a list.
-export function navigateBack() {
-  window.parent.postMessage(
-    { type: 'plugin:navigate-back' },
     window.fundament?.parentOrigin ?? '*',
   );
 }
@@ -145,21 +246,23 @@ export function defaultFieldHtml(checked = false) {
     </div>`;
 }
 
-// Metadata-servers input shared by the FileStorage create and edit forms.
-export function metadataServersFieldHtml(value = 1) {
+// One integer input field, driven by a field descriptor (see the intFields
+// descriptors in consumer-pages.js), so each field's CRD bounds live in one
+// place instead of a copy per form and per validator.
+export function integerFieldHtml(field, value) {
   return `
     <div class="plugin-field">
-      <label class="plugin-label" for="mds-count">Metadata servers</label>
-      <input id="mds-count" name="metadataServers" type="number" class="plugin-input"
-             min="1" max="5" value="${escapeHtml(String(value))}" />
-      <span class="plugin-hint">Active MDS daemons; each gets a standby. 1 is right unless metadata throughput at scale demands more.</span>
+      <label class="plugin-label" for="${field.id}">${escapeHtml(field.label)}</label>
+      <input id="${field.id}" name="${field.name}" type="number" class="plugin-input"
+             min="${field.min}" max="${field.max}" value="${escapeHtml(String(value))}" />
+      <span class="plugin-hint">${escapeHtml(field.hint)}</span>
     </div>`;
 }
 
-// Bounds mirror the CRD's validation; returns an error message or null.
-export function metadataServersError(value) {
-  if (!Number.isInteger(value) || value < 1 || value > 5) {
-    return 'Metadata servers must be a whole number from 1 to 5.';
+// Bounds mirror the field's CRD validation; returns an error message or null.
+export function integerFieldError(field, value) {
+  if (!Number.isInteger(value) || value < field.min || value > field.max) {
+    return `${field.label} must be a whole number from ${field.min} to ${field.max}.`;
   }
   return null;
 }
@@ -172,17 +275,19 @@ export function wireSubmit(form, { button, errorBox, busyLabel, failPrefix, vali
     e.preventDefault();
     errorBox.hidden = true;
 
-    const invalid = validate?.();
-    if (invalid) {
-      errorBox.textContent = invalid;
-      errorBox.hidden = false;
-      return;
-    }
-
+    // validate runs inside the try: preventDefault() already suppressed the
+    // native submit, so a validator that throws would otherwise leave the
+    // form silently dead — no error box, no native validation, nothing.
     const idleLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = busyLabel;
     try {
+      const invalid = validate?.();
+      if (invalid) {
+        errorBox.textContent = invalid;
+        errorBox.hidden = false;
+        return;
+      }
+      button.disabled = true;
+      button.textContent = busyLabel;
       await action();
     } catch (err) {
       errorBox.textContent = `${failPrefix}: ${err?.message ?? err}`;
@@ -203,6 +308,11 @@ const QUANTITY_MULTIPLIERS = {
 // decimal SI suffix. The exponent is tried first, so "1E3" is 1000, not 1 exa
 // followed by garbage. Returns null for anything outside the grammar.
 const QUANTITY_PATTERN = /^([+-]?(?:\d+\.?\d*|\.\d+))(?:([KMGTPE]i)|[eE]([+-]?\d+)|([numkMGTPE]?))$/;
+
+// Returns an error message when value is not a Kubernetes quantity, else null.
+export function quantityError(value) {
+  return QUANTITY_PATTERN.test(value) ? null : 'Use a quantity like 500Mi or 10Gi.';
+}
 
 // Whole bytes, rounded up like Quantity.Value().
 function parseQuantity(quantity) {
@@ -230,6 +340,18 @@ function formatSize(bytes) {
 
 // Renders a byte Quantity ("20478Mi") as "19.9 GiB". A value outside the
 // Quantity grammar is shown as written rather than as a misleading 0 GiB.
+// Raw capacity from the CephCluster's own status (status.ceph.capacity);
+// null when no cluster reports one or the viewer may not read it.
+export async function fetchCephCapacity() {
+  try {
+    const { items } = await fundament.k8s.list({ group: 'ceph.rook.io', version: 'v1', resource: 'cephclusters' });
+    const cap = items?.[0]?.status?.ceph?.capacity;
+    return cap?.bytesTotal ? cap : null;
+  } catch {
+    return null;
+  }
+}
+
 export function humanizeQuantity(quantity) {
   if (quantity === undefined || quantity === null || quantity === '') return '—';
   const bytes = parseQuantity(String(quantity).trim());

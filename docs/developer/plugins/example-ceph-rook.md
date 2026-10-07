@@ -4,7 +4,7 @@ sidebar:
   order: 5
 ---
 
-The ceph-rook plugin provides block and shared file storage for in-cluster workloads by installing and managing the Rook-Ceph operator and a singleton CephCluster.
+The ceph-rook plugin provides block, shared file and S3-compatible object storage for in-cluster workloads by installing and managing the Rook-Ceph operator and a singleton CephCluster.
 
 :::tip[Verifying it works]
 This page describes the design. To actually exercise the plugin against a local
@@ -17,9 +17,9 @@ cluster — from empty machine to a pod writing to a Ceph-backed volume — foll
 1. **Install**: Installs the Rook-Ceph operator via Helm (from `charts.rook.io/release`) and bootstraps a single `CephCluster` resource
 2. **Discover**: Rook discovers available block devices on cluster nodes and publishes them as `Disk` CRs (cluster-scoped inventory)
 3. **Provision**: Operators select disks in the console and create a `DiskPool` CR, specifying which disks to use
-4. **Consume**: Operators create a `BlockStorage` or `FileStorage` CR, which derives the `StorageClass` — a replication strategy on the consumer, not the pool
-5. **Reconcile**: The plugin folds every `DiskPool`'s disks into the singleton `CephCluster` as OSDs, and for each `BlockStorage`/`FileStorage` creates a `CephBlockPool`/`CephFilesystem` and a `StorageClass` for in-cluster PVC provisioning
-6. **Console**: Serves list and detail HTML for `Disk`, `DiskPool`, `BlockStorage` and `FileStorage` resources, allowing operators to inspect discovered devices and manage storage
+4. **Consume**: Operators create a `BlockStorage`, `FileStorage` or `ObjectStorage` CR, which derives the `StorageClass` — a replication strategy on the consumer, not the pool
+5. **Reconcile**: The plugin folds every `DiskPool`'s disks into the singleton `CephCluster` as OSDs, and for each `BlockStorage`/`FileStorage`/`ObjectStorage` creates a `CephBlockPool`/`CephFilesystem`/`CephObjectStore` and a `StorageClass` for in-cluster PVC (or ObjectBucketClaim) provisioning
+6. **Console**: Serves list and detail HTML for `Disk`, `DiskPool`, `BlockStorage`, `FileStorage` and `ObjectStorage` resources, allowing operators to inspect discovered devices and manage storage
 
 ## Object map
 
@@ -47,12 +47,13 @@ plugins/storage/ceph-rook/
 │   ├── diskpool_types.go  # DiskPool CR: operator's disk contribution
 │   ├── blockstorage_types.go # BlockStorage CR: RBD (RWO) consumer
 │   ├── filestorage_types.go  # FileStorage CR: CephFS (RWX) consumer
+│   ├── objectstorage_types.go # ObjectStorage CR: RGW (S3) consumer
 │   ├── groupversion_info.go  # Scheme registration + go:generate directives
 │   └── zz_generated.deepcopy.go
 ├── crds/                    # Generated CRD YAML, embedded and applied at install
 ├── diskinventory_controller.go  # Rook discovery ConfigMaps -> Disk CRs
 ├── diskpool_controller.go    # DiskPool -> CephCluster OSDs
-├── consumer_controller.go       # Generic consumer reconciler: BlockStorage -> CephBlockPool + RBD StorageClass, FileStorage -> CephFilesystem + CephFS StorageClass
+├── consumer_controller.go       # Generic consumer reconciler: BlockStorage -> CephBlockPool + RBD StorageClass, FileStorage -> CephFilesystem + CephFS StorageClass, ObjectStorage -> CephObjectStore + bucket StorageClass
 ├── union.go                 # Shared disk union: every live DiskPool's disks, deduplicated
 ├── claims.go                # Derived names + which pool owns a contested disk
 ├── replication.go           # spec.replicas -> replica count and CRUSH failure domain
@@ -61,20 +62,21 @@ plugins/storage/ceph-rook/
 ├── rookvalues.go            # Helm values + the CephCluster bootstrap object
 ├── blockpool.go             # Renders CephBlockPool
 ├── filesystem.go            # Renders CephFilesystem
-├── storageclass.go          # Renders the RBD and CephFS StorageClasses
+├── objectstore.go           # Renders CephObjectStore
+├── storageclass.go          # Renders the RBD, CephFS and bucket StorageClasses
 ├── storageclass_apply.go    # Create/reconcile a StorageClass its owner already owns
 ├── console/                 # Hand-written console pages (no build step)
 │   ├── _shared.js           # SDK loader, escaping, navigation helpers
-│   ├── consumer-pages.js    # List/detail/create page factory for BlockStorage + FileStorage
+│   ├── consumer-pages.js    # List/detail page factory for the consumer kinds; create/edit open in sheets
+│   ├── bucket-pages.js      # Buckets section (ObjectBucketClaims) on the ObjectStorage detail page
 │   ├── disk-picker.js       # Shared disk-selection widget (pool/consumer create+edit)
 │   ├── disks-list.{html,js}
 │   ├── disks-detail.{html,js}
-│   ├── diskpools-list.{html,js}
-│   ├── diskpools-detail.{html,js}
-│   ├── diskpools-create.{html,js}
-│   ├── blockstorages-{list,detail,create}.{html,js}
-│   └── filestorages-{list,detail,create}.{html,js}
-├── test-resources.yaml      # Sample DiskPool/BlockStorage/FileStorage for sandbox verification
+│   ├── diskpools-{list,detail}.{html,js}
+│   ├── blockstorages-{list,detail}.{html,js}
+│   ├── filestorages-{list,detail}.{html,js}
+│   └── objectstorages-{list,detail}.{html,js}
+├── test-resources.yaml      # Sample DiskPool and consumer kinds for sandbox verification
 └── Dockerfile               # Multi-stage build (Go build + alpine with helm)
 ```
 
@@ -82,7 +84,8 @@ Most `*.go` files above have a matching `*_test.go`. The exceptions are
 `union.go`, `storageclass_apply.go` and `consumer_controller.go` — all three
 are exercised through the per-kind controller test files
 (`blockstorage_controller_test.go`, `filestorage_controller_test.go`,
-`diskpool_controller_test.go`) rather than a test file of their own.
+`objectstorage_controller_test.go`, `diskpool_controller_test.go`) rather than
+a test file of their own.
 
 ### What the console can do
 
@@ -91,14 +94,17 @@ are exercised through the per-kind controller test files
 | `DiskPool` | list, detail, create, **edit** |
 | `BlockStorage` | list, detail, create, **edit** |
 | `FileStorage` | list, detail, create, **edit** |
+| `ObjectStorage` | list, detail, create, **edit**, embedded Buckets section |
 | `Disk` | list, **detail** |
 
-**Editing** lives on each kind's own detail page rather than a page of its own:
-`ComponentMapping` has `list`, `detail` and `create` slots but no `edit`, so an
-Edit button swaps the read-only view for a form. `DiskPool` edits its disk
+**Create and edit** both run in an `<nldd-sheet>` side panel over the list or
+detail page (the shared NLDD Design System bundle the console serves per
+FUN-18), so there are no routed create pages and `ComponentMapping`'s `create`
+slots go unused. `DiskPool` edits its disk
 selection with the same picker the create form uses; `BlockStorage` edits
 replicas and whether its StorageClass is the cluster default; `FileStorage`
-edits replicas and metadata server count. Every
+edits replicas and metadata server count; `ObjectStorage` edits replicas and
+gateway instance count. Every
 edit saves a merge-patch of `spec` only, so `status` is never clobbered, and
 `DiskPool`'s disk array is replaced wholesale rather than merged element-wise.
 
@@ -106,16 +112,16 @@ Unchecking a disk on a `DiskPool` warns what the reconciler will and will
 not do: the device leaves the CephCluster list, but **its OSD keeps running**
 until it is purged from Ceph manually, and data may rebalance in the meantime.
 
-**None of the four kinds offer delete from the console** — `allowedResources`
-grants no `delete` verb. Deleting a `DiskPool`, `BlockStorage` or
-`FileStorage` is a `kubectl delete`; owner references still cascade the
-derived `CephBlockPool`/`CephFilesystem`/`StorageClass`, and OSDs still
-survive it, same as ever.
+**None of the five kinds offer delete from the console** — `allowedResources`
+grants no `delete` verb. Deleting a `DiskPool`, `BlockStorage`, `FileStorage`
+or `ObjectStorage` is a `kubectl delete`; owner references still cascade the
+derived `CephBlockPool`/`CephFilesystem`/`CephObjectStore`/`StorageClass`, and
+OSDs still survive it, same as ever.
 
 The host has its own generic delete for plugin resources, but
 `resource-detail.component.html` renders either a custom detail component **or**
 the generic view, never both — so a plugin with a custom detail page loses the
-host's delete unless it implements one itself. None of these four do.
+host's delete unless it implements one itself. None of these five do.
 
 ### Console pages
 
@@ -129,10 +135,11 @@ Pages are served under the plugin CSP (`script-src 'self'; style-src 'self'`,
 no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
 `style` attributes** — both are blocked. Events are wired with
 `addEventListener` and styling comes from the `.plugin-*` classes in
-`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()` /
-`navigateBack()`, which post to `window.fundament.parentOrigin` rather than `*`.
+`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()`,
+which posts to `window.fundament.parentOrigin` rather than `*`; create and
+edit never navigate, they open an `<nldd-sheet>` in place.
 
-## Disk → DiskPool → BlockStorage/FileStorage flow
+## Disk → DiskPool → consumer-kind flow
 
 The plugin follows a four-step workflow:
 
@@ -160,14 +167,15 @@ dev flow, which is the only place they occur.
 
 2. **Pool Selection** (`DiskPool` CR): Operators use the console to select which disks to pool together. Creating a `DiskPool` specifies a list of disk names. The DiskPoolReconciler watches the `DiskPool` and folds every live pool's disks into the singleton `CephCluster`'s OSDs.
 
-3. **Consumer creation** (`BlockStorage` / `FileStorage` CR): Operators create a `BlockStorage` for block (RWO) volumes or a `FileStorage` for shared (RWX) volumes, each specifying a replication strategy (see [Replication](#replication-strategy) below); `FileStorage` additionally sets `metadataServers`. The BlockStorageReconciler / FileStorageReconciler watches its kind, plus `Disk` and `DiskPool` changes that affect the shared OSD set.
+3. **Consumer creation** (`BlockStorage` / `FileStorage` / `ObjectStorage` CR): Operators create a `BlockStorage` for block (RWO) volumes, a `FileStorage` for shared (RWX) volumes or an `ObjectStorage` for S3 buckets, each specifying a replication strategy (see [Replication](#replication-strategy) below); `FileStorage` additionally sets `metadataServers`, `ObjectStorage` sets `gatewayInstances`. Each kind's reconciler watches its kind, plus `Disk` and `DiskPool` changes that affect the shared OSD set.
 
-4. **Storage Class** (`CephBlockPool`/`CephFilesystem` + `StorageClass`): For each `BlockStorage`, the plugin creates a `CephBlockPool` and an RBD `StorageClass`. For each `FileStorage`, it creates a `CephFilesystem` (MDS active + standby) and a CephFS `StorageClass`. Both sit over the OSDs contributed by every `DiskPool`, and either is what in-cluster workloads reference in their `PersistentVolumeClaim` spec.
+4. **Storage Class** (`CephBlockPool`/`CephFilesystem`/`CephObjectStore` + `StorageClass`): For each `BlockStorage`, the plugin creates a `CephBlockPool` and an RBD `StorageClass`. For each `FileStorage`, it creates a `CephFilesystem` (MDS active + standby) and a CephFS `StorageClass`. For each `ObjectStorage`, it creates a `CephObjectStore` (RGW gateways) and a bucket `StorageClass`. All sit over the OSDs contributed by every `DiskPool`; the first two are what in-cluster workloads reference in a `PersistentVolumeClaim` spec, the last in an `ObjectBucketClaim`.
 
 ### Derived object names
 
-Both derived objects are named `ceph-<name>` for a `BlockStorage` (RBD), or
-`cephfs-<name>` for a `FileStorage` (CephFS) — not `<name>`. The name is
+Both derived objects are named `ceph-<name>` for a `BlockStorage` (RBD),
+`cephfs-<name>` for a `FileStorage` (CephFS), or `cephobj-<name>` for an
+`ObjectStorage` (RGW) — not `<name>`. The name is
 operator-chosen and a `StorageClass` is cluster-scoped, so an unprefixed name
 would collide with whatever else is on the cluster — a `BlockStorage` called
 `local-path` would otherwise take over k3d's default `StorageClass` and
@@ -176,7 +184,7 @@ real name, which is what a `PersistentVolumeClaim` should reference.
 
 The prefix reduces collisions; ownership is what prevents damage. Before writing
 either object the reconciler checks for a controller reference back to this
-`BlockStorage`/`FileStorage`, and refuses to adopt anything else — it goes
+consumer, and refuses to adopt anything else — it goes
 `Degraded` with the conflicting object named, rather than silently taking it over.
 
 ### Contested disks
@@ -189,10 +197,10 @@ inventory and the reconciler never disagree about who owns what.
 
 ## Single CephCluster, multiple DiskPool model
 
-The plugin follows a **singleton CephCluster** pattern: only one `CephCluster` is deployed per cluster. Multiple `DiskPool` CRs contribute disks to the same shared OSD set; multiple `BlockStorage`/`FileStorage` CRs each derive their own `CephBlockPool`/`CephFilesystem` and `StorageClass` over that same set.
+The plugin follows a **singleton CephCluster** pattern: only one `CephCluster` is deployed per cluster. Multiple `DiskPool` CRs contribute disks to the same shared OSD set; multiple `BlockStorage`/`FileStorage`/`ObjectStorage` CRs each derive their own `CephBlockPool`/`CephFilesystem`/`CephObjectStore` and `StorageClass` over that same set.
 
 This design supports:
-- **Multi-tenancy**: Different `BlockStorage`/`FileStorage` objects can have different replication (and, for `FileStorage`, a different `metadataServers` count), allowing per-workload customization.
+- **Multi-tenancy**: Different consumer objects can have different replication (and their own `metadataServers` / `gatewayInstances` counts), allowing per-workload customization.
 - **Shared infrastructure**: All storage in the cluster flows through a single Ceph cluster, simplifying backup, disaster recovery, and capacity planning.
 
 Tiering by device type is not supported: no renderer sets a `deviceClass` or a
@@ -202,7 +210,7 @@ set that every volume spans; see
 
 ## Replication strategy
 
-`BlockStorage` and `FileStorage` each carry an optional `replicas` field that controls how many copies Ceph maintains (for `FileStorage`, both its metadata and data pool replicate at the same size):
+`BlockStorage`, `FileStorage` and `ObjectStorage` each carry an optional `replicas` field that controls how many copies Ceph maintains (for `FileStorage` and `ObjectStorage`, both the metadata and data pool replicate at the same size):
 
 - absent (default): derives the replica count from the number of nodes contributing disks (via `DiskPool`), capped at 3 — `min(3, nodes)`. Two nodes give 2 replicas, five nodes still give 3.
 
@@ -214,15 +222,15 @@ The node count is the cluster's, not any single object's — see [Pools share on
 
 The failure domain follows from the result: `host` when replication ends up with 2 or more replicas across 2 or more nodes, otherwise `osd`. A single-node cluster therefore still provisions — with `osd` domain and, at 1 replica, `requireSafeReplicaSize: false`, which Ceph needs to accept a size-1 pool at all.
 
-The resulting replica count, failure domain and any clamping message are recorded in the `BlockStorage`/`FileStorage` status.
+The resulting replica count, failure domain and any clamping message are recorded in the consumer's status.
 
 ### Status fields
 
-A `BlockStorage`/`FileStorage`'s `status` describes its derived `StorageClass`, not live Ceph state:
+A consumer kind's `status` describes its derived `StorageClass`, not live Ceph state:
 
-- `storageClassName` — the derived `StorageClass`'s name (`ceph-<name>` or `cephfs-<name>`); what a `PersistentVolumeClaim` should reference.
+- `storageClassName` — the derived `StorageClass`'s name (`ceph-<name>`, `cephfs-<name>` or `cephobj-<name>`); what a `PersistentVolumeClaim` (or, for `ObjectStorage`, an `ObjectBucketClaim`) should reference.
 - `replicas`, `failureDomain` — the result of [replication](#replication-strategy) sizing.
-- `phase` — `Provisioning` until the backing `CephBlockPool`/`CephFilesystem` reports `Ready`; `Degraded` when it cannot be reconciled without operator action, including when no `DiskPool` contributes any disks.
+- `phase` — `Provisioning` until the backing Rook object reports `Ready`; `Degraded` when it cannot be reconciled without operator action, including when no `DiskPool` contributes any disks.
 
 A `DiskPool`'s `status` is different: it describes only its own disk *contribution*, not any derived object, and carries no replication of its own:
 
@@ -232,11 +240,11 @@ A `DiskPool`'s `status` is different: it describes only its own disk *contributi
 
 ### Pools share one OSD set
 
-Every `DiskPool` feeds the same `CephCluster`, and the `CephBlockPool`/`CephFilesystem` a `BlockStorage`/`FileStorage` derives carries **no CRUSH rule confining it to any one `DiskPool`'s disks**. Ceph places a volume's data across every OSD in the cluster.
+Every `DiskPool` feeds the same `CephCluster`, and the Rook object a consumer derives carries **no CRUSH rule confining it to any one `DiskPool`'s disks**. Ceph places a volume's data across every OSD in the cluster.
 
 Three consequences, all of them load-bearing:
 
-- **Multiple pools do not isolate or tier storage.** A second `BlockStorage` or `FileStorage` gives you a second `StorageClass` over the same disks. Real separation needs a device class plus a per-pool CRUSH rule, which this version does not implement.
+- **Multiple pools do not isolate or tier storage.** A second consumer object gives you a second `StorageClass` over the same disks. Real separation needs a device class plus a per-pool CRUSH rule, which this version does not implement.
 - **`rawCapacity / replicas` is not usable capacity.** With more than one `DiskPool` it is not even an upper bound.
 - **Replication is sized against the cluster, not any one pool.** `auto` uses the number of nodes contributing disks cluster-wide. This is deliberate: sizing off a single `DiskPool`'s disks would cap that pool's consumers at `replicas: 1` — waiving Ceph's size-1 safety check to advertise no redundancy — while Ceph replicated that data across all hosts regardless.
 
@@ -256,6 +264,32 @@ with a standby (`activeStandby: true`) so a crashed MDS fails over without an
 operator manually promoting one. `preserveFilesystemOnDelete` is always `true`:
 deleting the `FileStorage` CR (or its owner) tears down the `CephFilesystem`
 object, but never the underlying filesystem data.
+
+## ObjectStorage (RGW)
+
+`ObjectStorage` rides the same shared OSD set and derives a `cephobj-<name>`
+pair: a `CephObjectStore` running `spec.gatewayInstances` RGW pods behind the
+`rook-ceph-rgw-cephobj-<name>` Service (port 80; TLS is a gateway concern), and
+a `StorageClass` that drives Rook's ObjectBucketClaim provisioner
+(`<cluster namespace>.ceph.rook.io/bucket` — it follows the CephCluster's namespace, not the Rook operator's) rather than a CSI driver.
+
+Workloads consume it by creating an `ObjectBucketClaim` that references the
+class — by hand, or through the Buckets section on the ObjectStorage detail
+page (list, create and inspect claims for that store, with optional per-claim
+quotas and an exact-name collision pre-check): Rook provisions the bucket and writes the S3 endpoint to a ConfigMap and
+the credentials to a Secret, both named after the claim. A claim can cap its
+own bucket via `spec.additionalConfig` (`maxSize`, `maxObjects`). Buckets
+advertise the signing-only region label from the `S3_REGION` install config
+(default `nl-1`; RGW enforces no region).
+`preservePoolsOnDelete` is always `true`, same stance as `FileStorage`:
+deleting an `ObjectStorage` keeps its seven `cephobj-<name>.rgw.*` pools and
+their data. Reclaiming the space is a deliberate second step in the Ceph
+toolbox: `ceph osd pool ls | grep cephobj-<name>`, then `ceph osd pool rm`
+per pool (requires `mon_allow_pool_delete=true`).
+
+The S3 endpoint is in-cluster only. External exposure (a Gateway/HTTPRoute via
+the gateway-api plugin) and standalone S3 users (`CephObjectStoreUser`) are
+deliberate non-goals of this version.
 
 ## Why it needs cluster-admin-equivalent RBAC
 
@@ -284,7 +318,7 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: ceph-rook
-    pluginVersion: "0.2.0"
+    pluginVersion: "0.3.0"
     definitionHash: sha256:<hash printed by `just plugins publish storage/ceph-rook`>
 ```
 
@@ -326,8 +360,8 @@ Ensure these prerequisites are in place on all nodes before creating a `DiskPool
        ├─ Install Rook-Ceph Helm chart
        ├─ Bootstrap singleton CephCluster CR
        ├─ Create k8s client
-       ├─ Register DiskInventoryReconciler, DiskPoolReconciler,
-       │  BlockStorageReconciler and FileStorageReconciler
+       ├─ Register DiskInventoryReconciler, DiskPoolReconciler and the
+       │  BlockStorage/FileStorage/ObjectStorage consumer reconcilers
        ├─ Start controller-runtime manager
        ├─ ReportReady()
        ├─ ReportStatus("running", "rook-ceph storage plugin running")
@@ -349,18 +383,18 @@ Ensure these prerequisites are in place on all nodes before creating a `DiskPool
        │       ├─ Fold every live pool's disks into CephCluster OSDs (deduped)
        │       └─ Update status (phase, selected disks, raw capacity)
        │
-       └─ BlockStorageReconciler / FileStorageReconciler: react to their own
-           kind plus Disk/DiskPool changes (either can change the node
-           count and therefore replication)
+       └─ Consumer reconcilers: react to their own kind plus Disk/DiskPool
+           changes (either can change the node count and therefore replication)
            ├─ No OSDs in the shared union -> Degraded, no derived objects made
-           ├─ Create/update CephBlockPool ceph-<name>    (BlockStorage)
-           │             or CephFilesystem cephfs-<name>  (FileStorage)
-           │             — refuse to adopt either if not ours
-           ├─ Create/update StorageClass  ceph-<name> / cephfs-<name>
+           ├─ Create/update CephBlockPool ceph-<name>      (BlockStorage)
+           │             or CephFilesystem cephfs-<name>   (FileStorage)
+           │             or CephObjectStore cephobj-<name> (ObjectStorage)
+           │             — refuse to adopt any if not ours
+           ├─ Create/update StorageClass  ceph-<name> / cephfs-<name> / cephobj-<name>
            │             — refuse to adopt if not ours
            ├─ Update status (phase, storageClassName, replicas, failure domain)
            └─ Re-check every 30 s while phase is Provisioning
-              (until the CephBlockPool/CephFilesystem reports Ready)
+              (until the derived Rook object reports Ready)
 ```
 
 A reconcile that fails writes `phase: Degraded` with the cause in

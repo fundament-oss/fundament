@@ -38,11 +38,16 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, clientgoscheme.AddToScheme(s))
 	require.NoError(t, apiextensionsv1.AddToScheme(s))
 	require.NoError(t, v1alpha1.AddToScheme(s))
-	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem"} {
-		gvk := schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}
+	for _, gvk := range []schema.GroupVersionKind{
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephCluster"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephBlockPool"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephFilesystem"},
+		{Group: "ceph.rook.io", Version: "v1", Kind: "CephObjectStore"},
+		{Group: "objectbucket.io", Version: "v1alpha1", Kind: "ObjectBucket"},
+	} {
 		s.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
 		listGVK := gvk
-		listGVK.Kind = kind + "List"
+		listGVK.Kind += "List"
 		s.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
 	}
 	return s
@@ -53,7 +58,7 @@ func newFakeClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(testScheme(t)).
 		WithObjects(objs...).
-		WithStatusSubresource(&v1alpha1.DiskPool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}, &v1alpha1.FileStorage{}).
+		WithStatusSubresource(&v1alpha1.DiskPool{}, &v1alpha1.Disk{}, &v1alpha1.BlockStorage{}, &v1alpha1.FileStorage{}, &v1alpha1.ObjectStorage{}).
 		Build()
 }
 
@@ -530,7 +535,7 @@ func firstErr(_ ctrl.Result, err error) error { return err }
 // kind the controllers register.
 func TestRookStubsResolveGVK(t *testing.T) {
 	t.Parallel()
-	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem"} {
+	for _, kind := range []string{"CephCluster", "CephBlockPool", "CephFilesystem", "CephObjectStore"} {
 		gvk, err := apiutil.GVKForObject(rookStub(kind), testScheme(t))
 		require.NoError(t, err)
 		assert.Equal(t, schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: kind}, gvk)

@@ -31,6 +31,10 @@ func FilesystemDerivedName(name string) string {
 	return filesystemDerivedNamePrefix + name
 }
 
+// Prefix for the objects an ObjectStorage derives; distinct from the other
+// prefixes for the same collision reason.
+const objectStoreDerivedNamePrefix = "cephobj-"
+
 // ClaimOwner returns the DiskPool entitled to a disk when more than one lists
 // it, or "" when no live pool claims it.
 //

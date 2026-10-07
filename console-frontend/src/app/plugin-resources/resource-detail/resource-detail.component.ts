@@ -10,6 +10,8 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
+import { create } from '@bufbuild/protobuf';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
@@ -21,6 +23,8 @@ import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
+import { NAMESPACE } from '../../../connect/tokens';
+import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
@@ -154,6 +158,9 @@ export default class ResourceDetailComponent implements OnInit {
       this.titleService.setTitle(r?.metadata.name);
     });
 
+    const projectId = this.route.snapshot.parent?.params['id'];
+    if (projectId) void this.loadNamespaces(projectId);
+
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
       const clusterId = this.clusterContext.selectedClusterId();
@@ -218,6 +225,25 @@ export default class ResourceDetailComponent implements OnInit {
     const projectId = this.route.snapshot.parent?.params['id'];
     return projectId ? `/projects/${projectId}` : '/';
   });
+
+  private namespaceClient = inject(NAMESPACE);
+
+  // The project's namespaces, forwarded to the plugin iframe: custom detail
+  // UIs embed create flows (the ceph-rook Buckets section), which need the
+  // same namespace choices the create view gets.
+  namespaces = signal<string[]>([]);
+
+  private async loadNamespaces(projectId: string): Promise<void> {
+    try {
+      const request = create(ListProjectNamespacesRequestSchema, { projectId });
+      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
+      this.namespaces.set(response.namespaces.map((n) => n.name));
+    } catch (err) {
+      // Transient failure: plugin UIs fall back to a free-text namespace field.
+      // eslint-disable-next-line no-console
+      console.error('[ResourceDetail] Failed to load namespaces:', err);
+    }
+  }
 
   goToList(event?: Event) {
     // The back event bubbles and composes, so the split view in the shell hears

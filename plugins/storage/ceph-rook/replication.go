@@ -18,6 +18,12 @@ func ComputeReplication(requested *int32, nodeCount int) (replicas int, failureD
 	switch {
 	case requested == nil:
 		replicas = min(3, nodes)
+	case *requested < 1:
+		// Below the CRD minimum (reachable for Go-constructed objects or
+		// during version skew): auto beats honoring it, which would mean
+		// unreplicated storage, and the message keeps the fallback visible.
+		message = "unrecognised replication request, using auto"
+		replicas = min(3, nodes)
 	default:
 		replicas = int(*requested)
 		if replicas > nodes {

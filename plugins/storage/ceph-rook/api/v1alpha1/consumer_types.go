@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // ReasonNoOSDs: no DiskPool contributes usable disks, so there is nothing
-// to place data on. Consumer kinds (BlockStorage, FileStorage) share it.
+// to place data on. All consumer kinds share it.
 const ReasonNoOSDs = "NoOSDs"
 
 // ReasonRookFailure: the derived Rook object reports phase Failure, so the
@@ -14,14 +14,22 @@ const ReasonRookFailure = "RookFailure"
 // of them marks its StorageClass as the cluster default.
 const ReasonDefaultConflict = "DefaultConflict"
 
-// ConsumerStatus is the observed state of a BlockStorage or FileStorage and
-// the StorageClass it derives.
+// ReasonDeletionBlocked: buckets still reference the ObjectStorage's derived
+// StorageClass, which their claims' finalizers need to deprovision.
+const ReasonDeletionBlocked = "DeletionBlocked"
+
+// Detached from the doc comment below so it stays out of the CRDs: these
+// docs publish into every consumer kind, so name no kind-specific field.
+
+// ConsumerStatus is the observed state of a storage consumer and the
+// StorageClass it derives.
 type ConsumerStatus struct {
 	// Phase is Provisioning until the derived storage reports Ready, and
 	// Degraded when reconciliation needs operator action.
 	Phase string `json:"phase,omitempty"`
-	// StorageClassName is the name of the derived StorageClass, for
-	// PersistentVolumeClaims to reference.
+	// StorageClassName is the name of the derived StorageClass, which claims
+	// (PersistentVolumeClaims, or ObjectBucketClaims for an object store)
+	// reference.
 	StorageClassName string `json:"storageClassName,omitempty"`
 	// Replicas is the replica count in effect: spec.replicas clamped to the
 	// contributing node count, or the derived count when spec.replicas is absent.
@@ -50,3 +58,6 @@ func (in *BlockStorage) RequestedReplicas() *int32       { return in.Spec.Replic
 
 func (in *FileStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
 func (in *FileStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }
+
+func (in *ObjectStorage) ConsumerStatus() *ConsumerStatus { return &in.Status }
+func (in *ObjectStorage) RequestedReplicas() *int32       { return in.Spec.Replicas }

@@ -1,8 +1,19 @@
-import { loadSdk, escapeHtml, humanizeQuantity, renderDefList, wireSubmit } from './_shared.js';
+import {
+  loadSdk,
+  openSheet,
+  errorBox,
+  ensureNldd,
+  fetchCephCapacity,
+  escapeHtml,
+  humanizeQuantity,
+  renderDefList,
+  wireSubmit,
+} from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
 const ctx = await fundament.init;
+ensureNldd().catch(() => {});
 
 const content = document.getElementById('content');
 const heading = document.getElementById('heading');
@@ -74,9 +85,9 @@ function renderReadOnly(item, byName) {
       Every disk pool feeds one shared Ceph cluster; BlockStorage and FileStorage objects
       turn that capacity into StorageClasses. Volumes provisioned through those StorageClasses
       are placed across all of the cluster's disks, so the raw size above is this pool's
-      contribution. Use
-      <code>ceph df</code> for free space.
+      contribution.
     </p>
+    <p class="plugin-hint" data-role="capacity"></p>
     <h2 class="plugin-heading">Contributed Disks</h2>
     ${renderDiskList(spec.disks, byName)}
   `;
@@ -92,16 +103,23 @@ async function showDetail() {
     // survives every re-render, so listeners would stack. (CSP restricts inline
     // handler *attributes*, not this.)
     document.getElementById('edit-btn').onclick = () => showEdit(item);
+    fetchCephCapacity().then((cap) => {
+      const el = content.querySelector('[data-role="capacity"]');
+      if (!cap || !el) return;
+      el.textContent = `Raw free space: ${humanizeQuantity(String(cap.bytesAvailable))} of `
+        + `${humanizeQuantity(String(cap.bytesTotal))} across the shared cluster.`;
+    });
   } catch (err) {
     actions.hidden = true;
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load: ${err?.message ?? err}`,
-    )}</div>`;
+    content.innerHTML = errorBox(err);
   }
 }
 
 async function showEdit(item) {
-  actions.hidden = true;
+  const sheet = await openSheet({ label: 'Edit Disk Pool' });
+  if (!sheet) return;
+  const { body, close } = sheet;
+  body.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading disks…</p>');
   const current = item.spec?.disks ?? [];
   const currentNames = current.map((d) => d.name);
 
@@ -110,10 +128,7 @@ async function showEdit(item) {
     const { items } = await fundament.k8s.list(RESOURCE_DISKS);
     disks = selectableDisks(items, name);
   } catch (err) {
-    content.innerHTML = `<div class="plugin-error">${escapeHtml(
-      `Failed to load disks: ${err?.message ?? err}`,
-    )}</div>`;
-    actions.hidden = false;
+    body.lastElementChild.outerHTML = errorBox(err, 'Failed to load disks');
     return;
   }
 
@@ -135,9 +150,9 @@ async function showEdit(item) {
            to remove one.
          </p>`;
 
-  content.innerHTML = `
-    <form id="edit-form" class="plugin-form" novalidate>
-      <div class="plugin-error" id="edit-error" hidden></div>
+  body.lastElementChild.outerHTML = `
+    <form class="plugin-form" novalidate>
+      <div class="plugin-error" data-role="error" hidden></div>
 
       <div class="plugin-field">
         <span class="plugin-label">Disks</span>
@@ -151,15 +166,15 @@ async function showEdit(item) {
       </div>
 
       <div class="plugin-actions">
-        <button type="submit" class="plugin-button" id="save-btn">Save</button>
-        <button type="button" class="plugin-button-secondary" id="cancel-btn">Cancel</button>
+        <button type="submit" class="plugin-button" data-role="save">Save</button>
+        <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
       </div>
     </form>
   `;
 
-  const form = document.getElementById('edit-form');
+  const form = body.querySelector('form');
 
-  document.getElementById('cancel-btn').addEventListener('click', () => showDetail());
+  body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
 
   // Disjoint by construction: preserved is exactly what the picker did not
   // render, so this cannot produce the duplicate name the CRD's listType=map
@@ -167,8 +182,8 @@ async function showEdit(item) {
   const selected = () => [...readSelectedDisks(form, current), ...preserved];
 
   wireSubmit(form, {
-    button: document.getElementById('save-btn'),
-    errorBox: document.getElementById('edit-error'),
+    button: body.querySelector('[data-role="save"]'),
+    errorBox: body.querySelector('[data-role="error"]'),
     busyLabel: 'Saving…',
     failPrefix: 'Failed to save',
     validate: () => (selected().length === 0 ? 'Select at least one disk.' : null),
@@ -181,6 +196,7 @@ async function showEdit(item) {
           spec: { disks: selected() },
         },
       );
+      close();
       await showDetail();
     },
   });

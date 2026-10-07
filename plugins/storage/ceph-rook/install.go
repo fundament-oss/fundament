@@ -44,6 +44,7 @@ var rookCRDNames = []string{
 	"cephclusters.ceph.rook.io",
 	"cephblockpools.ceph.rook.io",
 	"cephfilesystems.ceph.rook.io",
+	"cephobjectstores.ceph.rook.io",
 }
 
 // install runs the full install lifecycle: the rook-ceph chart, this plugin's

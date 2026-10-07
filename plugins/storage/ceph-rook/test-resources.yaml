@@ -34,3 +34,14 @@ metadata:
   name: test-file
 spec:
   metadataServers: 1
+---
+# The `just test` recipe claims a bucket against this store's StorageClass,
+# but only once the store is Ready: a claim created earlier sits in the OBC
+# provisioner's exponential backoff and can outlive any reasonable wait.
+apiVersion: ceph.fundament.io/v1alpha1
+kind: ObjectStorage
+metadata:
+  name: test-object
+spec:
+  # replicas omitted: automatic, derived from the contributing nodes.
+  gatewayInstances: 1

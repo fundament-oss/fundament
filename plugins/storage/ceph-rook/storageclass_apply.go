@@ -91,10 +91,14 @@ func immutableStorageClassDrift(existing, desired *storagev1.StorageClass) []str
 	if !maps.Equal(existing.Parameters, desired.Parameters) {
 		drift = append(drift, "parameters")
 	}
-	if !ptr.Equal(existing.ReclaimPolicy, desired.ReclaimPolicy) {
+	// Pointer fields the renderer leaves nil are unspecified, not a request
+	// for the zero value: the server defaults them on create, and reading
+	// that default back as drift would turn a byte-identical class into a
+	// terminal conflict.
+	if desired.ReclaimPolicy != nil && !ptr.Equal(existing.ReclaimPolicy, desired.ReclaimPolicy) {
 		drift = append(drift, "reclaimPolicy")
 	}
-	if !ptr.Equal(existing.VolumeBindingMode, desired.VolumeBindingMode) {
+	if desired.VolumeBindingMode != nil && !ptr.Equal(existing.VolumeBindingMode, desired.VolumeBindingMode) {
 		drift = append(drift, "volumeBindingMode")
 	}
 	sort.Strings(drift)
