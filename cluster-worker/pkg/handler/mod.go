@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -13,6 +14,10 @@ import (
 // The outbox worker defers the row without incrementing retries.
 type PreconditionError struct {
 	Reason string
+	// FirstRetryAfter, when set and shorter than the worker's default delay, is
+	// used for a row's first deferral only: a precondition that usually clears
+	// within seconds is rechecked quickly once, then falls back to the default.
+	FirstRetryAfter time.Duration
 }
 
 func (e *PreconditionError) Error() string {
@@ -21,6 +26,12 @@ func (e *PreconditionError) Error() string {
 
 func NewPreconditionError(reason string) *PreconditionError {
 	return &PreconditionError{Reason: reason}
+}
+
+// NewPreconditionErrorWithFirstRetry is NewPreconditionError with a shorter
+// delay before the first recheck.
+func NewPreconditionErrorWithFirstRetry(reason string, firstRetryAfter time.Duration) *PreconditionError {
+	return &PreconditionError{Reason: reason, FirstRetryAfter: firstRetryAfter}
 }
 
 // EntityType identifies an entity type in the outbox table via its FK column.

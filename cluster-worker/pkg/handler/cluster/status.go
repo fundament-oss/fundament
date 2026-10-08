@@ -31,7 +31,8 @@ func (h *Handler) CheckStatus(ctx context.Context) error {
 // pollActiveClusters checks Gardener status for active (non-deleted) clusters.
 func (h *Handler) pollActiveClusters(ctx context.Context) error {
 	clusters, err := h.queries.ClusterListNeedingStatusCheck(ctx, db.ClusterListNeedingStatusCheckParams{
-		LimitCount: h.cfg.StatusBatchSize,
+		ReadyInterval: pgtype.Interval{Microseconds: h.cfg.StatusReadyInterval.Microseconds(), Valid: true},
+		LimitCount:    h.cfg.StatusBatchSize,
 	})
 	if err != nil {
 		h.logger.Error("failed to list clusters for status check", "error", err)
@@ -44,18 +45,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 		cluster := &clusters[i]
 
-		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
-		if err != nil {
-			h.logger.Error("failed to get project namespace",
-				"cluster_id", cluster.ID,
-				"error", err)
-			continue
-		}
-		if namespace == "" {
-			continue
-		}
-
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
+		// Status lookups find the Shoot by cluster-ID label across all namespaces, so
+		// they need no project namespace (and must not create a Project as a side effect).
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, "", cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
@@ -65,74 +57,88 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		var oldStatus gardener.ShootStatusType
-		if cluster.ShootStatus.Valid {
-			oldStatus = gardener.ShootStatusType(cluster.ShootStatus.String)
+		stored := storedShootState{
+			Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
+			Message:  cluster.ShootStatusMessage.String,
+			Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
+			Updating: cluster.ShootUpdating,
 		}
+		update := nextShootStatus(stored, shootStatus)
 
 		params := db.ClusterUpdateShootStatusParams{
 			ClusterID: cluster.ID,
-			Status:    pgtype.Text{String: string(shootStatus.Status), Valid: true},
-			Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
+			Status:    pgtype.Text{String: string(update.Status), Valid: true},
+			Message:   pgtype.Text{String: update.Message, Valid: true},
+			Health:    pgtype.Text{String: string(update.Health), Valid: update.Health != ""},
+			Updating:  update.Updating,
+			CheckedAt: cluster.ShootStatusUpdated,
 		}
 
-		if err := h.queries.ClusterUpdateShootStatus(ctx, params); err != nil {
+		updated, err := h.queries.ClusterUpdateShootStatus(ctx, params)
+		if err != nil {
 			h.logger.Error("failed to update shoot status",
 				"cluster_id", cluster.ID,
 				"error", err)
 			continue
 		}
+		if updated == 0 {
+			// The row changed after it was read (an update was marked in
+			// progress); the next poll decides from the new state.
+			h.logger.Debug("shoot status changed during poll, skipping", "cluster_id", cluster.ID)
+			continue
+		}
 
-		if shootStatus.Status != oldStatus {
-			var eventType dbconst.ClusterEventEventType
-			switch shootStatus.Status {
-			case gardener.StatusProgressing:
-				eventType = dbconst.ClusterEventEventType_StatusProgressing
-			case gardener.StatusReady:
-				eventType = dbconst.ClusterEventEventType_StatusReady
-			case gardener.StatusError:
-				eventType = dbconst.ClusterEventEventType_StatusError
-			case gardener.StatusPending, gardener.StatusDeleting:
-				// No event for these transient states
-			case gardener.StatusDeleted:
-				// Handled in pollDeletedClusters
-			default:
-				panic(fmt.Sprintf("unhandled shoot status: %s", shootStatus.Status))
+		for _, event := range update.Events {
+			if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
+				ClusterID: cluster.ID,
+				EventType: string(event.Type),
+				Message:   pgtype.Text{String: event.Message, Valid: true},
+			}); err != nil {
+				h.logger.Warn("failed to create status event",
+					"cluster_id", cluster.ID,
+					"event_type", event.Type,
+					"error", err)
 			}
-
-			if eventType != "" {
-				if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
-					ClusterID: cluster.ID,
-					EventType: string(eventType),
-					Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
-				}); err != nil {
-					h.logger.Warn("failed to create status event",
-						"cluster_id", cluster.ID,
-						"event_type", eventType,
-						"error", err)
-				}
+			if event.Type == dbconst.ClusterEventEventType_StatusUnhealthy {
+				h.logger.Warn("ready shoot became unhealthy",
+					"cluster_id", cluster.ID,
+					"name", cluster.Name,
+					"message", event.Message)
 			}
+			if event.Type == dbconst.ClusterEventEventType_StatusLost {
+				h.logger.Warn("shoot disappeared from Gardener",
+					"cluster_id", cluster.ID,
+					"name", cluster.Name,
+					"previous_status", stored.Status)
+			}
+			if event.Type == dbconst.ClusterEventEventType_StatusWarning {
+				h.logger.Warn("gardener is retrying a failed shoot operation",
+					"cluster_id", cluster.ID,
+					"name", cluster.Name,
+					"message", event.Message)
+			}
+		}
 
-			// On transition to ready, insert a ready outbox row. Handlers that
-			// react to cluster-ready (usersync, namespace-sync) subscribe to this
-			// event via the registry — the status handler stays agnostic of them.
-			if shootStatus.Status == gardener.StatusReady {
-				if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
-					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
-				}); err != nil {
-					h.logger.Warn("failed to insert ready outbox row",
-						"cluster_id", cluster.ID,
-						"error", err)
-				}
+		// On transition to ready, insert a ready outbox row. Handlers that
+		// react to cluster-ready (usersync, namespace-sync) subscribe to this
+		// event via the registry — the status handler stays agnostic of them.
+		if update.InsertReady {
+			if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
+				ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+			}); err != nil {
+				h.logger.Warn("failed to insert ready outbox row",
+					"cluster_id", cluster.ID,
+					"error", err)
 			}
 		}
 
 		h.logger.Debug("updated shoot status",
 			"cluster_id", cluster.ID,
 			"name", cluster.Name,
-			"status", shootStatus.Status)
+			"status", update.Status,
+			"health", update.Health)
 
-		if shootStatus.Status == gardener.StatusError {
+		if update.Status == gardener.StatusError {
 			h.logger.Error("ALERT: shoot reconciliation failed",
 				"cluster_id", cluster.ID,
 				"name", cluster.Name,
@@ -162,18 +168,9 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			deleted = &cluster.Deleted.Time
 		}
 
-		namespace, err := h.resolveProjectNamespace(ctx, cluster.OrganizationName, cluster.OrganizationID)
-		if err != nil {
-			h.logger.Error("failed to get project namespace",
-				"cluster_id", cluster.ID,
-				"error", err)
-			continue
-		}
-		if namespace == "" {
-			continue
-		}
-
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
+		// Status lookups find the Shoot by cluster-ID label across all namespaces, so
+		// they need no project namespace (and must not create a Project as a side effect).
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, "", cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 		clusterToSync.Deleted = deleted
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
@@ -185,14 +182,19 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 
 		if shootStatus.Status == gardener.StatusPending && shootStatus.Message == gardener.MsgShootNotFound {
-			if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
+			updated, err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
 				Status:    pgtype.Text{String: string(gardener.StatusDeleted), Valid: true},
 				Message:   pgtype.Text{String: "Shoot confirmed deleted", Valid: true},
-			}); err != nil {
+				CheckedAt: cluster.ShootStatusUpdated,
+			})
+			if err != nil {
 				h.logger.Error("failed to update deleted status",
 					"cluster_id", cluster.ID,
 					"error", err)
+				continue
+			}
+			if updated == 0 {
 				continue
 			}
 
@@ -210,10 +212,11 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 				"cluster_id", cluster.ID,
 				"name", cluster.Name)
 		} else {
-			if err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
+			if _, err := h.queries.ClusterUpdateShootStatus(ctx, db.ClusterUpdateShootStatusParams{
 				ClusterID: cluster.ID,
 				Status:    pgtype.Text{String: string(gardener.StatusDeleting), Valid: true},
 				Message:   pgtype.Text{String: shootStatus.Message, Valid: true},
+				CheckedAt: cluster.ShootStatusUpdated,
 			}); err != nil {
 				h.logger.Error("failed to update deleting status",
 					"cluster_id", cluster.ID,

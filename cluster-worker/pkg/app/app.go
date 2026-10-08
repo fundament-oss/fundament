@@ -87,6 +87,12 @@ type ReadyChecker interface {
 	IsReady() bool
 }
 
+// statusCacheRunner is implemented by Gardener clients that serve status reads
+// from a watch-backed cache (the real client); the mock has none.
+type statusCacheRunner interface {
+	RunStatusCache(ctx context.Context) error
+}
+
 // App holds the wired-up application components.
 type App struct {
 	pool            *pgxpool.Pool
@@ -94,6 +100,7 @@ type App struct {
 	outboxWorker    *outbox.Worker
 	statusWorker    *status.Worker
 	reconcileWorker *reconcile.Worker
+	statusCache     statusCacheRunner // nil when the client has no status cache
 	healthServer    *http.Server
 	logger          *slog.Logger
 	cfg             *Config
@@ -159,12 +166,15 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	// Health server
 	healthServer := startHealthServer(cfg.HealthPort, logger, outboxWorker, statusWorker, reconcileWorker)
 
+	statusCache, _ := gardenerClient.(statusCacheRunner)
+
 	return &App{
 		pool:            pool,
 		registry:        registry,
 		outboxWorker:    outboxWorker,
 		statusWorker:    statusWorker,
 		reconcileWorker: reconcileWorker,
+		statusCache:     statusCache,
 		healthServer:    healthServer,
 		logger:          logger,
 		cfg:             cfg,
@@ -185,6 +195,10 @@ func (a *App) Run(ctx context.Context) error {
 	g.Go(func() error { return a.outboxWorker.Run(ctx) })
 	g.Go(func() error { return a.statusWorker.Run(ctx) })
 	g.Go(func() error { return a.reconcileWorker.Run(ctx) })
+	if a.statusCache != nil {
+		// Status reads fall back to direct Gardener requests until it has synced.
+		g.Go(func() error { return a.statusCache.RunStatusCache(ctx) })
+	}
 
 	err := g.Wait()
 

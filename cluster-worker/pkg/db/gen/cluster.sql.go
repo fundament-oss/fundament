@@ -280,6 +280,9 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -296,23 +299,39 @@ WHERE
     )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
-        tenant.clusters.shoot_status IS NULL -- Never checked
-        OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
-        OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
-        OR tenant.clusters.shoot_status = 'error'
-    ) -- Failed, might recover
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL -- Never checked
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-    ) -- Not checked recently
+        (
+            (
+                tenant.clusters.shoot_status IS NULL -- Never checked
+                OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
+                OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
+                OR tenant.clusters.shoot_status = 'error' -- Failed, might recover
+                OR (
+                    tenant.clusters.shoot_status = 'ready'
+                    AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
+                ) -- Ready but conditions still settling (or health not recorded yet)
+                OR tenant.clusters.shoot_updating -- An update fundament pushed rolls out
+            )
+            AND (
+                tenant.clusters.shoot_status_updated IS NULL -- Never checked
+                OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
+            ) -- Not checked recently
+        )
+        OR (
+            tenant.clusters.shoot_status = 'ready'
+            AND tenant.clusters.shoot_health = 'healthy'
+            AND tenant.clusters.shoot_status_updated < now() - $1::interval
+        ) -- Healthy: slower refresh
+    )
 ORDER BY
-    shoot_status_updated NULLS FIRST
+    tenant.clusters.shoot_status IS NOT DISTINCT FROM 'ready', -- NULL status sorts with the non-ready ones
+    tenant.clusters.shoot_status_updated NULLS FIRST
 LIMIT
-    $1
+    $2
 `
 
 type ClusterListNeedingStatusCheckParams struct {
-	LimitCount int32
+	ReadyInterval pgtype.Interval
+	LimitCount    int32
 }
 
 type ClusterListNeedingStatusCheckRow struct {
@@ -322,6 +341,9 @@ type ClusterListNeedingStatusCheckRow struct {
 	KubernetesVersion  string
 	Deleted            pgtype.Timestamptz
 	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootHealth        pgtype.Text
+	ShootUpdating      bool
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -330,10 +352,14 @@ type ClusterListNeedingStatusCheckRow struct {
 }
 
 // Get clusters where we need to check Gardener status (active clusters).
-// Polls clusters in non-terminal states: NULL (never checked), pending,
-// progressing, error.
+// Two speeds: clusters in non-terminal states (NULL, pending, progressing,
+// error) and ready clusters that are not known to be healthy are polled every
+// 30 seconds; healthy ready clusters every @ready_interval. Ready clusters are
+// polled at all so their message and health stay current after the first
+// ready reading. Clusters still being created are ordered first so a large
+// ready fleet cannot crowd them out of the batch.
 func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg ClusterListNeedingStatusCheckParams) ([]ClusterListNeedingStatusCheckRow, error) {
-	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, arg.LimitCount)
+	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, arg.ReadyInterval, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
@@ -348,6 +374,9 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 			&i.KubernetesVersion,
 			&i.Deleted,
 			&i.ShootStatus,
+			&i.ShootStatusMessage,
+			&i.ShootHealth,
+			&i.ShootUpdating,
 			&i.OrganizationID,
 			&i.ShootStatusUpdated,
 			&i.OrganizationName,
@@ -364,26 +393,72 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 	return items, nil
 }
 
-const clusterUpdateShootStatus = `-- name: ClusterUpdateShootStatus :exec
+const clusterMarkShootUpdating = `-- name: ClusterMarkShootUpdating :execrows
+UPDATE tenant.clusters
+SET
+    shoot_updating = true,
+    shoot_status_message = $1,
+    shoot_status_updated = now()
+WHERE
+    id = $2
+    AND shoot_status = 'ready'
+`
+
+type ClusterMarkShootUpdatingParams struct {
+	Message   pgtype.Text
+	ClusterID uuid.UUID
+}
+
+// Mark a ready cluster as updating once Gardener accepted a spec change. It
+// stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
+// keeps working while the update rolls out.
+func (q *Queries) ClusterMarkShootUpdating(ctx context.Context, arg ClusterMarkShootUpdatingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterMarkShootUpdating, arg.Message, arg.ClusterID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const clusterUpdateShootStatus = `-- name: ClusterUpdateShootStatus :execrows
 UPDATE tenant.clusters
 SET
     shoot_status = $1,
     shoot_status_message = $2,
+    shoot_health = $3,
+    shoot_updating = $4,
     shoot_status_updated = now()
 WHERE
-    id = $3
+    id = $5
+    AND shoot_status_updated IS NOT DISTINCT FROM $6
 `
 
 type ClusterUpdateShootStatusParams struct {
 	Status    pgtype.Text
 	Message   pgtype.Text
+	Health    pgtype.Text
+	Updating  bool
 	ClusterID uuid.UUID
+	CheckedAt pgtype.Timestamptz
 }
 
-// Update shoot status from Gardener polling.
-func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) error {
-	_, err := q.db.Exec(ctx, clusterUpdateShootStatus, arg.Status, arg.Message, arg.ClusterID)
-	return err
+// Update shoot status from Gardener polling. health is NULL unless ready;
+// updating is set while an update fundament pushed rolls out. Writes nothing
+// when the row changed since it was read (checked_at is the
+// shoot_status_updated read then), such as the sync handler marking an update.
+func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdateShootStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterUpdateShootStatus,
+		arg.Status,
+		arg.Message,
+		arg.Health,
+		arg.Updating,
+		arg.ClusterID,
+		arg.CheckedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const nodePoolGetClusterID = `-- name: NodePoolGetClusterID :one

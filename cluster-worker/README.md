@@ -47,7 +47,7 @@ sequenceDiagram
     end
 
     loop status loop, every 30s
-        Worker->>Gardener: shoot status (clusters not ready)
+        Worker->>Gardener: shoot status (clusters due in their lane)
         Worker->>DB: shoot_status, event on change
         opt became ready
             Worker->>DB: "ready" outbox row
@@ -62,10 +62,13 @@ sequenceDiagram
   run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
   whose precondition is not met yet (for example, the project namespace does not exist)
   is deferred instead of failed.
-- **Status loop.** Every 30s it polls Gardener for clusters stored as `pending`,
-  `progressing` or `error`, and for deleted clusters until their shoot is gone. A `ready`
-  cluster is not polled again: it stays `ready` through later node pool changes until it
-  is deleted.
+- **Status loop.** Every `STATUS_INTERVAL` (30s) it checks one batch of
+  `CLUSTER_STATUS_BATCH_SIZE` clusters, in two lanes: every 30s for clusters that are new,
+  `pending`, `progressing` or in `error`, and for ready clusters whose health is not known
+  to be healthy yet; every `CLUSTER_STATUS_READY_INTERVAL` (5m) for healthy ready
+  clusters. Clusters still being created are ordered first, so ready clusters never delay
+  them. Deleted clusters are polled until their shoot is gone. See
+  [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
   deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
   resources.
@@ -94,8 +97,9 @@ stateDiagram-v2
         [*] --> pending: shoot not in Gardener yet
         pending --> progressing
         progressing --> ready: last operation succeeded
-        progressing --> error: last operation failed
-        error --> progressing: Gardener retries
+        progressing --> error: last operation failed, no retry
+        error --> progressing: retried
+        ready --> progressing: migrate or restore
         ready --> deleting: cluster deleted
         progressing --> deleting: cluster deleted
         deleting --> deleted: shoot gone
@@ -108,14 +112,63 @@ stateDiagram-v2
 |---|---|
 | `pending` | no shoot in Gardener yet |
 | `progressing` | Gardener is creating or changing the shoot |
-| `ready` | the last operation succeeded |
-| `error` | the last operation failed; Gardener retries |
+| `ready` | the last operation succeeded; `shoot_health` says whether all conditions are healthy |
+| `error` | the last operation failed and Gardener will not retry it by itself |
 | `deleting` | the cluster is deleted, the shoot is going away |
 | `deleted` | the shoot is gone |
 
 Changes are recorded in `tenant.cluster_events`: `sync_succeeded` / `sync_failed` per
 outbox row, `status_progressing` / `status_ready` / `status_error` / `status_deleted` on a
-status change, `user_sync_succeeded` / `user_sync_failed` from usersync.
+status change, `status_healthy` / `status_unhealthy` when a ready cluster's health
+changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
+shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+`user_sync_succeeded` / `user_sync_failed` from usersync.
+
+### Ready clusters
+
+Ready clusters keep being polled, so a message recorded while conditions were still
+settling does not stick, and a cluster that breaks later shows it.
+
+- Gardener reconciles every shoot periodically (gardenlet `syncPeriod`, 1h by default).
+  A `Reconcile` fundament did not start keeps the cluster `ready`, so it does not re-run
+  the ready fan-out, but
+  health still follows the conditions: a condition that turns False records
+  `status_unhealthy`, and the message shows Gardener's progress until the cluster is
+  healthy again.
+- An update fundament pushes (Kubernetes version, node pools) that changes the Shoot's
+  spec sets `shoot_updating` on the ready cluster, with a `status_progressing` event
+  ("Waiting for Gardener to start the update"). The cluster stays `ready`, so everything
+  gated on a ready cluster (kubeconfig, member sync) keeps working, and the API reports
+  it as `CLUSTER_STATUS_UPGRADING`. While it updates, its message is Gardener's progress
+  and its health is tracked without events, since a rolling update takes conditions down
+  on purpose. When Gardener's reconcile finishes, `shoot_updating` is cleared and
+  `status_ready` is recorded; the ready fan-out does not run again. Until the gardenlet
+  picks up the change (`generation` ahead of `observedGeneration`), the last operation
+  still describes the previous reconcile, so the poll reports the pending message
+  instead.
+- `shoot_health` (`healthy` / `unhealthy`) is recorded on every ready poll; a change
+  writes `status_healthy` or `status_unhealthy`.
+- A last operation in state `Error` or `Aborted` is one Gardener will retry: it is
+  recorded as `status_warning` (once per distinct message) and does not change the
+  status. Only `Failed` sets `error`.
+
+### Status cache
+
+In real mode the status loop reads Shoots from a watch-backed cache instead of asking
+Gardener per cluster, so a poll costs one database update and no Gardener request; raise
+`CLUSTER_STATUS_BATCH_SIZE` for large fleets. One watch on Shoots with the
+`fundament.io/cluster-id` label (the garden identity needs `list` and `watch` on shoots)
+keeps them in memory with their spec and managed fields trimmed off, indexed by cluster
+ID. On start the cache loads all Shoots once, then applies changes as Gardener pushes
+them; after a dropped watch it reconnects or re-lists by itself.
+
+Status reads go to Gardener directly (with a 10s timeout) while the cache has not synced
+yet, for a minute after the watch reports a real failure (such as an unreachable or
+unauthorized garden), and whenever the garden has not answered a probe for 30s. The probe
+is one cheap list request every 15s: a garden that hangs instead of refusing connections
+never makes the watch fail, so without it the cache would keep serving its last state.
+An outage therefore shows up as errors within about 30s instead of as silently stale
+status. Writes (`ApplyShoot`, deletes, kubeconfigs) never use the cache.
 
 ## Configuration
 
@@ -144,6 +197,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `STATUS_INTERVAL` | `30s` | |
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_BATCH_SIZE` | `50` | clusters polled per status tick |
+| `CLUSTER_STATUS_READY_INTERVAL` | `5m` | how often a healthy ready cluster is re-checked |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 

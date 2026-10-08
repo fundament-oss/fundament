@@ -180,15 +180,33 @@ const getEventTypeLabel = (eventType: string): string => {
     status_ready: 'Cluster ready',
     status_error: 'Cluster error',
     status_deleted: 'Cluster deleted',
+    status_healthy: 'Cluster healthy',
+    status_unhealthy: 'Cluster unhealthy',
+    status_warning: 'Cluster warning',
+    status_lost: 'Cluster lost',
+    user_sync_succeeded: 'Users synced',
+    user_sync_failed: 'User sync failed',
   };
   return labels[eventType] || eventType;
 };
 
-/** Only failures get tinted. On a timeline every dot is the same neutral track
+const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'sync_failed',
+  'status_error',
+  'status_unhealthy',
+  'status_lost',
+  'user_sync_failed',
+]);
+
+/** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and
- *  the event label names it too, so color is never the sole signal. */
-const getEventTypeColor = (eventType: string): string =>
-  eventType === 'sync_failed' || eventType === 'status_error' ? 'critical' : 'default';
+ *  the event label names it too, so color is never the sole signal. A warning is
+ *  something Gardener is already retrying by itself, so it is not critical. */
+const getEventTypeColor = (eventType: string): string => {
+  if (CRITICAL_EVENT_TYPES.has(eventType)) return 'critical';
+  if (eventType === 'status_warning') return 'warning';
+  return 'default';
+};
 
 const getEventDetails = (event: ClusterEvent): string => {
   if (event.message) {
