@@ -7,6 +7,8 @@ import { client as authnRestClient } from '../generated/authn-api/client.gen';
 import { handlePasswordLogin, handleRefresh, handleLogout } from '../generated/authn-api';
 import OrganizationContextService from './organization-context.service';
 
+const COOKIE_REQUEST_TIMEOUT_MS = 10_000;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -43,10 +45,11 @@ export default class AuthnApiService {
   // cookie, it never redirects, so the caller stays on the page and routes
   // itself. Only the OIDC `/login` takes one.
   async login(email: string, password: string): Promise<void> {
-    const { error } = await this.oneAtATime(() =>
+    const { error } = await this.oneAtATime((signal) =>
       handlePasswordLogin({
         client: this.restClient,
         body: { email, password },
+        signal,
       }),
     );
 
@@ -94,7 +97,9 @@ export default class AuthnApiService {
   }
 
   async refreshToken(): Promise<void> {
-    const { error } = await this.oneAtATime(() => handleRefresh({ client: this.restClient }));
+    const { error } = await this.oneAtATime((signal) =>
+      handleRefresh({ client: this.restClient, signal }),
+    );
 
     if (error) {
       throw new Error(error.error || 'Refresh failed');
@@ -102,7 +107,9 @@ export default class AuthnApiService {
   }
 
   async logout(): Promise<void> {
-    const { error } = await this.oneAtATime(() => handleLogout({ client: this.restClient }));
+    const { error } = await this.oneAtATime((signal) =>
+      handleLogout({ client: this.restClient, signal }),
+    );
 
     if (error) {
       throw new Error(error.error || 'Logout failed');
@@ -119,9 +126,20 @@ export default class AuthnApiService {
     return this.currentUserSubject.value !== undefined;
   }
 
-  private oneAtATime<T>(send: () => Promise<T>): Promise<T> {
-    const request = this.lastCookieRequest.then(send);
-    this.lastCookieRequest = request.catch(() => undefined);
+  // A request that never answers would hold up every one queued behind it, a
+  // logout included, so each is aborted after a while. Aborted rather than
+  // given up on: the browser then drops its answer, where one that still
+  // arrived could set the cookie after the requests that followed it.
+  private oneAtATime<T>(send: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const request = this.lastCookieRequest.then(() => {
+      const abort = new AbortController();
+      const timer = setTimeout(() => abort.abort(), COOKIE_REQUEST_TIMEOUT_MS);
+      return send(abort.signal).finally(() => clearTimeout(timer));
+    });
+    this.lastCookieRequest = request.then(
+      () => undefined,
+      () => undefined,
+    );
     return request;
   }
 
