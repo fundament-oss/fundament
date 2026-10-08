@@ -28,7 +28,9 @@ function heldFetch() {
           );
         waiting.push(answer);
         request.signal.addEventListener('abort', () => {
-          waiting.splice(waiting.indexOf(answer), 1);
+          const at = waiting.indexOf(answer);
+          if (at === -1) return;
+          waiting.splice(at, 1);
           reject(request.signal.reason);
         });
       }),
