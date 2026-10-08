@@ -43,6 +43,15 @@ describe('fieldError', () => {
     );
     expect(fieldError(field(attrs, '443'))).toBeNull();
   });
+
+  it('names only the bound a number has', () => {
+    expect(fieldError(field('type="number" min="1"', '0'))).toBe(
+      'Enter a number of at least 1.',
+    );
+    expect(fieldError(field('type="number" max="10"', '11'))).toBe(
+      'Enter a number of at most 10.',
+    );
+  });
 });
 
 describe('validateFields', () => {

@@ -9,3 +9,10 @@
  */
 
 @import '@nldd/design-system/styles';
+
+/* The Console's fix for a label nldd-text-cell beside a fit-content value cell
+   collapsing to one character per line; see nldd-text-cell in src/styles.css
+   for why. Plugin iframes do not load that stylesheet, so it is repeated here. */
+nldd-text-cell:not([min-width]) {
+  min-width: min-content;
+}

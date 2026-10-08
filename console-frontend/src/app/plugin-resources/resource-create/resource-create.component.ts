@@ -97,7 +97,17 @@ export default class ResourceCreateComponent implements OnInit {
 
   private namespacesReady = signal(false);
 
+  // Counts namespace loads, so a response for a project the route has since
+  // left is dropped instead of overwriting the current project's list.
+  private namespacesRequest = 0;
+
   protected namespacesFailed = signal(false);
+
+  // Only a namespaced resource needs the list: a cluster-scoped create form
+  // still works when it failed to load.
+  protected namespacesUnavailable = computed(
+    () => this.namespacesFailed() && this.crdDef()?.scope === 'Namespaced',
+  );
 
   // A namespaced resource on a project route can only go in one of the project's
   // namespaces. With none there is nothing to pick, so the page points to where
@@ -145,6 +155,10 @@ export default class ResourceCreateComponent implements OnInit {
         } else {
           // Org-level route has no project to scope namespaces to; the form uses
           // its free-text namespace field. Nothing to load, so mark it settled.
+          this.namespacesRequest += 1;
+          this.namespacesFailed.set(false);
+          this.namespaces.set([]);
+          this.namespaceDisplayNames.set({});
           this.namespacesReady.set(true);
         }
       });
@@ -178,21 +192,33 @@ export default class ResourceCreateComponent implements OnInit {
   }
 
   private async loadNamespaces(projectId: string): Promise<void> {
+    // Unmounts the iframe until the new project's list is in: the plugin SDK's
+    // init is one-shot, so a form already showing the previous project's
+    // namespaces would keep them.
+    this.namespacesRequest += 1;
+    const current = this.namespacesRequest;
+    this.namespacesReady.set(false);
+    this.namespacesFailed.set(false);
+    this.namespaces.set([]);
+    this.namespaceDisplayNames.set({});
+
     try {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
+      if (current !== this.namespacesRequest) return;
       this.namespaces.set(response.namespaces.map((n) => n.clusterSideName));
       this.namespaceDisplayNames.set(
         Object.fromEntries(response.namespaces.map((n) => [n.clusterSideName, n.name])),
       );
     } catch (err) {
+      if (current !== this.namespacesRequest) return;
       // The plugin form's free-text fallback would take the project-level name,
       // which is not the namespace's name on the cluster, so say what failed.
       // eslint-disable-next-line no-console
       console.error('[ResourceCreate] Failed to load namespaces:', err);
       this.namespacesFailed.set(true);
     } finally {
-      this.namespacesReady.set(true);
+      if (current === this.namespacesRequest) this.namespacesReady.set(true);
     }
   }
 }

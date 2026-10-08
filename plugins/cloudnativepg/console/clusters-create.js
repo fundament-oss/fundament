@@ -35,9 +35,18 @@ async function loadStorageClasses() {
       version: 'v1',
       resource: 'storageclasses',
     });
-    return items
-      .filter((sc) => sc.metadata?.name)
-      .map((sc) => ({ name: sc.metadata.name, isDefault: isDefaultClass(sc) }))
+    const classes = items.filter((sc) => sc.metadata?.name);
+    // With more than one marked default, Kubernetes gives a PVC without a class
+    // the most recently created one, so only that one counts as the default.
+    const effectiveDefault = classes
+      .filter(isDefaultClass)
+      .reduce(
+        (newest, sc) =>
+          !newest || (sc.metadata.creationTimestamp ?? '') > (newest.metadata.creationTimestamp ?? '') ? sc : newest,
+        null,
+      );
+    return classes
+      .map((sc) => ({ name: sc.metadata.name, isDefault: sc === effectiveDefault }))
       .sort((a, b) => a.name.localeCompare(b.name));
   } catch (err) {
     if (err?.code === 'forbidden') return null;

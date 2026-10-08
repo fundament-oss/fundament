@@ -25,13 +25,45 @@ function readyText(item) {
   return `${ready} of ${total}`;
 }
 
+// The application database as CNPG sets it up. The create form leaves the
+// bootstrap to CNPG's defaults: database "app", owned by a user of the same
+// name, credentials in a generated Secret <name>-app. A Cluster made with
+// kubectl can name its own in any bootstrap method.
+function appDatabase(item) {
+  const bootstrap = item.spec?.bootstrap ?? {};
+  const source = bootstrap.initdb ?? bootstrap.recovery ?? bootstrap.pg_basebackup ?? {};
+  const database = source.database ?? 'app';
+  return {
+    database,
+    owner: source.owner ?? database,
+    secret: source.secret?.name ?? `${item.metadata?.name ?? ''}-app`,
+    // Only a Secret CNPG generates carries the uri key.
+    generatedSecret: !source.secret?.name,
+  };
+}
+
+// The create form configures neither; a Cluster made with kubectl can have both.
+function instanceCount(item) {
+  return item.spec?.instances ?? 1;
+}
+
+function hasBackups(item) {
+  return !!item.spec?.backup || (item.spec?.plugins ?? []).some((p) => p.isWALArchiver);
+}
+
 // The page never reads the Secret, so no password reaches the UI; it shows the
 // command that does. Plain text in a read-only field: the iframe has no
 // clipboard-write permission, so a Copy button could not work.
 function passwordCommand(item) {
   const ns = item.metadata?.namespace ?? '';
-  const secret = `${item.metadata?.name ?? ''}-app`;
-  return `kubectl -n ${ns} get secret ${secret} -o jsonpath='{.data.password}' | base64 -d`;
+  return `kubectl -n ${ns} get secret ${appDatabase(item).secret} -o jsonpath='{.data.password}' | base64 -d`;
+}
+
+function summaryText(item) {
+  const instances = instanceCount(item);
+  const count = instances === 1 ? 'one instance' : `${instances} instances`;
+  const backups = hasBackups(item) ? 'backups configured' : 'no backups';
+  return `This database has ${count} and ${backups}. It cannot be changed from the console.`;
 }
 
 // One titled box, the shape of a section on the Console's generated detail page.
@@ -51,6 +83,7 @@ function render(item) {
   const clusterName = item.metadata?.name ?? '';
   const status = item.status ?? {};
   const spec = item.spec ?? {};
+  const app = appDatabase(item);
 
   const statusPairs = [
     ['Phase', status.phase ?? 'Unknown'],
@@ -63,10 +96,14 @@ function render(item) {
   const connectionPairs = [
     ['Host', `${clusterName}-rw.${ns}.svc`],
     ['Port', '5432'],
-    ['Database', 'app'],
-    ['User', 'app'],
-    ['Credentials Secret', `${clusterName}-app`],
+    ['Database', app.database],
+    ['User', app.owner],
+    ['Credentials Secret', app.secret],
   ];
+
+  const uriNote = app.generatedSecret
+    ? ' The Secret also holds a ready-made <code>uri</code> for applications.'
+    : '';
 
   return `
     ${sectionHtml('Status', renderKeyValueList(statusPairs, 'Status'))}
@@ -76,10 +113,7 @@ function render(item) {
       `${renderKeyValueList(connectionPairs, 'Connection')}
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-rich-text>
-        <p>
-          Reachable from pods in the cluster. The Secret also holds a ready-made
-          <code>uri</code> for applications.
-        </p>
+        <p>Reachable from pods in the cluster.${uriNote}</p>
       </nldd-rich-text>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-form-field label="Read the password">
@@ -89,27 +123,27 @@ function render(item) {
     )}
     <nldd-spacer size="16"></nldd-spacer>
     <nldd-text size="sm" color="secondary">
-      This database has one instance and no backups. It cannot be changed from the console.
+      ${escapeHtml(summaryText(item))}
     </nldd-text>
     <nldd-spacer size="24"></nldd-spacer>
-    ${deleteSectionHtml(clusterName)}
+    ${deleteSectionHtml(clusterName, hasBackups(item))}
   `;
 }
 
 // Last on the page, like the Console's own Delete box. Typing the name confirms,
 // in place of the Console's modal: a modal centres in the iframe, which is as
 // tall as the page, so after scrolling down to here it can open out of view.
-function deleteSectionHtml(clusterName) {
+function deleteSectionHtml(clusterName, backups) {
+  const loss = backups
+    ? 'Deleting this database also deletes its storage.'
+    : 'Deleting this database also deletes its storage. It has no backups, so the data cannot be recovered.';
   return `
     <nldd-box background="critical">
       <nldd-container padding="16">
         <nldd-title size="5"><h2>Delete ${escapeHtml(clusterName)}</h2></nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
         <nldd-rich-text spacing="flat">
-          <p>
-            Deleting this database also deletes its storage. It has no backups, so the data
-            cannot be recovered.
-          </p>
+          <p>${loss}</p>
         </nldd-rich-text>
         <nldd-spacer size="16"></nldd-spacer>
         <nldd-form>

@@ -63,10 +63,17 @@ export function storageSizeError(size) {
 // the console to try again.
 export function storageClassError(storageClass, { required }) {
   if (!storageClass) return required ? 'Please choose a StorageClass.' : null;
-  if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(storageClass) || storageClass.length > 253) {
-    return 'Enter a valid StorageClass name.';
-  }
+  if (!isDnsSubdomain(storageClass)) return 'Enter a valid StorageClass name.';
   return null;
+}
+
+// A DNS-1123 subdomain, the rule for StorageClass names: dot-separated labels
+// of at most 63 characters each, 253 in all.
+function isDnsSubdomain(value) {
+  return (
+    value.length <= 253 &&
+    value.split('.').every((label) => label.length <= 63 && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(label))
+  );
 }
 
 // No bootstrap block: CNPG's default initdb creates database "app" owned by

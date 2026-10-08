@@ -103,18 +103,21 @@ func pendingError(current *helm.ReleaseStatus, now time.Time) error {
 		return fmt.Errorf("%w: release %s/%s is %s since %s; waiting for it to finish",
 			ErrInProgress, Namespace, Release, current.Status, current.LastDeployed.UTC().Format(time.RFC3339))
 	}
-	return fmt.Errorf("release %s/%s has been %s for over %s; run `%s` to clear it",
+	return fmt.Errorf("release %s/%s has been %s for over %s; %s",
 		Namespace, Release, current.Status, pendingGrace, pendingRecovery(current.Status))
 }
 
-// pendingRecovery is the command that clears a pending release. A first install
-// has no earlier revision to roll back to, so it is uninstalled instead; that
-// is safe because it never deployed, so no databases depend on it yet.
+// pendingRecovery says how to clear a pending release. A first install has no
+// earlier revision to roll back to, so it is uninstalled instead. That is not
+// safe by itself: --wait may have been killed after the operator and CRDs were
+// created, and the chart ships the CRDs as templates, so the uninstall deletes
+// them and every Cluster with them.
 func pendingRecovery(status string) string {
 	if status == "pending-install" {
-		return fmt.Sprintf("helm -n %s uninstall %s", Namespace, Release)
+		return fmt.Sprintf("check that `kubectl get %s -A` lists no databases, then run `helm -n %s uninstall %s` to clear it",
+			CRDNames[0], Namespace, Release)
 	}
-	return fmt.Sprintf("helm -n %s rollback %s", Namespace, Release)
+	return fmt.Sprintf("run `helm -n %s rollback %s` to clear it", Namespace, Release)
 }
 
 // operatorPresent reports whether the release's operator Deployment and the

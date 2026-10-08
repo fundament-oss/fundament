@@ -76,7 +76,13 @@
                   type="number"
                   min="1"
                   placeholder="100"
+                  unmet="rate-requests-error"
                 ></nldd-text-field>
+                <nldd-validation-list>
+                  <nldd-validation-item id="rate-requests-error"
+                    >Enter a whole number of at least 1.</nldd-validation-item
+                  >
+                </nldd-validation-list>
                 <nldd-form-field-help-text
                   >Leave blank for no rate limit.</nldd-form-field-help-text
                 >

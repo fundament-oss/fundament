@@ -38,5 +38,6 @@ func TestSandboxShootAccess_NamespacesOnSandbox(t *testing.T) {
 	require.NoError(t, s.EnsureLimitRange(ctx, clusterID, "tnt-p--web", LimitDefaults{}, nil))
 	lrs, err := cs.CoreV1().LimitRanges("tnt-p--web").List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
-	assert.Empty(t, lrs.Items, "LimitRanges stay in memory")
+	assert.Empty(t, lrs.Items, "LimitRanges do not reach the sandbox")
+	assert.Contains(t, s.MockShootAccess.LimitRanges[clusterID], "tnt-p--web", "LimitRanges stay in memory")
 }

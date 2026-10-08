@@ -12,7 +12,7 @@
         variant="loading"
         text="Loading..."
       ></nldd-inline-dialog>
-    } @else if (namespacesFailed()) {
+    } @else if (namespacesUnavailable()) {
       <nldd-banner
         variant="critical"
         text="Failed to load the project's namespaces. Reload the page to try again."

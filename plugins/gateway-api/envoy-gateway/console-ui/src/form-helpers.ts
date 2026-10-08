@@ -72,11 +72,13 @@ export function fieldError(el: TextField): string | null {
   }
   if (el.getAttribute('type') === 'number') {
     const num = Number(value);
-    const min = Number(el.getAttribute('min') ?? -Infinity);
-    const maxValue = Number(el.getAttribute('max') ?? Infinity);
+    const minAttr = el.getAttribute('min');
+    const maxAttr = el.getAttribute('max');
     if (!Number.isInteger(num)) return 'Enter a whole number.';
-    if (num < min || num > maxValue) {
-      return `Enter a number from ${el.getAttribute('min')} to ${el.getAttribute('max')}.`;
+    if (num < Number(minAttr ?? -Infinity) || num > Number(maxAttr ?? Infinity)) {
+      if (minAttr === null) return `Enter a number of at most ${maxAttr}.`;
+      if (maxAttr === null) return `Enter a number of at least ${minAttr}.`;
+      return `Enter a number from ${minAttr} to ${maxAttr}.`;
     }
   }
   return null;

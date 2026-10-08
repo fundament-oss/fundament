@@ -20,7 +20,9 @@ import (
 // console users' ServiceAccounts cluster-admin already.
 //
 // Every cluster id maps to the same sandbox, so two clusters with a project
-// namespace of the same name share it.
+// namespace of the same name collide: the first one's namespace carries its
+// namespace id, and the second's stays pending on the name. One mock cluster
+// per name is all local development needs.
 type SandboxShootAccess struct {
 	*MockShootAccess
 	sandbox *RealShootAccess
