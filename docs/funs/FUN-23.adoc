@@ -1,0 +1,207 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 23
+:state: prediscussion
+
+= FUN-23 Web Sessions and Token Lifetimes
+
+== Introduction
+
+Every caller into fundament holds a long-lived credential that authn-api can revoke, and presents a short-lived JWT that no service has to look up. The credential is the session; the JWT is the proof that it was alive a few minutes ago. That split is what lets a surface authenticate a request with nothing but the shared secret, and still lets a session be ended.
+
+This FUN describes the browser's half of that model: a web session, the credential a console or developer portal visit holds, and the lifetimes that bound what revoking one is worth. It adds no token type and changes no claim any validator reads: the UserToken a browser presents and the one terraform presents are the same token, and a resource server cannot tell which credential minted it.
+
+The guarantee the model offers is the one number in <<Token lifetimes>> that a resource server can see: when a session stops being allowed, every request made with it fails within the access token's lifetime, platform-wide, with no revocation check in any hot path.
+
+== One token model, three doors
+
+Three kinds of caller reach fundament. Each holds a credential of a different shape, and each mints the same UserToken from it.
+
+[cols="1,2,2", options="header"]
+|===
+| Caller | Long-lived credential | Access token
+
+| terraform, functl, direct API
+| `authn.api_keys` row, revocable; user-managed and named (link:/funs/fun-9[FUN-9])
+| UserToken, minted by `ExchangeToken`
+
+| console, developer portal
+| `authn.web_sessions` row, revocable; browser-held and invisible
+| UserToken, minted by `/callback`, `/login/password` and `/refresh`
+
+| plugins, shoot workloads
+| none; the caller's own identity is re-proven at every mint (link:/funs/fun-17[FUN-17], link:/funs/fun-22[FUN-22])
+| PluginToken, WorkloadToken
+|===
+
+Every door produces the same `iss`, the same `aud` of `fundament-user`, the same subject, `organization_ids`, `name` and `groups`, from the same minter, and every service that accepts one builds the identical validator. What differs between the doors is only what a caller must hold in order to mint, and for how long the result is good.
+
+== The web session
+
+=== The credential
+
+A web session's refresh token is thirty-two bytes from a cryptographic random source, base64url-encoded, and nothing else. It is not a JWT: only authn-api ever reads it, so there is nothing to gain from a self-describing token, and a token that cannot be parsed cannot be mistaken for an access token by a service that happens to see it.
+
+It carries neither FUN-9's `fun_` prefix nor its CRC32 checksum. Those serve people who paste an API key into a configuration file and deserve a typo caught before a failed request; nobody types a session cookie. The first eight characters are stored alongside the hash as `token_prefix`, so a log line can name a session without naming its credential.
+
+Only the SHA-256 hash is stored, as `token_hash`, the treatment `authn.api_keys` gives its tokens: a database dump is then a list of sessions, not a set of live credentials.
+
+=== Rotation and reuse detection
+
+Every refresh mints a new access token *and* a new refresh token. The row that was presented is marked with `rotated_to`, pointing at its successor, and the successor's token is what the browser receives. A session is therefore a chain of rows, named by the `session_id` they share, and revoking it is one statement over that name.
+
+Rotation is what makes a credential with a day-long life safe to hold. A refresh token is a bearer string, so a stolen copy is indistinguishable from the legitimate one at the moment it is presented — but only one of the two can be first. When a token whose row already carries a `rotated_to` is presented again, two parties hold it and authn-api cannot tell which one is the user. It revokes the whole chain, and both must sign in again. A legitimate client never triggers this: it has already replaced the token it sent.
+
+Spending a token and minting its successor is one statement, so the row lock is what serializes two refreshes racing on the same token. The loser matches no row, which is indistinguishable from a replay and treated as one. There is no state in which a chain is half rotated.
+
+=== Where the cookie goes
+
+The access cookie, `fundament_auth`, is set on `COOKIE_DOMAIN` and so reaches every subdomain: marketplace-registry-api validates exactly that cookie, and the plugin surfaces receive it too. That breadth is the point of a stateless access token, and it is also why the access token is short — it is handed to a lot of code on every request.
+
+The refresh cookie is the opposite shape. `fundament_refresh` is host-only — no `Domain` attribute, so the browser sends it to authn-api's host and nowhere else — and scoped to `Path=/refresh`, so it does not even reach authn-api's other endpoints. `HttpOnly`, `Secure` and `SameSite=Strict` match the access cookie. Host-only does not stop the portal from refreshing: it and the console are siblings under the same registrable domain, so the cookie is same-site, and both send credentials cross-origin already.
+
+The credential worth stealing therefore travels to exactly one path on one host, and the credential that travels everywhere is worth ten minutes.
+
+== Token lifetimes
+
+[cols="2,1,3", options="header"]
+|===
+| Lifetime | Value | Set by
+
+| UserToken `exp`
+| 10 minutes
+| `TOKEN_EXPIRY`
+
+| API-key UserToken `exp`
+| 10 minutes
+| `APITokenExpiry`, aligned with the above
+
+| Web session idle
+| 24 hours since the last refresh
+| `web_sessions.expires`, moved forward on every rotation
+
+| Web session absolute
+| 7 days since sign-in
+| `SESSION_MAX_LIFETIME`, checked against `web_sessions.started`
+|===
+
+Ten minutes is how long a revoked credential keeps working, and the only lifetime a resource server can see. It is short because refresh is cheap and only the two frontends and the Go clients ever call it; it is not shorter because every tab, CLI invocation and terraform run pays a round trip at the boundary. The same number applies at both user-facing doors, so "how long until a revocation bites" has one answer rather than one per credential kind.
+
+The idle timeout is what ends an abandoned session, and moving it forward on every rotation is what keeps a working day from being interrupted. The absolute lifetime is what ends a session that is never abandoned: without it, a tab left open in a browser nobody closes is a credential with no end, and re-authentication at the identity provider would never happen again. Seven days is a choice, not a derivation; it is the knob an operator turns when a deployment's policy says otherwise.
+
+== Groups
+
+`groups` reaches a UserToken from the identity provider's ID token at sign-in, and lives on the session row from there, as `text[]`, read on every refresh. A refresh has no ID token to re-read it from, and the OIDC refresh token is not persisted, so the row is the only source.
+
+The consequence is that a change to a user's groups at the identity provider takes effect at the user's next sign-in rather than their next refresh, bounded by the absolute session lifetime. Group membership that must take effect sooner than that belongs in fundament's own authorization model (link:/funs/fun-7[FUN-7]), which is evaluated per request.
+
+Live `groups` would mean persisting dex's refresh token and re-fetching claims on every refresh. That is a third long-lived credential to protect, and it is deliberately not part of this model; it is where to start if the IdP's groups ever need to be authoritative between sign-ins.
+
+== The client contract
+
+Every client holds a credential and presents a token, so every client must know when the token is too old to start a request with. The rule is the same everywhere: refresh before sending a request if the token has less than two minutes left. How a client knows that differs, and the difference is not a matter of taste.
+
+A Go client holds its token in memory and reads `exp` out of it. `TokenManager` in terraform-provider is that client, with a two-minute `RefreshBuffer`, and it serves a refresh token in place of an API key unchanged.
+
+A browser cannot. The access token is in an `HttpOnly` cookie, so no TypeScript in the console or the portal can read it, let alone its `exp`. The browser's contract is the `expires_in` that `/refresh` and `/login/password` answer with: schedule the next refresh at half the token's life, and treat a 401 from any API as the signal to refresh once and retry. Two mechanisms, one policy. This is worth stating plainly, because "clients check `exp` before each request" is not implementable in the console and will otherwise be attempted.
+
+== Logout
+
+`POST /logout` reads the refresh cookie, revokes that row and its chain, and clears both cookies. A logout that arrives without a refresh cookie still clears cookies and still answers `ok`: a caller who no longer holds the credential has nothing to prove and nothing to revoke, and answering differently would report which cookies they hold (link:/funs/fun-12[FUN-12]).
+
+Revocation is a soft delete in the sense this codebase means it: `revoked` is stamped and the row stays. A session nobody can use is still evidence of a session, and the work in <<Aside: withdrawing authorization when activity looks nefarious>> reads exactly these rows.
+
+== Aside: withdrawing authorization when activity looks nefarious
+
+Logout is the benign case of a general mechanism: something decides a session should stop working, and it stops within the access-token window. The same row, the same `revoked` column and the same ten-minute bound serve a case that is not benign — a session behaving in a way that suggests it is no longer the user's, which fundament would end without waiting for anyone to click anything. The reuse detection in <<Rotation and reuse detection>> is the first instance of it: one signal, one automatic revocation.
+
+A fuller version is a detector reading signals fundament already has — impossible travel between a session's addresses, a rate of writes no human produces, an organization being enumerated — and withdrawing authorization as a response rather than filing it as a report. It needs a definition of nefarious that does not sign people out on a flaky network, a surface for an operator to see and undo what was withdrawn, and a decision about whether authorization is withdrawn from a session or from a user.
+
+This FUN does not design that, and none of it is in scope here. It is recorded because it is the reason the mechanism is built to be driven by something other than a user's click: the session row is what a detector revokes, and a ten-minute access token is what makes revoking it mean something. A credential long-lived enough to be convenient would make an automatic response arrive too late to matter.
+
+== What remains valid after a revocation
+
+Revoking a session stops it minting. It does not reach back into tokens already in flight, and three of those outlive the ten-minute window by construction.
+
+*PluginTokens minted before the revocation* live their own fifteen minutes (link:/funs/fun-17[FUN-17]). The plugin cannot mint another once the user's session is gone, because minting requires a UserToken, but the one it holds keeps working. Aligning `PluginTokenExpiry` with the access token closes most of this gap and is the obvious follow-up; plugin re-mint behaviour is FUN-17's to change.
+
+*Open streams at kube-api-proxy.* The proxy validates once per request, and a watch or an `exec` is a single long-lived request, so one opened a minute before a revocation stays open until the stream closes, which may be hours. This is the longest-lived hole in the model, and closing it means re-validating periodically inside the proxy rather than only at the boundary.
+
+*A compromised `JWT_SECRET`* forges any token, revoked session or not. That is FUN-17's known risk, and its asymmetric-signing follow-up is the only thing that closes it. Rotating the secret remains the blunt instrument that invalidates every token at once.
+
+== Threat model
+
+*A stolen access token.* Worth ten minutes against any surface, and nothing can extend it: it cannot be presented at `/refresh`, which reads only the refresh cookie. This is the capture the access cookie's breadth makes most likely, and the one the model is mostly shaped around.
+
+*A stolen refresh token.* Worth a full session until it is used, at which point rotation makes the theft visible: whichever party refreshes second presents a rotated token and the chain dies. A thief who refreshes and then sits idle holds a session the user cannot see; the absolute lifetime bounds it, and a sessions surface in the console would let a user end it sooner. The cookie's host-only, `/refresh`-scoped, `HttpOnly` shape is what makes the theft hard in the first place: no surface other than authn-api's refresh endpoint receives it, and no script can read it.
+
+*A compromised plugin or surface.* Sees access tokens, worth ten minutes. It never sees a refresh token.
+
+*XSS in the console or the portal.* Reads neither cookie, but can act as the user for as long as the page lives: the refresh cookie means a script can keep obtaining tokens by calling `/refresh`, exactly as the application does. Short tokens do not help here, and this model does not address it; it is the content-security-policy's problem.
+
+*A compromised authn-api* holds the signing secret and can mint anything (link:/funs/fun-17[FUN-17]). It also holds a table of live session hashes, which is a list of who is signed in, not a set of usable credentials.
+
+== Lifecycle
+
+* A session is created by `/callback` or `/login/password`, alongside the first access token.
+* Every `/refresh` rotates the row, moves `expires` forward, and stamps `last_used`.
+* A logout revokes the row and its chain.
+* Presenting a rotated token revokes the chain.
+* `expires` passing, or `started` plus `SESSION_MAX_LIFETIME` passing, refuses the refresh; the row is left for an audit to find rather than deleted.
+* Revoked and expired rows are retained like every other soft-deleted record. A retention job for them is out of scope here.
+* Rotating `JWT_SECRET` invalidates every access token. Sessions survive it: the next refresh mints a token under the new secret, so a secret rotation signs nobody out.
+
+== Local development and testing
+
+Nothing in the model needs a mode or a mock: a session is a row, and every environment already has a database. Three things do need attention.
+
+*Revocation is an end-to-end assertion.* `auth-session.feature` covers it where it is observable: after a logout, a refresh is refused, and the dashboard stays unreachable. The cookie-tampering scenarios alongside it are unaffected by any of this.
+
+*The short access token has to be exercised, not just configured.* With a ten-minute token nothing in a test run ever expires, so the e2e environment sets `TOKEN_EXPIRY` low enough that a scenario can wait a token out and watch the console refresh it unaided.
+
+*The rotation rules are tested without a database.* The handler's rules — rotate, detect reuse, revoke the chain, refuse the three ways a session is dead — go through a store interface with a fake, the way link:/funs/fun-22[FUN-22]'s verifier and the authz evaluator already let handler tests skip a dependency. The SQL that enforces them under concurrency is what the end-to-end run covers.
+
+*The frontends test the schedule, not the clock.* The refresh timer and the 401-retry path are unit-tested with fake timers rather than real waits, alongside the request-ordering assertions the console's `authn-api.service.spec.ts` already holds.
+
+== Rollout
+
+Three steps, each of which deploys on its own.
+
+The first is this FUN.
+
+The second is additive and invisible: the table arrives, sign-in creates a session and sets the refresh cookie, `/refresh` prefers the refresh cookie, and logout revokes what it can find. `TOKEN_EXPIRY` stays where it is, and `/refresh` still answers a browser that presents only an access token, so a visit that predates the deploy keeps working.
+
+The third shortens the access token to ten minutes, has the console and the portal refresh on a schedule and retry 401s, and drops the access-token path from `/refresh`. A visit that predates the second step has no refresh cookie, so its next refresh fails and it signs in again — once, at a deploy, with the login page as the worst outcome. Two lines say whether the step landed: the rate of `/refresh` answers, which rises by roughly the ratio of the old token lifetime to the new one, and 401s at the other surfaces, which do not rise at all.
+
+== Amendments to earlier FUNs
+
+* link:/funs/fun-9[FUN-9], "Why API Keys Instead of Just JWTs?", opens with "JWTs work well for web sessions". Amended: a JWT works well as a web session's *access token* and badly as the session itself, for the same reason FUN-9 gives for not handing JWTs to scripts. The rest of FUN-9 stands, and its exchange flow is the model the web session follows.
+* link:/funs/fun-17[FUN-17], "Two token types", gains no type. A UserToken minted from a web session and one minted from an API key are the same token, and FUN-17's audience discipline is what lets the credential behind a token change without touching any surface that accepts one.
+* link:/funs/fun-3[FUN-3] Security Principles gains a concrete instance of defence in depth: the credential that travels widely is short-lived, and the credential that is long-lived travels to one path on one host.
+
+== Alternatives considered
+
+*A second TTL on the same JWT.* One cookie, no rotation: give the JWT a ten-minute `exp` that resource servers enforce, and let `/refresh` accept the same token for a day, checking the session row for revocation. The revocation window is identical. Rejected on three counts. The string in `fundament_auth` would be the day-long credential, and that cookie is sent to six services and the plugin surfaces on every request by design, so a capture at any one of those hops is worth a day rather than ten minutes. A JWT cannot be rotated — both the legitimate holder and a thief present the identical string, so there is no reuse signal and no equivalent of the `rotated_to` check, which is precisely the property that makes a long-lived credential tolerable. And it needs a parse path in `common/auth` that deliberately skips `exp`, living next to the one that must not, in a package six services import, where the mistake it invites fails open. Decoupling session length from access-token length is the goal, and a separate credential reaches it without weakening the token that goes everywhere.
+
+*Merging `authn.web_sessions` into `authn.api_keys`.* The two have nearly the same columns, and one `authn.credentials` table with a kind column would save a `CREATE TABLE`. Their lifecycles share nothing: an API key is created deliberately, named, scoped to one organization, listed and revoked by its owner in the console, and may outlive any session, where a web session is created as a side effect of signing in, has no name worth showing, belongs to a browser rather than to an organization, and is revoked by walking away. Merging them puts a nullable `organization_id`, a nullable `name` and a kind check constraint on a table two unrelated code paths write.
+
+*A denylist checked at every validation.* Revocation to the second, at the cost of a lookup in the hot path of every service — a database or an authn-api round trip plus a cache, in six services, two of which (kube-api-proxy, the plugin SDK validator) have no database and one of which runs in a third party's process. It would still miss PluginTokens and open streams. The value of the model is that a resource server needs nothing but the secret; a denylist spends exactly that to buy ten minutes.
+
+*A short `TOKEN_EXPIRY` and no session state.* A one-line change that shrinks the window to ten minutes, and signs every user out every ten minutes, because nothing can mint the next token once the old one has expired. It is what the session state is for.
+
+*Server-side session state and no JWT at all* — an opaque cookie looked up on every request. Simple and revocable to the second, and the end of distributed validation: every surface would need the session store or a hop to authn-api, and FUN-22's workload tokens and FUN-17's plugin tokens have no equivalent. Rejected as a reversal of the platform's shape for a property worth ten minutes of exposure.
+
+*A session surface in the console* — the user seeing their active sessions and ending one. Wanted, and the table is shaped so it can be added without a migration, but it needs product decisions (what a session is called, what a device looks like) that a security property should not wait for.
+
+*Driving the browser's refresh off `exp`.* Would require dropping `HttpOnly`, or answering with the token in the body for the application to store, trading a cookie no script can read for a token every script can. The timer and the 401 retry cost two mechanisms and keep the token out of reach.
+
+== Related
+
+* link:/funs/fun-3[FUN-3 Security Principles], the principles this FUN applies.
+* link:/funs/fun-7[FUN-7 User Permissions and Roles], where authorization that must take effect immediately lives.
+* link:/funs/fun-9[FUN-9 API Keys], the credential-to-JWT exchange the browser's door follows.
+* link:/funs/fun-12[FUN-12 Unauthorized vs Not Found], the denial convention `/refresh` and `/logout` follow.
+* link:/funs/fun-17[FUN-17 Plugin Authorization], the token discipline that keeps this model out of every resource server.
+* link:/funs/fun-22[FUN-22 Cluster Workload Identity], the third door's credential.
