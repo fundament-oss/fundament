@@ -350,3 +350,185 @@ func (q *Queries) UserUpsert(ctx context.Context, arg UserUpsertParams) (UserUps
 	)
 	return i, err
 }
+
+const webSessionCreate = `-- name: WebSessionCreate :one
+INSERT INTO authn.web_sessions (id, session_id, user_id, token_hash, token_prefix, groups, expires)
+VALUES ($1, $1, $2, $3, $4, $5, $6)
+RETURNING id, session_id, user_id, token_prefix, groups, started, expires, created
+`
+
+type WebSessionCreateParams struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	TokenHash   []byte
+	TokenPrefix string
+	Groups      []string
+	Expires     pgtype.Timestamptz
+}
+
+type WebSessionCreateRow struct {
+	ID          uuid.UUID
+	SessionID   uuid.UUID
+	UserID      uuid.UUID
+	TokenPrefix string
+	Groups      []string
+	Started     pgtype.Timestamptz
+	Expires     pgtype.Timestamptz
+	Created     pgtype.Timestamptz
+}
+
+// The first refresh token of a browser session (FUN-23). id doubles as
+// session_id: the row that starts a chain names it, and every rotation of it
+// carries that name forward, so revoking a session is one statement.
+func (q *Queries) WebSessionCreate(ctx context.Context, arg WebSessionCreateParams) (WebSessionCreateRow, error) {
+	row := q.db.QueryRow(ctx, webSessionCreate,
+		arg.ID,
+		arg.UserID,
+		arg.TokenHash,
+		arg.TokenPrefix,
+		arg.Groups,
+		arg.Expires,
+	)
+	var i WebSessionCreateRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.UserID,
+		&i.TokenPrefix,
+		&i.Groups,
+		&i.Started,
+		&i.Expires,
+		&i.Created,
+	)
+	return i, err
+}
+
+const webSessionGetByHash = `-- name: WebSessionGetByHash :one
+SELECT id, session_id, user_id, token_prefix, groups, started, expires, rotated_to, revoked, last_used, created
+FROM authn.web_sessions
+WHERE token_hash = $1 AND deleted IS NULL
+`
+
+type WebSessionGetByHashParams struct {
+	TokenHash []byte
+}
+
+type WebSessionGetByHashRow struct {
+	ID          uuid.UUID
+	SessionID   uuid.UUID
+	UserID      uuid.UUID
+	TokenPrefix string
+	Groups      []string
+	Started     pgtype.Timestamptz
+	Expires     pgtype.Timestamptz
+	RotatedTo   pgtype.UUID
+	Revoked     pgtype.Timestamptz
+	LastUsed    pgtype.Timestamptz
+	Created     pgtype.Timestamptz
+}
+
+// Looked up by hash, never by id: the browser presents the token, and only its
+// hash is stored.
+func (q *Queries) WebSessionGetByHash(ctx context.Context, arg WebSessionGetByHashParams) (WebSessionGetByHashRow, error) {
+	row := q.db.QueryRow(ctx, webSessionGetByHash, arg.TokenHash)
+	var i WebSessionGetByHashRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.UserID,
+		&i.TokenPrefix,
+		&i.Groups,
+		&i.Started,
+		&i.Expires,
+		&i.RotatedTo,
+		&i.Revoked,
+		&i.LastUsed,
+		&i.Created,
+	)
+	return i, err
+}
+
+const webSessionRevoke = `-- name: WebSessionRevoke :execrows
+UPDATE authn.web_sessions
+SET revoked = now()
+WHERE session_id = $1 AND revoked IS NULL AND deleted IS NULL
+`
+
+type WebSessionRevokeParams struct {
+	SessionID uuid.UUID
+}
+
+// The whole chain, by its session_id: a logout ends the session rather than one
+// of its tokens, and a token presented twice compromises every token in the
+// chain. Returns the number of rows revoked, so a handler can log whether
+// anything was still live.
+func (q *Queries) WebSessionRevoke(ctx context.Context, arg WebSessionRevokeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, webSessionRevoke, arg.SessionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const webSessionRotate = `-- name: WebSessionRotate :one
+WITH spent AS (
+    UPDATE authn.web_sessions
+    SET rotated_to = $1, last_used = now()
+    WHERE authn.web_sessions.id = $5
+        AND authn.web_sessions.rotated_to IS NULL
+        AND authn.web_sessions.revoked IS NULL
+        AND authn.web_sessions.deleted IS NULL
+    RETURNING authn.web_sessions.session_id, authn.web_sessions.user_id, authn.web_sessions.groups, authn.web_sessions.started
+)
+INSERT INTO authn.web_sessions (id, session_id, user_id, token_hash, token_prefix, groups, started, expires)
+SELECT $1, spent.session_id, spent.user_id, $2, $3, spent.groups, spent.started, $4
+FROM spent
+RETURNING authn.web_sessions.id, authn.web_sessions.session_id, authn.web_sessions.user_id, authn.web_sessions.token_prefix, authn.web_sessions.groups, authn.web_sessions.started, authn.web_sessions.expires, authn.web_sessions.created
+`
+
+type WebSessionRotateParams struct {
+	NewID       uuid.UUID
+	TokenHash   []byte
+	TokenPrefix string
+	Expires     pgtype.Timestamptz
+	ID          uuid.UUID
+}
+
+type WebSessionRotateRow struct {
+	ID          uuid.UUID
+	SessionID   uuid.UUID
+	UserID      uuid.UUID
+	TokenPrefix string
+	Groups      []string
+	Started     pgtype.Timestamptz
+	Expires     pgtype.Timestamptz
+	Created     pgtype.Timestamptz
+}
+
+// Spends the presented token and mints its successor in one statement, so the
+// UPDATE's row lock is what serializes two refreshes racing on the same token:
+// the second finds rotated_to already set, matches no row, and the INSERT it
+// feeds writes nothing. No rows returned therefore means "that token was
+// already spent" — a replay, or a loser of the race — and never a partial
+// rotation.
+func (q *Queries) WebSessionRotate(ctx context.Context, arg WebSessionRotateParams) (WebSessionRotateRow, error) {
+	row := q.db.QueryRow(ctx, webSessionRotate,
+		arg.NewID,
+		arg.TokenHash,
+		arg.TokenPrefix,
+		arg.Expires,
+		arg.ID,
+	)
+	var i WebSessionRotateRow
+	err := row.Scan(
+		&i.ID,
+		&i.SessionID,
+		&i.UserID,
+		&i.TokenPrefix,
+		&i.Groups,
+		&i.Started,
+		&i.Expires,
+		&i.Created,
+	)
+	return i, err
+}

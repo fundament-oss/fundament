@@ -33,19 +33,24 @@ import (
 )
 
 type config struct {
-	Database           psqldb.Config
-	OpenFGA            authz.Config
-	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty" `
-	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
-	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
-	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
-	RedirectURL        string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"https://authn.fundament.localhost:8443/callback"`
-	FrontendURL        string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"https://console.fundament.localhost:8443"`
-	CookieDomain       string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"fundament.localhost"`
-	CookieSecure       bool          `env:"COOKIE_SECURE,required,notEmpty"`
-	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
-	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
-	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	Database         psqldb.Config
+	OpenFGA          authz.Config
+	JWTSecret        string        `env:"JWT_SECRET,required,notEmpty" `
+	OIDCIssuer       string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"http://localhost:5556"`
+	OIDCDiscoveryURL string        `env:"OIDC_DISCOVERY_URL"` // URL to fetch OIDC discovery document (defaults to OIDCIssuer)
+	ClientID         string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"authn-api"`
+	RedirectURL      string        `env:"OIDC_REDIRECT_URL,required,notEmpty" envDefault:"https://authn.fundament.localhost:8443/callback"`
+	FrontendURL      string        `env:"FRONTEND_URL,required,notEmpty" envDefault:"https://console.fundament.localhost:8443"`
+	CookieDomain     string        `env:"COOKIE_DOMAIN,required,notEmpty" envDefault:"fundament.localhost"`
+	CookieSecure     bool          `env:"COOKIE_SECURE,required,notEmpty"`
+	DatabaseURL      string        `env:"DATABASE_URL,required,notEmpty"`
+	ListenAddr       string        `env:"LISTEN_ADDR" envDefault:":8080"`
+	TokenExpiry      time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	// Browser session lifetimes (FUN-23). The idle timeout moves forward on
+	// every refresh and ends an abandoned session; the maximum is measured from
+	// sign-in, never moves, and ends one that is never abandoned.
+	SessionIdleTimeout time.Duration `env:"SESSION_IDLE_TIMEOUT" envDefault:"24h"`
+	SessionMaxLifetime time.Duration `env:"SESSION_MAX_LIFETIME" envDefault:"168h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,https://console.fundament.localhost:8443"`
 	PluginProxyURL     string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8081"`
@@ -179,11 +184,13 @@ func run() error {
 	}
 
 	authnCfg := &authn.Config{
-		TokenExpiry:  cfg.TokenExpiry,
-		JWTSecret:    []byte(cfg.JWTSecret),
-		CookieDomain: cfg.CookieDomain,
-		CookieSecure: cfg.CookieSecure,
-		FrontendURL:  cfg.FrontendURL,
+		TokenExpiry:        cfg.TokenExpiry,
+		JWTSecret:          []byte(cfg.JWTSecret),
+		CookieDomain:       cfg.CookieDomain,
+		CookieSecure:       cfg.CookieSecure,
+		FrontendURL:        cfg.FrontendURL,
+		SessionIdleTimeout: cfg.SessionIdleTimeout,
+		SessionMaxLifetime: cfg.SessionMaxLifetime,
 		// The browser origins allowed to call authn with the session cookie are
 		// also the ones a login may return to, so there is one list rather than
 		// two that can disagree (see pkg/authn/return_to.go). FrontendURL is

@@ -32,6 +32,14 @@ Feature: Authentication Session Management
     And the auth cookie should be cleared
     And I should not be able to access the dashboard directly
 
+  @auth @logout
+  Scenario: Logout revokes the session, so a refresh cannot restore it
+    Given my session is active
+    When I click the logout button
+    And I trigger a token refresh
+    Then the token refresh should be rejected
+    And I should not be able to access the dashboard directly
+
   @auth @security
   Scenario: Tampered JWT payload is rejected
     Given I have a valid auth cookie

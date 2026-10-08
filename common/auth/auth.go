@@ -15,6 +15,19 @@ import (
 // ConsoleAuthCookieName is the name of the authentication cookie for the console.
 const ConsoleAuthCookieName = "fundament_auth"
 
+// ConsoleRefreshCookieName is the cookie holding a browser session's refresh
+// token (FUN-23). It is deliberately not the access cookie's sibling: the
+// access cookie is set on the whole cookie domain because every surface
+// validates it, while this one is host-only and scoped to
+// ConsoleRefreshCookiePath, so the credential that can mint tokens for a day
+// reaches exactly the endpoint that spends it.
+const ConsoleRefreshCookieName = "fundament_refresh" //nolint:gosec // cookie name, not a credential
+
+// ConsoleRefreshCookiePath is the only path the refresh cookie is sent to. It
+// matches authn-api's refresh endpoint; authn-api's other handlers never
+// receive the cookie, and neither does any other service.
+const ConsoleRefreshCookiePath = "/refresh"
+
 // DCIMAuthCookieName is the name of the authentication cookie for DCIM.
 const DCIMAuthCookieName = "dcim_auth"
 
@@ -47,11 +60,19 @@ const (
 const WorkloadCredentialAudience = "fundament-authn-api" //nolint:gosec // audience label, not a credential
 
 // Claims represents the JWT claims used across fundament services.
+//
+// SessionID names the credential this token was minted from — a web session
+// (FUN-23) or an API key (FUN-9) — so a request can be traced back to it in
+// an audit. It is for logging only: no service may make an authorization
+// decision on it, because the token it rides in is valid on its own terms and a
+// validator does not look the credential up. Empty on tokens minted before it
+// existed, and on token types that have no credential row behind them.
 type Claims struct {
 	jwt.RegisteredClaims
 	OrganizationIDs []uuid.UUID `json:"organization_ids"`
 	Groups          []string    `json:"groups"`
 	Name            string      `json:"name"`
+	SessionID       string      `json:"sid,omitempty"`
 }
 
 func (c *Claims) UserID() uuid.UUID {

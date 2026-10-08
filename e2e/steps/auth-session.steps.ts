@@ -141,6 +141,22 @@ Then('I should remain authenticated', async function (this: ICustomWorld) {
   expect(response.ok).toBe(true);
 });
 
+// What a logout could not do before FUN-23: it revoked nothing, so a refresh
+// that still carried the cleared cookie minted a new token and put the session
+// back (the race #512 worked around). A revoked session cannot mint, whichever
+// answer the browser keeps.
+Then(
+  'the token refresh should be rejected',
+  async function (this: ICustomWorld) {
+    const response = this.testData.refreshResponse as {
+      ok: boolean;
+      status: number;
+    };
+    expect(response.ok).toBe(false);
+    expect(response.status).toBe(401);
+  },
+);
+
 Then(
   'I should still have access to the dashboard',
   async function (this: ICustomWorld) {

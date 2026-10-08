@@ -1085,6 +1085,70 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<table name="web_sessions" layers="0" collapse-mode="1" max-obj-count="15" z-value="0">
+	<schema name="authn"/>
+	<role name="fun_owner"/>
+	<comment> <![CDATA[A browser's console session (FUN-23). One row per refresh token: rotating a session inserts a successor and points the predecessor at it through rotated_to, so a token presented twice is detectable. session_id names the whole chain and is what a logout revokes. No row-level security and no organization column: authn-api is the only role that reaches this table, and a session belongs to a browser rather than to an organization, so there is no tenant boundary for a policy to draw.]]> </comment>
+	<position x="-240" y="1040"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="session_id" not-null="true">
+		<type name="uuid" length="0"/>
+		<comment> <![CDATA[The chain this token belongs to; equal to id for the token minted at sign-in.]]> </comment>
+	</column>
+	<column name="user_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="token_hash" not-null="true">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="token_prefix" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="groups" not-null="true" default-value="'{}'">
+		<type name="text" length="0" dimension="1"/>
+		<comment> <![CDATA[The identity provider's groups, as they were at sign-in. Copied forward on every rotation: a refresh has no ID token to re-read them from.]]> </comment>
+	</column>
+	<column name="started" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+		<comment> <![CDATA[When the chain began, copied forward on every rotation, so the absolute session lifetime is measured from sign-in rather than from the last refresh.]]> </comment>
+	</column>
+	<column name="expires" not-null="true">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="rotated_to">
+		<type name="uuid" length="0"/>
+		<comment> <![CDATA[The successor minted when this token was used. Set means spent: presenting the token again means two parties hold it.]]> </comment>
+	</column>
+	<column name="revoked">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="last_used">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="web_sessions_pk" type="pk-constr" table="authn.web_sessions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="web_sessions_uq_token_hash" type="uq-constr" table="authn.web_sessions">
+		<columns names="token_hash" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<index name="web_sessions_ix_session_id" table="authn.web_sessions"
+	 concurrent="false" unique="false" fast-update="false" buffering="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="session_id"/>
+		</idxelement>
+</index>
+
 <table name="kubernetes_versions" layers="0" collapse-mode="1" max-obj-count="2" z-value="0">
 	<schema name="catalog"/>
 	<role name="fun_owner"/>
@@ -3756,6 +3820,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="web_sessions_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="authn.web_sessions">
+	<columns names="user_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="clusters_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.clusters">
 	<columns names="organization_id" ref-type="src-columns"/>
@@ -4400,6 +4470,12 @@ END;]]> </definition>
 	 dst-table="tenant.users" reference-fk="api_keys_fk_user"
 	 src-required="false" dst-required="true"/>
 
+<relationship name="rel_web_sessions_users" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
+	 src-table="authn.web_sessions"
+	 dst-table="tenant.users" reference-fk="web_sessions_fk_user"
+	 src-required="false" dst-required="true"/>
+
 <relationship name="rel_project_members_projects" type="relfk" layers="0"
 	 custom-color="#f0f0f0"
 	 src-table="tenant.project_members"
@@ -5004,6 +5080,11 @@ END;]]> </definition>
 	<object name="authn.api_keys" type="table"/>
 	<roles names="fun_authn_api"/>
 	<privileges select="true" update="true"/>
+</permission>
+<permission>
+	<object name="authn.web_sessions" type="table"/>
+	<roles names="fun_authn_api"/>
+	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="authn.api_keys" type="table"/>

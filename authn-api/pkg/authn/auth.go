@@ -43,6 +43,14 @@ type Config struct {
 	CookieDomain string
 	CookieSecure bool
 	FrontendURL  string
+	// SessionIdleTimeout is how long a browser session survives without a
+	// refresh, measured from the last one (FUN-23). It bounds an abandoned
+	// session; it does not bound a session that is never abandoned.
+	SessionIdleTimeout time.Duration
+	// SessionMaxLifetime is how long a browser session may live at all,
+	// measured from sign-in and never moved forward, so that a tab left open
+	// forever still has to authenticate at the identity provider again.
+	SessionMaxLifetime time.Duration
 	// WorkloadSubjects extends DefaultWorkloadSubjects with deployment-specific
 	// ServiceAccounts (the plugin sandbox's controller in local dev).
 	WorkloadSubjects map[string]string
@@ -60,19 +68,24 @@ type authzEvaluator interface {
 
 // AuthnServer handles authentication operations.
 type AuthnServer struct {
-	config              *Config
-	oauth2Config        *oauth2.Config
-	oidcVerifier        *oidc.IDTokenVerifier
-	db                  *psqldb.DB
-	queries             *db.Queries
-	sessionStore        *SessionStore
-	logger              *slog.Logger
-	validator           *auth.Validator
-	cookieBuilder       *auth.CookieBuilder
-	authz               authzEvaluator
-	pluginInstallations PluginInstallationLookup
-	shootVerifier       shootverify.Verifier
-	clusters            clusterLookup
+	config        *Config
+	oauth2Config  *oauth2.Config
+	oidcVerifier  *oidc.IDTokenVerifier
+	db            *psqldb.DB
+	queries       *db.Queries
+	sessionStore  *SessionStore
+	logger        *slog.Logger
+	validator     *auth.Validator
+	cookieBuilder *auth.CookieBuilder
+	// refreshCookieBuilder builds the host-only, /refresh-scoped cookie that
+	// carries a session's refresh token (FUN-23), as against cookieBuilder's
+	// access cookie on the whole cookie domain.
+	refreshCookieBuilder *auth.CookieBuilder
+	authz                authzEvaluator
+	webSessions          webSessionStore
+	pluginInstallations  PluginInstallationLookup
+	shootVerifier        shootverify.Verifier
+	clusters             clusterLookup
 	// workloadSubjects maps a verified Kubernetes username to the workload name
 	// it is allow-listed under (FUN-22).
 	workloadSubjects map[string]string
@@ -86,16 +99,19 @@ type AuthnServer struct {
 func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup, shootVerifier shootverify.Verifier) (*AuthnServer, error) {
 	queries := db.New(database.Pool)
 	return &AuthnServer{
-		config:              cfg,
-		logger:              logger,
-		oauth2Config:        oauth2Config,
-		oidcVerifier:        verifier,
-		db:                  database,
-		queries:             queries,
-		sessionStore:        sessionStore,
-		validator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		cookieBuilder:       auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
+		config:        cfg,
+		logger:        logger,
+		oauth2Config:  oauth2Config,
+		oidcVerifier:  verifier,
+		db:            database,
+		queries:       queries,
+		sessionStore:  sessionStore,
+		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
+		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
+		refreshCookieBuilder: auth.NewHostOnlyCookieBuilder(
+			cfg.CookieSecure, auth.ConsoleRefreshCookieName, auth.ConsoleRefreshCookiePath),
 		authz:               authzClient,
+		webSessions:         queries,
 		pluginInstallations: pluginInstallations,
 
 		allowedReturnOrigins: auth.NewReturnOrigins(logger, cfg.AllowedReturnOrigins),
@@ -121,12 +137,14 @@ func (s *AuthnServer) getUserOrganizationIDs(ctx context.Context, userID uuid.UU
 }
 
 // generateJWT generates a JWT for the given user with the default expiry.
-func (s *AuthnServer) generateJWT(u *user, groups []string) (string, error) {
-	return s.generateJWTWithExpiry(u, groups, s.config.TokenExpiry)
+// sessionID names the credential the token is minted from, for the `sid` claim;
+// see auth.Claims.
+func (s *AuthnServer) generateJWT(u *user, groups []string, sessionID string) (string, error) {
+	return s.generateJWTWithExpiry(u, groups, sessionID, s.config.TokenExpiry)
 }
 
 // generateJWTWithExpiry generates a JWT for the given user with a custom expiry.
-func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry time.Duration) (string, error) {
+func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, sessionID string, expiry time.Duration) (string, error) {
 	now := time.Now()
 
 	claims := auth.Claims{
@@ -140,6 +158,7 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 		OrganizationIDs: u.OrganizationIDs,
 		Name:            u.Name,
 		Groups:          groups,
+		SessionID:       sessionID,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -201,6 +220,13 @@ func (s *AuthnServer) buildAuthCookie(token string) *http.Cookie {
 // buildClearAuthCookie returns a cookie that clears the auth cookie.
 func (s *AuthnServer) buildClearAuthCookie() *http.Cookie {
 	return s.cookieBuilder.BuildClear()
+}
+
+// buildClearRefreshCookie returns a cookie that clears the refresh cookie. It
+// goes out alongside buildClearAuthCookie wherever a session ends, so that a
+// browser stops presenting a credential that cannot work.
+func (s *AuthnServer) buildClearRefreshCookie() *http.Cookie {
+	return s.refreshCookieBuilder.BuildClear()
 }
 
 // authenticateWithPassword authenticates with OIDC using the password grant flow.

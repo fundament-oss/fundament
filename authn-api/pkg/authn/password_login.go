@@ -48,10 +48,17 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "password")
+	user, err := s.processOIDCLogin(r.Context(), claims, "password")
 	if err != nil {
 		s.logger.Error("process oidc login", "error", err)
 		s.writeErrorJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	accessToken, session, err := s.signIn(r.Context(), user, claims.Groups)
+	if err != nil {
+		s.logger.Error("failed to start web session", "error", err, "user_id", user.ID)
+		s.writeErrorJSON(w, http.StatusInternalServerError, "Failed to start session")
 		return
 	}
 
@@ -60,9 +67,11 @@ func (s *AuthnServer) HandlePasswordLogin(w http.ResponseWriter, r *http.Request
 		"organization_ids", user.OrganizationIDs,
 		"name", user.Name,
 		"groups", claims.Groups,
+		"session_id", session.SessionID,
 	)
 
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	http.SetCookie(w, s.buildRefreshCookie(session.RefreshToken))
 	if err := s.writeJSON(w, http.StatusOK, authnhttp.TokenResponse{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",

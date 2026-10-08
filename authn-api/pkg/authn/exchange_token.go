@@ -73,7 +73,7 @@ func (s *AuthnServer) ExchangeToken(
 		ExternalRef:     dbUser.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWTWithExpiry(u, []string{}, APITokenExpiry)
+	accessToken, err := s.generateJWTWithExpiry(u, []string{}, apiKey.ID.String(), APITokenExpiry)
 	if err != nil {
 		s.logger.Error("failed to generate jwt for api token", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))

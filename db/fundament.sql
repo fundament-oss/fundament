@@ -892,6 +892,48 @@ $function$;
 ALTER FUNCTION authn.api_key_update_last_used(uuid) OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: authn.web_sessions | type: TABLE --
+-- DROP TABLE IF EXISTS authn.web_sessions CASCADE;
+CREATE TABLE authn.web_sessions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	session_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	token_hash bytea NOT NULL,
+	token_prefix text NOT NULL,
+	groups text[] NOT NULL DEFAULT '{}',
+	started timestamptz NOT NULL DEFAULT now(),
+	expires timestamptz NOT NULL,
+	rotated_to uuid,
+	revoked timestamptz,
+	last_used timestamptz,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT web_sessions_pk PRIMARY KEY (id),
+	CONSTRAINT web_sessions_uq_token_hash UNIQUE (token_hash)
+);
+-- ddl-end --
+COMMENT ON TABLE authn.web_sessions IS E'A browser''s console session (FUN-23). One row per refresh token: rotating a session inserts a successor and points the predecessor at it through rotated_to, so a token presented twice is detectable. session_id names the whole chain and is what a logout revokes. No row-level security and no organization column: authn-api is the only role that reaches this table, and a session belongs to a browser rather than to an organization, so there is no tenant boundary for a policy to draw.';
+-- ddl-end --
+COMMENT ON COLUMN authn.web_sessions.session_id IS E'The chain this token belongs to; equal to id for the token minted at sign-in.';
+-- ddl-end --
+COMMENT ON COLUMN authn.web_sessions.groups IS E'The identity provider''s groups, as they were at sign-in. Copied forward on every rotation: a refresh has no ID token to re-read them from.';
+-- ddl-end --
+COMMENT ON COLUMN authn.web_sessions.started IS E'When the chain began, copied forward on every rotation, so the absolute session lifetime is measured from sign-in rather than from the last refresh.';
+-- ddl-end --
+COMMENT ON COLUMN authn.web_sessions.rotated_to IS E'The successor minted when this token was used. Set means spent: presenting the token again means two parties hold it.';
+-- ddl-end --
+ALTER TABLE authn.web_sessions OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: web_sessions_ix_session_id | type: INDEX --
+-- DROP INDEX IF EXISTS authn.web_sessions_ix_session_id CASCADE;
+CREATE INDEX web_sessions_ix_session_id ON authn.web_sessions
+USING btree
+(
+	session_id
+);
+-- ddl-end --
+
 -- object: catalog.kubernetes_versions | type: TABLE --
 -- DROP TABLE IF EXISTS catalog.kubernetes_versions CASCADE;
 CREATE TABLE catalog.kubernetes_versions (
@@ -3218,6 +3260,13 @@ REFERENCES tenant.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: web_sessions_fk_user | type: CONSTRAINT --
+-- ALTER TABLE authn.web_sessions DROP CONSTRAINT IF EXISTS web_sessions_fk_user CASCADE;
+ALTER TABLE authn.web_sessions ADD CONSTRAINT web_sessions_fk_user FOREIGN KEY (user_id)
+REFERENCES tenant.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: region_kubernetes_versions_fk_region | type: CONSTRAINT --
 -- ALTER TABLE catalog.region_kubernetes_versions DROP CONSTRAINT IF EXISTS region_kubernetes_versions_fk_region CASCADE;
 ALTER TABLE catalog.region_kubernetes_versions ADD CONSTRAINT region_kubernetes_versions_fk_region FOREIGN KEY (region_id)
@@ -4171,6 +4220,14 @@ GRANT USAGE
 -- object: grant_rw_a72779b347 | type: PERMISSION --
 GRANT SELECT,UPDATE
    ON TABLE authn.api_keys
+   TO fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_e117d9f482 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE authn.web_sessions
    TO fun_authn_api;
 
 -- ddl-end --

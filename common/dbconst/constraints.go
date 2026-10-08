@@ -393,4 +393,8 @@ const (
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"
+	// ConstraintWebSessionsFkUser is defined on authn.web_sessions.
+	ConstraintWebSessionsFkUser = "web_sessions_fk_user"
+	// ConstraintWebSessionsUqTokenHash is defined on authn.web_sessions.
+	ConstraintWebSessionsUqTokenHash = "web_sessions_uq_token_hash"
 )

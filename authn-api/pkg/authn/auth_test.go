@@ -12,6 +12,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
@@ -34,7 +35,9 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 		Name:            "alice",
 	}
 
-	tokenStr, err := server.generateJWT(u, []string{"admin"})
+	sessionID := uuid.New().String()
+
+	tokenStr, err := server.generateJWT(u, []string{"admin"}, sessionID)
 	require.NoError(t, err)
 
 	parsed, err := jwt.ParseWithClaims(tokenStr, &auth.Claims{}, func(_ *jwt.Token) (any, error) {
@@ -46,6 +49,7 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 	require.True(t, ok, "claims type assertion failed")
 	require.Len(t, claims.Audience, 1)
 	require.Equal(t, auth.TokenTypeUser, claims.Audience[0])
+	assert.Equal(t, sessionID, claims.SessionID, "the credential the token was minted from rides in sid")
 }
 
 // TestGetUserInfo_RejectsPluginToken verifies that a PluginToken presented to

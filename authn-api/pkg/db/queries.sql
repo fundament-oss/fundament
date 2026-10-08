@@ -62,6 +62,51 @@ FROM authn.api_key_get_by_hash($1);
 -- Uses SECURITY DEFINER function to bypass RLS
 SELECT authn.api_key_update_last_used($1);
 
+-- name: WebSessionCreate :one
+-- The first refresh token of a browser session (FUN-23). id doubles as
+-- session_id: the row that starts a chain names it, and every rotation of it
+-- carries that name forward, so revoking a session is one statement.
+INSERT INTO authn.web_sessions (id, session_id, user_id, token_hash, token_prefix, groups, expires)
+VALUES (@id, @id, @user_id, @token_hash, @token_prefix, @groups, @expires)
+RETURNING id, session_id, user_id, token_prefix, groups, started, expires, created;
+
+-- name: WebSessionGetByHash :one
+-- Looked up by hash, never by id: the browser presents the token, and only its
+-- hash is stored.
+SELECT id, session_id, user_id, token_prefix, groups, started, expires, rotated_to, revoked, last_used, created
+FROM authn.web_sessions
+WHERE token_hash = @token_hash AND deleted IS NULL;
+
+-- name: WebSessionRotate :one
+-- Spends the presented token and mints its successor in one statement, so the
+-- UPDATE's row lock is what serializes two refreshes racing on the same token:
+-- the second finds rotated_to already set, matches no row, and the INSERT it
+-- feeds writes nothing. No rows returned therefore means "that token was
+-- already spent" — a replay, or a loser of the race — and never a partial
+-- rotation.
+WITH spent AS (
+    UPDATE authn.web_sessions
+    SET rotated_to = @new_id, last_used = now()
+    WHERE authn.web_sessions.id = @id
+        AND authn.web_sessions.rotated_to IS NULL
+        AND authn.web_sessions.revoked IS NULL
+        AND authn.web_sessions.deleted IS NULL
+    RETURNING authn.web_sessions.session_id, authn.web_sessions.user_id, authn.web_sessions.groups, authn.web_sessions.started
+)
+INSERT INTO authn.web_sessions (id, session_id, user_id, token_hash, token_prefix, groups, started, expires)
+SELECT @new_id, spent.session_id, spent.user_id, @token_hash, @token_prefix, spent.groups, spent.started, @expires
+FROM spent
+RETURNING authn.web_sessions.id, authn.web_sessions.session_id, authn.web_sessions.user_id, authn.web_sessions.token_prefix, authn.web_sessions.groups, authn.web_sessions.started, authn.web_sessions.expires, authn.web_sessions.created;
+
+-- name: WebSessionRevoke :execrows
+-- The whole chain, by its session_id: a logout ends the session rather than one
+-- of its tokens, and a token presented twice compromises every token in the
+-- chain. Returns the number of rows revoked, so a handler can log whether
+-- anything was still live.
+UPDATE authn.web_sessions
+SET revoked = now()
+WHERE session_id = @session_id AND revoked IS NULL AND deleted IS NULL;
+
 -- name: ClusterGetByID :one
 -- The organization a shoot workload belongs to comes from this row, never
 -- from the shoot (FUN-22). Deleted clusters refuse the exchange.

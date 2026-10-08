@@ -52,9 +52,16 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 		return
 	}
 
-	user, accessToken, err := s.processOIDCLogin(r.Context(), claims, "oidc")
+	user, err := s.processOIDCLogin(r.Context(), claims, "oidc")
 	if err != nil {
 		s.writeErrorJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	accessToken, session, err := s.signIn(r.Context(), user, claims.Groups)
+	if err != nil {
+		s.logger.Error("failed to start web session", "error", err, "user_id", user.ID)
+		s.writeErrorJSON(w, http.StatusInternalServerError, "Failed to start session")
 		return
 	}
 
@@ -63,10 +70,12 @@ func (s *AuthnServer) HandleCallback(w http.ResponseWriter, r *http.Request, par
 		"organization_ids", user.OrganizationIDs,
 		"name", user.Name,
 		"groups", claims.Groups,
+		"session_id", session.SessionID,
 	)
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
+	http.SetCookie(w, s.buildRefreshCookie(session.RefreshToken))
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }
 

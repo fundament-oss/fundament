@@ -69,17 +69,18 @@ func (s *AuthnServer) verifyAndParseIDToken(ctx context.Context, rawIDToken stri
 	return &claims, nil
 }
 
-// processOIDCLogin handles the common logic for processing an OIDC login,
-// including user lookup/creation and JWT generation.
-// Returns the user, groups, and access token on success.
-func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
+// processOIDCLogin handles the common logic for processing an OIDC login:
+// looking the user up, or registering them, from the identity provider's view
+// of them. Minting the session and the first access token is the caller's,
+// because both belong to the browser being answered rather than to the lookup.
+func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, error) {
 	// Try by external_ref
 	_, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
 		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
 	})
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.logger.Error("failed to get user by external_ref", "error", err)
-		return nil, "", fmt.Errorf("looking up user: %w", err)
+		return nil, fmt.Errorf("looking up user: %w", err)
 	}
 	if err == nil {
 		return s.handleExistingUser(ctx, claims, loginMethod)
@@ -92,7 +93,7 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 		})
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Error("failed to check for invited user", "error", err)
-			return nil, "", fmt.Errorf("looking up invited user: %w", err)
+			return nil, fmt.Errorf("looking up invited user: %w", err)
 		}
 		if err == nil {
 			return s.handleInvitedUser(ctx, claims, &invitedUser, loginMethod)
@@ -104,16 +105,16 @@ func (s *AuthnServer) processOIDCLogin(ctx context.Context, claims *oidcClaims, 
 }
 
 // handleExistingUser handles login for users with a matching external_ref.
-func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
+func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, error) {
 	row, err := s.upsertUser(ctx, s.queries, claims)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	organizationIDs, err := s.getUserOrganizationIDs(ctx, row.ID)
 	if err != nil {
 		s.logger.Error("failed to get user organizations", "error", err)
-		return nil, "", fmt.Errorf("getting user organizations: %w", err)
+		return nil, fmt.Errorf("getting user organizations: %w", err)
 	}
 
 	u := &user{
@@ -123,26 +124,20 @@ func (s *AuthnServer) handleExistingUser(ctx context.Context, claims *oidcClaims
 		ExternalRef:     row.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
-	if err != nil {
-		s.logger.Error("failed to generate token", "error", err)
-		return nil, "", fmt.Errorf("generating JWT: %w", err)
-	}
-
 	s.logger.Info("existing user logged in",
 		"login_method", loginMethod,
 		"user_id", u.ID,
 		"organization_ids", u.OrganizationIDs,
 	)
 
-	return u, accessToken, nil
+	return u, nil
 }
 
 // handleInvitedUser handles login for users who were invited by email.
-func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*user, string, error) {
+func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims, invitedUser *db.UserGetByEmailRow, loginMethod string) (*user, error) {
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
-		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction"))
 	}
 
 	defer rollback.Rollback(ctx, tx, s.logger)
@@ -158,17 +153,17 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 	err = qtx.UserSetExternalRef(ctx, params)
 	if err != nil {
 		s.logger.Error("failed to set external_ref for invited user", "error", err)
-		return nil, "", fmt.Errorf("claiming invited user: %w", err)
+		return nil, fmt.Errorf("claiming invited user: %w", err)
 	}
 
 	organizationIDs, err := s.getUserOrganizationIDs(ctx, invitedUser.ID)
 	if err != nil {
 		s.logger.Error("failed to get user organizations", "error", err)
-		return nil, "", fmt.Errorf("getting user organizations: %w", err)
+		return nil, fmt.Errorf("getting user organizations: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, "", connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	u := &user{
@@ -176,12 +171,6 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 		OrganizationIDs: organizationIDs,
 		Name:            claims.Name,
 		ExternalRef:     claims.Sub,
-	}
-
-	accessToken, err := s.generateJWT(u, claims.Groups)
-	if err != nil {
-		s.logger.Error("failed to generate token", "error", err)
-		return nil, "", fmt.Errorf("generating JWT: %w", err)
 	}
 
 	s.logger.Info("invited user claimed account",
@@ -192,17 +181,17 @@ func (s *AuthnServer) handleInvitedUser(ctx context.Context, claims *oidcClaims,
 		"email", claims.Email,
 	)
 
-	return u, accessToken, nil
+	return u, nil
 }
 
 // handleNewUser registers a first-time user. The user starts without any
 // organization membership: organizations are not self-service, an operator
 // assigns users to them through funops (before or after this first login).
 // Memberships assigned later reach the session on the next token refresh.
-func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, string, error) {
+func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, loginMethod string) (*user, error) {
 	row, err := s.upsertUser(ctx, s.queries, claims)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	u := &user{
@@ -212,12 +201,6 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 		ExternalRef:     row.ExternalRef.String,
 	}
 
-	accessToken, err := s.generateJWT(u, claims.Groups)
-	if err != nil {
-		s.logger.Error("failed to generate token", "error", err)
-		return nil, "", fmt.Errorf("generating JWT: %w", err)
-	}
-
 	s.logger.Info("new user registered without organization",
 		"login_method", loginMethod,
 		"user_id", u.ID,
@@ -225,5 +208,5 @@ func (s *AuthnServer) handleNewUser(ctx context.Context, claims *oidcClaims, log
 		"email", claims.Email,
 	)
 
-	return u, accessToken, nil
+	return u, nil
 }

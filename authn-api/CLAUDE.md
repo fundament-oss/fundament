@@ -53,8 +53,9 @@ This is a Go authentication service using:
 1. User visits `/login` → state + PKCE verifier stored in session cookie → redirect to OIDC provider
 2. OIDC provider authenticates user → redirects to `/callback` with code and state
 3. `/callback` verifies state, exchanges code for tokens (with PKCE), creates/updates user in DB
-4. JWT set in `fundament_auth` cookie → user redirected to frontend
+4. A web session row is created and its opaque refresh token set in the host-only `fundament_refresh` cookie (`Path=/refresh`); the JWT minted from it is set in `fundament_auth` cookie on the whole cookie domain → user redirected to frontend
 5. Frontend can call `GetUserInfo` RPC (via cookie or Bearer token) to get user data
+6. `POST /refresh` rotates the session: the presented token is spent, a successor is minted, and presenting a spent token revokes the whole chain (FUN-23)
 
 ### Endpoints
 
@@ -62,8 +63,8 @@ This is a Go authentication service using:
 - `GET /login` - Initiates OIDC login flow (with PKCE)
 - `POST /login/password` - Direct password authentication via OIDC password grant
 - `GET /callback` - Handles OIDC redirect
-- `POST /refresh` - Refreshes JWT token
-- `POST /logout` - Clears auth cookie
+- `POST /refresh` - Spends the `fundament_refresh` cookie for a rotated web session and a new JWT (FUN-23); falls back to re-minting from a still-valid JWT for browsers that signed in before web sessions existed
+- `POST /logout` - Revokes the web session the refresh cookie names, and clears both cookies
 
 **RPC (Connect):**
 - `GetUserInfo` - Returns user info from valid JWT
@@ -94,6 +95,8 @@ Optional with defaults:
 - `PLUGIN_PROXY_INTERNAL_URL` (http://plugin-proxy:8081) - plugin-proxy internal RPC URL, called by `MintPluginToken`
 - `COOKIE_DOMAIN` (fundament.localhost)
 - `COOKIE_SECURE` (false)
+- `SESSION_IDLE_TIMEOUT` (24h) - how long a browser session survives without a refresh, moved forward on every refresh (FUN-23)
+- `SESSION_MAX_LIFETIME` (168h) - how long one may live at all, measured from sign-in and never moved
 - `GARDENER_MODE` (mock) / `GARDENER_KUBECONFIG` - real mode verifies shoot workload tokens by TokenReview through Gardener (FUN-22)
 - `PLUGIN_SANDBOX_KUBECONFIG` - kubeconfig of the local plugin sandbox cluster; when set and present, TokenReview runs there (without it and without Gardener or mock, every exchange is denied)
 - `SHOOT_VERIFIER_MODE` (auto) - `mock` accepts HMAC mock tokens (`MOCK_SHOOT_SECRET`, default `mock-shoot-secret`) for the seeded cluster; tests only
