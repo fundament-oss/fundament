@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -34,16 +35,14 @@ type ShootStatusChecker interface {
 
 // Config holds handler-specific configuration.
 type Config struct {
-	StatusBatchSize int32 `env:"STATUS_BATCH_SIZE" envDefault:"50"`
-	// StatusReadyInterval is how often a healthy ready cluster is re-checked;
-	// non-ready and not-yet-healthy clusters are re-checked every 30 seconds.
-	// One batch of StatusBatchSize per status tick bounds how many healthy
-	// clusters can be kept current: about StatusBatchSize per tick times the
-	// ticks in one interval (50 × 10 = 500 at the defaults). With the real
-	// client's status cache a poll is one DB update, so raising
-	// StatusBatchSize is the cheap way to support larger fleets.
-	StatusReadyInterval time.Duration `env:"STATUS_READY_INTERVAL" envDefault:"5m"`
-	MaxRetries          int32         `env:"MAX_RETRIES" envDefault:"10"`
+	// StatusWorkers is how many status checks run at once. The queue never
+	// hands one cluster to two workers, so this only adds parallelism across
+	// clusters.
+	StatusWorkers int `env:"STATUS_WORKERS" envDefault:"2"`
+	// StatusProgressEventInterval is the shortest time between two recorded
+	// progress messages of one cluster while Gardener runs an operation.
+	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
+	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
@@ -67,6 +66,9 @@ type Handler struct {
 	logger        *slog.Logger
 	cfg           Config
 
+	// statusQueue holds the IDs of clusters whose status needs a check.
+	statusQueue workqueue.TypedRateLimitingInterface[uuid.UUID]
+
 	preconditions map[handler.EntityType][]handler.Precondition
 }
 
@@ -80,6 +82,7 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 		statusChecker: statusChecker,
 		logger:        logger.With("handler", "cluster"),
 		cfg:           cfg,
+		statusQueue:   newStatusQueue(),
 		preconditions: make(map[handler.EntityType][]handler.Precondition),
 	}
 

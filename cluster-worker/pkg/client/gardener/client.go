@@ -41,10 +41,15 @@ type ShootStatus struct {
 	Message string
 	// Operation is empty when the Shoot has no last operation yet.
 	Operation OperationType
-	// Healthy reports whether all required Shoot conditions are True.
-	// Only meaningful for StatusReady and for a StatusProgressing reconcile of
-	// a shoot that is already running.
+	// Healthy is Gardener's health verdict: its shoot.gardener.cloud/status
+	// label is "healthy", or, for a Shoot without the label, all required
+	// conditions are True. Only meaningful for StatusReady and for a
+	// StatusProgressing reconcile of a shoot that is already running.
 	Healthy bool
+	// HealthGrace marks the label value "progressing": a condition turned bad
+	// but is within Gardener's grace period (its threshold, or pardoned while
+	// an operation runs without errors). Healthy is false.
+	HealthGrace bool
 	// Retrying marks a StatusError that Gardener will retry by itself
 	// (lastOperation state Error or Aborted), as opposed to Failed.
 	Retrying bool
@@ -55,6 +60,9 @@ const (
 	MsgShootNotFound  = "Shoot not found in Gardener"
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
+	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
+	// first reports the new cluster healthy.
+	MsgShootAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
 	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
 	// change until the gardenlet starts reconciling it.
 	MsgShootUpdatePending = "Waiting for Gardener to start the update"

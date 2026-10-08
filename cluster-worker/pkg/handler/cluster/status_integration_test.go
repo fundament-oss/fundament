@@ -33,7 +33,7 @@ func TestCheckStatusTransitionCreatesEvent(t *testing.T) {
 	setShootStatus(t, db, clusterID, "progressing")
 
 	// Mock returns Ready for this cluster (instant mock — shoot is immediately ready).
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	// DB should have shoot_status = ready.
@@ -60,7 +60,7 @@ func TestCheckStatusDeletedConfirmedGone(t *testing.T) {
 	// No shoot exists in mock — GetShootStatus will return {StatusPending, MsgShootNotFound}.
 	setShootStatus(t, db, clusterID, "deleting")
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	// DB should have shoot_status = deleted.
@@ -90,7 +90,7 @@ func TestCheckStatusErrorTransition(t *testing.T) {
 	// Override mock to return error status.
 	mock.SetStatusOverride(clusterID, gardener.StatusError, "shoot reconciliation failed")
 
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)
@@ -118,7 +118,7 @@ func TestCheckStatusSkipsProjectLookup(t *testing.T) {
 	callsBefore := len(mock.EnsureProjectCalls)
 	mock.EnsureProjectError = errors.New("garden unavailable")
 
-	err = h.CheckStatus(t.Context())
+	err = checkStatus(t, h)
 	require.NoError(t, err)
 
 	assert.Len(t, mock.EnsureProjectCalls, callsBefore)
@@ -141,7 +141,7 @@ func TestCheckStatusDeletedSkipsProjectLookup(t *testing.T) {
 	// Confirming a deletion must neither need nor (re)create the org's project.
 	mock.EnsureProjectError = errors.New("garden unavailable")
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	assert.Empty(t, mock.EnsureProjectCalls)
@@ -176,7 +176,7 @@ func TestCheckStatusRefreshesUnhealthyReady(t *testing.T) {
 		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	message, health := getShootState(t, db, clusterID)
@@ -187,66 +187,55 @@ func TestCheckStatusRefreshesUnhealthyReady(t *testing.T) {
 	assert.Equal(t, readyRowsBefore, countReadyOutboxRows(t, db, clusterID))
 }
 
-func TestCheckStatusReadyPollLanes(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		health     string
-		age        time.Duration
-		wantPolled bool
-	}{
-		{name: "healthy, checked recently", health: "healthy", age: time.Minute, wantPolled: false},
-		{name: "healthy, past the ready interval", health: "healthy", age: 6 * time.Minute, wantPolled: true},
-		{name: "unhealthy, past 30 seconds", health: "unhealthy", age: time.Minute, wantPolled: true},
-		{name: "unhealthy, checked just now", health: "unhealthy", age: 10 * time.Second, wantPolled: false},
-		{name: "health unknown, past 30 seconds", health: "", age: time.Minute, wantPolled: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			db := createTestDB(t)
-			mock := newMock(t)
-			h := newTestHandler(t, db, mock)
-
-			clusterID := readyCluster(t, db, "status-lanes")
-			setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, tt.health, tt.age)
-			mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
-				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
-			})
-
-			err := h.CheckStatus(t.Context())
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.wantPolled, mock.StatusCallsFor(clusterID) > 0)
-		})
-	}
-}
-
-func TestCheckStatusOrdersNonReadyFirst(t *testing.T) {
+// The sweep checks every cluster that has reached Gardener, whatever its
+// status and however recently it was checked, plus soft-deleted clusters
+// whose Shoot is not confirmed gone.
+func TestCheckStatusSweepsEveryCluster(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
-	h := newTestHandlerWithConfig(t, db, mock, cluster.Config{
-		StatusBatchSize:     1,
-		StatusReadyInterval: 5 * time.Minute,
-		MaxRetries:          10,
+	h := newTestHandler(t, db, mock)
+
+	healthy := readyCluster(t, db, "sweep-healthy")
+	setShootState(t, db, healthy, "ready", gardener.MsgShootReady, "healthy", time.Second)
+	creating := readyCluster(t, db, "sweep-creating")
+	setShootState(t, db, creating, "progressing", "Create: Waiting", "", time.Second)
+	unsynced := insertCluster(t, db, acmeCorpOrgID, "sweep-unsynced")
+	deleting := insertDeletedCluster(t, db, acmeCorpOrgID, "sweep-deleting")
+	setShootState(t, db, deleting, "deleting", "Shoot is being deleted", "", time.Second)
+	gone := insertDeletedCluster(t, db, acmeCorpOrgID, "sweep-gone")
+	setShootState(t, db, gone, "deleted", "Shoot confirmed deleted", "", time.Second)
+
+	require.NoError(t, checkStatus(t, h))
+
+	assert.Equal(t, 1, mock.StatusCallsFor(healthy))
+	assert.Equal(t, 1, mock.StatusCallsFor(creating))
+	assert.Equal(t, 1, mock.StatusCallsFor(deleting))
+	assert.Equal(t, 0, mock.StatusCallsFor(unsynced), "no Shoot yet")
+	assert.Equal(t, 0, mock.StatusCallsFor(gone), "confirmed deleted")
+}
+
+// A check that would record nothing new writes nothing, so a routine
+// reconcile's many Shoot updates cost reads only.
+func TestCheckClusterUnchangedWritesNothing(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-unchanged")
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", time.Hour)
+	before := getShootStatusUpdated(t, db, clusterID)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
-	// The ready cluster is far older, so plain staleness order would pick it.
-	readyID := readyCluster(t, db, "status-order-ready")
-	setShootState(t, db, readyID, "ready", gardener.MsgShootReady, "healthy", time.Hour)
-	newID := readyCluster(t, db, "status-order-new")
-	setShootState(t, db, newID, "progressing", "Create: Waiting", "", time.Minute)
+	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
 
-	err := h.CheckStatus(t.Context())
-	require.NoError(t, err)
-
-	assert.Equal(t, 1, mock.StatusCallsFor(newID))
-	assert.Equal(t, 0, mock.StatusCallsFor(readyID))
+	assert.Equal(t, 1, mock.StatusCallsFor(clusterID))
+	assert.Equal(t, before, getShootStatusUpdated(t, db, clusterID))
 }
 
 // An error Gardener will retry (state Error or Aborted) is recorded as a
@@ -264,7 +253,7 @@ func TestCheckStatusRetriedErrorIsWarning(t *testing.T) {
 		Status: gardener.StatusError, Message: "etcd not ready. Operation will be retried.", Operation: gardener.OperationCreate, Retrying: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)
@@ -290,7 +279,7 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 		Status: gardener.StatusProgressing, Message: "Reconcile: Syncing", Operation: gardener.OperationReconcile, Healthy: true,
 	})
 
-	err := h.CheckStatus(t.Context())
+	err := checkStatus(t, h)
 	require.NoError(t, err)
 
 	status := getClusterShootStatus(t, db, clusterID)
@@ -301,5 +290,144 @@ func TestCheckStatusRoutineReconcileKeepsRow(t *testing.T) {
 	assert.Equal(t, "healthy", health)
 	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_progressing"))
 	assert.Equal(t, readyRowsBefore, countReadyOutboxRows(t, db, clusterID))
-	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the row was polled and its timestamp moved")
+	assert.Equal(t, 1, mock.StatusCallsFor(clusterID), "the cluster was checked")
+}
+
+// A status check for a cluster row that does not exist does nothing.
+func TestCheckClusterMissingRow(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	missing := uuid.New()
+	require.NoError(t, h.CheckCluster(t.Context(), missing))
+	assert.Equal(t, 0, mock.StatusCallsFor(missing))
+}
+
+// A cluster that has not reached Gardener yet has no Shoot to check; the
+// caller is told to try again.
+func TestCheckClusterNotSyncedYet(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-unsynced")
+	require.ErrorIs(t, h.CheckCluster(t.Context(), clusterID), cluster.ErrClusterNotSynced)
+	assert.Equal(t, 0, mock.StatusCallsFor(clusterID))
+	assert.Nil(t, getClusterShootStatus(t, db, clusterID))
+}
+
+// Two checks of the same transition racing on one row record it once: the
+// guarded update lets one of them write, and the events and the ready outbox
+// row are written in the same transaction as that update.
+func TestCheckClusterConcurrentTransitionRecordedOnce(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-race")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true,
+	})
+
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() { errs <- h.CheckCluster(t.Context(), clusterID) }()
+	}
+	require.NoError(t, <-errs)
+	require.NoError(t, <-errs)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
+	assert.Equal(t, readyRowsBefore+1, countReadyOutboxRows(t, db, clusterID))
+}
+
+// Gardener retries a failing task again and again, with progress in between
+// that the watch sees; the same error is recorded as one warning.
+func TestCheckClusterRetriedErrorRecordedOnce(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-retry-once")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+
+	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
+	report := func(status gardener.ShootStatusType, message string, retrying bool) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report(gardener.StatusError, failure, true)
+	report(gardener.StatusProgressing, "Create: Deploying gardener-resource-manager", false)
+	report(gardener.StatusError, failure, true)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_warning"))
+}
+
+// The same error in a later incident is a new warning: once the cluster
+// reached ready, an earlier warning no longer counts as the one it repeats.
+func TestCheckClusterRetriedErrorAfterReadyIsNewWarning(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-retry-again")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting", "", time.Minute)
+
+	const failure = `task "Deploying gardener-resource-manager" failed: token not yet generated. Operation will be retried.`
+	report := func(status gardener.ShootStatusType, message string, retrying, healthy bool) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: status, Message: message, Operation: gardener.OperationCreate, Retrying: retrying, Healthy: healthy,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report(gardener.StatusError, failure, true, false)
+	report(gardener.StatusReady, gardener.MsgShootReady, false, true)
+	report(gardener.StatusError, failure, true, false)
+
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_ready"))
+	assert.Equal(t, 2, countEvents(t, db, clusterID, "status_warning"))
+}
+
+// While Gardener runs an operation, a new progress message is recorded, and
+// another one that follows within the throttle window is not.
+func TestCheckClusterRecordsThrottledProgress(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := readyCluster(t, db, "status-progress")
+	setShootState(t, db, clusterID, "progressing", "Create: Waiting for etcd", "", time.Minute)
+
+	report := func(message string) {
+		mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+			Status: gardener.StatusProgressing, Message: message, Operation: gardener.OperationCreate,
+		})
+		require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	}
+
+	report("Create: Deploying kube-apiserver")
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_progressing"))
+
+	report("Create: Waiting until the Kubernetes API server is ready")
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "status_progressing"), "inside the window")
+	message, _ := getShootState(t, db, clusterID)
+	assert.Equal(t, "Create: Waiting until the Kubernetes API server is ready", message, "the row still shows the live message")
 }

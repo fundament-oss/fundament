@@ -109,6 +109,153 @@ func (q *Queries) ClusterCreateSyncSucceededEvent(ctx context.Context, arg Clust
 	return id, err
 }
 
+const clusterGetForStatusCheck = `-- name: ClusterGetForStatusCheck :one
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.organization_id,
+    tenant.clusters.shoot_status_updated,
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region,
+    (
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )::boolean AS synced
+FROM
+    tenant.clusters
+    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
+WHERE
+    tenant.clusters.id = $1
+`
+
+type ClusterGetForStatusCheckParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetForStatusCheckRow struct {
+	ID                 uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Deleted            pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	ShootStatusMessage pgtype.Text
+	ShootHealth        pgtype.Text
+	ShootUpdating      bool
+	OrganizationID     uuid.UUID
+	ShootStatusUpdated pgtype.Timestamptz
+	OrganizationName   string
+	CloudProfile       pgtype.Text
+	CloudProfileRegion pgtype.Text
+	Synced             bool
+}
+
+// Load one cluster for a status check, active or soft-deleted. synced says
+// whether the cluster has reached Gardener at all (a status was recorded or
+// an outbox row completed); before that there is no Shoot to check.
+func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetForStatusCheckParams) (ClusterGetForStatusCheckRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetForStatusCheck, arg.ClusterID)
+	var i ClusterGetForStatusCheckRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Region,
+		&i.KubernetesVersion,
+		&i.Deleted,
+		&i.ShootStatus,
+		&i.ShootStatusMessage,
+		&i.ShootHealth,
+		&i.ShootUpdating,
+		&i.OrganizationID,
+		&i.ShootStatusUpdated,
+		&i.OrganizationName,
+		&i.CloudProfile,
+		&i.CloudProfileRegion,
+		&i.Synced,
+	)
+	return i, err
+}
+
+const clusterGetLastProgressEvent = `-- name: ClusterGetLastProgressEvent :one
+SELECT
+    tenant.cluster_events.created,
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = $1
+    AND tenant.cluster_events.event_type = 'status_progressing'
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1
+`
+
+type ClusterGetLastProgressEventParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetLastProgressEventRow struct {
+	Created pgtype.Timestamptz
+	Message pgtype.Text
+}
+
+// The cluster's most recent status_progressing event, which throttles how
+// often Gardener's progress messages are recorded.
+func (q *Queries) ClusterGetLastProgressEvent(ctx context.Context, arg ClusterGetLastProgressEventParams) (ClusterGetLastProgressEventRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetLastProgressEvent, arg.ClusterID)
+	var i ClusterGetLastProgressEventRow
+	err := row.Scan(&i.Created, &i.Message)
+	return i, err
+}
+
+const clusterGetLastWarningMessage = `-- name: ClusterGetLastWarningMessage :one
+SELECT
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = $1
+    AND tenant.cluster_events.event_type = 'status_warning'
+    AND tenant.cluster_events.created > COALESCE((
+        SELECT
+            max(tenant.cluster_events.created)
+        FROM
+            tenant.cluster_events
+        WHERE
+            tenant.cluster_events.cluster_id = $1
+            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
+    ), '-infinity'::timestamptz)
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1
+`
+
+type ClusterGetLastWarningMessageParams struct {
+	ClusterID uuid.UUID
+}
+
+// The message of the cluster's most recent status_warning event since its last
+// milestone (ready, healthy, error or lost), so an error Gardener retries again
+// and again is recorded once, and the same error in a later incident is
+// recorded again.
+func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterGetLastWarningMessageParams) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, clusterGetLastWarningMessage, arg.ClusterID)
+	var message pgtype.Text
+	err := row.Scan(&message)
+	return message, err
+}
+
 const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
 SELECT EXISTS (
     SELECT 1
@@ -183,209 +330,40 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 	return items, nil
 }
 
-const clusterListDeletedNeedingVerification = `-- name: ClusterListDeletedNeedingVerification :many
+const clusterListForStatusSweep = `-- name: ClusterListForStatusSweep :many
 SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.region,
-    tenant.clusters.kubernetes_version,
-    tenant.clusters.deleted,
-    tenant.clusters.shoot_status,
-    tenant.clusters.organization_id,
-    tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name,
-    catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
+    tenant.clusters.id
 FROM
     tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
-    ( -- Delete has been synced: has shoot_status or a completed outbox row
+    (
         tenant.clusters.shoot_status IS NOT NULL
         OR tenant.clusters.outbox_status = 'completed'
     )
-    AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
     AND (
-        tenant.clusters.shoot_status IS NULL
-        OR tenant.clusters.shoot_status != 'deleted'
-    ) -- Not yet confirmed deleted
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
+        tenant.clusters.deleted IS NULL
+        OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted'
     )
 ORDER BY
-    shoot_status_updated NULLS FIRST
-LIMIT
-    $1
+    tenant.clusters.id
 `
 
-type ClusterListDeletedNeedingVerificationParams struct {
-	LimitCount int32
-}
-
-type ClusterListDeletedNeedingVerificationRow struct {
-	ID                 uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Deleted            pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	OrganizationID     uuid.UUID
-	ShootStatusUpdated pgtype.Timestamptz
-	OrganizationName   string
-	CloudProfile       pgtype.Text
-	CloudProfileRegion pgtype.Text
-}
-
-// Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
-// Polls until shoot_status = 'deleted' (confirmed removed).
-func (q *Queries) ClusterListDeletedNeedingVerification(ctx context.Context, arg ClusterListDeletedNeedingVerificationParams) ([]ClusterListDeletedNeedingVerificationRow, error) {
-	rows, err := q.db.Query(ctx, clusterListDeletedNeedingVerification, arg.LimitCount)
+// IDs of every cluster the status sweep checks: it has reached Gardener (a
+// status was recorded or an outbox row completed) and, if soft-deleted, its
+// Shoot is not confirmed gone yet.
+func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, clusterListForStatusSweep)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ClusterListDeletedNeedingVerificationRow
+	var items []uuid.UUID
 	for rows.Next() {
-		var i ClusterListDeletedNeedingVerificationRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Region,
-			&i.KubernetesVersion,
-			&i.Deleted,
-			&i.ShootStatus,
-			&i.OrganizationID,
-			&i.ShootStatusUpdated,
-			&i.OrganizationName,
-			&i.CloudProfile,
-			&i.CloudProfileRegion,
-		); err != nil {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const clusterListNeedingStatusCheck = `-- name: ClusterListNeedingStatusCheck :many
-SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.region,
-    tenant.clusters.kubernetes_version,
-    tenant.clusters.deleted,
-    tenant.clusters.shoot_status,
-    tenant.clusters.shoot_status_message,
-    tenant.clusters.shoot_health,
-    tenant.clusters.shoot_updating,
-    tenant.clusters.organization_id,
-    tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name,
-    catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
-WHERE
-    ( -- Cluster has been synced: has shoot_status or a completed outbox row
-        tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
-    )
-    AND tenant.clusters.deleted IS NULL -- Active (not deleted)
-    AND (
-        (
-            (
-                tenant.clusters.shoot_status IS NULL -- Never checked
-                OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
-                OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
-                OR tenant.clusters.shoot_status = 'error' -- Failed, might recover
-                OR (
-                    tenant.clusters.shoot_status = 'ready'
-                    AND tenant.clusters.shoot_health IS DISTINCT FROM 'healthy'
-                ) -- Ready but conditions still settling (or health not recorded yet)
-                OR tenant.clusters.shoot_updating -- An update fundament pushed rolls out
-            )
-            AND (
-                tenant.clusters.shoot_status_updated IS NULL -- Never checked
-                OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-            ) -- Not checked recently
-        )
-        OR (
-            tenant.clusters.shoot_status = 'ready'
-            AND tenant.clusters.shoot_health = 'healthy'
-            AND tenant.clusters.shoot_status_updated < now() - $1::interval
-        ) -- Healthy: slower refresh
-    )
-ORDER BY
-    tenant.clusters.shoot_status IS NOT DISTINCT FROM 'ready', -- NULL status sorts with the non-ready ones
-    tenant.clusters.shoot_status_updated NULLS FIRST
-LIMIT
-    $2
-`
-
-type ClusterListNeedingStatusCheckParams struct {
-	ReadyInterval pgtype.Interval
-	LimitCount    int32
-}
-
-type ClusterListNeedingStatusCheckRow struct {
-	ID                 uuid.UUID
-	Name               string
-	Region             string
-	KubernetesVersion  string
-	Deleted            pgtype.Timestamptz
-	ShootStatus        pgtype.Text
-	ShootStatusMessage pgtype.Text
-	ShootHealth        pgtype.Text
-	ShootUpdating      bool
-	OrganizationID     uuid.UUID
-	ShootStatusUpdated pgtype.Timestamptz
-	OrganizationName   string
-	CloudProfile       pgtype.Text
-	CloudProfileRegion pgtype.Text
-}
-
-// Get clusters where we need to check Gardener status (active clusters).
-// Two speeds: clusters in non-terminal states (NULL, pending, progressing,
-// error) and ready clusters that are not known to be healthy are polled every
-// 30 seconds; healthy ready clusters every @ready_interval. Ready clusters are
-// polled at all so their message and health stay current after the first
-// ready reading. Clusters still being created are ordered first so a large
-// ready fleet cannot crowd them out of the batch.
-func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg ClusterListNeedingStatusCheckParams) ([]ClusterListNeedingStatusCheckRow, error) {
-	rows, err := q.db.Query(ctx, clusterListNeedingStatusCheck, arg.ReadyInterval, arg.LimitCount)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ClusterListNeedingStatusCheckRow
-	for rows.Next() {
-		var i ClusterListNeedingStatusCheckRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Region,
-			&i.KubernetesVersion,
-			&i.Deleted,
-			&i.ShootStatus,
-			&i.ShootStatusMessage,
-			&i.ShootHealth,
-			&i.ShootUpdating,
-			&i.OrganizationID,
-			&i.ShootStatusUpdated,
-			&i.OrganizationName,
-			&i.CloudProfile,
-			&i.CloudProfileRegion,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

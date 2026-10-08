@@ -18,6 +18,8 @@ message SyncState {
   string outbox_error = 30 [features.field_presence = EXPLICIT];
   string shoot_status = 40 [features.field_presence = EXPLICIT];
   string shoot_message = 50 [features.field_presence = EXPLICIT];
+  // When shoot_status, shoot_message or the health last changed. Status is
+  // checked far more often than that; an unchanged check leaves it as it is.
   google.protobuf.Timestamp status_updated_at = 60;
 }
 
