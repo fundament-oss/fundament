@@ -164,7 +164,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// cluster-worker may already have given the Shoot a default worker pool;
 	// created right away, the pools replace it before Gardener builds workers.
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), plan.NodePools)...)
+	// A new cluster has no pools, so there is nothing to list; ListNodePools
+	// could also be refused until the new cluster's permissions are synced.
+	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), nil, plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -295,7 +297,12 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), plan.NodePools)...)
+	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
+		return
+	}
+	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), current, plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -220,16 +220,10 @@ func orderNodePools(pools []existingNodePool, prior []ClusterNodePoolModel) []Cl
 	return result
 }
 
-// applyNodePoolChanges makes the cluster's node pools match planned. New pools
-// are created before old ones are removed, so the cluster keeps workers in between.
-func applyNodePoolChanges(ctx context.Context, client *FundamentClient, clusterID, region string, planned []ClusterNodePoolModel) diag.Diagnostics {
+// applyNodePoolChanges turns the cluster's current node pools into planned. New
+// pools are created before old ones are removed, so the cluster keeps workers in between.
+func applyNodePoolChanges(ctx context.Context, client *FundamentClient, clusterID, region string, current []existingNodePool, planned []ClusterNodePoolModel) diag.Diagnostics {
 	var diags diag.Diagnostics
-
-	current, err := listNodePools(ctx, client, clusterID)
-	if err != nil {
-		diags.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", clusterID, err))
-		return diags
-	}
 
 	changes := planNodePoolChanges(current, planned)
 
