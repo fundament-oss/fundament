@@ -70,7 +70,7 @@ func TestAccClusterResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
 				),
 			},
-			// Resize a pool, change another's machine type and add a third
+			// Resize a pool, change its machine type and add a second
 			{
 				Config: testAccClusterResourceConfig(clusterName, "1.29", endpoint, organizationID,
 					testAccNodePool("workers", "n1-standard-2", 2, 4)+testAccNodePool("extra", "n1-standard-1", 1, 1)),

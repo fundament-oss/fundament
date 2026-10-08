@@ -252,6 +252,11 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	nodePools, err := listNodePools(ctx, r.client, state.ID.ValueString())
 	if err != nil {
+		// Deleted since the GetCluster above.
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.ID.ValueString(), err))
 		return
 	}
@@ -290,6 +295,18 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		"kubernetes_version_new": plan.KubernetesVersion.ValueString(),
 	})
 
+	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
+		return
+	}
+	// Check the machine types before anything changes, so a type the region
+	// does not offer fails before an upgrade has gone out.
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), planNodePoolChanges(current, plan.NodePools).Create)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	if !plan.KubernetesVersion.Equal(state.KubernetesVersion) {
 		r.updateKubernetesVersion(ctx, state.ID.ValueString(), plan.KubernetesVersion.ValueString(), &resp.Diagnostics)
 		if resp.Diagnostics.HasError() {
@@ -297,11 +314,6 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
-		return
-	}
 	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), current, plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
