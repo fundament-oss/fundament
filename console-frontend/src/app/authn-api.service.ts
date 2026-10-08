@@ -25,6 +25,12 @@ export default class AuthnApiService {
 
   private pendingGetUserInfo: Promise<User | undefined> | null = null;
 
+  // Login, refresh and logout all answer by setting the auth cookie, and the
+  // browser keeps whichever answer lands last. A refresh answered after a
+  // logout would put the session back, or after a login the session before it,
+  // so they go out one at a time.
+  private lastCookieRequest: Promise<unknown> = Promise.resolve();
+
   constructor() {
     // Configure the authn REST client with the runtime base URL and credentials
     this.restClient.setConfig({
@@ -37,10 +43,12 @@ export default class AuthnApiService {
   // cookie, it never redirects, so the caller stays on the page and routes
   // itself. Only the OIDC `/login` takes one.
   async login(email: string, password: string): Promise<void> {
-    const { error } = await handlePasswordLogin({
-      client: this.restClient,
-      body: { email, password },
-    });
+    const { error } = await this.oneAtATime(() =>
+      handlePasswordLogin({
+        client: this.restClient,
+        body: { email, password },
+      }),
+    );
 
     if (error) {
       throw new Error(error.error || 'Login failed');
@@ -86,7 +94,7 @@ export default class AuthnApiService {
   }
 
   async refreshToken(): Promise<void> {
-    const { error } = await handleRefresh({ client: this.restClient });
+    const { error } = await this.oneAtATime(() => handleRefresh({ client: this.restClient }));
 
     if (error) {
       throw new Error(error.error || 'Refresh failed');
@@ -94,7 +102,7 @@ export default class AuthnApiService {
   }
 
   async logout(): Promise<void> {
-    const { error } = await handleLogout({ client: this.restClient });
+    const { error } = await this.oneAtATime(() => handleLogout({ client: this.restClient }));
 
     if (error) {
       throw new Error(error.error || 'Logout failed');
@@ -109,6 +117,12 @@ export default class AuthnApiService {
   isAuthenticated(): boolean {
     // Check if we have a current user in our state
     return this.currentUserSubject.value !== undefined;
+  }
+
+  private oneAtATime<T>(send: () => Promise<T>): Promise<T> {
+    const request = this.lastCookieRequest.then(send);
+    this.lastCookieRequest = request.catch(() => undefined);
+    return request;
   }
 
   private static hasAuthHint(): boolean {
