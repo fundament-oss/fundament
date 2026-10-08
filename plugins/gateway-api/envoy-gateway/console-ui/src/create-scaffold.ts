@@ -9,7 +9,11 @@ import {
   navigateToDetail,
   navigateBack,
 } from './shared.ts';
-import { namespaceFieldHtml, trimmedValue } from './form-helpers.ts';
+import {
+  namespaceFieldHtml,
+  trimmedValue,
+  validateFields,
+} from './form-helpers.ts';
 import type { NlddButton } from './nldd-design-system.ts';
 import type { InitContext, K8sRef } from './sdk.ts';
 
@@ -23,7 +27,8 @@ export interface CreateFormOptions {
     form: ParentNode,
     namespace: string,
   ) => { metadata: { name: string } };
-  // Returns false to block submit (missing/invalid required fields).
+  // Returns false to block submit. Runs after the per-field checks of
+  // validateFields, so it only has to cover what the markup cannot say.
   validate: (form: ParentNode) => boolean;
   // Optional: wire extra toggles / dynamic UI after init (e.g. an HTTPS toggle).
   onReady?: (form: HTMLFormElement, ctx: InitContext) => void;
@@ -82,16 +87,25 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
     }
   });
 
+  // A field is judged on submit, and stops being wrong the moment it is edited.
+  form.addEventListener('input', (e) => {
+    (e.target as HTMLElement | null)
+      ?.closest('nldd-text-field')
+      ?.removeAttribute('invalid');
+  });
+
   submitButton.addEventListener('click', async () => {
     // A programmatic .click() (Enter-to-submit) isn't blocked by `disabled`, so guard.
     if (submitButton.disabled) return;
     errorBox.hidden = true;
+    // Each failing field says what is wrong under itself.
+    if (!validateFields(form)) return;
     // The namespace control is universal (dropdown for project routes, free-text
     // org-level). A programmatic .click() skips native `required`, so validate it
-    // here — an empty namespace would otherwise build an invalid create request.
+    // here: an empty namespace would otherwise build an invalid create request.
     const namespace = trimmedValue(form, 'namespace');
     if (!opts.validate(form) || !namespace) {
-      errorBox.textContent = 'Please fill in the required fields.';
+      errorBox.setAttribute('text', 'Please fill in the required fields.');
       errorBox.hidden = false;
       return;
     }
@@ -107,7 +121,10 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
         namespace,
       );
     } catch (err) {
-      errorBox.textContent = `Failed to create: ${err instanceof Error ? err.message : err}`;
+      errorBox.setAttribute(
+        'text',
+        `Failed to create: ${err instanceof Error ? err.message : err}`,
+      );
       errorBox.hidden = false;
       submitButton.disabled = false;
     }

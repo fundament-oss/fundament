@@ -109,7 +109,7 @@ The full message reference lives in [Console integration](console-integration#th
 
 | Class | Description |
 |-------|-------------|
-| `.plugin-card` | Bordered card container with rounded corners and padding |
+| `.plugin-card` | Page container. It draws no frame of its own, since the Console page around the iframe already is one |
 | `.plugin-heading` | Primary heading (`h1`) |
 | `.plugin-text` | Body / paragraph text |
 | `.plugin-table` | Full-width data table with row dividers |

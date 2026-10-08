@@ -173,7 +173,8 @@ authzWorker:
 
 openfga:
   enabled: true
-  # Use a non-standard API port since 8080 is used by ingress.
+  # A non-standard API port, so the playground port-forward below does not
+  # take localhost:8080, which other local tools often use.
   # The playground auto-detects the API port from the URL it's served from.
   apiPort: 18080
   playground:

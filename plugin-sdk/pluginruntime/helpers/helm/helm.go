@@ -3,7 +3,9 @@
 package helm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -73,20 +75,27 @@ func (c *Client) InstallFromOCI(ctx context.Context, releaseName, chartRef, vers
 // the plugin SA's scope is granted (see the BANDAID note above). Any other
 // failure returns immediately.
 func (c *Client) runInstall(ctx context.Context, args []string) error {
+	return retryOnRBACForbidden(ctx, "install", func() (string, error) {
+		output, err := exec.CommandContext(ctx, "helm", args...).CombinedOutput() //nolint:gosec // args are constructed internally
+		return strings.TrimSpace(string(output)), err
+	})
+}
+
+// retryOnRBACForbidden runs attempt until it succeeds, fails for a reason other
+// than RBAC, or rbacRetryTimeout passes. attempt returns helm's error output.
+func retryOnRBACForbidden(ctx context.Context, op string, attempt func() (string, error)) error {
 	deadline := time.Now().Add(rbacRetryTimeout)
 	for {
-		cmd := exec.CommandContext(ctx, "helm", args...) //nolint:gosec // args are constructed internally
-		output, err := cmd.CombinedOutput()
+		out, err := attempt()
 		if err == nil {
 			return nil
 		}
-		out := strings.TrimSpace(string(output))
 		if !isRBACForbidden(out) || time.Now().After(deadline) {
-			return fmt.Errorf("helm install failed: %s: %w", out, err)
+			return fmt.Errorf("helm %s failed: %s: %w", op, out, err)
 		}
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("helm install cancelled while awaiting plugin RBAC: %w", ctx.Err())
+			return fmt.Errorf("helm %s cancelled while awaiting plugin RBAC: %w", op, ctx.Err())
 		case <-time.After(rbacRetryInterval):
 		}
 	}
@@ -98,13 +107,94 @@ func isRBACForbidden(output string) bool {
 	return strings.Contains(output, "is forbidden")
 }
 
-// IsInstalled checks whether a Helm release exists in the client's namespace.
+// IsInstalled checks whether a Helm release exists in the client's namespace,
+// in any state. Only a missing release reports false; any other helm failure
+// (cluster unreachable, RBAC still forbidden after the retries) is an error.
 func (c *Client) IsInstalled(ctx context.Context, releaseName string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "helm", "status", releaseName, "--namespace", c.namespace) //nolint:gosec // args are constructed internally
-	if err := cmd.Run(); err != nil {
-		return false, nil //nolint:nilerr // non-zero exit means release not found, not an error
+	status, err := c.Status(ctx, releaseName)
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	return status != nil, nil
+}
+
+// ReleaseStatus is the part of `helm status -o json` a plugin needs to decide
+// whether to (re)install a release.
+type ReleaseStatus struct {
+	// Status is Helm's release status: deployed, failed, pending-install,
+	// pending-upgrade, pending-rollback, uninstalling, superseded or uninstalled.
+	Status string
+	// ChartVersion is the deployed chart's version, e.g. "0.24.0".
+	ChartVersion string
+	// LastDeployed is when the latest operation on the release started; for a
+	// pending release, when that operation began. Zero when helm omits it.
+	LastDeployed time.Time
+}
+
+// Pending reports whether a Helm operation holds the release. Another install
+// fails with "another operation is in progress" until it finishes, or forever
+// when the process running it was killed.
+func (s *ReleaseStatus) Pending() bool {
+	return strings.HasPrefix(s.Status, "pending-")
+}
+
+// Status returns the deployed state of a release in the client's namespace, or
+// nil when the release does not exist. Like the installs, it retries while the
+// plugin SA cannot yet read Helm's release Secrets (see the BANDAID note above):
+// it typically runs first in Start, and failing there would restart the pod.
+func (c *Client) Status(ctx context.Context, releaseName string) (*ReleaseStatus, error) {
+	var stdout bytes.Buffer
+	notFound := false
+	err := retryOnRBACForbidden(ctx, "status", func() (string, error) {
+		stdout.Reset()
+		var stderr bytes.Buffer
+		cmd := exec.CommandContext(ctx, "helm", "status", releaseName, "--namespace", c.namespace, "--output", "json") //nolint:gosec // args are constructed internally
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		out := strings.TrimSpace(stderr.String())
+		if err != nil && isReleaseNotFound(out) {
+			notFound = true
+			return out, nil
+		}
+		return out, err //nolint:wrapcheck // retryOnRBACForbidden wraps it with helm's output
+	})
+	if err != nil {
+		return nil, err
+	}
+	if notFound {
+		return nil, nil
+	}
+	return parseReleaseStatus(stdout.Bytes())
+}
+
+func isReleaseNotFound(output string) bool {
+	return strings.Contains(output, "release: not found")
+}
+
+func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
+	var release struct {
+		Info struct {
+			Status       string `json:"status"`
+			LastDeployed string `json:"last_deployed"`
+		} `json:"info"`
+		Chart struct {
+			Metadata struct {
+				Version string `json:"version"`
+			} `json:"metadata"`
+		} `json:"chart"`
+	}
+	if err := json.Unmarshal(data, &release); err != nil {
+		return nil, fmt.Errorf("parse helm status: %w", err)
+	}
+	// A missing or unparseable timestamp leaves LastDeployed zero, which a caller
+	// reads as "long ago".
+	lastDeployed, _ := time.Parse(time.RFC3339Nano, release.Info.LastDeployed)
+	return &ReleaseStatus{
+		Status:       release.Info.Status,
+		ChartVersion: release.Chart.Metadata.Version,
+		LastDeployed: lastDeployed,
+	}, nil
 }
 
 func appendSortedValues(args []string, values map[string]string) []string {

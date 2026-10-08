@@ -261,6 +261,8 @@ jobs:
         include:
           - image-name: cert-manager-plugin
             dockerfile: plugins/cert-manager/Dockerfile
+          - image-name: cloudnativepg-plugin
+            dockerfile: plugins/cloudnativepg/Dockerfile
           - image-name: external-dns-plugin
             dockerfile: plugins/external-dns/Dockerfile
           - image-name: gateway-api-envoy-plugin

@@ -7,7 +7,7 @@
  * Dark mode is applied by the plugin SDK JS via the `.dark` class on <body>.
  *
  * Available component classes:
- *   .plugin-card       Bordered card container
+ *   .plugin-card       Page container (no frame of its own)
  *   .plugin-heading    Primary heading
  *   .plugin-text       Body / paragraph text
  *   .plugin-table      Full-width data table with dividers
@@ -49,13 +49,19 @@
 }
 
 body {
-  @apply m-0 bg-white font-sans text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
+  @apply m-0 bg-white text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
+  /* The NLDD Design System's body font once a page loads nldd-design-system.css,
+     so <nldd-*> components are set in the same face as the Console around them. */
+  font-family: var(--primitives-font-family-body, --theme(--font-sans));
 }
 
 /* ── Components ───────────────────────────────────────────────────────────── */
 
 .plugin-card {
-  @apply rounded-lg border border-gray-200 p-6 dark:border-gray-700;
+  /* No border: the iframe already sits on a Console page, and a frame inside it
+     boxed the plugin's content in twice. The 4px only keeps focus rings, which
+     reach that far outside a control, from being cut off at the iframe edge. */
+  @apply p-1;
 }
 
 .plugin-heading {

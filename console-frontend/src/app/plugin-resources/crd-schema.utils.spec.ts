@@ -1,4 +1,10 @@
-import { crdRefToLabel, fieldNameToLabel, kindToLabel, labelMidSentence } from './crd-schema.utils';
+import {
+  crdRefToLabel,
+  fieldNameToLabel,
+  kindToLabel,
+  kindToSingularLabel,
+  labelMidSentence,
+} from './crd-schema.utils';
 
 describe('kindToLabel', () => {
   it('pluralizes a single-word kind', () => {
@@ -37,6 +43,22 @@ describe('kindToLabel', () => {
 
   it('returns an empty string for an empty kind', () => {
     expect(kindToLabel('')).toBe('');
+  });
+});
+
+describe('kindToSingularLabel', () => {
+  it('keeps the kind singular, split on every word boundary', () => {
+    expect(kindToSingularLabel('Certificate')).toBe('Certificate');
+    expect(kindToSingularLabel('ClusterIssuer')).toBe('Cluster Issuer');
+  });
+
+  it('keeps acronyms intact', () => {
+    expect(kindToSingularLabel('FSCInstallation')).toBe('FSC Installation');
+    expect(kindToSingularLabel('ClusterHTTPRoute')).toBe('Cluster HTTP Route');
+  });
+
+  it('returns an empty string for an empty kind', () => {
+    expect(kindToSingularLabel('')).toBe('');
   });
 });
 

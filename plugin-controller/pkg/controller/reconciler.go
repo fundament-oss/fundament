@@ -59,7 +59,19 @@ const (
 	// up this long after it started coming up is not about to be, and is
 	// checked at the steady-state interval instead.
 	progressWindow = 10 * time.Minute
+
+	// namespaceTerminatingRetryInterval is how often an installation whose
+	// namespace is still being deleted checks whether it is gone. Removing a
+	// plugin namespace takes seconds to a minute.
+	namespaceTerminatingRetryInterval = 5 * time.Second
 )
+
+// errNamespaceTerminating means the plugin namespace is still being deleted,
+// typically by an uninstall of the same plugin just before this install. The
+// installation waits for it: building in it would adopt the previous install's
+// Deployment, whose pod still answers status polls as Running while the
+// namespace is torn down around it.
+var errNamespaceTerminating = errors.New("waiting for the previous installation's namespace to be removed")
 
 // permanentError marks a reconcile failure that retrying the same spec cannot
 // fix: a hash that does not match, a version the catalog does not have, a
@@ -229,6 +241,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
 	// those before returning on error so the CR reflects the failure.
 	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+		if errors.Is(err, errNamespaceTerminating) {
+			cr.Status.Phase = pluginsv1.PluginPhasePending
+			cr.Status.Ready = false
+			cr.Status.Message = err.Error()
+			if updateErr := r.client.Status().Update(ctx, &cr); updateErr != nil {
+				return ctrl.Result{}, fmt.Errorf("update status: %w", updateErr)
+			}
+			log.Info("plugin namespace still terminating, waiting", "namespace", pluginNamespace(cr.Name))
+			return ctrl.Result{RequeueAfter: namespaceTerminatingRetryInterval}, nil
+		}
+
 		// Always leave a phase behind: a CR that never gets one reads as
 		// "still installing" to every client, however long it has been failing.
 		var perm *permanentError
@@ -450,6 +473,13 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	// Namespace (no owner ref — cleaned up via finalizer)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: nsName},
+	}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(ns), ns); err == nil {
+		if !ns.DeletionTimestamp.IsZero() {
+			return errNamespaceTerminating
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get Namespace: %w", err)
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, ns, func() error {
 		mutateNamespace(ns, cr)

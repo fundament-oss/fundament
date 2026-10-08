@@ -2,8 +2,10 @@ package helm
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsRBACForbidden(t *testing.T) {
@@ -52,4 +54,47 @@ func TestOCIInstallArgsNoVersion(t *testing.T) {
 	c := NewClient("ns")
 	args := c.ociInstallArgs("r", "oci://example/chart", "", nil)
 	assert.NotContains(t, args, "--version")
+}
+
+func TestParseReleaseStatus(t *testing.T) {
+	// Trimmed `helm status cnpg -n cnpg-system -o json`.
+	out := []byte(`{
+		"name": "cnpg",
+		"info": {"status": "deployed", "last_deployed": "2026-10-05T09:14:03.123456+02:00", "description": "Install complete"},
+		"chart": {"metadata": {"name": "cloudnative-pg", "version": "0.24.0", "appVersion": "1.26.0"}},
+		"version": 3,
+		"namespace": "cnpg-system"
+	}`)
+
+	status, err := parseReleaseStatus(out)
+	require.NoError(t, err)
+	assert.Equal(t, "deployed", status.Status)
+	assert.Equal(t, "0.24.0", status.ChartVersion)
+	assert.True(t, time.Date(2026, 10, 5, 7, 14, 3, 123456000, time.UTC).Equal(status.LastDeployed))
+	assert.False(t, status.Pending())
+}
+
+func TestParseReleaseStatusNoTimestamp(t *testing.T) {
+	status, err := parseReleaseStatus([]byte(`{"info": {"status": "pending-install"}, "chart": {"metadata": {"version": "0.24.0"}}}`))
+	require.NoError(t, err)
+	assert.True(t, status.LastDeployed.IsZero())
+}
+
+func TestParseReleaseStatusInvalidJSON(t *testing.T) {
+	_, err := parseReleaseStatus([]byte("Error: something"))
+	assert.Error(t, err)
+}
+
+func TestReleaseStatusPending(t *testing.T) {
+	for _, s := range []string{"pending-install", "pending-upgrade", "pending-rollback"} {
+		assert.True(t, (&ReleaseStatus{Status: s}).Pending(), s)
+	}
+	for _, s := range []string{"deployed", "failed", "superseded"} {
+		assert.False(t, (&ReleaseStatus{Status: s}).Pending(), s)
+	}
+}
+
+func TestIsReleaseNotFound(t *testing.T) {
+	assert.True(t, isReleaseNotFound("Error: release: not found"))
+	assert.False(t, isReleaseNotFound(`Error: secrets is forbidden: User "x" cannot list resource "secrets"`))
 }

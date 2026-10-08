@@ -63,13 +63,19 @@ function isPluginMessage(data: unknown): data is PluginMessage {
       allow-forms remains for plugin create UIs whose submits stay in-frame.
       allow-top-navigation and allow-popups stay ungranted.
     -->
+    <!--
+      The negative margins undo the 4px .plugin-card keeps around plugin content
+      for focus rings, so that content lines up with the Console's own.
+    -->
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
       sandbox="allow-scripts allow-same-origin allow-forms"
       [style.height.px]="frameHeight()"
       [style.minHeight.px]="frameMinHeight()"
-      [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
+      [class]="
+        status() === 'error' ? 'hidden' : '-mx-1 -mt-1 block w-[calc(100%+0.5rem)] border-none'
+      "
       title="Plugin custom UI"
     ></iframe>
   `,
@@ -94,6 +100,8 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
   resourceNamespace = input<string | undefined>(undefined);
 
   namespaces = input<string[] | undefined>(undefined);
+
+  namespaceDisplayNames = input<Record<string, string> | undefined>(undefined);
 
   private sanitizer = inject(DomSanitizer);
 
@@ -346,6 +354,7 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
     const name = this.resourceName();
     const namespace = this.resourceNamespace();
     const namespaces = this.namespaces();
+    const namespaceDisplayNames = this.namespaceDisplayNames();
     this.postToIframe(iframe, {
       type: 'fundament:init',
       protocolVersion: 1,
@@ -355,6 +364,7 @@ export default class PluginIframeComponent implements OnInit, AfterViewInit {
       view: this.view(),
       ...(name ? { resource: { name, namespace } } : {}),
       ...(namespaces ? { namespaces } : {}),
+      ...(namespaceDisplayNames ? { namespaceDisplayNames } : {}),
       kubeApiProxyUrl: this.configService.getConfig().kubeApiProxyUrl,
       clusterId: this.clusterId(),
       token: snap.token,

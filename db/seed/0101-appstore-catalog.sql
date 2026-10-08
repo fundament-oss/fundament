@@ -82,20 +82,24 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
     -- (the Console would show it as not installed and create a second CR on re-install).
     ('019b4000-3000-7000-8000-000000000003', '019b4000-0000-7000-8000-000000000000', 'cloudnativepg', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
 
-CloudNativePG is an open source operator designed to manage PostgreSQL workloads on Kubernetes, covering the full lifecycle of a PostgreSQL cluster.
+Create PostgreSQL databases for your projects from the console. The plugin installs the CloudNativePG operator, which runs and looks after each database.
 
 ## Key Features
 
-- **High Availability**: Automated failover and self-healing capabilities
-- **Backup & Recovery**: Continuous backup to object storage with point-in-time recovery
-- **Declarative Configuration**: Manage clusters using Kubernetes-native resources
-- **Connection Pooling**: Built-in PgBouncer integration
+- **Self-service**: Project admins create a database by choosing a name, namespace, size, PostgreSQL version and StorageClass
+- **Ready to connect**: Every database comes with database `app`, user `app` and a Secret holding the credentials and a connection URI
+- **Protected**: A database cannot be changed or deleted from the console
+
+## Limitations
+
+- One instance per database, without failover
+- No backups
+- No extensions or custom PostgreSQL settings
 
 ## Use Cases
 
-- Production PostgreSQL databases on Kubernetes
-- Database-as-a-Service platforms
-- Microservices requiring relational databases', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.25.1'),
+- Development and test databases
+- Applications that need a relational database in their own namespace', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.26.0'),
     ('019b4000-3000-7000-8000-000000000004', '019b4000-0000-7000-8000-000000000000', 'eck-operator', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
 
 Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, management, and orchestration of Elasticsearch, Kibana, and the Elastic Stack on Kubernetes.

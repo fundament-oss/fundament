@@ -6,116 +6,122 @@
   </head>
   <body class="light">
     <div class="plugin-card">
-      <h1 class="plugin-heading">Create Gateway</h1>
-      <p class="plugin-text" id="intro">Loading…</p>
+      <nldd-title size="3"><h1>Create Gateway</h1></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-text id="intro">Loading…</nldd-text>
+      <nldd-spacer size="12"></nldd-spacer>
 
-      <form id="form" class="plugin-form" hidden>
-        <div class="plugin-error" id="error" hidden></div>
+      <nldd-form>
+        <form id="form" hidden>
+          <nldd-banner id="error" variant="critical" hidden></nldd-banner>
 
-        <nldd-form-field label="Name">
-          <nldd-text-field
-            id="name"
-            name="name"
-            required
-            maxlength="63"
-            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
-            placeholder="web"
-            unmet="name-error"
-          ></nldd-text-field>
-          <nldd-form-field-help-text
-            >Lowercase letters, digits and dashes.</nldd-form-field-help-text
-          >
-          <nldd-validation-list>
-            <nldd-validation-item id="name-error"
-              >Enter a valid name.</nldd-validation-item
-            >
-          </nldd-validation-list>
-        </nldd-form-field>
-
-        <!-- Replaced at runtime with a dropdown (project namespaces) or a text field. -->
-        <div id="namespace-field"></div>
-
-        <p class="plugin-hint">
-          An HTTP listener on port 80 is always created. Enable HTTPS to add a
-          TLS listener on port 443.
-        </p>
-
-        <nldd-checkbox-field
-          id="https-enabled"
-          name="https-enabled"
-          label="Enable HTTPS (port 443)"
-        ></nldd-checkbox-field>
-
-        <fieldset class="plugin-fieldset" id="https-fieldset" hidden>
-          <legend class="plugin-legend">TLS</legend>
-          <nldd-form-field label="Certificate source">
-            <nldd-dropdown>
-              <select
-                id="tls-mode"
-                name="tls-mode"
-                aria-label="Certificate source"
-              >
-                <option value="secret">Existing TLS secret</option>
-                <option value="certManager">
-                  cert-manager (cluster issuer)
-                </option>
-              </select>
-            </nldd-dropdown>
-          </nldd-form-field>
-
-          <nldd-form-field label="TLS secret name" id="tls-secret-field">
+          <nldd-form-field label="Name">
             <nldd-text-field
-              id="tls-secret"
-              name="tls-secret"
-              placeholder="web-tls"
-              unmet="tls-secret-error"
+              id="name"
+              name="name"
+              required
+              maxlength="63"
+              pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+              placeholder="web"
+              unmet="name-error"
             ></nldd-text-field>
             <nldd-form-field-help-text
-              >Name of an existing kubernetes.io/tls Secret in the
-              namespace.</nldd-form-field-help-text
+              >Lowercase letters, digits and dashes.</nldd-form-field-help-text
             >
             <nldd-validation-list>
-              <nldd-validation-item id="tls-secret-error"
-                >This field is required.</nldd-validation-item
+              <nldd-validation-item id="name-error"
+                >Enter a valid name.</nldd-validation-item
               >
             </nldd-validation-list>
           </nldd-form-field>
 
-          <nldd-form-field
-            label="Cluster issuer"
-            id="cluster-issuer-field"
-            hidden
-          >
-            <!-- Filled at runtime: a dropdown of cert-manager ClusterIssuers, or a
-                 free-text field when none are found / cert-manager isn't installed. -->
-            <div id="cluster-issuer-control"></div>
-            <nldd-form-field-help-text
-              >cert-manager provisions a &lt;name&gt;-tls Secret via this
-              ClusterIssuer.</nldd-form-field-help-text
-            >
-            <nldd-validation-list>
-              <nldd-validation-item id="cluster-issuer-error"
-                >This field is required.</nldd-validation-item
-              >
-            </nldd-validation-list>
-          </nldd-form-field>
-        </fieldset>
+          <!-- Replaced at runtime with a dropdown (project namespaces) or a text field. -->
+          <div id="namespace-field"></div>
 
-        <div class="plugin-actions">
-          <nldd-button
-            id="submit"
-            type="button"
-            variant="primary"
-            text="Create Gateway"
-          ></nldd-button>
-          <nldd-button
-            id="back"
-            type="button"
-            variant="secondary"
-            text="Back"
-          ></nldd-button>
-        </div>
-      </form>
+          <nldd-text size="sm" color="secondary">
+            An HTTP listener on port 80 is always created. Enable HTTPS to add a
+            TLS listener on port 443.
+          </nldd-text>
+
+          <nldd-checkbox-field
+            id="https-enabled"
+            name="https-enabled"
+            label="Enable HTTPS (port 443)"
+          ></nldd-checkbox-field>
+
+          <nldd-form-section id="https-fieldset" text="TLS" hidden>
+            <nldd-form-field label="Certificate source">
+              <nldd-dropdown>
+                <select
+                  id="tls-mode"
+                  name="tls-mode"
+                  aria-label="Certificate source"
+                >
+                  <option value="secret">Existing TLS secret</option>
+                  <option value="certManager">
+                    cert-manager (cluster issuer)
+                  </option>
+                </select>
+              </nldd-dropdown>
+            </nldd-form-field>
+
+            <nldd-form-field label="TLS secret name" id="tls-secret-field">
+              <nldd-text-field
+                id="tls-secret"
+                name="tls-secret"
+                required
+                placeholder="web-tls"
+                unmet="tls-secret-error"
+              ></nldd-text-field>
+              <nldd-form-field-help-text
+                >Name of an existing kubernetes.io/tls Secret in the
+                namespace.</nldd-form-field-help-text
+              >
+              <nldd-validation-list>
+                <nldd-validation-item id="tls-secret-error"
+                  >This field is required.</nldd-validation-item
+                >
+              </nldd-validation-list>
+            </nldd-form-field>
+
+            <nldd-form-field
+              label="Cluster issuer"
+              id="cluster-issuer-field"
+              hidden
+            >
+              <!-- Filled at runtime: a dropdown of cert-manager ClusterIssuers, or a
+                   free-text field when none are found / cert-manager isn't installed. -->
+              <div id="cluster-issuer-control"></div>
+              <nldd-form-field-help-text
+                >cert-manager provisions a &lt;name&gt;-tls Secret via this
+                ClusterIssuer.</nldd-form-field-help-text
+              >
+              <nldd-validation-list>
+                <nldd-validation-item id="cluster-issuer-error"
+                  >This field is required.</nldd-validation-item
+                >
+              </nldd-validation-list>
+            </nldd-form-field>
+          </nldd-form-section>
+
+          <nldd-form-actions>
+            <nldd-button-group orientation="horizontal">
+              <nldd-button
+                id="submit"
+                type="button"
+                variant="primary"
+                text="Create Gateway"
+              ></nldd-button>
+              <nldd-button
+                id="back"
+                type="button"
+                variant="secondary"
+                text="Back"
+              ></nldd-button>
+            </nldd-button-group>
+          </nldd-form-actions>
+        </form>
+      </nldd-form>
     </div>
 
     <script type="module" src="/src/gateways-create.ts"></script>

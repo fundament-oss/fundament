@@ -143,14 +143,15 @@ func (b0 ListClusterNamespacesResponse_builder) Build() *ListClusterNamespacesRe
 
 // Namespace information
 type Namespace struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name      string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_ProjectId string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId"`
-	xxx_hidden_ClusterId string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId"`
-	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id              string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name            string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_ClusterSideName string                 `protobuf:"bytes,25,opt,name=cluster_side_name,json=clusterSideName"`
+	xxx_hidden_ProjectId       string                 `protobuf:"bytes,30,opt,name=project_id,json=projectId"`
+	xxx_hidden_ClusterId       string                 `protobuf:"bytes,35,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Created         *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *Namespace) Reset() {
@@ -192,6 +193,13 @@ func (x *Namespace) GetName() string {
 	return ""
 }
 
+func (x *Namespace) GetClusterSideName() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterSideName
+	}
+	return ""
+}
+
 func (x *Namespace) GetProjectId() string {
 	if x != nil {
 		return x.xxx_hidden_ProjectId
@@ -221,6 +229,10 @@ func (x *Namespace) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *Namespace) SetClusterSideName(v string) {
+	x.xxx_hidden_ClusterSideName = v
+}
+
 func (x *Namespace) SetProjectId(v string) {
 	x.xxx_hidden_ProjectId = v
 }
@@ -247,11 +259,14 @@ func (x *Namespace) ClearCreated() {
 type Namespace_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id        string
-	Name      string
-	ProjectId string
-	ClusterId string
-	Created   *timestamppb.Timestamp
+	Id   string
+	Name string
+	// The namespace's name on the cluster ("tnt-<project>--<name>"), which is
+	// what Kubernetes API calls take. name is only unique within the project.
+	ClusterSideName string
+	ProjectId       string
+	ClusterId       string
+	Created         *timestamppb.Timestamp
 }
 
 func (b0 Namespace_builder) Build() *Namespace {
@@ -260,6 +275,7 @@ func (b0 Namespace_builder) Build() *Namespace {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_ClusterSideName = b.ClusterSideName
 	x.xxx_hidden_ProjectId = b.ProjectId
 	x.xxx_hidden_ClusterId = b.ClusterId
 	x.xxx_hidden_Created = b.Created
@@ -911,11 +927,12 @@ const file_v1_namespace_proto_rawDesc = "" +
 	"\n" +
 	"namespaces\x18\n" +
 	" \x03(\v2\x1a.organization.v1.NamespaceR\n" +
-	"namespaces\"\xa3\x01\n" +
+	"namespaces\"\xcf\x01\n" +
 	"\tNamespace\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1d\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12*\n" +
+	"\x11cluster_side_name\x18\x19 \x01(\tR\x0fclusterSideName\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x1e \x01(\tR\tprojectId\x12\x1d\n" +
 	"\n" +

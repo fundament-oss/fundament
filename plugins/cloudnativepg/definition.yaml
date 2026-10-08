@@ -1,0 +1,116 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cloudnativepg
+  displayName: CloudNativePG
+  version: v0.1.0
+  description: PostgreSQL databases for projects. Installs the CloudNativePG operator; project members create single-instance databases from the console.
+  author: Fundament
+  license: Apache-2.0
+  icon: database
+  urls:
+    homepage: https://cloudnative-pg.io
+    repository: https://github.com/cloudnative-pg/cloudnative-pg
+    documentation: https://cloudnative-pg.io/documentation/1.26/
+  tags:
+    - postgresql
+    - database
+spec:
+  permissions:
+    capabilities:
+      # Pull the CloudNativePG chart and images from public registries.
+      - internet_access
+    # plugin-controller turns this block into the plugin's ClusterRole: the plugin
+    # can only do what is listed here.
+    rbac:
+      # What the console pages and the status summary use. Delete, for the
+      # detail page; no update or patch: a database cannot be changed through
+      # this plugin's pages. Project admins get the same verbs through the
+      # ClusterRole the plugin aggregates into admin (roles.go).
+      - apiGroups: ["postgresql.cnpg.io"]
+        resources: ["clusters"]
+        verbs: ["get", "list", "watch", "create", "delete"]
+      # The create form's StorageClass picker and the no-default-class hint.
+      - apiGroups: ["storage.k8s.io"]
+        resources: ["storageclasses"]
+        verbs: ["get", "list", "watch"]
+
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install --create-namespace --wait` for
+      # CloudNativePG 0.24.0 (release cnpg in cnpg-system, shared with openfsc).
+      # These rules cover Helm's release storage and what the chart creates: CRDs,
+      # webhooks, the operator Deployment, ServiceAccount, Service, ConfigMap and
+      # RBAC. clusterroles also covers the plugin's two aggregated ClusterRoles.
+      - apiGroups: [""]
+        resources: ["namespaces"] # helm --create-namespace
+        verbs: ["get", "list", "watch", "create"]
+      - apiGroups: [""]
+        resources: ["services", "serviceaccounts", "secrets", "configmaps"] # secrets: Helm release storage
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["pods"] # helm --wait readiness polling
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets"] # helm --wait polls the Deployment's ReplicaSets
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apiextensions.k8s.io"]
+        resources: ["customresourcedefinitions"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["admissionregistration.k8s.io"]
+        resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterroles", "roles"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "bind", "escalate"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterrolebindings", "rolebindings"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  crds:
+    - clusters.postgresql.cnpg.io
+
+  menu:
+    project:
+      - crd: clusters.postgresql.cnpg.io
+        list: true
+        detail: true
+        icon: database
+        # A CNPG Cluster is one database server; "Clusters" would read as
+        # Kubernetes clusters next to Fundament's own.
+        label: Databases
+        singularLabel: Database
+
+  # No list page: the generated one shows CNPG's printer columns (Instances,
+  # Ready, Status), offers Create because a create page exists, and has no
+  # delete. The detail page is custom for the connection details and the
+  # password command, and so a delete asks for the database's name first.
+  customComponents:
+    Cluster:
+      detail: clusters-detail.html
+      create: clusters-create.html
+
+  allowedResources:
+    - group: postgresql.cnpg.io
+      version: v1
+      resource: clusters
+      verbs: [list, get, create, delete]
+    - group: storage.k8s.io
+      version: v1
+      resource: storageclasses
+      verbs: [list]
+
+  uiHints:
+    clusters.postgresql.cnpg.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          "Cluster in healthy state":
+            badge: success
+            label: Ready
+        # Every other phase, CNPG's failure phases included, so not
+        # "Provisioning": a broken database would look like it is starting.
+        default:
+          badge: warning
+          label: Not ready

@@ -14,6 +14,7 @@
 /public/plugin-ui/plugin-sdk.css
 /public/plugin-ui/nldd-design-system.js
 /public/plugin-ui/nldd-design-system.css
+/public/plugin-ui/fonts/
 
 # Generated proto version — written by generate-proto-version.js (runs via the
 # prebuild/prestart hooks, and in the Docker image build). Regenerated, not source.

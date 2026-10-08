@@ -211,10 +211,15 @@ export default class ResourceDetailComponent implements OnInit {
     return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
   }
 
-  /** Names the list the back button returns to, so the button says where it
-   *  goes. Built from the CRD's kind, not its plural: the plural is lowercase by
-   *  Kubernetes' rules, which capitalized gave "Dnsendpoints". */
+  /** Names the list the back button returns to: the plugin's menu label, else
+   *  the CRD's kind, so the button says where it goes. Built from the kind, not
+   *  its plural: the plural is lowercase by Kubernetes' rules, which capitalized
+   *  gave "Dnsendpoints". */
   kindLabel = computed(() => {
+    const resourceKind = this.resourceKind();
+    const item = this.plugin()?.menu.project?.find((i) => i.crd === resourceKind);
+    if (item?.label) return item.label;
+
     const kind = this.crdDef()?.kind;
     return kind ? kindToLabel(kind) : this.kind() || 'list';
   });

@@ -2514,14 +2514,15 @@ func (b0 PluginMenu_builder) Build() *PluginMenu {
 }
 
 type PluginMenuEntry struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Crd    string                 `protobuf:"bytes,10,opt,name=crd"`
-	xxx_hidden_List   bool                   `protobuf:"varint,20,opt,name=list"`
-	xxx_hidden_Detail bool                   `protobuf:"varint,30,opt,name=detail"`
-	xxx_hidden_Icon   string                 `protobuf:"bytes,40,opt,name=icon"`
-	xxx_hidden_Label  string                 `protobuf:"bytes,50,opt,name=label"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Crd           string                 `protobuf:"bytes,10,opt,name=crd"`
+	xxx_hidden_List          bool                   `protobuf:"varint,20,opt,name=list"`
+	xxx_hidden_Detail        bool                   `protobuf:"varint,30,opt,name=detail"`
+	xxx_hidden_Icon          string                 `protobuf:"bytes,40,opt,name=icon"`
+	xxx_hidden_Label         string                 `protobuf:"bytes,50,opt,name=label"`
+	xxx_hidden_SingularLabel string                 `protobuf:"bytes,60,opt,name=singular_label,json=singularLabel"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *PluginMenuEntry) Reset() {
@@ -2584,6 +2585,13 @@ func (x *PluginMenuEntry) GetLabel() string {
 	return ""
 }
 
+func (x *PluginMenuEntry) GetSingularLabel() string {
+	if x != nil {
+		return x.xxx_hidden_SingularLabel
+	}
+	return ""
+}
+
 func (x *PluginMenuEntry) SetCrd(v string) {
 	x.xxx_hidden_Crd = v
 }
@@ -2604,14 +2612,19 @@ func (x *PluginMenuEntry) SetLabel(v string) {
 	x.xxx_hidden_Label = v
 }
 
+func (x *PluginMenuEntry) SetSingularLabel(v string) {
+	x.xxx_hidden_SingularLabel = v
+}
+
 type PluginMenuEntry_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Crd    string
-	List   bool
-	Detail bool
-	Icon   string
-	Label  string
+	Crd           string
+	List          bool
+	Detail        bool
+	Icon          string
+	Label         string
+	SingularLabel string
 }
 
 func (b0 PluginMenuEntry_builder) Build() *PluginMenuEntry {
@@ -2623,6 +2636,7 @@ func (b0 PluginMenuEntry_builder) Build() *PluginMenuEntry {
 	x.xxx_hidden_Detail = b.Detail
 	x.xxx_hidden_Icon = b.Icon
 	x.xxx_hidden_Label = b.Label
+	x.xxx_hidden_SingularLabel = b.SingularLabel
 	return m0
 }
 
@@ -3268,14 +3282,15 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"PluginMenu\x12D\n" +
 	"\forganization\x18\n" +
 	" \x03(\v2 .organization.v1.PluginMenuEntryR\forganization\x12:\n" +
-	"\aproject\x18\x14 \x03(\v2 .organization.v1.PluginMenuEntryR\aproject\"y\n" +
+	"\aproject\x18\x14 \x03(\v2 .organization.v1.PluginMenuEntryR\aproject\"\xa0\x01\n" +
 	"\x0fPluginMenuEntry\x12\x10\n" +
 	"\x03crd\x18\n" +
 	" \x01(\tR\x03crd\x12\x12\n" +
 	"\x04list\x18\x14 \x01(\bR\x04list\x12\x16\n" +
 	"\x06detail\x18\x1e \x01(\bR\x06detail\x12\x12\n" +
 	"\x04icon\x18( \x01(\tR\x04icon\x12\x14\n" +
-	"\x05label\x182 \x01(\tR\x05label\"\\\n" +
+	"\x05label\x182 \x01(\tR\x05label\x12%\n" +
+	"\x0esingular_label\x18< \x01(\tR\rsingularLabel\"\\\n" +
 	"\x16PluginComponentMapping\x12\x12\n" +
 	"\x04list\x18\n" +
 	" \x01(\tR\x04list\x12\x16\n" +

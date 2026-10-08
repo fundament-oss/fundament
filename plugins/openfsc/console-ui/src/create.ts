@@ -123,7 +123,10 @@ submitButton.addEventListener('click', async () => {
     );
     navigateToDetail(created?.metadata?.name ?? body.metadata.name, namespace);
   } catch (err) {
-    errorBox.textContent = `Failed to create: ${err instanceof Error ? err.message : err}`;
+    errorBox.setAttribute(
+      'text',
+      `Failed to create: ${err instanceof Error ? err.message : err}`,
+    );
     errorBox.hidden = false;
     submitButton.disabled = false;
   }
