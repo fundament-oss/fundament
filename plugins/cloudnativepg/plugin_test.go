@@ -145,7 +145,7 @@ func TestApplyUserRoles(t *testing.T) {
 	require.NoError(t, applyUserRoles(t.Context(), kube))
 
 	wantVerbs := map[string][]string{
-		"fundament-cloudnativepg-admin": {"get", "list", "watch", "create"},
+		"fundament-cloudnativepg-admin": {"get", "list", "watch", "create", "delete"},
 		"fundament-cloudnativepg-view":  {"get", "list", "watch"},
 	}
 	wantLabel := map[string]string{
@@ -163,13 +163,18 @@ func TestApplyUserRoles(t *testing.T) {
 	}
 }
 
-// Project admins must not be able to update or delete a Cluster, including
-// through the console's generated views and kubectl.
+// Project admins must not be able to update a Cluster, nor delete them in
+// bulk, including through the console's generated views and kubectl. Only
+// admins may delete one; viewers stay read-only.
 func TestUserRolesGrantNoModification(t *testing.T) {
 	t.Parallel()
 	for _, role := range userRoles() {
+		forbidden := []string{"update", "patch", "deletecollection", "*"}
+		if role.Name != "fundament-cloudnativepg-admin" {
+			forbidden = append(forbidden, "delete")
+		}
 		for _, rule := range role.Rules {
-			for _, verb := range []string{"update", "patch", "delete", "deletecollection", "*"} {
+			for _, verb := range forbidden {
 				assert.NotContains(t, rule.Verbs, verb, "%s must not grant %s", role.Name, verb)
 			}
 		}

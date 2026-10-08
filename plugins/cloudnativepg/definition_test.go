@@ -34,12 +34,12 @@ func TestDefinition(t *testing.T) {
 		for _, r := range def.Spec.AllowedResources {
 			verbs[r.Resource] = r.Verbs
 		}
-		assert.ElementsMatch(t, []string{"list", "get", "create"}, verbs["clusters"])
+		assert.ElementsMatch(t, []string{"list", "get", "create", "delete"}, verbs["clusters"])
 		assert.ElementsMatch(t, []string{"list"}, verbs["storageclasses"])
 	})
 
-	// The plugin SA caps the console pages: no rule may let them change or
-	// delete a database.
+	// The plugin SA caps the console pages: no rule may let them change a
+	// database or delete them in bulk.
 	t.Run("rbac/clusters-cannot-be-modified", func(t *testing.T) {
 		t.Parallel()
 		found := false
@@ -48,7 +48,7 @@ func TestDefinition(t *testing.T) {
 				continue
 			}
 			found = true
-			for _, verb := range []string{"update", "patch", "delete", "deletecollection", "*"} {
+			for _, verb := range []string{"update", "patch", "deletecollection", "*"} {
 				assert.NotContains(t, rule.Verbs, verb, "the clusters rule must not grant %s", verb)
 			}
 		}
@@ -73,7 +73,8 @@ func TestDefinition(t *testing.T) {
 		}
 	})
 
-	// The generated detail view offers Delete; only a custom one keeps it out.
+	// The generated detail view deletes after a plain confirm; the custom one
+	// asks for the name first.
 	t.Run("customComponents/cluster-has-detail", func(t *testing.T) {
 		t.Parallel()
 		mapping, ok := def.Spec.CustomComponents["Cluster"]
@@ -105,8 +106,9 @@ func TestDefinition(t *testing.T) {
 	})
 }
 
-// A database cannot be changed or deleted from the console. The plugin's rbac
-// already refuses it; this keeps the pages from offering it.
+// A database cannot be changed from the console. The plugin's rbac already
+// refuses it; this keeps the pages from offering it. Only the detail page
+// deletes, behind its typed-name confirmation.
 func TestConsoleOffersNoModification(t *testing.T) {
 	t.Parallel()
 	entries, err := os.ReadDir("console")
@@ -117,7 +119,9 @@ func TestConsoleOffersNoModification(t *testing.T) {
 		}
 		src, err := os.ReadFile("console/" + entry.Name())
 		require.NoError(t, err)
-		assert.NotContains(t, string(src), "k8s.delete", "console/%s must not delete", entry.Name())
+		if entry.Name() != "clusters-detail.js" {
+			assert.NotContains(t, string(src), "k8s.delete", "console/%s must not delete", entry.Name())
+		}
 		assert.NotContains(t, string(src), "k8s.patch", "console/%s must not patch", entry.Name())
 	}
 }

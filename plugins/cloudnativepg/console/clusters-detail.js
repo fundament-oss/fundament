@@ -1,4 +1,11 @@
-import { loadSdk, loadNlddDesignSystem, escapeHtml, navigateBack, renderKeyValueList } from './_shared.js';
+import {
+  loadSdk,
+  loadNlddDesignSystem,
+  escapeHtml,
+  navigateBack,
+  renderKeyValueList,
+  wireSubmit,
+} from './_shared.js';
 import { CLUSTER_RESOURCE } from './clusters-body.js';
 
 await Promise.all([loadSdk(), loadNlddDesignSystem()]);
@@ -82,10 +89,70 @@ function render(item) {
     )}
     <nldd-spacer size="16"></nldd-spacer>
     <nldd-text size="sm" color="secondary">
-      This database has one instance and no backups. It cannot be changed or deleted from
-      the console.
+      This database has one instance and no backups. It cannot be changed from the console.
     </nldd-text>
+    <nldd-spacer size="24"></nldd-spacer>
+    ${deleteSectionHtml(clusterName)}
   `;
+}
+
+// Last on the page, like the Console's own Delete box. Typing the name confirms,
+// in place of the Console's modal: a modal centres in the iframe, which is as
+// tall as the page, so after scrolling down to here it can open out of view.
+function deleteSectionHtml(clusterName) {
+  return `
+    <nldd-box background="critical">
+      <nldd-container padding="16">
+        <nldd-title size="5"><h2>Delete ${escapeHtml(clusterName)}</h2></nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-rich-text spacing="flat">
+          <p>
+            Deleting this database also deletes its storage. It has no backups, so the data
+            cannot be recovered.
+          </p>
+        </nldd-rich-text>
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-form>
+          <form id="delete-form" novalidate>
+            <nldd-banner id="delete-error" variant="critical" hidden></nldd-banner>
+            <nldd-form-field label="Type ${escapeHtml(clusterName)} to confirm">
+              <nldd-text-field id="delete-confirm" name="confirm" autocomplete="off"
+                               no-spellcheck></nldd-text-field>
+              <nldd-validation-list>
+                <nldd-validation-item id="delete-confirm-error"></nldd-validation-item>
+              </nldd-validation-list>
+            </nldd-form-field>
+            <nldd-form-actions>
+              <nldd-button id="delete-btn" type="submit" variant="destructive" start-icon="delete"
+                           text="Delete database"></nldd-button>
+            </nldd-form-actions>
+          </form>
+        </nldd-form>
+      </nldd-container>
+    </nldd-box>`;
+}
+
+function wireDelete(item) {
+  const clusterName = item.metadata?.name ?? '';
+  wireSubmit(document.getElementById('delete-form'), {
+    button: document.getElementById('delete-btn'),
+    errorBanner: document.getElementById('delete-error'),
+    failPrefix: 'Failed to delete database',
+    checks: [
+      [
+        document.getElementById('delete-confirm'),
+        (value) => (value === clusterName ? null : `Type ${clusterName} to confirm.`),
+      ],
+    ],
+    action: async () => {
+      await fundament.k8s.delete({
+        ...CLUSTER_RESOURCE,
+        namespace: item.metadata?.namespace,
+        name: clusterName,
+      });
+      navigateBack();
+    },
+  });
 }
 
 function showError(message) {
@@ -102,6 +169,7 @@ if (!name) {
     const item = await fundament.k8s.get({ ...CLUSTER_RESOURCE, namespace, name });
     heading.textContent = item.metadata?.name ?? name;
     content.innerHTML = render(item);
+    wireDelete(item);
     // Select the whole command on focus, so one copy takes all of it. The native
     // input sits in the text field's shadow root.
     const cmd = document.getElementById('password-cmd');

@@ -177,10 +177,12 @@ let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 function reportHeight(): void {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    window.parent.postMessage(
-      { type: 'plugin:resize', height: document.documentElement.scrollHeight },
-      parentOrigin ?? '*',
-    );
+    // scrollHeight is a whole number that rounds the fraction away: content
+    // 950.23px tall reports 950, and a frame that much short of its content
+    // gets a scrollbar of its own. The rounded-up layout height covers that.
+    const root = document.documentElement;
+    const height = Math.max(root.scrollHeight, Math.ceil(root.getBoundingClientRect().height));
+    window.parent.postMessage({ type: 'plugin:resize', height }, parentOrigin ?? '*');
   }, 50);
 }
 

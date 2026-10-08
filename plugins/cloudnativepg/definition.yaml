@@ -23,13 +23,13 @@ spec:
     # plugin-controller turns this block into the plugin's ClusterRole: the plugin
     # can only do what is listed here.
     rbac:
-      # What the console pages and the status summary use. No update, patch or
-      # delete: a database cannot be changed or removed through this plugin's
-      # pages. Users get the same verbs through the ClusterRoles the plugin
-      # aggregates into admin and view (roles.go).
+      # What the console pages and the status summary use. Delete, for the
+      # detail page; no update or patch: a database cannot be changed through
+      # this plugin's pages. Project admins get the same verbs through the
+      # ClusterRole the plugin aggregates into admin (roles.go).
       - apiGroups: ["postgresql.cnpg.io"]
         resources: ["clusters"]
-        verbs: ["get", "list", "watch", "create"]
+        verbs: ["get", "list", "watch", "create", "delete"]
       # The create form's StorageClass picker and the no-default-class hint.
       - apiGroups: ["storage.k8s.io"]
         resources: ["storageclasses"]
@@ -84,7 +84,8 @@ spec:
 
   # No list page: the generated one shows CNPG's printer columns (Instances,
   # Ready, Status), offers Create because a create page exists, and has no
-  # delete. The detail page is custom because the generated one has a delete.
+  # delete. The detail page is custom for the connection details and the
+  # password command, and so a delete asks for the database's name first.
   customComponents:
     Cluster:
       detail: clusters-detail.html
@@ -94,7 +95,7 @@ spec:
     - group: postgresql.cnpg.io
       version: v1
       resource: clusters
-      verbs: [list, get, create]
+      verbs: [list, get, create, delete]
     - group: storage.k8s.io
       version: v1
       resource: storageclasses

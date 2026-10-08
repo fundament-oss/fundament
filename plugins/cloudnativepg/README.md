@@ -4,16 +4,16 @@ Installs the CloudNativePG operator and lets project members create PostgreSQL d
 
 - Helm chart `cloudnative-pg` 0.24.0 (operator v1.26.0) from `https://cloudnative-pg.github.io/charts`, release `cnpg` in `cnpg-system`, chart default values
 - CRD: Cluster (`clusters.postgresql.cnpg.io`)
-- Console: create and read-only detail pages in `console/`; the list is the console's generated one, labelled Databases
+- Console: create and detail pages in `console/`; the list is the console's generated one, labelled Databases. The detail page deletes a database after the user types its name
 - Config: none
 
 ## Scope
 
 A database is a CNPG `Cluster` with 1 instance, no backups, and CNPG's default bootstrap: database `app`, owned by user `app`, credentials in Secret `<name>-app`. The create form sets name, namespace, storage size, PostgreSQL version (17.4 or 16.8) and StorageClass.
 
-Project admins cannot update or delete the `Cluster` resource, from the console or with kubectl. To change or delete one, an organization admin uses kubectl, or a later version of this plugin adds it.
+Project admins can delete a `Cluster`, from the console or with kubectl, but cannot update it. To change one, an organization admin uses kubectl. Deleting a `Cluster` deletes its PVC with it, and there are no backups, so the data is gone.
 
-That protects the resource, not the data. The built-in `admin` role still covers what the operator creates in the namespace, so a project admin can:
+Blocking updates protects the resource, not the data. The built-in `admin` role still covers what the operator creates in the namespace, so a project admin can:
 
 - delete PVC `<name>-1` and pod `<name>-1`, which destroys a single-instance database;
 - edit or delete Secret `<name>-app`;
@@ -34,10 +34,10 @@ The plugin applies two ClusterRoles on every start, which aggregate into the rol
 
 | ClusterRole | Aggregates into | Verbs on `clusters` |
 |---|---|---|
-| `fundament-cloudnativepg-admin` | `admin` (project admins) | get, list, watch, create |
+| `fundament-cloudnativepg-admin` | `admin` (project admins) | get, list, watch, create, delete |
 | `fundament-cloudnativepg-view` | `view` (project viewers) | get, list, watch |
 
-The chart's `rbac.aggregateClusterRoles` stays off: it would give `admin` every verb, delete included. The plugin's own `permissions.rbac` has the same four verbs, so its console pages cannot change or delete either.
+The chart's `rbac.aggregateClusterRoles` stays off: it would give `admin` every verb, update and patch included. The plugin's own `permissions.rbac` has the same five verbs, so its console pages cannot change a database either.
 
 ## Uninstall
 

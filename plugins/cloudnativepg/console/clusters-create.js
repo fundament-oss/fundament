@@ -143,8 +143,8 @@ function showForm(storageClasses) {
     <nldd-rich-text>
       <p>
         Creates a single-instance PostgreSQL database with database <code>app</code>, owned by
-        user <code>app</code>. It has no backups. After creation it cannot be changed or deleted
-        from the console.
+        user <code>app</code>. It has no backups. After creation it cannot be changed from the
+        console.
       </p>
     </nldd-rich-text>
     <nldd-spacer size="12"></nldd-spacer>

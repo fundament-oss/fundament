@@ -14,12 +14,12 @@ import (
 // project admins to ClusterRole/admin and viewers to view in their namespaces
 // (FUN-7); these roles aggregate into both.
 //
-// They are the user half of "no update or delete on a Cluster". The plugin's
-// own rbac only caps its console pages; the console's generated views and
-// kubectl act with the user's own rights. The chart's
-// rbac.aggregateClusterRoles would give admin every verb, delete included, so
-// it stays off. The data itself is not protected: admin still deletes the
-// PVCs and pods the operator creates (see README, Scope).
+// They are the user half of "no update on a Cluster". The plugin's own rbac
+// only caps its console pages; the console's generated views and kubectl act
+// with the user's own rights. Admins may delete, as the detail page does:
+// project admins can already destroy the data through the PVCs and pods the
+// operator creates (see README, Scope). The chart's rbac.aggregateClusterRoles
+// would give admin every verb, update and patch included, so it stays off.
 func userRoles() []*rbacv1.ClusterRole {
 	clusters := func(verbs ...string) []rbacv1.PolicyRule {
 		return []rbacv1.PolicyRule{{
@@ -37,7 +37,7 @@ func userRoles() []*rbacv1.ClusterRole {
 					"app.kubernetes.io/managed-by":                 "fundament-cloudnativepg",
 				},
 			},
-			Rules: clusters("get", "list", "watch", "create"),
+			Rules: clusters("get", "list", "watch", "create", "delete"),
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
