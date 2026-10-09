@@ -97,7 +97,7 @@ func newMock(t *testing.T) *gardener.MockClient {
 }
 
 // insertCluster inserts a cluster into the test DB. The trigger auto-creates an
-// outbox row with status=pending (which propagates to clusters.outbox_status).
+// outbox row with status=pending.
 func insertCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string) uuid.UUID {
 	t.Helper()
 
@@ -156,7 +156,6 @@ func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, na
 }
 
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.
-// The trigger propagates this to clusters.outbox_status.
 func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 

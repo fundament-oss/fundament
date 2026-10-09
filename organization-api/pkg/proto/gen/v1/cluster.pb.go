@@ -25,17 +25,19 @@ const (
 
 // Cluster sync state derived from cluster_outbox and Gardener
 type SyncState struct {
-	state                      protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_OutboxStatus    *string                `protobuf:"bytes,10,opt,name=outbox_status,json=outboxStatus"`
-	xxx_hidden_OutboxRetries   int32                  `protobuf:"varint,20,opt,name=outbox_retries,json=outboxRetries"`
-	xxx_hidden_OutboxError     *string                `protobuf:"bytes,30,opt,name=outbox_error,json=outboxError"`
-	xxx_hidden_ShootStatus     *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus"`
-	xxx_hidden_ShootMessage    *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage"`
-	xxx_hidden_StatusUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt"`
-	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
-	XXX_presence               [1]uint32
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state                          protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_OutboxStatus        *string                `protobuf:"bytes,10,opt,name=outbox_status,json=outboxStatus"`
+	xxx_hidden_OutboxRetries       int32                  `protobuf:"varint,20,opt,name=outbox_retries,json=outboxRetries"`
+	xxx_hidden_OutboxError         *string                `protobuf:"bytes,30,opt,name=outbox_error,json=outboxError"`
+	xxx_hidden_ShootStatus         *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus"`
+	xxx_hidden_ShootMessage        *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage"`
+	xxx_hidden_StatusUpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt"`
+	xxx_hidden_FailedNodePoolName  *string                `protobuf:"bytes,70,opt,name=failed_node_pool_name,json=failedNodePoolName"`
+	xxx_hidden_FailedNodePoolError *string                `protobuf:"bytes,80,opt,name=failed_node_pool_error,json=failedNodePoolError"`
+	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
+	XXX_presence                   [1]uint32
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
 }
 
 func (x *SyncState) Reset() {
@@ -117,9 +119,29 @@ func (x *SyncState) GetStatusUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SyncState) GetFailedNodePoolName() string {
+	if x != nil {
+		if x.xxx_hidden_FailedNodePoolName != nil {
+			return *x.xxx_hidden_FailedNodePoolName
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *SyncState) GetFailedNodePoolError() string {
+	if x != nil {
+		if x.xxx_hidden_FailedNodePoolError != nil {
+			return *x.xxx_hidden_FailedNodePoolError
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *SyncState) SetOutboxStatus(v string) {
 	x.xxx_hidden_OutboxStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 8)
 }
 
 func (x *SyncState) SetOutboxRetries(v int32) {
@@ -128,21 +150,31 @@ func (x *SyncState) SetOutboxRetries(v int32) {
 
 func (x *SyncState) SetOutboxError(v string) {
 	x.xxx_hidden_OutboxError = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 8)
 }
 
 func (x *SyncState) SetShootStatus(v string) {
 	x.xxx_hidden_ShootStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
 }
 
 func (x *SyncState) SetShootMessage(v string) {
 	x.xxx_hidden_ShootMessage = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 8)
 }
 
 func (x *SyncState) SetStatusUpdatedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_StatusUpdatedAt = v
+}
+
+func (x *SyncState) SetFailedNodePoolName(v string) {
+	x.xxx_hidden_FailedNodePoolName = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 8)
+}
+
+func (x *SyncState) SetFailedNodePoolError(v string) {
+	x.xxx_hidden_FailedNodePoolError = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
 }
 
 func (x *SyncState) HasOutboxStatus() bool {
@@ -180,6 +212,20 @@ func (x *SyncState) HasStatusUpdatedAt() bool {
 	return x.xxx_hidden_StatusUpdatedAt != nil
 }
 
+func (x *SyncState) HasFailedNodePoolName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
+func (x *SyncState) HasFailedNodePoolError() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *SyncState) ClearOutboxStatus() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_OutboxStatus = nil
@@ -204,6 +250,16 @@ func (x *SyncState) ClearStatusUpdatedAt() {
 	x.xxx_hidden_StatusUpdatedAt = nil
 }
 
+func (x *SyncState) ClearFailedNodePoolName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_FailedNodePoolName = nil
+}
+
+func (x *SyncState) ClearFailedNodePoolError() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_FailedNodePoolError = nil
+}
+
 type SyncState_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -215,6 +271,11 @@ type SyncState_builder struct {
 	// When shoot_status, shoot_message or the health last changed. Status is
 	// checked far more often than that; an unchanged check leaves it as it is.
 	StatusUpdatedAt *timestamppb.Timestamp
+	// outbox_status, outbox_retries and outbox_error describe the cluster's own
+	// latest sync. A node pool whose own sync failed for good is named here
+	// instead, with its error, so it never stands in for the cluster's state.
+	FailedNodePoolName  *string
+	FailedNodePoolError *string
 }
 
 func (b0 SyncState_builder) Build() *SyncState {
@@ -222,23 +283,31 @@ func (b0 SyncState_builder) Build() *SyncState {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.OutboxStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 8)
 		x.xxx_hidden_OutboxStatus = b.OutboxStatus
 	}
 	x.xxx_hidden_OutboxRetries = b.OutboxRetries
 	if b.OutboxError != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 8)
 		x.xxx_hidden_OutboxError = b.OutboxError
 	}
 	if b.ShootStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
 		x.xxx_hidden_ShootStatus = b.ShootStatus
 	}
 	if b.ShootMessage != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
 		x.xxx_hidden_ShootMessage = b.ShootMessage
 	}
 	x.xxx_hidden_StatusUpdatedAt = b.StatusUpdatedAt
+	if b.FailedNodePoolName != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 8)
+		x.xxx_hidden_FailedNodePoolName = b.FailedNodePoolName
+	}
+	if b.FailedNodePoolError != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_FailedNodePoolError = b.FailedNodePoolError
+	}
 	return m0
 }
 
@@ -3011,7 +3080,7 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa6\x02\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x9c\x03\n" +
 	"\tSyncState\x12*\n" +
 	"\routbox_status\x18\n" +
 	" \x01(\tB\x05\xaa\x01\x02\b\x01R\foutboxStatus\x12%\n" +
@@ -3019,7 +3088,9 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\foutbox_error\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\voutboxError\x12(\n" +
 	"\fshoot_status\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\vshootStatus\x12*\n" +
 	"\rshoot_message\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fshootMessage\x12F\n" +
-	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\"\x15\n" +
+	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\x128\n" +
+	"\x15failed_node_pool_name\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x12failedNodePoolName\x12:\n" +
+	"\x16failed_node_pool_error\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x13failedNodePoolError\"\x15\n" +
 	"\x13ListClustersRequest\"\xf7\x02\n" +
 	"\x14ListClustersResponse\x12P\n" +
 	"\bclusters\x18\n" +

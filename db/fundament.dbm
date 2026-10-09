@@ -3,7 +3,7 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="2.0.0-beta" use-changelog="false" max-obj-count="111"
+<dbmodel pgmodeler-ver="2.0.0-beta" use-changelog="false" max-obj-count="113"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
 	 last-position="-332,174" last-zoom="0.45" scene-rect="-1628,-265,10746.3,5925.72"
 	 default-owner="postgres"
@@ -676,54 +676,6 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<function name="cluster_outbox_update_cluster_status"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY INVOKER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[DECLARE
-    resolved_cluster_id uuid;
-    resolved_error text;
-BEGIN
-    -- A pending row that carries status_info is deferred on a precondition
-    -- (waiting, not failing); only retrying/failed rows surface as an error.
-    IF NEW.status IN ('retrying', 'failed') THEN
-        resolved_error := NEW.status_info;
-    END IF;
-
-    IF NEW.cluster_id IS NOT NULL THEN
-        UPDATE tenant.clusters
-        SET outbox_status = NEW.status,
-            outbox_retries = NEW.retries,
-            outbox_error = resolved_error
-        WHERE tenant.clusters.id = NEW.cluster_id;
-    ELSIF NEW.node_pool_id IS NOT NULL THEN
-        SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
-        FROM tenant.node_pools
-        WHERE tenant.node_pools.id = NEW.node_pool_id;
-
-        IF resolved_cluster_id IS NOT NULL THEN
-            UPDATE tenant.clusters
-            SET outbox_status = NEW.status,
-                outbox_retries = NEW.retries,
-                outbox_error = resolved_error
-            WHERE tenant.clusters.id = resolved_cluster_id;
-        END IF;
-    END IF;
-    RETURN NULL;
-END;]]> </definition>
-</function>
-
 <function name="current_user_id"
 		window-func="false"
 		returns-setof="false"
@@ -1245,15 +1197,6 @@ END;]]> </definition>
 	</column>
 	<column name="shoot_updating" not-null="true" default-value="false">
 		<type name="boolean" length="0"/>
-	</column>
-	<column name="outbox_status">
-		<type name="text" length="0"/>
-	</column>
-	<column name="outbox_retries" not-null="true" default-value="0">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="outbox_error">
-		<type name="text" length="0"/>
 	</column>
 	<column name="region_id">
 		<type name="uuid" length="0"/>
@@ -2690,12 +2633,6 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
 	 table="tenant.cluster_outbox">
 		<function signature="tenant.cluster_outbox_notify()"/>
-</trigger>
-
-<trigger name="cluster_outbox_update_cluster_status" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.cluster_outbox">
-		<function signature="tenant.cluster_outbox_update_cluster_status()"/>
 </trigger>
 
 <table name="organizations_users" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
@@ -4799,6 +4736,49 @@ END;]]> </definition>
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.users" reference-fk="idempotency_keys_fk_user"
 	 src-required="false" dst-required="true"/>
+
+<view name="cluster_sync_state" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<comment> <![CDATA[A cluster's own latest sync row in cluster_outbox: created, updated, deleted or reconcile; the ready fan-out row is not a sync. outbox_error is the row's status_info: an error for a retrying or failed row, the awaited precondition for a pending one.]]> </comment>
+	<position x="2400" y="100"/>
+	<definition> <![CDATA[SELECT DISTINCT ON (tenant.cluster_outbox.cluster_id)
+    tenant.cluster_outbox.cluster_id,
+    tenant.cluster_outbox.event AS outbox_event,
+    tenant.cluster_outbox.status AS outbox_status,
+    tenant.cluster_outbox.retries AS outbox_retries,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.created AS outbox_created
+FROM tenant.cluster_outbox
+WHERE tenant.cluster_outbox.cluster_id IS NOT NULL
+  AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+ORDER BY tenant.cluster_outbox.cluster_id, tenant.cluster_outbox.created DESC, tenant.cluster_outbox.id DESC]]> </definition>
+</view>
+
+<view name="cluster_node_pool_sync_failure" layers="0" collapse-mode="2" max-obj-count="5" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_fundament_api"/>
+	<comment> <![CDATA[Per cluster, the active node pool whose own latest sync row is a failed one, with that row's error; the pool that failed most recently when several did. A node pool's failure is shown next to the cluster's own sync state, never as the cluster's.]]> </comment>
+	<position x="2400" y="440"/>
+	<definition> <![CDATA[SELECT DISTINCT ON (tenant.node_pools.cluster_id)
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.id AS node_pool_id,
+    tenant.node_pools.name AS node_pool_name,
+    tenant.cluster_outbox.status_info AS outbox_error,
+    tenant.cluster_outbox.created AS failed_at
+FROM tenant.node_pools
+JOIN tenant.cluster_outbox ON tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.deleted IS NULL
+  AND tenant.cluster_outbox.status = 'failed'
+  AND tenant.cluster_outbox.id = (
+      SELECT tenant.cluster_outbox.id
+      FROM tenant.cluster_outbox
+      WHERE tenant.cluster_outbox.node_pool_id = tenant.node_pools.id
+      ORDER BY tenant.cluster_outbox.created DESC, tenant.cluster_outbox.id DESC
+      LIMIT 1
+  )
+ORDER BY tenant.node_pools.cluster_id, tenant.cluster_outbox.created DESC]]> </definition>
+</view>
 
 <permission>
 	<object name="appstore" type="schema"/>

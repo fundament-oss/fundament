@@ -140,31 +140,6 @@ func TestClusterOutbox_SingleFKRejectsClusterPlusNamespace(t *testing.T) {
 	require.Contains(t, err.Error(), "cluster_outbox_ck_single_fk")
 }
 
-// Task 1.15: a namespace-only outbox row must not update clusters.outbox_status.
-func TestNamespaceOutbox_DoesNotUpdateClusterStatus(t *testing.T) {
-	db := createTestDB(t)
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-fanin")
-	projectID := insertProject(t, db, clusterID, "proj-fanin")
-
-	// Drive the cluster's own outbox row to completed so outbox_status is a known value.
-	markOutboxCompleted(t, db, clusterID)
-	var before *string
-	require.NoError(t, db.adminPool.QueryRow(t.Context(),
-		`SELECT outbox_status FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&before))
-	require.NotNil(t, before)
-	require.Equal(t, "completed", *before)
-
-	// Inserting a namespace creates a namespace-only outbox row (status transitions
-	// pending). The fan-in trigger must leave clusters.outbox_status untouched.
-	insertNamespace(t, db, projectID, "team-a")
-
-	var after *string
-	require.NoError(t, db.adminPool.QueryRow(t.Context(),
-		`SELECT outbox_status FROM tenant.clusters WHERE id = $1`, clusterID).Scan(&after))
-	require.NotNil(t, after)
-	require.Equal(t, "completed", *after, "namespace outbox row must not change the cluster's outbox_status")
-}
-
 // Task 4.11: full create -> re-sync -> delete cycle through the handler with a real DB.
 func TestNamespaceSync_CreateResyncDelete(t *testing.T) {
 	db := createTestDB(t)

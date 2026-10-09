@@ -200,13 +200,30 @@
               }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
-                  <nldd-text-cell text="Sync error"></nldd-text-cell>
+                  <!-- The label keeps its width: Gardener's errors run long and
+                       would otherwise squeeze it to one letter per line. -->
+                  <nldd-text-cell text="Sync error" width="fit-content"></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
-                    width="fit-content"
                     horizontal-alignment="right"
                     [attr.text]="formatEventMessage(clusterData.syncState.outboxError)"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+              @if (clusterData.syncState?.failedNodePoolName) {
+                <!-- A node pool's failure is the pool's, shown next to the
+                     cluster's own sync state rather than as it. -->
+                <nldd-list-item>
+                  <nldd-text-cell
+                    width="fit-content"
+                    [attr.text]="'Node pool ' + clusterData.syncState!.failedNodePoolName + ' sync error'"
+                  ></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    color="critical"
+                    horizontal-alignment="right"
+                    [attr.text]="formatEventMessage(clusterData.syncState!.failedNodePoolError)"
                   ></nldd-text-cell>
                 </nldd-list-item>
               }

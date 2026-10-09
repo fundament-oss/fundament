@@ -21,6 +21,11 @@ message SyncState {
   // When shoot_status, shoot_message or the health last changed. Status is
   // checked far more often than that; an unchanged check leaves it as it is.
   google.protobuf.Timestamp status_updated_at = 60;
+  // outbox_status, outbox_retries and outbox_error describe the cluster's own
+  // latest sync. A node pool whose own sync failed for good is named here
+  // instead, with its error, so it never stands in for the cluster's state.
+  string failed_node_pool_name = 70 [features.field_presence = EXPLICIT];
+  string failed_node_pool_error = 80 [features.field_presence = EXPLICIT];
 }
 
 // ClusterService manages Kubernetes clusters
