@@ -3,7 +3,7 @@
 # Node-compat version (24.3.0). Bun is still used as the package manager.
 FROM oven/bun:1.3.14-alpine AS bun
 
-FROM node:24.17-alpine AS build
+FROM node:24.21-alpine AS build
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN bun run "$BUILD_SCRIPT"
 # The storefront is server-rendered, so this ships as a Node server rather than
 # a static site. The server bundle is self-contained (esbuild inlines express
 # and everything else), so no node_modules are needed here.
-FROM node:24.17-alpine
+FROM node:24.21-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
