@@ -1,5 +1,5 @@
 {
   "age": "7d",
   "ignore": ["buf.build/*"],
-  "allow": [{ "module": "golang.org/x/net", "version": "v0.55.0", "reason": "required to update in order for the vulnerability CI job to succeed" }]
+  "allow": [{ "module": "golang.org/x/net", "version": "v0.60.0", "reason": "same-day security release: the HTTP/2 fixes for CVE-2026-97032 and friends that the h2c services need" }]
 }
