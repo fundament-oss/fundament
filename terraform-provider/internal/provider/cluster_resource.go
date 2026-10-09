@@ -61,8 +61,8 @@ func (r *ClusterResource) Metadata(ctx context.Context, req resource.MetadataReq
 func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a Kubernetes cluster in Fundament.\n\n" +
-			"A create waits until Gardener has built the cluster and its nodes; an update until Fundament has applied " +
-			"the change to Gardener, not until Gardener has rolled it out; a destroy until Gardener has removed the cluster. " +
+			"A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out " +
+			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
 			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
 			"cluster does not run within the timeout.\n\n" +
 			"When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. " +
@@ -96,7 +96,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster: provisioning, running, error (Gardener reports a problem, which it usually retries), deleting or stopped.",
+				Description: "The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
 				Computed:    true,
 			},
 		},
@@ -107,7 +107,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Update:            true,
 				Delete:            true,
 				CreateDescription: "How long to wait for a new cluster to run (default 30m).",
-				UpdateDescription: "How long to wait for a change to be applied (default 30m).",
+				UpdateDescription: "How long to wait for a change to be rolled out (default 30m).",
 				DeleteDescription: "How long to wait for the cluster to be gone (default 30m).",
 			}),
 		},
@@ -259,7 +259,7 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		// Connect errors include the code in the error message
 		// The API answers both for a cluster whose deletion was requested.
 		if code := connect.CodeOf(err); code == connect.CodeNotFound || code == connect.CodePermissionDenied {
-			r.readMissingCluster(ctx, &state, resp)
+			r.readMissingCluster(ctx, &state, err, resp)
 			return
 		}
 
@@ -315,8 +315,9 @@ func (r *ClusterResource) existingClusterHint(ctx context.Context, name string) 
 // happens as soon as its deletion is requested, while Gardener still removes
 // it: such a cluster stays in state as deleting, so the next destroy waits
 // for it and the next apply replaces it (see ModifyPlan). A cluster that is
-// gone leaves the state.
-func (r *ClusterResource) readMissingCluster(ctx context.Context, state *ClusterResourceModel, resp *resource.ReadResponse) {
+// gone leaves the state. A cluster listed with another status was refused
+// for another reason, such as a lost permission, which getErr reports.
+func (r *ClusterResource) readMissingCluster(ctx context.Context, state *ClusterResourceModel, getErr error, resp *resource.ReadResponse) {
 	listed, err := r.listedCluster(ctx, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Cluster", err.Error())
@@ -325,6 +326,10 @@ func (r *ClusterResource) readMissingCluster(ctx context.Context, state *Cluster
 	if listed == nil {
 		tflog.Info(ctx, "Cluster not found, removing from state", map[string]any{"id": state.ID.ValueString()})
 		resp.State.RemoveResource(ctx)
+		return
+	}
+	if listed.GetStatus() != organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING {
+		resp.Diagnostics.AddError("Unable to Read Cluster", fmt.Sprintf("Unable to read cluster %q: %s", state.Name.ValueString(), getErr))
 		return
 	}
 

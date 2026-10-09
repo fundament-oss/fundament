@@ -35,6 +35,7 @@ func TestClusterRunning(t *testing.T) {
 		{name: "running, never synced through the outbox", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, done: true},
 		{name: "running, change not yet applied", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, outboxStatus: "pending"},
 		{name: "running, change being retried", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, outboxStatus: "retrying"},
+		{name: "change applied, rolling out", status: organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING, outboxStatus: "completed"},
 		{name: "provisioning", status: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, outboxStatus: "completed"},
 		{name: "error that Gardener may retry", status: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, outboxStatus: "completed"},
 		{name: "sync given up", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, outboxStatus: "failed", errContains: "shoot rejected"},

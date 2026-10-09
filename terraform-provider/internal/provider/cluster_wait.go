@@ -21,8 +21,10 @@ const (
 	outboxFailed    = "failed"
 )
 
-// waitForClusterRunning polls GetCluster until the cluster runs and
-// cluster-worker has applied every change to Gardener.
+// waitForClusterRunning polls GetCluster until the cluster runs, cluster-worker
+// has applied every change to Gardener, and Gardener has rolled it out: a
+// change is pending in the outbox until cluster-worker has applied it, and
+// the cluster is upgrading from then until Gardener has finished.
 //
 // A failed sync is fatal: cluster-worker has stopped retrying it. An error
 // status is not: Gardener retries most errors, so it only ends the wait when
