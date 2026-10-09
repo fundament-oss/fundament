@@ -37,8 +37,10 @@ membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
 
 `funops organization quota` sets what an organization may build. A new one
-may have one cluster and no node pools at all, so `set-clusters` and
-`set-nodes` come before anyone can build in it. The node quota is per region
+may have one cluster and no node pools of its own (a cluster without pools
+runs on the default worker pool, which is outside the quota), so `set-nodes`
+comes before anyone adds a pool and `set-clusters` before a second cluster.
+The node quota is per region
 and machine type and caps the sum of the maximum sizes of the organization's
 node pools of that type. A quota only stops something new: lowering it below
 what is in use is allowed, leaves the existing clusters and pools alone, and

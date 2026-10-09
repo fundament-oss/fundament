@@ -68,25 +68,39 @@ func (q *Queries) MachineQuotaList(ctx context.Context, arg MachineQuotaListPara
 	return items, nil
 }
 
-const machineQuotaSet = `-- name: MachineQuotaSet :exec
+const machineQuotaSet = `-- name: MachineQuotaSet :execrows
+WITH locked AS (
+    SELECT tenant.organizations.id
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = $3
+      AND tenant.organizations.deleted IS NULL
+    FOR NO KEY UPDATE
+)
 INSERT INTO tenant.organization_machine_quotas (organization_id, region_machine_type_id, max_nodes)
-VALUES ($1, $2, $3)
+SELECT locked.id, $1, $2
+FROM locked
 ON CONFLICT (organization_id, region_machine_type_id) DO UPDATE
 SET max_nodes = EXCLUDED.max_nodes,
     updated = now()
 `
 
 type MachineQuotaSetParams struct {
-	OrganizationID      uuid.UUID
 	RegionMachineTypeID uuid.UUID
 	MaxNodes            int32
+	OrganizationID      uuid.UUID
 }
 
 // One row per organization and offering, never removed: setting 0 is how a
 // quota is taken away, and reads the same as no row to the trigger.
-func (q *Queries) MachineQuotaSet(ctx context.Context, arg MachineQuotaSetParams) error {
-	_, err := q.db.Exec(ctx, machineQuotaSet, arg.OrganizationID, arg.RegionMachineTypeID, arg.MaxNodes)
-	return err
+// The organization row is locked the way node_pools_tr_verify_quota locks it,
+// so a pool growing against the old quota and this lowering cannot both
+// commit: one waits for the other. No row means the organization is gone.
+func (q *Queries) MachineQuotaSet(ctx context.Context, arg MachineQuotaSetParams) (int64, error) {
+	result, err := q.db.Exec(ctx, machineQuotaSet, arg.RegionMachineTypeID, arg.MaxNodes, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const quotaClustersGet = `-- name: QuotaClustersGet :one

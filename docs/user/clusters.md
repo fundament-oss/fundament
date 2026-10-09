@@ -98,10 +98,11 @@ when something new is made, never against what already runs:
 - **Nodes.** Per region and machine type, the maximum size of every node pool
   with that machine type counts, across all the organization's clusters,
   whether or not the autoscaler ever reaches it. A new organization has no node
-  quota at all, so its first node pool needs the operator first. Creating a
-  pool, or raising a pool's maximum, that would take the sum over the quota is
-  refused with a message naming the sum and the quota. Pools on a deleted
-  cluster count until the cluster is torn down.
+  quota at all, so its first node pool needs the operator first: without a
+  quota the refusal says so. With one, creating a pool, or raising a pool's
+  maximum, that would take the sum over the quota is refused with a message
+  naming the sum and the quota. Pools on a deleted cluster count until the
+  cluster is torn down.
 
 A quota lowered below what you already run changes nothing about it: your
 clusters and pools keep running, and a pool may still be shrunk. It only stops
