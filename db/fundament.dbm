@@ -95,7 +95,7 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
-<table name="organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
+<table name="organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
 	<position x="240" y="1240"/>
@@ -114,6 +114,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="quota_clusters" not-null="true" default-value="1">
+		<type name="integer" length="0"/>
+	</column>
 	<constraint name="organizations_pk" type="pk-constr" table="tenant.organizations">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -125,6 +128,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 	<constraint name="organizations_ck_alias" type="ck-constr" table="tenant.organizations">
 			<expression> <![CDATA[char_length(alias) >= 1 AND char_length(alias) <= 255]]> </expression>
+	</constraint>
+	<constraint name="organizations_ck_quota_clusters" type="ck-constr" table="tenant.organizations">
+			<expression> <![CDATA[quota_clusters >= 0]]> </expression>
 	</constraint>
 </table>
 
@@ -304,6 +310,188 @@ END;]]> </definition>
             RAISE EXCEPTION 'node_pool region_machine_type region does not match cluster region'
                         USING HINT = 'node_pool_region_mismatch';
         END IF;
+    END IF;
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="organization_clusters_in_use"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="bigint" length="0"/>
+	</return-type>
+	<parameter name="p_organization_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[BEGIN
+    -- What counts against quota_clusters: the organization's live clusters, and
+    -- its deleted ones until Gardener confirms the shoot is gone, since those
+    -- still hold machines. The same definition as OrganizationCountLiveClusters
+    -- in funops.
+    RETURN (
+        SELECT count(*)
+        FROM tenant.clusters
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+    );
+END;]]> </definition>
+</function>
+
+<function name="organization_nodes_in_use"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="STABLE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="bigint" length="0"/>
+	</return-type>
+	<parameter name="p_organization_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<parameter name="p_region_machine_type_id" in="true">
+		<type name="uuid" length="0"/>
+	</parameter>
+	<definition> <![CDATA[BEGIN
+    -- What counts against a machine quota: the autoscale maxima of the live
+    -- node pools of that machine type and region on the organization's
+    -- clusters, deleted clusters included until their shoot is gone. A pool
+    -- without a catalog reference (pre-catalog rows) has nothing to count
+    -- against and is skipped, as node_pool_region_match_trigger skips it.
+    RETURN (
+        SELECT coalesce(sum(tenant.node_pools.autoscale_max), 0)
+        FROM tenant.node_pools
+        JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND tenant.node_pools.region_machine_type_id = p_region_machine_type_id
+          AND tenant.node_pools.deleted IS NULL
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+    );
+END;]]> </definition>
+</function>
+
+<function name="clusters_tr_verify_quota"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[DECLARE
+    v_quota integer;
+BEGIN
+    -- Only creation is checked: a quota lowered below what an organization
+    -- already runs leaves its clusters alone and stops the next one.
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- FOR NO KEY UPDATE serialises the count with other cluster inserts for
+    -- this organization, without blocking the key-share locks of foreign keys.
+    SELECT tenant.organizations.quota_clusters INTO v_quota
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = NEW.organization_id
+    FOR NO KEY UPDATE;
+
+    IF tenant.organization_clusters_in_use(NEW.organization_id) > v_quota THEN
+        RAISE EXCEPTION 'the organization has reached its quota of % cluster(s)', v_quota
+                    USING HINT = 'cluster_quota_exceeded';
+    END IF;
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="node_pools_tr_verify_quota"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[DECLARE
+    v_organization_id uuid;
+    v_quota integer;
+    v_in_use bigint;
+    v_machine_type text;
+    v_region text;
+BEGIN
+    -- A pool without a catalog reference cannot be matched to a quota entry;
+    -- see organization_nodes_in_use.
+    IF NEW.deleted IS NOT NULL OR NEW.region_machine_type_id IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Only growth is checked: a pool that shrinks or keeps its maximum stays
+    -- valid under a quota lowered below what the organization already runs.
+    IF TG_OP = 'UPDATE'
+       AND NEW.autoscale_max <= OLD.autoscale_max
+       AND NEW.region_machine_type_id IS NOT DISTINCT FROM OLD.region_machine_type_id
+    THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT tenant.clusters.organization_id INTO v_organization_id
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = NEW.cluster_id;
+
+    -- Serialises the sum with the other node pool changes of the organization.
+    PERFORM 1
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = v_organization_id
+    FOR NO KEY UPDATE;
+
+    SELECT tenant.organization_machine_quotas.max_nodes INTO v_quota
+    FROM tenant.organization_machine_quotas
+    WHERE tenant.organization_machine_quotas.organization_id = v_organization_id
+      AND tenant.organization_machine_quotas.region_machine_type_id = NEW.region_machine_type_id;
+    v_quota := coalesce(v_quota, 0);
+
+    v_in_use := tenant.organization_nodes_in_use(v_organization_id, NEW.region_machine_type_id);
+    IF v_in_use > v_quota THEN
+        SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+        WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
+
+        IF v_quota = 0 THEN
+            RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
+                        USING HINT = 'node_pool_quota_exceeded';
+        END IF;
+        RAISE EXCEPTION 'node pools of machine type % in region % would total % nodes, over the organization''s quota of %', v_machine_type, v_region, v_in_use, v_quota
+                    USING HINT = 'node_pool_quota_exceeded';
     END IF;
     RETURN NULL;
 END;]]> </definition>
@@ -1235,6 +1423,41 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="region_machine_types_fk_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.machine_types" table="catalog.region_machine_types">
 		<columns names="machine_type_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+</table>
+
+<table name="organization_machine_quotas" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<position x="-500" y="2680"/>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="region_machine_type_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="max_nodes" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="updated" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="organization_machine_quotas_pk" type="pk-constr" table="tenant.organization_machine_quotas">
+		<columns names="organization_id,region_machine_type_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="organization_machine_quotas_ck_max_nodes" type="ck-constr" table="tenant.organization_machine_quotas">
+			<expression> <![CDATA[max_nodes >= 0]]> </expression>
+	</constraint>
+	<constraint name="organization_machine_quotas_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organization_machine_quotas">
+		<columns names="organization_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+	<constraint name="organization_machine_quotas_fk_region_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_machine_types" table="tenant.organization_machine_quotas">
+		<columns names="region_machine_type_id" ref-type="src-columns"/>
 		<columns names="id" ref-type="dst-columns"/>
 	</constraint>
 </table>
@@ -2676,6 +2899,19 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="tenant.node_pool_region_match_trigger()"/>
+</trigger>
+
+<trigger name="verify_quota" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.node_pools_tr_verify_quota()"/>
+		<columns names="autoscale_max,region_machine_type_id"/>
+</trigger>
+
+<trigger name="verify_quota" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="false" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.clusters_tr_verify_quota()"/>
 </trigger>
 
 <trigger name="verify_defaults" firing-type="AFTER" per-line="true" constraint="true"

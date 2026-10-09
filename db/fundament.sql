@@ -60,10 +60,12 @@ CREATE TABLE tenant.organizations (
 	alias text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	quota_clusters integer NOT NULL DEFAULT 1,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
 	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--'),
-	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
+	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255),
+	CONSTRAINT organizations_ck_quota_clusters CHECK (quota_clusters >= 0)
 );
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;
@@ -204,6 +206,179 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.node_pool_region_match_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organization_clusters_in_use | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organization_clusters_in_use(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organization_clusters_in_use (IN p_organization_id uuid)
+	RETURNS bigint
+	LANGUAGE plpgsql
+	STABLE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- What counts against quota_clusters: the organization's live clusters, and
+    -- its deleted ones until Gardener confirms the shoot is gone, since those
+    -- still hold machines. The same definition as OrganizationCountLiveClusters
+    -- in funops.
+    RETURN (
+        SELECT count(*)
+        FROM tenant.clusters
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+    );
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organization_clusters_in_use(uuid) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organization_nodes_in_use | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organization_nodes_in_use(uuid,uuid) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organization_nodes_in_use (IN p_organization_id uuid, IN p_region_machine_type_id uuid)
+	RETURNS bigint
+	LANGUAGE plpgsql
+	STABLE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- What counts against a machine quota: the autoscale maxima of the live
+    -- node pools of that machine type and region on the organization's
+    -- clusters, deleted clusters included until their shoot is gone. A pool
+    -- without a catalog reference (pre-catalog rows) has nothing to count
+    -- against and is skipped, as node_pool_region_match_trigger skips it.
+    RETURN (
+        SELECT coalesce(sum(tenant.node_pools.autoscale_max), 0)
+        FROM tenant.node_pools
+        JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND tenant.node_pools.region_machine_type_id = p_region_machine_type_id
+          AND tenant.node_pools.deleted IS NULL
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+    );
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organization_nodes_in_use(uuid,uuid) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.clusters_tr_verify_quota | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.clusters_tr_verify_quota() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_quota ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_quota integer;
+BEGIN
+    -- Only creation is checked: a quota lowered below what an organization
+    -- already runs leaves its clusters alone and stops the next one.
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- FOR NO KEY UPDATE serialises the count with other cluster inserts for
+    -- this organization, without blocking the key-share locks of foreign keys.
+    SELECT tenant.organizations.quota_clusters INTO v_quota
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = NEW.organization_id
+    FOR NO KEY UPDATE;
+
+    IF tenant.organization_clusters_in_use(NEW.organization_id) > v_quota THEN
+        RAISE EXCEPTION 'the organization has reached its quota of % cluster(s)', v_quota
+                    USING HINT = 'cluster_quota_exceeded';
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.clusters_tr_verify_quota() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.node_pools_tr_verify_quota | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pools_tr_verify_quota() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pools_tr_verify_quota ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_organization_id uuid;
+    v_quota integer;
+    v_in_use bigint;
+    v_machine_type text;
+    v_region text;
+BEGIN
+    -- A pool without a catalog reference cannot be matched to a quota entry;
+    -- see organization_nodes_in_use.
+    IF NEW.deleted IS NOT NULL OR NEW.region_machine_type_id IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Only growth is checked: a pool that shrinks or keeps its maximum stays
+    -- valid under a quota lowered below what the organization already runs.
+    IF TG_OP = 'UPDATE'
+       AND NEW.autoscale_max <= OLD.autoscale_max
+       AND NEW.region_machine_type_id IS NOT DISTINCT FROM OLD.region_machine_type_id
+    THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT tenant.clusters.organization_id INTO v_organization_id
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = NEW.cluster_id;
+
+    -- Serialises the sum with the other node pool changes of the organization.
+    PERFORM 1
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = v_organization_id
+    FOR NO KEY UPDATE;
+
+    SELECT tenant.organization_machine_quotas.max_nodes INTO v_quota
+    FROM tenant.organization_machine_quotas
+    WHERE tenant.organization_machine_quotas.organization_id = v_organization_id
+      AND tenant.organization_machine_quotas.region_machine_type_id = NEW.region_machine_type_id;
+    v_quota := coalesce(v_quota, 0);
+
+    v_in_use := tenant.organization_nodes_in_use(v_organization_id, NEW.region_machine_type_id);
+    IF v_in_use > v_quota THEN
+        SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+        WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
+
+        IF v_quota = 0 THEN
+            RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
+                        USING HINT = 'node_pool_quota_exceeded';
+        END IF;
+        RAISE EXCEPTION 'node pools of machine type % in region % would total % nodes, over the organization''s quota of %', v_machine_type, v_region, v_in_use, v_quota
+                    USING HINT = 'node_pool_quota_exceeded';
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.node_pools_tr_verify_quota() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.project_defaults_violation | type: FUNCTION --
@@ -1014,6 +1189,23 @@ CREATE TABLE catalog.region_machine_types (
 );
 -- ddl-end --
 ALTER TABLE catalog.region_machine_types OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organization_machine_quotas | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.organization_machine_quotas CASCADE;
+CREATE TABLE tenant.organization_machine_quotas (
+	organization_id uuid NOT NULL,
+	region_machine_type_id uuid NOT NULL,
+	max_nodes integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	updated timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT organization_machine_quotas_pk PRIMARY KEY (organization_id,region_machine_type_id),
+	CONSTRAINT organization_machine_quotas_ck_max_nodes CHECK (max_nodes >= 0)
+);
+-- ddl-end --
+ALTER TABLE tenant.organization_machine_quotas OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.organization_machine_quotas ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
 -- object: tenant.clusters | type: TABLE --
@@ -2474,6 +2666,26 @@ CREATE CONSTRAINT TRIGGER region_match
 	EXECUTE PROCEDURE tenant.node_pool_region_match_trigger();
 -- ddl-end --
 
+-- object: verify_quota | type: TRIGGER --
+-- verify_quota ON tenant.node_pools CASCADE;
+CREATE CONSTRAINT TRIGGER verify_quota
+	AFTER INSERT OR UPDATE OF autoscale_max,region_machine_type_id
+	ON tenant.node_pools
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.node_pools_tr_verify_quota();
+-- ddl-end --
+
+-- object: verify_quota | type: TRIGGER --
+-- verify_quota ON tenant.clusters CASCADE;
+CREATE CONSTRAINT TRIGGER verify_quota
+	AFTER INSERT 
+	ON tenant.clusters
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.clusters_tr_verify_quota();
+-- ddl-end --
+
 -- object: verify_defaults | type: TRIGGER --
 -- verify_defaults ON tenant.projects CASCADE;
 CREATE CONSTRAINT TRIGGER verify_defaults
@@ -3283,6 +3495,20 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ALTER TABLE catalog.region_machine_types DROP CONSTRAINT IF EXISTS region_machine_types_fk_machine_type CASCADE;
 ALTER TABLE catalog.region_machine_types ADD CONSTRAINT region_machine_types_fk_machine_type FOREIGN KEY (machine_type_id)
 REFERENCES catalog.machine_types (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: organization_machine_quotas_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE tenant.organization_machine_quotas DROP CONSTRAINT IF EXISTS organization_machine_quotas_fk_organization CASCADE;
+ALTER TABLE tenant.organization_machine_quotas ADD CONSTRAINT organization_machine_quotas_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: organization_machine_quotas_fk_region_machine_type | type: CONSTRAINT --
+-- ALTER TABLE tenant.organization_machine_quotas DROP CONSTRAINT IF EXISTS organization_machine_quotas_fk_region_machine_type CASCADE;
+ALTER TABLE tenant.organization_machine_quotas ADD CONSTRAINT organization_machine_quotas_fk_region_machine_type FOREIGN KEY (region_machine_type_id)
+REFERENCES catalog.region_machine_types (id) MATCH SIMPLE
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
