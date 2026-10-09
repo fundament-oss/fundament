@@ -75,14 +75,13 @@ message ListOrganizationsResponse {
   repeated Organization organizations = 10;
 }
 
-// OrganizationLimits holds Gardener cluster quotas and Kubernetes namespace LimitRange defaults
+// OrganizationLimits holds the Kubernetes namespace LimitRange defaults
 message OrganizationLimits {
-  // Maximum total number of nodes across all node pools in a shoot cluster
-  int32 max_nodes_per_cluster = 10 [features.field_presence = EXPLICIT];
-  // Maximum number of node pools per shoot cluster
-  int32 max_node_pools_per_cluster = 20 [features.field_presence = EXPLICIT];
-  // Maximum number of nodes in a single node pool (autoscaler max)
-  int32 max_nodes_per_node_pool = 30 [features.field_presence = EXPLICIT];
+  // 10, 20 and 30 carried the node caps (per cluster, per cluster's node pools
+  // and per node pool). They bound nobody: the organization admin that set them
+  // is the same role that creates and edits node pools.
+  reserved 10, 20, 30;
+  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
   // Default memory request applied to containers via LimitRange (mebibytes)
   int32 default_memory_request_mi = 40 [features.field_presence = EXPLICIT];
   // Default memory limit applied to containers via LimitRange (mebibytes)
@@ -111,21 +110,9 @@ message GetOrganizationLimitsResponse {
 message UpdateOrganizationLimitsRequest {
   // ID of the organization to update
   string id = 10 [(buf.validate.field).string = {uuid: true}];
-  // Maximum total number of nodes across all node pools in a shoot cluster
-  int32 max_nodes_per_cluster = 20 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Maximum number of node pools per shoot cluster
-  int32 max_node_pools_per_cluster = 30 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Maximum number of nodes in a single node pool (autoscaler max)
-  int32 max_nodes_per_node_pool = 40 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
+  // 20, 30 and 40 carried the node caps, see OrganizationLimits.
+  reserved 20, 30, 40;
+  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
   // Default memory request applied to containers via LimitRange (mebibytes)
   int32 default_memory_request_mi = 50 [
     features.field_presence = EXPLICIT,

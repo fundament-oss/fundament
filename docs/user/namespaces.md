@@ -83,23 +83,11 @@ cluster name, a project prefix with a few generated characters (for example
 
 Resource limits are set on **Organization → Limits** and **Project → Limits**.
 See [Members and roles](./members-and-roles.md) for who is allowed to change
-them. There are two kinds, and only the second one reaches namespaces.
+them.
 
-The values in the tables below are the platform's starting values, offered in
+The values in the table below are the platform's starting values, offered in
 the console and restored by **Reset to defaults**. They are not floors: a limit
 left unset means no limit at all, not the value listed here.
-
-### Node limits (organization only)
-
-| Limit | Default | Effect |
-| --- | --- | --- |
-| Maximum nodes per cluster | 10 | Sum of all node pool maxima in a cluster |
-| Maximum node pools per cluster | 5 | Number of node pools in a cluster |
-| Maximum nodes per node pool | 5 | Upper bound of a single pool's autoscaler |
-
-These bound the hardware a cluster may grow to, not what a namespace may
-consume. See [Clusters](./clusters.md#interaction-with-organization-limits) for
-how each one is enforced.
 
 ### Per-container resource defaults
 
@@ -125,5 +113,5 @@ that specifies its own keeps them, however large. Storage and object counts are
 not limited at all.
 
 Where a namespace does run out of room is at the cluster level: pods stay
-`Pending` when the cluster cannot grow enough nodes to schedule them, which is
-where the node limits above come back in.
+`Pending` when the cluster cannot grow enough nodes to schedule them. See
+[Clusters](./clusters.md) for how a cluster grows.

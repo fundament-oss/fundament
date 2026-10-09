@@ -6,9 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
@@ -43,43 +41,6 @@ func outboxCounts(t *testing.T, db *testDB) (clusterRows, namespaceRows int) {
 	return clusterRows, namespaceRows
 }
 
-// Task 1.8: a node-cap change on organization_limits enqueues one cluster_id
-// row per active cluster in the org, and no namespace_id row.
-func TestOrgLimitsTrigger_NodeCapChangeEnqueuesClusters(t *testing.T) {
-	db := createTestDB(t)
-	orgID := insertOrg(t, db, "limits-org-nodecap")
-	insertCluster(t, db, orgID, "limits-active-a")
-	clusterB := insertCluster(t, db, orgID, "limits-active-b")
-	projectID := insertProject(t, db, clusterB, "limits-proj")
-	insertNamespace(t, db, projectID, "team-a")
-	deletedCluster := insertCluster(t, db, orgID, "limits-deleted")
-	_, err := db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.clusters SET deleted = now() WHERE id = $1`, deletedCluster)
-	require.NoError(t, err)
-
-	clustersBefore, namespacesBefore := outboxCounts(t, db)
-
-	// INSERT with a node cap fires the cluster branch only.
-	_, err = db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.organization_limits (organization_id, max_nodes_per_node_pool)
-		 VALUES ($1, 5)`, orgID)
-	require.NoError(t, err)
-
-	clustersAfter, namespacesAfter := outboxCounts(t, db)
-	require.Equal(t, clustersBefore+2, clustersAfter, "one row per active cluster, none for the soft-deleted one")
-	require.Equal(t, namespacesBefore, namespacesAfter, "node-cap change must not enqueue namespaces")
-
-	// UPDATE changing a node cap fires it again.
-	_, err = db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.organization_limits SET max_nodes_per_node_pool = 6
-		 WHERE organization_id = $1 AND deleted IS NULL`, orgID)
-	require.NoError(t, err)
-
-	clustersFinal, namespacesFinal := outboxCounts(t, db)
-	require.Equal(t, clustersAfter+2, clustersFinal)
-	require.Equal(t, namespacesAfter, namespacesFinal)
-}
-
 // Task 1.9: a default_* change on organization_limits enqueues one namespace_id
 // row per active namespace across the org's projects, and no cluster_id row.
 func TestOrgLimitsTrigger_DefaultChangeEnqueuesNamespaces(t *testing.T) {
@@ -97,7 +58,7 @@ func TestOrgLimitsTrigger_DefaultChangeEnqueuesNamespaces(t *testing.T) {
 		`UPDATE tenant.namespaces SET deleted = now() WHERE id = $1`, deletedNS)
 	require.NoError(t, err)
 
-	// INSERT with neither caps nor defaults set fires neither branch.
+	// INSERT with no defaults set enqueues nothing.
 	clustersBefore, namespacesBefore := outboxCounts(t, db)
 	_, err = db.adminPool.Exec(t.Context(),
 		`INSERT INTO tenant.organization_limits (organization_id) VALUES ($1)`, orgID)
@@ -150,9 +111,8 @@ func TestProjectLimitsTrigger_DefaultChangeEnqueuesNamespaces(t *testing.T) {
 	require.Equal(t, 2, enqueued, "the new rows reference the target project's namespaces")
 }
 
-// Task 1.11: soft-deleting an organization_limits row enqueues both cluster
-// rows (caps removed) and namespace rows (defaults removed); soft-deleting a
-// project_limits row enqueues namespace rows.
+// Task 1.11: soft-deleting an organization_limits or project_limits row that
+// carried defaults enqueues the affected namespaces, and never a cluster.
 func TestLimitsTrigger_SoftDeleteEnqueues(t *testing.T) {
 	db := createTestDB(t)
 	orgID := insertOrg(t, db, "limits-org-softdelete")
@@ -161,8 +121,8 @@ func TestLimitsTrigger_SoftDeleteEnqueues(t *testing.T) {
 	insertNamespace(t, db, projectID, "team-a")
 
 	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.organization_limits (organization_id, max_nodes_per_cluster, default_cpu_limit_m)
-		 VALUES ($1, 10, 500)`, orgID)
+		`INSERT INTO tenant.organization_limits (organization_id, default_cpu_limit_m)
+		 VALUES ($1, 500)`, orgID)
 	require.NoError(t, err)
 	_, err = db.adminPool.Exec(t.Context(),
 		`INSERT INTO tenant.project_limits (project_id, default_memory_request_mi)
@@ -177,7 +137,7 @@ func TestLimitsTrigger_SoftDeleteEnqueues(t *testing.T) {
 	require.NoError(t, err)
 
 	clustersAfter, namespacesAfter := outboxCounts(t, db)
-	require.Equal(t, clustersBefore+1, clustersAfter, "org limits soft-delete re-syncs clusters")
+	require.Equal(t, clustersBefore, clustersAfter, "org limits soft-delete must not enqueue clusters")
 	require.Equal(t, namespacesBefore+1, namespacesAfter, "org limits soft-delete re-syncs namespaces")
 
 	_, err = db.adminPool.Exec(t.Context(),
@@ -188,81 +148,6 @@ func TestLimitsTrigger_SoftDeleteEnqueues(t *testing.T) {
 	clustersFinal, namespacesFinal := outboxCounts(t, db)
 	require.Equal(t, clustersAfter, clustersFinal, "project limits soft-delete must not enqueue clusters")
 	require.Equal(t, namespacesAfter+1, namespacesFinal, "project limits soft-delete re-syncs namespaces")
-}
-
-// Task 4.4: syncCluster loads the owning org's node caps into ClusterToSync.
-func TestSyncPopulatesNodeLimits(t *testing.T) {
-	t.Parallel()
-
-	db := createTestDB(t)
-	mock := newMock(t)
-	h := newTestHandler(t, db, mock)
-
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-limits")
-	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 4)
-	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.organization_limits
-		     (organization_id, max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool)
-		 VALUES ($1, 10, 3, 5)`, acmeCorpOrgID)
-	require.NoError(t, err)
-
-	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
-	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
-
-	require.Len(t, mock.ApplyCalls, 1)
-	limits := mock.ApplyCalls[0].NodeLimits
-	require.NotNil(t, limits.MaxNodesPerCluster)
-	require.EqualValues(t, 10, *limits.MaxNodesPerCluster)
-	require.NotNil(t, limits.MaxNodePoolsPerCluster)
-	require.EqualValues(t, 3, *limits.MaxNodePoolsPerCluster)
-	require.NotNil(t, limits.MaxNodesPerNodePool)
-	require.EqualValues(t, 5, *limits.MaxNodesPerNodePool)
-}
-
-// Task 4.4: no active limits row means all caps nil (unlimited).
-func TestSyncNoLimitsRowMeansUnlimited(t *testing.T) {
-	t.Parallel()
-
-	db := createTestDB(t)
-	mock := newMock(t)
-	h := newTestHandler(t, db, mock)
-
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-no-limits")
-
-	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
-	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
-
-	require.Len(t, mock.ApplyCalls, 1)
-	limits := mock.ApplyCalls[0].NodeLimits
-	require.Nil(t, limits.MaxNodesPerCluster)
-	require.Nil(t, limits.MaxNodePoolsPerCluster)
-	require.Nil(t, limits.MaxNodesPerNodePool)
-}
-
-// Tasks 4.3/4.4: an aggregate-cap violation fails the sync through syncError
-// with a sync_failed event, and the error names the cap and the observed value.
-func TestSyncAggregateCapExceededFails(t *testing.T) {
-	t.Parallel()
-
-	db := createTestDB(t)
-	mock := newMock(t)
-	h := newTestHandler(t, db, mock)
-
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-cap-exceeded")
-	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
-	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.organization_limits (organization_id, max_nodes_per_cluster)
-		 VALUES ($1, 3)`, acmeCorpOrgID)
-	require.NoError(t, err)
-
-	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
-	err = h.Sync(t.Context(), clusterID, sc)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "max_nodes_per_cluster is 3")
-	require.ErrorContains(t, err, "sum to 5")
-
-	assertEventExists(t, db, clusterID, "sync_failed")
-	assertNoEvent(t, db, clusterID, "sync_succeeded")
 }
 
 // Tasks 2.2/6.6 end-to-end: the namespace sync reads the limits tables through
@@ -313,8 +198,8 @@ func TestNamespaceSync_LimitRangeFromMergedDefaults(t *testing.T) {
 	require.Nil(t, mock.GetLimitRange(clusterID, clusterNS), "cleared defaults must remove the LimitRange")
 }
 
-// Task 1.12: a limit change affecting zero active clusters/namespaces inserts
-// no rows and does not error.
+// Task 1.12: a limit change affecting zero active namespaces inserts no rows
+// and does not error.
 func TestLimitsTrigger_NoActiveTargetsNoop(t *testing.T) {
 	db := createTestDB(t)
 	orgID := insertOrg(t, db, "limits-org-empty")
@@ -322,11 +207,11 @@ func TestLimitsTrigger_NoActiveTargetsNoop(t *testing.T) {
 	clustersBefore, namespacesBefore := outboxCounts(t, db)
 
 	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.organization_limits (organization_id, max_nodes_per_cluster, default_cpu_limit_m)
-		 VALUES ($1, 10, 500)`, orgID)
+		`INSERT INTO tenant.organization_limits (organization_id, default_cpu_limit_m)
+		 VALUES ($1, 500)`, orgID)
 	require.NoError(t, err)
 
 	clustersAfter, namespacesAfter := outboxCounts(t, db)
-	require.Equal(t, clustersBefore, clustersAfter)
+	require.Equal(t, clustersBefore, clustersAfter, "a limits change must never enqueue clusters")
 	require.Equal(t, namespacesBefore, namespacesAfter)
 }

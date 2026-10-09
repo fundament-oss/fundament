@@ -43,15 +43,6 @@ func (s *Server) GetOrganizationLimits(
 
 func organizationLimitsFromRow(row *db.OrganizationLimitsGetRow) *organizationv1.OrganizationLimits {
 	limits := organizationv1.OrganizationLimits_builder{}.Build()
-	if row.MaxNodesPerCluster.Valid {
-		limits.SetMaxNodesPerCluster(row.MaxNodesPerCluster.Int32)
-	}
-	if row.MaxNodePoolsPerCluster.Valid {
-		limits.SetMaxNodePoolsPerCluster(row.MaxNodePoolsPerCluster.Int32)
-	}
-	if row.MaxNodesPerNodePool.Valid {
-		limits.SetMaxNodesPerNodePool(row.MaxNodesPerNodePool.Int32)
-	}
 	if row.DefaultMemoryRequestMi.Valid {
 		limits.SetDefaultMemoryRequestMi(row.DefaultMemoryRequestMi.Int32)
 	}
