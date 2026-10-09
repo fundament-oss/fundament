@@ -26,8 +26,8 @@ projects. Service accounts follow the same model.
 Organization admins can invite new members, change roles and remove members.
 
 **Organization → Settings** and **Organization → Limits** are also
-admin-only; limits bound what the organization's clusters and projects may
-consume in total.
+admin-only; limits set the resource requests and limits containers get in the
+organization's namespaces when a workload does not set its own.
 
 ## Managing project members
 

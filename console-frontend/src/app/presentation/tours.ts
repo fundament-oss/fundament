@@ -1012,8 +1012,8 @@ const securityOfficer: Tour = {
       id: 'org-limits',
       title: loc('Grenzen die centraal vastliggen', 'Limits fixed centrally'),
       lead: loc(
-        'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
-        'Maximum nodes and default resource limits apply across the whole organisation.',
+        'Standaard resource requests en limits gelden voor de hele organisatie.',
+        'Default resource requests and limits apply across the whole organisation.',
       ),
       route: '/limits',
       skippable: true,

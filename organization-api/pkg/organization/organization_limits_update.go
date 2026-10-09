@@ -29,9 +29,6 @@ func (s *Server) UpdateOrganizationLimits(
 
 	params := db.OrganizationLimitsUpsertParams{
 		OrganizationID:         organizationID,
-		MaxNodesPerCluster:     pgtype.Int4{Int32: req.GetMaxNodesPerCluster(), Valid: req.HasMaxNodesPerCluster()},
-		MaxNodePoolsPerCluster: pgtype.Int4{Int32: req.GetMaxNodePoolsPerCluster(), Valid: req.HasMaxNodePoolsPerCluster()},
-		MaxNodesPerNodePool:    pgtype.Int4{Int32: req.GetMaxNodesPerNodePool(), Valid: req.HasMaxNodesPerNodePool()},
 		DefaultMemoryRequestMi: pgtype.Int4{Int32: req.GetDefaultMemoryRequestMi(), Valid: req.HasDefaultMemoryRequestMi()},
 		DefaultMemoryLimitMi:   pgtype.Int4{Int32: req.GetDefaultMemoryLimitMi(), Valid: req.HasDefaultMemoryLimitMi()},
 		DefaultCpuRequestM:     pgtype.Int4{Int32: req.GetDefaultCpuRequestM(), Valid: req.HasDefaultCpuRequestM()},

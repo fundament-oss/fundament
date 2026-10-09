@@ -703,14 +703,9 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.Shoot, error) {
-	workers, err := r.buildWorkers(cluster)
-	if err != nil {
-		return nil, err
-	}
-
 	provider := gardencorev1beta1.Provider{
 		Type:    r.provider.Type,
-		Workers: workers,
+		Workers: r.buildWorkers(cluster),
 	}
 	// Provider-specific extension configs, stamped verbatim. Required by metal
 	// (partition/project/firewall + control plane); the local provider sets neither.
@@ -801,19 +796,18 @@ func (r *RealClient) buildNetworking() *gardencorev1beta1.Networking {
 	return n
 }
 
-// buildWorkers converts node pools to Gardener worker groups and enforces the
-// organization node caps: per-pool maxima are clamped in place and the
-// aggregate caps fail the build. Every path that constructs workers goes
-// through here, so a valid worker set can never bypass enforcement.
+// Default worker group autoscaler bounds used when a cluster has no node pools.
+const (
+	defaultWorkerMinimum int32 = 1
+	defaultWorkerMaximum int32 = 3
+)
+
+// buildWorkers converts node pools to Gardener worker groups.
 // If the cluster has no node pools, a default worker group is created.
 // All workers share the same machine image from ProviderConfig.
 // TODO: support per-pool machine image once tenant.node_pools gains an image column.
 // TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
-func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.Worker, error) {
-	if err := validateNodeLimits(cluster.NodePools, cluster.NodeLimits); err != nil {
-		return nil, err
-	}
-
+func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
 	if len(cluster.NodePools) == 0 {
 		// Declare separately to avoid taking the address of a local variable that
 		// would be shared if this were a loop (consistent with the loop below).
@@ -838,8 +832,7 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.W
 				MaxUnavailable: &maxUnavailable,
 			},
 		}
-		clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
-		return workers, nil
+		return workers
 	}
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
@@ -879,16 +872,12 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.W
 			workers[i].Zones = []string{np.Zone}
 		}
 	}
-	clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
-	return workers, nil
+	return workers
 }
 
 // updateShootSpec updates an existing Shoot's spec and labels.
 func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) error {
-	workers, err := r.buildWorkers(cluster)
-	if err != nil {
-		return err
-	}
+	workers := r.buildWorkers(cluster)
 
 	if shoot.Labels == nil {
 		shoot.Labels = make(map[string]string)

@@ -14,9 +14,6 @@ import (
 
 const organizationLimitsGet = `-- name: OrganizationLimitsGet :one
 SELECT
-    max_nodes_per_cluster,
-    max_node_pools_per_cluster,
-    max_nodes_per_node_pool,
     default_memory_request_mi,
     default_memory_limit_mi,
     default_cpu_request_m,
@@ -31,9 +28,6 @@ type OrganizationLimitsGetParams struct {
 }
 
 type OrganizationLimitsGetRow struct {
-	MaxNodesPerCluster     pgtype.Int4
-	MaxNodePoolsPerCluster pgtype.Int4
-	MaxNodesPerNodePool    pgtype.Int4
 	DefaultMemoryRequestMi pgtype.Int4
 	DefaultMemoryLimitMi   pgtype.Int4
 	DefaultCpuRequestM     pgtype.Int4
@@ -44,9 +38,6 @@ func (q *Queries) OrganizationLimitsGet(ctx context.Context, arg OrganizationLim
 	row := q.db.QueryRow(ctx, organizationLimitsGet, arg.OrganizationID)
 	var i OrganizationLimitsGetRow
 	err := row.Scan(
-		&i.MaxNodesPerCluster,
-		&i.MaxNodePoolsPerCluster,
-		&i.MaxNodesPerNodePool,
 		&i.DefaultMemoryRequestMi,
 		&i.DefaultMemoryLimitMi,
 		&i.DefaultCpuRequestM,
@@ -58,9 +49,6 @@ func (q *Queries) OrganizationLimitsGet(ctx context.Context, arg OrganizationLim
 const organizationLimitsUpsert = `-- name: OrganizationLimitsUpsert :one
 INSERT INTO tenant.organization_limits (
     organization_id,
-    max_nodes_per_cluster,
-    max_node_pools_per_cluster,
-    max_nodes_per_node_pool,
     default_memory_request_mi,
     default_memory_limit_mi,
     default_cpu_request_m,
@@ -70,23 +58,14 @@ INSERT INTO tenant.organization_limits (
     $2,
     $3,
     $4,
-    $5,
-    $6,
-    $7,
-    $8
+    $5
 )
 ON CONFLICT ON CONSTRAINT organization_limits_uq_org DO UPDATE SET
-    max_nodes_per_cluster      = EXCLUDED.max_nodes_per_cluster,
-    max_node_pools_per_cluster = EXCLUDED.max_node_pools_per_cluster,
-    max_nodes_per_node_pool    = EXCLUDED.max_nodes_per_node_pool,
     default_memory_request_mi  = EXCLUDED.default_memory_request_mi,
     default_memory_limit_mi    = EXCLUDED.default_memory_limit_mi,
     default_cpu_request_m      = EXCLUDED.default_cpu_request_m,
     default_cpu_limit_m        = EXCLUDED.default_cpu_limit_m
 RETURNING
-    max_nodes_per_cluster,
-    max_node_pools_per_cluster,
-    max_nodes_per_node_pool,
     default_memory_request_mi,
     default_memory_limit_mi,
     default_cpu_request_m,
@@ -95,9 +74,6 @@ RETURNING
 
 type OrganizationLimitsUpsertParams struct {
 	OrganizationID         uuid.UUID
-	MaxNodesPerCluster     pgtype.Int4
-	MaxNodePoolsPerCluster pgtype.Int4
-	MaxNodesPerNodePool    pgtype.Int4
 	DefaultMemoryRequestMi pgtype.Int4
 	DefaultMemoryLimitMi   pgtype.Int4
 	DefaultCpuRequestM     pgtype.Int4
@@ -105,9 +81,6 @@ type OrganizationLimitsUpsertParams struct {
 }
 
 type OrganizationLimitsUpsertRow struct {
-	MaxNodesPerCluster     pgtype.Int4
-	MaxNodePoolsPerCluster pgtype.Int4
-	MaxNodesPerNodePool    pgtype.Int4
 	DefaultMemoryRequestMi pgtype.Int4
 	DefaultMemoryLimitMi   pgtype.Int4
 	DefaultCpuRequestM     pgtype.Int4
@@ -117,9 +90,6 @@ type OrganizationLimitsUpsertRow struct {
 func (q *Queries) OrganizationLimitsUpsert(ctx context.Context, arg OrganizationLimitsUpsertParams) (OrganizationLimitsUpsertRow, error) {
 	row := q.db.QueryRow(ctx, organizationLimitsUpsert,
 		arg.OrganizationID,
-		arg.MaxNodesPerCluster,
-		arg.MaxNodePoolsPerCluster,
-		arg.MaxNodesPerNodePool,
 		arg.DefaultMemoryRequestMi,
 		arg.DefaultMemoryLimitMi,
 		arg.DefaultCpuRequestM,
@@ -127,9 +97,6 @@ func (q *Queries) OrganizationLimitsUpsert(ctx context.Context, arg Organization
 	)
 	var i OrganizationLimitsUpsertRow
 	err := row.Scan(
-		&i.MaxNodesPerCluster,
-		&i.MaxNodePoolsPerCluster,
-		&i.MaxNodesPerNodePool,
 		&i.DefaultMemoryRequestMi,
 		&i.DefaultMemoryLimitMi,
 		&i.DefaultCpuRequestM,

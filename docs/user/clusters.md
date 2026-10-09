@@ -71,20 +71,6 @@ longer needed, within that range. The **Nodes** tab shows each pool's current
 node count alongside its bounds. There is no manual "set the node count to N"
 operation; set the minimum instead.
 
-### Interaction with organization limits
-
-The node limits on **Organization → Limits** bound what a cluster may ask for,
-and they behave differently per limit:
-
-- **Maximum nodes per node pool** silently clamps each pool's maximum (and its
-  minimum, if that would end up above the clamped maximum). A pool asking for
-  more nodes than the limit allows is applied at the limit rather than
-  rejected.
-- **Maximum node pools per cluster** and **maximum nodes per cluster** (the sum
-  of all clamped pool maxima) reject the change: the cluster fails to apply
-  with an "organization node limit exceeded" error instead of silently
-  shrinking.
-
 A cluster with no node pools at all still gets one default worker pool, sized
 1 to 3 nodes.
 
