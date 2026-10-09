@@ -130,3 +130,24 @@ INSERT INTO tenant.cluster_events (
 )
 VALUES ($1, 'sync_requested', $2);
 
+-- name: ClusterDefaultsGet :one
+-- The cluster's per-container resource defaults. A NULL column means no
+-- default is set for that field.
+SELECT
+    default_memory_request_mi,
+    default_memory_limit_mi,
+    default_cpu_request_m,
+    default_cpu_limit_m
+FROM tenant.clusters
+WHERE id = @id
+  AND deleted IS NULL;
+
+-- name: ClusterDefaultsUpdate :execrows
+-- Replaces all four defaults: a NULL argument clears that default. Lowering a
+-- default below an active project's raises cluster_defaults_below_project.
+UPDATE tenant.clusters
+SET default_memory_request_mi = @default_memory_request_mi,
+    default_memory_limit_mi   = @default_memory_limit_mi,
+    default_cpu_request_m     = @default_cpu_request_m,
+    default_cpu_limit_m       = @default_cpu_limit_m
+WHERE id = @id AND deleted IS NULL;
