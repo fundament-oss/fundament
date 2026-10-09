@@ -84,6 +84,75 @@ func (q *Queries) ClusterCreateSyncRequestedEvent(ctx context.Context, arg Clust
 	return err
 }
 
+const clusterDefaultsGet = `-- name: ClusterDefaultsGet :one
+SELECT
+    default_memory_request_mi,
+    default_memory_limit_mi,
+    default_cpu_request_m,
+    default_cpu_limit_m
+FROM tenant.clusters
+WHERE id = $1
+  AND deleted IS NULL
+`
+
+type ClusterDefaultsGetParams struct {
+	ID uuid.UUID
+}
+
+type ClusterDefaultsGetRow struct {
+	DefaultMemoryRequestMi pgtype.Int4
+	DefaultMemoryLimitMi   pgtype.Int4
+	DefaultCpuRequestM     pgtype.Int4
+	DefaultCpuLimitM       pgtype.Int4
+}
+
+// The cluster's per-container resource defaults. A NULL column means no
+// default is set for that field.
+func (q *Queries) ClusterDefaultsGet(ctx context.Context, arg ClusterDefaultsGetParams) (ClusterDefaultsGetRow, error) {
+	row := q.db.QueryRow(ctx, clusterDefaultsGet, arg.ID)
+	var i ClusterDefaultsGetRow
+	err := row.Scan(
+		&i.DefaultMemoryRequestMi,
+		&i.DefaultMemoryLimitMi,
+		&i.DefaultCpuRequestM,
+		&i.DefaultCpuLimitM,
+	)
+	return i, err
+}
+
+const clusterDefaultsUpdate = `-- name: ClusterDefaultsUpdate :execrows
+UPDATE tenant.clusters
+SET default_memory_request_mi = $1,
+    default_memory_limit_mi   = $2,
+    default_cpu_request_m     = $3,
+    default_cpu_limit_m       = $4
+WHERE id = $5 AND deleted IS NULL
+`
+
+type ClusterDefaultsUpdateParams struct {
+	DefaultMemoryRequestMi pgtype.Int4
+	DefaultMemoryLimitMi   pgtype.Int4
+	DefaultCpuRequestM     pgtype.Int4
+	DefaultCpuLimitM       pgtype.Int4
+	ID                     uuid.UUID
+}
+
+// Replaces all four defaults: a NULL argument clears that default. Lowering a
+// default below an active project's raises cluster_defaults_below_project.
+func (q *Queries) ClusterDefaultsUpdate(ctx context.Context, arg ClusterDefaultsUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterDefaultsUpdate,
+		arg.DefaultMemoryRequestMi,
+		arg.DefaultMemoryLimitMi,
+		arg.DefaultCpuRequestM,
+		arg.DefaultCpuLimitM,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clusterDelete = `-- name: ClusterDelete :execrows
 UPDATE tenant.clusters
 SET deleted = NOW()

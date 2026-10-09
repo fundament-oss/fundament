@@ -23,16 +23,16 @@ const (
 	AnnotationUserName = "fundament.io/user-name"
 
 	// LimitRangeName is the name of the managed LimitRange that materializes
-	// the merged organization/project per-container resource defaults inside a
+	// the effective cluster/project per-container resource defaults inside a
 	// project namespace.
 	LimitRangeName = "fundament-defaults"
 )
 
-// LimitDefaults are the effective per-container resource defaults applied as
+// ContainerDefaults are the effective per-container resource defaults applied as
 // the managed LimitRange. Nil fields are omitted from the object. CPU values
-// are millicores, memory values mebibytes (matching the tenant.*_limits
-// column units).
-type LimitDefaults struct {
+// are millicores, memory values mebibytes (matching the default_* column
+// units on tenant.clusters and tenant.projects).
+type ContainerDefaults struct {
 	CPURequestMilli *int32
 	CPULimitMilli   *int32
 	MemoryRequestMi *int32
@@ -86,7 +86,7 @@ type ShootAccess interface {
 
 	// EnsureLimitRange creates or updates the managed fundament-defaults
 	// LimitRange in a namespace to match the given defaults.
-	EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error
+	EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults ContainerDefaults, labels map[string]string) error
 
 	// DeleteLimitRange deletes the managed fundament-defaults LimitRange from
 	// a namespace (no-op if absent).
