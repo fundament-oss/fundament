@@ -34,7 +34,7 @@ func (d *NamespaceDataSource) Metadata(ctx context.Context, req datasource.Metad
 // Schema defines the schema for the data source.
 func (d *NamespaceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches a single namespace by cluster name, project name, and namespace name.",
+		Description: "Fetches a namespace of a Fundament project by cluster, project and namespace name. In the cluster it is `tnt-<project>--<name>`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the namespace.",

@@ -30,6 +30,12 @@ cluster has access to the same set of plugins.
   add new ones.
 - **Cluster → Namespaces** shows every namespace on a cluster together with the
   project that owns it, which is the view cluster admins use.
+- `functl` and the [OpenTofu provider](./opentofu-provider.md)
+  (`fundament_namespace`) do the same.
+
+A namespace created directly in the cluster, for example with
+`kubectl create namespace`, is not a Fundament namespace: it belongs to no
+project, Fundament does not list it, and project members get no rights in it.
 
 ## Naming
 
