@@ -290,7 +290,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	tflog.Debug(ctx, "Waiting for cluster to be running before installing plugin", map[string]any{"cluster_id": clusterID})
 
-	if err := waitForClusterRunning(ctx, r.client, clusterID); err != nil {
+	if _, err := waitForClusterRunning(ctx, r.client, clusterID); err != nil {
 		resp.Diagnostics.AddError(
 			"Cluster Not Ready",
 			fmt.Sprintf("Cluster %q did not reach RUNNING state: %s", clusterID, err.Error()),

@@ -3,9 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -20,6 +22,7 @@ import (
 var _ resource.Resource = &ClusterResource{}
 var _ resource.ResourceWithConfigure = &ClusterResource{}
 var _ resource.ResourceWithImportState = &ClusterResource{}
+var _ resource.ResourceWithModifyPlan = &ClusterResource{}
 
 // ClusterResource defines the resource implementation.
 type ClusterResource struct {
@@ -34,7 +37,14 @@ type ClusterResourceModel struct {
 	KubernetesVersion types.String           `tfsdk:"kubernetes_version"`
 	Status            types.String           `tfsdk:"status"`
 	NodePools         []ClusterNodePoolModel `tfsdk:"node_pool"`
+	Timeouts          timeouts.Value         `tfsdk:"timeouts"`
 }
+
+const (
+	defaultClusterCreateTimeout = 30 * time.Minute
+	defaultClusterUpdateTimeout = 30 * time.Minute
+	defaultClusterDeleteTimeout = 30 * time.Minute
+)
 
 // NewClusterResource creates a new ClusterResource.
 func NewClusterResource() resource.Resource {
@@ -49,7 +59,15 @@ func (r *ClusterResource) Metadata(ctx context.Context, req resource.MetadataReq
 // Schema defines the schema for the resource.
 func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a Kubernetes cluster in Fundament.",
+		Description: "Manages a Kubernetes cluster in Fundament.\n\n" +
+			"A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out " +
+			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
+			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
+			"cluster does not run within the timeout.\n\n" +
+			"When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. " +
+			"If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address " +
+			"to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish " +
+			"stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the cluster.",
@@ -77,12 +95,20 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster (e.g., provisioning, running, stopped).",
+				Description: "The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
 				Computed:    true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"node_pool": clusterNodePoolBlock(),
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Create:            true,
+				Update:            true,
+				Delete:            true,
+				CreateDescription: "How long to wait for a new cluster to run (default 30m).",
+				UpdateDescription: "How long to wait for a change to be rolled out (default 30m).",
+				DeleteDescription: "How long to wait for the cluster to be gone (default 30m).",
+			}),
 		},
 	}
 }
@@ -144,10 +170,11 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 
 	createResp, err := createIdempotent(ctx, r.client.ClusterService.CreateCluster, createReq)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Cluster",
-			fmt.Sprintf("Unable to create cluster: %s", err.Error()),
-		)
+		detail := fmt.Sprintf("Unable to create cluster: %s.", err.Error())
+		if connect.CodeOf(err) == connect.CodeAlreadyExists {
+			detail += r.existingClusterHint(ctx, plan.Name.ValueString())
+		}
+		resp.Diagnostics.AddError("Unable to Create Cluster", detail)
 		return
 	}
 
@@ -171,23 +198,26 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Read the cluster to get the full state including status.
-	// Retry on permission_denied, OpenFGA needs time to sync
-	getReq := organizationv1.GetClusterRequest_builder{
-		ClusterId: createResp.GetClusterId(),
-	}.Build()
-
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
+	createTimeout, diags := plan.Timeouts.Create(ctx, defaultClusterCreateTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Created Cluster",
-			fmt.Sprintf("Unable to read created cluster: %s", err.Error()),
-		)
+		detail := fmt.Sprintf("Cluster %q: %s.", plan.Name.ValueString(), err)
+		if waitInconclusive(err) {
+			detail += " Fundament keeps building it, but OpenTofu has marked it tainted, so the next apply deletes and " +
+				"recreates it. To keep this cluster instead, run `tofu untaint` on its address: Fundament finishes it, " +
+				"and `tofu plan` shows its status. Set `timeouts { create = ... }` to wait longer next time."
+		}
+		resp.Diagnostics.AddError("Cluster Did Not Start", detail)
 		return
 	}
 
-	// Map response to state
-	plan.Status = types.StringValue(clusterStatusToString(getResp.GetCluster().GetStatus()))
+	plan.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
 
 	tflog.Info(ctx, "Created cluster", map[string]any{
 		"id":     plan.ID.ValueString(),
@@ -226,11 +256,9 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if err != nil {
 		// Check if the cluster was deleted (not found)
 		// Connect errors include the code in the error message
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			tflog.Info(ctx, "Cluster not found, removing from state", map[string]any{
-				"id": state.ID.ValueString(),
-			})
-			resp.State.RemoveResource(ctx)
+		// The API answers both for a cluster whose deletion was requested.
+		if code := connect.CodeOf(err); code == connect.CodeNotFound || code == connect.CodePermissionDenied {
+			r.readMissingCluster(ctx, &state, err, resp)
 			return
 		}
 
@@ -268,6 +296,76 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 	})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// existingClusterHint tells how to take over a cluster that already exists
+// under this name, for example one an apply created before OpenTofu was
+// killed without saving its state.
+func (r *ClusterResource) existingClusterHint(ctx context.Context, name string) string {
+	resp, err := r.client.ClusterService.GetClusterByName(ctx, organizationv1.GetClusterByNameRequest_builder{Name: name}.Build())
+	if err != nil {
+		return " If an earlier apply created it and was stopped before saving it, take it over with `tofu import` and the cluster's ID."
+	}
+	return fmt.Sprintf(" If an earlier apply created it and was stopped before saving it, take it over with: "+
+		"tofu import <address of this resource> %s", resp.GetCluster().GetId())
+}
+
+// readMissingCluster handles a cluster GetCluster no longer returns. That
+// happens as soon as its deletion is requested, while Gardener still removes
+// it: such a cluster stays in state as deleting, so the next destroy waits
+// for it and the next apply replaces it (see ModifyPlan). A cluster that is
+// gone leaves the state. A cluster listed with another status was refused
+// for another reason, such as a lost permission, which getErr reports.
+func (r *ClusterResource) readMissingCluster(ctx context.Context, state *ClusterResourceModel, getErr error, resp *resource.ReadResponse) {
+	listed, err := r.listedCluster(ctx, state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Cluster", err.Error())
+		return
+	}
+	if listed == nil {
+		tflog.Info(ctx, "Cluster not found, removing from state", map[string]any{"id": state.ID.ValueString()})
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if listed.GetStatus() != organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING {
+		resp.Diagnostics.AddError("Unable to Read Cluster", fmt.Sprintf("Unable to read cluster %q: %s", state.Name.ValueString(), getErr))
+		return
+	}
+
+	tflog.Info(ctx, "Cluster is being deleted", map[string]any{"id": state.ID.ValueString()})
+	state.Status = types.StringValue(clusterStatusToString(listed.GetStatus()))
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+// listedCluster returns the cluster as ListClusters lists it, or nil when it
+// is not listed. ListClusters keeps a cluster until Gardener has removed it.
+func (r *ClusterResource) listedCluster(ctx context.Context, clusterID string) (*organizationv1.ListClustersResponse_ClusterSummary, error) {
+	listResp, err := r.client.ClusterService.ListClusters(ctx, organizationv1.ListClustersRequest_builder{}.Build())
+	if err != nil {
+		return nil, fmt.Errorf("unable to list clusters: %w", err)
+	}
+	for _, c := range listResp.GetClusters() {
+		if c.GetId() == clusterID {
+			return c, nil
+		}
+	}
+	return nil, nil
+}
+
+// ModifyPlan replaces a cluster that is being deleted: the apply then waits
+// until it is gone and creates it again.
+func (r *ClusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) { //nolint:gocritic // signature set by resource.ResourceWithModifyPlan
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var status types.String
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("status"), &status)...)
+	if status.ValueString() == clusterStatusToString(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING) {
+		// A replacement only takes effect on an attribute that changes.
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status"), types.StringUnknown())...)
+		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("status"))
+	}
 }
 
 // Update updates the cluster configuration.
@@ -319,29 +417,22 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Read the cluster to get the updated state.
-	getReq := organizationv1.GetClusterRequest_builder{
-		ClusterId: state.ID.ValueString(),
-	}.Build()
-
-	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
-	if err != nil {
-		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			resp.Diagnostics.AddError(
-				"Cluster Not Found After Update",
-				fmt.Sprintf("Cluster %q was updated but could not be read. It may have been deleted.", state.ID.ValueString()),
-			)
-		default:
-			resp.Diagnostics.AddError(
-				"Unable to Read Updated Cluster",
-				fmt.Sprintf("Unable to read updated cluster: %s", err.Error()),
-			)
-		}
+	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultClusterUpdateTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	cluster := getResp.GetCluster()
+	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString())
+	if err != nil {
+		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
+		if waitInconclusive(err) {
+			detail += " Fundament has the change and keeps applying it; the next plan shows what is left to do."
+		}
+		resp.Diagnostics.AddError("Cluster Update Did Not Complete", detail)
+		return
+	}
 
 	// Update the plan with the server response
 	plan.ID = types.StringValue(cluster.GetId())
@@ -422,12 +513,22 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 	_, err := r.client.ClusterService.DeleteCluster(ctx, deleteReq)
 	if err != nil {
 		switch connect.CodeOf(err) {
-		case connect.CodeNotFound:
-			// Cluster already deleted, this is fine
-			tflog.Info(ctx, "Cluster already deleted", map[string]any{
+		case connect.CodeNotFound, connect.CodePermissionDenied:
+			// Once a deletion is requested, for example by a destroy that timed
+			// out, the API answers like this for the cluster. Only a cluster
+			// that is listed and not being deleted is a real refusal.
+			listed, listErr := r.listedCluster(ctx, state.ID.ValueString())
+			if listErr != nil {
+				resp.Diagnostics.AddError("Unable to Delete Cluster", listErr.Error())
+				return
+			}
+			if listed != nil && listed.GetStatus() != organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING {
+				resp.Diagnostics.AddError("Unable to Delete Cluster", fmt.Sprintf("Unable to delete cluster %q: %s", state.Name.ValueString(), err.Error()))
+				return
+			}
+			tflog.Info(ctx, "Cluster deletion already requested", map[string]any{
 				"id": state.ID.ValueString(),
 			})
-			return
 		case connect.CodeFailedPrecondition:
 			resp.Diagnostics.AddError(
 				"Cluster Cannot Be Deleted",
@@ -441,6 +542,22 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 			)
 			return
 		}
+	}
+
+	deleteTimeout, diags := state.Timeouts.Delete(ctx, defaultClusterDeleteTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+	if err := waitForClusterDeleted(waitCtx, r.client, state.ID.ValueString()); err != nil {
+		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
+		if waitInconclusive(err) {
+			detail += " Fundament keeps deleting it; run the destroy again to wait for it."
+		}
+		resp.Diagnostics.AddError("Cluster Deletion Did Not Complete", detail)
+		return
 	}
 
 	tflog.Info(ctx, "Deleted cluster", map[string]any{
