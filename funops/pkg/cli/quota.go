@@ -128,13 +128,16 @@ func (c *OrganizationQuotaSetNodesCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to resolve machine type: %w", err)
 	}
 
-	err = ctx.Queries.MachineQuotaSet(bgCtx, db.MachineQuotaSetParams{
+	written, err := ctx.Queries.MachineQuotaSet(bgCtx, db.MachineQuotaSetParams{
 		OrganizationID:      orgID,
 		RegionMachineTypeID: offering,
 		MaxNodes:            c.MaxNodes,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to set node quota: %w", err)
+	}
+	if written != 1 {
+		return fmt.Errorf("organization %q not found", c.Organization)
 	}
 
 	ctx.Logger.Info("node quota set", "organization", c.Organization,

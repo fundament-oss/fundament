@@ -28,11 +28,22 @@ JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_
 WHERE catalog.regions.name = @region_name
   AND catalog.machine_types.name = @machine_type_name;
 
--- name: MachineQuotaSet :exec
+-- name: MachineQuotaSet :execrows
 -- One row per organization and offering, never removed: setting 0 is how a
 -- quota is taken away, and reads the same as no row to the trigger.
+-- The organization row is locked the way node_pools_tr_verify_quota locks it,
+-- so a pool growing against the old quota and this lowering cannot both
+-- commit: one waits for the other. No row means the organization is gone.
+WITH locked AS (
+    SELECT tenant.organizations.id
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = @organization_id
+      AND tenant.organizations.deleted IS NULL
+    FOR NO KEY UPDATE
+)
 INSERT INTO tenant.organization_machine_quotas (organization_id, region_machine_type_id, max_nodes)
-VALUES (@organization_id, @region_machine_type_id, @max_nodes)
+SELECT locked.id, @region_machine_type_id, @max_nodes
+FROM locked
 ON CONFLICT (organization_id, region_machine_type_id) DO UPDATE
 SET max_nodes = EXCLUDED.max_nodes,
     updated = now();

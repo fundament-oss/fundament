@@ -18,7 +18,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
-import { NodePoolNotCreated } from '../new-cluster-summary/new-cluster-summary.component';
+import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
 import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -327,13 +327,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     return `${pools.length} node pools were not created`;
   });
 
-  /** Why, in the API's words: a pool refused for its quota is not one to add
-   *  again, so the reason comes before the advice. */
+  /** Why, pool by pool: a pool refused for its quota is not one to add again,
+   *  so each name comes with its own reason rather than a single piece of advice. */
   nodePoolsNotCreatedDetail = computed(() => {
-    const reasons = [...new Set(this.nodePoolsNotCreated().map((pool) => pool.reason))].filter(
-      (reason) => reason !== '',
-    );
-    return reasons.length > 0 ? reasons.join(' ') : 'Add it again under Node pools.';
+    const pools = this.nodePoolsNotCreated();
+    return pools.length > 0 ? describeRefusals(pools) : null;
   });
 
   isLoading = signal<boolean>(true);

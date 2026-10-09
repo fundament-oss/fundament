@@ -1,4 +1,3 @@
-import { ConnectError } from '@connectrpc/connect';
 import {
   Component,
   inject,
@@ -11,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
+import { NodePoolNotCreated, refusalReason } from '../utils/node-pool-refusal';
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
@@ -34,19 +34,6 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
-
-/** A pool the wizard asked for and the API refused, in the API's own words. */
-export interface NodePoolNotCreated {
-  name: string;
-  reason: string;
-}
-
-/** The message without the "[code]" prefix a ConnectError puts in front of it. */
-function rejectionReason(reason: unknown): string {
-  if (reason instanceof ConnectError) return reason.rawMessage;
-  if (reason instanceof Error) return reason.message;
-  return '';
-}
 
 @Component({
   selector: 'app-new-cluster-summary',
@@ -200,7 +187,7 @@ export default class NewClusterSummaryComponent {
     return pools.flatMap((pool, i) => {
       const uitkomst = uitkomsten[i];
       if (uitkomst.status !== 'rejected') return [];
-      return [{ name: pool.name, reason: rejectionReason(uitkomst.reason) }];
+      return [{ name: pool.name, reason: refusalReason(uitkomst.reason) }];
     });
   }
 

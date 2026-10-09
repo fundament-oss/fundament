@@ -27,10 +27,12 @@ A cluster belongs to one organization. An organization can have multiple cluster
 Every organization has quotas, set by the platform operator: how many clusters
 it may have, and how many nodes of each machine type it may have per region,
 counted as the sum of the maximum sizes of its node pools. A new organization
-may have one cluster and no nodes at all until the operator sets its node
-quotas, so a fresh organization asks its operator before building anything.
-Quotas stop new clusters and new or larger node pools; they never touch what
-already runs, even when lowered below it. See [Quotas](./clusters.md#quotas).
+may have one cluster, and no node pools of its own until the operator sets its
+node quotas: such a cluster runs on the platform's default worker pool, which
+is outside the quota. So a fresh organization asks its operator before adding
+node pools or a second cluster. Quotas stop new clusters and new or larger
+node pools; they never touch what already runs, even when lowered below it.
+See [Quotas](./clusters.md#quotas).
 
 ## Project
 
