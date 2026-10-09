@@ -27,7 +27,7 @@ Organization admins can invite new members, change roles and remove members.
 
 **Organization → Settings** is also admin-only, as is a cluster's **Defaults**
 block: an organization admin sets the resource requests and limits containers on
-that cluster get when a workload sets none of its own.
+that cluster get for each request or limit they leave unset.
 
 ## Managing project members
 

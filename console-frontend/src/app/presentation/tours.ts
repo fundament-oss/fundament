@@ -288,7 +288,7 @@ const intro: Tour = {
       title: loc('Standaardwaarden', 'Resource defaults'),
       lead: loc(
         'Standaard resource requests en limits per project, binnen die van het cluster.',
-        "Default resource requests and limits, per project, within the cluster's.",
+        "Default resource requests and limits for each project, capped by the cluster's defaults.",
       ),
       route: '/projects/pr-burgerzaken/general',
       skippable: true,

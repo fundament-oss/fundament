@@ -275,7 +275,11 @@ CREATE TRIGGER defaults_outbox AFTER UPDATE OF default_memory_request_mi, defaul
 
 CREATE CONSTRAINT TRIGGER verify_defaults AFTER INSERT OR UPDATE OF cluster_id, default_memory_request_mi, default_memory_limit_mi, default_cpu_request_m, default_cpu_limit_m ON tenant.projects NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION tenant.projects_tr_verify_defaults();
 
--- Data: carry today's effective values over before the old tables go.
+-- Data: carry today's effective values over before the old tables go. The
+-- updates touch every row and fire the outbox triggers, so they get more than
+-- the DDL's 3 seconds; the DDL timeout comes back after them.
+SET SESSION statement_timeout = 300000;
+
 -- Every active cluster takes its organization's defaults.
 UPDATE tenant.clusters
 SET default_memory_request_mi = tenant.organization_limits.default_memory_request_mi,
@@ -304,6 +308,8 @@ WHERE tenant.project_limits.project_id = tenant.projects.id
   AND tenant.project_limits.deleted IS NULL
   AND tenant.clusters.id = tenant.projects.cluster_id
   AND tenant.projects.deleted IS NULL;
+
+SET SESSION statement_timeout = 3000;
 
 DROP TRIGGER "organization_limits_outbox" ON "tenant"."organization_limits";
 
