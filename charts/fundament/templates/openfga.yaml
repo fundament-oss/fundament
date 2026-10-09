@@ -59,7 +59,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-db
-          image: ghcr.io/cloudnative-pg/postgresql:18
+          image: {{ $.Values.db.image }}
           command:
             - sh
             - -c
