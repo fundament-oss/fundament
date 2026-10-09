@@ -64,15 +64,17 @@ jobs:
             && jq -c '[.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName + .InstalledVersion)' \
               trivy.json > "$2"
           }
+          # "critical / high"
           counts() {
-            jq -r '"\(map(select(.Severity == "CRITICAL")) | length) critical, \(map(select(.Severity == "HIGH")) | length) high"' "$1"
+            jq -r '"\(map(select(.Severity == "CRITICAL")) | length) / \(map(select(.Severity == "HIGH")) | length)"' "$1"
           }
-          # Appends "| Image | Tag | Fixable findings | Upgrade to | Findings after |
-          # Newer major |" to rows.md, preceded by the cell in $2 when it is set.
+          # Appends "| Image | Critical / high | Upgrade to | Newer major |" to
+          # rows.md, followed by the cell in $2 when it is set.
           row() {
-            local image=$1 prefix=${2:+$2 | } repo tag tags shape cur_major upgrade="" major="" now next note warning
+            local image=$1 suffix=${2:+ $2 |} repo tag name tags shape cur_major upgrade="" major="" now note
             repo=${image%:*} tag=${image##*:}
             if [ "$repo" = "$image" ]; then tag=latest; fi
+            name="\`${repo##*/}:$tag\`"
             if grep -q '[0-9]' <<< "$tag"; then
               shape=$(sed -E 's/\./\\./g; s/[0-9]+/[0-9]+/g' <<< "$tag")
               cur_major=$(grep -oE '^v?[0-9]+' <<< "$tag")
@@ -84,10 +86,9 @@ jobs:
             fi
             if ! scan "$repo:$tag" now.json; then
               echo "::warning title=Image scan::$repo:$tag: scan failed"
-              echo "| $prefix\`$repo\` | $tag | scan failed | | | $major |" >> rows.md
+              echo "| $name | scan failed | | $major |$suffix" >> rows.md
               return
             fi
-            now=$(counts now.json)
             {
               echo "### \`$repo:$tag\`"
               echo
@@ -98,21 +99,22 @@ jobs:
               echo
             } >> "$GITHUB_STEP_SUMMARY"
             if [ "$(jq length now.json)" -eq 0 ]; then
-              echo "| $prefix\`$repo\` | $tag | none | | | $major |" >> rows.md
+              echo "| $name | – | | $major |$suffix" >> rows.md
               return
             fi
             affected=$((affected + 1))
+            now=$(counts now.json)
             if [ -z "$cur_major" ]; then
-              note="floating tag, already the newest image: waits on upstream" next=""
+              note="floating tag, waits on upstream"
             elif [ -z "$upgrade" ]; then
-              note="no newer release" next=""
+              note="no newer release"
+            elif scan "$repo:$upgrade" next.json; then
+              note="**$upgrade** ($(counts next.json))"
             else
-              note="**$upgrade**"
-              if scan "$repo:$upgrade" next.json; then next=$(counts next.json); else next="scan failed"; fi
+              note="**$upgrade** (scan failed)"
             fi
-            if [ -n "$upgrade" ]; then warning="$upgrade has $next"; else warning=$note; fi
-            echo "::warning title=Image scan::$repo:$tag: $now; $warning${major:+; newer major $major}"
-            echo "| $prefix\`$repo\` | $tag | $now | $note | $next | $major |" >> rows.md
+            echo "::warning title=Image scan::$repo:$tag: $now critical / high; ${note//\*/}${major:+; newer major $major}"
+            echo "| $name | $now | $note | $major |$suffix" >> rows.md
           }
 
           affected=0
@@ -121,34 +123,27 @@ jobs:
           mv rows.md chart-rows.md
           : > rows.md
           while read -r base; do
-            dockerfiles=$(awk -v b="$base" '$1 == b {printf "%s`%s`", sep, $2; sep = "<br>"}' base-images.txt)
-            row "$base" "$dockerfiles"
+            row "$base" "$(awk -v b="$base" '$1 == b {sub("/?Dockerfile$", "", $2); printf "%s%s", sep, $2; sep = ", "}' base-images.txt)"
           done < <(cut -d' ' -f1 base-images.txt | sort -u)
           mv rows.md base-rows.md
           total=$(( $(wc -l < chart-images.txt) + $(cut -d' ' -f1 base-images.txt | sort -u | wc -l) ))
 
           {
-            echo "## Image scan: $affected of $total images have fixable high or critical vulnerabilities"
+            echo "## Image scan: $affected of $total images have fixable vulnerabilities"
             echo
-            echo "### Images the chart deploys"
+            echo "**Chart images**: bump the tag in \`charts/fundament\`"
             echo
-            echo "Fix: bump the tag in \`charts/fundament\`."
-            echo
-            echo "| Image | Tag | Fixable findings | Upgrade to | Findings after | Newer major |"
-            echo "|---|---|---|---|---|---|"
+            echo "| Image | Critical / high | Upgrade to | Newer major |"
+            echo "|---|---|---|---|"
             cat chart-rows.md
             echo
-            echo "### Base images of our Dockerfiles"
+            echo "**Dockerfile base images**: bump the \`FROM\`"
             echo
-            echo "Fix: bump the \`FROM\` in the Dockerfiles listed."
-            echo
-            echo "| Dockerfiles | Base image | Tag | Fixable findings | Upgrade to | Findings after | Newer major |"
-            echo "|---|---|---|---|---|---|---|"
+            echo "| Image | Critical / high | Upgrade to | Newer major | Dockerfiles in |"
+            echo "|---|---|---|---|---|"
             cat base-rows.md
             echo
-            echo "Fixable high and critical findings only. Packages per image are in the [run summary]($RUN_URL). Does not block merging."
-            echo
-            echo "Do not discuss whether a finding is exploitable here: open a [private security advisory]($ADVISORY_URL) instead."
+            echo "Fixable high and critical findings; packages in the [run summary]($RUN_URL). Does not block merging. Exploitable for us? Open a [private security advisory]($ADVISORY_URL), do not discuss it here."
           } > comment.md
 
       - uses: marocchino/sticky-pull-request-comment@v2
