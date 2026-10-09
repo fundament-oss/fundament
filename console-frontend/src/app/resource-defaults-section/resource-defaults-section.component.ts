@@ -148,6 +148,10 @@ export default class ResourceDefaultsSectionComponent {
    *  it has one. Absent on a cluster, where nothing is above it. */
   ceiling = input<ResourceSeed>({ request: undefined, limit: undefined });
 
+  /** Off while the owning form saves: what is sent is a snapshot, and an edit
+   *  made meanwhile would be lost when the sheet closes on success. */
+  disabled = input(false);
+
   mode = model.required<ResourceMode>();
 
   request = model<number | undefined>(undefined);

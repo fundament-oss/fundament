@@ -292,6 +292,7 @@ const intro: Tour = {
       ),
       route: '/projects/pr-burgerzaken/general',
       skippable: true,
+      drive: [{ scroll: 'app-project-defaults-block' }],
     },
     storefrontSlide(
       loc(
@@ -1012,11 +1013,14 @@ const securityOfficer: Tour = {
       id: 'cluster-defaults',
       title: loc('Grenzen per cluster', 'Limits set per cluster'),
       lead: loc(
-        'Elk cluster heeft eigen standaardwaarden voor requests en limits; projecten kunnen alleen lager.',
-        'Every cluster has its own default requests and limits; projects can only go lower.',
+        'Elk cluster heeft eigen standaardwaarden voor requests en limits; waar het cluster een waarde zet, kan een project alleen lager.',
+        'Every cluster has its own default requests and limits; wherever the cluster sets one, a project can only go lower.',
       ),
       route: '/clusters/cl-production',
       skippable: true,
+      // The block sits below the status, usage and node pools; the slide
+      // before this one is on the same page, so nothing scrolls on its own.
+      drive: [{ scroll: 'app-cluster-defaults-block' }],
     },
     {
       id: 'plugin-detail',

@@ -150,6 +150,7 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
 
   /** Reset means inherit everything: all four fields go back to unset. */
   protected reset(): void {
+    if (this.saving()) return;
     this.draftMemoryMode.set('inherit');
     this.draftMemoryRequestMi.set(undefined);
     this.draftMemoryLimitMi.set(undefined);

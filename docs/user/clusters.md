@@ -85,8 +85,10 @@ workloads should have a PodDisruptionBudget.
 ## Defaults
 
 The **Defaults** block sets the resource requests and limits containers on this
-cluster get for each request or limit they leave unset. Every namespace on the
-cluster inherits them, and a project may narrow them but never widen them. See
+cluster get for each request or limit they leave unset. Every namespace
+Fundament manages on the cluster inherits them (one created straight on the
+cluster with `kubectl` gets nothing), and a project may narrow them but never
+widen them. See
 [Defaults](./namespaces.md#defaults).
 
 ## Namespaces
