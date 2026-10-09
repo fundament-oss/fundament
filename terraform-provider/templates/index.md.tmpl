@@ -1,0 +1,23 @@
+---
+page_title: "{{.ProviderShortName}} Provider"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{ .ProviderShortName }} Provider
+
+{{ .Description | trimspace }}
+
+<!-- overview -->
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+## Complete Example
+
+A cluster with a node pool, a project with a namespace, and a member with read access. With the provider configuration above, `tofu apply` creates it and returns once the cluster runs. Deploy into the namespace, `tnt-demo--web` in the cluster, with kubectl and the cluster's kubeconfig from the console or `functl cluster kubeconfig <CLUSTER_ID>`.
+
+{{ tffile "examples/complete/main.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

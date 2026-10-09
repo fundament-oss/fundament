@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Manages a Kubernetes cluster in Fundament.
   A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
-  When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run tofu untaint on its address to keep it, and set timeouts { create = ... } to wait longer next time. A cluster whose deletion did not finish stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
+  When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run tofu untaint on its address to keep it, and set timeouts { create = ... } to wait longer next time. A cluster whose deletion did not finish stays in the state, and the next refresh shows it as deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 ---
 
 # fundament_cluster (Resource)
@@ -14,7 +14,7 @@ Manages a Kubernetes cluster in Fundament.
 
 A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
 
-When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
+When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish stays in the state, and the next refresh shows it as deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 
 ## Example Usage
 
