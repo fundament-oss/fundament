@@ -17,7 +17,8 @@ func insertOrg(t *testing.T, db *testDB, name string) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
-		`INSERT INTO tenant.organizations (name, alias) VALUES ($1, $1) RETURNING id`,
+		// Several clusters per organization; the default quota is one.
+		`INSERT INTO tenant.organizations (name, alias, quota_clusters) VALUES ($1, $1, 10) RETURNING id`,
 		name,
 	).Scan(&id)
 	require.NoError(t, err)

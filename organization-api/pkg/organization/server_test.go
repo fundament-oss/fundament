@@ -195,8 +195,10 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	t.Cleanup(ts.Close)
 
 	for id, name := range opts.organizations {
+		// Room for every cluster a test wants to make: the default quota is one.
+		// The quota tests set the value they are about themselves.
 		_, err = adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.organizations (id, name, alias) VALUES ($1, $2, $3)",
+			"INSERT INTO tenant.organizations (id, name, alias, quota_clusters) VALUES ($1, $2, $3, 100)",
 			id, name, name,
 		)
 		require.NoError(t, err)

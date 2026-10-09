@@ -48,6 +48,9 @@ funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
+funops organization quota list <organization>
+funops organization quota set-clusters <organization> <count>
+funops organization quota set-nodes <organization> <region> <machine-type> <max-nodes>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
@@ -81,6 +84,28 @@ they first sign in at that address. Without the flag an unknown address is an
 error, so a typo cannot create an account nobody can claim. If a registration
 was a typo after all, `funops user delete` removes it; it refuses accounts
 somebody has signed in to.
+
+## Set quotas
+
+A new organization may create one cluster and no node pools: its cluster quota
+is one and it has no node quota. Set what it may build:
+
+```bash
+funops organization quota set-clusters acme-corp 3
+funops organization quota set-nodes acme-corp eu-west-1 n1-standard-2 20
+```
+
+The node quota is per region and machine type, named as the catalog offers
+them, and caps the sum of the maximum sizes of all the organization's node
+pools of that type, across its clusters. `funops organization quota list
+acme-corp` shows every quota next to what is in use.
+
+Lowering a quota below what is in use is allowed and changes nothing that
+runs: it stops the next cluster, or the next new or larger pool, until there
+is room again, and `quota list` shows the excess. Setting a node quota to 0
+takes it away; the row stays and shows as 0. A deleted cluster and its pools
+count until Gardener has torn the shoot down, as `organization delete` counts
+them.
 
 ## Remove users and organizations
 
