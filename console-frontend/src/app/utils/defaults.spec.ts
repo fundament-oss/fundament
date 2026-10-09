@@ -1,7 +1,7 @@
-import { pairLimited, positive, toInt } from './limits';
+import { pairSet, positive, toInt } from './defaults';
 
-describe('limit helpers', () => {
-  it('reads a proto zero as "no limit set"', () => {
+describe('defaults helpers', () => {
+  it('reads a proto zero as "no default set"', () => {
     expect(positive(0)).toBeUndefined();
     expect(positive(undefined)).toBeUndefined();
     expect(positive(4)).toBe(4);
@@ -16,10 +16,10 @@ describe('limit helpers', () => {
     expect(toInt('abc')).toBeUndefined();
   });
 
-  it('counts a pair as limited when either half is set', () => {
-    expect(pairLimited(undefined, undefined)).toBe(false);
-    expect(pairLimited(64, undefined)).toBe(true);
-    expect(pairLimited(undefined, 128)).toBe(true);
-    expect(pairLimited(64, 128)).toBe(true);
+  it('counts a pair as set when either half is set', () => {
+    expect(pairSet(undefined, undefined)).toBe(false);
+    expect(pairSet(64, undefined)).toBe(true);
+    expect(pairSet(undefined, 128)).toBe(true);
+    expect(pairSet(64, 128)).toBe(true);
   });
 });

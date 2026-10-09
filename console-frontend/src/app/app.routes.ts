@@ -141,9 +141,11 @@ const routes: Routes = [
         ],
       },
       {
+        // The organization Limits page is gone: defaults are per cluster now,
+        // and the cluster list is where you pick one.
         path: 'limits',
-        loadComponent: () =>
-          import('./organization-limits/organization-limits.component').then((m) => m.default),
+        redirectTo: 'clusters',
+        pathMatch: 'full',
       },
       {
         path: 'clusters',
@@ -273,9 +275,10 @@ const routes: Routes = [
         ],
       },
       {
+        // The project Limits page is gone: its defaults are a block on General.
         path: 'projects/:id/limits',
-        loadComponent: () =>
-          import('./project-limits/project-limits.component').then((m) => m.default),
+        redirectTo: 'projects/:id/general',
+        pathMatch: 'full',
       },
       {
         path: 'projects/:id/settings',

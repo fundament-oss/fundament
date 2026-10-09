@@ -1,0 +1,116 @@
+<nldd-box>
+  <nldd-container padding="16">
+    <nldd-title size="5">
+      <h3>Defaults</h3>
+      <nldd-button
+        slot="end"
+        type="button"
+        (click)="openEdit()"
+        text="Edit"
+        start-icon="pencil"
+        variant="secondary"
+        size="sm"
+      ></nldd-button>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <nldd-rich-text spacing="flat">
+      <p>
+        Default resource requests and limits for containers that don't set their own, applied to
+        every namespace in this project. They can be lower than the cluster's defaults, never
+        higher.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="16"></nldd-spacer>
+    @if (loadError(); as message) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="message"
+      ></nldd-banner>
+    } @else if (loading()) {
+      <nldd-inline-dialog
+        variant="loading"
+        text="Loading defaults..."
+      ></nldd-inline-dialog>
+    } @else {
+      <app-container-defaults-summary
+        [sections]="sections()"
+        (edit)="openEdit()"
+      ></app-container-defaults-summary>
+    }
+  </nldd-container>
+</nldd-box>
+<nldd-sheet
+  #editSheet
+  appSheetSync
+  [show]="showEdit()"
+  accessible-label="Edit project defaults"
+  placement="right"
+  (close)="showEdit.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit defaults"
+      collapse-anchor="edit-project-defaults-title"
+      dismiss-text="Cancel"
+      (dismiss)="showEdit.set(false)"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title
+        id="edit-project-defaults-title"
+        size="3"
+      >
+        <h1>Edit defaults</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      @if (saveError(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your changes are not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-form (submit)="save($event)">
+        <app-resource-defaults-section
+          scope="project"
+          [copy]="MEMORY_SECTION"
+          [seed]="memoryFromCluster()"
+          [ceiling]="memoryFromCluster()"
+          [(mode)]="draftMemoryMode"
+          [(request)]="draftMemoryRequestMi"
+          [(limit)]="draftMemoryLimitMi"
+        ></app-resource-defaults-section>
+        <app-resource-defaults-section
+          scope="project"
+          [copy]="CPU_SECTION"
+          [seed]="cpuFromCluster()"
+          [ceiling]="cpuFromCluster()"
+          [(mode)]="draftCpuMode"
+          [(request)]="draftCpuRequestM"
+          [(limit)]="draftCpuLimitM"
+        ></app-resource-defaults-section>
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="save()"
+            text="Save defaults"
+            [attr.loading]="saving() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+          <!-- One button for both resources: inheriting everything is the one
+               state you cannot reach by switching the sections one by one
+               without thinking about it. -->
+          <nldd-button
+            type="button"
+            (click)="reset()"
+            text="Inherit everything from the cluster"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

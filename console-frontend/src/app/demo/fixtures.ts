@@ -3,7 +3,7 @@
 // out of the production bundle.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { OrganizationSchema, OrganizationLimitsSchema } from '../../generated/v1/organization_pb';
+import { OrganizationSchema } from '../../generated/v1/organization_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
@@ -17,7 +17,6 @@ import { NamespaceSchema } from '../../generated/v1/namespace_pb';
 import {
   ProjectSchema,
   ProjectMemberSchema,
-  ProjectLimitsSchema,
   ProjectMemberRole,
 } from '../../generated/v1/project_pb';
 import { MemberSchema } from '../../generated/v1/member_pb';
@@ -33,7 +32,7 @@ import {
   type PluginDetail,
   type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
+import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
@@ -57,12 +56,28 @@ export const organization = create(OrganizationSchema, {
   created: daysAgo(420),
 });
 
-export const organizationLimits = create(OrganizationLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 250,
-  defaultCpuLimitM: 500,
-});
+// Per cluster now, keyed by cluster id: production runs tighter than staging,
+// which is the point of moving them off the organization.
+export const clusterDefaults = new Map([
+  [
+    'cl-production',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 256,
+      memoryLimitMi: 512,
+      cpuRequestM: 250,
+      cpuLimitM: 500,
+    }),
+  ],
+  [
+    'cl-staging',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 128,
+      memoryLimitMi: 1024,
+      cpuRequestM: 100,
+      cpuLimitM: 1000,
+    }),
+  ],
+]);
 
 // --- Clusters -------------------------------------------------------------
 
@@ -338,28 +353,33 @@ export const projectMembersByProject = new Map([
   ],
 ]);
 
-export const projectLimits = create(ProjectLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 250,
-  defaultCpuLimitM: 500,
-});
+// Per project, keyed by project id. Burgerzaken tightens the CPU limit its
+// cluster allows and inherits the rest; a project with no entry inherits
+// everything.
+export const projectDefaults = new Map([
+  [
+    'pr-burgerzaken',
+    create(ContainerDefaultsSchema, {
+      cpuLimitM: 250,
+    }),
+  ],
+  [
+    'pr-belastingen',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 128,
+      memoryLimitMi: 256,
+    }),
+  ],
+]);
 
-// The platform's starting values, hardcoded in organization-api's
-// limit_defaults.go. Handing back the saved limits instead would make every
-// project look like it is still on the platform's numbers.
-export const platformProjectLimits = create(ProjectLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 100,
-  defaultCpuLimitM: 500,
-});
-
-export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 100,
-  defaultCpuLimitM: 500,
+// The platform's suggestion, hardcoded in organization-api's
+// suggested_defaults.go. Handing back the saved values instead would make every
+// cluster look like it is still on the platform's numbers.
+export const suggestedDefaults = create(ContainerDefaultsSchema, {
+  memoryRequestMi: 256,
+  memoryLimitMi: 512,
+  cpuRequestM: 100,
+  cpuLimitM: 500,
 });
 
 // --- Metrics --------------------------------------------------------------

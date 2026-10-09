@@ -7,7 +7,6 @@ import {
   OrganizationService,
   ListOrganizationsResponseSchema,
   GetOrganizationResponseSchema,
-  GetOrganizationLimitsResponseSchema,
 } from '../../generated/v1/organization_pb';
 import {
   ClusterService,
@@ -19,6 +18,7 @@ import {
   ListRegionsResponseSchema,
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
+  GetClusterDefaultsResponseSchema,
 } from '../../generated/v1/cluster_pb';
 import {
   NamespaceService,
@@ -33,7 +33,7 @@ import {
   ListProjectsResponseSchema,
   GetProjectResponseSchema,
   ListProjectMembersResponseSchema,
-  GetProjectLimitsResponseSchema,
+  GetProjectDefaultsResponseSchema,
 } from '../../generated/v1/project_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
@@ -161,13 +161,6 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetOrganizationResponseSchema, { organization: fx.organization });
       },
-      getOrganizationLimits: async () => {
-        await delay();
-        return create(GetOrganizationLimitsResponseSchema, {
-          limits: fx.organizationLimits,
-          defaults: fx.platformOrganizationLimits,
-        });
-      },
     });
 
     router.service(ClusterService, {
@@ -198,6 +191,13 @@ export default function createDemoTransport(): Transport {
       getClusterActivity: async () => {
         await delay();
         return create(GetClusterActivityResponseSchema, { events: fx.clusterActivity });
+      },
+      getClusterDefaults: async (req) => {
+        await delay();
+        return create(GetClusterDefaultsResponseSchema, {
+          defaults: fx.clusterDefaults.get(req.clusterId),
+          suggested: fx.suggestedDefaults,
+        });
       },
       createCluster: async (req, ctx) => {
         await delay(500);
@@ -305,11 +305,14 @@ export default function createDemoTransport(): Transport {
           members: fx.projectMembersByProject.get(req.projectId) ?? [],
         });
       },
-      getProjectLimits: async () => {
+      // The cluster's values come along: the block shows what an unset field
+      // inherits and caps the inputs with them.
+      getProjectDefaults: async (req) => {
         await delay();
-        return create(GetProjectLimitsResponseSchema, {
-          limits: fx.projectLimits,
-          defaults: fx.platformProjectLimits,
+        const project = fx.projects.find((p) => p.id === req.projectId);
+        return create(GetProjectDefaultsResponseSchema, {
+          defaults: fx.projectDefaults.get(req.projectId),
+          clusterDefaults: project && fx.clusterDefaults.get(project.clusterId),
         });
       },
     });
