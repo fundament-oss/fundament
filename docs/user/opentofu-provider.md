@@ -4,8 +4,8 @@ sidebar:
   order: 11
 ---
 
-The Fundament provider lets you manage clusters, projects, namespaces and
-members declaratively with [OpenTofu](https://opentofu.org/) or Terraform,
+The Fundament provider lets you manage clusters, node pools, projects,
+namespaces and members declaratively with [OpenTofu](https://opentofu.org/) or Terraform,
 instead of clicking through the console or scripting the [CLI](./functl.md).
 
 The [provider reference](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/index.md) describes every argument and
@@ -72,7 +72,7 @@ exchanges the API key for a short-lived token and refreshes it as needed.
 
 | Resource | Manages |
 | --- | --- |
-| [`fundament_cluster`](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/resources/cluster.md) | A managed Kubernetes cluster. See [Clusters](./clusters.md) |
+| [`fundament_cluster`](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/resources/cluster.md) | A managed Kubernetes cluster and its node pools. See [Clusters](./clusters.md) |
 | [`fundament_project`](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/resources/project.md) | A project on a cluster |
 | [`fundament_namespace`](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/resources/namespace.md) | A namespace of a project. See [Namespaces](./namespaces.md) |
 | [`fundament_project_member`](https://github.com/fundament-oss/fundament/blob/master/terraform-provider/docs/resources/project_member.md) | A user's membership of a project. See [Members and roles](./members-and-roles.md) |

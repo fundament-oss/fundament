@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"sync/atomic"
+	"time"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -93,6 +95,19 @@ type RealClient struct {
 	client   client.Client
 	provider ProviderConfig
 	logger   *slog.Logger
+
+	// statusCache serves GetShootStatus from a watch (see status_cache.go);
+	// nil means status reads always go to Gardener directly.
+	statusCache       shootStatusCache
+	statusCacheSynced atomic.Bool
+	statusCacheReady  chan struct{} // closed when the cache first synced; nil without a cache
+	lastWatchFailure  atomic.Int64  // unix nanoseconds; 0 when the watch never failed
+	lastProbeSuccess  atomic.Int64  // unix nanoseconds; 0 until the garden answered a probe
+	clock             func() time.Time
+
+	// onStatusChange, when set, receives the cluster ID of each Shoot whose
+	// status changes in the watch (see SetStatusChangeHandler).
+	onStatusChange func(clusterID uuid.UUID)
 }
 
 // NewReal creates a new RealClient that connects to Gardener.
@@ -137,11 +152,20 @@ func NewReal(kubeconfigPath string, provider ProviderConfig, logger *slog.Logger
 		"provider", provider.Type,
 		"cloudProfile", provider.CloudProfile)
 
-	return &RealClient{
+	r := &RealClient{
 		client:   c,
 		provider: provider,
 		logger:   logger,
-	}, nil
+	}
+
+	statusCache, err := newShootStatusCache(cfg, scheme, r.recordWatchError)
+	if err != nil {
+		return nil, err
+	}
+	r.statusCache = statusCache
+	r.statusCacheReady = make(chan struct{})
+
+	return r, nil
 }
 
 // EnsureProject creates the Gardener Project if it doesn't exist (idempotent).
@@ -198,17 +222,19 @@ func (r *RealClient) EnsureProject(ctx context.Context, projectName string, orgI
 
 // ApplyShoot creates or updates a Shoot in Gardener.
 // Uses cluster ID label to find existing shoots. ShootName is only used for creation.
-func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) error {
+// specChanged is true when Gardener raised an existing Shoot's generation,
+// which it does for every spec change and which starts a reconcile.
+func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bool, error) {
 	if cluster.Namespace == "" {
-		return fmt.Errorf("namespace is required")
+		return false, fmt.Errorf("namespace is required")
 	}
 	if cluster.ShootName == "" {
-		return fmt.Errorf("shoot name is required")
+		return false, fmt.Errorf("shoot name is required")
 	}
 
 	existing, err := r.getShootByClusterID(ctx, cluster.ID)
 	if err != nil {
-		return fmt.Errorf("failed to look up existing shoot: %w", err)
+		return false, fmt.Errorf("failed to look up existing shoot: %w", err)
 	}
 
 	if existing != nil {
@@ -225,25 +251,31 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		// the shoot found above. Every error inside the closure keeps its API status
 		// (only %w wrapping) so RetryOnConflict still recognizes conflicts.
 		key := client.ObjectKeyFromObject(existing)
+		specChanged := false
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			shoot := &gardencorev1beta1.Shoot{}
 			if err := r.client.Get(ctx, key, shoot); err != nil {
 				return fmt.Errorf("re-read shoot: %w", err)
 			}
+			generation := shoot.Generation
 			if err := r.updateShootSpec(shoot, cluster); err != nil {
 				return err
 			}
-			return r.client.Update(ctx, shoot)
+			if err := r.client.Update(ctx, shoot); err != nil {
+				return fmt.Errorf("write shoot: %w", err)
+			}
+			specChanged = shoot.Generation != generation
+			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("failed to update shoot: %w", err)
+			return false, fmt.Errorf("failed to update shoot: %w", err)
 		}
-		return nil
+		return specChanged, nil
 	}
 
 	shoot, err := r.buildShootSpec(cluster)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	r.logger.Info("creating shoot",
@@ -252,9 +284,9 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		"namespace", cluster.Namespace)
 
 	if err := r.client.Create(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to create shoot: %w", err)
+		return false, fmt.Errorf("failed to create shoot: %w", err)
 	}
-	return nil
+	return false, nil
 }
 
 // DeleteShootByClusterID deletes a Shoot by cluster ID label.
@@ -309,46 +341,77 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 
 // GetShootStatus returns the current reconciliation status of a Shoot.
 func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync) (*ShootStatus, error) {
-	shoot, err := r.getShootByClusterID(ctx, cluster.ID)
+	shoot, err := r.getShootForStatus(ctx, cluster.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up shoot: %w", err)
 	}
 
+	return shootStatusOf(shoot), nil
+}
+
+// shootStatusOf derives fundament's status for a Shoot; nil is a Shoot
+// Gardener does not have. It is pure, so the watch's change filter and the
+// status step derive exactly the same thing from the same object.
+func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	if shoot == nil {
-		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
+		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
 	}
 
 	if shoot.DeletionTimestamp != nil {
-		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}, nil
+		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}
 	}
 
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
+		operation := OperationType(op.Type)
 
 		switch op.State {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
-			return &ShootStatus{Status: StatusProgressing, Message: fmt.Sprintf("%s: %s", op.Type, op.Description)}, nil
-		case gardencorev1beta1.LastOperationStateError, gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description}, nil
+			healthy, grace := shootHealthOf(shoot)
+			return &ShootStatus{
+				Status:      StatusProgressing,
+				Message:     fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
+			}
+		case gardencorev1beta1.LastOperationStateError:
+			// "Completed with errors and will be retried" per Gardener's API.
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}
+		case gardencorev1beta1.LastOperationStateFailed:
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}
 		case gardencorev1beta1.LastOperationStateSucceeded:
+			healthy, grace := shootHealthOf(shoot)
+			// The gardenlet sets observedGeneration when it starts a reconcile.
+			// Until then lastOperation still describes the previous one.
+			if shoot.Generation != shoot.Status.ObservedGeneration {
+				return &ShootStatus{
+					Status:      StatusProgressing,
+					Message:     MsgShootUpdatePending,
+					Operation:   OperationReconcile,
+					Healthy:     healthy,
+					HealthGrace: grace,
+				}
+			}
 			msg := MsgShootReady
-			if !r.isShootHealthy(shoot) {
-				msg = "Shoot reconciled but not all conditions healthy"
-				r.logger.Warn("shoot succeeded but conditions unhealthy",
-					"shoot", shoot.Name,
-					"namespace", shoot.Namespace)
+			if !healthy {
+				msg = MsgShootUnhealthy
 			}
 			return &ShootStatus{
-				Status:  StatusReady,
-				Message: msg,
-			}, nil
+				Status:      StatusReady,
+				Message:     msg,
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
+			}
 		case gardencorev1beta1.LastOperationStateAborted:
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description}, nil
+			// Seen while the seed was not ready; Gardener resumed the operation by itself.
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}
 		}
 	}
 
 	// No last operation, likely still being created
-	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}, nil
+	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}
 }
 
 // RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
@@ -567,8 +630,44 @@ func (r *RealClient) deleteShoot(ctx context.Context, shoot *gardencorev1beta1.S
 	return nil
 }
 
-// isShootHealthy checks if all key conditions are True.
-func (r *RealClient) isShootHealthy(shoot *gardencorev1beta1.Shoot) bool {
+// Values of the shoot.gardener.cloud/status label, as gardener-controller-manager
+// sets them (gardener pkg/utils/gardener/shoot_status.go; not part of the API module).
+const (
+	shootStatusLabelHealthy     = "healthy"
+	shootStatusLabelProgressing = "progressing"
+	shootStatusLabelUnhealthy   = "unhealthy"
+	shootStatusLabelUnknown     = "unknown"
+)
+
+// shootHealthOf returns Gardener's own health verdict from the Shoot's
+// status label, which covers all conditions with Gardener's thresholds and
+// grace handling. grace is the label value "progressing". A Shoot the label
+// controller has not reached yet falls back to the required conditions.
+//
+// While the last operation is a Create, Gardener computes the label from the
+// last errors only, and the label is rewritten only after the Succeeded write
+// that makes the cluster ready. So until the first reconcile a "healthy" label
+// also needs the required conditions; otherwise a cluster whose conditions
+// are still settling would be recorded as healthy, and the grace period that
+// follows would keep it so.
+func shootHealthOf(shoot *gardencorev1beta1.Shoot) (healthy, grace bool) {
+	switch shoot.Labels[v1beta1constants.ShootStatus] {
+	case shootStatusLabelHealthy:
+		if op := shoot.Status.LastOperation; op != nil && op.Type == gardencorev1beta1.LastOperationTypeCreate {
+			return shootHealthy(shoot), false
+		}
+		return true, false
+	case shootStatusLabelProgressing:
+		return false, true
+	case shootStatusLabelUnhealthy, shootStatusLabelUnknown:
+		return false, false
+	default:
+		return shootHealthy(shoot), false
+	}
+}
+
+// shootHealthy checks if all key conditions are True.
+func shootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 	requiredConditions := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,

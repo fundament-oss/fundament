@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -20,7 +22,7 @@ import (
 // ShootSyncer provides the Gardener operations needed by the sync path.
 type ShootSyncer interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
-	ApplyShoot(ctx context.Context, cluster *gardener.ClusterToSync) error
+	ApplyShoot(ctx context.Context, cluster *gardener.ClusterToSync) (specChanged bool, err error)
 	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
 	ListShoots(ctx context.Context) ([]gardener.ShootInfo, error)
 }
@@ -33,8 +35,14 @@ type ShootStatusChecker interface {
 
 // Config holds handler-specific configuration.
 type Config struct {
-	StatusBatchSize int32 `env:"STATUS_BATCH_SIZE" envDefault:"50"`
-	MaxRetries      int32 `env:"MAX_RETRIES" envDefault:"10"`
+	// StatusWorkers is how many status checks run at once. The queue never
+	// hands one cluster to two workers, so this only adds parallelism across
+	// clusters.
+	StatusWorkers int `env:"STATUS_WORKERS" envDefault:"2"`
+	// StatusProgressEventInterval is the shortest time between two recorded
+	// progress messages of one cluster while Gardener runs an operation.
+	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
+	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
@@ -58,6 +66,9 @@ type Handler struct {
 	logger        *slog.Logger
 	cfg           Config
 
+	// statusQueue holds the IDs of clusters whose status needs a check.
+	statusQueue workqueue.TypedRateLimitingInterface[uuid.UUID]
+
 	preconditions map[handler.EntityType][]handler.Precondition
 }
 
@@ -71,6 +82,7 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 		statusChecker: statusChecker,
 		logger:        logger.With("handler", "cluster"),
 		cfg:           cfg,
+		statusQueue:   newStatusQueue(),
 		preconditions: make(map[handler.EntityType][]handler.Precondition),
 	}
 
@@ -118,7 +130,9 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 					return fmt.Errorf("ensure project: %w", err)
 				}
 				if namespace == "" {
-					return handler.NewPreconditionError("project namespace not ready")
+					// A just-created Project usually has its namespace within
+					// seconds; recheck once quickly instead of waiting the full delay.
+					return handler.NewPreconditionErrorWithFirstRetry("project namespace not ready", 5*time.Second)
 				}
 				return nil
 			},

@@ -23,16 +23,49 @@ const (
 	StatusDeleted     ShootStatusType = "deleted"
 )
 
+// OperationType is the Gardener operation a status was derived from
+// (the Shoot's .status.lastOperation.type). Values mirror Gardener's.
+type OperationType string
+
+const (
+	OperationCreate    OperationType = "Create"
+	OperationReconcile OperationType = "Reconcile"
+	OperationDelete    OperationType = "Delete"
+	OperationMigrate   OperationType = "Migrate"
+	OperationRestore   OperationType = "Restore"
+)
+
 // ShootStatus contains the current status and a descriptive message.
 type ShootStatus struct {
 	Status  ShootStatusType
 	Message string
+	// Operation is empty when the Shoot has no last operation yet.
+	Operation OperationType
+	// Healthy is Gardener's health verdict: its shoot.gardener.cloud/status
+	// label is "healthy", or, for a Shoot without the label, all required
+	// conditions are True. Only meaningful for StatusReady and for a
+	// StatusProgressing reconcile of a shoot that is already running.
+	Healthy bool
+	// HealthGrace marks the label value "progressing": a condition turned bad
+	// but is within Gardener's grace period (its threshold, or pardoned while
+	// an operation runs without errors). Healthy is false.
+	HealthGrace bool
+	// Retrying marks a StatusError that Gardener will retry by itself
+	// (lastOperation state Error or Aborted), as opposed to Failed.
+	Retrying bool
 }
 
 // Status message constants for consistent messaging.
 const (
-	MsgShootNotFound = "Shoot not found in Gardener"
-	MsgShootReady    = "Shoot is ready"
+	MsgShootNotFound  = "Shoot not found in Gardener"
+	MsgShootReady     = "Shoot is ready"
+	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
+	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
+	// first reports the new cluster healthy.
+	MsgShootAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
+	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
+	// change until the gardenlet starts reconciling it.
+	MsgShootUpdatePending = "Waiting for Gardener to start the update"
 )
 
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
@@ -50,8 +83,9 @@ type Client interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
 
 	// ApplyShoot creates or updates a Shoot in Gardener.
-	// Uses cluster ID label to find existing shoots.
-	ApplyShoot(ctx context.Context, cluster *ClusterToSync) error
+	// Uses cluster ID label to find existing shoots. specChanged reports that an
+	// existing Shoot's spec changed, so Gardener will reconcile it.
+	ApplyShoot(ctx context.Context, cluster *ClusterToSync) (specChanged bool, err error)
 
 	// DeleteShootByClusterID deletes a Shoot by cluster ID label.
 	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error

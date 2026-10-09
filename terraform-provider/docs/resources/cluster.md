@@ -17,6 +17,13 @@ resource "fundament_cluster" "example" {
   name               = "my-cluster"
   region             = "local"
   kubernetes_version = "1.33.0"
+
+  node_pool {
+    name          = "workers"
+    machine_type  = "local-small"
+    autoscale_min = 1
+    autoscale_max = 3
+  }
 }
 ```
 
@@ -29,10 +36,24 @@ resource "fundament_cluster" "example" {
 - `name` (String) The name of the cluster. Must be unique within the organization.
 - `region` (String) The region where the cluster will be deployed.
 
+### Optional
+
+- `node_pool` (Block List) A node pool of the cluster. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. Without any node_pool block, Gardener runs a default worker pool that fundament does not list. (see [below for nested schema](#nestedblock--node_pool))
+
 ### Read-Only
 
 - `id` (String) The unique identifier of the cluster.
 - `status` (String) The current status of the cluster (e.g., provisioning, running, stopped).
+
+<a id="nestedblock--node_pool"></a>
+### Nested Schema for `node_pool`
+
+Required:
+
+- `autoscale_max` (Number) The maximum number of nodes. Must be at least autoscale_min.
+- `autoscale_min` (Number) The minimum number of nodes.
+- `machine_type` (String) The machine type of the nodes, one the cluster's region offers. Changing it replaces the node pool and its nodes.
+- `name` (String) The name of the node pool, unique within the cluster: lowercase letters, digits and hyphens, starting with a letter.
 
 ## Import
 

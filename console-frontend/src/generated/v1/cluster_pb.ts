@@ -50,6 +50,9 @@ export type SyncState = Message<"organization.v1.SyncState"> & {
   shootMessage: string;
 
   /**
+   * When shoot_status, shoot_message or the health last changed. Status is
+   * checked far more often than that; an unchanged check leaves it as it is.
+   *
    * @generated from field: google.protobuf.Timestamp status_updated_at = 60;
    */
   statusUpdatedAt?: Timestamp | undefined;
@@ -554,7 +557,7 @@ export type ClusterEvent = Message<"organization.v1.ClusterEvent"> & {
   id: string;
 
   /**
-   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, user_sync_succeeded, user_sync_failed
    *
    * @generated from field: string event_type = 20;
    */

@@ -18,6 +18,8 @@ message SyncState {
   string outbox_error = 30 [features.field_presence = EXPLICIT];
   string shoot_status = 40 [features.field_presence = EXPLICIT];
   string shoot_message = 50 [features.field_presence = EXPLICIT];
+  // When shoot_status, shoot_message or the health last changed. Status is
+  // checked far more often than that; an unchanged check leaves it as it is.
   google.protobuf.Timestamp status_updated_at = 60;
 }
 
@@ -199,7 +201,7 @@ message GetClusterActivityResponse {
 // Cluster event from cluster_events table
 message ClusterEvent {
   string id = 10;
-  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted
+  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, user_sync_succeeded, user_sync_failed
   google.protobuf.Timestamp created_at = 30;
   string sync_action = 40 [features.field_presence = EXPLICIT]; // sync, delete (for sync events)
   string message = 50 [features.field_presence = EXPLICIT];
