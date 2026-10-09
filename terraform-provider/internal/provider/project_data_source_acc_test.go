@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -38,18 +39,29 @@ func TestAccProjectDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID),
+				// Two clusters each have a project with the name.
+				Config:      testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, ""),
+				ExpectError: regexp.MustCompile(`each have a project`),
+			},
+			{
+				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, "tf-acc-pds-b-"+suffix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
-					resource.TestCheckResourceAttrSet("data.fundament_project.test", "id"),
-					resource.TestCheckResourceAttrSet("data.fundament_project.test", "created"),
+					resource.TestCheckResourceAttrPair("data.fundament_project.test", "id", "fundament_project.b", "id"),
+					resource.TestCheckResourceAttrPair("data.fundament_project.test", "cluster_id", "fundament_cluster.b", "id"),
+					resource.TestCheckResourceAttr("data.fundament_project.test", "cluster_name", "tf-acc-pds-b-"+suffix),
+					resource.TestMatchResourceAttr("data.fundament_project.test", "created", rfc3339),
 				),
 			},
 		},
 	})
 }
 
-func testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID string) string {
+func testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, clusterName string) string {
+	clusterArg := ""
+	if clusterName != "" {
+		clusterArg = fmt.Sprintf("cluster_name = %q", clusterName)
+	}
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint        = %[3]q
@@ -57,20 +69,32 @@ provider "fundament" {
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
-resource "fundament_cluster" "test" {
-  name               = "tf-acc-pds-c-%[2]s"
+resource "fundament_cluster" "a" {
+  name               = "tf-acc-pds-a-%[2]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
 }
 
-resource "fundament_project" "test" {
+resource "fundament_cluster" "b" {
+  name               = "tf-acc-pds-b-%[2]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
+}
+
+resource "fundament_project" "a" {
   name       = %[1]q
-  cluster_id = fundament_cluster.test.id
+  cluster_id = fundament_cluster.a.id
+}
+
+resource "fundament_project" "b" {
+  name       = %[1]q
+  cluster_id = fundament_cluster.b.id
 }
 
 data "fundament_project" "test" {
   name       = %[1]q
-  depends_on = [fundament_project.test]
+  %[5]s
+  depends_on = [fundament_project.a, fundament_project.b]
 }
-`, projectName, suffix, endpoint, organizationID)
+`, projectName, suffix, endpoint, organizationID, clusterArg)
 }

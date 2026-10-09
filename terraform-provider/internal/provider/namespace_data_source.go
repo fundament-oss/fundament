@@ -151,7 +151,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 	config.Name = types.StringValue(ns.GetName())
 	config.ProjectID = types.StringValue(ns.GetProjectId())
 	config.ClusterID = types.StringValue(ns.GetClusterId())
-	config.Created = types.StringValue(ns.GetCreated().String())
+	config.Created = timestampValue(ns.GetCreated())
 
 	tflog.Debug(ctx, "Read namespace successfully", map[string]any{
 		"id":         config.ID.ValueString(),

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -42,7 +41,7 @@ func (d *ProjectsDataSource) Metadata(ctx context.Context, req datasource.Metada
 // Schema defines the schema for the data source.
 func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches the list of projects for the current organization.",
+		Description: "Fetches the projects on a cluster.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Identifier for this data source.",
@@ -71,6 +70,10 @@ func (d *ProjectsDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 						},
 						"name": schema.StringAttribute{
 							Description: "The name of the project.",
+							Computed:    true,
+						},
+						"alias": schema.StringAttribute{
+							Description: "The alias of the project.",
 							Computed:    true,
 						},
 						"created": schema.StringAttribute{
@@ -164,17 +167,13 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	// Map response to state
 	state.Projects = make([]ProjectModel, len(rpcResp.GetProjects()))
 	for i, project := range rpcResp.GetProjects() {
-		var created basetypes.StringValue
-
-		if project.GetCreated().CheckValid() == nil {
-			created = types.StringValue(project.GetCreated().String())
-		}
-
 		pm := ProjectModel{
-			ID:        types.StringValue(project.GetId()),
-			ClusterID: types.StringValue(project.GetClusterId()),
-			Name:      types.StringValue(project.GetName()),
-			Created:   created,
+			ID:          types.StringValue(project.GetId()),
+			ClusterID:   types.StringValue(project.GetClusterId()),
+			ClusterName: types.StringNull(),
+			Name:        types.StringValue(project.GetName()),
+			Alias:       types.StringValue(project.GetAlias()),
+			Created:     timestampValue(project.GetCreated()),
 		}
 
 		if name, ok := clusterNames[project.GetClusterId()]; ok {

@@ -178,11 +178,7 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		plan.Email = types.StringNull()
 	}
 
-	if member.GetCreated().CheckValid() == nil {
-		plan.Created = types.StringValue(member.GetCreated().String())
-	} else {
-		plan.Created = types.StringNull()
-	}
+	plan.Created = timestampValue(member.GetCreated())
 
 	tflog.Info(ctx, "Invited organization member", map[string]any{
 		"id":    plan.ID.ValueString(),
@@ -246,11 +242,7 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 		state.Email = types.StringNull()
 	}
 
-	if member.GetCreated().CheckValid() == nil {
-		state.Created = types.StringValue(member.GetCreated().String())
-	} else {
-		state.Created = types.StringNull()
-	}
+	state.Created = timestampValue(member.GetCreated())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -346,11 +338,7 @@ func (r *OrganizationMemberResource) Update(ctx context.Context, req resource.Up
 		plan.Email = types.StringNull()
 	}
 
-	if member.GetCreated().CheckValid() == nil {
-		plan.Created = types.StringValue(member.GetCreated().String())
-	} else {
-		plan.Created = types.StringNull()
-	}
+	plan.Created = timestampValue(member.GetCreated())
 
 	tflog.Info(ctx, "Updated organization member permission", map[string]any{
 		"id":         plan.ID.ValueString(),
