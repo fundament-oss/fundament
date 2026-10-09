@@ -1,3 +1,4 @@
+import { ConnectError } from '@connectrpc/connect';
 import {
   Component,
   inject,
@@ -33,6 +34,19 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
+
+/** A pool the wizard asked for and the API refused, in the API's own words. */
+export interface NodePoolNotCreated {
+  name: string;
+  reason: string;
+}
+
+/** The message without the "[code]" prefix a ConnectError puts in front of it. */
+function rejectionReason(reason: unknown): string {
+  if (reason instanceof ConnectError) return reason.rawMessage;
+  if (reason instanceof Error) return reason.message;
+  return '';
+}
 
 @Component({
   selector: 'app-new-cluster-summary',
@@ -151,19 +165,20 @@ export default class NewClusterSummaryComponent {
     this.isCreating.set(false);
 
     // The cluster is there either way, so the road leads to it. A pool that did
-    // not make it travels along as navigation state: the cluster page says it
-    // where the missing pool is, next to the section that should have held it,
-    // and it stays there to be read instead of sliding away on its own.
+    // not make it travels along as navigation state, with the API's reason: the
+    // cluster page says it where the missing pool is, next to the section that
+    // should have held it, and it stays there to be read instead of sliding
+    // away on its own.
     this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}`), {
       state: notCreated.length > 0 ? { nodePoolsNotCreated: notCreated } : undefined,
     });
   }
 
-  /** Returns the names of the pools that did not make it. */
+  /** Returns the pools that did not make it, each with the API's reason. */
   private async createNodePools(
     clusterId: string,
     pools: { name: string; machineType: string; autoscaleMin: number; autoscaleMax: number }[],
-  ): Promise<string[]> {
+  ): Promise<NodePoolNotCreated[]> {
     if (pools.length === 0) return [];
 
     const abortSignal = this.idempotency.reset();
@@ -182,7 +197,11 @@ export default class NewClusterSummaryComponent {
       }),
     );
 
-    return pools.filter((_, i) => uitkomsten[i].status === 'rejected').map((pool) => pool.name);
+    return pools.flatMap((pool, i) => {
+      const uitkomst = uitkomsten[i];
+      if (uitkomst.status !== 'rejected') return [];
+      return [{ name: pool.name, reason: rejectionReason(uitkomst.reason) }];
+    });
   }
 
   modalDialogRef = viewChild<ElementRef<HTMLElement>>('modalDialog');
