@@ -64,6 +64,12 @@ func (s *Server) CreateNodePool(
 	nodePoolID, err := s.queries.NodePoolCreate(ctx, params)
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			// The quota trigger: the pool's maximum would take the organization
+			// over its node quota for this machine type in this region. Its text
+			// names the numbers and is written to be shown to the user.
+			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolQuotaExceeded {
+				return nil, connect.NewError(connect.CodeResourceExhausted, errors.New(pgErr.Message))
+			}
 			// The region-match constraint trigger: the resolved row's region does
 			// not match the cluster's region_id (e.g. a pre-catalog cluster whose
 			// region_id is still NULL).
