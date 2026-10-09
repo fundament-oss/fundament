@@ -1,20 +1,23 @@
 name: Image scan
 
+# Reports only: findings show as warnings and a PR comment, never as a failed
+# check.
+
 on:
   pull_request:
-    paths:
-      - charts/**
-      - .github/workflows/image-scan.yml
   schedule: # Mondays at 06:00 UTC
     - cron: '0 6 * * 1'
   workflow_dispatch:
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.67.2
 
 permissions:
   contents: read
 
 jobs:
   images:
-    name: List chart images
+    name: List images
     runs-on: ubuntu-24.04
     outputs:
       images: ${{ steps.list.outputs.images }}
@@ -23,13 +26,19 @@ jobs:
 
       - uses: jdx/mise-action@v4
 
+      # Third-party images come from the rendered chart. Of our own images only
+      # the frontends and db-migrations are scanned: the Go services are built
+      # FROM scratch, so govulncheck covers everything in them.
       # The default values do not render: they leave jwtSecret empty.
       - id: list
         run: |
-          images=$(mise exec -- helm template charts/fundament \
-              -f charts/fundament/values-production.yaml --set jwtSecret=unused \
-            | grep -E '^\s*image:' | sed -E 's/.*image:[[:space:]]*"?//; s/"$//' \
-            | sort -u | jq -Rnc '[inputs]')
+          images=$( {
+            mise exec -- helm template charts/fundament \
+                -f charts/fundament/values-production.yaml --set jwtSecret=unused \
+              | grep -E '^\s*image:' | sed -E 's/.*image:[[:space:]]*"?//; s/"$//' \
+              | grep -v '^ghcr.io/fundament-oss/'
+            mise exec -- yq -r '.images[] | select(test("-frontend:|/db-migrations:"))' charts/fundament/values.yaml
+          } | sort -u | jq -Rnc '[inputs]')
           echo "$images" | jq .
           echo "images=$images" >> "$GITHUB_OUTPUT"
 
@@ -37,41 +46,95 @@ jobs:
     name: Scan ${{ matrix.image }}
     needs: images
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      security-events: write
     strategy:
       fail-fast: false
       matrix:
         image: ${{ fromJson(needs.images.outputs.images) }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # Runs in the checkout so trivy picks up .trivyignore when it exists.
       - name: Scan
         env:
           IMAGE: ${{ matrix.image }}
         run: |
-          docker run --rm -v "$PWD:/out" aquasec/trivy:0.67.2 image --quiet --scanners vuln \
-            --severity HIGH,CRITICAL --ignore-unfixed --format json --output /out/trivy.json "$IMAGE"
-          docker run --rm -v "$PWD:/out" aquasec/trivy:0.67.2 convert \
-            --format sarif --output /out/trivy.sarif /out/trivy.json
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE" image --quiet --scanners vuln \
+            --severity HIGH,CRITICAL --ignore-unfixed --format json --output trivy.json "$IMAGE"
 
-      - name: Summary
+      - name: Report
         env:
           IMAGE: ${{ matrix.image }}
         run: |
-          jq -r --arg img "$IMAGE" '
-            [.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName + .InstalledVersion) as $v
-            | "### `\($img)`\n",
-              if ($v | length) == 0 then "No fixable high or critical vulnerabilities."
+          mkdir report
+          jq -c '[.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName + .InstalledVersion)' \
+            trivy.json > vulns.json
+          critical=$(jq '[.[] | select(.Severity == "CRITICAL")] | length' vulns.json)
+          high=$(jq '[.[] | select(.Severity == "HIGH")] | length' vulns.json)
+          echo "$critical $high" > report/counts
+          if [ $((critical + high)) -gt 0 ]; then
+            echo "::warning title=Image scan::$IMAGE: $critical critical, $high high with a fix available"
+          fi
+          {
+            echo "<details><summary><code>$IMAGE</code>: $critical critical, $high high</summary>"
+            echo
+            # A PR comment holds at most 65536 characters.
+            jq -r '
+              if length == 0 then "No fixable high or critical vulnerabilities."
               else
                 "| Severity | Package | Installed | Fixed in | ID |",
                 "|---|---|---|---|---|",
-                ($v[] | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | [\(.VulnerabilityID)](\(.PrimaryURL // "")) |")
+                (sort_by(.Severity) | .[:25][] | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | [\(.VulnerabilityID)](\(.PrimaryURL // "")) |"),
+                (if length > 25 then "\n\(length - 25) more in the run summary." else empty end)
               end
-          ' trivy.json >> "$GITHUB_STEP_SUMMARY"
+            ' vulns.json
+            echo
+            echo "</details>"
+          } > report/summary.md
+          jq -r --arg img "$IMAGE" '
+            "### `\($img)`\n",
+            if length == 0 then "No fixable high or critical vulnerabilities."
+            else
+              "| Severity | Package | Installed | Fixed in | ID |",
+              "|---|---|---|---|---|",
+              (sort_by(.Severity) | .[] | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | [\(.VulnerabilityID)](\(.PrimaryURL // "")) |")
+            end
+          ' vulns.json >> "$GITHUB_STEP_SUMMARY"
 
-      # A fork's token cannot write security events.
-      - uses: github/codeql-action/upload-sarif@v4
-        if: github.event.pull_request.head.repo.fork != true
+      - uses: actions/upload-artifact@v4
         with:
-          sarif_file: trivy.sarif
-          category: ${{ matrix.image }}
+          name: image-scan-${{ strategy.job-index }}
+          path: report/
+
+  comment:
+    name: Comment on PR
+    needs: scan
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-scan-*
+
+      - name: Compose
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          read -r critical high < <(cat image-scan-*/counts | awk '{c+=$1; h+=$2} END {print c+0, h+0}')
+          {
+            echo "## Image scan: $critical critical, $high high with a fix available"
+            echo
+            echo "Images the chart deploys, as published now; this PR's own changes are not scanned. Does not block merging. [Run]($RUN_URL)"
+            echo
+            cat image-scan-*/summary.md
+            echo
+            echo "Do not discuss whether a finding is exploitable here: open a [private security advisory](${{ github.server_url }}/${{ github.repository }}/security/advisories/new) instead."
+          } > comment.md
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: image-scan
+          path: comment.md
