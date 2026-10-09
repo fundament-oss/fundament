@@ -41,7 +41,8 @@ docs:
     printf 'provider_installation {\n  dev_overrides {\n    "registry.opentofu.org/fundament/fundament" = "%s"\n  }\n  direct {}\n}\n' "$TMP" > "$TMP/tofurc"
     printf 'terraform {\n  required_providers {\n    fundament = { source = "fundament/fundament" }\n  }\n}\n' > "$TMP/main.tf"
     # tfplugindocs looks a schema up by the provider's short name, not by OpenTofu's registry address.
-    (cd "$TMP" && TF_CLI_CONFIG_FILE="$TMP/tofurc" tofu providers schema -json) \
+    # -chdir rather than cd: mise resolves tofu's version from the working directory.
+    TF_CLI_CONFIG_FILE="$TMP/tofurc" tofu -chdir="$TMP" providers schema -json \
         | jq '.provider_schemas |= with_entries(.key = "fundament")' > "$TMP/schema.json"
     tfplugindocs generate --provider-name fundament --providers-schema "$TMP/schema.json"
 
@@ -80,7 +81,7 @@ validate-examples:
     failed=0
     for dir in "$TMP"/configs/*/; do
         name=$(basename "$dir")
-        if (cd "$dir" && tofu init -input=false -backend=false -no-color > init.log 2>&1 && tofu validate -no-color > validate.log 2>&1); then
+        if tofu -chdir="$dir" init -input=false -backend=false -no-color > "$dir/init.log" 2>&1 && tofu -chdir="$dir" validate -no-color > "$dir/validate.log" 2>&1; then
             echo "ok    $name"
         else
             echo "FAIL  $name"
