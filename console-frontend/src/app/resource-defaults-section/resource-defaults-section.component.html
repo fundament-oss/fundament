@@ -3,7 +3,7 @@
 </nldd-title>
 <nldd-spacer size="8"></nldd-spacer>
 <nldd-rich-text spacing="flat">
-  <p>{{ copy().description }}</p>
+  <p>{{ description() }}</p>
 </nldd-rich-text>
 <nldd-spacer size="12"></nldd-spacer>
 <nldd-toggle-button-group
@@ -13,29 +13,31 @@
   (change)="$any($event).detail.selected && select($any($event).detail.value)"
 >
   <nldd-toggle-button
-    value="unlimited"
-    text="Unlimited"
-    [attr.selected]="mode() === 'unlimited' ? '' : null"
+    [attr.value]="scope() === 'cluster' ? 'none' : 'inherit'"
+    [attr.text]="offText()"
+    [attr.selected]="isOff() ? '' : null"
   ></nldd-toggle-button>
-  <!-- Platform, not organization: the fallback is a constant in the API, the
-       same one for an organization and a project. -->
-  <nldd-toggle-button
-    value="defaults"
-    text="Platform defaults"
-    [attr.selected]="mode() === 'defaults' ? '' : null"
-  ></nldd-toggle-button>
+  <!-- Offered for a cluster only: the platform's numbers are a starting point
+       for a cluster, while a project starts from its own cluster. -->
+  @if (scope() === 'cluster') {
+    <nldd-toggle-button
+      value="suggested"
+      text="Suggested"
+      [attr.selected]="mode() === 'suggested' ? '' : null"
+    ></nldd-toggle-button>
+  }
   <nldd-toggle-button
     value="custom"
     text="Custom"
     [attr.selected]="mode() === 'custom' ? '' : null"
   ></nldd-toggle-button>
 </nldd-toggle-button-group>
-<!-- Nothing to fill in when nothing is limited: the fields would only hold
-     numbers that are not applied.
+<!-- Nothing to fill in when nothing is set: the fields would only hold numbers
+     that are not applied.
      A list rather than stacked fields: two numbers of the same kind read as a
      pair when the labels line up on one side and the values on the other. The
      row is the label, so each field carries its own accessible name. -->
-@if (mode() !== 'unlimited') {
+@if (!isOff()) {
   <nldd-spacer size="16"></nldd-spacer>
   <nldd-list
     variant="box-tinted"
@@ -45,6 +47,7 @@
       <nldd-text-cell
         width="full"
         [attr.text]="requestLabel()"
+        [attr.supporting-text]="requestHint()"
       ></nldd-text-cell>
       <nldd-spacer-cell size="12"></nldd-spacer-cell>
       <nldd-cell width="fit-content">
@@ -54,7 +57,7 @@
           step="1"
           [attr.id]="copy().requestId"
           [attr.accessible-label]="copy().requestAccessibleLabel"
-          [attr.max]="limit() ?? null"
+          [attr.max]="requestMax() ?? null"
           [value]="request()"
           (input)="$any($event).detail && edit(request, toInt($any($event).detail.value))"
         ></nldd-number-field>
@@ -64,6 +67,7 @@
       <nldd-text-cell
         width="full"
         [attr.text]="limitLabel()"
+        [attr.supporting-text]="limitHint()"
       ></nldd-text-cell>
       <nldd-spacer-cell size="12"></nldd-spacer-cell>
       <nldd-cell width="fit-content">
@@ -73,6 +77,7 @@
           [attr.id]="copy().limitId"
           [attr.accessible-label]="copy().limitAccessibleLabel"
           [min]="request() ?? 1"
+          [attr.max]="limitMax() ?? null"
           [value]="limit()"
           (input)="$any($event).detail && edit(limit, toInt($any($event).detail.value))"
         ></nldd-number-field>

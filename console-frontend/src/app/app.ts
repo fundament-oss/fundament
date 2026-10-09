@@ -829,7 +829,6 @@ export default class App implements OnInit {
         exact: false,
         count: project?.memberCount ?? null,
       },
-      { path: `${base}/limits`, icon: 'hand', label: 'Limits', exact: false, count: null },
     ];
   });
 

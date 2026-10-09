@@ -82,6 +82,13 @@ the background. Nodes are replaced rather than modified: adding, removing or
 shrinking a pool takes the nodes involved out of service, so drain-sensitive
 workloads should have a PodDisruptionBudget.
 
+## Defaults
+
+The **Defaults** block sets the resource requests and limits containers on this
+cluster get when their workload sets none of its own. Every namespace on the
+cluster inherits them, and a project may narrow them but never widen them. See
+[Defaults](./namespaces.md#defaults).
+
 ## Namespaces
 
 Each cluster's **Namespaces** tab lists the namespaces on that cluster and which

@@ -37,7 +37,8 @@ The project defines who has access and what the namespaces are for. The cluster 
 
 A Kubernetes namespace within a project. Since a project runs on one cluster, the namespace's location is determined by its project.
 
-- Resource quotas and limit ranges are applied per namespace
+- Container defaults are applied per namespace, as a LimitRange; there is no
+  ResourceQuota. See [Defaults](./namespaces.md#defaults)
 - Network policies scope traffic within and between namespaces
 - RBAC is scoped to the namespace level
 

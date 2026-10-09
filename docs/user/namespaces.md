@@ -79,31 +79,53 @@ Namespaces created before this naming was introduced keep their earlier
 cluster name, a project prefix with a few generated characters (for example
 `payments1f3a-staging`); Kubernetes can't rename a namespace.
 
-## Quotas and limits
+## Defaults
 
-Resource limits are set on **Organization → Limits** and **Project → Limits**.
-See [Members and roles](./members-and-roles.md) for who is allowed to change
-them.
+What a container gets when its workload sets no resources of its own is set in
+two places:
 
-The values in the table below are the platform's starting values, offered in
-the console and restored by **Reset to defaults**. They are not floors: a limit
-left unset means no limit at all, not the value listed here.
+- on a cluster's own page, which applies to every namespace on that cluster
+- on a project's **General** page, which applies to that project's namespaces
+  only
 
-### Per-container resource defaults
+See [Members and roles](./members-and-roles.md) for who may change them.
+Organization admins set a cluster's defaults; a project admin sets the
+project's.
 
-| Limit | Default | Unit |
+### The four values
+
+| Default | Unit | Suggested |
 | --- | --- | --- |
-| Default CPU request | 100 | millicores |
-| Default CPU limit | 500 | millicores |
-| Default memory request | 256 | mebibytes |
-| Default memory limit | 512 | mebibytes |
+| CPU request | millicores | 100 |
+| CPU limit | millicores | 500 |
+| Memory request | mebibytes | 256 |
+| Memory limit | mebibytes | 512 |
 
-These are set at both the organization and the project level, and they land in
-every namespace as a Kubernetes LimitRange named `fundament-defaults`. Where
-both levels set the same field, the **lower value wins**: a project can only
-tighten what the organization allows, never loosen it. A field left unset at
-both levels means no default is applied for it, and if no field is set at all
-the LimitRange is not created.
+The suggested column is what the console offers on a cluster as a starting
+point. They are not floors: a field left unset applies no default at all, not
+the value listed here.
+
+### Inheritance, and the one rule
+
+A field the project does not set takes the cluster's value, so a project only
+has to say what it wants to differ. A field neither sets applies no default.
+
+A project's value may be **lower than the cluster's, never higher**. That holds
+per field, and only where the cluster has a value at all: where the cluster sets
+no CPU limit, a project may set any CPU limit it likes.
+
+Two things are refused when you save them, with the offending value named:
+
+- A project value above the cluster's. Lower the project, or raise the cluster
+  first.
+- Lowering a cluster value below a value one of its projects has set. The error
+  names the project, so you know which one to lower first. Nothing is cascaded:
+  a project's value is never changed on its behalf.
+
+The effective request may not exceed the effective limit either, even when each
+of the two comes from a different place. A cluster with a CPU limit of 200m and
+a project with a CPU request of 300m and no limit of its own is refused for that
+reason.
 
 ### What happens when you hit them
 
@@ -111,6 +133,10 @@ Nothing is rejected. These are *defaults*, not caps: a container that specifies
 no CPU or memory request and limit of its own gets these values, and a container
 that specifies its own keeps them, however large. Storage and object counts are
 not limited at all.
+
+The effective values land in every namespace as a Kubernetes LimitRange named
+`fundament-defaults`. When no field applies, the LimitRange is not created, and
+clearing every field removes it again.
 
 Where a namespace does run out of room is at the cluster level: pods stay
 `Pending` when the cluster cannot grow enough nodes to schedule them. See
