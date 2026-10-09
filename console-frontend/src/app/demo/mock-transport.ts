@@ -2,7 +2,8 @@
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { Transport, createRouterTransport } from '@connectrpc/connect';
+import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
+import type { ContainerDefaults } from '../../generated/v1/common_pb';
 import {
   OrganizationService,
   ListOrganizationsResponseSchema,
@@ -145,6 +146,32 @@ const demoCategories = () => {
   return [...byId.values()];
 };
 
+/**
+ * The rule tenant.project_defaults_violation holds: a project's value may not
+ * exceed the cluster's, and the effective request may not exceed the effective
+ * limit. Returns the first problem as the trigger would word it, or null.
+ */
+function defaultsViolation(
+  cluster: ContainerDefaults | undefined,
+  project: ContainerDefaults | undefined,
+): string | null {
+  if (!project) return null;
+  const fields: [keyof ContainerDefaults, string, string][] = [
+    ['memoryRequestMi', 'default memory request', 'Mi'],
+    ['memoryLimitMi', 'default memory limit', 'Mi'],
+    ['cpuRequestM', 'default CPU request', 'm'],
+    ['cpuLimitM', 'default CPU limit', 'm'],
+  ];
+  const over = fields.find(([field]) => {
+    const own = project[field];
+    const ceiling = cluster?.[field];
+    return own !== undefined && ceiling !== undefined && own > ceiling;
+  });
+  if (!over) return null;
+  const [field, name, unit] = over;
+  return `${name} ${project[field]}${unit} exceeds the cluster's ${cluster?.[field]}${unit}`;
+}
+
 export default function createDemoTransport(): Transport {
   return createRouterTransport((router) => {
     router.service(AuthnService, {
@@ -201,8 +228,20 @@ export default function createDemoTransport(): Transport {
           suggested: fx.suggestedDefaults,
         });
       },
+      // Refuses what the real triggers refuse: a project's own values may not
+      // end up above the cluster's.
       updateClusterDefaults: async (req) => {
         await delay();
+        const refused = fx.projects
+          .filter((p) => p.clusterId === req.clusterId)
+          .map((p) => ({ p, reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)) }))
+          .find(({ reason }) => reason !== null);
+        if (refused) {
+          throw new ConnectError(
+            `project ${refused.p.name}: ${refused.reason}`,
+            Code.FailedPrecondition,
+          );
+        }
         if (req.defaults) fx.clusterDefaults.set(req.clusterId, req.defaults);
         else fx.clusterDefaults.delete(req.clusterId);
         return create(UpdateClusterDefaultsResponseSchema, {});
@@ -325,6 +364,12 @@ export default function createDemoTransport(): Transport {
       },
       updateProjectDefaults: async (req) => {
         await delay();
+        const project = fx.projects.find((p) => p.id === req.projectId);
+        const reason = defaultsViolation(
+          project && fx.clusterDefaults.get(project.clusterId),
+          req.defaults,
+        );
+        if (reason) throw new ConnectError(reason, Code.InvalidArgument);
         if (req.defaults) fx.projectDefaults.set(req.projectId, req.defaults);
         else fx.projectDefaults.delete(req.projectId);
         return create(UpdateProjectDefaultsResponseSchema, {});

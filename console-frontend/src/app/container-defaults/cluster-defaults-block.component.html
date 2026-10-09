@@ -77,9 +77,13 @@
         ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-      <nldd-form (submit)="save($event)">
+      <nldd-form
+        (submit)="save($event)"
+        (keydown.enter)="save($event)"
+      >
         <app-resource-defaults-section
           scope="cluster"
+          [disabled]="saving()"
           [copy]="MEMORY_SECTION"
           [seed]="memorySeed()"
           [(mode)]="draftMemoryMode"
@@ -88,6 +92,7 @@
         ></app-resource-defaults-section>
         <app-resource-defaults-section
           scope="cluster"
+          [disabled]="saving()"
           [copy]="CPU_SECTION"
           [seed]="cpuSeed()"
           [(mode)]="draftCpuMode"

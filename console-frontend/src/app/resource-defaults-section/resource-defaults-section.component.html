@@ -10,6 +10,7 @@
   type="radio"
   [attr.name]="copy().name"
   [attr.accessible-label]="copy().title"
+  [attr.disabled]="disabled() ? '' : null"
   (change)="$any($event).detail.selected && select($any($event).detail.value)"
 >
   <nldd-toggle-button
@@ -58,6 +59,7 @@
           [attr.id]="copy().requestId"
           [attr.accessible-label]="copy().requestAccessibleLabel"
           [attr.max]="requestMax() ?? null"
+          [attr.disabled]="disabled() ? '' : null"
           [value]="request()"
           (input)="$any($event).detail && edit(request, toInt($any($event).detail.value))"
         ></nldd-number-field>
@@ -78,6 +80,7 @@
           [attr.accessible-label]="copy().limitAccessibleLabel"
           [min]="request() ?? 1"
           [attr.max]="limitMax() ?? null"
+          [attr.disabled]="disabled() ? '' : null"
           [value]="limit()"
           (input)="$any($event).detail && edit(limit, toInt($any($event).detail.value))"
         ></nldd-number-field>

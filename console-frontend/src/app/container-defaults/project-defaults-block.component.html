@@ -74,9 +74,13 @@
         ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-      <nldd-form (submit)="save($event)">
+      <nldd-form
+        (submit)="save($event)"
+        (keydown.enter)="save($event)"
+      >
         <app-resource-defaults-section
           scope="project"
+          [disabled]="saving()"
           [copy]="MEMORY_SECTION"
           [seed]="memoryFromCluster()"
           [ceiling]="memoryFromCluster()"
@@ -86,6 +90,7 @@
         ></app-resource-defaults-section>
         <app-resource-defaults-section
           scope="project"
+          [disabled]="saving()"
           [copy]="CPU_SECTION"
           [seed]="cpuFromCluster()"
           [ceiling]="cpuFromCluster()"
@@ -108,6 +113,7 @@
           <nldd-button
             type="button"
             (click)="reset()"
+            [attr.disabled]="saving() ? '' : null"
             text="Inherit everything from the cluster"
             variant="secondary"
             width="full"

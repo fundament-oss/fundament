@@ -276,9 +276,13 @@ CREATE TRIGGER defaults_outbox AFTER UPDATE OF default_memory_request_mi, defaul
 CREATE CONSTRAINT TRIGGER verify_defaults AFTER INSERT OR UPDATE OF cluster_id, default_memory_request_mi, default_memory_limit_mi, default_cpu_request_m, default_cpu_limit_m ON tenant.projects NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION tenant.projects_tr_verify_defaults();
 
 -- Data: carry today's effective values over before the old tables go. The
--- updates touch every row and fire the outbox triggers, so they get more than
--- the DDL's 3 seconds; the DDL timeout comes back after them.
+-- updates touch every row, so they get more than the DDL's 3 seconds; the DDL
+-- timeout comes back after them. The outbox triggers stay quiet meanwhile:
+-- each would enqueue the same namespaces, and one sync per namespace is
+-- enqueued once below, after both.
 SET SESSION statement_timeout = 300000;
+ALTER TABLE tenant.clusters DISABLE TRIGGER defaults_outbox;
+ALTER TABLE tenant.projects DISABLE TRIGGER defaults_outbox;
 
 -- Every active cluster takes its organization's defaults.
 UPDATE tenant.clusters
@@ -308,6 +312,24 @@ WHERE tenant.project_limits.project_id = tenant.projects.id
   AND tenant.project_limits.deleted IS NULL
   AND tenant.clusters.id = tenant.projects.cluster_id
   AND tenant.projects.deleted IS NULL;
+
+ALTER TABLE tenant.clusters ENABLE TRIGGER defaults_outbox;
+ALTER TABLE tenant.projects ENABLE TRIGGER defaults_outbox;
+
+-- One LimitRange reconcile per active namespace that now has a default to apply.
+INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+SELECT tenant.namespaces.id, 'updated', 'trigger'
+FROM tenant.namespaces
+JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+WHERE tenant.namespaces.deleted IS NULL
+  AND tenant.projects.deleted IS NULL
+  AND tenant.clusters.deleted IS NULL
+  AND num_nonnulls(
+        tenant.clusters.default_memory_request_mi, tenant.clusters.default_memory_limit_mi,
+        tenant.clusters.default_cpu_request_m, tenant.clusters.default_cpu_limit_m,
+        tenant.projects.default_memory_request_mi, tenant.projects.default_memory_limit_mi,
+        tenant.projects.default_cpu_request_m, tenant.projects.default_cpu_limit_m) > 0;
 
 SET SESSION statement_timeout = 3000;
 
