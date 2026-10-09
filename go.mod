@@ -1,6 +1,6 @@
 module github.com/fundament-oss/fundament
 
-go 1.27.1
+go 1.27.2
 
 // A third-party Go file lives under docs-frontend/node_modules; keep every
 // node_modules tree out of ./... so vet, test, fix and lint skip it.
