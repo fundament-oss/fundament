@@ -35,8 +35,10 @@ organization's namespaces when a workload does not set its own.
 admin can manage members and settings for that project; a viewer has read-only
 access.
 
-**Project → Limits** bounds the resources the project's namespaces can consume,
-within whatever the organization allows.
+**Project → Limits** sets the same container defaults for the project's
+namespaces, within whatever the organization allows: a project may lower a
+value, never raise it. Like the organization's, they are defaults, not caps; a
+workload that sets its own requests and limits keeps them.
 
 ## Namespace role bindings
 
