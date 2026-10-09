@@ -64,10 +64,10 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
 			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
 			"cluster does not run within the timeout.\n\n" +
-			"When a create fails, OpenTofu marks the cluster tainted and the next apply deletes and recreates it. " +
+			"When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. " +
 			"If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address " +
 			"to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish " +
-			"stays in the state with status deleting: the next destroy waits for it, and the next apply recreates it once it is gone.",
+			"stays in the state, and the next refresh shows it as deleting: the next destroy waits for it, and the next apply recreates it once it is gone.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the cluster.",
