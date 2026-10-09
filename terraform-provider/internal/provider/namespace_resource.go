@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -278,7 +277,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	plan.Created = types.StringValue(getResp.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))
+	plan.Created = timestampValue(getResp.GetNamespace().GetCreated())
 	r.populateClusterFields(ctx, &plan, getResp.GetNamespace().GetClusterId())
 	r.populateProjectFields(ctx, &plan, getResp.GetNamespace().GetProjectId())
 
@@ -335,7 +334,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	ns := getResp.GetNamespace()
 	state.Name = types.StringValue(ns.GetName())
-	state.Created = types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339))
+	state.Created = timestampValue(ns.GetCreated())
 	r.populateClusterFields(ctx, &state, ns.GetClusterId())
 	r.populateProjectFields(ctx, &state, ns.GetProjectId())
 

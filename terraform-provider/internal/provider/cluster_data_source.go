@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -23,11 +25,12 @@ type ClusterDataSource struct {
 
 // ClusterDataSourceModel describes the data source data model.
 type ClusterDataSourceModel struct {
-	ID                types.String `tfsdk:"id"`
-	Name              types.String `tfsdk:"name"`
-	Region            types.String `tfsdk:"region"`
-	KubernetesVersion types.String `tfsdk:"kubernetes_version"`
-	Status            types.String `tfsdk:"status"`
+	ID                types.String           `tfsdk:"id"`
+	Name              types.String           `tfsdk:"name"`
+	Region            types.String           `tfsdk:"region"`
+	KubernetesVersion types.String           `tfsdk:"kubernetes_version"`
+	Status            types.String           `tfsdk:"status"`
+	NodePools         []ClusterNodePoolModel `tfsdk:"node_pools"`
 }
 
 // NewClusterDataSource creates a new ClusterDataSource.
@@ -64,6 +67,18 @@ func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			"status": schema.StringAttribute{
 				Description: "The current status of the cluster.",
 				Computed:    true,
+			},
+			"node_pools": schema.ListNestedAttribute{
+				Description: "The cluster's node pools, by name.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"name":          schema.StringAttribute{Description: "The name of the node pool.", Computed: true},
+						"machine_type":  schema.StringAttribute{Description: "The machine type of the pool's nodes.", Computed: true},
+						"autoscale_min": schema.Int64Attribute{Description: "The minimum number of nodes.", Computed: true},
+						"autoscale_max": schema.Int64Attribute{Description: "The maximum number of nodes.", Computed: true},
+					},
+				},
 			},
 		},
 	}
@@ -147,6 +162,19 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.Region = types.StringValue(cluster.GetRegion())
 	config.KubernetesVersion = types.StringValue(cluster.GetKubernetesVersion())
 	config.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
+
+	pools, err := listNodePools(ctx, d.client, cluster.GetId())
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", cluster.GetName(), err))
+		return
+	}
+	config.NodePools = make([]ClusterNodePoolModel, 0, len(pools))
+	for _, pool := range pools {
+		config.NodePools = append(config.NodePools, pool.Pool)
+	}
+	slices.SortFunc(config.NodePools, func(a, b ClusterNodePoolModel) int {
+		return strings.Compare(a.Name.ValueString(), b.Name.ValueString())
+	})
 
 	tflog.Debug(ctx, "Read cluster successfully", map[string]any{
 		"id":     config.ID.ValueString(),

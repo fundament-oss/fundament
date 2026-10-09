@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -157,12 +156,7 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	members := rpcResp.GetMembers()
 	state.Members = make([]ProjectMemberModel, len(members))
 	for i, member := range members {
-		var created types.String
-		if member.HasCreated() {
-			created = types.StringValue(member.GetCreated().AsTime().Format(time.RFC3339))
-		} else {
-			created = types.StringNull()
-		}
+		created := timestampValue(member.GetCreated())
 
 		permissionStr, err := projectMemberPermissionFromProto(member.GetRole())
 		if err != nil {

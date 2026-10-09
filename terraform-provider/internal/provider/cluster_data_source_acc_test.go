@@ -45,6 +45,11 @@ func TestAccClusterDataSource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "region"),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "kubernetes_version"),
 					resource.TestCheckResourceAttrSet("data.fundament_cluster.test", "status"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "node_pools.#", "1"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "node_pools.0.name", "workers"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "node_pools.0.machine_type", "n1-standard-1"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "node_pools.0.autoscale_min", "1"),
+					resource.TestCheckResourceAttr("data.fundament_cluster.test", "node_pools.0.autoscale_max", "3"),
 				),
 			},
 		},
@@ -63,6 +68,13 @@ resource "fundament_cluster" "test" {
   name               = %[1]q
   region             = "eu-west-1"
   kubernetes_version = "1.28"
+
+  node_pool {
+    name          = "workers"
+    machine_type  = "n1-standard-1"
+    autoscale_min = 1
+    autoscale_max = 3
+  }
 }
 
 data "fundament_cluster" "test" {

@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -40,8 +41,11 @@ func TestAccProjectsDataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Verify the data source ID is set
 					resource.TestCheckResourceAttr("data.fundament_projects.test", "id", "projects"),
-					// Verify projects attribute exists (may be empty list)
-					resource.TestCheckResourceAttrSet("data.fundament_projects.test", "projects.#"),
+					resource.TestCheckResourceAttr("data.fundament_projects.test", "projects.#", "1"),
+					resource.TestCheckResourceAttrPair("data.fundament_projects.test", "projects.0.id", "fundament_project.test", "id"),
+					resource.TestCheckResourceAttr("data.fundament_projects.test", "projects.0.name", "tf-acc-pds-"+suffix),
+					resource.TestCheckResourceAttrSet("data.fundament_projects.test", "projects.0.alias"),
+					resource.TestMatchResourceAttr("data.fundament_projects.test", "projects.0.created", rfc3339),
 				),
 			},
 		},
@@ -62,8 +66,16 @@ resource "fundament_cluster" "test" {
   kubernetes_version = "1.28"
 }
 
+resource "fundament_project" "test" {
+  name       = "tf-acc-pds-%[1]s"
+  cluster_id = fundament_cluster.test.id
+}
+
 data "fundament_projects" "test" {
   cluster_id = fundament_cluster.test.id
+  depends_on = [fundament_project.test]
 }
 `, suffix, endpoint, organizationID)
 }
+
+var rfc3339 = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`)
