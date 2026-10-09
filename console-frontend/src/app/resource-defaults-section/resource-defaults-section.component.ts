@@ -7,7 +7,7 @@ import {
   model,
   type WritableSignal,
 } from '@angular/core';
-import { toInt } from '../utils/defaults';
+import { INT32_MAX, toInt } from '../utils/defaults';
 
 import '@nldd/design-system/cell';
 import '@nldd/design-system/list';
@@ -170,10 +170,13 @@ export default class ResourceDefaultsSectionComponent {
   protected limitLabel = computed(() => `${this.copy().limitName} (${this.copy().unit})`);
 
   /** What a field may not go above: the cluster's value, and for a request also
-   *  the limit in this same pair. */
-  protected requestMax = computed(() => lowest(this.limit(), this.ceiling().request));
+   *  the limit in this same pair, which on a project is the cluster's limit when
+   *  the project sets none. Without any of those, the API's int32. */
+  protected requestMax = computed(
+    () => lowest(this.limit() ?? this.ceiling().limit, this.ceiling().request) ?? INT32_MAX,
+  );
 
-  protected limitMax = computed(() => this.ceiling().limit);
+  protected limitMax = computed(() => this.ceiling().limit ?? INT32_MAX);
 
   /** Says the ceiling out loud, so the number field is not the only place it
    *  shows up — a disabled spin button explains nothing. */

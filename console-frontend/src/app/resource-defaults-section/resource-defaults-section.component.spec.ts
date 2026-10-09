@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { INT32_MAX } from '../utils/defaults';
 import ResourceDefaultsSectionComponent, {
   modeFor,
   MEMORY_SECTION,
@@ -113,11 +114,12 @@ describe('ResourceDefaultsSectionComponent on a cluster', () => {
     expect(host.querySelector('#defaultMemoryRequest')).not.toBeNull();
   });
 
-  it('has no ceiling: nothing sits above a cluster', () => {
+  it('has no ceiling but the int32: nothing sits above a cluster', () => {
     const fixture = build();
     const internals = fixture.componentInstance as unknown as Internals;
 
-    expect(internals.limitMax()).toBeUndefined();
+    expect(internals.limitMax()).toBe(INT32_MAX);
+    expect(internals.requestMax()).toBe(INT32_MAX);
     expect(internals.requestHint()).toBeNull();
   });
 });
@@ -197,6 +199,17 @@ describe('ResourceDefaultsSectionComponent on a project', () => {
     const internals = fixture.componentInstance as unknown as Internals;
 
     expect(internals.requestHint()).toBeNull();
+  });
+
+  it('caps a request by the limit it inherits when the project sets none', () => {
+    const fixture = buildProject({ request: undefined, limit: 200 });
+    const internals = fixture.componentInstance as unknown as Internals;
+
+    expect(internals.requestMax()).toBe(200);
+
+    fixture.componentRef.setInput('limit', 150);
+    fixture.detectChanges();
+    expect(internals.requestMax()).toBe(150);
   });
 });
 

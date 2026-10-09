@@ -78,6 +78,10 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
 
   protected loadError = signal<string | null>(null);
 
+  /** The editor starts from what is stored, so it waits until that is known:
+   *  a draft seeded while loading or after a failed read would save as unset. */
+  protected canEdit = computed(() => !this.loading() && this.loadError() === null);
+
   private values = signal<ContainerDefaultValues>(NO_DEFAULTS);
 
   /** The platform's suggestion, offered as a starting point. */
@@ -130,6 +134,7 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
   }
 
   protected openEdit(): void {
+    if (!this.canEdit()) return;
     const values = this.values();
     this.saveError.set(null);
     this.draftMemoryRequestMi.set(values.memoryRequestMi);

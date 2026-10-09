@@ -19,6 +19,7 @@ import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
   GetClusterDefaultsResponseSchema,
+  UpdateClusterDefaultsResponseSchema,
 } from '../../generated/v1/cluster_pb';
 import {
   NamespaceService,
@@ -34,6 +35,7 @@ import {
   GetProjectResponseSchema,
   ListProjectMembersResponseSchema,
   GetProjectDefaultsResponseSchema,
+  UpdateProjectDefaultsResponseSchema,
 } from '../../generated/v1/project_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
@@ -199,6 +201,12 @@ export default function createDemoTransport(): Transport {
           suggested: fx.suggestedDefaults,
         });
       },
+      updateClusterDefaults: async (req) => {
+        await delay();
+        if (req.defaults) fx.clusterDefaults.set(req.clusterId, req.defaults);
+        else fx.clusterDefaults.delete(req.clusterId);
+        return create(UpdateClusterDefaultsResponseSchema, {});
+      },
       createCluster: async (req, ctx) => {
         await delay(500);
         // Same as createNamespace: the caller polls until this header says the
@@ -314,6 +322,12 @@ export default function createDemoTransport(): Transport {
           defaults: fx.projectDefaults.get(req.projectId),
           clusterDefaults: project && fx.clusterDefaults.get(project.clusterId),
         });
+      },
+      updateProjectDefaults: async (req) => {
+        await delay();
+        if (req.defaults) fx.projectDefaults.set(req.projectId, req.defaults);
+        else fx.projectDefaults.delete(req.projectId);
+        return create(UpdateProjectDefaultsResponseSchema, {});
       },
     });
 

@@ -81,8 +81,9 @@ cluster name, a project prefix with a few generated characters (for example
 
 ## Defaults
 
-What a container gets when its workload sets no resources of its own is set in
-two places:
+What a container gets for each request or limit it leaves unset is set in two
+places. Each of the four values fills in on its own: a container that sets only
+a CPU limit still gets the default CPU request and the memory values.
 
 - on a cluster's own page, which applies to every namespace on that cluster
 - on a project's **General** page, which applies to that project's namespaces

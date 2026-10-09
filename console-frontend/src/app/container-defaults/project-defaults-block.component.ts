@@ -77,6 +77,10 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
 
   protected loadError = signal<string | null>(null);
 
+  /** The editor starts from what is stored, so it waits until that is known:
+   *  a draft seeded while loading or after a failed read would save as unset. */
+  protected canEdit = computed(() => !this.loading() && this.loadError() === null);
+
   private values = signal<ContainerDefaultValues>(NO_DEFAULTS);
 
   private clusterValues = signal<ContainerDefaultValues>(NO_DEFAULTS);
@@ -128,6 +132,7 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
   }
 
   protected openEdit(): void {
+    if (!this.canEdit()) return;
     const values = this.values();
     this.saveError.set(null);
     this.draftMemoryRequestMi.set(values.memoryRequestMi);

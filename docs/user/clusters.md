@@ -85,7 +85,7 @@ workloads should have a PodDisruptionBudget.
 ## Defaults
 
 The **Defaults** block sets the resource requests and limits containers on this
-cluster get when their workload sets none of its own. Every namespace on the
+cluster get for each request or limit they leave unset. Every namespace on the
 cluster inherits them, and a project may narrow them but never widen them. See
 [Defaults](./namespaces.md#defaults).
 
