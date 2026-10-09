@@ -42,7 +42,6 @@ type ClusterResourceModel struct {
 
 const (
 	defaultClusterCreateTimeout = 30 * time.Minute
-	// An update waits until the change reached Gardener, not for its rollout.
 	defaultClusterUpdateTimeout = 30 * time.Minute
 	defaultClusterDeleteTimeout = 30 * time.Minute
 )
