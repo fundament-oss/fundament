@@ -1,0 +1,77 @@
+name: Image scan
+
+on:
+  pull_request:
+    paths:
+      - charts/**
+      - .github/workflows/image-scan.yml
+  schedule: # Mondays at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: List chart images
+    runs-on: ubuntu-24.04
+    outputs:
+      images: ${{ steps.list.outputs.images }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jdx/mise-action@v4
+
+      # The default values do not render: they leave jwtSecret empty.
+      - id: list
+        run: |
+          images=$(mise exec -- helm template charts/fundament \
+              -f charts/fundament/values-production.yaml --set jwtSecret=unused \
+            | grep -E '^\s*image:' | sed -E 's/.*image:[[:space:]]*"?//; s/"$//' \
+            | sort -u | jq -Rnc '[inputs]')
+          echo "$images" | jq .
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+  scan:
+    name: Scan ${{ matrix.image }}
+    needs: images
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJson(needs.images.outputs.images) }}
+    steps:
+      - name: Scan
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD:/out" aquasec/trivy:0.67.2 image --quiet --scanners vuln \
+            --severity HIGH,CRITICAL --ignore-unfixed --format json --output /out/trivy.json "$IMAGE"
+          docker run --rm -v "$PWD:/out" aquasec/trivy:0.67.2 convert \
+            --format sarif --output /out/trivy.sarif /out/trivy.json
+
+      - name: Summary
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          jq -r --arg img "$IMAGE" '
+            [.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName + .InstalledVersion) as $v
+            | "### `\($img)`\n",
+              if ($v | length) == 0 then "No fixable high or critical vulnerabilities."
+              else
+                "| Severity | Package | Installed | Fixed in | ID |",
+                "|---|---|---|---|---|",
+                ($v[] | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | [\(.VulnerabilityID)](\(.PrimaryURL // "")) |")
+              end
+          ' trivy.json >> "$GITHUB_STEP_SUMMARY"
+
+      # A fork's token cannot write security events.
+      - uses: github/codeql-action/upload-sarif@v4
+        if: github.event.pull_request.head.repo.fork != true
+        with:
+          sarif_file: trivy.sarif
+          category: ${{ matrix.image }}
