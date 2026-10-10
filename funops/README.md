@@ -46,6 +46,13 @@ node pools of that type. A quota only stops something new: lowering it below
 what is in use is allowed, leaves the existing clusters and pools alone, and
 `quota list` shows the excess.
 
+Upgrading an installation to the release that introduces quotas puts every
+existing organization at one cluster and no node quota, while its clusters and
+pools keep running. Review each one right after the migration: `quota list`
+shows what is in use, including machine types that have no quota row yet, and
+`set-clusters` and `set-nodes` give it room before anyone adds a cluster or a
+pool.
+
 `funops organization delete` soft-deletes the organization and revokes its
 memberships and API keys. It refuses while the organization still has clusters,
 including deleted ones whose shoot Gardener has not removed yet, or publishes

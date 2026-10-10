@@ -107,6 +107,23 @@ takes it away; the row stays and shows as 0. A deleted cluster and its pools
 count until Gardener has torn the shoot down, as `organization delete` counts
 them.
 
+### After upgrading to quotas
+
+The migration that introduces quotas gives every existing organization the
+defaults of a new one: one cluster and no node quota. Nothing that runs is
+touched, but from then on a second cluster, a new pool or a larger pool is
+refused until the quotas are set. Review every organization right after the
+migration:
+
+```bash
+funops organization list
+funops organization quota list acme-corp
+```
+
+The list shows what is in use, including machine types the organization runs
+without a quota row yet (quota 0, no "updated" time), so `set-clusters` and
+`set-nodes` can give each organization at least the room it already uses.
+
 ## Remove users and organizations
 
 `funops organization member remove` revokes a membership or a pending

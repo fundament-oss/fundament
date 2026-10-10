@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,6 +116,44 @@ func TestOrganizationQuotaList_ShowsWhatIsInUse(t *testing.T) {
 	}
 	assert.Equal(t, int64(3), inUse["eu-west-1/n1-standard-1"], "the maximum counts, not the minimum")
 	assert.Equal(t, int64(0), inUse["eu-west-1/n1-standard-2"])
+}
+
+// Pools from before quotas existed have no quota row; the list still shows
+// what they use, as quota 0, so an upgrade review sees them.
+func TestOrganizationQuotaList_ShowsUseWithoutAQuotaRow(t *testing.T) {
+	ctx := newTestContext(t)
+
+	require.NoError(t, (&OrganizationCreateCmd{Name: "legacy"}).Run(ctx))
+	orgID, err := lookupOrganizationID(t.Context(), ctx.Queries, "legacy")
+	require.NoError(t, err)
+
+	// A cluster with a pool the quota trigger would refuse today: inserted
+	// with the trigger off, the way the rows predate the migration.
+	for _, statement := range []string{
+		`ALTER TABLE tenant.node_pools DISABLE TRIGGER verify_quota`,
+		`INSERT INTO tenant.clusters (id, organization_id, name, region, kubernetes_version, region_id)
+		 VALUES ('019b4000-2000-7000-8000-00000000fffe', $1, 'old', 'eu-west-1', '1.28', '019b4000-5000-7000-8000-000000000002')`,
+		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max, region_machine_type_id)
+		 VALUES ('019b4000-2000-7000-8000-00000000fffe', 'workers', 'n1-standard-2', 1, 4, '019b4000-5300-7000-8000-000000000004')`,
+		`ALTER TABLE tenant.node_pools ENABLE TRIGGER verify_quota`,
+	} {
+		if strings.Contains(statement, "$1") {
+			_, err = ctx.DB.Pool.Exec(t.Context(), statement, orgID)
+		} else {
+			_, err = ctx.DB.Pool.Exec(t.Context(), statement)
+		}
+		require.NoError(t, err)
+	}
+
+	_, machines := quotaRows(t, ctx, "legacy")
+	require.Len(t, machines, 1, "only the offering in use, no row for the rest")
+	assert.Equal(t, "eu-west-1", machines[0].Region)
+	assert.Equal(t, "n1-standard-2", machines[0].MachineType)
+	assert.Equal(t, int32(0), machines[0].MaxNodes)
+	assert.Equal(t, int64(4), machines[0].NodesInUse)
+	assert.False(t, machines[0].Updated.Valid, "never set")
+
+	require.NoError(t, (&OrganizationQuotaListCmd{Organization: "legacy"}).Run(ctx))
 }
 
 func TestOrganizationQuotaSet_LoweringBelowUseIsAllowed(t *testing.T) {

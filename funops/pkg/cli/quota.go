@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/funops/pkg/db/gen"
 )
@@ -162,7 +163,18 @@ type nodeQuotaOutput struct {
 	MachineType string `json:"machine_type"`
 	Quota       int32  `json:"quota"`
 	InUse       int64  `json:"in_use"`
-	Updated     string `json:"updated"`
+	// Empty for an offering in use without a quota row, which only pools from
+	// before quotas existed can be.
+	Updated string `json:"updated"`
+}
+
+// quotaUpdated formats when a quota row was last set; a row-less offering in
+// use shows "-" in the table and "" in JSON.
+func quotaUpdated(updated pgtype.Timestamptz) string {
+	if !updated.Valid {
+		return ""
+	}
+	return updated.Time.Format(TimeFormat)
 }
 
 func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machines []db.MachineQuotaListRow) error {
@@ -179,7 +191,7 @@ func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machi
 				MachineType: m.MachineType,
 				Quota:       m.MaxNodes,
 				InUse:       m.NodesInUse,
-				Updated:     m.Updated.Time.Format(TimeFormat),
+				Updated:     quotaUpdated(m.Updated),
 			}
 		}
 		return PrintJSON(output)
@@ -193,12 +205,16 @@ func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machi
 		}
 		for i := range machines {
 			m := &machines[i]
+			updated := quotaUpdated(m.Updated)
+			if updated == "" {
+				updated = "-"
+			}
 			if _, err := fmt.Fprintf(w, "nodes\t%s\t%s\t%d\t%d\t%s\n",
 				m.Region,
 				m.MachineType,
 				m.MaxNodes,
 				m.NodesInUse,
-				m.Updated.Time.Format(TimeFormat),
+				updated,
 			); err != nil {
 				return fmt.Errorf("writing output: %w", err)
 			}
