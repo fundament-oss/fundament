@@ -13,6 +13,10 @@ funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
+funops organization quota get-clusters <organization>
+funops organization quota set-clusters <organization> <count>
+funops organization quota list-nodes <organization>
+funops organization quota set-nodes <organization> <region> <machine-type> <max-nodes>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
@@ -32,6 +36,24 @@ The invitation keeps the permission it was sent with unless `--permission`
 says otherwise; a new membership defaults to viewer. An invitation is not
 membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
+
+`funops organization quota` sets what an organization may build. A new one
+may have one cluster and no node pools of its own (a cluster without pools
+runs on the default worker pool, which is outside the quota), so `set-nodes`
+comes before anyone adds a pool and `set-clusters` before a second cluster.
+The node quota is per region
+and machine type and caps the sum of the maximum sizes of the organization's
+node pools of that type. A quota only stops something new: lowering it below
+what is in use is allowed, leaves the existing clusters and pools alone, and
+`quota get-clusters` and `quota list-nodes` show the excess.
+
+Upgrading an installation to the release that introduces quotas puts every
+existing organization at one cluster and no node quota, while its clusters and
+pools keep running. Review each one right after the migration:
+`quota get-clusters` and `quota list-nodes` show what is in use, the latter
+including machine types that have no quota row yet, and
+`set-clusters` and `set-nodes` give it room before anyone adds a cluster or a
+pool.
 
 `funops organization delete` soft-deletes the organization and revokes its
 memberships and API keys. It refuses while the organization still has clusters,

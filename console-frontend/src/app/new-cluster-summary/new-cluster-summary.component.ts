@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
+import { NodePoolNotCreated, refusalReason } from '../utils/node-pool-refusal';
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
@@ -151,19 +152,20 @@ export default class NewClusterSummaryComponent {
     this.isCreating.set(false);
 
     // The cluster is there either way, so the road leads to it. A pool that did
-    // not make it travels along as navigation state: the cluster page says it
-    // where the missing pool is, next to the section that should have held it,
-    // and it stays there to be read instead of sliding away on its own.
+    // not make it travels along as navigation state, with the API's reason: the
+    // cluster page says it where the missing pool is, next to the section that
+    // should have held it, and it stays there to be read instead of sliding
+    // away on its own.
     this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}`), {
       state: notCreated.length > 0 ? { nodePoolsNotCreated: notCreated } : undefined,
     });
   }
 
-  /** Returns the names of the pools that did not make it. */
+  /** Returns the pools that did not make it, each with the API's reason. */
   private async createNodePools(
     clusterId: string,
     pools: { name: string; machineType: string; autoscaleMin: number; autoscaleMax: number }[],
-  ): Promise<string[]> {
+  ): Promise<NodePoolNotCreated[]> {
     if (pools.length === 0) return [];
 
     const abortSignal = this.idempotency.reset();
@@ -182,7 +184,11 @@ export default class NewClusterSummaryComponent {
       }),
     );
 
-    return pools.filter((_, i) => uitkomsten[i].status === 'rejected').map((pool) => pool.name);
+    return pools.flatMap((pool, i) => {
+      const uitkomst = uitkomsten[i];
+      if (uitkomst.status !== 'rejected') return [];
+      return [{ name: pool.name, reason: refusalReason(uitkomst.reason) }];
+    });
   }
 
   modalDialogRef = viewChild<ElementRef<HTMLElement>>('modalDialog');

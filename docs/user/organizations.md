@@ -22,6 +22,18 @@ A Kubernetes cluster managed by Gardener, running on bare-metal machines provisi
 
 A cluster belongs to one organization. An organization can have multiple clusters (e.g. production, staging, different regions). A single cluster can host multiple projects.
 
+## Quotas
+
+Every organization has quotas, set by the platform operator: how many clusters
+it may have, and how many nodes of each machine type it may have per region,
+counted as the sum of the maximum sizes of its node pools. A new organization
+may have one cluster, and no node pools of its own until the operator sets its
+node quotas: such a cluster runs on the platform's default worker pool, which
+is outside the quota. So a fresh organization asks its operator before adding
+node pools or a second cluster. Quotas stop new clusters and new or larger
+node pools; they never touch what already runs, even when lowered below it.
+See [Quotas](./clusters.md#quotas).
+
 ## Project
 
 A logical grouping for ownership and access control. A project represents a team, application, or workload group within a specific environment. Project members share access to the project's namespaces.

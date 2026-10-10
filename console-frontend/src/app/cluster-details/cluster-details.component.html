@@ -91,7 +91,7 @@
         <nldd-banner
           variant="warning"
           [attr.text]="message"
-          supporting-text="Add it again under Node pools."
+          [attr.supporting-text]="nodePoolsNotCreatedDetail()"
         ></nldd-banner>
         <nldd-spacer size="24"></nldd-spacer>
       }
