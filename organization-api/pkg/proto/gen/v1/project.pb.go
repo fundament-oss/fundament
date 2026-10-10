@@ -246,10 +246,13 @@ func (b0 GetProjectRequest_builder) Build() *GetProjectRequest {
 
 // Get project by name request
 type GetProjectByNameRequest struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Name string                 `protobuf:"bytes,10,opt,name=name"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_ClusterId   *string                `protobuf:"bytes,20,opt,name=cluster_id,json=clusterId"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *GetProjectByNameRequest) Reset() {
@@ -284,14 +287,44 @@ func (x *GetProjectByNameRequest) GetName() string {
 	return ""
 }
 
+func (x *GetProjectByNameRequest) GetClusterId() string {
+	if x != nil {
+		if x.xxx_hidden_ClusterId != nil {
+			return *x.xxx_hidden_ClusterId
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *GetProjectByNameRequest) SetName(v string) {
 	x.xxx_hidden_Name = v
+}
+
+func (x *GetProjectByNameRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *GetProjectByNameRequest) HasClusterId() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *GetProjectByNameRequest) ClearClusterId() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_ClusterId = nil
 }
 
 type GetProjectByNameRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Name string
+	// The cluster to look in. Project names are unique per cluster; without a
+	// cluster the call fails when several clusters have a project with the name.
+	ClusterId *string
 }
 
 func (b0 GetProjectByNameRequest_builder) Build() *GetProjectByNameRequest {
@@ -299,6 +332,10 @@ func (b0 GetProjectByNameRequest_builder) Build() *GetProjectByNameRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Name = b.Name
+	if b.ClusterId != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_ClusterId = b.ClusterId
+	}
 	return m0
 }
 
@@ -2249,11 +2286,13 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x11GetProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\x96\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\xc4\x01\n" +
 	"\x17GetProjectByNameRequest\x12{\n" +
 	"\x04name\x18\n" +
 	" \x01(\tBg\xbaHd\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"H\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\x12,\n" +
+	"\n" +
+	"cluster_id\x18\x14 \x01(\tB\r\xbaH\x05r\x03\xb0\x01\x01\xaa\x01\x02\b\x01R\tclusterId\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
 	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"\xe4\x01\n" +
