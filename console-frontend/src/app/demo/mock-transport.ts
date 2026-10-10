@@ -167,9 +167,26 @@ function defaultsViolation(
     const ceiling = cluster?.[field];
     return own !== undefined && ceiling !== undefined && own > ceiling;
   });
-  if (!over) return null;
-  const [field, name, unit] = over;
-  return `${name} ${project[field]}${unit} exceeds the cluster's ${cluster?.[field]}${unit}`;
+  if (over) {
+    const [field, name, unit] = over;
+    return `${name} ${project[field]}${unit} exceeds the cluster's ${cluster?.[field]}${unit}`;
+  }
+  // The effective pair, project value first: a request above its limit is
+  // refused too, however the two were mixed.
+  const pairs: [keyof ContainerDefaults, keyof ContainerDefaults, string, string][] = [
+    ['memoryRequestMi', 'memoryLimitMi', 'memory', 'Mi'],
+    ['cpuRequestM', 'cpuLimitM', 'CPU', 'm'],
+  ];
+  const crossed = pairs.find(([requestField, limitField]) => {
+    const request = project[requestField] ?? cluster?.[requestField];
+    const limit = project[limitField] ?? cluster?.[limitField];
+    return request !== undefined && limit !== undefined && request > limit;
+  });
+  if (!crossed) return null;
+  const [requestField, limitField, resource, unit] = crossed;
+  const request = project[requestField] ?? cluster?.[requestField];
+  const limit = project[limitField] ?? cluster?.[limitField];
+  return `effective default ${resource} request ${request}${unit} exceeds the effective limit ${limit}${unit}`;
 }
 
 export default function createDemoTransport(): Transport {

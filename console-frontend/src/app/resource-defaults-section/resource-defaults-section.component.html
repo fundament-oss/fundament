@@ -78,7 +78,7 @@
           step="1"
           [attr.id]="copy().limitId"
           [attr.accessible-label]="copy().limitAccessibleLabel"
-          [min]="request() ?? 1"
+          [min]="limitMin()"
           [attr.max]="limitMax() ?? null"
           [attr.disabled]="disabled() ? '' : null"
           [value]="limit()"
