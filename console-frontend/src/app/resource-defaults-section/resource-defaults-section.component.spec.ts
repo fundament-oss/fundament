@@ -27,6 +27,7 @@ interface Internals {
   edit(field: { set(value: number | undefined): void }, value: number | undefined): void;
   requestMax(): number | undefined;
   limitMax(): number | undefined;
+  limitMin(): number;
   requestHint(): string | null;
 }
 
@@ -199,6 +200,17 @@ describe('ResourceDefaultsSectionComponent on a project', () => {
     const internals = fixture.componentInstance as unknown as Internals;
 
     expect(internals.requestHint()).toBeNull();
+  });
+
+  it('floors a limit at the request it inherits when the project sets none', () => {
+    const fixture = buildProject({ request: 100, limit: 500 });
+    const internals = fixture.componentInstance as unknown as Internals;
+
+    expect(internals.limitMin()).toBe(100);
+
+    fixture.componentRef.setInput('request', 50);
+    fixture.detectChanges();
+    expect(internals.limitMin()).toBe(50);
   });
 
   it('caps a request by the limit it inherits when the project sets none', () => {

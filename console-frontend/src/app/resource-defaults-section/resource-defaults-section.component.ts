@@ -182,6 +182,10 @@ export default class ResourceDefaultsSectionComponent {
 
   protected limitMax = computed(() => this.ceiling().limit ?? INT32_MAX);
 
+  /** A limit may not drop under the request it pairs with, which on a project
+   *  is the inherited cluster request when the project sets none. */
+  protected limitMin = computed(() => this.request() ?? this.ceiling().request ?? 1);
+
   /** Says the ceiling out loud, so the number field is not the only place it
    *  shows up — a disabled spin button explains nothing. */
   protected requestHint = computed(() => ceilingHint(this.ceiling().request, this.copy().unit));
