@@ -143,6 +143,9 @@ func (r *NamespaceResource) resolveProjectID(ctx context.Context, state *Namespa
 	}.Build()
 
 	getResp, err := r.client.ProjectService.GetProjectByName(ctx, getReq)
+	if connect.CodeOf(err) == connect.CodeFailedPrecondition {
+		return "", fmt.Errorf("several clusters have a project %q; set project_id instead of project_name", state.ProjectName.ValueString())
+	}
 	if err != nil {
 		return "", fmt.Errorf("unable to find project with name %q: %s", state.ProjectName.ValueString(), err.Error())
 	}

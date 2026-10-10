@@ -75,6 +75,12 @@ message GetProjectByNameRequest {
     message: "must be a valid DNS-1123 label"
     expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
   }];
+  // The cluster to look in. Project names are unique per cluster; without a
+  // cluster the call fails when several clusters have a project with the name.
+  string cluster_id = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {uuid: true}
+  ];
 }
 
 // Get project response

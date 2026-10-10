@@ -73,30 +73,6 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 	return i, err
 }
 
-const projectGetByName = `-- name: ProjectGetByName :one
-SELECT id, cluster_id, name, alias, created, deleted
-FROM tenant.projects
-WHERE name = $1 AND deleted IS NULL
-`
-
-type ProjectGetByNameParams struct {
-	Name string
-}
-
-func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (TenantProject, error) {
-	row := q.db.QueryRow(ctx, projectGetByName, arg.Name)
-	var i TenantProject
-	err := row.Scan(
-		&i.ID,
-		&i.ClusterID,
-		&i.Name,
-		&i.Alias,
-		&i.Created,
-		&i.Deleted,
-	)
-	return i, err
-}
-
 const projectList = `-- name: ProjectList :many
 SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
@@ -177,6 +153,47 @@ func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByC
 			&i.Deleted,
 			&i.NamespaceCount,
 			&i.MemberCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const projectListByName = `-- name: ProjectListByName :many
+SELECT id, cluster_id, name, alias, created, deleted
+FROM tenant.projects
+WHERE name = $1
+    AND ($2::uuid IS NULL OR cluster_id = $2)
+    AND deleted IS NULL
+`
+
+type ProjectListByNameParams struct {
+	Name      string
+	ClusterID pgtype.UUID
+}
+
+// Project names are unique per cluster, so without a cluster there can be several.
+func (q *Queries) ProjectListByName(ctx context.Context, arg ProjectListByNameParams) ([]TenantProject, error) {
+	rows, err := q.db.Query(ctx, projectListByName, arg.Name, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TenantProject
+	for rows.Next() {
+		var i TenantProject
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClusterID,
+			&i.Name,
+			&i.Alias,
+			&i.Created,
+			&i.Deleted,
 		); err != nil {
 			return nil, err
 		}

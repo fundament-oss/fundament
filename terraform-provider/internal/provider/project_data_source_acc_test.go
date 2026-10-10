@@ -41,7 +41,7 @@ func TestAccProjectDataSource(t *testing.T) {
 			{
 				// Two clusters each have a project with the name.
 				Config:      testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, ""),
-				ExpectError: regexp.MustCompile(`each have a project`),
+				ExpectError: regexp.MustCompile(`several clusters have a project`),
 			},
 			{
 				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, "tf-acc-pds-b-"+suffix),
