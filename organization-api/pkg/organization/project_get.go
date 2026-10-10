@@ -35,15 +35,20 @@ func (s *Server) GetProjectByName(
 
 	// Auth is done after the DB call because we don't know the project IDs
 	// yet. Only projects the caller may view count, so the answer does not
-	// reveal projects on clusters the caller cannot see.
+	// reveal projects on clusters the caller cannot see. A check that fails
+	// for another reason fails the call: skipping it could hide an ambiguity.
 	var visible []db.TenantProject
 	var permErr error
 	for i := range projects {
-		if err := s.checkPermission(ctx, authz.CanView(), authz.Project(projects[i].ID)); err != nil {
+		err := s.checkPermission(ctx, authz.CanView(), authz.Project(projects[i].ID))
+		switch {
+		case connect.CodeOf(err) == connect.CodePermissionDenied:
 			permErr = err
-			continue
+		case err != nil:
+			return nil, err
+		default:
+			visible = append(visible, projects[i])
 		}
-		visible = append(visible, projects[i])
 	}
 
 	switch {

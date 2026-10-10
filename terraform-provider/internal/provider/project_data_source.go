@@ -47,7 +47,7 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Computed:    true,
 			},
 			"cluster_name": schema.StringAttribute{
-				Description: "The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name.",
+				Description: "The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name. Null when you may view the project but not its cluster.",
 				Optional:    true,
 				Computed:    true,
 			},
@@ -116,7 +116,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.Name = types.StringValue(project.GetName())
 	config.Alias = types.StringValue(project.GetAlias())
 	config.ClusterID = types.StringValue(project.GetClusterId())
-	config.ClusterName = types.StringValue(clusterName)
+	config.ClusterName = clusterName
 	config.Created = timestampValue(project.GetCreated())
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
@@ -128,13 +128,14 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 }
 
 // findProject looks the project up by name, on the named cluster when one is
-// given, and returns it with its cluster's name.
-func (d *ProjectDataSource) findProject(ctx context.Context, name, clusterName string) (*organizationv1.Project, string, error) {
+// given, and returns it with its cluster's name: null when the caller may view
+// the project but not its cluster.
+func (d *ProjectDataSource) findProject(ctx context.Context, name, clusterName string) (*organizationv1.Project, types.String, error) {
 	req := organizationv1.GetProjectByNameRequest_builder{Name: name}.Build()
 	if clusterName != "" {
 		cluster, err := d.client.ClusterService.GetClusterByName(ctx, organizationv1.GetClusterByNameRequest_builder{Name: clusterName}.Build())
 		if err != nil {
-			return nil, "", fmt.Errorf("cluster %q: %w", clusterName, err)
+			return nil, types.StringNull(), fmt.Errorf("cluster %q: %w", clusterName, err)
 		}
 		req.SetClusterId(cluster.GetCluster().GetId())
 	}
@@ -143,24 +144,27 @@ func (d *ProjectDataSource) findProject(ctx context.Context, name, clusterName s
 	if err != nil {
 		switch connect.CodeOf(err) {
 		case connect.CodeFailedPrecondition:
-			return nil, "", fmt.Errorf("several clusters have a project %q; set cluster_name", name)
+			return nil, types.StringNull(), fmt.Errorf("several clusters have a project %q; set cluster_name", name)
 		case connect.CodeNotFound:
 			if clusterName != "" {
-				return nil, "", fmt.Errorf("cluster %q has no project %q", clusterName, name)
+				return nil, types.StringNull(), fmt.Errorf("cluster %q has no project %q", clusterName, name)
 			}
-			return nil, "", fmt.Errorf("no cluster has a project %q", name)
+			return nil, types.StringNull(), fmt.Errorf("no cluster has a project %q", name)
 		default:
-			return nil, "", fmt.Errorf("project %q: %w", name, err)
+			return nil, types.StringNull(), fmt.Errorf("project %q: %w", name, err)
 		}
 	}
 	project := resp.GetProject()
 
-	if clusterName == "" {
-		cluster, err := d.client.ClusterService.GetCluster(ctx, organizationv1.GetClusterRequest_builder{ClusterId: project.GetClusterId()}.Build())
-		if err != nil {
-			return nil, "", fmt.Errorf("cluster of project %q: %w", name, err)
-		}
-		clusterName = cluster.GetCluster().GetName()
+	if clusterName != "" {
+		return project, types.StringValue(clusterName), nil
 	}
-	return project, clusterName, nil
+	cluster, err := d.client.ClusterService.GetCluster(ctx, organizationv1.GetClusterRequest_builder{ClusterId: project.GetClusterId()}.Build())
+	switch {
+	case connect.CodeOf(err) == connect.CodePermissionDenied:
+		return project, types.StringNull(), nil
+	case err != nil:
+		return nil, types.StringNull(), fmt.Errorf("cluster of project %q: %w", name, err)
+	}
+	return project, types.StringValue(cluster.GetCluster().GetName()), nil
 }

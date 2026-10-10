@@ -27,7 +27,7 @@ data "fundament_project" "example" {
 
 ### Optional
 
-- `cluster_name` (String) The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name.
+- `cluster_name` (String) The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name. Null when you may view the project but not its cluster.
 
 ### Read-Only
 

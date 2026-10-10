@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -141,4 +142,58 @@ func TestClusterReadRefused(t *testing.T) {
 		require.True(t, resp.Diagnostics.HasError())
 		assert.Contains(t, resp.Diagnostics.Errors()[0].Detail(), `Unable to read cluster "web": permission_denied: permission denied`)
 	})
+}
+
+// fakeProjectLookup answers GetProjectByName with a project and GetCluster
+// with clusterErr.
+type fakeProjectLookup struct {
+	organizationv1connect.UnimplementedClusterServiceHandler
+	organizationv1connect.UnimplementedProjectServiceHandler
+	clusterErr error
+}
+
+func (fakeProjectLookup) GetProjectByName(_ context.Context, req *organizationv1.GetProjectByNameRequest) (*organizationv1.GetProjectResponse, error) {
+	return organizationv1.GetProjectResponse_builder{
+		Project: organizationv1.Project_builder{Id: "p1", Name: req.GetName(), ClusterId: "c1"}.Build(),
+	}.Build(), nil
+}
+
+func (f fakeProjectLookup) GetCluster(_ context.Context, _ *organizationv1.GetClusterRequest) (*organizationv1.GetClusterResponse, error) {
+	if f.clusterErr != nil {
+		return nil, f.clusterErr
+	}
+	return organizationv1.GetClusterResponse_builder{Cluster: organizationv1.ClusterDetails_builder{Id: "c1", Name: "web"}.Build()}.Build(), nil
+}
+
+func TestFindProjectClusterName(t *testing.T) {
+	lookup := func(t *testing.T, clusterErr error) (types.String, error) {
+		t.Helper()
+		service := fakeProjectLookup{clusterErr: clusterErr}
+		mux := http.NewServeMux()
+		mux.Handle(organizationv1connect.NewClusterServiceHandler(service))
+		mux.Handle(organizationv1connect.NewProjectServiceHandler(service))
+		srv := httptest.NewServer(mux)
+		t.Cleanup(srv.Close)
+		d := &ProjectDataSource{client: &FundamentClient{
+			ClusterService: organizationv1connect.NewClusterServiceClient(srv.Client(), srv.URL),
+			ProjectService: organizationv1connect.NewProjectServiceClient(srv.Client(), srv.URL),
+		}}
+		project, clusterName, err := d.findProject(context.Background(), "shared", "")
+		if err == nil {
+			assert.Equal(t, "p1", project.GetId())
+		}
+		return clusterName, err
+	}
+
+	name, err := lookup(t, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "web", name.ValueString())
+
+	// A project member may view the project but not its cluster.
+	name, err = lookup(t, connect.NewError(connect.CodePermissionDenied, errors.New("permission denied")))
+	require.NoError(t, err)
+	assert.True(t, name.IsNull())
+
+	_, err = lookup(t, connect.NewError(connect.CodeInternal, errors.New("authorization check failed")))
+	require.ErrorContains(t, err, "authorization check failed")
 }
