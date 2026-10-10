@@ -19,14 +19,21 @@ import (
 // here. Lowering a quota below what is in use stops the next cluster or pool
 // and leaves the existing ones alone.
 type OrganizationQuotaCmd struct {
-	List        OrganizationQuotaListCmd        `cmd:"" help:"Show an organization's quotas and what is in use."`
+	GetClusters OrganizationQuotaGetClustersCmd `cmd:"" name:"get-clusters" help:"Show how many clusters an organization may have, and has."`
 	SetClusters OrganizationQuotaSetClustersCmd `cmd:"" name:"set-clusters" help:"Set how many clusters an organization may have."`
+	ListNodes   OrganizationQuotaListNodesCmd   `cmd:"" name:"list-nodes" help:"List an organization's node quotas per region and machine type, and what is in use."`
 	SetNodes    OrganizationQuotaSetNodesCmd    `cmd:"" name:"set-nodes" help:"Set how many nodes of a machine type an organization may have in a region."`
 }
 
-// OrganizationQuotaListCmd shows an organization's quotas next to what is in
-// use, which may exceed a quota that was lowered.
-type OrganizationQuotaListCmd struct {
+// OrganizationQuotaGetClustersCmd shows the cluster quota next to the clusters
+// in use, which may exceed a quota that was lowered.
+type OrganizationQuotaGetClustersCmd struct {
+	Organization string `arg:"" help:"Organization name." required:""`
+}
+
+// OrganizationQuotaListNodesCmd lists the node quotas next to what is in use,
+// which may exceed a quota that was lowered.
+type OrganizationQuotaListNodesCmd struct {
 	Organization string `arg:"" help:"Organization name." required:""`
 }
 
@@ -45,9 +52,9 @@ type OrganizationQuotaSetNodesCmd struct {
 	MaxNodes     int32  `arg:"" help:"Maximum nodes of this machine type in this region, summed over the maxima of the organization's node pools; 0 takes the quota away." required:""`
 }
 
-// Run executes the organization quota list command.
-func (c *OrganizationQuotaListCmd) Run(ctx *Context) error {
-	ctx.Logger.Debug("listing quotas", "organization", c.Organization)
+// Run executes the organization quota get-clusters command.
+func (c *OrganizationQuotaGetClustersCmd) Run(ctx *Context) error {
+	ctx.Logger.Debug("reading cluster quota", "organization", c.Organization)
 
 	bgCtx := context.Background()
 
@@ -64,12 +71,26 @@ func (c *OrganizationQuotaListCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to read cluster quota: %w", err)
 	}
 
-	machines, err := ctx.Queries.MachineQuotaList(bgCtx, db.MachineQuotaListParams{OrganizationID: orgID})
+	return outputClusterQuota(ctx.Output, clusters)
+}
+
+// Run executes the organization quota list-nodes command.
+func (c *OrganizationQuotaListNodesCmd) Run(ctx *Context) error {
+	ctx.Logger.Debug("listing node quotas", "organization", c.Organization)
+
+	bgCtx := context.Background()
+
+	orgID, err := lookupOrganizationID(bgCtx, ctx.Queries, c.Organization)
 	if err != nil {
-		return fmt.Errorf("failed to list machine quotas: %w", err)
+		return err
 	}
 
-	return outputQuotaList(ctx.Output, clusters, machines)
+	machines, err := ctx.Queries.MachineQuotaList(bgCtx, db.MachineQuotaListParams{OrganizationID: orgID})
+	if err != nil {
+		return fmt.Errorf("failed to list node quotas: %w", err)
+	}
+
+	return outputNodeQuotaList(ctx.Output, machines)
 }
 
 // Run executes the organization quota set-clusters command.
@@ -147,17 +168,13 @@ func (c *OrganizationQuotaSetNodesCmd) Run(ctx *Context) error {
 	return nil
 }
 
-// quotaOutput is the JSON output structure of the quota list.
-type quotaOutput struct {
-	Clusters clusterQuotaOutput `json:"clusters"`
-	Nodes    []nodeQuotaOutput  `json:"nodes"`
-}
-
+// clusterQuotaOutput is the JSON output structure of quota get-clusters.
 type clusterQuotaOutput struct {
 	Quota int32 `json:"quota"`
 	InUse int64 `json:"in_use"`
 }
 
+// nodeQuotaOutput is one row of quota list-nodes in JSON.
 type nodeQuotaOutput struct {
 	Region      string `json:"region"`
 	MachineType string `json:"machine_type"`
@@ -177,16 +194,34 @@ func quotaUpdated(updated pgtype.Timestamptz) string {
 	return updated.Time.Format(TimeFormat)
 }
 
-func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machines []db.MachineQuotaListRow) error {
+func outputClusterQuota(format OutputFormat, clusters db.QuotaClustersGetRow) error {
 	switch format {
 	case OutputJSON:
-		output := quotaOutput{
-			Clusters: clusterQuotaOutput{Quota: clusters.QuotaClusters, InUse: clusters.ClustersInUse},
-			Nodes:    make([]nodeQuotaOutput, len(machines)),
+		return PrintJSON(clusterQuotaOutput{Quota: clusters.QuotaClusters, InUse: clusters.ClustersInUse})
+	case OutputTable:
+		w := NewTableWriter()
+		if _, err := fmt.Fprintln(w, "QUOTA\tIN_USE"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
 		}
+		if _, err := fmt.Fprintf(w, "%d\t%d\n", clusters.QuotaClusters, clusters.ClustersInUse); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
+	default:
+		panic(fmt.Sprintf("unknown output format: %s", format))
+	}
+}
+
+func outputNodeQuotaList(format OutputFormat, machines []db.MachineQuotaListRow) error {
+	switch format {
+	case OutputJSON:
+		output := make([]nodeQuotaOutput, len(machines))
 		for i := range machines {
 			m := &machines[i]
-			output.Nodes[i] = nodeQuotaOutput{
+			output[i] = nodeQuotaOutput{
 				Region:      m.Region,
 				MachineType: m.MachineType,
 				Quota:       m.MaxNodes,
@@ -197,10 +232,7 @@ func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machi
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		if _, err := fmt.Fprintln(w, "KIND\tREGION\tMACHINE_TYPE\tQUOTA\tIN_USE\tUPDATED"); err != nil {
-			return fmt.Errorf("writing output: %w", err)
-		}
-		if _, err := fmt.Fprintf(w, "clusters\t-\t-\t%d\t%d\t-\n", clusters.QuotaClusters, clusters.ClustersInUse); err != nil {
+		if _, err := fmt.Fprintln(w, "REGION\tMACHINE_TYPE\tQUOTA\tIN_USE\tUPDATED"); err != nil {
 			return fmt.Errorf("writing output: %w", err)
 		}
 		for i := range machines {
@@ -209,7 +241,7 @@ func outputQuotaList(format OutputFormat, clusters db.QuotaClustersGetRow, machi
 			if updated == "" {
 				updated = "-"
 			}
-			if _, err := fmt.Fprintf(w, "nodes\t%s\t%s\t%d\t%d\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%s\n",
 				m.Region,
 				m.MachineType,
 				m.MaxNodes,

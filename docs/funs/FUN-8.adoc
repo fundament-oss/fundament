@@ -84,7 +84,7 @@ Users are addressed by ID or by email, never by name: names are what the identit
 
 What an organization may build is capped by quotas the operator sets with `funops organization quota`: how many clusters it may have (`quota_clusters` on the organization, one for a new organization) and how many nodes of each machine type it may have per region (`tenant.organization_machine_quotas`, keyed by the catalog offering; no row means zero). The database enforces both with constraint triggers on `tenant.clusters` and `tenant.node_pools`, so every path that writes those rows is covered. The default worker group the cluster-worker gives a cluster without node pools is no row and stays outside the quota. The node quota caps the sum of the autoscale maxima of the organization's pools of that offering, across its clusters.
 
-A quota only ever stops something new: a cluster, a pool, or a pool growing. Lowering it below what is in use is allowed and leaves the existing rows alone, so an operator can tighten a quota without interrupting a tenant; `quota list` shows the excess. Deleted clusters and their pools count until Gardener confirms the shoot is gone, as `organization delete` counts them.
+A quota only ever stops something new: a cluster, a pool, or a pool growing. Lowering it below what is in use is allowed and leaves the existing rows alone, so an operator can tighten a quota without interrupting a tenant; `quota get-clusters` and `quota list-nodes` show the excess. Deleted clusters and their pools count until Gardener confirms the shoot is gone, as `organization delete` counts them.
 
 === Non-Interactive Design
 
