@@ -37,7 +37,8 @@ func TestOrganizationQuota_NewOrganizationStartsAtOneClusterAndNoNodes(t *testin
 	assert.Equal(t, int64(0), clusters.ClustersInUse)
 	assert.Empty(t, machines, "no machine quota until an operator sets one")
 
-	require.NoError(t, (&OrganizationQuotaListCmd{Organization: "fresh"}).Run(ctx))
+	require.NoError(t, (&OrganizationQuotaGetClustersCmd{Organization: "fresh"}).Run(ctx))
+	require.NoError(t, (&OrganizationQuotaListNodesCmd{Organization: "fresh"}).Run(ctx))
 }
 
 func TestOrganizationQuotaSetClusters(t *testing.T) {
@@ -94,10 +95,10 @@ func TestOrganizationQuotaSetNodes(t *testing.T) {
 	err = (&OrganizationQuotaSetNodesCmd{Organization: "globex", Region: "local", MachineType: "local-small", MaxNodes: -1}).Run(ctx)
 	require.EqualError(t, err, "the node quota must be 0 or more")
 
-	require.NoError(t, (&OrganizationQuotaListCmd{Organization: "globex"}).Run(ctx))
+	require.NoError(t, (&OrganizationQuotaListNodesCmd{Organization: "globex"}).Run(ctx))
 }
 
-func TestOrganizationQuotaList_ShowsWhatIsInUse(t *testing.T) {
+func TestOrganizationQuotaGetClustersAndListNodes_ShowWhatIsInUse(t *testing.T) {
 	ctx := newTestContext(t)
 
 	// acme-corp has one cluster in eu-west-1. Give it a pool of two
@@ -120,7 +121,7 @@ func TestOrganizationQuotaList_ShowsWhatIsInUse(t *testing.T) {
 
 // Pools from before quotas existed have no quota row; the list still shows
 // what they use, as quota 0, so an upgrade review sees them.
-func TestOrganizationQuotaList_ShowsUseWithoutAQuotaRow(t *testing.T) {
+func TestOrganizationQuotaListNodes_ShowsUseWithoutAQuotaRow(t *testing.T) {
 	ctx := newTestContext(t)
 
 	require.NoError(t, (&OrganizationCreateCmd{Name: "legacy"}).Run(ctx))
@@ -153,7 +154,7 @@ func TestOrganizationQuotaList_ShowsUseWithoutAQuotaRow(t *testing.T) {
 	assert.Equal(t, int64(4), machines[0].NodesInUse)
 	assert.False(t, machines[0].Updated.Valid, "never set")
 
-	require.NoError(t, (&OrganizationQuotaListCmd{Organization: "legacy"}).Run(ctx))
+	require.NoError(t, (&OrganizationQuotaListNodesCmd{Organization: "legacy"}).Run(ctx))
 }
 
 func TestOrganizationQuotaSet_LoweringBelowUseIsAllowed(t *testing.T) {

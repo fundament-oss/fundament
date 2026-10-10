@@ -48,8 +48,9 @@ funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
-funops organization quota list <organization>
+funops organization quota get-clusters <organization>
 funops organization quota set-clusters <organization> <count>
+funops organization quota list-nodes <organization>
 funops organization quota set-nodes <organization> <region> <machine-type> <max-nodes>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
@@ -97,12 +98,13 @@ funops organization quota set-nodes acme-corp eu-west-1 n1-standard-2 20
 
 The node quota is per region and machine type, named as the catalog offers
 them, and caps the sum of the maximum sizes of all the organization's node
-pools of that type, across its clusters. `funops organization quota list
-acme-corp` shows every quota next to what is in use.
+pools of that type, across its clusters. `funops organization quota
+get-clusters acme-corp` and `funops organization quota list-nodes acme-corp`
+show each quota next to what is in use.
 
 Lowering a quota below what is in use is allowed and changes nothing that
 runs: it stops the next cluster, or the next new or larger pool, until there
-is room again, and `quota list` shows the excess. Setting a node quota to 0
+is room again, and the two read commands show the excess. Setting a node quota to 0
 takes it away; the row stays and shows as 0. A deleted cluster and its pools
 count until Gardener has torn the shoot down, as `organization delete` counts
 them.
@@ -117,10 +119,11 @@ migration:
 
 ```bash
 funops organization list
-funops organization quota list acme-corp
+funops organization quota get-clusters acme-corp
+funops organization quota list-nodes acme-corp
 ```
 
-The list shows what is in use, including machine types the organization runs
+They show what is in use, the node list including machine types the organization runs
 without a quota row yet (quota 0, no "updated" time), so `set-clusters` and
 `set-nodes` can give each organization at least the room it already uses.
 

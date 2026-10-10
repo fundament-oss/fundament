@@ -13,8 +13,9 @@ funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
-funops organization quota list <organization>
+funops organization quota get-clusters <organization>
 funops organization quota set-clusters <organization> <count>
+funops organization quota list-nodes <organization>
 funops organization quota set-nodes <organization> <region> <machine-type> <max-nodes>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
@@ -44,12 +45,13 @@ The node quota is per region
 and machine type and caps the sum of the maximum sizes of the organization's
 node pools of that type. A quota only stops something new: lowering it below
 what is in use is allowed, leaves the existing clusters and pools alone, and
-`quota list` shows the excess.
+`quota get-clusters` and `quota list-nodes` show the excess.
 
 Upgrading an installation to the release that introduces quotas puts every
 existing organization at one cluster and no node quota, while its clusters and
-pools keep running. Review each one right after the migration: `quota list`
-shows what is in use, including machine types that have no quota row yet, and
+pools keep running. Review each one right after the migration:
+`quota get-clusters` and `quota list-nodes` show what is in use, the latter
+including machine types that have no quota row yet, and
 `set-clusters` and `set-nodes` give it room before anyone adds a cluster or a
 pool.
 
