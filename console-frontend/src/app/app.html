@@ -465,18 +465,6 @@
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
                         <nldd-text-cell text="Members"></nldd-text-cell>
                       </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/limits')"
-                        [attr.current]="isNavActive('/limits') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/limits')"
-                      >
-                        <nldd-icon-cell
-                          icon="hand"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Limits"></nldd-text-cell>
-                      </nldd-list-item>
                     </nldd-list>
                     <!-- The projects themselves, not a link to a list of them: this
                        is where you pick one, and the status dot makes the whole

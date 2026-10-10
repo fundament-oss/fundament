@@ -7,6 +7,7 @@
 package organizationv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
@@ -218,16 +219,195 @@ func (b0 ResourceUsage_builder) Build() *ResourceUsage {
 	return m0
 }
 
+// Per-container resource defaults, applied to namespaces as the
+// fundament-defaults LimitRange. An absent field means no default is set.
+type ContainerDefaults struct {
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_MemoryRequestMi int32                  `protobuf:"varint,10,opt,name=memory_request_mi,json=memoryRequestMi"`
+	xxx_hidden_MemoryLimitMi   int32                  `protobuf:"varint,20,opt,name=memory_limit_mi,json=memoryLimitMi"`
+	xxx_hidden_CpuRequestM     int32                  `protobuf:"varint,30,opt,name=cpu_request_m,json=cpuRequestM"`
+	xxx_hidden_CpuLimitM       int32                  `protobuf:"varint,40,opt,name=cpu_limit_m,json=cpuLimitM"`
+	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
+	XXX_presence               [1]uint32
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *ContainerDefaults) Reset() {
+	*x = ContainerDefaults{}
+	mi := &file_v1_common_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerDefaults) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerDefaults) ProtoMessage() {}
+
+func (x *ContainerDefaults) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_common_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ContainerDefaults) GetMemoryRequestMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_MemoryRequestMi
+	}
+	return 0
+}
+
+func (x *ContainerDefaults) GetMemoryLimitMi() int32 {
+	if x != nil {
+		return x.xxx_hidden_MemoryLimitMi
+	}
+	return 0
+}
+
+func (x *ContainerDefaults) GetCpuRequestM() int32 {
+	if x != nil {
+		return x.xxx_hidden_CpuRequestM
+	}
+	return 0
+}
+
+func (x *ContainerDefaults) GetCpuLimitM() int32 {
+	if x != nil {
+		return x.xxx_hidden_CpuLimitM
+	}
+	return 0
+}
+
+func (x *ContainerDefaults) SetMemoryRequestMi(v int32) {
+	x.xxx_hidden_MemoryRequestMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *ContainerDefaults) SetMemoryLimitMi(v int32) {
+	x.xxx_hidden_MemoryLimitMi = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *ContainerDefaults) SetCpuRequestM(v int32) {
+	x.xxx_hidden_CpuRequestM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+}
+
+func (x *ContainerDefaults) SetCpuLimitM(v int32) {
+	x.xxx_hidden_CpuLimitM = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
+}
+
+func (x *ContainerDefaults) HasMemoryRequestMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ContainerDefaults) HasMemoryLimitMi() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ContainerDefaults) HasCpuRequestM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *ContainerDefaults) HasCpuLimitM() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *ContainerDefaults) ClearMemoryRequestMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_MemoryRequestMi = 0
+}
+
+func (x *ContainerDefaults) ClearMemoryLimitMi() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_MemoryLimitMi = 0
+}
+
+func (x *ContainerDefaults) ClearCpuRequestM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_CpuRequestM = 0
+}
+
+func (x *ContainerDefaults) ClearCpuLimitM() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_CpuLimitM = 0
+}
+
+type ContainerDefaults_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Memory request, in mebibytes
+	MemoryRequestMi *int32
+	// Memory limit, in mebibytes
+	MemoryLimitMi *int32
+	// CPU request, in millicores
+	CpuRequestM *int32
+	// CPU limit, in millicores
+	CpuLimitM *int32
+}
+
+func (b0 ContainerDefaults_builder) Build() *ContainerDefaults {
+	m0 := &ContainerDefaults{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.MemoryRequestMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
+		x.xxx_hidden_MemoryRequestMi = *b.MemoryRequestMi
+	}
+	if b.MemoryLimitMi != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_MemoryLimitMi = *b.MemoryLimitMi
+	}
+	if b.CpuRequestM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_CpuRequestM = *b.CpuRequestM
+	}
+	if b.CpuLimitM != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
+		x.xxx_hidden_CpuLimitM = *b.CpuLimitM
+	}
+	return m0
+}
+
 var File_v1_common_proto protoreflect.FileDescriptor
 
 const file_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/common.proto\x12\x0forganization.v1\x1a!google/protobuf/go_features.proto\"M\n" +
+	"\x0fv1/common.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\"M\n" +
 	"\rResourceUsage\x12\x12\n" +
 	"\x04used\x18\n" +
 	" \x01(\x01R\x04used\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x01R\x05total\x12\x12\n" +
-	"\x04unit\x18\x1e \x01(\tR\x04unit*\x97\x02\n" +
+	"\x04unit\x18\x1e \x01(\tR\x04unit\"\xc1\x04\n" +
+	"\x11ContainerDefaults\x128\n" +
+	"\x11memory_request_mi\x18\n" +
+	" \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x0fmemoryRequestMi\x124\n" +
+	"\x0fmemory_limit_mi\x18\x14 \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\rmemoryLimitMi\x120\n" +
+	"\rcpu_request_m\x18\x1e \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\vcpuRequestM\x12,\n" +
+	"\vcpu_limit_m\x18( \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\tcpuLimitM:\xdb\x02\xbaH\xd7\x02\x1a\xb6\x01\n" +
+	"\x18memory_limit_gte_request\x12,memory_limit_mi must be >= memory_request_mi\x1al!has(this.memory_limit_mi) || !has(this.memory_request_mi) || this.memory_limit_mi >= this.memory_request_mi\x1a\x9b\x01\n" +
+	"\x15cpu_limit_gte_request\x12$cpu_limit_m must be >= cpu_request_m\x1a\\!has(this.cpu_limit_m) || !has(this.cpu_request_m) || this.cpu_limit_m >= this.cpu_request_m*\x97\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\x01\x12\x1b\n" +
@@ -245,11 +425,12 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x1aNODE_POOL_STATUS_UNHEALTHY\x10\x03B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_v1_common_proto_goTypes = []any{
-	(ClusterStatus)(0),    // 0: organization.v1.ClusterStatus
-	(NodePoolStatus)(0),   // 1: organization.v1.NodePoolStatus
-	(*ResourceUsage)(nil), // 2: organization.v1.ResourceUsage
+	(ClusterStatus)(0),        // 0: organization.v1.ClusterStatus
+	(NodePoolStatus)(0),       // 1: organization.v1.NodePoolStatus
+	(*ResourceUsage)(nil),     // 2: organization.v1.ResourceUsage
+	(*ContainerDefaults)(nil), // 3: organization.v1.ContainerDefaults
 }
 var file_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -270,7 +451,7 @@ func file_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_common_proto_rawDesc), len(file_v1_common_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

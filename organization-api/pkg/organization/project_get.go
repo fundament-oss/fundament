@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -35,7 +36,7 @@ func (s *Server) GetProjectByName(
 	}
 
 	return organizationv1.GetProjectResponse_builder{
-		Project: projectFromGetRow(&project),
+		Project: projectMessage(project.ID, project.ClusterID, project.Name, project.Alias, project.Created),
 	}.Build(), nil
 }
 
@@ -58,16 +59,18 @@ func (s *Server) GetProject(
 	}
 
 	return organizationv1.GetProjectResponse_builder{
-		Project: projectFromGetRow(&project),
+		Project: projectMessage(project.ID, project.ClusterID, project.Name, project.Alias, project.Created),
 	}.Build(), nil
 }
 
-func projectFromGetRow(row *db.TenantProject) *organizationv1.Project {
+// projectMessage takes the columns rather than a row type: ProjectGetByID and
+// ProjectGetByName select the same ones but sqlc gives each its own struct.
+func projectMessage(id, clusterID uuid.UUID, name, alias string, created pgtype.Timestamptz) *organizationv1.Project {
 	return organizationv1.Project_builder{
-		Id:        row.ID.String(),
-		ClusterId: row.ClusterID.String(),
-		Name:      row.Name,
-		Alias:     row.Alias,
-		Created:   timestamppb.New(row.Created.Time),
+		Id:        id.String(),
+		ClusterId: clusterID.String(),
+		Name:      name,
+		Alias:     alias,
+		Created:   timestamppb.New(created.Time),
 	}.Build()
 }

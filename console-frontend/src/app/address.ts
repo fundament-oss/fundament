@@ -2,7 +2,7 @@
  * Every address in the console names the organization it belongs to:
  *
  *     /organizations/gemeente-fundament/clusters
- *     /organizations/gemeente-fundament/projects/pr-burgerzaken/limits
+ *     /organizations/gemeente-fundament/projects/pr-burgerzaken/members
  *
  * The organization is what everything else hangs under, so it sits in front of
  * the address rather than in a header nobody can see. An address you paste into

@@ -642,7 +642,7 @@ func (r *RealShootAccess) EnsureClusterRoleBindingSubjects(ctx context.Context, 
 		})
 }
 
-func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
+func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults ContainerDefaults, labels map[string]string) error {
 	cs, err := r.newClient(ctx, clusterID)
 	if err != nil {
 		return err
@@ -678,7 +678,7 @@ func (r *RealShootAccess) DeleteLimitRange(ctx context.Context, clusterID uuid.U
 // Only set fields are populated: `default` (the limit ceiling) from the limit
 // values, `defaultRequest` from the request values; CPU as millicores (500m),
 // memory as mebibytes (512Mi).
-func limitRangeSpec(defaults LimitDefaults) corev1.LimitRangeSpec {
+func limitRangeSpec(defaults ContainerDefaults) corev1.LimitRangeSpec {
 	defaultLimits := corev1.ResourceList{}
 	defaultRequests := corev1.ResourceList{}
 	if defaults.CPULimitMilli != nil {

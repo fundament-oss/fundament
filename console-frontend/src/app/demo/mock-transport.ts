@@ -2,12 +2,12 @@
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { Transport, createRouterTransport } from '@connectrpc/connect';
+import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
+import type { ContainerDefaults } from '../../generated/v1/common_pb';
 import {
   OrganizationService,
   ListOrganizationsResponseSchema,
   GetOrganizationResponseSchema,
-  GetOrganizationLimitsResponseSchema,
 } from '../../generated/v1/organization_pb';
 import {
   ClusterService,
@@ -19,6 +19,8 @@ import {
   ListRegionsResponseSchema,
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
+  GetClusterDefaultsResponseSchema,
+  UpdateClusterDefaultsResponseSchema,
 } from '../../generated/v1/cluster_pb';
 import {
   NamespaceService,
@@ -33,7 +35,8 @@ import {
   ListProjectsResponseSchema,
   GetProjectResponseSchema,
   ListProjectMembersResponseSchema,
-  GetProjectLimitsResponseSchema,
+  GetProjectDefaultsResponseSchema,
+  UpdateProjectDefaultsResponseSchema,
 } from '../../generated/v1/project_pb';
 import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
 import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
@@ -143,6 +146,49 @@ const demoCategories = () => {
   return [...byId.values()];
 };
 
+/**
+ * The rule tenant.project_defaults_violation holds: a project's value may not
+ * exceed the cluster's, and the effective request may not exceed the effective
+ * limit. Returns the first problem as the trigger would word it, or null.
+ */
+function defaultsViolation(
+  cluster: ContainerDefaults | undefined,
+  project: ContainerDefaults | undefined,
+): string | null {
+  if (!project) return null;
+  const fields: [keyof ContainerDefaults, string, string][] = [
+    ['memoryRequestMi', 'default memory request', 'Mi'],
+    ['memoryLimitMi', 'default memory limit', 'Mi'],
+    ['cpuRequestM', 'default CPU request', 'm'],
+    ['cpuLimitM', 'default CPU limit', 'm'],
+  ];
+  const over = fields.find(([field]) => {
+    const own = project[field];
+    const ceiling = cluster?.[field];
+    return own !== undefined && ceiling !== undefined && own > ceiling;
+  });
+  if (over) {
+    const [field, name, unit] = over;
+    return `${name} ${project[field]}${unit} exceeds the cluster's ${cluster?.[field]}${unit}`;
+  }
+  // The effective pair, project value first: a request above its limit is
+  // refused too, however the two were mixed.
+  const pairs: [keyof ContainerDefaults, keyof ContainerDefaults, string, string][] = [
+    ['memoryRequestMi', 'memoryLimitMi', 'memory', 'Mi'],
+    ['cpuRequestM', 'cpuLimitM', 'CPU', 'm'],
+  ];
+  const crossed = pairs.find(([requestField, limitField]) => {
+    const request = project[requestField] ?? cluster?.[requestField];
+    const limit = project[limitField] ?? cluster?.[limitField];
+    return request !== undefined && limit !== undefined && request > limit;
+  });
+  if (!crossed) return null;
+  const [requestField, limitField, resource, unit] = crossed;
+  const request = project[requestField] ?? cluster?.[requestField];
+  const limit = project[limitField] ?? cluster?.[limitField];
+  return `effective default ${resource} request ${request}${unit} exceeds the effective limit ${limit}${unit}`;
+}
+
 export default function createDemoTransport(): Transport {
   return createRouterTransport((router) => {
     router.service(AuthnService, {
@@ -160,13 +206,6 @@ export default function createDemoTransport(): Transport {
       getOrganization: async () => {
         await delay();
         return create(GetOrganizationResponseSchema, { organization: fx.organization });
-      },
-      getOrganizationLimits: async () => {
-        await delay();
-        return create(GetOrganizationLimitsResponseSchema, {
-          limits: fx.organizationLimits,
-          defaults: fx.platformOrganizationLimits,
-        });
       },
     });
 
@@ -198,6 +237,31 @@ export default function createDemoTransport(): Transport {
       getClusterActivity: async () => {
         await delay();
         return create(GetClusterActivityResponseSchema, { events: fx.clusterActivity });
+      },
+      getClusterDefaults: async (req) => {
+        await delay();
+        return create(GetClusterDefaultsResponseSchema, {
+          defaults: fx.clusterDefaults.get(req.clusterId),
+          suggested: fx.suggestedDefaults,
+        });
+      },
+      // Refuses what the real triggers refuse: a project's own values may not
+      // end up above the cluster's.
+      updateClusterDefaults: async (req) => {
+        await delay();
+        const refused = fx.projects
+          .filter((p) => p.clusterId === req.clusterId)
+          .map((p) => ({ p, reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)) }))
+          .find(({ reason }) => reason !== null);
+        if (refused) {
+          throw new ConnectError(
+            `project ${refused.p.name}: ${refused.reason}`,
+            Code.FailedPrecondition,
+          );
+        }
+        if (req.defaults) fx.clusterDefaults.set(req.clusterId, req.defaults);
+        else fx.clusterDefaults.delete(req.clusterId);
+        return create(UpdateClusterDefaultsResponseSchema, {});
       },
       createCluster: async (req, ctx) => {
         await delay(500);
@@ -305,12 +369,27 @@ export default function createDemoTransport(): Transport {
           members: fx.projectMembersByProject.get(req.projectId) ?? [],
         });
       },
-      getProjectLimits: async () => {
+      // The cluster's values come along: the block shows what an unset field
+      // inherits and caps the inputs with them.
+      getProjectDefaults: async (req) => {
         await delay();
-        return create(GetProjectLimitsResponseSchema, {
-          limits: fx.projectLimits,
-          defaults: fx.platformProjectLimits,
+        const project = fx.projects.find((p) => p.id === req.projectId);
+        return create(GetProjectDefaultsResponseSchema, {
+          defaults: fx.projectDefaults.get(req.projectId),
+          clusterDefaults: project && fx.clusterDefaults.get(project.clusterId),
         });
+      },
+      updateProjectDefaults: async (req) => {
+        await delay();
+        const project = fx.projects.find((p) => p.id === req.projectId);
+        const reason = defaultsViolation(
+          project && fx.clusterDefaults.get(project.clusterId),
+          req.defaults,
+        );
+        if (reason) throw new ConnectError(reason, Code.InvalidArgument);
+        if (req.defaults) fx.projectDefaults.set(req.projectId, req.defaults);
+        else fx.projectDefaults.delete(req.projectId);
+        return create(UpdateProjectDefaultsResponseSchema, {});
       },
     });
 

@@ -68,28 +68,28 @@ describe('TitleService', () => {
   });
 
   it('puts the project between the page and the product', () => {
-    const { service, title } = setUp(ONE, 'org-1', '/projects/pr-burgerzaken/limits');
-    service.setTitle('Limits');
+    const { service, title } = setUp(ONE, 'org-1', '/projects/pr-burgerzaken/members');
+    service.setTitle('Members');
     TestBed.tick();
-    expect(title.getTitle()).toBe('Limits · burgerzaken · Fundament');
+    expect(title.getTitle()).toBe('Members · burgerzaken · Fundament');
   });
 
   it('reads the project from an address with the organization in it too', () => {
     const { service, title } = setUp(
       ONE,
       'org-1',
-      '/organizations/gemeente-fundament/projects/pr-burgerzaken/limits',
+      '/organizations/gemeente-fundament/projects/pr-burgerzaken/members',
     );
-    service.setTitle('Limits');
+    service.setTitle('Members');
     TestBed.tick();
-    expect(title.getTitle()).toBe('Limits · burgerzaken · Fundament');
+    expect(title.getTitle()).toBe('Members · burgerzaken · Fundament');
   });
 
   it('puts both the project and the organization in between when there are more organizations', () => {
-    const { service, title } = setUp(TWO, 'org-2', '/projects/pr-burgerzaken/limits');
-    service.setTitle('Limits');
+    const { service, title } = setUp(TWO, 'org-2', '/projects/pr-burgerzaken/members');
+    service.setTitle('Members');
     TestBed.tick();
-    expect(title.getTitle()).toBe('Limits · burgerzaken · delft · Fundament');
+    expect(title.getTitle()).toBe('Members · burgerzaken · delft · Fundament');
   });
 
   it('names the project without a page as well, as on the project route itself', () => {

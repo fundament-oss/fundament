@@ -48,6 +48,7 @@ import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
+import ClusterDefaultsBlockComponent from '../container-defaults/cluster-defaults-block.component';
 import { ConfigService } from '../config.service';
 import focusFirstModalInput from '../modal-focus';
 import {
@@ -240,6 +241,7 @@ const getEventLine = (event: ClusterEvent): string => {
     SheetSyncDirective,
     PluginIconComponent,
     MockBadgeComponent,
+    ClusterDefaultsBlockComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',

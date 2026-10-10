@@ -289,7 +289,7 @@ func TestEnsure_KeepsLegacyNamedNamespace(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
 	row := testRow("team-a")
-	row.OrgDefaultCpuLimitM = i4(500)
+	row.ClusterDefaultCpuLimitM = i4(500)
 	ctx := context.Background()
 
 	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, legacyName, map[string]string{

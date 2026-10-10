@@ -34,6 +34,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import PageNavService from '../page-nav.service';
+import ProjectDefaultsBlockComponent from '../container-defaults/project-defaults-block.component';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -63,7 +64,12 @@ import '@nldd/design-system/validation-list';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
+  imports: [
+    DialogSyncDirective,
+    SheetSyncDirective,
+    AutofocusDirective,
+    ProjectDefaultsBlockComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

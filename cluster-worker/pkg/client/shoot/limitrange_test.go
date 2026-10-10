@@ -12,7 +12,7 @@ import (
 )
 
 func TestLimitRangeSpec_AllFieldsFormatted(t *testing.T) {
-	spec := limitRangeSpec(LimitDefaults{
+	spec := limitRangeSpec(ContainerDefaults{
 		CPURequestMilli: ptr.To[int32](250),
 		CPULimitMilli:   ptr.To[int32](500),
 		MemoryRequestMi: ptr.To[int32](256),
@@ -34,7 +34,7 @@ func TestLimitRangeSpec_AllFieldsFormatted(t *testing.T) {
 }
 
 func TestLimitRangeSpec_PartialFieldsOmitted(t *testing.T) {
-	spec := limitRangeSpec(LimitDefaults{
+	spec := limitRangeSpec(ContainerDefaults{
 		CPULimitMilli: ptr.To[int32](1500),
 	})
 
@@ -54,7 +54,7 @@ func TestMockLimitRangeRoundTrip(t *testing.T) {
 	labels := map[string]string{"fundament.io/managed-by": "cluster-worker"}
 
 	// Ensure creates.
-	first := LimitDefaults{CPULimitMilli: ptr.To[int32](500)}
+	first := ContainerDefaults{CPULimitMilli: ptr.To[int32](500)}
 	require.NoError(t, m.EnsureLimitRange(t.Context(), clusterID, "team-a", first, labels))
 	lr := m.GetLimitRange(clusterID, "team-a")
 	require.NotNil(t, lr)
@@ -62,7 +62,7 @@ func TestMockLimitRangeRoundTrip(t *testing.T) {
 	require.Equal(t, labels, lr.Labels)
 
 	// Ensure updates in place.
-	second := LimitDefaults{CPULimitMilli: ptr.To[int32](250), MemoryLimitMi: ptr.To[int32](512)}
+	second := ContainerDefaults{CPULimitMilli: ptr.To[int32](250), MemoryLimitMi: ptr.To[int32](512)}
 	require.NoError(t, m.EnsureLimitRange(t.Context(), clusterID, "team-a", second, labels))
 	lr = m.GetLimitRange(clusterID, "team-a")
 	require.NotNil(t, lr)

@@ -11,8 +11,8 @@ describe('address', () => {
 
   it('leaves the page behind once the organization comes off', () => {
     expect(
-      withinOrganization('/organizations/gemeente-fundament/projects/pr-burgerzaken/limits'),
-    ).toBe('/projects/pr-burgerzaken/limits');
+      withinOrganization('/organizations/gemeente-fundament/projects/pr-burgerzaken/members'),
+    ).toBe('/projects/pr-burgerzaken/members');
   });
 
   it('leaves an address without an organization alone', () => {

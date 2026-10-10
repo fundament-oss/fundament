@@ -8,6 +8,7 @@ import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { ContainerDefaults } from "./common_pb";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -15,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/project.proto.
  */
 export const file_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiMwoTTGlzdFByb2plY3RzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IjEKEUdldFByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIpABChdHZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBJ1CgRuYW1lGAogASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpIj8KEkdldFByb2plY3RSZXNwb25zZRIpCgdwcm9qZWN0GAogASgLMhgub3JnYW5pemF0aW9uLnYxLlByb2plY3QiogEKB1Byb2plY3QSCgoCaWQYCiABKAkSEgoKY2x1c3Rlcl9pZBgPIAEoCRIMCgRuYW1lGBQgASgJEg0KBWFsaWFzGBkgASgJEisKB2NyZWF0ZWQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD25hbWVzcGFjZV9jb3VudBgjIAEoBRIUCgxtZW1iZXJfY291bnQYKCABKAUirQIKFENyZWF0ZVByb2plY3RSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYBSABKAlCCLpIBXIDsAEBEtYBCgRuYW1lGAogASgJQscBukjDAboBYQoMZG5zMTEyM2xhYmVsEh5tdXN0IGJlIGEgdmFsaWQgRE5TLTExMjMgbGFiZWwaMXRoaXMubWF0Y2hlcygnXlthLXpdKFstYS16MC05XXswLDYxfVthLXowLTldKT8kJym6AVgKFm5vX2NvbnNlY3V0aXZlX2h5cGhlbnMSKG11c3Qgbm90IGNvbnRhaW4gdHdvIGNvbnNlY3V0aXZlIGh5cGhlbnMaFCF0aGlzLmNvbnRhaW5zKCctLScpcgIYHhIeCgVhbGlhcxgUIAEoCUIPqgECCAG6SAdyBRABGP8BIisKFUNyZWF0ZVByb2plY3RSZXNwb25zZRISCgpwcm9qZWN0X2lkGAogASgJIlQKFFVwZGF0ZVByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBEh4KBWFsaWFzGBQgASgJQg+qAQIIAbpIB3IFEAEY/wEiFwoVVXBkYXRlUHJvamVjdFJlc3BvbnNlIjQKFERlbGV0ZVByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIhcKFURlbGV0ZVByb2plY3RSZXNwb25zZSKyAQoNUHJvamVjdE1lbWJlchIKCgJpZBgKIAEoCRISCgpwcm9qZWN0X2lkGBQgASgJEg8KB3VzZXJfaWQYHiABKAkSEQoJdXNlcl9uYW1lGCggASgJEjAKBHJvbGUYMiABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGUSKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOQoZTGlzdFByb2plY3RNZW1iZXJzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASJNChpMaXN0UHJvamVjdE1lbWJlcnNSZXNwb25zZRIvCgdtZW1iZXJzGAogAygLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXIiNgoXR2V0UHJvamVjdE1lbWJlclJlcXVlc3QSGwoJbWVtYmVyX2lkGAogASgJQgi6SAVyA7ABASJKChhHZXRQcm9qZWN0TWVtYmVyUmVzcG9uc2USLgoGbWVtYmVyGAogASgLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXIijgEKF0FkZFByb2plY3RNZW1iZXJSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBEhkKB3VzZXJfaWQYFCABKAlCCLpIBXIDsAEBEjoKBHJvbGUYHiABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGVCCLpIBYIBAiAAIi0KGEFkZFByb2plY3RNZW1iZXJSZXNwb25zZRIRCgltZW1iZXJfaWQYCiABKAkieQoeVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXF1ZXN0EhsKCW1lbWJlcl9pZBgKIAEoCUIIukgFcgOwAQESOgoEcm9sZRgUIAEoDjIiLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyUm9sZUIIukgFggECIAAiIQofVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXNwb25zZSI5ChpSZW1vdmVQcm9qZWN0TWVtYmVyUmVxdWVzdBIbCgltZW1iZXJfaWQYCiABKAlCCLpIBXIDsAEBIh0KG1JlbW92ZVByb2plY3RNZW1iZXJSZXNwb25zZSKrAQoNUHJvamVjdExpbWl0cxIoChlkZWZhdWx0X21lbW9yeV9yZXF1ZXN0X21pGAogASgFQgWqAQIIARImChdkZWZhdWx0X21lbW9yeV9saW1pdF9taRgUIAEoBUIFqgECCAESJAoVZGVmYXVsdF9jcHVfcmVxdWVzdF9tGB4gASgFQgWqAQIIARIiChNkZWZhdWx0X2NwdV9saW1pdF9tGCggASgFQgWqAQIIASI3ChdHZXRQcm9qZWN0TGltaXRzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASJ8ChhHZXRQcm9qZWN0TGltaXRzUmVzcG9uc2USLgoGbGltaXRzGAogASgLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RMaW1pdHMSMAoIZGVmYXVsdHMYFCABKAsyHi5vcmdhbml6YXRpb24udjEuUHJvamVjdExpbWl0cyLyAQoaVXBkYXRlUHJvamVjdExpbWl0c1JlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESLwoZZGVmYXVsdF9tZW1vcnlfcmVxdWVzdF9taRgUIAEoBUIMqgECCAG6SAQaAigBEi0KF2RlZmF1bHRfbWVtb3J5X2xpbWl0X21pGB4gASgFQgyqAQIIAbpIBBoCKAESKwoVZGVmYXVsdF9jcHVfcmVxdWVzdF9tGCggASgFQgyqAQIIAbpIBBoCKAESKQoTZGVmYXVsdF9jcHVfbGltaXRfbRgyIAEoBUIMqgECCAG6SAQaAigBIh0KG1VwZGF0ZVByb2plY3RMaW1pdHNSZXNwb25zZSp3ChFQcm9qZWN0TWVtYmVyUm9sZRIjCh9QUk9KRUNUX01FTUJFUl9ST0xFX1VOU1BFQ0lGSUVEEAASHQoZUFJPSkVDVF9NRU1CRVJfUk9MRV9BRE1JThABEh4KGlBST0pFQ1RfTUVNQkVSX1JPTEVfVklFV0VSEAIy0woKDlByb2plY3RTZXJ2aWNlElsKDExpc3RQcm9qZWN0cxIkLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXF1ZXN0GiUub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0c1Jlc3BvbnNlElUKCkdldFByb2plY3QSIi5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlc3BvbnNlEmEKEEdldFByb2plY3RCeU5hbWUSKC5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdEJ5TmFtZVJlcXVlc3QaIy5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdFJlc3BvbnNlEl4KDUNyZWF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuQ3JlYXRlUHJvamVjdFJlc3BvbnNlEl4KDVVwZGF0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdFJlc3BvbnNlEl4KDURlbGV0ZVByb2plY3QSJS5vcmdhbml6YXRpb24udjEuRGVsZXRlUHJvamVjdFJlcXVlc3QaJi5vcmdhbml6YXRpb24udjEuRGVsZXRlUHJvamVjdFJlc3BvbnNlEm0KEkxpc3RQcm9qZWN0TWVtYmVycxIqLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE1lbWJlcnNSZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLkxpc3RQcm9qZWN0TWVtYmVyc1Jlc3BvbnNlEmcKEEdldFByb2plY3RNZW1iZXISKC5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdE1lbWJlclJlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdE1lbWJlclJlc3BvbnNlEmcKEEFkZFByb2plY3RNZW1iZXISKC5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuQWRkUHJvamVjdE1lbWJlclJlc3BvbnNlEnwKF1VwZGF0ZVByb2plY3RNZW1iZXJSb2xlEi8ub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RNZW1iZXJSb2xlUmVxdWVzdBowLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0TWVtYmVyUm9sZVJlc3BvbnNlEnAKE1JlbW92ZVByb2plY3RNZW1iZXISKy5vcmdhbml6YXRpb24udjEuUmVtb3ZlUHJvamVjdE1lbWJlclJlcXVlc3QaLC5vcmdhbml6YXRpb24udjEuUmVtb3ZlUHJvamVjdE1lbWJlclJlc3BvbnNlEmcKEEdldFByb2plY3RMaW1pdHMSKC5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdExpbWl0c1JlcXVlc3QaKS5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdExpbWl0c1Jlc3BvbnNlEnAKE1VwZGF0ZVByb2plY3RMaW1pdHMSKy5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdExpbWl0c1JlcXVlc3QaLC5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdExpbWl0c1Jlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("ChB2MS9wcm9qZWN0LnByb3RvEg9vcmdhbml6YXRpb24udjEiMwoTTGlzdFByb2plY3RzUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASJCChRMaXN0UHJvamVjdHNSZXNwb25zZRIqCghwcm9qZWN0cxgKIAMoCzIYLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0IjEKEUdldFByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIpABChdHZXRQcm9qZWN0QnlOYW1lUmVxdWVzdBJ1CgRuYW1lGAogASgJQme6SGS6AWEKDGRuczExMjNsYWJlbBIebXVzdCBiZSBhIHZhbGlkIEROUy0xMTIzIGxhYmVsGjF0aGlzLm1hdGNoZXMoJ15bYS16XShbLWEtejAtOV17MCw2MX1bYS16MC05XSk/JCcpIj8KEkdldFByb2plY3RSZXNwb25zZRIpCgdwcm9qZWN0GAogASgLMhgub3JnYW5pemF0aW9uLnYxLlByb2plY3QiogEKB1Byb2plY3QSCgoCaWQYCiABKAkSEgoKY2x1c3Rlcl9pZBgPIAEoCRIMCgRuYW1lGBQgASgJEg0KBWFsaWFzGBkgASgJEisKB2NyZWF0ZWQYHiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD25hbWVzcGFjZV9jb3VudBgjIAEoBRIUCgxtZW1iZXJfY291bnQYKCABKAUirQIKFENyZWF0ZVByb2plY3RSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYBSABKAlCCLpIBXIDsAEBEtYBCgRuYW1lGAogASgJQscBukjDAboBYQoMZG5zMTEyM2xhYmVsEh5tdXN0IGJlIGEgdmFsaWQgRE5TLTExMjMgbGFiZWwaMXRoaXMubWF0Y2hlcygnXlthLXpdKFstYS16MC05XXswLDYxfVthLXowLTldKT8kJym6AVgKFm5vX2NvbnNlY3V0aXZlX2h5cGhlbnMSKG11c3Qgbm90IGNvbnRhaW4gdHdvIGNvbnNlY3V0aXZlIGh5cGhlbnMaFCF0aGlzLmNvbnRhaW5zKCctLScpcgIYHhIeCgVhbGlhcxgUIAEoCUIPqgECCAG6SAdyBRABGP8BIisKFUNyZWF0ZVByb2plY3RSZXNwb25zZRISCgpwcm9qZWN0X2lkGAogASgJIlQKFFVwZGF0ZVByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBEh4KBWFsaWFzGBQgASgJQg+qAQIIAbpIB3IFEAEY/wEiFwoVVXBkYXRlUHJvamVjdFJlc3BvbnNlIjQKFERlbGV0ZVByb2plY3RSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIhcKFURlbGV0ZVByb2plY3RSZXNwb25zZSKyAQoNUHJvamVjdE1lbWJlchIKCgJpZBgKIAEoCRISCgpwcm9qZWN0X2lkGBQgASgJEg8KB3VzZXJfaWQYHiABKAkSEQoJdXNlcl9uYW1lGCggASgJEjAKBHJvbGUYMiABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGUSKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOQoZTGlzdFByb2plY3RNZW1iZXJzUmVxdWVzdBIcCgpwcm9qZWN0X2lkGAogASgJQgi6SAVyA7ABASJNChpMaXN0UHJvamVjdE1lbWJlcnNSZXNwb25zZRIvCgdtZW1iZXJzGAogAygLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXIiNgoXR2V0UHJvamVjdE1lbWJlclJlcXVlc3QSGwoJbWVtYmVyX2lkGAogASgJQgi6SAVyA7ABASJKChhHZXRQcm9qZWN0TWVtYmVyUmVzcG9uc2USLgoGbWVtYmVyGAogASgLMh4ub3JnYW5pemF0aW9uLnYxLlByb2plY3RNZW1iZXIijgEKF0FkZFByb2plY3RNZW1iZXJSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBEhkKB3VzZXJfaWQYFCABKAlCCLpIBXIDsAEBEjoKBHJvbGUYHiABKA4yIi5vcmdhbml6YXRpb24udjEuUHJvamVjdE1lbWJlclJvbGVCCLpIBYIBAiAAIi0KGEFkZFByb2plY3RNZW1iZXJSZXNwb25zZRIRCgltZW1iZXJfaWQYCiABKAkieQoeVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXF1ZXN0EhsKCW1lbWJlcl9pZBgKIAEoCUIIukgFcgOwAQESOgoEcm9sZRgUIAEoDjIiLm9yZ2FuaXphdGlvbi52MS5Qcm9qZWN0TWVtYmVyUm9sZUIIukgFggECIAAiIQofVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXNwb25zZSI5ChpSZW1vdmVQcm9qZWN0TWVtYmVyUmVxdWVzdBIbCgltZW1iZXJfaWQYCiABKAlCCLpIBXIDsAEBIh0KG1JlbW92ZVByb2plY3RNZW1iZXJSZXNwb25zZSI5ChlHZXRQcm9qZWN0RGVmYXVsdHNSZXF1ZXN0EhwKCnByb2plY3RfaWQYCiABKAlCCLpIBXIDsAEBIpABChpHZXRQcm9qZWN0RGVmYXVsdHNSZXNwb25zZRI0CghkZWZhdWx0cxgKIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5Db250YWluZXJEZWZhdWx0cxI8ChBjbHVzdGVyX2RlZmF1bHRzGBQgASgLMiIub3JnYW5pemF0aW9uLnYxLkNvbnRhaW5lckRlZmF1bHRzInIKHFVwZGF0ZVByb2plY3REZWZhdWx0c1JlcXVlc3QSHAoKcHJvamVjdF9pZBgKIAEoCUIIukgFcgOwAQESNAoIZGVmYXVsdHMYFCABKAsyIi5vcmdhbml6YXRpb24udjEuQ29udGFpbmVyRGVmYXVsdHMiHwodVXBkYXRlUHJvamVjdERlZmF1bHRzUmVzcG9uc2UqdwoRUHJvamVjdE1lbWJlclJvbGUSIwofUFJPSkVDVF9NRU1CRVJfUk9MRV9VTlNQRUNJRklFRBAAEh0KGVBST0pFQ1RfTUVNQkVSX1JPTEVfQURNSU4QARIeChpQUk9KRUNUX01FTUJFUl9ST0xFX1ZJRVdFUhACMt8KCg5Qcm9qZWN0U2VydmljZRJbCgxMaXN0UHJvamVjdHMSJC5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RzUmVxdWVzdBolLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdHNSZXNwb25zZRJVCgpHZXRQcm9qZWN0EiIub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXF1ZXN0GiMub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXNwb25zZRJhChBHZXRQcm9qZWN0QnlOYW1lEigub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RCeU5hbWVSZXF1ZXN0GiMub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RSZXNwb25zZRJeCg1DcmVhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLkNyZWF0ZVByb2plY3RSZXNwb25zZRJeCg1VcGRhdGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLlVwZGF0ZVByb2plY3RSZXNwb25zZRJeCg1EZWxldGVQcm9qZWN0EiUub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXF1ZXN0GiYub3JnYW5pemF0aW9uLnYxLkRlbGV0ZVByb2plY3RSZXNwb25zZRJtChJMaXN0UHJvamVjdE1lbWJlcnMSKi5vcmdhbml6YXRpb24udjEuTGlzdFByb2plY3RNZW1iZXJzUmVxdWVzdBorLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJvamVjdE1lbWJlcnNSZXNwb25zZRJnChBHZXRQcm9qZWN0TWVtYmVyEigub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RNZW1iZXJSZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkdldFByb2plY3RNZW1iZXJSZXNwb25zZRJnChBBZGRQcm9qZWN0TWVtYmVyEigub3JnYW5pemF0aW9uLnYxLkFkZFByb2plY3RNZW1iZXJSZXF1ZXN0Gikub3JnYW5pemF0aW9uLnYxLkFkZFByb2plY3RNZW1iZXJSZXNwb25zZRJ8ChdVcGRhdGVQcm9qZWN0TWVtYmVyUm9sZRIvLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0TWVtYmVyUm9sZVJlcXVlc3QaMC5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdE1lbWJlclJvbGVSZXNwb25zZRJwChNSZW1vdmVQcm9qZWN0TWVtYmVyEisub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXF1ZXN0Giwub3JnYW5pemF0aW9uLnYxLlJlbW92ZVByb2plY3RNZW1iZXJSZXNwb25zZRJtChJHZXRQcm9qZWN0RGVmYXVsdHMSKi5vcmdhbml6YXRpb24udjEuR2V0UHJvamVjdERlZmF1bHRzUmVxdWVzdBorLm9yZ2FuaXphdGlvbi52MS5HZXRQcm9qZWN0RGVmYXVsdHNSZXNwb25zZRJ2ChVVcGRhdGVQcm9qZWN0RGVmYXVsdHMSLS5vcmdhbml6YXRpb24udjEuVXBkYXRlUHJvamVjdERlZmF1bHRzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVQcm9qZWN0RGVmYXVsdHNSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * List projects request
@@ -533,53 +534,11 @@ export const RemoveProjectMemberResponseSchema: GenMessage<RemoveProjectMemberRe
   messageDesc(file_v1_project, 22);
 
 /**
- * ProjectLimits holds Kubernetes namespace LimitRange defaults for a project
+ * GetProjectDefaults request
  *
- * @generated from message organization.v1.ProjectLimits
+ * @generated from message organization.v1.GetProjectDefaultsRequest
  */
-export type ProjectLimits = Message<"organization.v1.ProjectLimits"> & {
-  /**
-   * Default memory request applied to containers via LimitRange (mebibytes)
-   *
-   * @generated from field: int32 default_memory_request_mi = 10 [features.field_presence = EXPLICIT];
-   */
-  defaultMemoryRequestMi: number;
-
-  /**
-   * Default memory limit applied to containers via LimitRange (mebibytes)
-   *
-   * @generated from field: int32 default_memory_limit_mi = 20 [features.field_presence = EXPLICIT];
-   */
-  defaultMemoryLimitMi: number;
-
-  /**
-   * Default CPU request applied to containers via LimitRange (millicores)
-   *
-   * @generated from field: int32 default_cpu_request_m = 30 [features.field_presence = EXPLICIT];
-   */
-  defaultCpuRequestM: number;
-
-  /**
-   * Default CPU limit applied to containers via LimitRange (millicores)
-   *
-   * @generated from field: int32 default_cpu_limit_m = 40 [features.field_presence = EXPLICIT];
-   */
-  defaultCpuLimitM: number;
-};
-
-/**
- * Describes the message organization.v1.ProjectLimits.
- * Use `create(ProjectLimitsSchema)` to create a new message.
- */
-export const ProjectLimitsSchema: GenMessage<ProjectLimits> = /*@__PURE__*/
-  messageDesc(file_v1_project, 23);
-
-/**
- * GetProjectLimits request
- *
- * @generated from message organization.v1.GetProjectLimitsRequest
- */
-export type GetProjectLimitsRequest = Message<"organization.v1.GetProjectLimitsRequest"> & {
+export type GetProjectDefaultsRequest = Message<"organization.v1.GetProjectDefaultsRequest"> & {
   /**
    * ID of the project
    *
@@ -589,46 +548,47 @@ export type GetProjectLimitsRequest = Message<"organization.v1.GetProjectLimitsR
 };
 
 /**
- * Describes the message organization.v1.GetProjectLimitsRequest.
- * Use `create(GetProjectLimitsRequestSchema)` to create a new message.
+ * Describes the message organization.v1.GetProjectDefaultsRequest.
+ * Use `create(GetProjectDefaultsRequestSchema)` to create a new message.
  */
-export const GetProjectLimitsRequestSchema: GenMessage<GetProjectLimitsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 24);
+export const GetProjectDefaultsRequestSchema: GenMessage<GetProjectDefaultsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 23);
 
 /**
- * GetProjectLimits response
+ * GetProjectDefaults response
  *
- * @generated from message organization.v1.GetProjectLimitsResponse
+ * @generated from message organization.v1.GetProjectDefaultsResponse
  */
-export type GetProjectLimitsResponse = Message<"organization.v1.GetProjectLimitsResponse"> & {
+export type GetProjectDefaultsResponse = Message<"organization.v1.GetProjectDefaultsResponse"> & {
   /**
-   * The current limits for the project (absent fields mean no default is set)
+   * The project's own defaults; an absent field inherits the cluster's
    *
-   * @generated from field: organization.v1.ProjectLimits limits = 10;
+   * @generated from field: organization.v1.ContainerDefaults defaults = 10;
    */
-  limits?: ProjectLimits | undefined;
+  defaults?: ContainerDefaults | undefined;
 
   /**
-   * The platform default limits, used to pre-fill the form and by "Reset to defaults"
+   * The cluster's defaults: the ceiling for this project, and what an absent
+   * field above inherits
    *
-   * @generated from field: organization.v1.ProjectLimits defaults = 20;
+   * @generated from field: organization.v1.ContainerDefaults cluster_defaults = 20;
    */
-  defaults?: ProjectLimits | undefined;
+  clusterDefaults?: ContainerDefaults | undefined;
 };
 
 /**
- * Describes the message organization.v1.GetProjectLimitsResponse.
- * Use `create(GetProjectLimitsResponseSchema)` to create a new message.
+ * Describes the message organization.v1.GetProjectDefaultsResponse.
+ * Use `create(GetProjectDefaultsResponseSchema)` to create a new message.
  */
-export const GetProjectLimitsResponseSchema: GenMessage<GetProjectLimitsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 25);
+export const GetProjectDefaultsResponseSchema: GenMessage<GetProjectDefaultsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 24);
 
 /**
- * UpdateProjectLimits request
+ * UpdateProjectDefaults request
  *
- * @generated from message organization.v1.UpdateProjectLimitsRequest
+ * @generated from message organization.v1.UpdateProjectDefaultsRequest
  */
-export type UpdateProjectLimitsRequest = Message<"organization.v1.UpdateProjectLimitsRequest"> & {
+export type UpdateProjectDefaultsRequest = Message<"organization.v1.UpdateProjectDefaultsRequest"> & {
   /**
    * ID of the project to update
    *
@@ -637,55 +597,34 @@ export type UpdateProjectLimitsRequest = Message<"organization.v1.UpdateProjectL
   projectId: string;
 
   /**
-   * Default memory request applied to containers via LimitRange (mebibytes)
+   * Replaces all four values; an absent field inherits the cluster's
    *
-   * @generated from field: int32 default_memory_request_mi = 20 [features.field_presence = EXPLICIT];
+   * @generated from field: organization.v1.ContainerDefaults defaults = 20;
    */
-  defaultMemoryRequestMi: number;
-
-  /**
-   * Default memory limit applied to containers via LimitRange (mebibytes)
-   *
-   * @generated from field: int32 default_memory_limit_mi = 30 [features.field_presence = EXPLICIT];
-   */
-  defaultMemoryLimitMi: number;
-
-  /**
-   * Default CPU request applied to containers via LimitRange (millicores)
-   *
-   * @generated from field: int32 default_cpu_request_m = 40 [features.field_presence = EXPLICIT];
-   */
-  defaultCpuRequestM: number;
-
-  /**
-   * Default CPU limit applied to containers via LimitRange (millicores)
-   *
-   * @generated from field: int32 default_cpu_limit_m = 50 [features.field_presence = EXPLICIT];
-   */
-  defaultCpuLimitM: number;
+  defaults?: ContainerDefaults | undefined;
 };
 
 /**
- * Describes the message organization.v1.UpdateProjectLimitsRequest.
- * Use `create(UpdateProjectLimitsRequestSchema)` to create a new message.
+ * Describes the message organization.v1.UpdateProjectDefaultsRequest.
+ * Use `create(UpdateProjectDefaultsRequestSchema)` to create a new message.
  */
-export const UpdateProjectLimitsRequestSchema: GenMessage<UpdateProjectLimitsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_project, 26);
+export const UpdateProjectDefaultsRequestSchema: GenMessage<UpdateProjectDefaultsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_project, 25);
 
 /**
- * UpdateProjectLimits response
+ * UpdateProjectDefaults response
  *
- * @generated from message organization.v1.UpdateProjectLimitsResponse
+ * @generated from message organization.v1.UpdateProjectDefaultsResponse
  */
-export type UpdateProjectLimitsResponse = Message<"organization.v1.UpdateProjectLimitsResponse"> & {
+export type UpdateProjectDefaultsResponse = Message<"organization.v1.UpdateProjectDefaultsResponse"> & {
 };
 
 /**
- * Describes the message organization.v1.UpdateProjectLimitsResponse.
- * Use `create(UpdateProjectLimitsResponseSchema)` to create a new message.
+ * Describes the message organization.v1.UpdateProjectDefaultsResponse.
+ * Use `create(UpdateProjectDefaultsResponseSchema)` to create a new message.
  */
-export const UpdateProjectLimitsResponseSchema: GenMessage<UpdateProjectLimitsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_project, 27);
+export const UpdateProjectDefaultsResponseSchema: GenMessage<UpdateProjectDefaultsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_project, 26);
 
 /**
  * Project member role
@@ -832,24 +771,26 @@ export const ProjectService: GenService<{
     output: typeof RemoveProjectMemberResponseSchema;
   },
   /**
-   * GetProjectLimits retrieves the namespace resource defaults for a project
+   * GetProjectDefaults retrieves the project's per-container resource defaults
+   * and the cluster's, which are both the ceiling and what an unset field
+   * inherits
    *
-   * @generated from rpc organization.v1.ProjectService.GetProjectLimits
+   * @generated from rpc organization.v1.ProjectService.GetProjectDefaults
    */
-  getProjectLimits: {
+  getProjectDefaults: {
     methodKind: "unary";
-    input: typeof GetProjectLimitsRequestSchema;
-    output: typeof GetProjectLimitsResponseSchema;
+    input: typeof GetProjectDefaultsRequestSchema;
+    output: typeof GetProjectDefaultsResponseSchema;
   },
   /**
-   * UpdateProjectLimits sets the namespace resource defaults for a project
+   * UpdateProjectDefaults replaces the project's per-container resource defaults
    *
-   * @generated from rpc organization.v1.ProjectService.UpdateProjectLimits
+   * @generated from rpc organization.v1.ProjectService.UpdateProjectDefaults
    */
-  updateProjectLimits: {
+  updateProjectDefaults: {
     methodKind: "unary";
-    input: typeof UpdateProjectLimitsRequestSchema;
-    output: typeof UpdateProjectLimitsResponseSchema;
+    input: typeof UpdateProjectDefaultsRequestSchema;
+    output: typeof UpdateProjectDefaultsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_project, 0);

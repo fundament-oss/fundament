@@ -31,6 +31,89 @@ func (q *Queries) ProjectCreate(ctx context.Context, arg ProjectCreateParams) (u
 	return id, err
 }
 
+const projectDefaultsGet = `-- name: ProjectDefaultsGet :one
+SELECT
+    tenant.projects.default_memory_request_mi,
+    tenant.projects.default_memory_limit_mi,
+    tenant.projects.default_cpu_request_m,
+    tenant.projects.default_cpu_limit_m,
+    tenant.clusters.default_memory_request_mi AS cluster_default_memory_request_mi,
+    tenant.clusters.default_memory_limit_mi AS cluster_default_memory_limit_mi,
+    tenant.clusters.default_cpu_request_m AS cluster_default_cpu_request_m,
+    tenant.clusters.default_cpu_limit_m AS cluster_default_cpu_limit_m
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+WHERE tenant.projects.id = $1
+  AND tenant.projects.deleted IS NULL
+`
+
+type ProjectDefaultsGetParams struct {
+	ID uuid.UUID
+}
+
+type ProjectDefaultsGetRow struct {
+	DefaultMemoryRequestMi        pgtype.Int4
+	DefaultMemoryLimitMi          pgtype.Int4
+	DefaultCpuRequestM            pgtype.Int4
+	DefaultCpuLimitM              pgtype.Int4
+	ClusterDefaultMemoryRequestMi pgtype.Int4
+	ClusterDefaultMemoryLimitMi   pgtype.Int4
+	ClusterDefaultCpuRequestM     pgtype.Int4
+	ClusterDefaultCpuLimitM       pgtype.Int4
+}
+
+// The project's own per-container resource defaults alongside its cluster's.
+// A NULL project column inherits the cluster's value; the cluster's value is
+// also the ceiling the project may not exceed.
+func (q *Queries) ProjectDefaultsGet(ctx context.Context, arg ProjectDefaultsGetParams) (ProjectDefaultsGetRow, error) {
+	row := q.db.QueryRow(ctx, projectDefaultsGet, arg.ID)
+	var i ProjectDefaultsGetRow
+	err := row.Scan(
+		&i.DefaultMemoryRequestMi,
+		&i.DefaultMemoryLimitMi,
+		&i.DefaultCpuRequestM,
+		&i.DefaultCpuLimitM,
+		&i.ClusterDefaultMemoryRequestMi,
+		&i.ClusterDefaultMemoryLimitMi,
+		&i.ClusterDefaultCpuRequestM,
+		&i.ClusterDefaultCpuLimitM,
+	)
+	return i, err
+}
+
+const projectDefaultsUpdate = `-- name: ProjectDefaultsUpdate :execrows
+UPDATE tenant.projects
+SET default_memory_request_mi = $1,
+    default_memory_limit_mi   = $2,
+    default_cpu_request_m     = $3,
+    default_cpu_limit_m       = $4
+WHERE id = $5 AND deleted IS NULL
+`
+
+type ProjectDefaultsUpdateParams struct {
+	DefaultMemoryRequestMi pgtype.Int4
+	DefaultMemoryLimitMi   pgtype.Int4
+	DefaultCpuRequestM     pgtype.Int4
+	DefaultCpuLimitM       pgtype.Int4
+	ID                     uuid.UUID
+}
+
+// Replaces all four defaults: a NULL argument inherits the cluster's value.
+// A value above the cluster's raises project_defaults_exceed_cluster.
+func (q *Queries) ProjectDefaultsUpdate(ctx context.Context, arg ProjectDefaultsUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, projectDefaultsUpdate,
+		arg.DefaultMemoryRequestMi,
+		arg.DefaultMemoryLimitMi,
+		arg.DefaultCpuRequestM,
+		arg.DefaultCpuLimitM,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const projectDelete = `-- name: ProjectDelete :execrows
 UPDATE tenant.projects
 SET deleted = NOW()
@@ -59,9 +142,18 @@ type ProjectGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) (TenantProject, error) {
+type ProjectGetByIDRow struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	Name      string
+	Alias     string
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) (ProjectGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, projectGetByID, arg.ID)
-	var i TenantProject
+	var i ProjectGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
@@ -83,9 +175,18 @@ type ProjectGetByNameParams struct {
 	Name string
 }
 
-func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (TenantProject, error) {
+type ProjectGetByNameRow struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	Name      string
+	Alias     string
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (ProjectGetByNameRow, error) {
 	row := q.db.QueryRow(ctx, projectGetByName, arg.Name)
-	var i TenantProject
+	var i ProjectGetByNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
@@ -104,15 +205,24 @@ WHERE deleted IS NULL
 ORDER BY created DESC
 `
 
-func (q *Queries) ProjectList(ctx context.Context) ([]TenantProject, error) {
+type ProjectListRow struct {
+	ID        uuid.UUID
+	ClusterID uuid.UUID
+	Name      string
+	Alias     string
+	Created   pgtype.Timestamptz
+	Deleted   pgtype.Timestamptz
+}
+
+func (q *Queries) ProjectList(ctx context.Context) ([]ProjectListRow, error) {
 	rows, err := q.db.Query(ctx, projectList)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantProject
+	var items []ProjectListRow
 	for rows.Next() {
-		var i TenantProject
+		var i ProjectListRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClusterID,

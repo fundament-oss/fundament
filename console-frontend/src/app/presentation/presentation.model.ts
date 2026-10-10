@@ -17,6 +17,8 @@ export interface DriveStep {
   check?: boolean;
   /** CSS selector of an element to click. */
   click?: string;
+  /** CSS selector of an element to scroll into view, for a block far down a page. */
+  scroll?: string;
   /** CSS selector of a form to submit (dispatches a native `submit` event). */
   submit?: string;
   /** Dispatch a bubbling CustomEvent of this name on `document` (demo services listen). */
