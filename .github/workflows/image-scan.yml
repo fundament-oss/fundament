@@ -1,0 +1,165 @@
+name: Image scan
+
+# Reports only: findings show as warnings and a PR comment, never as a failed
+# check.
+
+on:
+  pull_request:
+  schedule: # Mondays at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# By digest: a tag can be moved to another image after review.
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+  COSIGN_IMAGE: ghcr.io/sigstore/cosign/cosign:v3.1.3@sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+  CRANE_IMAGE: gcr.io/go-containerregistry/crane:v0.22.1@sha256:1f968817b95790bed063f71175aa6b8ff879fa17064020415f3e18bb6e6a36e1
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Image scan
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # Fails the job unless the image was signed by trivy's own release
+      # workflow for the pinned version.
+      - name: Verify trivy image
+        run: |
+          version=${TRIVY_IMAGE%@*}
+          version=${version##*:}
+          docker run --rm "$COSIGN_IMAGE" verify "$TRIVY_IMAGE" \
+            --certificate-identity "https://github.com/aquasecurity/trivy/.github/workflows/reusable-release.yaml@refs/tags/v$version" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+
+      - uses: jdx/mise-action@v4
+
+      # Our own images are not scanned: everything in them besides our code
+      # comes from the Dockerfile's final FROM, which is scanned instead. Go
+      # services build FROM scratch; govulncheck covers them.
+      # The default chart values do not render: they leave jwtSecret empty.
+      - name: List images
+        run: |
+          set -o pipefail
+          mise exec -- helm template charts/fundament \
+              -f charts/fundament/values-production.yaml --set jwtSecret=unused \
+            | grep -E '^\s*(image|imageName):' | sed -E 's/.*image(Name)?:[[:space:]]*"?//; s/"$//' \
+            | grep -v '^ghcr.io/fundament-oss/' | sort -u > chart-images.txt
+          for dockerfile in $(git ls-files '*Dockerfile' | grep -vE '(^|/)(hotreload|functl)/'); do
+            base=$(grep -E '^FROM ' "$dockerfile" | tail -1 | sed -E 's/^FROM +(--[^ ]+ +)*//; s/ .*//')
+            [ "$base" = scratch ] || echo "$base $dockerfile"
+          done | sort > base-images.txt
+          cat chart-images.txt base-images.txt
+
+      # Each image is compared with the newest tag of the same shape and major
+      # version (v2.41.1 -> newest v2.x.y); a newer major is named, not scanned.
+      # A tag without a version number, such as alpine, is floating: every
+      # build pulls its newest image.
+      # Runs in the checkout so trivy picks up .trivyignore when it exists.
+      - name: Scan
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ADVISORY_URL: ${{ github.server_url }}/${{ github.repository }}/security/advisories/new
+        run: |
+          scan() {
+            docker run --rm -v trivy-cache:/root/.cache -v "$PWD:/work" -w /work "$TRIVY_IMAGE" \
+              image --quiet --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+              --format json --output trivy.json "$1" \
+            && jq -c '[.Results[]?.Vulnerabilities[]?] | unique_by(.VulnerabilityID + .PkgName + .InstalledVersion)' \
+              trivy.json > "$2"
+          }
+          # "critical / high"
+          counts() {
+            jq -r '"\(map(select(.Severity == "CRITICAL")) | length) / \(map(select(.Severity == "HIGH")) | length)"' "$1"
+          }
+          # Appends "| Image | Critical / high | Upgrade to | Newer major |" to
+          # rows.md, followed by the cell in $2 when it is set.
+          row() {
+            local image=$1 suffix=${2:+ $2 |} repo tag name tags shape cur_major upgrade="" major="" now note
+            repo=${image%:*} tag=${image##*:}
+            if [ "$repo" = "$image" ]; then tag=latest; fi
+            name="\`${repo##*/}:$tag\`"
+            if grep -q '[0-9]' <<< "$tag"; then
+              shape=$(sed -E 's/\./\\./g; s/[0-9]+/[0-9]+/g' <<< "$tag")
+              cur_major=$(grep -oE '^v?[0-9]+' <<< "$tag")
+              tags=$(docker run --rm "$CRANE_IMAGE" ls "$repo" | grep -E "^${shape}\$" | sort -V || true)
+              upgrade=$(grep -E "^${cur_major}(\.|\$)" <<< "$tags" | tail -1 || true)
+              if [ "$upgrade" = "$tag" ]; then upgrade=""; fi
+              major=$(tail -1 <<< "$tags")
+              if [ "$(grep -oE '^v?[0-9]+' <<< "$major")" = "$cur_major" ]; then major=""; fi
+            fi
+            if ! scan "$repo:$tag" now.json; then
+              echo "::warning title=Image scan::$repo:$tag: scan failed"
+              echo "| $name | scan failed | | $major |$suffix" >> rows.md
+              return
+            fi
+            {
+              echo "### \`$repo:$tag\`"
+              echo
+              jq -r 'if length == 0 then "No fixable high or critical vulnerabilities." else
+                "| Severity | Package | Installed | Fixed in | ID |", "|---|---|---|---|---|",
+                (sort_by(.Severity)[] | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) | [\(.VulnerabilityID)](\(.PrimaryURL // "")) |")
+                end' now.json
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$(jq length now.json)" -eq 0 ]; then
+              echo "| $name | – | | $major |$suffix" >> rows.md
+              return
+            fi
+            affected=$((affected + 1))
+            now=$(counts now.json)
+            if [ -z "$cur_major" ]; then
+              note="floating tag, waits on upstream"
+            elif [ -z "$upgrade" ]; then
+              note="no newer release"
+            elif scan "$repo:$upgrade" next.json; then
+              note="**$upgrade** ($(counts next.json))"
+            else
+              note="**$upgrade** (scan failed)"
+            fi
+            echo "::warning title=Image scan::$repo:$tag: $now critical / high; ${note//\*/}${major:+; newer major $major}"
+            echo "| $name | $now | $note | $major |$suffix" >> rows.md
+          }
+
+          affected=0
+          : > rows.md
+          while read -r image; do row "$image"; done < chart-images.txt
+          mv rows.md chart-rows.md
+          : > rows.md
+          while read -r base; do
+            row "$base" "$(awk -v b="$base" '$1 == b {sub("/?Dockerfile$", "", $2); printf "%s%s", sep, $2; sep = ", "}' base-images.txt)"
+          done < <(cut -d' ' -f1 base-images.txt | sort -u)
+          mv rows.md base-rows.md
+          total=$(( $(wc -l < chart-images.txt) + $(cut -d' ' -f1 base-images.txt | sort -u | wc -l) ))
+
+          {
+            echo "## Image scan: $affected of $total images have fixable vulnerabilities"
+            echo
+            echo "**Chart images**: bump the tag in \`charts/fundament\`"
+            echo
+            echo "| Image | Critical / high | Upgrade to | Newer major |"
+            echo "|---|---|---|---|"
+            cat chart-rows.md
+            echo
+            echo "**Dockerfile base images**: bump the \`FROM\`"
+            echo
+            echo "| Image | Critical / high | Upgrade to | Newer major | Dockerfiles in |"
+            echo "|---|---|---|---|---|"
+            cat base-rows.md
+            echo
+            echo "Fixable high and critical findings; packages in the [run summary]($RUN_URL). Does not block merging. Exploitable for us? Open a [private security advisory]($ADVISORY_URL), do not discuss it here."
+          } > comment.md
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          header: image-scan
+          path: comment.md
