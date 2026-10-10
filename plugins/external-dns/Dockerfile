@@ -7,7 +7,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /external-dns-plugin ./plugins/external-dns/
 
-FROM alpine:3.21
+FROM alpine:3.24
 
 RUN apk add --no-cache helm
 
