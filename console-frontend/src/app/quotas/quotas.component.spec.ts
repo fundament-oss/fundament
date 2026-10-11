@@ -85,6 +85,7 @@ describe('QuotasComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(text).toContain('No node quota is set yet');
+    expect(text).toContain('default worker pool');
     expect((fixture.nativeElement as HTMLElement).querySelector('nldd-banner[variant="warning"]')).toBeNull();
   });
 });

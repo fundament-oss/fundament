@@ -7,6 +7,7 @@ import type { ContainerDefaults } from '../../generated/v1/common_pb';
 import {
   OrganizationService,
   ListOrganizationsResponseSchema,
+  GetOrganizationQuotasResponseSchema,
   GetOrganizationResponseSchema,
 } from '../../generated/v1/organization_pb';
 import {
@@ -207,9 +208,17 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetOrganizationResponseSchema, { organization: fx.organization });
       },
+      // The clusters in use are counted off the list the demo adds to, so the
+      // page agrees with the cluster list after a cluster was created here.
       getOrganizationQuotas: async () => {
         await delay();
-        return fx.organizationQuotas;
+        return create(GetOrganizationQuotasResponseSchema, {
+          clusters: {
+            quota: fx.organizationQuotas.clusters?.quota ?? 0,
+            inUse: fx.clusterSummaries.length,
+          },
+          nodes: fx.organizationQuotas.nodes,
+        });
       },
     });
 

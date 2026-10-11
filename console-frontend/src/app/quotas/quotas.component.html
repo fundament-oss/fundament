@@ -75,8 +75,10 @@
       @if (nodes().length === 0) {
         <nldd-rich-text spacing="flat">
           <p>
-            No node quota is set yet, so no node pool can be created. Contact a Fundament
-            operator to have one set for the machine types you need.
+            No node quota is set yet, so no node pool of your own can be added. A cluster
+            without node pools still runs on the platform's default worker pool, which is
+            outside this quota. Contact a Fundament operator to have a quota set for the
+            machine types you need.
           </p>
         </nldd-rich-text>
       } @else {
