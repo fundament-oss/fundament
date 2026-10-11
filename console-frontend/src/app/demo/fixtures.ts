@@ -70,7 +70,7 @@ export const organizationQuotas = create(GetOrganizationQuotasResponseSchema, {
   clusters: { quota: 3, inUse: 0 },
   nodes: [
     { region: 'local', machineType: 'e2-highmem-2', quota: 0, inUse: 2 },
-    { region: 'local', machineType: 'e2-highmem-4', quota: 4, inUse: 3 },
+    { region: 'local', machineType: 'e2-highmem-4', quota: 3, inUse: 3 },
     { region: 'local', machineType: 'e2-standard-2', quota: 3, inUse: 4 },
     { region: 'local', machineType: 'e2-standard-4', quota: 10, inUse: 6 },
     { region: 'nl-north-1', machineType: 'e2-standard-4', quota: 8, inUse: 0 },
