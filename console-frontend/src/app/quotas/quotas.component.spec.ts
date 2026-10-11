@@ -84,8 +84,11 @@ describe('QuotasComponent', () => {
     );
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('No node quota is set yet');
-    expect(text).toContain('default worker pool');
+    // Both halves of the guidance: no pool of their own, but a cluster still
+    // runs on the platform's pool, which this quota does not cover.
+    expect(text).toContain('no node pool of your own can be added');
+    expect(text).toContain("still runs on the platform's default worker pool, which is outside this quota");
+    expect(text).toContain('contact a Fundament operator');
     expect((fixture.nativeElement as HTMLElement).querySelector('nldd-banner[variant="warning"]')).toBeNull();
   });
 });
