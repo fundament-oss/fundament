@@ -839,7 +839,7 @@ export const members = [
     externalRef: 'demi',
     email: 'demi@fundament.example',
     permission: 'admin',
-    status: 'active',
+    status: 'accepted',
     created: daysAgo(420),
   }),
   create(MemberSchema, {
@@ -849,7 +849,7 @@ export const members = [
     externalRef: 'sanne',
     email: 'sanne@fundament.example',
     permission: 'member',
-    status: 'active',
+    status: 'accepted',
     created: daysAgo(300),
   }),
   create(MemberSchema, {
@@ -859,7 +859,7 @@ export const members = [
     externalRef: 'omar',
     email: 'omar@fundament.example',
     permission: 'member',
-    status: 'active',
+    status: 'accepted',
     created: daysAgo(30),
   }),
 ];

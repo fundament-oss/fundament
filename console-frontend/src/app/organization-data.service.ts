@@ -2,7 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
-import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
+import { ORGANIZATION, CLUSTER, PROJECT, MEMBER } from '../connect/tokens';
 import OrganizationContextService from './organization-context.service';
 import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
@@ -13,6 +13,7 @@ import {
 } from '../generated/v1/cluster_pb';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
+import { ListMembersRequestSchema, type Member } from '../generated/v1/member_pb';
 import sortByName from './utils/sort-by-name';
 
 export interface ProjectData {
@@ -81,8 +82,27 @@ export class OrganizationDataService {
 
   private projectClient = inject(PROJECT);
 
+  private memberClient = inject(MEMBER);
+
   /** Full ClusterSummary list (with status, region, etc.) for the current organization. */
   clusterSummaries = signal<ClusterSummary[]>([]);
+
+  /** The organization's members as ListMembers reports them, pending
+   *  invitations included, fetched with the organization the way the clusters
+   *  are. The Members page fetches through reloadMembers(), so the two agree. */
+  members = signal<Member[]>([]);
+
+  /** True once the member list has come back for the current org. */
+  membersLoaded = signal(false);
+
+  /** How many accepted members the organization has, for the sidebar next to
+   *  Members, as Clusters shows the length of its list. A pending invitation is
+   *  not a member yet. Null until the list is in. */
+  readonly memberCount = computed(() =>
+    this.membersLoaded()
+      ? this.members().filter((member) => member.status === 'accepted').length
+      : null,
+  );
 
   /** All organizations the user belongs to. Lightweight, without nested projects and namespaces. */
   userOrganizations = signal<Organization[]>([]);
@@ -180,9 +200,18 @@ export class OrganizationDataService {
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
     this.clustersLoaded.set(false);
+    this.members.set([]);
+    this.membersLoaded.set(false);
 
     this.loading.set(true);
     try {
+      // Alongside, not in the Promise.all: the sidebar's count is the only
+      // thing waiting on it, and that is no reason to hold up the organization.
+      this.reloadMembers().catch((error: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error('Error loading members:', error);
+      });
+
       const orgRequest = create(GetOrganizationRequestSchema, { id: orgId });
 
       const [orgResponse, clustersResponse] = await Promise.all([
@@ -463,6 +492,25 @@ export class OrganizationDataService {
   }
 
   /**
+   * Fetch the member list from the server: with the organization, and again
+   * after an invitation or a removal, so the sidebar's count follows. Resolves
+   * to the list for the page that asked for it, and throws when the list could
+   * not be fetched, so that page can say so; the cache keeps what it had then.
+   */
+  async reloadMembers(): Promise<Member[]> {
+    const { generation } = this;
+    const response = await firstValueFrom(
+      this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
+    );
+    // Dropped when the organization changed while the list was on its way.
+    if (generation === this.generation) {
+      this.members.set(response.members);
+      this.membersLoaded.set(true);
+    }
+    return response.members;
+  }
+
+  /**
    * Update the cached organization name without a full reload
    */
   updateOrganizationAlias(organizationId: string, alias: string) {
@@ -505,6 +553,8 @@ export class OrganizationDataService {
     this.userOrganizations.set([]);
     this.clusterSummaries.set([]);
     this.clustersLoaded.set(false);
+    this.members.set([]);
+    this.membersLoaded.set(false);
     this.loadProjectsPromise = null;
     this.projectsLoaded.set(false);
   }

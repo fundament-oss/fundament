@@ -3,7 +3,7 @@ import { create } from '@bufbuild/protobuf';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OrganizationDataService } from './organization-data.service';
-import { CLUSTER, ORGANIZATION, PROJECT } from '../connect/tokens';
+import { CLUSTER, ORGANIZATION, PROJECT, MEMBER } from '../connect/tokens';
 import { GetOrganizationResponseSchema, OrganizationSchema } from '../generated/v1/organization_pb';
 import {
   ListClustersResponseSchema,
@@ -11,6 +11,7 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
 import { ClusterStatus } from '../generated/v1/common_pb';
+import { ListMembersResponseSchema, MemberSchema, type Member } from '../generated/v1/member_pb';
 
 const ORGANIZATION_ID = '019b4000-1000-7000-8000-000000000001';
 
@@ -24,10 +25,24 @@ function summary(id: string, name: string, status: ClusterStatus): ClusterSummar
   });
 }
 
+function member(id: string, status: 'accepted' | 'pending'): Member {
+  return create(MemberSchema, { id, userId: `user-${id}`, name: id, permission: 'member', status });
+}
+
 /** The service behind a ListClusters the test drives: `listed` is what the
- *  server answers with, and `fail` makes it answer with an error instead. */
+ *  server answers with, and `fail` makes it answer with an error instead.
+ *  `members` is what ListMembers answers. */
 function build(listed: ClusterSummary[]) {
-  const server = { listed, fail: false };
+  const server = {
+    listed,
+    fail: false,
+    members: [
+      member('ann', 'accepted'),
+      member('bob', 'accepted'),
+      member('cas', 'accepted'),
+      member('dee', 'pending'),
+    ],
+  };
 
   TestBed.configureTestingModule({
     providers: [
@@ -56,6 +71,12 @@ function build(listed: ClusterSummary[]) {
         },
       },
       { provide: PROJECT, useValue: { listProjects: () => of({ projects: [] }) } },
+      {
+        provide: MEMBER,
+        useValue: {
+          listMembers: () => of(create(ListMembersResponseSchema, { members: server.members })),
+        },
+      },
     ],
   });
 
@@ -191,5 +212,31 @@ describe('OrganizationDataService setClusters', () => {
     service.setClusters([alpha, bravo], stale);
 
     expect(statuses(service)).toEqual([['zulu', ClusterStatus.RUNNING]]);
+  });
+});
+
+describe('OrganizationDataService members', () => {
+  const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
+
+  it('counts the accepted members once the list is in, leaving invitations out', async () => {
+    const { service } = build([alpha]);
+    expect(service.memberCount()).toBeNull();
+
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    await vi.waitFor(() => expect(service.membersLoaded()).toBe(true));
+
+    expect(service.memberCount()).toBe(3);
+  });
+
+  it('follows the list a page fetched through it', async () => {
+    const { service, server } = build([alpha]);
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    await vi.waitFor(() => expect(service.membersLoaded()).toBe(true));
+
+    server.members = [member('ann', 'accepted')];
+    const listed = await service.reloadMembers();
+
+    expect(listed).toHaveLength(1);
+    expect(service.memberCount()).toBe(1);
   });
 });

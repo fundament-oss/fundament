@@ -301,9 +301,10 @@ export default class OrganizationMembersComponent implements OnInit {
 
     try {
       const currentUser = await firstValueFrom(this.authnService.currentUser$);
-      const response = await firstValueFrom(this.memberClient.listMembers({}));
+      // Through the shared cache, so the sidebar's count is of this same list.
+      const listed = await this.organizationDataService.reloadMembers();
 
-      const members: OrganizationMember[] = response.members.map((member) => ({
+      const members: OrganizationMember[] = listed.map((member) => ({
         id: member.id,
         name: member.name,
         email: member.email,
