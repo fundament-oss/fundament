@@ -109,6 +109,90 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 	return items, nil
 }
 
+const organizationMachineQuotaList = `-- name: OrganizationMachineQuotaList :many
+SELECT
+    catalog.regions.name AS region,
+    catalog.machine_types.name AS machine_type,
+    coalesce(tenant.organization_machine_quotas.max_nodes, 0)::integer AS max_nodes,
+    tenant.organization_nodes_in_use($1, catalog.region_machine_types.id)::bigint AS nodes_in_use
+FROM catalog.region_machine_types
+JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+LEFT JOIN tenant.organization_machine_quotas
+    ON tenant.organization_machine_quotas.region_machine_type_id = catalog.region_machine_types.id
+   AND tenant.organization_machine_quotas.organization_id = $1
+WHERE tenant.organization_machine_quotas.organization_id IS NOT NULL
+   OR tenant.organization_nodes_in_use($1, catalog.region_machine_types.id) > 0
+ORDER BY region, machine_type
+`
+
+type OrganizationMachineQuotaListParams struct {
+	OrganizationID uuid.UUID
+}
+
+type OrganizationMachineQuotaListRow struct {
+	Region      string
+	MachineType string
+	MaxNodes    int32
+	NodesInUse  int64
+}
+
+// Every offering the organization has a quota row for, and every offering it
+// has nodes of without one (pools from before quotas existed), as quota 0.
+// Same shape as funops' MachineQuotaList; the policy on the quota rows scopes
+// it to the current organization.
+func (q *Queries) OrganizationMachineQuotaList(ctx context.Context, arg OrganizationMachineQuotaListParams) ([]OrganizationMachineQuotaListRow, error) {
+	rows, err := q.db.Query(ctx, organizationMachineQuotaList, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OrganizationMachineQuotaListRow
+	for rows.Next() {
+		var i OrganizationMachineQuotaListRow
+		if err := rows.Scan(
+			&i.Region,
+			&i.MachineType,
+			&i.MaxNodes,
+			&i.NodesInUse,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const organizationQuotaClustersGet = `-- name: OrganizationQuotaClustersGet :one
+SELECT
+  quota_clusters,
+  tenant.organization_clusters_in_use(id)::bigint AS clusters_in_use
+FROM tenant.organizations
+WHERE id = $1
+  AND deleted IS NULL
+`
+
+type OrganizationQuotaClustersGetParams struct {
+	ID uuid.UUID
+}
+
+type OrganizationQuotaClustersGetRow struct {
+	QuotaClusters int32
+	ClustersInUse int64
+}
+
+// The cluster quota next to what counts against it; the function is the one
+// the clusters_tr_verify_quota trigger counts with.
+func (q *Queries) OrganizationQuotaClustersGet(ctx context.Context, arg OrganizationQuotaClustersGetParams) (OrganizationQuotaClustersGetRow, error) {
+	row := q.db.QueryRow(ctx, organizationQuotaClustersGet, arg.ID)
+	var i OrganizationQuotaClustersGetRow
+	err := row.Scan(&i.QuotaClusters, &i.ClustersInUse)
+	return i, err
+}
+
 const organizationUpdate = `-- name: OrganizationUpdate :one
 UPDATE tenant.organizations
 SET alias = $2

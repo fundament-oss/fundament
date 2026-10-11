@@ -42,6 +42,9 @@ const (
 	// OrganizationServiceUpdateOrganizationProcedure is the fully-qualified name of the
 	// OrganizationService's UpdateOrganization RPC.
 	OrganizationServiceUpdateOrganizationProcedure = "/organization.v1.OrganizationService/UpdateOrganization"
+	// OrganizationServiceGetOrganizationQuotasProcedure is the fully-qualified name of the
+	// OrganizationService's GetOrganizationQuotas RPC.
+	OrganizationServiceGetOrganizationQuotasProcedure = "/organization.v1.OrganizationService/GetOrganizationQuotas"
 )
 
 // OrganizationServiceClient is a client for the organization.v1.OrganizationService service.
@@ -52,6 +55,9 @@ type OrganizationServiceClient interface {
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
 	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
+	// GetOrganizationQuotas shows what the current organization may build and
+	// what it has. Quotas are set by a platform operator; here they are read.
+	GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error)
 }
 
 // NewOrganizationServiceClient constructs a client for the organization.v1.OrganizationService
@@ -83,14 +89,21 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 			connect.WithClientOptions(opts...),
 		),
+		getOrganizationQuotas: connect.NewClient[v1.GetOrganizationQuotasRequest, v1.GetOrganizationQuotasResponse](
+			httpClient,
+			baseURL+OrganizationServiceGetOrganizationQuotasProcedure,
+			connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationQuotas")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // organizationServiceClient implements OrganizationServiceClient.
 type organizationServiceClient struct {
-	listOrganizations  *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
-	getOrganization    *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
-	updateOrganization *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	listOrganizations     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	getOrganization       *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
+	updateOrganization    *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	getOrganizationQuotas *connect.Client[v1.GetOrganizationQuotasRequest, v1.GetOrganizationQuotasResponse]
 }
 
 // ListOrganizations calls organization.v1.OrganizationService.ListOrganizations.
@@ -120,6 +133,15 @@ func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req 
 	return nil, err
 }
 
+// GetOrganizationQuotas calls organization.v1.OrganizationService.GetOrganizationQuotas.
+func (c *organizationServiceClient) GetOrganizationQuotas(ctx context.Context, req *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error) {
+	response, err := c.getOrganizationQuotas.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // OrganizationServiceHandler is an implementation of the organization.v1.OrganizationService
 // service.
 type OrganizationServiceHandler interface {
@@ -129,6 +151,9 @@ type OrganizationServiceHandler interface {
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
 	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
+	// GetOrganizationQuotas shows what the current organization may build and
+	// what it has. Quotas are set by a platform operator; here they are read.
+	GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error)
 }
 
 // NewOrganizationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -156,6 +181,12 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
+	organizationServiceGetOrganizationQuotasHandler := connect.NewUnaryHandlerSimple(
+		OrganizationServiceGetOrganizationQuotasProcedure,
+		svc.GetOrganizationQuotas,
+		connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationQuotas")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.OrganizationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case OrganizationServiceListOrganizationsProcedure:
@@ -164,6 +195,8 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 			organizationServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationServiceUpdateOrganizationProcedure:
 			organizationServiceUpdateOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationServiceGetOrganizationQuotasProcedure:
+			organizationServiceGetOrganizationQuotasHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -183,4 +216,8 @@ func (UnimplementedOrganizationServiceHandler) GetOrganization(context.Context, 
 
 func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganization is not implemented"))
+}
+
+func (UnimplementedOrganizationServiceHandler) GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganizationQuotas is not implemented"))
 }

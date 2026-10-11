@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/organization.proto.
  */
 export const file_v1_organization: GenFile = /*@__PURE__*/
-  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJkCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJOChdHZXRPcmdhbml6YXRpb25SZXNwb25zZRIzCgxvcmdhbml6YXRpb24YCiABKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIkwKGVVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhkKBWFsaWFzGBQgASgJQgq6SAdyBRABGP8BIhwKGlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlIhoKGExpc3RPcmdhbml6YXRpb25zUmVxdWVzdCJRChlMaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlEjQKDW9yZ2FuaXphdGlvbnMYCiADKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uMtYCChNPcmdhbml6YXRpb25TZXJ2aWNlEmoKEUxpc3RPcmdhbml6YXRpb25zEikub3JnYW5pemF0aW9uLnYxLkxpc3RPcmdhbml6YXRpb25zUmVxdWVzdBoqLm9yZ2FuaXphdGlvbi52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlEmQKD0dldE9yZ2FuaXphdGlvbhInLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlEm0KElVwZGF0ZU9yZ2FuaXphdGlvbhIqLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXF1ZXN0Gisub3JnYW5pemF0aW9uLnYxLlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChV2MS9vcmdhbml6YXRpb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSJkCgxPcmdhbml6YXRpb24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJOChdHZXRPcmdhbml6YXRpb25SZXNwb25zZRIzCgxvcmdhbml6YXRpb24YCiABKAsyHS5vcmdhbml6YXRpb24udjEuT3JnYW5pemF0aW9uIkwKGVVwZGF0ZU9yZ2FuaXphdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhkKBWFsaWFzGBQgASgJQgq6SAdyBRABGP8BIhwKGlVwZGF0ZU9yZ2FuaXphdGlvblJlc3BvbnNlIh4KHEdldE9yZ2FuaXphdGlvblF1b3Rhc1JlcXVlc3QiewodR2V0T3JnYW5pemF0aW9uUXVvdGFzUmVzcG9uc2USLwoIY2x1c3RlcnMYCiABKAsyHS5vcmdhbml6YXRpb24udjEuQ2x1c3RlclF1b3RhEikKBW5vZGVzGBQgAygLMhoub3JnYW5pemF0aW9uLnYxLk5vZGVRdW90YSItCgxDbHVzdGVyUXVvdGESDQoFcXVvdGEYCiABKAUSDgoGaW5fdXNlGBQgASgFIlAKCU5vZGVRdW90YRIOCgZyZWdpb24YCiABKAkSFAoMbWFjaGluZV90eXBlGBQgASgJEg0KBXF1b3RhGB4gASgFEg4KBmluX3VzZRgoIAEoBSIaChhMaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QiUQoZTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRI0Cg1vcmdhbml6YXRpb25zGAogAygLMh0ub3JnYW5pemF0aW9uLnYxLk9yZ2FuaXphdGlvbjLOAwoTT3JnYW5pemF0aW9uU2VydmljZRJqChFMaXN0T3JnYW5pemF0aW9ucxIpLm9yZ2FuaXphdGlvbi52MS5MaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QaKi5vcmdhbml6YXRpb24udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRJkCg9HZXRPcmdhbml6YXRpb24SJy5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUmVxdWVzdBooLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25SZXNwb25zZRJtChJVcGRhdGVPcmdhbml6YXRpb24SKi5vcmdhbml6YXRpb24udjEuVXBkYXRlT3JnYW5pemF0aW9uUmVxdWVzdBorLm9yZ2FuaXphdGlvbi52MS5VcGRhdGVPcmdhbml6YXRpb25SZXNwb25zZRJ2ChVHZXRPcmdhbml6YXRpb25RdW90YXMSLS5vcmdhbml6YXRpb24udjEuR2V0T3JnYW5pemF0aW9uUXVvdGFzUmVxdWVzdBouLm9yZ2FuaXphdGlvbi52MS5HZXRPcmdhbml6YXRpb25RdW90YXNSZXNwb25zZUJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Organization information
@@ -144,6 +144,120 @@ export const UpdateOrganizationResponseSchema: GenMessage<UpdateOrganizationResp
   messageDesc(file_v1_organization, 4);
 
 /**
+ * GetOrganizationQuotas request: the organization is the one of the request.
+ *
+ * @generated from message organization.v1.GetOrganizationQuotasRequest
+ */
+export type GetOrganizationQuotasRequest = Message<"organization.v1.GetOrganizationQuotasRequest"> & {
+};
+
+/**
+ * Describes the message organization.v1.GetOrganizationQuotasRequest.
+ * Use `create(GetOrganizationQuotasRequestSchema)` to create a new message.
+ */
+export const GetOrganizationQuotasRequestSchema: GenMessage<GetOrganizationQuotasRequest> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 5);
+
+/**
+ * GetOrganizationQuotas response
+ *
+ * @generated from message organization.v1.GetOrganizationQuotasResponse
+ */
+export type GetOrganizationQuotasResponse = Message<"organization.v1.GetOrganizationQuotasResponse"> & {
+  /**
+   * How many clusters the organization may have, and has
+   *
+   * @generated from field: organization.v1.ClusterQuota clusters = 10;
+   */
+  clusters?: ClusterQuota | undefined;
+
+  /**
+   * Per region and machine type: how many nodes it may have, and has. Only
+   * offerings with a quota or with nodes in use are listed.
+   *
+   * @generated from field: repeated organization.v1.NodeQuota nodes = 20;
+   */
+  nodes: NodeQuota[];
+};
+
+/**
+ * Describes the message organization.v1.GetOrganizationQuotasResponse.
+ * Use `create(GetOrganizationQuotasResponseSchema)` to create a new message.
+ */
+export const GetOrganizationQuotasResponseSchema: GenMessage<GetOrganizationQuotasResponse> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 6);
+
+/**
+ * The cluster quota next to what counts against it
+ *
+ * @generated from message organization.v1.ClusterQuota
+ */
+export type ClusterQuota = Message<"organization.v1.ClusterQuota"> & {
+  /**
+   * Maximum number of clusters
+   *
+   * @generated from field: int32 quota = 10;
+   */
+  quota: number;
+
+  /**
+   * Clusters counted against it: live ones, and deleted ones until torn down
+   *
+   * @generated from field: int32 in_use = 20;
+   */
+  inUse: number;
+};
+
+/**
+ * Describes the message organization.v1.ClusterQuota.
+ * Use `create(ClusterQuotaSchema)` to create a new message.
+ */
+export const ClusterQuotaSchema: GenMessage<ClusterQuota> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 7);
+
+/**
+ * A node quota next to what counts against it
+ *
+ * @generated from message organization.v1.NodeQuota
+ */
+export type NodeQuota = Message<"organization.v1.NodeQuota"> & {
+  /**
+   * Region name
+   *
+   * @generated from field: string region = 10;
+   */
+  region: string;
+
+  /**
+   * Machine type name
+   *
+   * @generated from field: string machine_type = 20;
+   */
+  machineType: string;
+
+  /**
+   * Maximum nodes of this machine type in this region; 0 means none allowed
+   *
+   * @generated from field: int32 quota = 30;
+   */
+  quota: number;
+
+  /**
+   * The sum of the autoscale maxima of the organization's node pools of it
+   *
+   * @generated from field: int32 in_use = 40;
+   */
+  inUse: number;
+};
+
+/**
+ * Describes the message organization.v1.NodeQuota.
+ * Use `create(NodeQuotaSchema)` to create a new message.
+ */
+export const NodeQuotaSchema: GenMessage<NodeQuota> = /*@__PURE__*/
+  messageDesc(file_v1_organization, 8);
+
+/**
  * ListOrganizations request
  *
  * @generated from message organization.v1.ListOrganizationsRequest
@@ -156,7 +270,7 @@ export type ListOrganizationsRequest = Message<"organization.v1.ListOrganization
  * Use `create(ListOrganizationsRequestSchema)` to create a new message.
  */
 export const ListOrganizationsRequestSchema: GenMessage<ListOrganizationsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_organization, 5);
+  messageDesc(file_v1_organization, 9);
 
 /**
  * ListOrganizations response
@@ -177,7 +291,7 @@ export type ListOrganizationsResponse = Message<"organization.v1.ListOrganizatio
  * Use `create(ListOrganizationsResponseSchema)` to create a new message.
  */
 export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_organization, 6);
+  messageDesc(file_v1_organization, 10);
 
 /**
  * OrganizationService manages organizations
@@ -214,6 +328,17 @@ export const OrganizationService: GenService<{
     methodKind: "unary";
     input: typeof UpdateOrganizationRequestSchema;
     output: typeof UpdateOrganizationResponseSchema;
+  },
+  /**
+   * GetOrganizationQuotas shows what the current organization may build and
+   * what it has. Quotas are set by a platform operator; here they are read.
+   *
+   * @generated from rpc organization.v1.OrganizationService.GetOrganizationQuotas
+   */
+  getOrganizationQuotas: {
+    methodKind: "unary";
+    input: typeof GetOrganizationQuotasRequestSchema;
+    output: typeof GetOrganizationQuotasResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_organization, 0);

@@ -21,6 +21,9 @@ service OrganizationService {
   // UpdateOrganization updates the user's organization
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
 
+  // GetOrganizationQuotas shows what the current organization may build and
+  // what it has. Quotas are set by a platform operator; here they are read.
+  rpc GetOrganizationQuotas(GetOrganizationQuotasRequest) returns (GetOrganizationQuotasResponse);
 }
 
 // Organization information
@@ -60,6 +63,38 @@ message UpdateOrganizationRequest {
 
 // UpdateOrganization response
 message UpdateOrganizationResponse {}
+
+// GetOrganizationQuotas request: the organization is the one of the request.
+message GetOrganizationQuotasRequest {}
+
+// GetOrganizationQuotas response
+message GetOrganizationQuotasResponse {
+  // How many clusters the organization may have, and has
+  ClusterQuota clusters = 10;
+  // Per region and machine type: how many nodes it may have, and has. Only
+  // offerings with a quota or with nodes in use are listed.
+  repeated NodeQuota nodes = 20;
+}
+
+// The cluster quota next to what counts against it
+message ClusterQuota {
+  // Maximum number of clusters
+  int32 quota = 10;
+  // Clusters counted against it: live ones, and deleted ones until torn down
+  int32 in_use = 20;
+}
+
+// A node quota next to what counts against it
+message NodeQuota {
+  // Region name
+  string region = 10;
+  // Machine type name
+  string machine_type = 20;
+  // Maximum nodes of this machine type in this region; 0 means none allowed
+  int32 quota = 30;
+  // The sum of the autoscale maxima of the organization's node pools of it
+  int32 in_use = 40;
+}
 
 // ListOrganizations request
 message ListOrganizationsRequest {}
