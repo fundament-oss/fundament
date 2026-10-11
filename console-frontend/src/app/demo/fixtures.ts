@@ -63,7 +63,8 @@ export const organization = create(OrganizationSchema, {
 // maxima of the pools below add up per machine type. Every state the page can
 // show is in here: room to spare, all used, a quota lowered under what runs
 // (e2-standard-2), and an offering in use with no quota at all (e2-highmem-2,
-// staging's batch pool from before quotas existed). The clusters line is
+// staging's batch pool from before quotas existed; the type is in the
+// catalog so the Nodes editor can show it). The clusters line is
 // counted live by the mock, as the demo can add clusters.
 export const organizationQuotas = create(GetOrganizationQuotasResponseSchema, {
   clusters: { quota: 3, inUse: 0 },
@@ -117,7 +118,7 @@ export const clusterSummaries = [
     status: ClusterStatus.RUNNING,
     region: 'local',
     projectCount: 1,
-    nodePoolCount: 1,
+    nodePoolCount: 2,
   }),
 ];
 
@@ -181,8 +182,8 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
         status: NodePoolStatus.HEALTHY,
         version: '1.33.0',
       }),
-      // From before quotas existed, on a machine type the region no longer
-      // offers: it has no quota row, and the Quotas page shows it as 0 of 2.
+      // From before quotas existed: its machine type has no quota row, and
+      // the Quotas page shows it as 0 of 2.
       create(NodePoolSchema, {
         id: 'np-batch',
         name: 'batch',
@@ -216,6 +217,7 @@ const machineType = (name: string, lcpu: number, memoryGib: number) =>
 const MACHINE_TYPES = [
   machineType('e2-standard-2', 2, 8),
   machineType('e2-standard-4', 4, 16),
+  machineType('e2-highmem-2', 2, 16),
   machineType('e2-highmem-4', 4, 32),
 ];
 
