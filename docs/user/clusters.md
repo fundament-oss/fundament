@@ -107,8 +107,12 @@ when something new is made, never against what already runs:
 A quota lowered below what you already run changes nothing about it: your
 clusters and pools keep running, and a pool may still be shrunk. It only stops
 the next cluster, or the next new or larger pool, until there is room again.
-Ask your operator to raise a quota that is in the way; the
-[funops](../developer/fundament/funops.md) page says how.
+
+**Organization → Quotas** shows every quota next to what counts against it:
+the clusters you have, and per region and machine type the sum of your pools'
+maximum sizes. It is read-only. To request an increase in quotas, contact a
+Fundament operator; the [funops](../developer/fundament/funops.md) page says
+what they run.
 
 ## Defaults
 

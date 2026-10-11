@@ -3,7 +3,10 @@
 // out of the production bundle.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { OrganizationSchema } from '../../generated/v1/organization_pb';
+import {
+  GetOrganizationQuotasResponseSchema,
+  OrganizationSchema,
+} from '../../generated/v1/organization_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
@@ -54,6 +57,19 @@ export const organization = create(OrganizationSchema, {
   name: 'gemeente-fundament',
   alias: 'fundament',
   created: daysAgo(420),
+});
+
+// What the operator allowed the organization, next to what its pools use: the
+// maxima of the pools below add up per machine type, and local-small sits
+// over a quota that was lowered, which the page should be able to say.
+export const organizationQuotas = create(GetOrganizationQuotasResponseSchema, {
+  clusters: { quota: 3, inUse: 2 },
+  nodes: [
+    { region: 'local', machineType: 'e2-highmem-4', quota: 4, inUse: 3 },
+    { region: 'local', machineType: 'e2-standard-2', quota: 4, inUse: 4 },
+    { region: 'local', machineType: 'e2-standard-4', quota: 10, inUse: 6 },
+    { region: 'nl-north-1', machineType: 'e2-standard-4', quota: 8, inUse: 0 },
+  ],
 });
 
 // Per cluster now, keyed by cluster id: production runs tighter than staging,

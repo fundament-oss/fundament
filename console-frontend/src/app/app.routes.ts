@@ -148,6 +148,10 @@ const routes: Routes = [
         pathMatch: 'full',
       },
       {
+        path: 'quotas',
+        loadComponent: () => import('./quotas/quotas.component').then((m) => m.default),
+      },
+      {
         path: 'clusters',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         // The form is a sheet the shell owns, so the address only opens it.

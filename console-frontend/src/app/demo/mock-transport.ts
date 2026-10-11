@@ -207,6 +207,10 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetOrganizationResponseSchema, { organization: fx.organization });
       },
+      getOrganizationQuotas: async () => {
+        await delay();
+        return fx.organizationQuotas;
+      },
     });
 
     router.service(ClusterService, {
