@@ -157,6 +157,7 @@ export default class ResourceDetailComponent implements OnInit {
 
     const projectId = this.route.snapshot.parent?.params['id'];
     if (projectId) this.loadNamespaces(projectId).catch(() => {});
+    else this.namespacesSettled.set(true);
 
     // The effect fires when selectedClusterId is set by loadClusters() in ngOnInit.
     effect(() => {
@@ -240,6 +241,10 @@ export default class ResourceDetailComponent implements OnInit {
   // The project-level name for each of namespaces, which the plugin shows.
   namespaceDisplayNames = signal<Record<string, string>>({});
 
+  // Holds the iframe back until the namespace lookup has finished, failed or
+  // not: the iframe sends them once, in fundament:init, and never again.
+  namespacesSettled = signal(false);
+
   private async loadNamespaces(projectId: string): Promise<void> {
     try {
       const { names, displayNames } = await this.projectNamespaces.list(projectId);
@@ -249,6 +254,8 @@ export default class ResourceDetailComponent implements OnInit {
       // Transient failure: plugin UIs fall back to a free-text namespace field.
       // eslint-disable-next-line no-console
       console.error('[ResourceDetail] Failed to load namespaces:', err);
+    } finally {
+      this.namespacesSettled.set(true);
     }
   }
 
