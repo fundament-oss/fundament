@@ -6,7 +6,7 @@ import routes from '../app.routes';
 import AppTitleStrategy from '../shell/page-title';
 import { ConfigService } from '../config.service';
 import AuthService from '../auth.service';
-import reloadOnStaleChunk from '../reload-on-stale-chunk';
+import provideStaleChunkReload from '../reload-on-stale-chunk';
 import { DCIM_TRANSPORT } from '../../connect/tokens';
 import createDemoTransport from './mock-transport';
 import DemoConfigService from './demo-config.service';
@@ -17,7 +17,8 @@ import DemoRackHistoryService from './demo-rack-history.service';
 const demoAppConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, reloadOnStaleChunk()),
+    provideRouter(routes),
+    provideStaleChunkReload(),
     // The demo bootstraps its own config, so anything the real app provides
     // has to stand here too, or the demo quietly runs without it.
     { provide: TitleStrategy, useClass: AppTitleStrategy },
