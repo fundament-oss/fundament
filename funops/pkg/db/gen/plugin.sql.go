@@ -66,7 +66,6 @@ func (q *Queries) PluginFindByName(ctx context.Context, arg PluginFindByNamePara
 const pluginGetByID = `-- name: PluginGetByID :one
 SELECT
   appstore.plugins.id,
-  appstore.plugins.name,
   tenant.organizations.name AS organization_name
 FROM appstore.plugins
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
@@ -80,14 +79,13 @@ type PluginGetByIDParams struct {
 
 type PluginGetByIDRow struct {
 	ID               uuid.UUID
-	Name             string
 	OrganizationName string
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, pluginGetByID, arg.ID)
 	var i PluginGetByIDRow
-	err := row.Scan(&i.ID, &i.Name, &i.OrganizationName)
+	err := row.Scan(&i.ID, &i.OrganizationName)
 	return i, err
 }
 
@@ -119,7 +117,7 @@ const pluginVersionGet = `-- name: PluginVersionGet :one
 SELECT
   appstore.plugin_definitions.id,
   appstore.plugin_definitions.status,
-  (appstore.submissions.id IS NOT NULL)::boolean AS has_open_round
+  appstore.submissions.id AS open_submission_id
 FROM appstore.plugin_definitions
 LEFT JOIN appstore.submissions ON appstore.submissions.plugin_definition_id = appstore.plugin_definitions.id
   AND appstore.submissions.closed IS NULL
@@ -135,17 +133,18 @@ type PluginVersionGetParams struct {
 }
 
 type PluginVersionGetRow struct {
-	ID           uuid.UUID
-	Status       dbconst.PluginDefinitionStatus
-	HasOpenRound bool
+	ID               uuid.UUID
+	Status           dbconst.PluginDefinitionStatus
+	OpenSubmissionID pgtype.UUID
 }
 
-// The version and whether it has an open review round. submissions_uq_open
-// pins a version to at most one open round, so a boolean is the whole story.
+// The version and its open review round, if any. submissions_uq_open pins a
+// version to at most one open round; the round's id is returned so the
+// decision can be pinned to exactly the round the operator saw.
 func (q *Queries) PluginVersionGet(ctx context.Context, arg PluginVersionGetParams) (PluginVersionGetRow, error) {
 	row := q.db.QueryRow(ctx, pluginVersionGet, arg.PluginID, arg.PluginVersion)
 	var i PluginVersionGetRow
-	err := row.Scan(&i.ID, &i.Status, &i.HasOpenRound)
+	err := row.Scan(&i.ID, &i.Status, &i.OpenSubmissionID)
 	return i, err
 }
 
@@ -156,17 +155,20 @@ SELECT
   appstore.plugin_definitions.plugin_version,
   appstore.plugin_definitions.status,
   appstore.plugin_definitions.published,
-  appstore.submissions.submitted
+  appstore.plugin_definitions.created AS version_created,
+  (SELECT appstore.submissions.submitted
+   FROM appstore.submissions
+   WHERE appstore.submissions.plugin_definition_id = appstore.plugin_definitions.id
+     AND appstore.submissions.deleted IS NULL
+   ORDER BY appstore.submissions.submitted DESC
+   LIMIT 1) AS submitted
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
-LEFT JOIN appstore.submissions ON appstore.submissions.plugin_definition_id = appstore.plugin_definitions.id
-  AND appstore.submissions.closed IS NULL
-  AND appstore.submissions.deleted IS NULL
 WHERE ($1::text = '' OR appstore.plugin_definitions.status = $1::text)
   AND appstore.plugin_definitions.deleted IS NULL
   AND appstore.plugins.deleted IS NULL
-ORDER BY submitted, organization_name, plugin_name, plugin_version
+ORDER BY submitted, organization_name, plugin_name, version_created
 `
 
 type PluginVersionListParams struct {
@@ -179,11 +181,15 @@ type PluginVersionListRow struct {
 	PluginVersion    string
 	Status           dbconst.PluginDefinitionStatus
 	Published        pgtype.Timestamptz
+	VersionCreated   pgtype.Timestamptz
 	Submitted        pgtype.Timestamptz
 }
 
-// Every live version with its open round's submitted timestamp, oldest
-// submission first: the review queue in the order it should be worked.
+// Every live version with its latest round's submitted timestamp, oldest
+// submission first: the review queue in the order it should be worked. The
+// latest round regardless of closed, so a decided version still shows when it
+// was submitted; versions created but never submitted stay blank and sort
+// last, by creation.
 func (q *Queries) PluginVersionList(ctx context.Context, arg PluginVersionListParams) ([]PluginVersionListRow, error) {
 	rows, err := q.db.Query(ctx, pluginVersionList, arg.Status)
 	if err != nil {
@@ -199,6 +205,7 @@ func (q *Queries) PluginVersionList(ctx context.Context, arg PluginVersionListPa
 			&i.PluginVersion,
 			&i.Status,
 			&i.Published,
+			&i.VersionCreated,
 			&i.Submitted,
 		); err != nil {
 			return nil, err
@@ -241,6 +248,7 @@ SELECT
 FROM dcim.users
 WHERE lower(email) = lower($1::text)
   AND deleted IS NULL
+ORDER BY name, id
 `
 
 type ReviewerFindByEmailParams struct {
@@ -308,28 +316,30 @@ SET reviewer_user_id = $1,
     closed = now(),
     rejection_reason = $2::text,
     feedback = $3::text
-WHERE plugin_definition_id = $4
+WHERE id = $4
   AND closed IS NULL
   AND deleted IS NULL
 `
 
 type SubmissionDecideParams struct {
-	ReviewerUserID     pgtype.UUID
-	RejectionReason    pgtype.Text
-	Feedback           string
-	PluginDefinitionID uuid.UUID
+	ReviewerUserID  pgtype.UUID
+	RejectionReason pgtype.Text
+	Feedback        string
+	ID              uuid.UUID
 }
 
-// Closes the version's open round in the same statement that records the
-// decision, so submissions_ck_reviewed and submissions_ck_closed hold.
-// closed IS NULL is the guard: zero rows means the round was decided or
-// withdrawn underneath the command.
+// Closes the round in the same statement that records the decision, so
+// submissions_ck_reviewed and submissions_ck_closed hold. Pinned to the round
+// the command loaded, with closed IS NULL as the guard: zero rows means that
+// round was decided or withdrawn underneath the command, and a verdict must
+// never land on a round the operator did not see (a withdraw and resubmit
+// opens a fresh one).
 func (q *Queries) SubmissionDecide(ctx context.Context, arg SubmissionDecideParams) (int64, error) {
 	result, err := q.db.Exec(ctx, submissionDecide,
 		arg.ReviewerUserID,
 		arg.RejectionReason,
 		arg.Feedback,
-		arg.PluginDefinitionID,
+		arg.ID,
 	)
 	if err != nil {
 		return 0, err

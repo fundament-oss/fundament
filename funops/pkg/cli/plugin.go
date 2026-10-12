@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -80,32 +81,57 @@ func (c *PluginListCmd) Run(ctx *Context) error {
 
 // Run executes the plugin approve command.
 func (c *PluginApproveCmd) Run(ctx *Context) error {
-	return decidePluginVersion(ctx, c.Plugin, c.Version, c.Organization, c.Reviewer, pluginDecision{
-		status:   dbconst.PluginDefinitionStatus_Approved,
-		feedback: c.Feedback,
+	return decidePluginVersion(ctx, pluginDecision{
+		plugin:       c.Plugin,
+		version:      c.Version,
+		organization: c.Organization,
+		reviewer:     c.Reviewer,
+		status:       dbconst.PluginDefinitionStatus_Approved,
+		feedback:     c.Feedback,
 	})
 }
 
 // Run executes the plugin request-changes command.
 func (c *PluginRequestChangesCmd) Run(ctx *Context) error {
-	return decidePluginVersion(ctx, c.Plugin, c.Version, c.Organization, c.Reviewer, pluginDecision{
-		status:   dbconst.PluginDefinitionStatus_ChangesRequested,
-		feedback: c.Feedback,
+	// Kong's required only checks the flag was passed; asking for changes
+	// without saying which is a dead end, as the admin API's contract puts it.
+	if strings.TrimSpace(c.Feedback) == "" {
+		return errors.New("feedback is required: say what should change")
+	}
+	return decidePluginVersion(ctx, pluginDecision{
+		plugin:       c.Plugin,
+		version:      c.Version,
+		organization: c.Organization,
+		reviewer:     c.Reviewer,
+		status:       dbconst.PluginDefinitionStatus_ChangesRequested,
+		feedback:     c.Feedback,
 	})
 }
 
 // Run executes the plugin reject command.
 func (c *PluginRejectCmd) Run(ctx *Context) error {
-	return decidePluginVersion(ctx, c.Plugin, c.Version, c.Organization, c.Reviewer, pluginDecision{
+	return decidePluginVersion(ctx, pluginDecision{
+		plugin:          c.Plugin,
+		version:         c.Version,
+		organization:    c.Organization,
+		reviewer:        c.Reviewer,
 		status:          dbconst.PluginDefinitionStatus_Rejected,
 		rejectionReason: c.Reason,
 		feedback:        c.Feedback,
 	})
 }
 
-// pluginDecision is the reviewer's verdict: the status the version moves to,
-// and what gets recorded on the round.
+// maxFeedbackLen is the admin API's cap on decision feedback (review.proto);
+// the direct-DB path keeps to the same contract.
+const maxFeedbackLen = 4000
+
+// pluginDecision is one review verdict: which version it targets, the status
+// the version moves to, and what gets recorded on the round.
 type pluginDecision struct {
+	plugin          string
+	version         string
+	organization    string
+	reviewer        string
 	status          dbconst.PluginDefinitionStatus
 	rejectionReason string
 	feedback        string
@@ -116,7 +142,11 @@ type pluginDecision struct {
 // can be decided, the version's status and the round's record move in one
 // transaction, and both writes are guarded so a decision racing a withdrawal
 // (or another reviewer) fails rather than half-landing.
-func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewer string, d pluginDecision) error {
+func decidePluginVersion(ctx *Context, d pluginDecision) error {
+	if utf8.RuneCountInString(d.feedback) > maxFeedbackLen {
+		return fmt.Errorf("feedback must be at most %d characters", maxFeedbackLen)
+	}
+
 	bgCtx := context.Background()
 
 	tx, err := ctx.DB.Pool.Begin(bgCtx)
@@ -127,26 +157,26 @@ func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewe
 
 	qtx := ctx.Queries.WithTx(tx)
 
-	pluginID, err := lookupPluginID(bgCtx, qtx, pluginRef, organization)
+	pluginID, err := lookupPluginID(bgCtx, qtx, d.plugin, d.organization)
 	if err != nil {
 		return err
 	}
 
-	ver, err := qtx.PluginVersionGet(bgCtx, db.PluginVersionGetParams{PluginID: pluginID, PluginVersion: version})
+	ver, err := qtx.PluginVersionGet(bgCtx, db.PluginVersionGetParams{PluginID: pluginID, PluginVersion: d.version})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("plugin %q has no version %q", pluginRef, version)
+			return fmt.Errorf("plugin %q has no version %q", d.plugin, d.version)
 		}
 		return fmt.Errorf("failed to look up plugin version: %w", err)
 	}
 	if ver.Status != dbconst.PluginDefinitionStatus_Pending {
-		return fmt.Errorf("version %q of plugin %q is %s; only a pending version can be decided", version, pluginRef, ver.Status)
+		return fmt.Errorf("version %q of plugin %q is %s; only a pending version can be decided", d.version, d.plugin, ver.Status)
 	}
-	if !ver.HasOpenRound {
-		return fmt.Errorf("version %q of plugin %q has no open submission round", version, pluginRef)
+	if !ver.OpenSubmissionID.Valid {
+		return fmt.Errorf("version %q of plugin %q has no open submission round", d.version, d.plugin)
 	}
 
-	reviewerID, err := lookupReviewerID(bgCtx, qtx, reviewer)
+	reviewerID, err := lookupReviewerID(bgCtx, qtx, d.reviewer)
 	if err != nil {
 		return err
 	}
@@ -161,7 +191,7 @@ func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewe
 		return fmt.Errorf("failed to update version status: %w", err)
 	}
 	if updated == 0 {
-		return fmt.Errorf("version %q of plugin %q is no longer pending", version, pluginRef)
+		return fmt.Errorf("version %q of plugin %q is no longer pending", d.version, d.plugin)
 	}
 
 	rejectionReason := pgtype.Text{}
@@ -169,10 +199,10 @@ func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewe
 		rejectionReason = pgtype.Text{String: d.rejectionReason, Valid: true}
 	}
 	closed, err := qtx.SubmissionDecide(bgCtx, db.SubmissionDecideParams{
-		PluginDefinitionID: ver.ID,
-		ReviewerUserID:     pgtype.UUID{Bytes: reviewerID, Valid: true},
-		RejectionReason:    rejectionReason,
-		Feedback:           d.feedback,
+		ID:              uuid.UUID(ver.OpenSubmissionID.Bytes),
+		ReviewerUserID:  pgtype.UUID{Bytes: reviewerID, Valid: true},
+		RejectionReason: rejectionReason,
+		Feedback:        d.feedback,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to record decision: %w", err)
@@ -185,7 +215,7 @@ func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewe
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	ctx.Logger.Info("decided plugin version", "plugin", pluginRef, "version", version,
+	ctx.Logger.Info("decided plugin version", "plugin", d.plugin, "version", d.version,
 		"status", string(d.status), "reviewer", reviewerID.String())
 
 	return nil
@@ -193,20 +223,21 @@ func decidePluginVersion(ctx *Context, pluginRef, version, organization, reviewe
 
 // lookupPluginID resolves a plugin named by ID or by name. Names are unique
 // per organization, not globally, so a bare name matching several listings is
-// refused naming the organizations; --organization narrows it down.
+// refused naming the organizations; --organization narrows it down. An
+// all-hex name can parse as a UUID too (plugins_ck_name allows it), so an ID
+// that matches nothing falls through to the name lookup.
 func lookupPluginID(ctx context.Context, queries *db.Queries, ref, organization string) (uuid.UUID, error) {
 	if id, err := uuid.Parse(ref); err == nil {
 		row, err := queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: id})
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return uuid.Nil, fmt.Errorf("plugin %q not found", ref)
+		switch {
+		case err == nil:
+			if organization != "" && row.OrganizationName != organization {
+				return uuid.Nil, fmt.Errorf("plugin %q is published by organization %q, not %q", ref, row.OrganizationName, organization)
 			}
+			return row.ID, nil
+		case !errors.Is(err, pgx.ErrNoRows):
 			return uuid.Nil, fmt.Errorf("failed to look up plugin: %w", err)
 		}
-		if organization != "" && row.OrganizationName != organization {
-			return uuid.Nil, fmt.Errorf("plugin %q is published by organization %q, not %q", ref, row.OrganizationName, organization)
-		}
-		return row.ID, nil
 	}
 
 	rows, err := queries.PluginFindByName(ctx, db.PluginFindByNameParams{Name: ref, OrganizationName: organization})
@@ -238,7 +269,7 @@ func lookupPluginID(ctx context.Context, queries *db.Queries, ref, organization 
 func lookupReviewerID(ctx context.Context, queries *db.Queries, reviewer string) (uuid.UUID, error) {
 	ref, err := parseUserRef(reviewer)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("invalid reviewer %q: expected a user ID or an email address", reviewer)
 	}
 
 	if ref.email == "" {
@@ -262,12 +293,13 @@ func lookupReviewerID(ctx context.Context, queries *db.Queries, reviewer string)
 	case 1:
 		return rows[0].ID, nil
 	default:
-		ids := make([]string, len(rows))
+		// Named so the operator can tell the rows apart; bare UUIDs would not.
+		matches := make([]string, len(rows))
 		for i := range rows {
-			ids[i] = rows[i].ID.String()
+			matches[i] = fmt.Sprintf("%s %s", rows[i].Name, rows[i].ID.String())
 		}
 		return uuid.Nil, fmt.Errorf("%d reviewers match email %q (%s): pass the user ID instead",
-			len(rows), ref.email, strings.Join(ids, ", "))
+			len(rows), ref.email, strings.Join(matches, ", "))
 	}
 }
 

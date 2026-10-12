@@ -225,6 +225,9 @@ type SubmissionListRow struct {
 // USING (true) — a reviewer acts on submissions from every publishing
 // organization — so unlike the registry's queries these filter nothing by
 // tenancy, only by lifecycle.
+//
+// funops/pkg/db/plugin.sql carries the operator CLI's copy of the decision
+// transitions below; keep the two in step.
 // Returns every round; the handler derives each round's own status (open,
 // withdrawn, rejected, changes requested, approving) from what the row records
 // and filters on that. Filtering here on plugin_definitions.status would be
