@@ -17,6 +17,7 @@ import {
 } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
+import reloadOnStaleChunk from './reload-on-stale-chunk';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 
@@ -53,7 +54,11 @@ const organizationFetch =
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
+    provideRouter(
+      routes,
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      reloadOnStaleChunk(),
+    ),
     // Initialize configuration before app starts
     provideAppInitializer(() => {
       const configService = inject(ConfigService);

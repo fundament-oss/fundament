@@ -10,16 +10,21 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { AppConfiguration, EMPTY_CONFIGURATION } from './app/config.service';
 import ServerContext from './app/server-context';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 // Long-lived caching is only safe for files whose name changes with their
-// contents. Everything else here (index.html, config.json, the favicons) is
+// contents: the build's own output, which is main, polyfills, styles, the chunks
+// and everything under media/. Matched by name because the hash may contain `-`
+// and `_`. Everything else here (index.html, config.json, the favicons) is
 // fetched by a stable path and has to be revalidated.
-const HASHED_ASSET = /-[A-Z0-9]{8,}\.[a-z0-9]+$/i;
+const HASHED_ASSET = /^(?:(?:main|polyfills|styles|chunk)-[^/]+\.(?:js|css)|media\/.+)$/;
+
+// Scripts and stylesheets, which are only ever files on disk, never a page.
+const SCRIPT_OR_STYLESHEET = /\.(?:js|mjs|css|map)$/;
 
 // Reads the first of the candidate paths that exists.
 async function readFirstConfig(paths: string[]): Promise<AppConfiguration | undefined> {
@@ -117,11 +122,24 @@ app.use(
     setHeaders: (res, path) => {
       res.setHeader(
         'Cache-Control',
-        HASHED_ASSET.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache',
+        HASHED_ASSET.test(relative(browserDistFolder, path))
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache',
       );
     },
   }),
 );
+
+// A script or stylesheet that is not on disk is a real 404. A tab still running
+// the previous build asks for chunks a redeploy has removed, and rendering the
+// app for that request would hand it HTML where it expects JavaScript.
+app.use((req, res, next) => {
+  if (SCRIPT_OR_STYLESHEET.test(req.path)) {
+    res.sendStatus(404);
+    return;
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   // Rendered pages carry the visitor's theme and, on the authenticated areas,
