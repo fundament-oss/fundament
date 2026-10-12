@@ -202,19 +202,25 @@ active pool from the same report the cluster rules read and stores the outcome o
 
 | Status | Meaning |
 |---|---|
-| `progressing` | an operation runs and this pool was never classified before (its machines are being created) |
+| `progressing` | a change fundament pushed is in flight (pending outbox row, or `shoot_updating`) and this pool was never classified before: its machines are being created |
 | `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
 | `error` | the operation failed for good, naming this pool |
 | `ready` | the shoot settled and nothing names the pool |
 
 An operation that does not name an already classified pool leaves it where it is: a
 routine reconcile says nothing about pools whose machines stand, and relabeling them
-would hide their live metrics and spray ready events when the reconcile ends. Generated
-worker names have equal length and distinct hash suffixes, so one pool can never match
-another's text. A failure that names no pool stays cluster-level; a `pending`/`deleting`
-shoot leaves pool rows untouched. Transitions record `nodepool_waiting` /
-`nodepool_error` (once per distinct reason) and `nodepool_ready` on recovery; a pool
-classified for the first time records nothing. organization-api serves the stored status
+would hide their live metrics and spray ready events when the reconcile ends. The one
+exception is a pool stored `waiting`/`error` that the current worker detail no longer
+names while it names others — its complaint has been dealt with, so it returns to
+`progressing` until the shoot settles. A pool meeting this feature for the first time
+mid-reconcile (NULL status, no fundament change in flight) is left alone until the
+shoot settles. Generated worker names have equal length and distinct hash suffixes, so
+one pool can never match another's text. A failure that names no pool stays
+cluster-level; a `pending`/`deleting` shoot leaves pool rows untouched. Only
+transitions record events — `nodepool_waiting` / `nodepool_error` with the reason at
+that moment, `nodepool_ready` on recovery; Gardener rewrites its reason text as
+machines churn, so a changed reason refreshes the row silently. A pool classified for
+the first time records nothing. Each pool's row and events commit in one transaction. organization-api serves the stored status
 and reason until a pool is `ready`, then its live node metrics take over. The watch
 treats a change in the worker detail as a status change, so a new reason reaches the
 pool row without waiting for the sweep.

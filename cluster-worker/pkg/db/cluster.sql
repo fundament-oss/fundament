@@ -65,9 +65,7 @@ SELECT
     COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
-    tenant.node_pools.created,
-    tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.created
 FROM
     tenant.node_pools
     LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
@@ -79,17 +77,34 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
+-- name: NodePoolListStatusByClusterID :many
+-- The status path needs only identity and the stored classification; the
+-- worker-group build query above, with its catalog joins, stays with sync.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id;
+
 -- name: NodePoolUpdateStatus :exec
--- Record what Gardener reports about one pool's machines. Keyed by name:
--- classification works from Gardener's machine-deployment names.
+-- Record what Gardener reports about one pool's machines. Keyed by id: the
+-- row was just read by the same check, and with soft deletes (cluster_id,
+-- name) could meanwhile mean a recreated pool.
 UPDATE tenant.node_pools
 SET
     status = @status,
     status_message = @message,
     status_updated = now()
 WHERE
-    cluster_id = @cluster_id
-    AND name = @pool_name
+    id = @node_pool_id
     AND deleted IS NULL;
 
 -- name: NodePoolGetClusterID :one
@@ -147,6 +162,7 @@ SELECT
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,

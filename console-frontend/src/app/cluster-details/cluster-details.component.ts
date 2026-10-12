@@ -118,31 +118,33 @@ interface ResourceMetric {
  *  PluginInstallation resource, so it is never what a user should read. */
 const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
 
-const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
-  const labels: Record<NodePoolStatus, string> = {
-    [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
-    [NodePoolStatus.HEALTHY]: 'Healthy',
-    [NodePoolStatus.DEGRADED]: 'Degraded',
-    [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
-    [NodePoolStatus.PROVISIONING]: 'Creating machines',
-    [NodePoolStatus.WAITING_FOR_MACHINES]: 'Waiting for machines',
-    [NodePoolStatus.FAILED]: 'Failed',
-  };
-  return labels[status];
+const NODE_POOL_STATUS_LABELS: Record<NodePoolStatus, string> = {
+  [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
+  [NodePoolStatus.HEALTHY]: 'Healthy',
+  [NodePoolStatus.DEGRADED]: 'Degraded',
+  [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
+  [NodePoolStatus.PROVISIONING]: 'Creating machines',
+  [NodePoolStatus.WAITING_FOR_MACHINES]: 'Waiting for machines',
+  [NodePoolStatus.FAILED]: 'Failed',
 };
 
-const getNodePoolStatusColor = (status: NodePoolStatus): string => {
-  const colors: Record<NodePoolStatus, string> = {
-    [NodePoolStatus.UNSPECIFIED]: 'neutral',
-    [NodePoolStatus.HEALTHY]: 'success',
-    [NodePoolStatus.DEGRADED]: 'warning',
-    [NodePoolStatus.UNHEALTHY]: 'critical',
-    [NodePoolStatus.PROVISIONING]: 'mintgroen',
-    [NodePoolStatus.WAITING_FOR_MACHINES]: 'warning',
-    [NodePoolStatus.FAILED]: 'critical',
-  };
-  return colors[status];
+const getNodePoolStatusLabel = (status: NodePoolStatus): string =>
+  NODE_POOL_STATUS_LABELS[status];
+
+// Hoisted: the template binds this per pool card, so it runs every change
+// detection cycle on a page that polls.
+const NODE_POOL_STATUS_COLORS: Record<NodePoolStatus, string> = {
+  [NodePoolStatus.UNSPECIFIED]: 'neutral',
+  [NodePoolStatus.HEALTHY]: 'success',
+  [NodePoolStatus.DEGRADED]: 'warning',
+  [NodePoolStatus.UNHEALTHY]: 'critical',
+  [NodePoolStatus.PROVISIONING]: 'mintgroen',
+  [NodePoolStatus.WAITING_FOR_MACHINES]: 'warning',
+  [NodePoolStatus.FAILED]: 'critical',
 };
+
+const getNodePoolStatusColor = (status: NodePoolStatus): string =>
+  NODE_POOL_STATUS_COLORS[status];
 
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
  *  no sync record at all, and not knowing whether a cluster is reconciling is a
@@ -528,6 +530,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
       this.clusterData.created = response.cluster.created;
+      // Node pool statuses and the activity timeline move with the cluster
+      // (a pool waiting for machines recovers, nodepool_* events arrive);
+      // refresh them on the same tick so the page never shows a stale badge
+      // next to a live cluster status.
+      this.loadNodePools(clusterId).catch(() => {});
+      this.loadClusterEvents(clusterId).catch(() => {});
       // The usage card loads once on init; when the cluster finishes
       // provisioning while the page is open, fetch it now instead of
       // requiring a page refresh.

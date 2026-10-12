@@ -21,26 +21,35 @@ import (
 // These rules turn that into a per-pool status. Pure, like nextShootStatus.
 
 type storedNodePool struct {
+	ID      uuid.UUID
 	Name    string
 	Status  string // tenant.node_pools.status; "" when never classified
 	Message string // tenant.node_pools.status_message
 }
 
 type nodePoolUpdate struct {
+	ID      uuid.UUID
 	Name    string
 	Status  dbconst.NodePoolStatus
 	Message string
 	Events  []statusEvent
 }
 
-func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus) []nodePoolUpdate {
+// pushed says a change fundament sent is in flight for this cluster (a
+// pending outbox row, or shoot_updating while Gardener rolls it out). Only
+// then does an operation explain a never-classified pool: it is the change
+// that creates its machines. Without it, a NULL status during an operation is
+// an existing pool meeting this feature for the first time mid-reconcile, and
+// relabeling it would hide its live metrics.
+func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus, pushed bool) []nodePoolUpdate {
 	var updates []nodePoolUpdate
 	for _, pool := range stored {
-		next, message, ok := classifyNodePool(pool, observed)
+		next, message, ok := classifyNodePool(pool, observed, pushed)
 		if !ok || (string(next) == pool.Status && message == pool.Message) {
 			continue
 		}
 		updates = append(updates, nodePoolUpdate{
+			ID:      pool.ID,
 			Name:    pool.Name,
 			Status:  next,
 			Message: message,
@@ -51,14 +60,14 @@ func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatu
 }
 
 // classifyNodePool decides one pool's status from the shoot-level report.
-// ok is false when the report says nothing about this pool: no shoot yet,
-// shoot deleting, a failure that does not name the pool — or an operation in
-// flight that does not name it either. The last case keeps an already
-// classified pool where it is: a routine reconcile says nothing about pools
-// whose machines stand, and flipping them to progressing would hide their
-// live metrics and spray ready events when the reconcile ends. Only a pool
-// that was never classified reads an operation as its machines being created.
-func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus) (status dbconst.NodePoolStatus, message string, ok bool) {
+// ok is false when the report says nothing about this pool, which keeps the
+// stored value: no shoot yet, shoot deleting, a failure that does not name
+// the pool, or an operation in flight that does not name it either — a
+// routine reconcile says nothing about pools whose machines stand. A pool
+// stored waiting/error that the current worker detail no longer names has
+// been dealt with: its complaint moved on, so it returns to progressing
+// until the shoot settles.
+func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushed bool) (status dbconst.NodePoolStatus, message string, ok bool) {
 	if complaint := poolComplaint(pool.Name, observed); complaint != "" {
 		if observed.Status == gardener.StatusError && !observed.Retrying {
 			return dbconst.NodePoolStatus_Error, complaint, true
@@ -66,25 +75,33 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus) (stat
 		return dbconst.NodePoolStatus_Waiting, complaint, true
 	}
 
-	switch observed.Status {
-	case gardener.StatusProgressing:
-		if pool.Status == "" {
+	operationRuns := observed.Status == gardener.StatusProgressing ||
+		(observed.Status == gardener.StatusError && observed.Retrying)
+
+	switch {
+	case observed.Status == gardener.StatusReady:
+		if pool.Status == "" && pushed {
+			// The pool was just saved and its sync has not reached Gardener
+			// yet (or the gardenlet has not started): its machines are coming.
 			return dbconst.NodePoolStatus_Progressing, "", true
 		}
-		return "", "", false // operation in flight, pool not named: keep what is stored
-	case gardener.StatusError:
-		if observed.Retrying && pool.Status == "" {
-			// Gardener retries by itself; for a new pool that is still progress.
-			return dbconst.NodePoolStatus_Progressing, "", true
-		}
-		return "", "", false // failed without naming this pool: not its failure
-	case gardener.StatusReady:
 		return dbconst.NodePoolStatus_Ready, "", true
-	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted:
-		return "", "", false
+	case operationRuns && pool.Status == "" && pushed:
+		return dbconst.NodePoolStatus_Progressing, "", true
+	case operationRuns && poolStuck(pool.Status) && hasWorkerDetail(observed):
+		// The detail names other pools now; this one's complaint is gone.
+		return dbconst.NodePoolStatus_Progressing, "", true
 	default:
-		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
+		return "", "", false
 	}
+}
+
+func poolStuck(status string) bool {
+	return status == string(dbconst.NodePoolStatus_Waiting) || status == string(dbconst.NodePoolStatus_Error)
+}
+
+func hasWorkerDetail(observed *gardener.ShootStatus) bool {
+	return observed.EveryNodeReadyMessage != "" || len(observed.LastErrors) > 0
 }
 
 // poolComplaint returns the Gardener text naming this pool's machine
@@ -94,6 +111,9 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus) (stat
 // never match each other's text: their generated names have equal length and
 // distinct hash suffixes, so neither can contain the other.
 func poolComplaint(name string, observed *gardener.ShootStatus) string {
+	if !hasWorkerDetail(observed) {
+		return ""
+	}
 	workerName := kubename.GenerateWorkerName(name)
 	if strings.Contains(observed.EveryNodeReadyMessage, workerName) {
 		return observed.EveryNodeReadyMessage
@@ -106,20 +126,24 @@ func poolComplaint(name string, observed *gardener.ShootStatus) string {
 	return ""
 }
 
-// nodePoolEvents records trouble (once per distinct message — the caller only
-// gets here when status or message changed) and recovery. A pool classified
-// for the first time ("" stored) gets no ready event: on an existing fleet
-// that would be an event storm saying nothing happened.
+// nodePoolEvents records transitions only: into waiting/error, and into
+// ready from a non-ready status. Gardener rewrites its reason text as
+// machines and counts churn, so a message-only change refreshes the row
+// silently — the row carries the current reason, the timeline the turning
+// points. A pool classified for the first time ("" stored) gets no ready
+// event: on an existing fleet that would be an event storm saying nothing
+// happened.
 func nodePoolEvents(pool storedNodePool, next dbconst.NodePoolStatus, message string) []statusEvent {
+	if string(next) == pool.Status {
+		return nil
+	}
 	switch next {
-	case dbconst.NodePoolStatus_Waiting, dbconst.NodePoolStatus_Error:
-		eventType := dbconst.ClusterEventEventType_NodepoolWaiting
-		if next == dbconst.NodePoolStatus_Error {
-			eventType = dbconst.ClusterEventEventType_NodepoolError
-		}
-		return []statusEvent{{Type: eventType, Message: "Node pool " + pool.Name + ": " + message}}
+	case dbconst.NodePoolStatus_Waiting:
+		return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool " + pool.Name + ": " + message}}
+	case dbconst.NodePoolStatus_Error:
+		return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool " + pool.Name + ": " + message}}
 	case dbconst.NodePoolStatus_Ready:
-		if pool.Status != "" && pool.Status != string(dbconst.NodePoolStatus_Ready) {
+		if pool.Status != "" {
 			return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool " + pool.Name + ": machines are ready"}}
 		}
 	case dbconst.NodePoolStatus_Progressing:
@@ -131,12 +155,22 @@ func nodePoolEvents(pool storedNodePool, next dbconst.NodePoolStatus, message st
 }
 
 // updateNodePoolStatuses loads the cluster's pools, classifies them against
-// the observed shoot status, and persists changes plus their events. Pool
-// status is best-effort alongside the cluster poll: failures log and move on.
-func (h *Handler) updateNodePoolStatuses(ctx context.Context, clusterID uuid.UUID, observed *gardener.ShootStatus) {
-	rows, err := h.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: clusterID})
+// the observed shoot status, and persists changes plus their events — each
+// pool's row and events in one transaction, so a crash cannot keep a status
+// whose event was lost. Best-effort alongside the cluster check: failures
+// log and move on; the next check retries.
+func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) {
+	switch observed.Status {
+	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted:
+		return // nothing a pool could learn from these
+	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
+	default:
+		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
+	}
+
+	rows, err := h.queries.NodePoolListStatusByClusterID(ctx, db.NodePoolListStatusByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
-		h.logger.Warn("failed to load node pools for status", "cluster_id", clusterID, "error", err)
+		h.logger.Warn("failed to load node pools for status", "cluster_id", cluster.ID, "error", err)
 		return
 	}
 	if len(rows) == 0 {
@@ -145,31 +179,52 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, clusterID uuid.UUI
 
 	stored := make([]storedNodePool, len(rows))
 	for i := range rows {
-		stored[i] = storedNodePool{Name: rows[i].Name, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String}
+		stored[i] = storedNodePool{ID: rows[i].ID, Name: rows[i].Name, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String}
 	}
 
-	for _, update := range nextNodePoolStatuses(stored, observed) {
-		err := h.queries.NodePoolUpdateStatus(ctx, db.NodePoolUpdateStatusParams{
-			ClusterID: clusterID,
-			PoolName:  update.Name,
-			Status:    pgtype.Text{String: string(update.Status), Valid: true},
-			Message:   pgtype.Text{String: update.Message, Valid: update.Message != ""},
-		})
-		if err != nil {
-			h.logger.Warn("failed to update node pool status", "cluster_id", clusterID, "pool", update.Name, "error", err)
+	pushed := cluster.ShootUpdating ||
+		(cluster.OutboxStatus.Valid && cluster.OutboxStatus.String != string(dbconst.ClusterOutboxStatus_Completed))
+
+	for _, update := range nextNodePoolStatuses(stored, observed, pushed) {
+		if err := h.writeNodePoolStatus(ctx, cluster.ID, update); err != nil {
+			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue
 		}
 		for _, event := range update.Events {
-			if _, err := h.queries.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
-				ClusterID: clusterID,
-				EventType: string(event.Type),
-				Message:   pgtype.Text{String: event.Message, Valid: true},
-			}); err != nil {
-				h.logger.Warn("failed to create node pool event", "cluster_id", clusterID, "event_type", event.Type, "error", err)
-			}
 			if event.Type == dbconst.ClusterEventEventType_NodepoolWaiting || event.Type == dbconst.ClusterEventEventType_NodepoolError {
-				h.logger.Warn("node pool machines not provisioning", "cluster_id", clusterID, "pool", update.Name, "message", event.Message)
+				h.logger.Warn("node pool machines not provisioning", "cluster_id", cluster.ID, "pool", update.Name, "message", update.Message)
 			}
 		}
 	}
+}
+
+// writeNodePoolStatus commits one pool's status row and its events together.
+func (h *Handler) writeNodePoolStatus(ctx context.Context, clusterID uuid.UUID, update nodePoolUpdate) error {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
+
+	qtx := h.queries.WithTx(tx)
+	if err := qtx.NodePoolUpdateStatus(ctx, db.NodePoolUpdateStatusParams{
+		NodePoolID: update.ID,
+		Status:     pgtype.Text{String: string(update.Status), Valid: true},
+		Message:    pgtype.Text{String: update.Message, Valid: update.Message != ""},
+	}); err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+	for _, event := range update.Events {
+		if _, err := qtx.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
+			ClusterID: clusterID,
+			EventType: string(event.Type),
+			Message:   pgtype.Text{String: event.Message, Valid: true},
+		}); err != nil {
+			return fmt.Errorf("create %s event: %w", event.Type, err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
 }

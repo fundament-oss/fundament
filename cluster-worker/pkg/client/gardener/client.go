@@ -6,10 +6,12 @@ package gardener
 
 import (
 	"context"
-	"slices"
+	"reflect"
 	"time"
 
 	"github.com/google/uuid"
+
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
 )
 
 // ShootStatusType represents the reconciliation state of a Shoot.
@@ -61,17 +63,11 @@ type ShootStatus struct {
 	LastErrors []string
 }
 
-// equal compares field by field; ShootStatus is not comparable as a value
-// because LastErrors is a slice.
+// equal compares every field. ShootStatus is not comparable as a value
+// (LastErrors is a slice), and DeepEqual keeps the comparison exhaustive for
+// fields added later — the watch's change filter depends on that.
 func (s *ShootStatus) equal(other *ShootStatus) bool {
-	return s.Status == other.Status &&
-		s.Message == other.Message &&
-		s.Operation == other.Operation &&
-		s.Healthy == other.Healthy &&
-		s.HealthGrace == other.HealthGrace &&
-		s.Retrying == other.Retrying &&
-		s.EveryNodeReadyMessage == other.EveryNodeReadyMessage &&
-		slices.Equal(s.LastErrors, other.LastErrors)
+	return reflect.DeepEqual(s, other)
 }
 
 // Status message constants for consistent messaging.
@@ -80,8 +76,9 @@ const (
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
 	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
-	// first reports the new cluster healthy.
-	MsgShootAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
+	// first reports the new cluster healthy. Shared: organization-api keys the
+	// STARTING cluster status on this exact text.
+	MsgShootAwaitingHealth = commongardener.MsgShootAwaitingHealth
 	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
 	// change until the gardenlet starts reconciling it.
 	MsgShootUpdatePending = "Waiting for Gardener to start the update"

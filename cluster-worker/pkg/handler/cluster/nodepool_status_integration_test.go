@@ -25,6 +25,7 @@ func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	insertNodePool(t, db, clusterID, "nomach", "local-medium", 1, 1)
 	markOutboxCompleted(t, db, clusterID)
 	setShootState(t, db, clusterID, "ready", "Shoot is ready", "healthy", time.Minute)
+	setShootUpdating(t, db, clusterID, true)
 
 	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
@@ -41,7 +42,9 @@ func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	assert.Equal(t, "progressing", extraStatus)
 
 	assertEventExists(t, db, clusterID, "nodepool_waiting")
-	assertEventExists(t, db, clusterID, "status_unhealthy")
+	// No status_unhealthy event: during a fundament-pushed rollout health is
+	// tracked without events (readyDuringUpdate) — the pool event carries it.
+	assertNoEvent(t, db, clusterID, "status_unhealthy")
 
 	// A second check with the same message must not duplicate the event.
 	require.NoError(t, checkStatus(t, h))

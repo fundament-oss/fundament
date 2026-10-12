@@ -34,7 +34,6 @@ export interface ICustomWorld extends World {
   // @real-gardener node pool provisioning state
   clusterService?: ClusterService;
   realGardenerCluster?: ClusterDetails;
-  createdNodePoolIds: Map<string, string>;
 }
 
 export class CustomWorld extends World implements ICustomWorld {
@@ -60,7 +59,6 @@ export class CustomWorld extends World implements ICustomWorld {
   lastApiError?: Error;
   clusterService?: ClusterService;
   realGardenerCluster?: ClusterDetails;
-  createdNodePoolIds: Map<string, string> = new Map();
 
   constructor(options: IWorldOptions) {
     super(options);

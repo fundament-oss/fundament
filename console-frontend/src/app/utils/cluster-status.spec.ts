@@ -8,21 +8,21 @@ import {
 
 describe('isKubeconfigAvailable', () => {
   it('offers a kubeconfig once the shoot is ready underneath', () => {
-    const ready = [ClusterStatus.RUNNING, ClusterStatus.UPGRADING, ClusterStatus.UNHEALTHY];
+    const ready = [
+      ClusterStatus.RUNNING,
+      ClusterStatus.STARTING,
+      ClusterStatus.UPGRADING,
+      ClusterStatus.UNHEALTHY,
+    ];
     ready.forEach((status) => {
       expect(isKubeconfigAvailable(status)).toBe(true);
     });
-  });
-
-  it('keeps offering it while an update rolls out on the running cluster', () => {
-    expect(isKubeconfigAvailable(ClusterStatus.UPGRADING)).toBe(true);
   });
 
   it('withholds the kubeconfig in every other status', () => {
     const others = [
       ClusterStatus.UNSPECIFIED,
       ClusterStatus.PROVISIONING,
-      ClusterStatus.STARTING,
       ClusterStatus.ERROR,
       ClusterStatus.STOPPING,
       ClusterStatus.STOPPED,

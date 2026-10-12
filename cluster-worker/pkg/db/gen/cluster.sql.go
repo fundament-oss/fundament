@@ -120,6 +120,7 @@ SELECT
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -151,6 +152,7 @@ type ClusterGetForStatusCheckRow struct {
 	ShootStatusMessage pgtype.Text
 	ShootHealth        pgtype.Text
 	ShootUpdating      bool
+	OutboxStatus       pgtype.Text
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -175,6 +177,7 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 		&i.ShootStatusMessage,
 		&i.ShootHealth,
 		&i.ShootUpdating,
+		&i.OutboxStatus,
 		&i.OrganizationID,
 		&i.ShootStatusUpdated,
 		&i.OrganizationName,
@@ -468,9 +471,7 @@ SELECT
     COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
-    tenant.node_pools.created,
-    tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.created
 FROM
     tenant.node_pools
     LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
@@ -488,14 +489,12 @@ type NodePoolListByClusterIDParams struct {
 }
 
 type NodePoolListByClusterIDRow struct {
-	ID            uuid.UUID
-	Name          string
-	MachineType   string
-	AutoscaleMin  int32
-	AutoscaleMax  int32
-	Created       pgtype.Timestamptz
-	Status        pgtype.Text
-	StatusMessage pgtype.Text
+	ID           uuid.UUID
+	Name         string
+	MachineType  string
+	AutoscaleMin int32
+	AutoscaleMax int32
+	Created      pgtype.Timestamptz
 }
 
 // Fetch active (non-deleted) node pools for a cluster.
@@ -518,6 +517,58 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.AutoscaleMin,
 			&i.AutoscaleMax,
 			&i.Created,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const nodePoolListStatusByClusterID = `-- name: NodePoolListStatusByClusterID :many
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = $1
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id
+`
+
+type NodePoolListStatusByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+type NodePoolListStatusByClusterIDRow struct {
+	ID            uuid.UUID
+	Name          string
+	Status        pgtype.Text
+	StatusMessage pgtype.Text
+}
+
+// The status path needs only identity and the stored classification; the
+// worker-group build query above, with its catalog joins, stays with sync.
+func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
+	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NodePoolListStatusByClusterIDRow
+	for rows.Next() {
+		var i NodePoolListStatusByClusterIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
 			&i.Status,
 			&i.StatusMessage,
 		); err != nil {
@@ -538,26 +589,20 @@ SET
     status_message = $2,
     status_updated = now()
 WHERE
-    cluster_id = $3
-    AND name = $4
+    id = $3
     AND deleted IS NULL
 `
 
 type NodePoolUpdateStatusParams struct {
-	Status    pgtype.Text
-	Message   pgtype.Text
-	ClusterID uuid.UUID
-	PoolName  string
+	Status     pgtype.Text
+	Message    pgtype.Text
+	NodePoolID uuid.UUID
 }
 
-// Record what Gardener reports about one pool's machines. Keyed by name:
-// classification works from Gardener's machine-deployment names.
+// Record what Gardener reports about one pool's machines. Keyed by id: the
+// row was just read by the same check, and with soft deletes (cluster_id,
+// name) could meanwhile mean a recreated pool.
 func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) error {
-	_, err := q.db.Exec(ctx, nodePoolUpdateStatus,
-		arg.Status,
-		arg.Message,
-		arg.ClusterID,
-		arg.PoolName,
-	)
+	_, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
 	return err
 }

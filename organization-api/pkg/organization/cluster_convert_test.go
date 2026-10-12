@@ -7,6 +7,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
+
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -19,7 +21,7 @@ func TestClusterStatusFromDB(t *testing.T) {
 	active := pgtype.Timestamptz{}
 	deleted := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 
-	awaiting := pgtype.Text{String: shootMessageAwaitingHealth, Valid: true}
+	awaiting := pgtype.Text{String: commongardener.MsgShootAwaitingHealth, Valid: true}
 
 	tests := []struct {
 		name     string

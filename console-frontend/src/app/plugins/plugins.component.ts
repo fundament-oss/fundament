@@ -37,7 +37,6 @@ import {
 } from '../../generated/catalog/v1/catalog_pb';
 import { type Category, type Preset } from '../../generated/marketplace/v1/common_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
-import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,

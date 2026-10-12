@@ -26,18 +26,24 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
 	}
+	quietReconcile := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		Message: "Reconcile: 10% done",
+	}
 	readyHealthy := &gardener.ShootStatus{Status: gardener.StatusReady, Healthy: true}
 
 	tests := []struct {
 		name     string
 		stored   []storedNodePool
 		observed *gardener.ShootStatus
+		pushed   bool
 		want     []nodePoolUpdate
 	}{
 		{
 			name:     "named pool waits; settled pool keeps its status; new pool progresses",
 			stored:   []storedNodePool{{Name: "extra", Status: "ready"}, {Name: "fresh"}, {Name: "nomach", Status: "progressing"}},
 			observed: stuck,
+			pushed:   true,
 			want: []nodePoolUpdate{
 				{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing},
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
@@ -45,25 +51,60 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:   "raw pool name in the text does not match",
-			stored: []storedNodePool{{Name: "nomach", Status: "ready"}},
-			observed: &gardener.ShootStatus{
-				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
-				EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting`,
-			},
-			want: nil,
+			name:     "raw pool name in the text does not match",
+			stored:   []storedNodePool{{Name: "nomach", Status: "ready"}},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting`},
+			want:     nil,
 		},
 		{
 			name:     "routine reconcile leaves settled pools alone",
 			stored:   []storedNodePool{{Name: "web", Status: "ready"}, {Name: "db", Status: "ready"}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, Message: "Reconcile: 10% done"},
+			observed: quietReconcile,
 			want:     nil,
 		},
 		{
-			name:     "same waiting message writes no second event",
-			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: enrNomach}},
-			observed: stuck,
+			name:     "a rollout meeting unclassified pools mid-reconcile stays silent",
+			stored:   []storedNodePool{{Name: "legacy"}},
+			observed: quietReconcile,
 			want:     nil,
+		},
+		{
+			name:     "a new pool is progressing while its change is still being applied",
+			stored:   []storedNodePool{{Name: "fresh"}},
+			observed: readyHealthy,
+			pushed:   true,
+			want:     []nodePoolUpdate{{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
+			name:     "first classification of a settled pool is silent",
+			stored:   []storedNodePool{{Name: "extra", Status: ""}},
+			observed: readyHealthy,
+			want:     []nodePoolUpdate{{Name: "extra", Status: dbconst.NodePoolStatus_Ready}},
+		},
+		{
+			name:   "a cleared complaint returns a stuck pool to progressing",
+			stored: []storedNodePool{{Name: "fixed", Status: "waiting", Message: enrMessage("fixed")}, {Name: "nomach", Status: "waiting", Message: enrNomach}},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+				EveryNodeReadyMessage: enrNomach, // names nomach only; fixed recovered
+			},
+			want: []nodePoolUpdate{
+				{Name: "fixed", Status: dbconst.NodePoolStatus_Progressing},
+			},
+		},
+		{
+			name:     "a stuck pool keeps its reason while the report carries no detail",
+			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: enrNomach}},
+			observed: quietReconcile,
+			want:     nil,
+		},
+		{
+			name:     "a changed reason refreshes the row without a second event",
+			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: "old reason naming " + kubename.GenerateWorkerName("nomach")}},
+			observed: stuck,
+			want: []nodePoolUpdate{
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach},
+			},
 		},
 		{
 			name:     "recovery records nodepool_ready",
@@ -73,12 +114,6 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Ready,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool nomach: machines are ready"}}},
 			},
-		},
-		{
-			name:     "first classification of a settled pool is silent",
-			stored:   []storedNodePool{{Name: "extra", Status: ""}},
-			observed: readyHealthy,
-			want:     []nodePoolUpdate{{Name: "extra", Status: dbconst.NodePoolStatus_Ready}},
 		},
 		{
 			name:   "a pool never matches another pool's worker name",
@@ -95,11 +130,10 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:   "non-pool unhealthiness leaves pools alone",
-			stored: []storedNodePool{{Name: "extra", Status: "ready"}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Healthy: false,
-				Message: gardener.MsgShootUnhealthy},
-			want: nil,
+			name:     "non-pool unhealthiness leaves pools alone",
+			stored:   []storedNodePool{{Name: "extra", Status: "ready"}},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Healthy: false, Message: gardener.MsgShootUnhealthy},
+			want:     nil,
 		},
 		{
 			name:   "failed operation naming the pool records nodepool_error",
@@ -123,18 +157,12 @@ func TestNextNodePoolStatuses(t *testing.T) {
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
-		{
-			name:     "pending shoot leaves pools untouched",
-			stored:   []storedNodePool{{Name: "extra", Status: ""}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
-			want:     nil,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed))
+			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.pushed))
 		})
 	}
 }

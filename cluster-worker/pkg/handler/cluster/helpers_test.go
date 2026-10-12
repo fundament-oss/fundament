@@ -300,6 +300,15 @@ func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	require.Equalf(t, 0, count, "expected no reconcile outbox row for cluster %s", clusterID)
 }
 
+// setShootUpdating marks (or clears) a fundament-pushed rollout, as the sync
+// handler does when ApplyShoot changes the Shoot's spec.
+func setShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID, updating bool) {
+	t.Helper()
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET shoot_updating = $2 WHERE id = $1`, clusterID, updating)
+	require.NoError(t, err)
+}
+
 // getNodePoolStatus returns the stored status and message (empty for NULL).
 func getNodePoolStatus(t *testing.T, db *testDB, clusterID uuid.UUID, name string) (status, message string) {
 	t.Helper()

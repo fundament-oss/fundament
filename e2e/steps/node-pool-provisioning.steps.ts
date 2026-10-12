@@ -16,7 +16,10 @@ import { ICustomWorld } from '../support/world.ts';
 import { ClusterService, type NodePool } from '../support/api/cluster-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { ClusterStatus, NodePoolStatus } from '../support/generated/v1/common_pb.ts';
-import { authenticateWithPassword, extractOrganizationId } from './common.steps.ts';
+import { authenticateWithPassword, extractOrganizationId,
+  waitForAuthzReady,
+  AUTHZ_READY_TIMEOUT_MS,
+} from './common.steps.ts';
 
 // The scenario always targets this cluster/pool; the pool name is also
 // hardcoded (not read from world state) so the After hook can sweep it even
@@ -30,37 +33,6 @@ const seedContext = process.env.E2E_SEED_CONTEXT ?? 'kind-gardener-operator-loca
 const seedNode = process.env.E2E_SEED_NODE ?? 'gardener-operator-local-control-plane';
 
 const POLL_INTERVAL_MS = 15_000;
-
-// Authz propagation tolerance: mirrors waitForAuthzReady in common.steps.ts.
-// Against a freshly-deployed local-gardener environment, a user can
-// authenticate before the authz-worker has written their org-membership
-// tuples to OpenFGA, so the first permission-gated call can transiently fail
-// with permission_denied. Retrying here (rather than a separate throwaway
-// probe call) matters a lot more than in common.steps.ts: a flake that costs
-// a 5xx there costs a 10-20 minute re-run here.
-const AUTHZ_READY_TIMEOUT_MS = 60_000;
-const AUTHZ_READY_INTERVAL_MS = 2_000;
-
-async function waitForAuthzReady<T>(probe: () => Promise<T>): Promise<T> {
-  const deadline = Date.now() + AUTHZ_READY_TIMEOUT_MS;
-  for (;;) {
-    try {
-      return await probe();
-    } catch (err) {
-      if (
-        err instanceof ConnectRpcError &&
-        err.code === 'permission_denied' &&
-        Date.now() < deadline
-      ) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, AUTHZ_READY_INTERVAL_MS),
-        );
-        continue;
-      }
-      throw err;
-    }
-  }
-}
 
 function cordonSeed(on: boolean) {
   execFileSync(
@@ -121,7 +93,6 @@ Before({ tags: '@real-gardener', timeout: 10_000 }, async function (
   this.organizationApiUrl =
     process.env.ORGANIZATION_API_URL ||
     'https://organization.fundament.localhost:8443';
-  this.createdNodePoolIds = new Map();
 });
 
 // Always uncordon the seed and delete the "nomach" pool, even on failure, so
@@ -139,17 +110,8 @@ After({ tags: '@real-gardener', timeout: 60_000 }, async function (
     return;
   }
 
-  // Delete whatever this run created...
-  for (const [, nodePoolId] of this.createdNodePoolIds) {
-    try {
-      await this.clusterService.deleteNodePool(nodePoolId);
-    } catch (err) {
-      console.error('cleanup: failed to delete tracked node pool', err);
-    }
-  }
-
-  // ...and sweep any leftover "nomach" pool from a previous failed run that
-  // never made it into createdNodePoolIds.
+  // The scenario only ever creates the one pool named NODE_POOL_NAME, so a
+  // sweep by name covers this run and any previous failed one alike.
   try {
     const pools = await this.clusterService.listNodePools(
       this.realGardenerCluster.id,
@@ -216,7 +178,6 @@ When(
       autoscaleMin,
       autoscaleMax,
     });
-    this.createdNodePoolIds.set(name, response.nodePoolId);
   },
 );
 

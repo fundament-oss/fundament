@@ -91,7 +91,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	// Pool status is derived from the same report, before the cluster-level
 	// early return below: a check that changes nothing for the cluster row can
 	// still carry a new reason for a pool.
-	h.updateNodePoolStatuses(ctx, cluster.ID, shootStatus)
+	h.updateNodePoolStatuses(ctx, cluster, shootStatus)
 
 	stored := storedShootState{
 		Status:   gardener.ShootStatusType(cluster.ShootStatus.String),

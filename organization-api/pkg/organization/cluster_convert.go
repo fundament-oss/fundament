@@ -5,15 +5,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
-
-// shootMessageAwaitingHealth mirrors cluster-worker's
-// gardener.MsgShootAwaitingHealth (status_rules.go, settlingAfterCreate): the
-// marker the worker stores while a freshly created cluster's health checks
-// have not passed yet.
-const shootMessageAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
 
 // clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
 // A freshly created cluster whose health checks have not passed yet is
@@ -34,7 +29,7 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, sh
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	case "ready":
 		if dbconst.ClusterShootHealth(shootHealth.String) == dbconst.ClusterShootHealth_Unhealthy {
-			if shootMessage.String == shootMessageAwaitingHealth {
+			if shootMessage.String == commongardener.MsgShootAwaitingHealth {
 				return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
 			}
 			return organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY

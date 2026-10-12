@@ -11,7 +11,6 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
-	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -34,7 +33,7 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	runtime := s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1)[kubename.GenerateWorkerName(nodePool.Name)]
+	runtime := runtimeForPool(s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1), nodePool.Name)
 
 	return organizationv1.GetNodePoolResponse_builder{
 		NodePool: nodePoolFromRow(&nodePool, runtime),

@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
-	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -42,9 +41,7 @@ func (s *Server) ListNodePools(
 	result := make([]*organizationv1.NodePool, 0, len(nodePools))
 	for i := range nodePools {
 		pool := &nodePools[i]
-		// The runtime map is keyed by the worker.gardener.cloud/pool label,
-		// which carries the generated worker name, not the pool name.
-		result = append(result, nodePoolFromRow(pool, runtimes[kubename.GenerateWorkerName(pool.Name)]))
+		result = append(result, nodePoolFromRow(pool, runtimeForPool(runtimes, pool.Name)))
 	}
 
 	return organizationv1.ListNodePoolsResponse_builder{

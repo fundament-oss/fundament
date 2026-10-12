@@ -94,15 +94,17 @@ export function getStatusLabel(status: ClusterStatus): string {
 
 /**
  * Statuses in which the shoot is ready and its API server reachable:
- * `RUNNING`, `UPGRADING` while an update rolls out on the ready cluster, and
+ * `RUNNING`; `STARTING` while a new cluster's health checks still settle;
+ * `UPGRADING` while an update rolls out on the ready cluster; and
  * `UNHEALTHY` while a ready cluster's health conditions fail (a node pool
- * without machines, say) — the control plane still serves. Mirrors the
+ * without machines, say) — the control plane serves in all four. Mirrors the
  * organization-api gate in `GetKubeconfig`, which keys on shoot status
  * `ready`; the same set gates everything that talks to the cluster's API
  * server, such as plugin management.
  */
 const REACHABLE_STATUSES: ReadonlySet<ClusterStatus> = new Set([
   ClusterStatus.RUNNING,
+  ClusterStatus.STARTING,
   ClusterStatus.UPGRADING,
   ClusterStatus.UNHEALTHY,
 ]);
