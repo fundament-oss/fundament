@@ -81,6 +81,7 @@ development:
 
 db:
   enabled: true
+  image: ghcr.io/cloudnative-pg/postgresql:18.6
   instances: 1
   storageSize: 1Gi
   exposePort: 0 # Expose postgres on this port via LoadBalancer (0 = disabled)
