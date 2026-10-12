@@ -90,6 +90,42 @@ func Test_Project_Create(t *testing.T) {
 	assert.Equal(t, organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_ADMIN, members[0].GetRole())
 }
 
+func Test_Project_Create_DuplicateName(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, userID))
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	cluster, err := clusterClient.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+	req := organizationv1.CreateProjectRequest_builder{
+		ClusterId: cluster.GetClusterId(),
+		Name:      "test-project",
+	}.Build()
+
+	_, err = client.CreateProject(ctx, req)
+	require.NoError(t, err)
+
+	_, err = client.CreateProject(ctx, req)
+	assert.Equal(t, connect.CodeAlreadyExists, connect.CodeOf(err))
+}
+
 // Project names prefix every cluster-side namespace name, so they are capped
 // at 30 characters to leave namespaces at least 27.
 func Test_Project_Create_NameLength(t *testing.T) {

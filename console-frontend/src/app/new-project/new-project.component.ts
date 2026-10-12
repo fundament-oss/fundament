@@ -143,6 +143,8 @@ export default class NewProjectComponent implements OnInit {
     event?.preventDefault();
     this.formSubmitted.set(true);
 
+    // A second submit would start a create under a new idempotency key.
+    if (this.isSubmitting()) return;
     if (this.projectForm.invalid) {
       this.projectForm.markAllAsTouched();
       return;
