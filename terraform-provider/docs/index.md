@@ -16,21 +16,21 @@ Manages the clusters, projects, namespaces and members of a Fundament organizati
 | [`fundament_namespace`](resources/namespace.md) | A namespace of a Fundament project. |
 | [`fundament_organization_member`](resources/organization_member.md) | Manages an organization member in Fundament. |
 | [`fundament_plugin_installation`](resources/plugin_installation.md) | Manages a plugin installation on a Fundament cluster via the kube-api-proxy. |
-| [`fundament_project_member`](resources/project_member.md) | Manages a project member in Fundament. |
 | [`fundament_project`](resources/project.md) | Manages a project in Fundament. |
+| [`fundament_project_member`](resources/project_member.md) | Manages a project member in Fundament. |
 
 ## Data Sources
 
 | Name | Description |
 | --- | --- |
-| [`fundament_cluster_namespaces`](data-sources/cluster_namespaces.md) | Fetches the list of namespaces in a cluster. |
 | [`fundament_cluster`](data-sources/cluster.md) | Fetches a single Kubernetes cluster by name. |
+| [`fundament_cluster_namespaces`](data-sources/cluster_namespaces.md) | Fetches the list of namespaces in a cluster. |
 | [`fundament_clusters`](data-sources/clusters.md) | Fetches the list of clusters for the current organization. |
 | [`fundament_namespace`](data-sources/namespace.md) | Fetches a namespace of a Fundament project by cluster, project and namespace name. |
 | [`fundament_organization_members`](data-sources/organization_members.md) | Fetches the list of members for the current organization. |
+| [`fundament_project`](data-sources/project.md) | Fetches a single project by name. |
 | [`fundament_project_members`](data-sources/project_members.md) | Fetches the list of members for a project. |
 | [`fundament_project_namespaces`](data-sources/project_namespaces.md) | Fetches the list of namespaces belonging to a project. |
-| [`fundament_project`](data-sources/project.md) | Fetches a single project by name. |
 | [`fundament_projects`](data-sources/projects.md) | Fetches the projects on a cluster. |
 
 ## Example Usage
