@@ -539,12 +539,19 @@ CREATE OR REPLACE FUNCTION tenant.cluster_outbox_update_cluster_status ()
 $function$
 DECLARE
     resolved_cluster_id uuid;
+    resolved_error text;
 BEGIN
+    -- A pending row that carries status_info is deferred on a precondition
+    -- (waiting, not failing); only retrying/failed rows surface as an error.
+    IF NEW.status IN ('retrying', 'failed') THEN
+        resolved_error := NEW.status_info;
+    END IF;
+
     IF NEW.cluster_id IS NOT NULL THEN
         UPDATE tenant.clusters
         SET outbox_status = NEW.status,
             outbox_retries = NEW.retries,
-            outbox_error = NEW.status_info
+            outbox_error = resolved_error
         WHERE tenant.clusters.id = NEW.cluster_id;
     ELSIF NEW.node_pool_id IS NOT NULL THEN
         SELECT tenant.node_pools.cluster_id INTO resolved_cluster_id
@@ -555,7 +562,7 @@ BEGIN
             UPDATE tenant.clusters
             SET outbox_status = NEW.status,
                 outbox_retries = NEW.retries,
-                outbox_error = NEW.status_info
+                outbox_error = resolved_error
             WHERE tenant.clusters.id = resolved_cluster_id;
         END IF;
     END IF;
@@ -963,13 +970,16 @@ CREATE TABLE tenant.clusters (
 	shoot_status text,
 	shoot_status_message text,
 	shoot_status_updated timestamptz,
+	shoot_health text,
+	shoot_updating boolean NOT NULL DEFAULT false,
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
 	region_id uuid,
 	kubernetes_version_id uuid,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
-	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
+	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
+	CONSTRAINT clusters_ck_shoot_health CHECK (shoot_health IN ('healthy','unhealthy'))
 );
 -- ddl-end --
 ALTER TABLE tenant.clusters OWNER TO fun_owner;
@@ -1978,7 +1988,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','user_sync_succeeded','user_sync_failed')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','user_sync_succeeded','user_sync_failed')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --

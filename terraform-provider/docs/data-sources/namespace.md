@@ -3,12 +3,12 @@
 page_title: "fundament_namespace Data Source - fundament"
 subcategory: ""
 description: |-
-  Fetches a single namespace by cluster name, project name, and namespace name.
+  Fetches a namespace of a Fundament project by cluster, project and namespace name. In the cluster it is tnt-<project>--<name>.
 ---
 
 # fundament_namespace (Data Source)
 
-Fetches a single namespace by cluster name, project name, and namespace name.
+Fetches a namespace of a Fundament project by cluster, project and namespace name. In the cluster it is `tnt-<project>--<name>`.
 
 ## Example Usage
 

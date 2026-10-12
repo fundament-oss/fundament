@@ -94,10 +94,11 @@ export function getStatusLabel(status: ClusterStatus): string {
  * Whether a kubeconfig can be downloaded for a cluster in this status.
  *
  * Mirrors the organization-api gate in `GetKubeconfig`: it only serves a
- * kubeconfig once the shoot reports `ready`, which is the sole shoot status
- * that maps to `RUNNING`. Any other status would be rejected with
- * "cluster not ready yet", so the UI should not offer the download.
+ * kubeconfig once the shoot reports `ready`, which maps to `RUNNING`, or to
+ * `UPGRADING` while an update rolls out on the ready cluster. Any other status
+ * would be rejected with "cluster not ready yet", so the UI should not offer
+ * the download.
  */
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
-  return status === ClusterStatus.RUNNING;
+  return status === ClusterStatus.RUNNING || status === ClusterStatus.UPGRADING;
 }

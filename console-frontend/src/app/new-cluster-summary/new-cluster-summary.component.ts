@@ -19,6 +19,7 @@ import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
 } from '../../generated/v1/cluster_pb';
+import { ClusterStatus } from '../../generated/v1/common_pb';
 import focusFirstModalInput from '../modal-focus';
 import PageNavService from '../page-nav.service';
 
@@ -141,6 +142,7 @@ export default class NewClusterSummaryComponent {
     const reloaded = this.organizationDataService.reloadClusters({
       id: clusterId,
       name: formState.clusterName,
+      status: ClusterStatus.PROVISIONING,
     });
     const notCreated = await this.createNodePools(clusterId, formState.nodePools ?? []);
     await reloaded;

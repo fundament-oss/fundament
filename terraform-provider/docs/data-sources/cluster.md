@@ -29,5 +29,16 @@ data "fundament_cluster" "example" {
 
 - `id` (String) The unique identifier of the cluster.
 - `kubernetes_version` (String) The Kubernetes version of the cluster.
+- `node_pools` (Attributes List) The cluster's node pools, by name. (see [below for nested schema](#nestedatt--node_pools))
 - `region` (String) The region where the cluster is deployed.
 - `status` (String) The current status of the cluster.
+
+<a id="nestedatt--node_pools"></a>
+### Nested Schema for `node_pools`
+
+Read-Only:
+
+- `autoscale_max` (Number) The maximum number of nodes.
+- `autoscale_min` (Number) The minimum number of nodes.
+- `machine_type` (String) The machine type of the pool's nodes.
+- `name` (String) The name of the node pool.

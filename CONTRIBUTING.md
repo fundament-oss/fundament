@@ -6,7 +6,7 @@ Please follow these guidelines in your contributions.
 
 ## NeRDS
 
-This project follows the [Nederlandse Richtlijn Digitale Systemen (NeRDS)](https://minbzk.github.io/NeRDS/production/richtlijnen/) as a baseline for quality and consistency.
+This project follows the [Nederlandse Richtlijn Digitale Systemen (NeRDS)](https://nerds.digitaledienst.overheid.nl/richtlijnen/) as a baseline for quality and consistency.
 
 In practice, there may be situations where we take a pragmatic approach and deviate from these guidelines. Such deviations are acceptable when they serve the project’s needs.
 

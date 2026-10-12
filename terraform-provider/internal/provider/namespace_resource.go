@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -39,7 +38,11 @@ func (r *NamespaceResource) Metadata(ctx context.Context, req resource.MetadataR
 // Schema defines the schema for the resource.
 func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a namespace within a Kubernetes cluster in Fundament.",
+		Description: "A namespace of a Fundament project. Fundament creates it on the project's cluster as " +
+			"`tnt-<project>--<name>`, binds the project's admins to the Kubernetes role `admin` and its viewers to `view` " +
+			"there, and deletes it when the resource is destroyed. A namespace created directly in the cluster, with " +
+			"kubectl, is not a Fundament namespace: Fundament does not list it and creates no bindings in it. " +
+			"To deploy into the namespace, use the cluster's kubeconfig from the console or `functl cluster kubeconfig <CLUSTER_ID>`, with the `cluster_id` of the project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the namespace.",
@@ -49,7 +52,7 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the namespace. Must be unique within the cluster.",
+				Description: "The name of the namespace, unique within the project. In the cluster it is `tnt-<project>--<name>`.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -278,7 +281,7 @@ func (r *NamespaceResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
-	plan.Created = types.StringValue(getResp.GetNamespace().GetCreated().AsTime().Format(time.RFC3339))
+	plan.Created = timestampValue(getResp.GetNamespace().GetCreated())
 	r.populateClusterFields(ctx, &plan, getResp.GetNamespace().GetClusterId())
 	r.populateProjectFields(ctx, &plan, getResp.GetNamespace().GetProjectId())
 
@@ -335,7 +338,7 @@ func (r *NamespaceResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	ns := getResp.GetNamespace()
 	state.Name = types.StringValue(ns.GetName())
-	state.Created = types.StringValue(ns.GetCreated().AsTime().Format(time.RFC3339))
+	state.Created = timestampValue(ns.GetCreated())
 	r.populateClusterFields(ctx, &state, ns.GetClusterId())
 	r.populateProjectFields(ctx, &state, ns.GetProjectId())
 

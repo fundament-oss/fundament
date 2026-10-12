@@ -34,7 +34,7 @@ func TestAccNamespaceResource_basic(t *testing.T) {
 	nsName := "tf-acc-ns-" + suffix
 	resourceName := "fundament_namespace.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing

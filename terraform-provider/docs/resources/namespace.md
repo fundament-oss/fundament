@@ -3,12 +3,12 @@
 page_title: "fundament_namespace Resource - fundament"
 subcategory: ""
 description: |-
-  Manages a namespace within a Kubernetes cluster in Fundament.
+  A namespace of a Fundament project. Fundament creates it on the project's cluster as tnt-<project>--<name>, binds the project's admins to the Kubernetes role admin and its viewers to view there, and deletes it when the resource is destroyed. A namespace created directly in the cluster, with kubectl, is not a Fundament namespace: Fundament does not list it and creates no bindings in it. To deploy into the namespace, use the cluster's kubeconfig from the console or functl cluster kubeconfig <CLUSTER_ID>, with the cluster_id of the project.
 ---
 
 # fundament_namespace (Resource)
 
-Manages a namespace within a Kubernetes cluster in Fundament.
+A namespace of a Fundament project. Fundament creates it on the project's cluster as `tnt-<project>--<name>`, binds the project's admins to the Kubernetes role `admin` and its viewers to `view` there, and deletes it when the resource is destroyed. A namespace created directly in the cluster, with kubectl, is not a Fundament namespace: Fundament does not list it and creates no bindings in it. To deploy into the namespace, use the cluster's kubeconfig from the console or `functl cluster kubeconfig <CLUSTER_ID>`, with the `cluster_id` of the project.
 
 ## Example Usage
 
@@ -24,7 +24,7 @@ resource "fundament_namespace" "example" {
 
 ### Required
 
-- `name` (String) The name of the namespace. Must be unique within the cluster.
+- `name` (String) The name of the namespace, unique within the project. In the cluster it is `tnt-<project>--<name>`.
 
 ### Optional
 

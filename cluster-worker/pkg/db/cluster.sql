@@ -98,10 +98,30 @@ SELECT EXISTS (
       AND tenant.cluster_outbox.status = 'completed'
 )::boolean AS has_been_synced;
 
--- name: ClusterListNeedingStatusCheck :many
--- Get clusters where we need to check Gardener status (active clusters).
--- Polls clusters in non-terminal states: NULL (never checked), pending,
--- progressing, error.
+-- name: ClusterListForStatusSweep :many
+-- IDs of every cluster the status sweep checks: it has reached Gardener (a
+-- status was recorded or an outbox row completed) and, if soft-deleted, its
+-- Shoot is not confirmed gone yet.
+SELECT
+    tenant.clusters.id
+FROM
+    tenant.clusters
+WHERE
+    (
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )
+    AND (
+        tenant.clusters.deleted IS NULL
+        OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted'
+    )
+ORDER BY
+    tenant.clusters.id;
+
+-- name: ClusterGetForStatusCheck :one
+-- Load one cluster for a status check, active or soft-deleted. synced says
+-- whether the cluster has reached Gardener at all (a status was recorded or
+-- an outbox row completed); before that there is no Shoot to check.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
@@ -109,83 +129,95 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_health,
+    tenant.clusters.shoot_updating,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
     catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
+    catalog.regions.cloud_profile_region,
+    (
+        tenant.clusters.shoot_status IS NOT NULL
+        OR tenant.clusters.outbox_status = 'completed'
+    )::boolean AS synced
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
     LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
-    ( -- Cluster has been synced: has shoot_status or a completed outbox row
-        tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
-    )
-    AND tenant.clusters.deleted IS NULL -- Active (not deleted)
-    AND (
-        tenant.clusters.shoot_status IS NULL -- Never checked
-        OR tenant.clusters.shoot_status = 'pending' -- Shoot not yet visible in Gardener
-        OR tenant.clusters.shoot_status = 'progressing' -- Gardener creating/updating
-        OR tenant.clusters.shoot_status = 'error'
-    ) -- Failed, might recover
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL -- Never checked
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-    ) -- Not checked recently
-ORDER BY
-    shoot_status_updated NULLS FIRST
-LIMIT
-    @limit_count;
+    tenant.clusters.id = @cluster_id;
 
--- name: ClusterListDeletedNeedingVerification :many
--- Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
--- Polls until shoot_status = 'deleted' (confirmed removed).
-SELECT
-    tenant.clusters.id,
-    tenant.clusters.name,
-    tenant.clusters.region,
-    tenant.clusters.kubernetes_version,
-    tenant.clusters.deleted,
-    tenant.clusters.shoot_status,
-    tenant.clusters.organization_id,
-    tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name,
-    catalog.regions.cloud_profile,
-    catalog.regions.cloud_profile_region
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
-WHERE
-    ( -- Delete has been synced: has shoot_status or a completed outbox row
-        tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
-    )
-    AND tenant.clusters.deleted IS NOT NULL -- Soft-deleted
-    AND (
-        tenant.clusters.shoot_status IS NULL
-        OR tenant.clusters.shoot_status != 'deleted'
-    ) -- Not yet confirmed deleted
-    AND (
-        tenant.clusters.shoot_status_updated IS NULL
-        OR tenant.clusters.shoot_status_updated < now() - INTERVAL '30 seconds'
-    )
-ORDER BY
-    shoot_status_updated NULLS FIRST
-LIMIT
-    @limit_count;
-
--- name: ClusterUpdateShootStatus :exec
--- Update shoot status from Gardener polling.
+-- name: ClusterUpdateShootStatus :execrows
+-- Update shoot status from Gardener polling. health is NULL unless ready;
+-- updating is set while an update fundament pushed rolls out. Writes nothing
+-- when the row changed since it was read (checked_at is the
+-- shoot_status_updated read then), such as the sync handler marking an update.
 UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
+    shoot_health = @health,
+    shoot_updating = @updating,
     shoot_status_updated = now()
 WHERE
-    id = @cluster_id;
+    id = @cluster_id
+    AND shoot_status_updated IS NOT DISTINCT FROM @checked_at;
+
+-- name: ClusterMarkShootUpdating :execrows
+-- Mark a ready cluster as updating once Gardener accepted a spec change. It
+-- stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
+-- keeps working while the update rolls out.
+UPDATE tenant.clusters
+SET
+    shoot_updating = true,
+    shoot_status_message = @message,
+    shoot_status_updated = now()
+WHERE
+    id = @cluster_id
+    AND shoot_status = 'ready';
+
+-- name: ClusterGetLastWarningMessage :one
+-- The message of the cluster's most recent status_warning event since its last
+-- milestone (ready, healthy, error or lost), so an error Gardener retries again
+-- and again is recorded once, and the same error in a later incident is
+-- recorded again.
+SELECT
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = @cluster_id
+    AND tenant.cluster_events.event_type = 'status_warning'
+    AND tenant.cluster_events.created > COALESCE((
+        SELECT
+            max(tenant.cluster_events.created)
+        FROM
+            tenant.cluster_events
+        WHERE
+            tenant.cluster_events.cluster_id = @cluster_id
+            AND tenant.cluster_events.event_type IN ('status_ready', 'status_healthy', 'status_error', 'status_lost')
+    ), '-infinity'::timestamptz)
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1;
+
+-- name: ClusterGetLastProgressEvent :one
+-- The cluster's most recent status_progressing event, which throttles how
+-- often Gardener's progress messages are recorded.
+SELECT
+    tenant.cluster_events.created,
+    tenant.cluster_events.message
+FROM
+    tenant.cluster_events
+WHERE
+    tenant.cluster_events.cluster_id = @cluster_id
+    AND tenant.cluster_events.event_type = 'status_progressing'
+ORDER BY
+    tenant.cluster_events.created DESC
+LIMIT
+    1;
 
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).

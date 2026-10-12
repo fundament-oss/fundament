@@ -207,11 +207,13 @@ func (x *SyncState) ClearStatusUpdatedAt() {
 type SyncState_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	OutboxStatus    *string
-	OutboxRetries   int32
-	OutboxError     *string
-	ShootStatus     *string
-	ShootMessage    *string
+	OutboxStatus  *string
+	OutboxRetries int32
+	OutboxError   *string
+	ShootStatus   *string
+	ShootMessage  *string
+	// When shoot_status, shoot_message or the health last changed. Status is
+	// checked far more often than that; an unchanged check leaves it as it is.
 	StatusUpdatedAt *timestamppb.Timestamp
 }
 

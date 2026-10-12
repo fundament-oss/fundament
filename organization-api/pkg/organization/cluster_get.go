@@ -180,7 +180,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus),
+		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootUpdating),
 		Created:           timestamppb.New(row.Created.Time),
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,

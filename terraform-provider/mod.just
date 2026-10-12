@@ -41,9 +41,23 @@ docs:
     printf 'provider_installation {\n  dev_overrides {\n    "registry.opentofu.org/fundament/fundament" = "%s"\n  }\n  direct {}\n}\n' "$TMP" > "$TMP/tofurc"
     printf 'terraform {\n  required_providers {\n    fundament = { source = "fundament/fundament" }\n  }\n}\n' > "$TMP/main.tf"
     # tfplugindocs looks a schema up by the provider's short name, not by OpenTofu's registry address.
-    (cd "$TMP" && TF_CLI_CONFIG_FILE="$TMP/tofurc" tofu providers schema -json) \
+    # -chdir rather than cd: mise resolves tofu's version from the working directory.
+    TF_CLI_CONFIG_FILE="$TMP/tofurc" tofu -chdir="$TMP" providers schema -json \
         | jq '.provider_schemas |= with_entries(.key = "fundament")' > "$TMP/schema.json"
     tfplugindocs generate --provider-name fundament --providers-schema "$TMP/schema.json"
+    # tfplugindocs gives the provider page no list of resources and data sources;
+    # build one from the generated pages, with the first sentence of each description.
+    overview() {
+        printf '## %s\n\n| Name | Description |\n| --- | --- |\n' "$2"
+        for f in docs/$1/*.md; do
+            name=$(basename "$f" .md)
+            desc=$(awk '/^description: \|-$/ { getline; sub(/^ +/, ""); sub(/\. .*/, "."); print; exit }' "$f")
+            printf '| [`fundament_%s`](%s/%s.md) | %s |\n' "$name" "$1" "$name" "$desc"
+        done
+    }
+    { overview resources Resources; echo; overview data-sources "Data Sources"; } > "$TMP/overview.md"
+    awk -v overview="$TMP/overview.md" '$0 == "<!-- overview -->" { while ((getline line < overview) > 0) print line; next } { print }' docs/index.md > "$TMP/index.md"
+    mv "$TMP/index.md" docs/index.md
 
 # Validate every example, and every configuration on the OpenTofu docs page that declares its providers
 validate-examples:
@@ -59,7 +73,7 @@ validate-examples:
     export TF_CLI_CONFIG_FILE="$TMP/tofurc"
 
     mkdir "$TMP/configs"
-    for dir in examples/provider/ examples/*/*/; do
+    for dir in examples/provider/ examples/complete/ examples/*/*/; do
         name="${dir%/}"
         dest="$TMP/configs/${name//\//_}"
         cp -r "$dir" "$dest"
@@ -80,7 +94,7 @@ validate-examples:
     failed=0
     for dir in "$TMP"/configs/*/; do
         name=$(basename "$dir")
-        if (cd "$dir" && tofu init -input=false -backend=false -no-color > init.log 2>&1 && tofu validate -no-color > validate.log 2>&1); then
+        if tofu -chdir="$dir" init -input=false -backend=false -no-color > "$dir/init.log" 2>&1 && tofu -chdir="$dir" validate -no-color > "$dir/validate.log" 2>&1; then
             echo "ok    $name"
         else
             echo "FAIL  $name"

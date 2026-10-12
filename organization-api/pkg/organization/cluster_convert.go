@@ -9,7 +9,9 @@ import (
 )
 
 // clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
-func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) organizationv1.ClusterStatus {
+// A ready cluster that an update fundament pushed is rolling out on is
+// upgrading; it stays usable meanwhile.
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, updating bool) organizationv1.ClusterStatus {
 	if deleted.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	}
@@ -20,6 +22,9 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text) or
 	case "pending", "progressing":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	case "ready":
+		if updating {
+			return organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING
+		}
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING
 	case "error":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR

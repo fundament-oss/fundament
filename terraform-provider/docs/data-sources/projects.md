@@ -3,12 +3,12 @@
 page_title: "fundament_projects Data Source - fundament"
 subcategory: ""
 description: |-
-  Fetches the list of projects for the current organization.
+  Fetches the projects on a cluster.
 ---
 
 # fundament_projects (Data Source)
 
-Fetches the list of projects for the current organization.
+Fetches the projects on a cluster.
 
 ## Example Usage
 
@@ -39,6 +39,7 @@ data "fundament_projects" "all" {
 
 Read-Only:
 
+- `alias` (String) The alias of the project.
 - `cluster_id` (String) The ID of the cluster this project belongs to.
 - `cluster_name` (String) The name of the cluster this project belongs to.
 - `created` (String) The timestamp when the project was created.

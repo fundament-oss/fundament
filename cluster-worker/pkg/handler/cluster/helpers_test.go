@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -75,11 +76,17 @@ func testNameToDbName(testName string) string {
 func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluster.Handler {
 	t.Helper()
 
+	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
+		StatusWorkers:               2,
+		StatusProgressEventInterval: time.Minute,
+		MaxRetries:                  10,
+	})
+}
+
+func newTestHandlerWithConfig(t *testing.T, db *testDB, mock *gardener.MockClient, cfg cluster.Config) *cluster.Handler {
+	t.Helper()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	cfg := cluster.Config{
-		StatusBatchSize: 50,
-		MaxRetries:      10,
-	}
 	return cluster.New(db.workerPool, mock, mock, logger, cfg)
 }
 
@@ -183,6 +190,60 @@ func setShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID, status string
 	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one cluster row to be updated")
 }
 
+// setShootState sets status, message and health (empty writes NULL) with
+// shoot_status_updated = now() - age, to place the row in or out of a poll lane.
+func setShootState(t *testing.T, db *testDB, clusterID uuid.UUID, status, message, health string, age time.Duration) {
+	t.Helper()
+
+	result, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.clusters
+		 SET shoot_status = $1, shoot_status_message = $2, shoot_health = NULLIF($3, ''),
+		     shoot_status_updated = now() - make_interval(secs => $4)
+		 WHERE id = $5`,
+		status, message, health, age.Seconds(), clusterID,
+	)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one cluster row to be updated")
+}
+
+// getShootState returns the stored message and health (empty for NULL).
+func getShootState(t *testing.T, db *testDB, clusterID uuid.UUID) (message, health string) {
+	t.Helper()
+
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT COALESCE(shoot_status_message, ''), COALESCE(shoot_health, '') FROM tenant.clusters WHERE id = $1`,
+		clusterID,
+	).Scan(&message, &health)
+	require.NoError(t, err)
+	return message, health
+}
+
+// countEvents returns how many cluster events of the given type exist.
+func countEvents(t *testing.T, db *testDB, clusterID uuid.UUID, eventType string) int {
+	t.Helper()
+
+	var count int
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_events WHERE cluster_id = $1 AND event_type = $2`,
+		clusterID, eventType,
+	).Scan(&count)
+	require.NoError(t, err)
+	return count
+}
+
+// countReadyOutboxRows returns how many ready outbox rows exist for the cluster.
+func countReadyOutboxRows(t *testing.T, db *testDB, clusterID uuid.UUID) int {
+	t.Helper()
+
+	var count int
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox WHERE cluster_id = $1 AND event = 'ready'`,
+		clusterID,
+	).Scan(&count)
+	require.NoError(t, err)
+	return count
+}
+
 // assertEventExists asserts that at least one cluster event of the given type exists.
 func assertEventExists(t *testing.T, db *testDB, clusterID uuid.UUID, eventType string) {
 	t.Helper()
@@ -250,4 +311,38 @@ func getClusterShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID) *strin
 	).Scan(&status)
 	require.NoError(t, err)
 	return status
+}
+
+// getShootUpdating returns whether the cluster is marked as updating.
+func getShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID) bool {
+	t.Helper()
+
+	var updating bool
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT shoot_updating FROM tenant.clusters WHERE id = $1`,
+		clusterID,
+	).Scan(&updating)
+	require.NoError(t, err)
+	return updating
+}
+
+// checkStatus runs one status tick and then the checks it queued.
+func checkStatus(t *testing.T, h *cluster.Handler) error {
+	t.Helper()
+	err := h.CheckStatus(t.Context())
+	h.DrainStatusQueue(t.Context())
+	return err //nolint:wrapcheck // passes CheckStatus's result through unchanged
+}
+
+// getShootStatusUpdated returns the cluster's shoot_status_updated.
+func getShootStatusUpdated(t *testing.T, db *testDB, clusterID uuid.UUID) time.Time {
+	t.Helper()
+
+	var updated time.Time
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT shoot_status_updated FROM tenant.clusters WHERE id = $1`,
+		clusterID,
+	).Scan(&updated)
+	require.NoError(t, err)
+	return updated
 }

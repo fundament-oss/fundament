@@ -3,12 +3,12 @@
 page_title: "fundament_project Data Source - fundament"
 subcategory: ""
 description: |-
-  Fetches a single project by name.
+  Fetches a single project by name. Project names are unique per cluster, not per organization: when two clusters have a project with this name, set cluster_name.
 ---
 
 # fundament_project (Data Source)
 
-Fetches a single project by name.
+Fetches a single project by name. Project names are unique per cluster, not per organization: when two clusters have a project with this name, set cluster_name.
 
 ## Example Usage
 
@@ -25,10 +25,13 @@ data "fundament_project" "example" {
 
 - `name` (String) The name of the project to look up.
 
+### Optional
+
+- `cluster_name` (String) The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name.
+
 ### Read-Only
 
 - `alias` (String) The alias of the project.
 - `cluster_id` (String) The ID of the cluster this project belongs to.
-- `cluster_name` (String) The name of the cluster this project belongs to.
 - `created` (String) The timestamp when the project was created.
 - `id` (String) The unique identifier of the project.

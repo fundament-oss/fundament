@@ -2,12 +2,14 @@ package gardener
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"testing"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +40,8 @@ func shootConflict(name string) error {
 // applyShootTestClient serves cluster's shoot from a fake client. updateErr is
 // consulted on every Update with the 1-based attempt number; a non-nil result is
 // returned instead of writing, so a test can fail the first attempt only, every
-// attempt, or none.
+// attempt, or none. Like Gardener's apiserver, the fake raises the generation
+// when an update changes the spec; the fake client does not do that by itself.
 func applyShootTestClient(t *testing.T, cluster *ClusterToSync, updateErr func(attempt int) error) (*RealClient, *applyShootCalls) {
 	t.Helper()
 
@@ -74,6 +77,15 @@ func applyShootTestClient(t *testing.T, cluster *ClusterToSync, updateErr func(a
 			calls.updates++
 			if err := updateErr(calls.updates); err != nil {
 				return err
+			}
+			if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
+				current := &gardencorev1beta1.Shoot{}
+				if err := c.Get(ctx, client.ObjectKeyFromObject(shoot), current); err != nil {
+					return fmt.Errorf("get current shoot: %w", err)
+				}
+				if !apiequality.Semantic.DeepEqual(current.Spec, shoot.Spec) {
+					shoot.Generation = current.Generation + 1
+				}
 			}
 			return c.Update(ctx, obj, opts...)
 		},
@@ -111,7 +123,8 @@ func TestApplyShoot_RetriesOnConflict(t *testing.T) {
 		return nil
 	})
 
-	require.NoError(t, r.ApplyShoot(t.Context(), cluster))
+	_, err := r.ApplyShoot(t.Context(), cluster)
+	require.NoError(t, err)
 
 	// Two updates: the conflicting one and the retry. The label lookup runs once -
 	// the retry re-reads by key, so it gets a Get per attempt and no second List.
@@ -137,7 +150,7 @@ func TestApplyShoot_GivesUpAfterPersistentConflicts(t *testing.T) {
 		return shootConflict(cluster.ShootName)
 	})
 
-	err := r.ApplyShoot(t.Context(), cluster)
+	_, err := r.ApplyShoot(t.Context(), cluster)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to update shoot")
 	assert.True(t, apierrors.IsConflict(err), "the conflict should stay recognizable, got %v", err)
@@ -156,8 +169,43 @@ func TestApplyShoot_DoesNotRetryOtherErrors(t *testing.T) {
 		return apierrors.NewInternalError(assert.AnError)
 	})
 
-	err := r.ApplyShoot(t.Context(), cluster)
+	_, err := r.ApplyShoot(t.Context(), cluster)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to update shoot")
 	assert.Equal(t, 1, calls.updates)
+}
+
+// A spec change raises the Shoot's generation, which ApplyShoot reports;
+// applying the same cluster again changes nothing.
+func TestApplyShoot_ReportsSpecChange(t *testing.T) {
+	t.Parallel()
+
+	cluster := applyShootTestCluster()
+	cluster.KubernetesVersion = "1.35.6"
+
+	r, _ := applyShootTestClient(t, cluster, func(int) error { return nil })
+
+	specChanged, err := r.ApplyShoot(t.Context(), cluster)
+	require.NoError(t, err)
+	assert.True(t, specChanged, "the Kubernetes version changed")
+
+	specChanged, err = r.ApplyShoot(t.Context(), cluster)
+	require.NoError(t, err)
+	assert.False(t, specChanged, "applying the same cluster again changes nothing")
+}
+
+// Creating a Shoot is not a spec change: there is no generation to raise.
+func TestApplyShoot_CreateIsNoSpecChange(t *testing.T) {
+	t.Parallel()
+
+	cluster := applyShootTestCluster()
+	other := applyShootTestCluster()
+	other.ShootName = "other"
+
+	r, calls := applyShootTestClient(t, other, func(int) error { return nil })
+
+	specChanged, err := r.ApplyShoot(t.Context(), cluster)
+	require.NoError(t, err)
+	assert.False(t, specChanged, "a new Shoot is created, not updated")
+	assert.Equal(t, 0, calls.updates)
 }

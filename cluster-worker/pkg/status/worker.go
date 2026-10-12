@@ -17,7 +17,10 @@ const maxConsecutiveFailures = 3
 
 // Config holds configuration for the status polling loop.
 type Config struct {
-	Interval time.Duration `env:"INTERVAL" envDefault:"30s"`
+	// Interval is how often the status sweep runs (and it runs once at
+	// startup). Status changes themselves arrive as events; the sweep
+	// catches what produces no event.
+	Interval time.Duration `env:"INTERVAL" envDefault:"30m"`
 }
 
 // Worker periodically calls all registered StatusHandlers.
@@ -37,7 +40,10 @@ func New(registry *handler.Registry, logger *slog.Logger, cfg Config) *Worker {
 	}
 }
 
-// IsReady returns true after the first status poll has completed.
+// IsReady returns true once the first status sweep has run. The sweep only
+// queues the checks, so ready means the handlers could list their clusters
+// and the checks are queued, not that any of them completed; in real mode
+// the first sweep also waits for the shoot status cache to sync.
 func (w *Worker) IsReady() bool {
 	return w.ready.Load()
 }

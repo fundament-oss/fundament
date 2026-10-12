@@ -180,15 +180,33 @@ const getEventTypeLabel = (eventType: string): string => {
     status_ready: 'Cluster ready',
     status_error: 'Cluster error',
     status_deleted: 'Cluster deleted',
+    status_healthy: 'Cluster healthy',
+    status_unhealthy: 'Cluster unhealthy',
+    status_warning: 'Cluster warning',
+    status_lost: 'Cluster lost',
+    user_sync_succeeded: 'Users synced',
+    user_sync_failed: 'User sync failed',
   };
   return labels[eventType] || eventType;
 };
 
-/** Only failures get tinted. On a timeline every dot is the same neutral track
+const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'sync_failed',
+  'status_error',
+  'status_unhealthy',
+  'status_lost',
+  'user_sync_failed',
+]);
+
+/** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and
- *  the event label names it too, so color is never the sole signal. */
-const getEventTypeColor = (eventType: string): string =>
-  eventType === 'sync_failed' || eventType === 'status_error' ? 'critical' : 'default';
+ *  the event label names it too, so color is never the sole signal. A warning is
+ *  something Gardener is already retrying by itself, so it is not critical. */
+const getEventTypeColor = (eventType: string): string => {
+  if (CRITICAL_EVENT_TYPES.has(eventType)) return 'critical';
+  if (eventType === 'status_warning') return 'warning';
+  return 'default';
+};
 
 const getEventDetails = (event: ClusterEvent): string => {
   if (event.message) {
@@ -623,6 +641,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    */
   deleteAttempted = signal(false);
 
+  /** True from the click until the page turns. The delete is followed by a
+   *  reload of the cluster list, so the modal stays up long enough to be
+   *  clicked a second time, and the second DeleteCluster comes back not found. */
+  isDeleting = signal(false);
+
   deleteConfirmationInvalid = computed(() => this.deleteAttempted() && !this.isDeleteConfirmed());
 
   /**
@@ -647,9 +670,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   async deleteCluster(): Promise<void> {
     this.deleteAttempted.set(true);
-    if (!this.isDeleteConfirmed()) {
+    if (!this.isDeleteConfirmed() || this.isDeleting()) {
       return;
     }
+    this.isDeleting.set(true);
     try {
       const request = create(DeleteClusterRequestSchema, {
         clusterId: this.clusterData.basics.id,
@@ -657,7 +681,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       await firstValueFrom(this.client.deleteCluster(request));
 
-      this.organizationDataService.removeCluster(this.clusterData.basics.id);
+      // The cluster is soft-deleted, so the list still holds it, now DELETING.
+      // Awaited before the page turns: the clusters page takes its list from the
+      // cache as it mounts and only starts polling when something in that list
+      // is still moving, so a reload landing after it would be both unseen and
+      // too late to start the poll.
+      await this.organizationDataService.reloadClusters({
+        id: this.clusterData.basics.id,
+        name: this.clusterData.basics.name,
+        status: ClusterStatus.DELETING,
+      });
+
       this.showDeleteModal.set(false);
       this.notificationService.info(
         `The cluster '${this.clusterData.basics.name}' is being deleted`,
@@ -669,6 +703,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
           ? `Failed to delete cluster: ${error.message}`
           : 'Failed to delete cluster',
       );
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 
@@ -817,6 +853,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.errorMessage.set(null);
     this.deleteConfirmationInput.set('');
     this.deleteAttempted.set(false);
+    this.isDeleting.set(false);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

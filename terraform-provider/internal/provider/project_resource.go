@@ -232,9 +232,7 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	state.Alias = types.StringValue(getResp.GetProject().GetAlias())
 
-	if getResp.GetProject().GetCreated().CheckValid() == nil {
-		state.Created = types.StringValue(getResp.GetProject().GetCreated().String())
-	}
+	state.Created = timestampValue(getResp.GetProject().GetCreated())
 
 	tflog.Info(ctx, "Created project", map[string]any{
 		"id": state.ID.ValueString(),
@@ -296,9 +294,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Populate cluster fields (both ID and name)
 	r.populateClusterFields(ctx, &state, project.GetClusterId())
 
-	if project.GetCreated().CheckValid() == nil {
-		state.Created = types.StringValue(project.GetCreated().String())
-	}
+	state.Created = timestampValue(project.GetCreated())
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
 		"id": state.ID.ValueString(),
@@ -402,9 +398,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Populate cluster fields (both ID and name)
 	r.populateClusterFields(ctx, &plan, project.GetClusterId())
 
-	if project.GetCreated().CheckValid() == nil {
-		plan.Created = types.StringValue(project.GetCreated().String())
-	}
+	plan.Created = timestampValue(project.GetCreated())
 
 	tflog.Info(ctx, "Updated project", map[string]any{
 		"id": plan.ID.ValueString(),

@@ -44,7 +44,7 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 	return organizationv1.ListClustersResponse_ClusterSummary_builder{
 		Id:            row.ID.String(),
 		Name:          row.Name,
-		Status:        clusterStatusFromDB(row.Deleted, row.ShootStatus),
+		Status:        clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootUpdating),
 		Region:        row.Region,
 		ProjectCount:  countAsInt32(row.ProjectCount),
 		NodePoolCount: countAsInt32(row.NodePoolCount),

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -210,11 +209,7 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	plan.UserID = types.StringValue(m.GetUserId())
 	plan.UserName = types.StringValue(m.GetUserName())
 	plan.Permission = types.StringValue(permissionStr)
-	if m.GetCreated() != nil {
-		plan.Created = types.StringValue(m.GetCreated().AsTime().Format(time.RFC3339))
-	} else {
-		plan.Created = types.StringNull()
-	}
+	plan.Created = timestampValue(m.GetCreated())
 
 	tflog.Info(ctx, "Created project member", map[string]any{
 		"id":         plan.ID.ValueString(),
@@ -487,7 +482,7 @@ func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, mo
 	model.UserName = types.StringValue(member.GetUserName())
 	model.Permission = types.StringValue(permissionStr)
 	if member.HasCreated() {
-		model.Created = types.StringValue(member.GetCreated().AsTime().Format(time.RFC3339))
+		model.Created = timestampValue(member.GetCreated())
 	} else {
 		model.Created = types.StringNull()
 	}

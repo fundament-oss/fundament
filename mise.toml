@@ -34,7 +34,7 @@ opentofu = "1.11.3"
 "go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.20.0"
 
 # Go
-go = "1.27.1"
+go = "1.27.2"
 "go:sigs.k8s.io/controller-tools/cmd/controller-gen" = "0.20.1"
 "go:github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs" = "0.25.0"
 golangci-lint = "2.13.2"

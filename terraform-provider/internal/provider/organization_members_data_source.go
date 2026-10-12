@@ -156,11 +156,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 			m.ExternalID = types.StringNull()
 		}
 
-		if member.GetCreated().CheckValid() == nil {
-			m.Created = types.StringValue(member.GetCreated().String())
-		} else {
-			m.Created = types.StringNull()
-		}
+		m.Created = timestampValue(member.GetCreated())
 
 		state.Members[i] = m
 	}
