@@ -11,11 +11,13 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // A node pool row is a desired shape; whether Gardener can stand machines
 // under it only shows in the Shoot's EveryNodeReady condition and lastErrors,
-// which name the pool's machine deployments ("<shoot>-<pool>-z<zone>").
+// which name the pool's machine deployments. Those names carry the generated
+// worker name (kubename.GenerateWorkerName), not the pool name the user chose.
 // These rules turn that into a per-pool status. Pure, like nextShootStatus.
 
 type storedNodePool struct {
@@ -34,7 +36,7 @@ type nodePoolUpdate struct {
 func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatus) []nodePoolUpdate {
 	var updates []nodePoolUpdate
 	for _, pool := range stored {
-		next, message, ok := classifyNodePool(pool.Name, observed)
+		next, message, ok := classifyNodePool(pool, observed)
 		if !ok || (string(next) == pool.Status && message == pool.Message) {
 			continue
 		}
@@ -49,10 +51,15 @@ func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatu
 }
 
 // classifyNodePool decides one pool's status from the shoot-level report.
-// ok is false when the report says nothing about pools (no shoot yet, shoot
-// deleting, or a failure that does not name this pool).
-func classifyNodePool(name string, observed *gardener.ShootStatus) (status dbconst.NodePoolStatus, message string, ok bool) {
-	if complaint := poolComplaint(name, observed); complaint != "" {
+// ok is false when the report says nothing about this pool: no shoot yet,
+// shoot deleting, a failure that does not name the pool — or an operation in
+// flight that does not name it either. The last case keeps an already
+// classified pool where it is: a routine reconcile says nothing about pools
+// whose machines stand, and flipping them to progressing would hide their
+// live metrics and spray ready events when the reconcile ends. Only a pool
+// that was never classified reads an operation as its machines being created.
+func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus) (status dbconst.NodePoolStatus, message string, ok bool) {
+	if complaint := poolComplaint(pool.Name, observed); complaint != "" {
 		if observed.Status == gardener.StatusError && !observed.Retrying {
 			return dbconst.NodePoolStatus_Error, complaint, true
 		}
@@ -61,10 +68,13 @@ func classifyNodePool(name string, observed *gardener.ShootStatus) (status dbcon
 
 	switch observed.Status {
 	case gardener.StatusProgressing:
-		return dbconst.NodePoolStatus_Progressing, "", true
+		if pool.Status == "" {
+			return dbconst.NodePoolStatus_Progressing, "", true
+		}
+		return "", "", false // operation in flight, pool not named: keep what is stored
 	case gardener.StatusError:
-		if observed.Retrying {
-			// Gardener retries by itself; for this pool that is still progress.
+		if observed.Retrying && pool.Status == "" {
+			// Gardener retries by itself; for a new pool that is still progress.
 			return dbconst.NodePoolStatus_Progressing, "", true
 		}
 		return "", "", false // failed without naming this pool: not its failure
@@ -78,34 +88,36 @@ func classifyNodePool(name string, observed *gardener.ShootStatus) (status dbcon
 }
 
 // poolComplaint returns the Gardener text naming this pool's machine
-// deployment, or "". The "-<pool>-z" fragment anchors the match so a pool
-// name that prefixes another ("web", "web2") cannot match the wrong text.
+// deployment, or "". Gardener names machine deployments after the generated
+// worker name — a fixed-length prefix+hash (kubename.GenerateWorkerName) — so
+// the match looks for that name, never the raw pool name, and two pools can
+// never match each other's text: their generated names have equal length and
+// distinct hash suffixes, so neither can contain the other.
 func poolComplaint(name string, observed *gardener.ShootStatus) string {
-	fragment := "-" + name + "-z"
-	if strings.Contains(observed.EveryNodeReadyMessage, fragment) {
+	workerName := kubename.GenerateWorkerName(name)
+	if strings.Contains(observed.EveryNodeReadyMessage, workerName) {
 		return observed.EveryNodeReadyMessage
 	}
 	for _, desc := range observed.LastErrors {
-		if strings.Contains(desc, fragment) {
+		if strings.Contains(desc, workerName) {
 			return desc
 		}
 	}
 	return ""
 }
 
-// nodePoolEvents records trouble (once per distinct message) and recovery.
-// A pool classified for the first time ("" stored) gets no ready event: on
-// an existing fleet that would be an event storm saying nothing happened.
+// nodePoolEvents records trouble (once per distinct message — the caller only
+// gets here when status or message changed) and recovery. A pool classified
+// for the first time ("" stored) gets no ready event: on an existing fleet
+// that would be an event storm saying nothing happened.
 func nodePoolEvents(pool storedNodePool, next dbconst.NodePoolStatus, message string) []statusEvent {
 	switch next {
-	case dbconst.NodePoolStatus_Waiting:
-		if string(next) != pool.Status || message != pool.Message {
-			return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool " + pool.Name + ": " + message}}
+	case dbconst.NodePoolStatus_Waiting, dbconst.NodePoolStatus_Error:
+		eventType := dbconst.ClusterEventEventType_NodepoolWaiting
+		if next == dbconst.NodePoolStatus_Error {
+			eventType = dbconst.ClusterEventEventType_NodepoolError
 		}
-	case dbconst.NodePoolStatus_Error:
-		if string(next) != pool.Status || message != pool.Message {
-			return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool " + pool.Name + ": " + message}}
-		}
+		return []statusEvent{{Type: eventType, Message: "Node pool " + pool.Name + ": " + message}}
 	case dbconst.NodePoolStatus_Ready:
 		if pool.Status != "" && pool.Status != string(dbconst.NodePoolStatus_Ready) {
 			return []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool " + pool.Name + ": machines are ready"}}

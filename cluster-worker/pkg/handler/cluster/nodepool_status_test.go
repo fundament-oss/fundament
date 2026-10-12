@@ -7,12 +7,20 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
+
+// Gardener names machine deployments after the generated worker name, so the
+// fixtures must carry kubename.GenerateWorkerName(pool), never the raw pool
+// name — production text never contains the raw name.
+func enrMessage(pool string) string {
+	return `machine deployment "shoot--acme--tf-a-` + kubename.GenerateWorkerName(pool) + `-z1" is waiting for machines to join`
+}
 
 func TestNextNodePoolStatuses(t *testing.T) {
 	t.Parallel()
 
-	enrNomach := `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting for machines to join`
+	enrNomach := enrMessage("nomach")
 	stuck := &gardener.ShootStatus{
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
@@ -27,14 +35,29 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		want     []nodePoolUpdate
 	}{
 		{
-			name:     "named pool waits, unnamed pool progresses",
-			stored:   []storedNodePool{{Name: "extra", Status: "ready"}, {Name: "nomach", Status: "progressing"}},
+			name:     "named pool waits; settled pool keeps its status; new pool progresses",
+			stored:   []storedNodePool{{Name: "extra", Status: "ready"}, {Name: "fresh"}, {Name: "nomach", Status: "progressing"}},
 			observed: stuck,
 			want: []nodePoolUpdate{
-				{Name: "extra", Status: dbconst.NodePoolStatus_Progressing},
+				{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing},
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
 			},
+		},
+		{
+			name:   "raw pool name in the text does not match",
+			stored: []storedNodePool{{Name: "nomach", Status: "ready"}},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+				EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting`,
+			},
+			want: nil,
+		},
+		{
+			name:     "routine reconcile leaves settled pools alone",
+			stored:   []storedNodePool{{Name: "web", Status: "ready"}, {Name: "db", Status: "ready"}},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, Message: "Reconcile: 10% done"},
+			want:     nil,
 		},
 		{
 			name:     "same waiting message writes no second event",
@@ -58,18 +81,17 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:     []nodePoolUpdate{{Name: "extra", Status: dbconst.NodePoolStatus_Ready}},
 		},
 		{
-			name:   "pool name prefixing another is not matched",
-			stored: []storedNodePool{{Name: "web", Status: "ready"}, {Name: "web2", Status: "ready"}},
+			name:   "a pool never matches another pool's worker name",
+			stored: []storedNodePool{{Name: "web", Status: "ready"}, {Name: "my-web", Status: "ready"}},
 			observed: &gardener.ShootStatus{
 				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
-				EveryNodeReadyMessage: `machine deployment "shoot--acme--tf-a-web2-z1" is waiting`,
+				EveryNodeReadyMessage: enrMessage("my-web"),
 			},
 			want: []nodePoolUpdate{
-				{Name: "web", Status: dbconst.NodePoolStatus_Progressing},
-				{Name: "web2", Status: dbconst.NodePoolStatus_Waiting,
-					Message: `machine deployment "shoot--acme--tf-a-web2-z1" is waiting`,
+				{Name: "my-web", Status: dbconst.NodePoolStatus_Waiting,
+					Message: enrMessage("my-web"),
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting,
-						Message: `Node pool web2: machine deployment "shoot--acme--tf-a-web2-z1" is waiting`}}},
+						Message: "Node pool my-web: " + enrMessage("my-web")}}},
 			},
 		},
 		{
@@ -84,25 +106,21 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			stored: []storedNodePool{{Name: "nomach", Status: "waiting", Message: "old"}},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError,
 				Message:    "Failed to reconcile",
-				LastErrors: []string{`machine deployment "shoot--acme--tf-a-nomach-z1" failed to create machines`}},
+				LastErrors: []string{enrMessage("nomach")}},
 			want: []nodePoolUpdate{
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Error,
-					Message: `machine deployment "shoot--acme--tf-a-nomach-z1" failed to create machines`,
+					Message: enrMessage("nomach"),
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError,
-						Message: `Node pool nomach: machine deployment "shoot--acme--tf-a-nomach-z1" failed to create machines`}}},
+						Message: "Node pool nomach: " + enrMessage("nomach")}}},
 			},
 		},
 		{
-			name:   "status flips waiting to error with identical message still records nodepool_error",
-			stored: []storedNodePool{{Name: "nomach", Status: "waiting", Message: enrNomach}},
-			observed: &gardener.ShootStatus{Status: gardener.StatusError,
-				Message:    "Failed to reconcile",
-				LastErrors: []string{enrNomach}},
+			name:     "status flips waiting to error with identical message still records nodepool_error",
+			stored:   []storedNodePool{{Name: "nomach", Status: "waiting", Message: enrNomach}},
+			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "Failed to reconcile", LastErrors: []string{enrNomach}},
 			want: []nodePoolUpdate{
-				{Name: "nomach", Status: dbconst.NodePoolStatus_Error,
-					Message: enrNomach,
-					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError,
-						Message: "Node pool nomach: " + enrNomach}}},
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Error, Message: enrNomach,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolError, Message: "Node pool nomach: " + enrNomach}}},
 			},
 		},
 		{

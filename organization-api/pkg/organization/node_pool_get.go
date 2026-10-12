@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -32,7 +34,7 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	runtime := s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1)[nodePool.Name]
+	runtime := s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1)[kubename.GenerateWorkerName(nodePool.Name)]
 
 	return organizationv1.GetNodePoolResponse_builder{
 		NodePool: nodePoolFromRow(&nodePool, runtime),
@@ -47,16 +49,16 @@ func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizat
 	status := runtime.status()
 	message := ""
 	if row.Status.Valid {
-		switch row.Status.String {
-		case "progressing":
+		switch dbconst.NodePoolStatus(row.Status.String) {
+		case dbconst.NodePoolStatus_Progressing:
 			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_PROVISIONING
-		case "waiting":
+		case dbconst.NodePoolStatus_Waiting:
 			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_WAITING_FOR_MACHINES
 			message = row.StatusMessage.String
-		case "error":
+		case dbconst.NodePoolStatus_Error:
 			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_FAILED
 			message = row.StatusMessage.String
-		case "ready":
+		case dbconst.NodePoolStatus_Ready:
 			// metrics runtime stands
 		default:
 			panic(fmt.Sprintf("unhandled node pool status: %q", row.Status.String))

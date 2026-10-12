@@ -122,7 +122,6 @@ Before({ tags: '@real-gardener', timeout: 10_000 }, async function (
     process.env.ORGANIZATION_API_URL ||
     'https://organization.fundament.localhost:8443';
   this.createdNodePoolIds = new Map();
-  this.seedCordoned = false;
 });
 
 // Always uncordon the seed and delete the "nomach" pool, even on failure, so
@@ -196,7 +195,6 @@ Given(
   { timeout: 15_000 },
   async function (this: ICustomWorld) {
     cordonSeed(true);
-    this.seedCordoned = true;
   },
 );
 
@@ -227,7 +225,6 @@ When(
   { timeout: 15_000 },
   async function (this: ICustomWorld) {
     cordonSeed(false);
-    this.seedCordoned = false;
   },
 );
 

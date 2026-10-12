@@ -38,7 +38,7 @@ import {
 import { type Category, type Preset } from '../../generated/marketplace/v1/common_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { isTransitionalStatus } from '../utils/cluster-status';
+import { isClusterReachable, shouldPollStatus } from '../utils/cluster-status';
 import {
   hasInvalidConfig,
   installPhase,
@@ -396,7 +396,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
       // Poll for cluster readiness so the install modal reflects status changes
       // (e.g. a provisioning cluster becoming RUNNING) without a page refresh.
-      if (this.clusters().some((c) => isTransitionalStatus(c.status))) {
+      if (this.clusters().some((c) => shouldPollStatus(c.status))) {
         this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
       }
 
@@ -426,7 +426,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.clusterClient.listClusters({}));
       this.clusters.set(response.clusters);
 
-      const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));
+      const needsPolling = response.clusters.some((c) => shouldPollStatus(c.status));
       if (needsPolling && !this.pollingTimer) {
         this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
       } else if (!needsPolling) {
@@ -713,7 +713,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         name: cluster.name,
         phase: install?.phase ?? null,
         version: install?.version ?? '',
-        running: cluster.status === ClusterStatus.RUNNING,
+        running: isClusterReachable(cluster.status),
         configInvalid: install?.configInvalid ?? false,
       };
     });

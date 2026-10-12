@@ -2428,7 +2428,7 @@ CREATE OR REPLACE TRIGGER clusters_outbox
 -- object: node_pools_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pools_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pools_outbox
-	AFTER INSERT OR UPDATE
+	AFTER INSERT OR UPDATE OF name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();

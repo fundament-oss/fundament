@@ -351,8 +351,22 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 // shootStatusOf derives fundament's status for a Shoot; nil is a Shoot
 // Gardener does not have. It is pure, so the watch's change filter and the
-// status step derive exactly the same thing from the same object.
+// status step derive exactly the same thing from the same object. The worker
+// detail — the EveryNodeReady message and lastErrors, which name the machine
+// deployments that cannot get machines — is attached here, once, so every
+// lifecycle branch carries it.
 func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
+	status := shootLifecycleStatusOf(shoot)
+	if shoot != nil && shoot.DeletionTimestamp == nil {
+		status.EveryNodeReadyMessage = everyNodeReadyMessage(shoot)
+		status.LastErrors = shootLastErrors(shoot)
+	}
+	return status
+}
+
+// shootLifecycleStatusOf maps the Shoot's last operation to fundament's
+// lifecycle status.
+func shootLifecycleStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	if shoot == nil {
 		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
 	}
@@ -360,12 +374,6 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	if shoot.DeletionTimestamp != nil {
 		return &ShootStatus{Status: StatusDeleting, Message: "Shoot is being deleted"}
 	}
-
-	// Worker detail travels with every status: the EveryNodeReady message and
-	// lastErrors name the machine deployments that cannot get machines, which
-	// the handler attributes to node pools.
-	enrMessage := everyNodeReadyMessage(shoot)
-	lastErrors := shootLastErrors(shoot)
 
 	if shoot.Status.LastOperation != nil {
 		op := shoot.Status.LastOperation
@@ -375,32 +383,28 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 		case gardencorev1beta1.LastOperationStatePending, gardencorev1beta1.LastOperationStateProcessing:
 			healthy, grace := shootHealthOf(shoot)
 			return &ShootStatus{
-				Status:                StatusProgressing,
-				Message:               fmt.Sprintf("%s: %s", op.Type, op.Description),
-				Operation:             operation,
-				Healthy:               healthy,
-				HealthGrace:           grace,
-				EveryNodeReadyMessage: enrMessage,
-				LastErrors:            lastErrors,
+				Status:      StatusProgressing,
+				Message:     fmt.Sprintf("%s: %s", op.Type, op.Description),
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
 			}
 		case gardencorev1beta1.LastOperationStateError:
 			// "Completed with errors and will be retried" per Gardener's API.
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, Retrying: true}
 		case gardencorev1beta1.LastOperationStateFailed:
-			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
+			return &ShootStatus{Status: StatusError, Message: op.Description, Operation: operation}
 		case gardencorev1beta1.LastOperationStateSucceeded:
 			healthy, grace := shootHealthOf(shoot)
 			// The gardenlet sets observedGeneration when it starts a reconcile.
 			// Until then lastOperation still describes the previous one.
 			if shoot.Generation != shoot.Status.ObservedGeneration {
 				return &ShootStatus{
-					Status:                StatusProgressing,
-					Message:               MsgShootUpdatePending,
-					Operation:             OperationReconcile,
-					Healthy:               healthy,
-					HealthGrace:           grace,
-					EveryNodeReadyMessage: enrMessage,
-					LastErrors:            lastErrors,
+					Status:      StatusProgressing,
+					Message:     MsgShootUpdatePending,
+					Operation:   OperationReconcile,
+					Healthy:     healthy,
+					HealthGrace: grace,
 				}
 			}
 			msg := MsgShootReady
@@ -408,22 +412,20 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 				msg = MsgShootUnhealthy
 			}
 			return &ShootStatus{
-				Status:                StatusReady,
-				Message:               msg,
-				Operation:             operation,
-				Healthy:               healthy,
-				HealthGrace:           grace,
-				EveryNodeReadyMessage: enrMessage,
-				LastErrors:            lastErrors,
+				Status:      StatusReady,
+				Message:     msg,
+				Operation:   operation,
+				Healthy:     healthy,
+				HealthGrace: grace,
 			}
 		case gardencorev1beta1.LastOperationStateAborted:
 			// Seen while the seed was not ready; Gardener resumed the operation by itself.
-			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true, EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
+			return &ShootStatus{Status: StatusError, Message: "Operation was aborted: " + op.Description, Operation: operation, Retrying: true}
 		}
 	}
 
 	// No last operation, likely still being created
-	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created", EveryNodeReadyMessage: enrMessage, LastErrors: lastErrors}
+	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}
 }
 
 // everyNodeReadyMessage returns the EveryNodeReady condition's message while

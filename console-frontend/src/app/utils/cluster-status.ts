@@ -93,21 +93,34 @@ export function getStatusLabel(status: ClusterStatus): string {
 }
 
 /**
- * Whether a kubeconfig can be downloaded for a cluster in this status.
- *
- * Mirrors the organization-api gate in `GetKubeconfig`: it only serves a
- * kubeconfig once the shoot reports `ready`. That maps to `RUNNING`, to
- * `UPGRADING` while an update rolls out on the ready cluster, and to
- * `UNHEALTHY` while a ready cluster's health conditions fail. Any other
- * status would be rejected with "cluster not ready yet", so the UI should
- * not offer the download.
+ * Statuses in which the shoot is ready and its API server reachable:
+ * `RUNNING`, `UPGRADING` while an update rolls out on the ready cluster, and
+ * `UNHEALTHY` while a ready cluster's health conditions fail (a node pool
+ * without machines, say) — the control plane still serves. Mirrors the
+ * organization-api gate in `GetKubeconfig`, which keys on shoot status
+ * `ready`; the same set gates everything that talks to the cluster's API
+ * server, such as plugin management.
  */
-const KUBECONFIG_AVAILABLE: ReadonlySet<ClusterStatus> = new Set([
+const REACHABLE_STATUSES: ReadonlySet<ClusterStatus> = new Set([
   ClusterStatus.RUNNING,
   ClusterStatus.UPGRADING,
   ClusterStatus.UNHEALTHY,
 ]);
 
+export function isClusterReachable(status: ClusterStatus): boolean {
+  return REACHABLE_STATUSES.has(status);
+}
+
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
-  return KUBECONFIG_AVAILABLE.has(status);
+  return isClusterReachable(status);
+}
+
+/**
+ * Whether a cluster's status should keep the page polling. Transitional
+ * statuses move by themselves; unhealthy is not transitional (its badge does
+ * not pulse), but Gardener keeps retrying behind it, so recovery has to be
+ * observed without a manual reload.
+ */
+export function shouldPollStatus(status: ClusterStatus): boolean {
+  return isTransitionalStatus(status) || status === ClusterStatus.UNHEALTHY;
 }

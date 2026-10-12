@@ -4,16 +4,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+// shootMessageAwaitingHealth mirrors cluster-worker's
+// gardener.MsgShootAwaitingHealth (status_rules.go, settlingAfterCreate): the
+// marker the worker stores while a freshly created cluster's health checks
+// have not passed yet.
+const shootMessageAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
+
 // clusterStatusFromDB derives cluster status from deleted flag + Gardener shoot status.
-// A ready cluster whose health conditions fail is unhealthy — that wins over
-// updating, because a stuck update is a failure, not progress. A ready cluster
-// that an update fundament pushed is rolling out on is upgrading; it stays
-// usable meanwhile.
-func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, shootHealth pgtype.Text, updating bool) organizationv1.ClusterStatus {
+// A freshly created cluster whose health checks have not passed yet is
+// starting, not unhealthy — the worker marks that window with the
+// awaiting-health message. After that, a ready cluster whose health
+// conditions fail is unhealthy; that wins over updating, because a stuck
+// update is a failure, not progress. A ready cluster that an update fundament
+// pushed is rolling out on is upgrading; it stays usable meanwhile.
+func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, shootMessage pgtype.Text, shootHealth pgtype.Text, updating bool) organizationv1.ClusterStatus {
 	if deleted.Valid {
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	}
@@ -24,7 +33,10 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, sh
 	case "pending", "progressing":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING
 	case "ready":
-		if shootHealth.Valid && shootHealth.String == "unhealthy" {
+		if dbconst.ClusterShootHealth(shootHealth.String) == dbconst.ClusterShootHealth_Unhealthy {
+			if shootMessage.String == shootMessageAwaitingHealth {
+				return organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING
+			}
 			return organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY
 		}
 		if updating {

@@ -194,25 +194,30 @@ settling does not stick, and a cluster that breaks later shows it.
 
 A node pool row is a desired shape; whether Gardener can stand machines under it only
 shows in the Shoot's `EveryNodeReady` condition and `lastErrors`, which name the pool's
-machine deployments (`<shoot>-<pool>-z<zone>`). Every status check classifies each active
-pool from the same report the cluster rules read and stores the outcome on
+machine deployments. Those names carry the generated worker name
+(`kubename.GenerateWorkerName`, a fixed-length prefix+hash), never the pool name the
+user chose, so the match looks for the worker name. Every status check classifies each
+active pool from the same report the cluster rules read and stores the outcome on
 `tenant.node_pools` (`status`, `status_message`, `status_updated`):
 
 | Status | Meaning |
 |---|---|
-| `progressing` | an operation runs and nothing complains about this pool |
+| `progressing` | an operation runs and this pool was never classified before (its machines are being created) |
 | `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
 | `error` | the operation failed for good, naming this pool |
 | `ready` | the shoot settled and nothing names the pool |
 
-The `-<pool>-z` fragment anchors the match, so a pool name that prefixes another
-(`web`, `web2`) cannot match the wrong text. A failure that names no pool stays
-cluster-level; a `pending`/`deleting` shoot leaves pool rows untouched. Transitions
-record `nodepool_waiting` / `nodepool_error` (once per distinct reason) and
-`nodepool_ready` on recovery; a pool classified for the first time records nothing.
-organization-api serves the stored status and reason until a pool is `ready`, then its
-live node metrics take over. The watch treats a change in the worker detail as a status
-change, so a new reason reaches the pool row without waiting for the sweep.
+An operation that does not name an already classified pool leaves it where it is: a
+routine reconcile says nothing about pools whose machines stand, and relabeling them
+would hide their live metrics and spray ready events when the reconcile ends. Generated
+worker names have equal length and distinct hash suffixes, so one pool can never match
+another's text. A failure that names no pool stays cluster-level; a `pending`/`deleting`
+shoot leaves pool rows untouched. Transitions record `nodepool_waiting` /
+`nodepool_error` (once per distinct reason) and `nodepool_ready` on recovery; a pool
+classified for the first time records nothing. organization-api serves the stored status
+and reason until a pool is `ready`, then its live node metrics take over. The watch
+treats a change in the worker detail as a status change, so a new reason reaches the
+pool row without waiting for the sweep.
 
 ### Status cache
 

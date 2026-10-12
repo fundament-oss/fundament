@@ -2,11 +2,10 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"os"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ClusterCmd contains cluster subcommands.
@@ -77,28 +76,25 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 
 	cluster := resp.GetCluster()
 
-	npResp, err := apiClient.Clusters().ListNodePools(context.Background(), organizationv1.ListNodePoolsRequest_builder{
+	// The pool list is auxiliary: when it fails, the cluster — what the
+	// operator came for — still prints, with a warning on stderr.
+	var nodePools []*organizationv1.NodePool
+	npResp, npErr := apiClient.Clusters().ListNodePools(context.Background(), organizationv1.ListNodePoolsRequest_builder{
 		ClusterId: c.ClusterID,
 	}.Build())
-	if err != nil {
-		return fmt.Errorf("failed to list node pools: %w", err)
+	if npErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to list node pools: %v\n", npErr)
+	} else {
+		nodePools = npResp.GetNodePools()
 	}
-	nodePools := npResp.GetNodePools()
 
 	if ctx.Output == OutputJSON {
-		clusterJSON, err := protojson.Marshal(cluster)
-		if err != nil {
-			return fmt.Errorf("failed to marshal cluster: %w", err)
+		// node_pools is null when the lookup failed, [] when there are none.
+		var pools any
+		if npErr == nil {
+			pools = nodePools
 		}
-		poolsJSON := make([]json.RawMessage, len(nodePools))
-		for i, pool := range nodePools {
-			data, err := protojson.Marshal(pool)
-			if err != nil {
-				return fmt.Errorf("failed to marshal node pool: %w", err)
-			}
-			poolsJSON[i] = data
-		}
-		return PrintJSON(map[string]any{"cluster": json.RawMessage(clusterJSON), "node_pools": poolsJSON})
+		return PrintJSON(map[string]any{"cluster": cluster, "node_pools": pools})
 	}
 
 	w := NewTableWriter()

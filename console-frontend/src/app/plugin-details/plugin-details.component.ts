@@ -1,3 +1,4 @@
+import { isClusterReachable } from '../utils/cluster-status';
 import {
   Component,
   inject,
@@ -264,7 +265,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
             phase: installPhaseOf(installation),
             version: installation?.spec?.definitionRef?.pluginVersion ?? '',
             configInvalid: installation ? hasInvalidConfig(installation) : false,
-            running: cluster.status === ClusterStatus.RUNNING,
+            running: isClusterReachable(cluster.status),
           };
         }),
       );
@@ -396,7 +397,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         ...c,
         phase: resolved,
         configInvalid: install ? hasInvalidConfig(install) : false,
-        running: c.status === ClusterStatus.RUNNING,
+        running: isClusterReachable(c.status),
       };
     });
 

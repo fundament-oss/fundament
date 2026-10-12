@@ -8,9 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
-const enrNomach = `machine deployment "shoot--acme--tf-a-nomach-z1" is waiting for machines to join`
+// Gardener's text names the generated worker name, never the raw pool name.
+var enrNomach = `machine deployment "shoot--acme--tf-a-` + kubename.GenerateWorkerName("nomach") + `-z1" is waiting for machines to join`
 
 func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	t.Parallel()

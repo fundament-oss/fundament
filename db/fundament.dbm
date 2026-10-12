@@ -2629,6 +2629,7 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="authz.node_pools_sync_trigger()"/>
+		<columns names="name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted"/>
 </trigger>
 
 <trigger name="node_pool_outbox" firing-type="AFTER" per-line="true" constraint="false"

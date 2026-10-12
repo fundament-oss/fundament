@@ -35,7 +35,6 @@ export interface ICustomWorld extends World {
   clusterService?: ClusterService;
   realGardenerCluster?: ClusterDetails;
   createdNodePoolIds: Map<string, string>;
-  seedCordoned: boolean;
 }
 
 export class CustomWorld extends World implements ICustomWorld {
@@ -62,7 +61,6 @@ export class CustomWorld extends World implements ICustomWorld {
   clusterService?: ClusterService;
   realGardenerCluster?: ClusterDetails;
   createdNodePoolIds: Map<string, string> = new Map();
-  seedCordoned = false;
 
   constructor(options: IWorldOptions) {
     super(options);
