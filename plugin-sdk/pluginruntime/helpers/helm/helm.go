@@ -129,6 +129,9 @@ type ReleaseStatus struct {
 	// LastDeployed is when the latest operation on the release started; for a
 	// pending release, when that operation began. Zero when helm omits it.
 	LastDeployed time.Time
+	// Deleted is when an uninstall started; set for an uninstalling or
+	// uninstalled release, zero otherwise.
+	Deleted time.Time
 }
 
 // Pending reports whether a Helm operation holds the release. Another install
@@ -177,6 +180,7 @@ func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 		Info struct {
 			Status       string `json:"status"`
 			LastDeployed string `json:"last_deployed"`
+			Deleted      string `json:"deleted"`
 		} `json:"info"`
 		Chart struct {
 			Metadata struct {
@@ -187,13 +191,15 @@ func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 	if err := json.Unmarshal(data, &release); err != nil {
 		return nil, fmt.Errorf("parse helm status: %w", err)
 	}
-	// A missing or unparseable timestamp leaves LastDeployed zero, which a caller
-	// reads as "long ago".
+	// A missing or unparseable timestamp stays zero, which a caller reads as
+	// "long ago".
 	lastDeployed, _ := time.Parse(time.RFC3339Nano, release.Info.LastDeployed)
+	deleted, _ := time.Parse(time.RFC3339Nano, release.Info.Deleted)
 	return &ReleaseStatus{
 		Status:       release.Info.Status,
 		ChartVersion: release.Chart.Metadata.Version,
 		LastDeployed: lastDeployed,
+		Deleted:      deleted,
 	}, nil
 }
 

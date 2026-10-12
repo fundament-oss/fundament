@@ -2,6 +2,7 @@ package cnpg
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -64,11 +65,14 @@ func TestInstallVersionPendingStale(t *testing.T) {
 		{"pending-install", now.Add(-time.Hour), "helm -n cnpg-system uninstall cnpg"},
 		// No timestamp: cannot tell it is recent, so give the way out.
 		{"pending-install", time.Time{}, "helm -n cnpg-system uninstall cnpg"},
+		// An interrupted uninstall is finished, not undone.
+		{"uninstalling", now.Add(-time.Hour), "helm -n cnpg-system uninstall cnpg"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.status, func(t *testing.T) {
 			t.Parallel()
-			_, err := installVersion(&helm.ReleaseStatus{Status: tt.status, ChartVersion: Version, LastDeployed: tt.lastDeployed}, now)
+			current := &helm.ReleaseStatus{Status: tt.status, ChartVersion: Version, LastDeployed: tt.lastDeployed, Deleted: tt.lastDeployed}
+			_, err := installVersion(current, now)
 			require.Error(t, err)
 			require.NotErrorIs(t, err, ErrInProgress)
 			assert.Contains(t, err.Error(), tt.status)
@@ -85,6 +89,35 @@ func TestInstallVersionPendingRecent(t *testing.T) {
 	require.ErrorIs(t, err, ErrInProgress)
 	assert.Contains(t, err.Error(), "pending-install")
 	assert.NotContains(t, err.Error(), "uninstall")
+}
+
+// An admin's uninstall still running: wait for it rather than upgrade over it.
+// The deploy time is old; the uninstall's own start time is what counts.
+func TestInstallVersionUninstallingRecent(t *testing.T) {
+	t.Parallel()
+	current := &helm.ReleaseStatus{Status: "uninstalling", ChartVersion: Version, LastDeployed: now.Add(-30 * 24 * time.Hour), Deleted: now.Add(-time.Minute)}
+	_, err := installVersion(current, now)
+	require.ErrorIs(t, err, ErrInProgress)
+	assert.Contains(t, err.Error(), "uninstalling")
+}
+
+func TestConcurrentOperation(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		output string
+		want   bool
+	}{
+		{"Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress", true},
+		{"Error: INSTALLATION FAILED: cannot re-use a name that is still in use", true},
+		{`Error: failed to download "cloudnative-pg"`, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.output, func(t *testing.T) {
+			t.Parallel()
+			err := errors.New("helm install failed: " + tt.output + ": exit status 1")
+			assert.Equal(t, tt.want, concurrentOperation(err))
+		})
+	}
 }
 
 func TestOperatorPresent(t *testing.T) {
@@ -108,7 +141,7 @@ func TestOperatorPresent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tt.objects...).Build()
-			got, err := operatorPresent(context.Background(), kube)
+			got, err := OperatorPresent(context.Background(), kube)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

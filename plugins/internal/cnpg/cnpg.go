@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/mod/semver"
@@ -30,8 +31,8 @@ const (
 	Version   = "0.24.0" // ships CloudNativePG operator v1.26.0
 )
 
-// pendingGrace is how long a pending release counts as another plugin's
-// install in progress. Past it, the operation that held the release was most
+// pendingGrace is how long a pending or uninstalling release counts as an
+// operation in progress. Past it, the operation that held the release was most
 // likely killed. It covers helm's default --wait timeout (5m) with slack.
 const pendingGrace = 10 * time.Minute
 
@@ -40,9 +41,9 @@ var CRDNames = []string{
 	"clusters.postgresql.cnpg.io",
 }
 
-// ErrInProgress marks an Install that found another plugin's helm operation on
-// the release still running. Callers report it as installing, not degraded,
-// and retry.
+// ErrInProgress marks an Install that found another helm operation on the
+// release still running: another plugin's install, or an admin's uninstall.
+// Callers report it as installing, not degraded, and retry.
 var ErrInProgress = errors.New("install in progress")
 
 // Install installs or upgrades the shared operator release to Version. When
@@ -63,7 +64,7 @@ func Install(ctx context.Context, kube client.Client) error {
 		return err
 	}
 	if current != nil && current.Status == "deployed" && version == current.ChartVersion {
-		present, err := operatorPresent(ctx, kube)
+		present, err := OperatorPresent(ctx, kube)
 		if err != nil {
 			return err
 		}
@@ -72,20 +73,36 @@ func Install(ctx context.Context, kube client.Client) error {
 		}
 	}
 	if err := h.InstallFromRepo(ctx, Release, Chart, Repo, version, nil); err != nil {
+		// Both plugins can read the release before either installs it; the
+		// one that loses the race finds the other's install holding it.
+		if concurrentOperation(err) {
+			return fmt.Errorf("%w: another install of release %s/%s started first: %w", ErrInProgress, Namespace, Release, err)
+		}
 		return fmt.Errorf("helm install %s: %w", Chart, err)
 	}
 	return nil
 }
 
+// concurrentOperation reports whether helm refused an install because another
+// operation holds the release: "another operation (install/upgrade/rollback)
+// is in progress" once that operation recorded the release, or "cannot re-use
+// a name that is still in use" when both started from an absent release.
+func concurrentOperation(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "another operation") || strings.Contains(msg, "cannot re-use a name that is still in use")
+}
+
 // installVersion returns the chart version to install over the release in its
-// current state (nil when absent): the newer of Version and the release's own, so a failed or uninstalled release left by a newer plugin is
-// retried at its own version rather than downgraded. It refuses while another
-// helm operation holds the release.
+// current state (nil when absent): the newer of Version and the release's own,
+// so a failed or uninstalled release left by a newer plugin is retried at its
+// own version rather than downgraded. It refuses while another helm operation
+// holds the release, including an uninstall: upgrading a release that is being
+// deleted would collide with it.
 func installVersion(current *helm.ReleaseStatus, now time.Time) (string, error) {
 	if current == nil {
 		return Version, nil
 	}
-	if current.Pending() {
+	if current.Pending() || current.Status == "uninstalling" {
 		return "", pendingError(current, now)
 	}
 	if semver.Compare("v"+current.ChartVersion, "v"+Version) > 0 {
@@ -94,14 +111,20 @@ func installVersion(current *helm.ReleaseStatus, now time.Time) (string, error) 
 	return Version, nil
 }
 
-// pendingError explains a pending release. Within pendingGrace it is another
-// plugin's install still running, which a retry resolves; after it, the
-// operation was most likely killed during --wait and the release stays
-// pending for good until an admin clears it.
+// pendingError explains a pending or uninstalling release. Within pendingGrace
+// it is an operation still running, which a retry resolves; after it, the
+// operation was most likely killed and the release stays in that state for
+// good until an admin clears it.
 func pendingError(current *helm.ReleaseStatus, now time.Time) error {
-	if !current.LastDeployed.IsZero() && now.Sub(current.LastDeployed) < pendingGrace {
+	// An uninstall keeps the release's deploy time and records its own start
+	// as the deletion time.
+	since := current.LastDeployed
+	if current.Status == "uninstalling" {
+		since = current.Deleted
+	}
+	if !since.IsZero() && now.Sub(since) < pendingGrace {
 		return fmt.Errorf("%w: release %s/%s is %s since %s; waiting for it to finish",
-			ErrInProgress, Namespace, Release, current.Status, current.LastDeployed.UTC().Format(time.RFC3339))
+			ErrInProgress, Namespace, Release, current.Status, since.UTC().Format(time.RFC3339))
 	}
 	return fmt.Errorf("release %s/%s has been %s for over %s; %s",
 		Namespace, Release, current.Status, pendingGrace, pendingRecovery(current.Status))
@@ -111,19 +134,24 @@ func pendingError(current *helm.ReleaseStatus, now time.Time) error {
 // earlier revision to roll back to, so it is uninstalled instead. That is not
 // safe by itself: --wait may have been killed after the operator and CRDs were
 // created, and the chart ships the CRDs as templates, so the uninstall deletes
-// them and every Cluster with them.
+// them and every Cluster with them. An interrupted uninstall already started
+// deleting them, so it is finished rather than undone.
 func pendingRecovery(status string) string {
-	if status == "pending-install" {
+	switch status {
+	case "uninstalling":
+		return fmt.Sprintf("run `helm -n %s uninstall %s` to finish it", Namespace, Release)
+	case "pending-install":
 		return fmt.Sprintf("check that `kubectl get %s -A` lists no databases, then run `helm -n %s uninstall %s` to clear it",
 			CRDNames[0], Namespace, Release)
+	default:
+		return fmt.Sprintf("run `helm -n %s rollback %s` to clear it", Namespace, Release)
 	}
-	return fmt.Sprintf("run `helm -n %s rollback %s` to clear it", Namespace, Release)
 }
 
-// operatorPresent reports whether the release's operator Deployment and the
+// OperatorPresent reports whether the release's operator Deployment and the
 // CRDs still exist. Helm keeps saying deployed after either is deleted, and
-// `helm upgrade --install` is what puts them back.
-func operatorPresent(ctx context.Context, kube client.Client) (bool, error) {
+// Install is what puts them back.
+func OperatorPresent(ctx context.Context, kube client.Client) (bool, error) {
 	var deployments appsv1.DeploymentList
 	if err := kube.List(ctx, &deployments, client.InNamespace(Namespace), client.MatchingLabels{
 		"app.kubernetes.io/name":     Chart,

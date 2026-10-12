@@ -11,8 +11,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { create } from '@bufbuild/protobuf';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import PluginRegistryService from '../plugin-registry.service';
 import KubeClusterContextService from '../kube-cluster-context.service';
@@ -20,8 +18,7 @@ import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import PageNavService from '../../page-nav.service';
-import { NAMESPACE } from '../../../connect/tokens';
-import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
+import ProjectNamespacesService from '../project-namespaces.service';
 import type { ParsedCrd } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
@@ -51,7 +48,7 @@ export default class ResourceCreateComponent implements OnInit {
 
   private config = inject(ConfigService);
 
-  private namespaceClient = inject(NAMESPACE);
+  private projectNamespaces = inject(ProjectNamespacesService);
 
   protected pageNav = inject(PageNavService);
 
@@ -203,13 +200,10 @@ export default class ResourceCreateComponent implements OnInit {
     this.namespaceDisplayNames.set({});
 
     try {
-      const request = create(ListProjectNamespacesRequestSchema, { projectId });
-      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
+      const { names, displayNames } = await this.projectNamespaces.list(projectId);
       if (current !== this.namespacesRequest) return;
-      this.namespaces.set(response.namespaces.map((n) => n.clusterSideName));
-      this.namespaceDisplayNames.set(
-        Object.fromEntries(response.namespaces.map((n) => [n.clusterSideName, n.name])),
-      );
+      this.namespaces.set(names);
+      this.namespaceDisplayNames.set(displayNames);
     } catch (err) {
       if (current !== this.namespacesRequest) return;
       // The plugin form's free-text fallback would take the project-level name,

@@ -147,24 +147,28 @@ export function wireSubmit(form, { button, errorBanner, failPrefix, checks, acti
     if (busy) return;
     errorBanner.hidden = true;
 
-    let firstInvalid = null;
-    for (const [control, check] of checks) {
-      const message = check(control.value.trim());
-      if (message) {
-        setFieldError(control, message);
-        firstInvalid ??= control;
-      } else {
-        clearFieldError(control);
-      }
-    }
-    if (firstInvalid) {
-      firstInvalid.focus();
-      return;
-    }
-
-    busy = true;
-    button.loading = true;
+    // The checks run inside the try: preventDefault() already suppressed the
+    // native submit, so a check that throws would otherwise leave the form
+    // silently dead, with no banner and no field error.
     try {
+      let firstInvalid = null;
+      for (const [control, check] of checks) {
+        // A field the design system has not upgraded yet has no value.
+        const message = check(String(control.value ?? '').trim());
+        if (message) {
+          setFieldError(control, message);
+          firstInvalid ??= control;
+        } else {
+          clearFieldError(control);
+        }
+      }
+      if (firstInvalid) {
+        firstInvalid.focus();
+        return;
+      }
+
+      busy = true;
+      button.loading = true;
       await action();
     } catch (err) {
       errorBanner.setAttribute('text', `${failPrefix}: ${err?.message ?? err}`);

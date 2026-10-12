@@ -71,8 +71,10 @@ export type Namespace = Message<"organization.v1.Namespace"> & {
   name: string;
 
   /**
-   * The namespace's name on the cluster ("tnt-<project>--<name>"), which is
-   * what Kubernetes API calls take. name is only unique within the project.
+   * The namespace's name on the cluster under the current naming scheme
+   * ("tnt-<project>--<name>"), which is what Kubernetes API calls take. name is
+   * only unique within the project. A namespace created under an earlier scheme
+   * keeps its old name; the cluster's fundament.io/namespace-id label finds it.
    *
    * @generated from field: string cluster_side_name = 25;
    */

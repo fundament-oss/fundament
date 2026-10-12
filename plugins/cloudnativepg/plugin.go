@@ -32,6 +32,9 @@ var clusterListGVK = schema.GroupVersionKind{Group: "postgresql.cnpg.io", Versio
 // databases keep running while this pod is down.
 type Plugin struct {
 	scheme *runtime.Scheme
+	// install installs the operator: cnpg.Install, which shells out to helm,
+	// replaced in tests.
+	install func(context.Context, client.Client) error
 	// kube is set by Start and read by Reconcile, which runs concurrently.
 	kube atomic.Pointer[client.Client]
 }
@@ -46,7 +49,7 @@ func newPlugin() (*Plugin, error) {
 			return nil, fmt.Errorf("build scheme: %w", err)
 		}
 	}
-	return &Plugin{scheme: scheme}, nil
+	return &Plugin{scheme: scheme, install: cnpg.Install}, nil
 }
 
 func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
@@ -57,14 +60,8 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	}
 
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing the CloudNativePG operator"})
-	if err := cnpg.Install(ctx, kube); err != nil {
-		// openfsc installs the same release; its install still running is not
-		// a fault, and the restart retries once it is done.
-		phase := pluginruntime.PhaseDegraded
-		if errors.Is(err, cnpg.ErrInProgress) {
-			phase = pluginruntime.PhaseInstalling
-		}
-		host.ReportStatus(pluginruntime.PluginStatus{Phase: phase, Message: err.Error()})
+	if err := p.install(ctx, kube); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: installFailurePhase(err), Message: err.Error()})
 		return fmt.Errorf("install operator: %w", pluginerrors.NewTransient(err))
 	}
 
@@ -95,12 +92,36 @@ func (p *Plugin) Reconcile(ctx context.Context, host pluginruntime.Host) error {
 	if kube == nil {
 		return nil
 	}
-	if err := crd.VerifyAll(ctx, *kube, cnpg.CRDNames); err != nil {
+	present, err := cnpg.OperatorPresent(ctx, *kube)
+	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
-		return fmt.Errorf("reconcile: CRDs missing: %w", pluginerrors.NewTransient(err))
+		return fmt.Errorf("reconcile: check operator: %w", pluginerrors.NewTransient(err))
+	}
+	if !present {
+		// The operator Deployment or a CRD was deleted. Helm still says
+		// deployed, so nothing else puts them back until this pod restarts.
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "reinstalling the CloudNativePG operator"})
+		if err := p.install(ctx, *kube); err != nil {
+			host.ReportStatus(pluginruntime.PluginStatus{Phase: installFailurePhase(err), Message: err.Error()})
+			return fmt.Errorf("reconcile: reinstall operator: %w", pluginerrors.NewTransient(err))
+		}
+		if err := crd.VerifyAll(ctx, *kube, cnpg.CRDNames); err != nil {
+			host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
+			return fmt.Errorf("reconcile: verify CRDs: %w", pluginerrors.NewTransient(err))
+		}
 	}
 	reportStatus(ctx, host, *kube)
 	return nil
+}
+
+// installFailurePhase is the phase for a failed cnpg.Install. openfsc installs
+// the same release; its install still running is not a fault, and a retry
+// succeeds once it is done.
+func installFailurePhase(err error) pluginruntime.PluginPhase {
+	if errors.Is(err, cnpg.ErrInProgress) {
+		return pluginruntime.PhaseInstalling
+	}
+	return pluginruntime.PhaseDegraded
 }
 
 // reportStatus summarizes the cluster's databases in the plugin status. The

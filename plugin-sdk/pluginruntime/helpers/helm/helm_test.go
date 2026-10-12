@@ -78,6 +78,18 @@ func TestParseReleaseStatusNoTimestamp(t *testing.T) {
 	status, err := parseReleaseStatus([]byte(`{"info": {"status": "pending-install"}, "chart": {"metadata": {"version": "0.24.0"}}}`))
 	require.NoError(t, err)
 	assert.True(t, status.LastDeployed.IsZero())
+	assert.True(t, status.Deleted.IsZero())
+}
+
+func TestParseReleaseStatusUninstalling(t *testing.T) {
+	status, err := parseReleaseStatus([]byte(`{
+		"info": {"status": "uninstalling", "last_deployed": "2026-10-01T08:00:00Z", "deleted": "2026-10-05T09:14:03Z"},
+		"chart": {"metadata": {"version": "0.24.0"}}
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, "uninstalling", status.Status)
+	assert.True(t, time.Date(2026, 10, 5, 9, 14, 3, 0, time.UTC).Equal(status.Deleted))
+	assert.False(t, status.Pending())
 }
 
 func TestParseReleaseStatusInvalidJSON(t *testing.T) {

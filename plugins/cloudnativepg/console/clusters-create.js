@@ -197,6 +197,8 @@ function showForm(storageClasses) {
 
   const form = document.getElementById('create-form');
   const field = (name) => form.querySelector(`[name="${name}"]`);
+  // A field the design system has not upgraded yet has no value.
+  const fieldValue = (name) => String(field(name).value ?? '').trim();
 
   document.getElementById('cancel-btn').addEventListener('click', () => navigateBack());
 
@@ -211,16 +213,16 @@ function showForm(storageClasses) {
       [field('storageClass'), (value) => storageClassError(value, { required: storageClassRequired })],
     ],
     action: async () => {
-      const name = field('name').value.trim();
-      const namespace = field('namespace').value.trim();
+      const name = fieldValue('name');
+      const namespace = fieldValue('namespace');
       await fundament.k8s.create(
         { ...CLUSTER_RESOURCE, namespace },
         buildCluster({
           name,
           namespace,
-          imageName: field('imageName').value,
-          size: field('size').value.trim(),
-          storageClass: field('storageClass').value.trim(),
+          imageName: fieldValue('imageName'),
+          size: fieldValue('size'),
+          storageClass: fieldValue('storageClass'),
         }),
       );
       navigateToDetail(name, namespace);

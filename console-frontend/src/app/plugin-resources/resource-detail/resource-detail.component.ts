@@ -10,8 +10,6 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { firstValueFrom } from 'rxjs';
-import { create } from '@bufbuild/protobuf';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
@@ -23,8 +21,7 @@ import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
-import { NAMESPACE } from '../../../connect/tokens';
-import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
+import ProjectNamespacesService from '../project-namespaces.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel, kindToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
@@ -232,18 +229,22 @@ export default class ResourceDetailComponent implements OnInit {
     return projectId ? `/projects/${projectId}` : '/';
   });
 
-  private namespaceClient = inject(NAMESPACE);
+  private projectNamespaces = inject(ProjectNamespacesService);
 
   // The project's namespaces, forwarded to the plugin iframe: custom detail
   // UIs embed create flows (the ceph-rook Buckets section), which need the
-  // same namespace choices the create view gets.
+  // same namespace choices the create view gets. Cluster-side names
+  // ("tnt-<project>--<name>"): the plugin passes them to the Kubernetes API as is.
   namespaces = signal<string[]>([]);
+
+  // The project-level name for each of namespaces, which the plugin shows.
+  namespaceDisplayNames = signal<Record<string, string>>({});
 
   private async loadNamespaces(projectId: string): Promise<void> {
     try {
-      const request = create(ListProjectNamespacesRequestSchema, { projectId });
-      const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
-      this.namespaces.set(response.namespaces.map((n) => n.name));
+      const { names, displayNames } = await this.projectNamespaces.list(projectId);
+      this.namespaces.set(names);
+      this.namespaceDisplayNames.set(displayNames);
     } catch (err) {
       // Transient failure: plugin UIs fall back to a free-text namespace field.
       // eslint-disable-next-line no-console

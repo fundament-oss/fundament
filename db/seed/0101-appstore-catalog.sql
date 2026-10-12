@@ -88,7 +88,6 @@ Create PostgreSQL databases for your projects from the console. The plugin insta
 
 - **Self-service**: Project admins create a database by choosing a name, namespace, size, PostgreSQL version and StorageClass
 - **Ready to connect**: Every database comes with database `app`, user `app` and a Secret holding the credentials and a connection URI
-- **Protected**: A database cannot be changed or deleted from the console
 
 ## Limitations
 
