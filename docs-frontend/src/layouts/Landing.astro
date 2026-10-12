@@ -4,6 +4,7 @@
 // pipeline, so the landing page would otherwise ship without the design system.
 import '@nldd/design-system/styles';
 import { umamiScriptAttrs } from '../analytics';
+import EnvironmentBanner from '../components/EnvironmentBanner.astro';
 
 export interface Props {
   title?: string;
@@ -34,6 +35,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <script is:inline {...umamiScriptAttrs}></script>
   </head>
   <body>
+    <EnvironmentBanner />
     <nldd-app-view>
       <nldd-page>
         <nldd-skip-link slot="header" text="Skip navigation">

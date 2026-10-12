@@ -24,3 +24,57 @@
 .sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
   @apply tracking-[-0.02em];
 }
+
+/* The test-environment banner (EnvironmentBanner.astro) is fixed above
+   Starlight's own fixed header, so everything Starlight positions against the
+   top of the viewport moves down by the banner's height. Mirrors the rules in
+   Starlight's PageFrame, TwoColumnContent, MobileTableOfContents,
+   MobileMenuToggle and Page components. */
+.environment-banner--fixed {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: calc(var(--sl-z-index-navbar) + 1);
+}
+
+html[data-environment-banner] {
+  scroll-padding-top: calc(
+    1.5rem + var(--sl-nav-height) + var(--sl-mobile-toc-height) +
+      var(--environment-banner-height, 0px)
+  );
+
+  .header {
+    inset-block-start: var(--environment-banner-height, 0px);
+  }
+
+  .sidebar-pane {
+    inset-block-start: calc(var(--sl-nav-height) + var(--environment-banner-height, 0px));
+  }
+
+  .main-frame {
+    padding-top: calc(
+      var(--sl-nav-height) + var(--sl-mobile-toc-height) + var(--environment-banner-height, 0px)
+    );
+  }
+
+  .right-sidebar {
+    padding-top: calc(var(--sl-nav-height) + var(--environment-banner-height, 0px));
+  }
+
+  mobile-starlight-toc nav {
+    top: calc(var(--sl-nav-height) - 1px + var(--environment-banner-height, 0px));
+  }
+
+  starlight-menu-button button {
+    top: calc(
+      (var(--sl-nav-height) - var(--sl-menu-button-size)) / 2 +
+        var(--environment-banner-height, 0px)
+    );
+  }
+}
+
+@media (min-width: 72em) {
+  html[data-environment-banner] {
+    scroll-padding-top: calc(1.5rem + var(--sl-nav-height) + var(--environment-banner-height, 0px));
+  }
+}

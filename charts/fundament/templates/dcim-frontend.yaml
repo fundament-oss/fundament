@@ -10,7 +10,8 @@ data:
   config.json: |
     {
       "apiUrl": "{{ $.Values.externalUrls.dcimApi }}",
-      "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}"
+      "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}",
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "dcim") }}"
     }
 
 ---

@@ -24,7 +24,6 @@ import '@nldd/design-system/dropdown';
 import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/inline-dialog';
 import { RouterOutlet, RouterLink, Router, ActivatedRoute } from '@angular/router';
-import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FundamentLogoIconComponent } from './icons';
 import DeveloperLinkComponent from './developer-link.component';
@@ -37,13 +36,7 @@ import { VARIANT } from './variant';
 
 @Component({
   selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    NgTemplateOutlet,
-    FundamentLogoIconComponent,
-    DeveloperLinkComponent,
-  ],
+  imports: [RouterOutlet, RouterLink, FundamentLogoIconComponent, DeveloperLinkComponent],
   host: {
     class: 'flex min-h-dvh flex-col',
   },
@@ -74,6 +67,10 @@ export default class App {
 
   // The portal's own pages by URL; '' where no portal is deployed alongside.
   protected readonly developerUrl = this.configService.getConfig().developerUrl ?? '';
+
+  // The same site on the PoC; set only in a test environment, which the banner
+  // above the header then says this is.
+  protected readonly pocUrl = this.configService.getConfig().pocUrl ?? '';
 
   private session = inject(SessionService);
 
@@ -111,6 +108,11 @@ export default class App {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.searchQuery.set(params.get('q') ?? '');
     });
+
+    // Only a test environment shows the status bar, so only there is it
+    // fetched: the real marketplace does not carry it in its first load. The
+    // server-rendered bar upgrades in place once it arrives.
+    if (this.pocUrl) import('@nldd/design-system/status-bar').catch(() => {});
 
     if (this.variant === 'registry') {
       // Resolve the membership up front so the picker is filled before the

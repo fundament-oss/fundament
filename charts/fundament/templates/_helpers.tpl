@@ -152,3 +152,14 @@ Usage: include "fundament.corsOrigins" (dict "root" $ "frontends" (list $.Values
 {{- define "fundament.corsOrigins" -}}
 {{- .root.Values.externalUrls.corsAllowedOrigins | default (compact .frontends | join ",") -}}
 {{- end }}
+
+{{/*
+Where a frontend's test-environment banner links to: the same site on the PoC,
+or "" when environmentBanner is off, which hides the banner.
+Usage: include "fundament.pocUrl" (dict "root" $ "site" "console")
+*/}}
+{{- define "fundament.pocUrl" -}}
+{{- if .root.Values.environmentBanner.enabled -}}
+https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
+{{- end -}}
+{{- end }}

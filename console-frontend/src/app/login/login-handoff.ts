@@ -25,7 +25,7 @@ const HANDOFF_APPS = {
     // Says why a visitor who asked for the portal is looking at a console
     // login on another host. Without it the page reads as a wrong turn.
     description:
-      'Publishing plugins uses your Fundament account. Signing in here takes you back to the Developer Portal.',
+      'Publishing plugins uses your Fundament account. Signing in here takes you back to the Plugin Developer Portal.',
   },
 } as const satisfies Record<string, { configKey: keyof AppConfiguration; description: string }>;
 

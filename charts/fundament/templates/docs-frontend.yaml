@@ -1,5 +1,21 @@
 {{- if $.Values.docsFrontend.enabled }}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docs-frontend-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "docs-frontend" "component" "frontend") | nindent 4 }}
+data:
+  # A script rather than JSON: the docs are static pages with no app to fetch it
+  # first, and a classic script in the head has run before the banner renders,
+  # so the page does not shift when it appears.
+  config.js: |
+    window.fundamentConfig = {
+      pocUrl: "{{ include "fundament.pocUrl" (dict "root" $ "site" "docs") }}"
+    };
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,6 +38,16 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          volumeMounts:
+            # subPath: the image ships a default config.js in the same directory.
+            - name: config
+              mountPath: /usr/share/nginx/html/config/config.js
+              subPath: config.js
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: docs-frontend-config
 
 ---
 apiVersion: v1

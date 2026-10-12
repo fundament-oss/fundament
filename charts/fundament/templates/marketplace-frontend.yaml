@@ -21,7 +21,8 @@ data:
       "adminApiUrl": "",
       "consoleUrl": "{{ $.Values.externalUrls.console }}",
       "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}",
-      "authnApiUrl": "{{ $.Values.externalUrls.authn }}"
+      "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "marketplace") }}"
     }
 
 {{- /*
@@ -52,7 +53,7 @@ spec:
         # server.ts reads the mounted config.json once at process start, so a
         # changed URL only reaches the browser; roll the pods to keep the
         # server-rendered first paint on the same APIs.
-        checksum/config: {{ printf "%s|%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry $.Values.externalUrls.authn | sha256sum }}
+        checksum/config: {{ printf "%s|%s|%s|%s|%s" $.Values.externalUrls.marketplaceCatalogApi $.Values.externalUrls.console $.Values.externalUrls.marketplaceRegistry $.Values.externalUrls.authn (include "fundament.pocUrl" (dict "root" $ "site" "marketplace")) | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "marketplace-frontend" "component" "frontend") | nindent 8 }}
     spec:

@@ -1,0 +1,47 @@
+---
+// Says that this is a test environment (a PR preview, the sandbox) and links to
+// the same site on the PoC. The site is static and the same build serves every
+// environment, so whether it shows is read at runtime from /config/config.js,
+// which the deployment mounts (see the chart's docs-frontend.yaml).
+//
+// `fixed` is for Starlight's pages, whose header is fixed to the top of the
+// viewport: the banner is fixed above it, and starlight-custom.css moves the
+// header and everything positioned against it down by the banner's height.
+interface Props {
+  fixed?: boolean;
+}
+
+const { fixed = false } = Astro.props;
+---
+
+{/* A classic script, so it has run by the time the one below reads it. */}
+<script is:inline src="/config/config.js"></script>
+<nldd-status-bar
+  id="environment-banner"
+  class:list={{ 'environment-banner--fixed': fixed }}
+  variant="warning"
+  text="This is a test environment. Go to the Fundament PoC"
+  hidden></nldd-status-bar>
+<script is:inline>
+  /* eslint-disable */
+  (function () {
+    var pocUrl = window.fundamentConfig && window.fundamentConfig.pocUrl;
+    var banner = document.getElementById('environment-banner');
+    if (!pocUrl || !banner) return;
+
+    banner.setAttribute('href', pocUrl);
+    banner.hidden = false;
+    if (!banner.classList.contains('environment-banner--fixed')) return;
+
+    /* Measured rather than assumed: it has no height until it upgrades. */
+    var root = document.documentElement;
+    root.setAttribute('data-environment-banner', '');
+    new ResizeObserver(function () {
+      root.style.setProperty('--environment-banner-height', banner.offsetHeight + 'px');
+    }).observe(banner);
+  })();
+</script>
+
+<script>
+  import '@nldd/design-system/status-bar';
+</script>

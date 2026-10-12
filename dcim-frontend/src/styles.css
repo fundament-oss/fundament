@@ -227,3 +227,31 @@ input[type='radio']:checked {
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 150ms ease;
 }
+
+/* The test-environment status bar (app.html) stays at the top above the app
+   view, at the 24px the design system fixes it to. The app view gives that up,
+   so the two fill the viewport together rather than scrolling it by the bar,
+   and publishes it as a bar outside the page: a page's floor and its sticky
+   header both allow for --context-inset-top. app-root becomes a block so the
+   bar has something to stick in and the app view a height to take its share of. */
+app-root:has(> nldd-status-bar) {
+  display: block;
+  height: 100%;
+
+  > nldd-status-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  nldd-app-view {
+    --context-inset-top: 24px;
+
+    height: calc(100% - 24px);
+  }
+
+  nldd-app-view[data-scroll='root'] {
+    height: auto;
+    min-height: calc(100dvh - 24px);
+  }
+}

@@ -1,12 +1,26 @@
 {{/*
 The guided walkthrough of the console: the same nginx image as console-frontend, built
 from the demo entrypoint (`bun run build:demo`). All of its data is compiled into the
-bundle, so unlike console-frontend it needs no config.json ConfigMap and no backend.
+bundle, so unlike console-frontend it needs no backend. Its config.json carries only
+pocUrl, for the test-environment banner; the demo takes nothing else from it.
 CONNECT_SRC is deliberately left unset — nginx.conf references it, and the CMD's envsubst
 resolves it to an empty string, giving a valid `connect-src 'self' ;`. The demo makes no
 network calls, so there is nothing to allow.
 */}}
 {{- if $.Values.consoleDemoFrontend.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: console-demo-frontend-config
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 4 }}
+data:
+  config.json: |
+    {
+      "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "console-demo") }}"
+    }
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,6 +44,15 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/assets/config/config.json
+              subPath: config.json
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: console-demo-frontend-config
 
 ---
 apiVersion: v1

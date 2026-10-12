@@ -39,6 +39,13 @@ externalUrls:
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
   cookieDomain: "" # e.g., example.com
 
+# Marks a test environment (PR previews, the sandbox) as one. Each frontend
+# then shows a banner above its header saying so, linking to the same site on
+# the PoC: https://<site>.<pocDomain>, e.g. https://console.fundament-poc.nl.
+environmentBanner:
+  enabled: false
+  pocDomain: fundament-poc.nl
+
 # appProtocol on the Services of the Connect APIs (organization, dcim and the
 # marketplace APIs). `kubernetes.io/h2c` makes the gateway speak cleartext
 # HTTP/2 to the pod, which gRPC clients need end to end; a gateway that does not

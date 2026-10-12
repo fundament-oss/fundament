@@ -182,6 +182,10 @@ export default class App implements OnInit {
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
+  /** The same site on the PoC; set only in a test environment, which the
+   *  banner above the app then says this is. */
+  protected readonly pocUrl = this.configService.getConfig().pocUrl ?? '';
+
   // Multi-org picker state (shown after login for multi-org users)
   showOrgPicker = signal(false);
 
@@ -261,6 +265,10 @@ export default class App implements OnInit {
 
   async ngOnInit() {
     this.initializeTheme();
+    // Only a test environment shows the status bar, so only there is it
+    // fetched: the real console does not carry it in its first load. The bar
+    // upgrades in place once it arrives.
+    if (this.pocUrl) import('@nldd/design-system/status-bar').catch(() => {});
     this.tourUrl.set(App.tourUrlInEnglish(this.configService.getConfig().consoleDemoUrl));
 
     // Initialize authentication state
@@ -425,11 +433,16 @@ export default class App implements OnInit {
     // chunk. `router.url` then still reads as the page being left, and writing
     // from it would cancel that arrival and drop the page it named: opening
     // /clusters would land on the organization's empty root instead.
+    //
+    // The login page belongs to no organization, and is left alone: a session
+    // that turns up while it is open (one that already existed, or the form's
+    // own) would otherwise move it to /organizations/<name>/login, which matches
+    // no page, and a hand-off back to another surface would land there instead.
     const arriving = this.router.getCurrentNavigation();
     const address = arriving
       ? this.router.serializeUrl(arriving.finalUrl ?? arriving.extractedUrl)
       : this.router.url;
-    if (name && organizationOf(address) !== name) {
+    if (name && !isLoginUrl(address) && organizationOf(address) !== name) {
       this.router.navigateByUrl(inOrganization(name, address), { replaceUrl: true });
     }
   }
