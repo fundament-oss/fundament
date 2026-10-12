@@ -51,10 +51,10 @@ funops organization member remove <organization> <user-id|email>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
-funops plugin list [--status <status>|all]
+funops plugin list [--status <status|all>]
 funops plugin approve <plugin|plugin-id> <version> --reviewer <user-id|email> [--feedback <text>]
 funops plugin request-changes <plugin|plugin-id> <version> --reviewer <user-id|email> --feedback <text>
-funops plugin reject <plugin|plugin-id> <version> --reviewer <user-id|email> --reason <reason> [--feedback <text>]
+funops plugin reject <plugin|plugin-id> <version> --reviewer <user-id|email> --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
 ```
 
 Organizations are addressed by name, users by ID or email address. Every
