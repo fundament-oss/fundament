@@ -8,6 +8,7 @@ import { provideRouter, withRouterConfig, withInMemoryScrolling } from '@angular
 import { provideClientHydration, withNoIncrementalHydration } from '@angular/platform-browser';
 import routes from './app.routes';
 import { ConfigService } from './config.service';
+import provideStaleChunkReload from './reload-on-stale-chunk';
 
 // eslint-disable-next-line import-x/prefer-default-export
 export const appConfig: ApplicationConfig = {
@@ -28,6 +29,7 @@ export const appConfig: ApplicationConfig = {
       // Scroll to top on navigation and restore position on back/forward.
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
     ),
+    provideStaleChunkReload(),
     // The API base URLs come from /assets/config/config.json, so the transports
     // cannot be constructed until it has been read.
     provideAppInitializer(async () => {
