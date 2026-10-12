@@ -76,15 +76,16 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 const projectGetByName = `-- name: ProjectGetByName :one
 SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
-WHERE name = $1 AND deleted IS NULL
+WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL
 `
 
 type ProjectGetByNameParams struct {
-	Name string
+	ClusterID uuid.UUID
+	Name      string
 }
 
 func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNameParams) (TenantProject, error) {
-	row := q.db.QueryRow(ctx, projectGetByName, arg.Name)
+	row := q.db.QueryRow(ctx, projectGetByName, arg.ClusterID, arg.Name)
 	var i TenantProject
 	err := row.Scan(
 		&i.ID,

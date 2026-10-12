@@ -25,7 +25,7 @@ WHERE id = $1 AND deleted IS NULL;
 -- name: ProjectGetByName :one
 SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
-WHERE name = $1 AND deleted IS NULL;
+WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL;
 
 -- name: ProjectCreate :one
 INSERT INTO tenant.projects (cluster_id, name, alias)

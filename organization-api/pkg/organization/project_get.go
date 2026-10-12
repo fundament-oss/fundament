@@ -20,7 +20,8 @@ func (s *Server) GetProjectByName(
 	req *organizationv1.GetProjectByNameRequest,
 ) (*organizationv1.GetProjectResponse, error) {
 	project, err := s.queries.ProjectGetByName(ctx, db.ProjectGetByNameParams{
-		Name: req.GetName(),
+		ClusterID: uuid.MustParse(req.GetClusterId()),
+		Name:      req.GetName(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
