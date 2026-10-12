@@ -296,7 +296,7 @@ export default function createDemoTransport(): Transport {
       getProjectByName: async (req) => {
         await delay();
         return create(GetProjectResponseSchema, {
-          project: fx.projects.find((p) => p.name === req.name),
+          project: fx.projects.find((p) => p.clusterId === req.clusterId && p.name === req.name),
         });
       },
       listProjectMembers: async (req) => {

@@ -3,18 +3,19 @@
 page_title: "fundament_project Data Source - fundament"
 subcategory: ""
 description: |-
-  Fetches a single project by name. Project names are unique per cluster, not per organization: when two clusters have a project with this name, set cluster_name.
+  Fetches a single project by its cluster and name. Project names are unique per cluster, not per organization.
 ---
 
 # fundament_project (Data Source)
 
-Fetches a single project by name. Project names are unique per cluster, not per organization: when two clusters have a project with this name, set cluster_name.
+Fetches a single project by its cluster and name. Project names are unique per cluster, not per organization.
 
 ## Example Usage
 
 ```terraform
 data "fundament_project" "example" {
-  name = "my-project"
+  cluster_name = "my-cluster"
+  name         = "my-project"
 }
 ```
 
@@ -23,11 +24,8 @@ data "fundament_project" "example" {
 
 ### Required
 
+- `cluster_name` (String) The name of the cluster the project belongs to.
 - `name` (String) The name of the project to look up.
-
-### Optional
-
-- `cluster_name` (String) The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name. Null when you may view the project but not its cluster.
 
 ### Read-Only
 

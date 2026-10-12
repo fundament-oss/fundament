@@ -3,7 +3,6 @@ package provider
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -37,14 +36,20 @@ func TestAccProjectDataSource(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		// Two clusters each have a project with the name; cluster_name picks one.
 		Steps: []resource.TestStep{
 			{
-				// Two clusters each have a project with the name.
-				Config:      testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, ""),
-				ExpectError: regexp.MustCompile(`several clusters have a project`),
+				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, "a"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
+					resource.TestCheckResourceAttrPair("data.fundament_project.test", "id", "fundament_project.a", "id"),
+					resource.TestCheckResourceAttrPair("data.fundament_project.test", "cluster_id", "fundament_cluster.a", "id"),
+					resource.TestCheckResourceAttr("data.fundament_project.test", "cluster_name", "tf-acc-pds-a-"+suffix),
+					resource.TestMatchResourceAttr("data.fundament_project.test", "created", rfc3339),
+				),
 			},
 			{
-				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, "tf-acc-pds-b-"+suffix),
+				Config: testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, "b"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.fundament_project.test", "name", projectName),
 					resource.TestCheckResourceAttrPair("data.fundament_project.test", "id", "fundament_project.b", "id"),
@@ -57,11 +62,7 @@ func TestAccProjectDataSource(t *testing.T) {
 	})
 }
 
-func testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, clusterName string) string {
-	clusterArg := ""
-	if clusterName != "" {
-		clusterArg = fmt.Sprintf("cluster_name = %q", clusterName)
-	}
+func testAccProjectDataSourceConfig(projectName, suffix, endpoint, organizationID, cluster string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
   endpoint        = %[3]q
@@ -92,9 +93,9 @@ resource "fundament_project" "b" {
 }
 
 data "fundament_project" "test" {
-  name       = %[1]q
-  %[5]s
-  depends_on = [fundament_project.a, fundament_project.b]
+  name         = %[1]q
+  cluster_name = fundament_cluster.%[5]s.name
+  depends_on   = [fundament_project.a, fundament_project.b]
 }
-`, projectName, suffix, endpoint, organizationID, clusterArg)
+`, projectName, suffix, endpoint, organizationID, cluster)
 }

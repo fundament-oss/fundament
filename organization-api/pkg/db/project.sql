@@ -22,13 +22,10 @@ SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE id = $1 AND deleted IS NULL;
 
--- name: ProjectListByName :many
--- Project names are unique per cluster, so without a cluster there can be several.
+-- name: ProjectGetByName :one
 SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
-WHERE name = @name
-    AND (sqlc.narg('cluster_id')::uuid IS NULL OR cluster_id = sqlc.narg('cluster_id'))
-    AND deleted IS NULL;
+WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL;
 
 -- name: ProjectCreate :one
 INSERT INTO tenant.projects (cluster_id, name, alias)

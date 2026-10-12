@@ -68,7 +68,7 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"project_name": schema.StringAttribute{
-				Description: "The name of the project that owns this namespace. Either project_id or project_name must be specified, but not both.",
+				Description: "The name of the project that owns this namespace. Either project_id or project_name must be specified, but not both. With project_name, set cluster_id or cluster_name.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -77,7 +77,7 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"cluster_id": schema.StringAttribute{
-				Description: "The ID of the cluster where this namespace is deployed. Derived from the project.",
+				Description: "The ID of the cluster where this namespace is deployed. Derived from the project; with project_name, set this or cluster_name.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -86,7 +86,7 @@ func (r *NamespaceResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"cluster_name": schema.StringAttribute{
-				Description: "The name of the cluster where this namespace is deployed. Derived from the project.",
+				Description: "The name of the cluster where this namespace is deployed. Derived from the project; with project_name, set this or cluster_id.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -137,15 +137,27 @@ func (r *NamespaceResource) resolveProjectID(ctx context.Context, state *Namespa
 		return state.ProjectID.ValueString(), nil
 	}
 
-	// Resolve project_name to project_id
+	// Project names are unique per cluster, so project_name needs the cluster.
+	clusterID := state.ClusterID.ValueString()
+	if clusterID == "" && !state.ClusterName.IsNull() && !state.ClusterName.IsUnknown() {
+		cluster, err := r.client.ClusterService.GetClusterByName(ctx, organizationv1.GetClusterByNameRequest_builder{
+			Name: state.ClusterName.ValueString(),
+		}.Build())
+		if err != nil {
+			return "", fmt.Errorf("unable to find cluster with name %q: %s", state.ClusterName.ValueString(), err.Error())
+		}
+		clusterID = cluster.GetCluster().GetId()
+	}
+	if clusterID == "" {
+		return "", fmt.Errorf("'project_name' needs 'cluster_id' or 'cluster_name'")
+	}
+
 	getReq := organizationv1.GetProjectByNameRequest_builder{
-		Name: state.ProjectName.ValueString(),
+		ClusterId: clusterID,
+		Name:      state.ProjectName.ValueString(),
 	}.Build()
 
 	getResp, err := r.client.ProjectService.GetProjectByName(ctx, getReq)
-	if connect.CodeOf(err) == connect.CodeFailedPrecondition {
-		return "", fmt.Errorf("several clusters have a project %q; set project_id instead of project_name", state.ProjectName.ValueString())
-	}
 	if err != nil {
 		return "", fmt.Errorf("unable to find project with name %q: %s", state.ProjectName.ValueString(), err.Error())
 	}

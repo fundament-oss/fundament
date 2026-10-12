@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -20,50 +19,25 @@ func (s *Server) GetProjectByName(
 	ctx context.Context,
 	req *organizationv1.GetProjectByNameRequest,
 ) (*organizationv1.GetProjectResponse, error) {
-	var clusterID pgtype.UUID
-	if req.HasClusterId() {
-		clusterID = pgtype.UUID{Bytes: uuid.MustParse(req.GetClusterId()), Valid: true}
-	}
-
-	projects, err := s.queries.ProjectListByName(ctx, db.ProjectListByNameParams{
+	project, err := s.queries.ProjectGetByName(ctx, db.ProjectGetByNameParams{
+		ClusterID: uuid.MustParse(req.GetClusterId()),
 		Name:      req.GetName(),
-		ClusterID: clusterID,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project: %w", err))
 	}
 
-	// Auth is done after the DB call because we don't know the project IDs
-	// yet. Only projects the caller may view count, so the answer does not
-	// reveal projects on clusters the caller cannot see. A check that fails
-	// for another reason fails the call: skipping it could hide an ambiguity.
-	var visible []db.TenantProject
-	var permErr error
-	for i := range projects {
-		err := s.checkPermission(ctx, authz.CanView(), authz.Project(projects[i].ID))
-		switch {
-		case connect.CodeOf(err) == connect.CodePermissionDenied:
-			permErr = err
-		case err != nil:
-			return nil, err
-		default:
-			visible = append(visible, projects[i])
-		}
+	// Auth is done after the DB call because we don't know the project ID yet.
+	if err := s.checkPermission(ctx, authz.CanView(), authz.Project(project.ID)); err != nil {
+		return nil, err
 	}
 
-	switch {
-	case len(visible) == 1:
-		return organizationv1.GetProjectResponse_builder{
-			Project: projectFromGetRow(&visible[0]),
-		}.Build(), nil
-	case len(visible) > 1:
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("several clusters have a project named %q; set cluster_id", req.GetName()))
-	case permErr != nil:
-		return nil, permErr
-	default:
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
-	}
+	return organizationv1.GetProjectResponse_builder{
+		Project: projectFromGetRow(&project),
+	}.Build(), nil
 }
 
 func (s *Server) GetProject(

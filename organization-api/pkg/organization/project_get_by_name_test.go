@@ -13,8 +13,7 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
-// Project names are unique per cluster, so a name alone can match projects on
-// several clusters.
+// Project names are unique per cluster, so the cluster is part of the lookup.
 func Test_Project_GetByName_SameNameOnTwoClusters(t *testing.T) {
 	t.Parallel()
 
@@ -50,18 +49,23 @@ func Test_Project_GetByName_SameNameOnTwoClusters(t *testing.T) {
 	}
 
 	_, err := client.GetProjectByName(ctx, organizationv1.GetProjectByNameRequest_builder{Name: "shared"}.Build())
-	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 
 	for clusterID, projectID := range projectIDs {
 		resp, err := client.GetProjectByName(ctx, organizationv1.GetProjectByNameRequest_builder{
 			Name:      "shared",
-			ClusterId: &clusterID,
+			ClusterId: clusterID,
 		}.Build())
 		require.NoError(t, err)
 		assert.Equal(t, projectID, resp.GetProject().GetId())
 		assert.Equal(t, clusterID, resp.GetProject().GetClusterId())
 	}
 
-	_, err = client.GetProjectByName(ctx, organizationv1.GetProjectByNameRequest_builder{Name: "missing"}.Build())
-	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+	for clusterID := range projectIDs {
+		_, err = client.GetProjectByName(ctx, organizationv1.GetProjectByNameRequest_builder{
+			Name:      "missing",
+			ClusterId: clusterID,
+		}.Build())
+		assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+	}
 }
