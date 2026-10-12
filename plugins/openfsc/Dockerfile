@@ -23,7 +23,7 @@ COPY . .
 COPY --from=console-ui /console ./plugins/openfsc/console
 RUN CGO_ENABLED=0 go build -o /openfsc-plugin ./plugins/openfsc/
 
-FROM alpine:3.21
+FROM alpine:3.24
 
 # helm: the plugin installs the prerequisite charts (cert-manager,
 # CloudNativePG) and the vendored openfsc-operator chart at runtime.

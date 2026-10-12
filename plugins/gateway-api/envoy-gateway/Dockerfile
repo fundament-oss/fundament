@@ -20,7 +20,7 @@ COPY . .
 COPY --from=console-ui /console ./plugins/gateway-api/envoy-gateway/console
 RUN CGO_ENABLED=0 go build -o /bin/gateway-api-envoy ./plugins/gateway-api/envoy-gateway
 
-FROM alpine:3.22
+FROM alpine:3.24
 
 RUN apk add --no-cache helm
 
