@@ -31,7 +31,7 @@ Manages the clusters, projects, namespaces and members of a Fundament organizati
 | [`fundament_project`](data-sources/project.md) | Fetches a single project by name. |
 | [`fundament_project_members`](data-sources/project_members.md) | Fetches the list of members for a project. |
 | [`fundament_project_namespaces`](data-sources/project_namespaces.md) | Fetches the list of namespaces belonging to a project. |
-| [`fundament_projects`](data-sources/projects.md) | Fetches the list of projects for the current organization. |
+| [`fundament_projects`](data-sources/projects.md) | Fetches the projects on a cluster. |
 
 ## Example Usage
 
