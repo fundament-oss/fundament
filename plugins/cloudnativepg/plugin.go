@@ -18,7 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	pluginerrors "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/errors"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
-	"github.com/fundament-oss/fundament/plugins/internal/cnpg"
+	"github.com/fundament-oss/fundament/plugins/cloudnativepg/cnpg"
 )
 
 // healthyPhase is the status.phase CNPG reports for a Cluster that is up.

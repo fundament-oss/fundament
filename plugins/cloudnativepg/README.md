@@ -21,12 +21,14 @@ Blocking updates protects the resource, not the data. The built-in `admin` role 
 
 ## Shared operator
 
-openfsc installs the same `cnpg` release. Both call `plugins/internal/cnpg`, which:
+A cluster runs one CloudNativePG operator, and the openfsc plugin installs the same `cnpg` release in `cnpg-system` with its own `helm upgrade --install`, pinned to chart 0.24.0, on every start. This plugin's install (`cnpg/`):
 
-- keeps the chart's default values, so neither plugin flips the other's settings;
-- never downgrades: it installs the newer of its pinned chart version and the release's own, whatever state the release is in, so an older plugin leaves a newer operator and its CRDs in place;
-- skips the install when the release is deployed at that version and the operator Deployment and CRDs exist. When one was deleted, it reinstalls at the deployed version to restore it;
-- waits while the release is `pending-*`. For up to 10 minutes that is the other plugin's install in progress, and the plugin reports Installing. Past that, the pod running the install was most likely killed during `helm --wait` and the release stays pending. Recover a stuck upgrade with `helm -n cnpg-system rollback cnpg`. A stuck first install (`pending-install`) has no earlier revision to roll back to, so it has to be uninstalled. The install may have created the operator and its CRDs before it was killed, and the chart ships the CRDs as templates, so the uninstall deletes them and every database with them. Check that `kubectl get clusters.postgresql.cnpg.io -A` lists none first, then run `helm -n cnpg-system uninstall cnpg`.
+- keeps the chart's default values, as openfsc does, so neither flips the other's settings;
+- never downgrades: it installs the newer of its pinned chart version and the release's own, whatever state the release is in, so a newer operator and its CRDs stay in place;
+- skips the install when the release is deployed at that version and the operator Deployment and CRDs exist. When one was deleted, it reinstalls at the deployed version to restore it, at startup and on every reconcile;
+- waits while the release is `pending-*` or `uninstalling`. For up to 10 minutes that is another install (most likely openfsc's) or an uninstall in progress, and the plugin reports Installing. Past that, the pod running the install was most likely killed during `helm --wait` and the release stays pending. Recover a stuck upgrade with `helm -n cnpg-system rollback cnpg`. A stuck first install (`pending-install`) has no earlier revision to roll back to, so it has to be uninstalled. The install may have created the operator and its CRDs before it was killed, and the chart ships the CRDs as templates, so the uninstall deletes them and every database with them. Check that `kubectl get clusters.postgresql.cnpg.io -A` lists none first, then run `helm -n cnpg-system uninstall cnpg`. A stuck uninstall is finished with the same `helm uninstall`.
+
+openfsc has none of these checks. Keep `Version` in `cnpg/cnpg.go` at openfsc's pin: if this plugin moves ahead, the next openfsc restart downgrades the operator and its CRDs.
 
 ## User RBAC
 

@@ -20,7 +20,7 @@ import (
 
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	sdktesting "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/testing"
-	"github.com/fundament-oss/fundament/plugins/internal/cnpg"
+	"github.com/fundament-oss/fundament/plugins/cloudnativepg/cnpg"
 )
 
 func TestPluginImplementsInterfaces(t *testing.T) {

@@ -1,11 +1,11 @@
-// Package cnpg installs the CloudNativePG operator for the plugins that need it
-// (cloudnativepg, openfsc). They share one Helm release, so they share the
-// chart pin and the install rules here.
+// Package cnpg installs the CloudNativePG operator. The openfsc plugin installs
+// the same Helm release with its own `helm upgrade --install`, since a cluster
+// runs one operator for the CRDs, so this release can be held or upgraded by
+// someone else.
 //
-// A shared constant keeps plugins in step only when their images come from the
-// same commit; installed plugins can run different versions. Install therefore
-// never downgrades the release: an older plugin leaves a newer operator (and the
-// CRDs its chart ships as templates) in place, whatever state the release is in.
+// Install therefore never downgrades the release: a newer operator (and the
+// CRDs its chart ships as templates) stays in place, whatever state the release
+// is in.
 package cnpg
 
 import (
@@ -36,7 +36,7 @@ const (
 // likely killed. It covers helm's default --wait timeout (5m) with slack.
 const pendingGrace = 10 * time.Minute
 
-// CRDNames are the CRDs a plugin verifies after Install.
+// CRDNames are the CRDs the plugin verifies after Install.
 var CRDNames = []string{
 	"clusters.postgresql.cnpg.io",
 }
@@ -46,7 +46,7 @@ var CRDNames = []string{
 // Callers report it as installing, not degraded, and retry.
 var ErrInProgress = errors.New("install in progress")
 
-// Install installs or upgrades the shared operator release to Version. When
+// Install installs or upgrades the operator release to Version. When
 // the release is already deployed at Version or newer and the operator's
 // Deployment and CRDs are all there, it does nothing, so a plugin restart
 // does not re-run `helm upgrade --wait`. When one of them was deleted, it
@@ -73,8 +73,8 @@ func Install(ctx context.Context, kube client.Client) error {
 		}
 	}
 	if err := h.InstallFromRepo(ctx, Release, Chart, Repo, version, nil); err != nil {
-		// Both plugins can read the release before either installs it; the
-		// one that loses the race finds the other's install holding it.
+		// openfsc can read the release absent too and install it first; this
+		// install then finds openfsc's holding it.
 		if concurrentOperation(err) {
 			return fmt.Errorf("%w: another install of release %s/%s started first: %w", ErrInProgress, Namespace, Release, err)
 		}
