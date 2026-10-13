@@ -140,9 +140,11 @@ export default class LoginComponent implements OnInit {
     // page opens on a fresh load, which is how another surface sends a visitor
     // here. Waiting for that answer (the same request, not a second one) is what
     // sends a visitor who is already signed in straight back to that surface,
-    // rather than showing them a form they do not need.
+    // rather than showing them a form they do not need. A hand-off asks even
+    // without this origin's auth hint: the session it borrows lives in the
+    // parent-domain cookie, which the hint may not know about.
     if (!this.apiService.isAuthenticated()) {
-      await this.apiService.initializeAuth();
+      await this.apiService.initializeAuth({ ignoreHint: this.handoff !== null });
     }
     if (this.apiService.isAuthenticated()) {
       // Already signed in, so there is nothing to ask. Somebody arriving from

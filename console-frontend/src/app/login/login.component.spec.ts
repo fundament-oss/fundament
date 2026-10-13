@@ -51,6 +51,7 @@ async function openLogin(signedIn: boolean) {
 
   return {
     login: TestBed.createComponent(LoginComponent).componentInstance,
+    initializeAuth,
     navigateByUrl,
   };
 }
@@ -60,10 +61,13 @@ describe('LoginComponent', () => {
 
   it('sends a visitor who is already signed in straight back to the portal', async () => {
     const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
-    const { login, navigateByUrl } = await openLogin(true);
+    const { login, initializeAuth, navigateByUrl } = await openLogin(true);
 
     await login.ngOnInit();
 
+    // The portal's session is the parent-domain cookie, which this origin's
+    // auth hint need not know about, so the check must not stop at the hint.
+    expect(initializeAuth).toHaveBeenCalledWith({ ignoreHint: true });
     expect(assign).toHaveBeenCalledWith(`${DEVELOPER_URL}/manage`);
     expect(navigateByUrl).not.toHaveBeenCalled();
   });

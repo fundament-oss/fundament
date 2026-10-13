@@ -146,6 +146,20 @@ app-root:has(> nldd-status-bar) {
     height: auto;
     min-height: calc(100dvh - 24px);
   }
+
+  /* In root-scroll mode the document scrolls and the app view grows with its
+     content. app-root grows along, or the bar runs out of room to stick in
+     once the page is scrolled past one viewport. */
+  &:has(> nldd-app-view[data-scroll='root']) {
+    height: auto;
+    min-height: 100%;
+  }
+}
+
+/* The bar is a link to the PoC. The design system gives links the default
+   cursor; this one says it can be clicked. */
+nldd-status-bar {
+  --semantics-controls-link-cursor: pointer;
 }
 
 /* Form validation */

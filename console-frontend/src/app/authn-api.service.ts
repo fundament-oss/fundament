@@ -80,20 +80,28 @@ export default class AuthnApiService {
     return this.pendingGetUserInfo;
   }
 
-  async initializeAuth(): Promise<void> {
+  /**
+   * `ignoreHint` asks authn-api even without the hint. The hint lives in this
+   * origin's storage while the cookie lives on the parent domain, so a session
+   * can exist that the hint does not know about.
+   */
+  async initializeAuth({ ignoreHint = false }: { ignoreHint?: boolean } = {}): Promise<void> {
     // Check hint flag to avoid unnecessary API calls when we know user isn't logged in
     // This is just an optimization - the server (via HTTP-only cookie) is still the source of truth
-    if (!AuthnApiService.hasAuthHint()) {
+    if (!ignoreHint && !AuthnApiService.hasAuthHint()) {
       this.currentUserSubject.next(undefined);
       return;
     }
 
     // getUserInfo() already deduplicates concurrent calls; just attach the init-specific error handler
-    await this.getUserInfo().catch(() => {
-      // Not authenticated or session expired - clear the hint
-      this.currentUserSubject.next(undefined);
-      localStorage.removeItem('auth_hint');
-    });
+    await this.getUserInfo().then(
+      () => localStorage.setItem('auth_hint', 'true'),
+      () => {
+        // Not authenticated or session expired - clear the hint
+        this.currentUserSubject.next(undefined);
+        localStorage.removeItem('auth_hint');
+      },
+    );
   }
 
   async refreshToken(): Promise<void> {

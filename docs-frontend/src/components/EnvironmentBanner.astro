@@ -45,3 +45,11 @@ const { fixed = false } = Astro.props;
 <script>
   import '@nldd/design-system/status-bar';
 </script>
+
+<style>
+  /* The bar is a link to the PoC. The design system gives links the default
+     cursor; this one says it can be clicked. */
+  nldd-status-bar {
+    --semantics-controls-link-cursor: pointer;
+  }
+</style>
