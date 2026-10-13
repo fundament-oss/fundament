@@ -47,6 +47,8 @@ docs:
     tfplugindocs generate --provider-name fundament --providers-schema "$TMP/schema.json"
     # tfplugindocs gives the provider page no list of resources and data sources;
     # build one from the generated pages, with the first sentence of each description.
+    # Glob order follows the locale (en_US sorts cluster_namespaces.md before cluster.md); pin it to match CI.
+    export LC_ALL=C
     overview() {
         printf '## %s\n\n| Name | Description |\n| --- | --- |\n' "$2"
         for f in docs/$1/*.md; do

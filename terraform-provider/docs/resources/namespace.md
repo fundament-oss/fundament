@@ -15,6 +15,7 @@ A namespace of a Fundament project. Fundament creates it on the project's cluste
 ```terraform
 resource "fundament_namespace" "example" {
   name         = "app"
+  cluster_name = "my-cluster"
   project_name = "my-project"
 }
 ```
@@ -28,10 +29,10 @@ resource "fundament_namespace" "example" {
 
 ### Optional
 
-- `cluster_id` (String) The ID of the cluster where this namespace is deployed. Derived from the project.
-- `cluster_name` (String) The name of the cluster where this namespace is deployed. Derived from the project.
+- `cluster_id` (String) The ID of the cluster where this namespace is deployed. Derived from the project; with project_name, set this or cluster_name.
+- `cluster_name` (String) The name of the cluster where this namespace is deployed. Derived from the project; with project_name, set this or cluster_id.
 - `project_id` (String) The ID of the project that owns this namespace. Either project_id or project_name must be specified, but not both.
-- `project_name` (String) The name of the project that owns this namespace. Either project_id or project_name must be specified, but not both.
+- `project_name` (String) The name of the project that owns this namespace. Either project_id or project_name must be specified, but not both. With project_name, set cluster_id or cluster_name.
 
 ### Read-Only
 

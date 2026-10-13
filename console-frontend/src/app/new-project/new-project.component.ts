@@ -12,6 +12,7 @@ import {
 import { Router } from '@angular/router';
 import { AbstractControl, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
+import { ConnectError, Code } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NotificationService } from '../notification.service';
@@ -131,6 +132,8 @@ export default class NewProjectComponent implements OnInit {
     const { value } = (event as CustomEvent<{ value: string }>).detail;
     this.projectForm.get('clusterId')?.setValue(value);
     this.projectForm.get('clusterId')?.markAsDirty();
+    // A name taken on one cluster can be free on another.
+    this.projectForm.get('name')?.updateValueAndValidity();
   }
 
   /** Dismissing the sheet leaves the flow, which unmounts this route and reveals
@@ -141,6 +144,8 @@ export default class NewProjectComponent implements OnInit {
 
   async onSubmit(event?: Event) {
     event?.preventDefault();
+    // A second submit would start a create under a new idempotency key.
+    if (this.isSubmitting()) return;
     this.formSubmitted.set(true);
 
     if (this.projectForm.invalid) {
@@ -172,6 +177,10 @@ export default class NewProjectComponent implements OnInit {
       this.closed.emit();
       this.pageNav.goTo(`/projects/${response.projectId}`);
     } catch (error) {
+      if (error instanceof ConnectError && error.code === Code.AlreadyExists) {
+        this.projectForm.get('name')?.setErrors({ taken: true });
+        return;
+      }
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to create project: ${error.message}`
@@ -209,6 +218,9 @@ export default class NewProjectComponent implements OnInit {
     }
     if (nameControl?.hasError('consecutiveHyphens')) {
       return 'Project name must not contain two hyphens in a row.';
+    }
+    if (nameControl?.hasError('taken')) {
+      return 'A project with this name already exists in this cluster.';
     }
     return '';
   }

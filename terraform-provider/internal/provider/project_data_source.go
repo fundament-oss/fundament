@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
+
+	"connectrpc.com/connect"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -35,8 +35,7 @@ func (d *ProjectDataSource) Metadata(ctx context.Context, req datasource.Metadat
 // Schema defines the schema for the data source.
 func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Fetches a single project by name. Project names are unique per cluster, not per organization: " +
-			"when two clusters have a project with this name, set cluster_name.",
+		Description: "Fetches a single project by its cluster and name. Project names are unique per cluster, not per organization.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The unique identifier of the project.",
@@ -47,9 +46,8 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Computed:    true,
 			},
 			"cluster_name": schema.StringAttribute{
-				Description: "The name of the cluster the project belongs to. Optional: only needed when several clusters have a project with this name.",
-				Optional:    true,
-				Computed:    true,
+				Description: "The name of the cluster the project belongs to.",
+				Required:    true,
 			},
 			"name": schema.StringAttribute{
 				Description: "The name of the project to look up.",
@@ -106,7 +104,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		"name": config.Name.ValueString(),
 	})
 
-	project, clusterName, err := d.findProject(ctx, config.Name.ValueString(), config.ClusterName.ValueString())
+	project, err := d.findProject(ctx, config.ClusterName.ValueString(), config.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Project", err.Error())
 		return
@@ -116,7 +114,6 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	config.Name = types.StringValue(project.GetName())
 	config.Alias = types.StringValue(project.GetAlias())
 	config.ClusterID = types.StringValue(project.GetClusterId())
-	config.ClusterName = types.StringValue(clusterName)
 	config.Created = timestampValue(project.GetCreated())
 
 	tflog.Debug(ctx, "Read project successfully", map[string]any{
@@ -127,54 +124,22 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
 }
 
-// findProject looks the project up on every cluster, or on the named one.
-// GetProjectByName does not take a cluster and returns any one of several
-// projects with the name.
-func (d *ProjectDataSource) findProject(ctx context.Context, name, clusterName string) (*organizationv1.Project, string, error) {
-	clusters := map[string]string{} // ID to name
-	if clusterName != "" {
-		resp, err := d.client.ClusterService.GetClusterByName(ctx, organizationv1.GetClusterByNameRequest_builder{Name: clusterName}.Build())
-		if err != nil {
-			return nil, "", fmt.Errorf("cluster %q: %w", clusterName, err)
-		}
-		clusters[resp.GetCluster().GetId()] = resp.GetCluster().GetName()
-	} else {
-		resp, err := d.client.ClusterService.ListClusters(ctx, organizationv1.ListClustersRequest_builder{}.Build())
-		if err != nil {
-			return nil, "", fmt.Errorf("list clusters: %w", err)
-		}
-		for _, c := range resp.GetClusters() {
-			clusters[c.GetId()] = c.GetName()
-		}
+// findProject looks the project up by the name of its cluster and its own name.
+func (d *ProjectDataSource) findProject(ctx context.Context, clusterName, name string) (*organizationv1.Project, error) {
+	cluster, err := d.client.ClusterService.GetClusterByName(ctx, organizationv1.GetClusterByNameRequest_builder{Name: clusterName}.Build())
+	if err != nil {
+		return nil, fmt.Errorf("cluster %q: %w", clusterName, err)
 	}
 
-	var found []*organizationv1.Project
-	for clusterID := range clusters {
-		resp, err := d.client.ProjectService.ListProjects(ctx, organizationv1.ListProjectsRequest_builder{ClusterId: clusterID}.Build())
-		if err != nil {
-			return nil, "", fmt.Errorf("list projects of cluster %q: %w", clusters[clusterID], err)
-		}
-		for _, p := range resp.GetProjects() {
-			if p.GetName() == name {
-				found = append(found, p)
-			}
-		}
+	resp, err := d.client.ProjectService.GetProjectByName(ctx, organizationv1.GetProjectByNameRequest_builder{
+		ClusterId: cluster.GetCluster().GetId(),
+		Name:      name,
+	}.Build())
+	if connect.CodeOf(err) == connect.CodeNotFound {
+		return nil, fmt.Errorf("cluster %q has no project %q", clusterName, name)
 	}
-
-	switch len(found) {
-	case 0:
-		if clusterName != "" {
-			return nil, "", fmt.Errorf("cluster %q has no project %q", clusterName, name)
-		}
-		return nil, "", fmt.Errorf("no cluster has a project %q", name)
-	case 1:
-		return found[0], clusters[found[0].GetClusterId()], nil
-	default:
-		names := make([]string, 0, len(found))
-		for _, p := range found {
-			names = append(names, clusters[p.GetClusterId()])
-		}
-		slices.Sort(names)
-		return nil, "", fmt.Errorf("clusters %s each have a project %q; set cluster_name", strings.Join(names, ", "), name)
+	if err != nil {
+		return nil, fmt.Errorf("project %q: %w", name, err)
 	}
+	return resp.GetProject(), nil
 }

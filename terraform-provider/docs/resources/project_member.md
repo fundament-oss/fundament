@@ -14,7 +14,8 @@ Manages a project member in Fundament. Note: when a project is created, the auth
 
 ```terraform
 data "fundament_project" "example" {
-  name = "my-project"
+  cluster_name = "my-cluster"
+  name         = "my-project"
 }
 
 data "fundament_organization_members" "all" {}
