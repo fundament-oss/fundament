@@ -56,9 +56,12 @@ func (s *Server) CreateProject(
 		Alias:     alias,
 	})
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.CheckViolation {
-			if pgErr.ConstraintName == dbconst.ConstraintProjectsCkAlias {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			if pgErr.Code == pgerrcode.CheckViolation && pgErr.ConstraintName == dbconst.ConstraintProjectsCkAlias {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("alias must be between 1 and 255 characters"))
+			}
+			if pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == dbconst.ConstraintProjectsUqClusterName {
+				return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("a project with the name %q already exists in this cluster", req.GetName()))
 			}
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
