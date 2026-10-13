@@ -95,7 +95,15 @@ export default class AuthnApiService {
 
     // getUserInfo() already deduplicates concurrent calls; just attach the init-specific error handler
     await this.getUserInfo().then(
-      () => localStorage.setItem('auth_hint', 'true'),
+      () => {
+        // Only an optimization, so a full or blocked storage must not turn a
+        // session that exists into a failed check.
+        try {
+          localStorage.setItem('auth_hint', 'true');
+        } catch {
+          // Without the hint the next load skips the check; logging in sets it.
+        }
+      },
       () => {
         // Not authenticated or session expired - clear the hint
         this.currentUserSubject.next(undefined);
