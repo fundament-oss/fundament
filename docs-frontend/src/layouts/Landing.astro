@@ -39,12 +39,13 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
     <nldd-app-view>
       <nldd-page>
         <nldd-skip-link slot="header" text="Skip navigation">
-          <nldd-top-navigation-bar
-            logo-href="/"
-            website-title="Fundament"
-            website-href="/"
-            width="1280px"
-          >
+          {
+            /* No logo-href: with one, the design system wraps the ribbon in a
+            span whose line box is taller than the ribbon, and centering it lifts
+            the ribbon 4px above the bar, into the test-environment banner. The
+            website title links home already. */
+          }
+          <nldd-top-navigation-bar website-title="Fundament" website-href="/" width="1280px">
             <nldd-menu-bar slot="global">
               <nldd-menu-bar-item text="Home" href="/" current={isActive('/') ? '' : undefined}
               ></nldd-menu-bar-item>
