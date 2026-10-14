@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,19 +20,48 @@ import (
 	"github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/platform/v1/platformv1connect"
 )
 
-const consoleOrigin = "https://console.fundament.localhost:8443"
+const (
+	consoleOrigin = "https://console.fundament.localhost:8443"
+	cacheTTL      = time.Minute
+)
 
 // newServer serves the overview over a pool connected as the public role, so
 // every read goes through its (absent) table grants.
-func newServer(t *testing.T, env *testpg.Env, ttl time.Duration) *httptest.Server {
+func newServer(t *testing.T, env *testpg.Env) *httptest.Server {
+	t.Helper()
+	return newServerWithClock(t, env, time.Now)
+}
+
+// newServerWithClock is newServer on a clock the test controls, so the TTL
+// passes without sleeping and without racing a busy CI worker.
+func newServerWithClock(t *testing.T, env *testpg.Env, clock func() time.Time) *httptest.Server {
 	t.Helper()
 	server := overview.New(slog.New(slog.DiscardHandler), env.RolePool(t, "fun_platform_public_api"), overview.Config{
 		CORSAllowedOrigins: []string{consoleOrigin},
-		CacheTTL:           ttl,
+		CacheTTL:           cacheTTL,
 	})
+	server.SetClock(clock)
 	ts := httptest.NewServer(server.Handler())
 	t.Cleanup(ts.Close)
 	return ts
+}
+
+// fakeClock is read by the server's handler goroutines and moved by the test.
+type fakeClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *fakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
 }
 
 // getOverview calls the RPC the way the console does: an anonymous HTTP GET.
@@ -94,7 +124,7 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 	seed.Cluster(gone, "orphaned")
 	seed.SoftDelete("organizations", gone)
 
-	resp, _, _ := getOverview(t, newServer(t, env, time.Minute))
+	resp, _, _ := getOverview(t, newServer(t, env))
 
 	got := findOrganization(resp, "counted")
 	require.NotNil(t, got)
@@ -131,7 +161,7 @@ func TestOverviewExposesNoNamesOrIDs(t *testing.T) {
 	project := seed.Project(cluster, "secret-project-name")
 	namespace := seed.Namespace(project, "secret-namespace-name")
 
-	_, _, body := getOverview(t, newServer(t, env, time.Minute))
+	_, _, body := getOverview(t, newServer(t, env))
 
 	assert.Contains(t, body, "visible-org")
 	for _, secret := range []string{
@@ -150,7 +180,8 @@ func TestOverviewIsCached(t *testing.T) {
 	org := seed.Organization("cached", "Cached Org")
 	seed.Cluster(org, "first")
 
-	ts := newServer(t, env, time.Minute)
+	clock := &fakeClock{now: time.Now()}
+	ts := newServerWithClock(t, env, clock.Now)
 	first, resp, _ := getOverview(t, ts)
 	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
 
@@ -160,25 +191,22 @@ func TestOverviewIsCached(t *testing.T) {
 	assert.Equal(t, first.GetGeneratedAt().AsTime(), second.GetGeneratedAt().AsTime())
 
 	// A cached answer is advertised for what remains of the TTL, not afresh.
-	ageing := newServer(t, env, 2*time.Second)
-	getOverview(t, ageing)
-	time.Sleep(1100 * time.Millisecond)
-	_, resp, _ = getOverview(t, ageing)
-	assert.Equal(t, "public, max-age=1", resp.Header.Get("Cache-Control"))
+	clock.Advance(cacheTTL - 1500*time.Millisecond)
+	_, resp, _ = getOverview(t, ts)
+	assert.Equal(t, "public, max-age=2", resp.Header.Get("Cache-Control"))
 
-	// A server with a short TTL reads again once it has passed.
-	short := newServer(t, env, 10*time.Millisecond)
-	getOverview(t, short)
-	time.Sleep(20 * time.Millisecond)
-	fresh, _, _ := getOverview(t, short)
+	// Once the TTL has passed the server reads again.
+	clock.Advance(1500 * time.Millisecond)
+	fresh, resp, _ := getOverview(t, ts)
 	assert.Equal(t, int32(2), findOrganization(fresh, "cached").GetClusters())
+	assert.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
 }
 
 // The console calls without credentials, so CORS allows its origin and never
 // credentials.
 func TestOverviewCORS(t *testing.T) {
 	env := testpg.NewEnv(t, testDBPort)
-	ts := newServer(t, env, time.Minute)
+	ts := newServer(t, env)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodOptions,
 		ts.URL+platformv1connect.OverviewServiceGetPlatformOverviewProcedure, nil)
