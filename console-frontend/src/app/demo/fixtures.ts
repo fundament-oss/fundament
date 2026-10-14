@@ -58,9 +58,6 @@ export const organization = create(OrganizationSchema, {
 });
 
 export const organizationLimits = create(OrganizationLimitsSchema, {
-  maxNodesPerCluster: 20,
-  maxNodePoolsPerCluster: 5,
-  maxNodesPerNodePool: 10,
   defaultMemoryRequestMi: 256,
   defaultMemoryLimitMi: 512,
   defaultCpuRequestM: 250,
@@ -359,9 +356,6 @@ export const platformProjectLimits = create(ProjectLimitsSchema, {
 });
 
 export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
-  maxNodesPerCluster: 10,
-  maxNodePoolsPerCluster: 5,
-  maxNodesPerNodePool: 5,
   defaultMemoryRequestMi: 256,
   defaultMemoryLimitMi: 512,
   defaultCpuRequestM: 100,

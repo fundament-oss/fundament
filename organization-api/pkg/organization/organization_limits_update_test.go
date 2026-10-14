@@ -44,9 +44,6 @@ func Test_OrganizationLimits_Update(t *testing.T) {
 
 	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                     orgID.String(),
-		MaxNodesPerCluster:     proto.Int32(50),
-		MaxNodePoolsPerCluster: proto.Int32(10),
-		MaxNodesPerNodePool:    proto.Int32(20),
 		DefaultMemoryRequestMi: proto.Int32(128),
 		DefaultMemoryLimitMi:   proto.Int32(256),
 		DefaultCpuRequestM:     proto.Int32(100),
@@ -69,9 +66,6 @@ func Test_OrganizationLimits_Update(t *testing.T) {
 
 	limits := getRes.GetLimits()
 	require.NotNil(t, limits)
-	assert.EqualValues(t, 50, limits.GetMaxNodesPerCluster())
-	assert.EqualValues(t, 10, limits.GetMaxNodePoolsPerCluster())
-	assert.EqualValues(t, 20, limits.GetMaxNodesPerNodePool())
 	assert.EqualValues(t, 128, limits.GetDefaultMemoryRequestMi())
 	assert.EqualValues(t, 256, limits.GetDefaultMemoryLimitMi())
 	assert.EqualValues(t, 100, limits.GetDefaultCpuRequestM())
@@ -93,8 +87,8 @@ func Test_OrganizationLimits_Update_Overwrites(t *testing.T) {
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
 	firstUpdate := organizationv1.UpdateOrganizationLimitsRequest_builder{
-		Id:                 orgID.String(),
-		MaxNodesPerCluster: proto.Int32(50),
+		Id:               orgID.String(),
+		DefaultCpuLimitM: proto.Int32(500),
 	}.Build()
 	firstUpdateCtx, firstUpdateCallInfo := connect.NewClientContext(context.Background())
 	firstUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
@@ -104,8 +98,8 @@ func Test_OrganizationLimits_Update_Overwrites(t *testing.T) {
 	require.NoError(t, err)
 
 	secondUpdate := organizationv1.UpdateOrganizationLimitsRequest_builder{
-		Id:                 orgID.String(),
-		MaxNodesPerCluster: proto.Int32(100),
+		Id:               orgID.String(),
+		DefaultCpuLimitM: proto.Int32(1000),
 	}.Build()
 	secondUpdateCtx, secondUpdateCallInfo := connect.NewClientContext(context.Background())
 	secondUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
@@ -122,7 +116,7 @@ func Test_OrganizationLimits_Update_Overwrites(t *testing.T) {
 	getRes, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	assert.EqualValues(t, 100, getRes.GetLimits().GetMaxNodesPerCluster())
+	assert.EqualValues(t, 1000, getRes.GetLimits().GetDefaultCpuLimitM())
 }
 
 func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
@@ -145,8 +139,8 @@ func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
 	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
-		Id:                 org1ID.String(),
-		MaxNodesPerCluster: proto.Int32(42),
+		Id:               org1ID.String(),
+		DefaultCpuLimitM: proto.Int32(42),
 	}.Build()
 	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
 	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token1)
@@ -163,7 +157,7 @@ func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
 
 	getRes, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
-	assert.False(t, getRes.GetLimits().HasMaxNodesPerCluster())
+	assert.False(t, getRes.GetLimits().HasDefaultCpuLimitM())
 }
 
 func Test_OrganizationLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {

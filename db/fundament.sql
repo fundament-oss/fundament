@@ -76,9 +76,6 @@ ALTER TABLE tenant.organizations ENABLE ROW LEVEL SECURITY;
 CREATE TABLE tenant.organization_limits (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	organization_id uuid NOT NULL,
-	max_nodes_per_cluster integer,
-	max_node_pools_per_cluster integer,
-	max_nodes_per_node_pool integer,
 	default_memory_request_mi integer,
 	default_memory_limit_mi integer,
 	default_cpu_request_m integer,
@@ -87,9 +84,6 @@ CREATE TABLE tenant.organization_limits (
 	deleted timestamptz,
 	CONSTRAINT organization_limits_pk PRIMARY KEY (id),
 	CONSTRAINT organization_limits_uq_org UNIQUE NULLS NOT DISTINCT (organization_id,deleted),
-	CONSTRAINT organization_limits_ck_max_nodes_per_cluster CHECK (max_nodes_per_cluster IS NULL OR max_nodes_per_cluster > 0),
-	CONSTRAINT organization_limits_ck_max_node_pools_per_cluster CHECK (max_node_pools_per_cluster IS NULL OR max_node_pools_per_cluster > 0),
-	CONSTRAINT organization_limits_ck_max_nodes_per_node_pool CHECK (max_nodes_per_node_pool IS NULL OR max_nodes_per_node_pool > 0),
 	CONSTRAINT organization_limits_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
 	CONSTRAINT organization_limits_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
 	CONSTRAINT organization_limits_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
@@ -299,32 +293,9 @@ CREATE OR REPLACE FUNCTION tenant.organization_limits_outbox_trigger ()
 	AS 
 $function$
 BEGIN
-    -- Node-cap branch: re-apply each active cluster's shoot spec. A deleted
-    -- change only matters when the row carries node-cap values in OLD or NEW;
-    -- otherwise the re-apply would be a guaranteed no-op.
-    IF (TG_OP = 'INSERT' AND (NEW.max_nodes_per_cluster IS NOT NULL
-                              OR NEW.max_node_pools_per_cluster IS NOT NULL
-                              OR NEW.max_nodes_per_node_pool IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.max_nodes_per_cluster IS DISTINCT FROM NEW.max_nodes_per_cluster
-                                 OR OLD.max_node_pools_per_cluster IS DISTINCT FROM NEW.max_node_pools_per_cluster
-                                 OR OLD.max_nodes_per_node_pool IS DISTINCT FROM NEW.max_nodes_per_node_pool
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.max_nodes_per_cluster IS NOT NULL
-                                          OR OLD.max_node_pools_per_cluster IS NOT NULL
-                                          OR OLD.max_nodes_per_node_pool IS NOT NULL
-                                          OR NEW.max_nodes_per_cluster IS NOT NULL
-                                          OR NEW.max_node_pools_per_cluster IS NOT NULL
-                                          OR NEW.max_nodes_per_node_pool IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-        SELECT tenant.clusters.id, 'updated', 'trigger'
-        FROM tenant.clusters
-        WHERE tenant.clusters.organization_id = NEW.organization_id
-          AND tenant.clusters.deleted IS NULL;
-    END IF;
-
-    -- Per-container-default branch: reconcile each active namespace's
-    -- LimitRange. Same deleted-change scoping as above, on the default columns.
+    -- Reconcile each active namespace's LimitRange. A deleted change only
+    -- matters when the row carries default values in OLD or NEW; otherwise the
+    -- reconcile would be a guaranteed no-op.
     IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
                               OR NEW.default_memory_limit_mi IS NOT NULL
                               OR NEW.default_cpu_request_m IS NOT NULL

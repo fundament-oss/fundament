@@ -203,12 +203,6 @@ const (
 	ConstraintOrganizationLimitsCkDefaultMemoryLimitMi = "organization_limits_ck_default_memory_limit_mi"
 	// ConstraintOrganizationLimitsCkDefaultMemoryRequestMi is defined on tenant.organization_limits.
 	ConstraintOrganizationLimitsCkDefaultMemoryRequestMi = "organization_limits_ck_default_memory_request_mi"
-	// ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster = "organization_limits_ck_max_node_pools_per_cluster"
-	// ConstraintOrganizationLimitsCkMaxNodesPerCluster is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodesPerCluster = "organization_limits_ck_max_nodes_per_cluster"
-	// ConstraintOrganizationLimitsCkMaxNodesPerNodePool is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodesPerNodePool = "organization_limits_ck_max_nodes_per_node_pool"
 	// ConstraintOrganizationLimitsCkMemoryLimitGteRequest is defined on tenant.organization_limits.
 	ConstraintOrganizationLimitsCkMemoryLimitGteRequest = "organization_limits_ck_memory_limit_gte_request"
 	// ConstraintOrganizationLimitsFkOrganization is defined on tenant.organization_limits.
