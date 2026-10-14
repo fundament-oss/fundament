@@ -84,8 +84,10 @@ export default class QuotasComponent implements OnInit {
 
   protected nodes = signal<QuotaLine[]>([]);
 
-  /** No node quota at all: nothing listed, or only pools from before quotas
-   *  existed, which show as quota 0. Either way no pool can be added. */
+  /** No node quota allows a pool: nothing listed, quotas an operator set to
+   *  zero, or only pools from before quotas existed, which show as quota 0.
+   *  The API reports a missing row and a zero alike; either way no pool can be
+   *  added, and the text says that rather than claiming nothing was set. */
   protected noNodeQuota = computed(() => this.nodes().every((line) => line.quota === 0));
 
   /** Whether any quota is exceeded: an operator lowered one under what runs,

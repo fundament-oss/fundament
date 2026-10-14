@@ -110,7 +110,7 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 }
 
 const organizationMachineQuotaList = `-- name: OrganizationMachineQuotaList :many
-WITH offering AS (
+WITH offering AS MATERIALIZED (
     SELECT
         catalog.regions.name AS region,
         catalog.machine_types.name AS machine_type,
@@ -150,7 +150,8 @@ type OrganizationMachineQuotaListRow struct {
 // has nodes of without one (pools from before quotas existed), as quota 0.
 // Same shape as funops' MachineQuotaList; the policy on the quota rows and on
 // the pools the counter reads scope it to the current organization. The usage
-// is counted once per offering, in the CTE, and filtered on from there.
+// is counted once per offering, in the CTE, and filtered on from there;
+// MATERIALIZED keeps the planner from inlining it into both places.
 func (q *Queries) OrganizationMachineQuotaList(ctx context.Context, arg OrganizationMachineQuotaListParams) ([]OrganizationMachineQuotaListRow, error) {
 	rows, err := q.db.Query(ctx, organizationMachineQuotaList, arg.OrganizationID)
 	if err != nil {

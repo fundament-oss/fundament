@@ -38,8 +38,9 @@ WHERE id = @id
 -- has nodes of without one (pools from before quotas existed), as quota 0.
 -- Same shape as funops' MachineQuotaList; the policy on the quota rows and on
 -- the pools the counter reads scope it to the current organization. The usage
--- is counted once per offering, in the CTE, and filtered on from there.
-WITH offering AS (
+-- is counted once per offering, in the CTE, and filtered on from there;
+-- MATERIALIZED keeps the planner from inlining it into both places.
+WITH offering AS MATERIALIZED (
     SELECT
         catalog.regions.name AS region,
         catalog.machine_types.name AS machine_type,
