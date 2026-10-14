@@ -83,7 +83,7 @@ func TestMockCreateFollowsGardener(t *testing.T) {
 }
 
 // The mock runs the nodes Gardener would: a cluster without node pools gets
-// the default worker, and a minimum above the per-pool cap is lowered to it.
+// the default worker, and every pool runs its autoscaler minimum.
 func TestMockWorkerPoolsFollowBuildWorkers(t *testing.T) {
 	t.Parallel()
 
@@ -94,17 +94,16 @@ func TestMockWorkerPoolsFollowBuildWorkers(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int32{"default": defaultWorkerMinimum}, m.WorkerPools(bare.ID))
 
-	capped := testCluster()
-	capped.Name, capped.ShootName = "capped", "capped"
-	capped.NodePools = []NodePool{
+	pooled := testCluster()
+	pooled.Name, pooled.ShootName = "pooled", "pooled"
+	pooled.NodePools = []NodePool{
 		{Name: "big", MachineType: "local", AutoscaleMin: 5, AutoscaleMax: 8},
 		{Name: "small", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 2},
 	}
-	capped.NodeLimits = NodeLimits{MaxNodesPerNodePool: new(int32(3))}
-	_, err = m.ApplyShoot(t.Context(), capped)
+	_, err = m.ApplyShoot(t.Context(), pooled)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int32{
-		kubename.GenerateWorkerName("big"):   3,
+		kubename.GenerateWorkerName("big"):   5,
 		kubename.GenerateWorkerName("small"): 1,
-	}, m.WorkerPools(capped.ID))
+	}, m.WorkerPools(pooled.ID))
 }

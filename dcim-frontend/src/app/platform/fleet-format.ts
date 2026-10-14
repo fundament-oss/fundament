@@ -1,14 +1,11 @@
-import { isFieldSet } from '@bufbuild/protobuf';
 import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import {
   ClusterHealth,
   ClusterStatus,
   DriftKind,
-  OrganizationLimitsSchema,
   type ClusterSnapshot,
   type ClusterSummary,
   type NodePool,
-  type OrganizationLimits,
 } from '../../generated/fleet/v1/fleet_pb';
 
 /** The colours a tag takes here: the semantic four only. */
@@ -114,37 +111,6 @@ export function formatMemory(mebibytes: bigint): string {
   return `${mi} MiB`;
 }
 
-export type LimitField = 'maxNodesPerCluster' | 'maxNodePoolsPerCluster' | 'maxNodesPerNodePool';
-
-/** One cap, or undefined when the organization has none. The fields have
- *  explicit presence: an unset one reads as 0, so presence is asked for. */
-export function limitValue(
-  limits: OrganizationLimits | undefined,
-  field: LimitField,
-): number | undefined {
-  if (!limits || !isFieldSet(limits, OrganizationLimitsSchema.field[field])) return undefined;
-  return limits[field];
-}
-
-/** A cap as text; an absent one is unlimited. */
-export function formatLimit(value: number | undefined): string {
-  return value === undefined ? 'Unlimited' : String(value);
-}
-
-/** The limits as label and value, in the order the console shows them. */
-export function limitRows(
-  limits: OrganizationLimits | undefined,
-): { label: string; value: string }[] {
-  return [
-    { label: 'Nodes per cluster', value: formatLimit(limitValue(limits, 'maxNodesPerCluster')) },
-    {
-      label: 'Node pools per cluster',
-      value: formatLimit(limitValue(limits, 'maxNodePoolsPerCluster')),
-    },
-    { label: 'Nodes per node pool', value: formatLimit(limitValue(limits, 'maxNodesPerNodePool')) },
-  ];
-}
-
 /** A day, the way the rest of DCIM writes dates. */
 export function formatDate(at: Timestamp | undefined): string {
   return at ? timestampDate(at).toISOString().slice(0, 10) : '';
@@ -166,16 +132,12 @@ export function capacityText(snapshot: ClusterSnapshot | undefined): string {
   return `${formatCores(snapshot.cpuAllocatableM)}, ${formatMemory(snapshot.memoryAllocatableMi)}`;
 }
 
-/** Where a node pool stands against its own bounds and the organization's cap. */
+/** Where a node pool stands against its own bounds. */
 export function poolFlag(
   pool: Pick<NodePool, 'nodes' | 'autoscaleMin' | 'autoscaleMax' | 'observed'>,
-  maxNodesPerNodePool: number | undefined,
 ): Tag | null {
   if (!pool.observed) return null;
   if (pool.nodes < pool.autoscaleMin) return { text: 'Below minimum', color: 'warning' };
-  if (maxNodesPerNodePool !== undefined && pool.nodes >= maxNodesPerNodePool) {
-    return { text: 'At pool cap', color: 'critical' };
-  }
   if (pool.nodes >= pool.autoscaleMax) return { text: 'At maximum', color: 'warning' };
   return null;
 }

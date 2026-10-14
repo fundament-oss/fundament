@@ -132,7 +132,6 @@ func TestListClustersFilters(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("filter-org", "Filter Org")
-	seed.Limits(org, new(int32(5)), new(int32(2)), new(int32(3)))
 
 	fine := seed.Cluster(org, "fine")
 	seed.Ready(fine, time.Minute)
@@ -146,21 +145,6 @@ func TestListClustersFilters(t *testing.T) {
 	seed.Ready(stale, 2*time.Hour)
 	seed.ClusterSnapshot(stale, 2*time.Hour, 2, 2, 10, 220)
 
-	full := seed.Cluster(org, "full")
-	seed.Ready(full, time.Minute)
-	seed.ClusterSnapshot(full, time.Minute, 5, 5, 10, 550)
-
-	pools := seed.Cluster(org, "pools")
-	seed.Ready(pools, time.Minute)
-	seed.ClusterSnapshot(pools, time.Minute, 2, 2, 10, 220)
-	seed.NodePool(pools, "a", 1, 1)
-	seed.NodePool(pools, "b", 1, 1)
-
-	poolFull := seed.Cluster(org, "pool-full")
-	seed.Ready(poolFull, time.Minute)
-	seed.ClusterSnapshot(poolFull, time.Minute, 3, 3, 10, 330)
-	seed.NodePoolSnapshot(seed.NodePool(poolFull, "workers", 1, 3), 3, 3)
-
 	list := func(filter fleetv1.ClusterFilter) []string {
 		t.Helper()
 		resp, err := client.ListClusters(t.Context(), fleetv1.ListClustersRequest_builder{
@@ -171,11 +155,9 @@ func TestListClustersFilters(t *testing.T) {
 		return clusterIDs(resp.GetClusters())
 	}
 
-	assert.Len(t, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL), 6)
+	assert.ElementsMatch(t, []string{fine.String(), broken.String(), stale.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL))
 	assert.ElementsMatch(t, []string{broken.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_UNHEALTHY))
 	assert.ElementsMatch(t, []string{stale.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_STALE))
-	assert.ElementsMatch(t, []string{full.String(), pools.String(), poolFull.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_OVER_LIMIT),
-		"at the node cap, the node pool cap, or a pool at the per-pool node cap")
 }
 
 func TestGetClusterDetail(t *testing.T) {
@@ -184,7 +166,6 @@ func TestGetClusterDetail(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("detail-org", "Detail Org")
-	seed.Limits(org, nil, nil, new(int32(4)))
 	cluster := seed.Cluster(org, "detail")
 	seed.Ready(cluster, time.Minute)
 	seed.ClusterSnapshot(cluster, time.Minute, 3, 3, 12, 330)
@@ -210,9 +191,6 @@ func TestGetClusterDetail(t *testing.T) {
 	assert.True(t, c.GetSnapshot().HasObserved())
 	assert.False(t, c.GetSnapshot().HasLastError())
 	assert.False(t, c.GetStale())
-
-	assert.Equal(t, int32(4), resp.GetLimits().GetMaxNodesPerNodePool())
-	assert.False(t, resp.GetLimits().HasMaxNodesPerCluster(), "an absent cap is unlimited")
 
 	require.True(t, resp.HasShoot())
 	assert.Equal(t, "detail-shoot", resp.GetShoot().GetName())

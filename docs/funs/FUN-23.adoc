@@ -14,7 +14,7 @@ Every API in Fundament is scoped to one organization: row security in the databa
 This FUN adds two views across organizations, for two audiences:
 
 * A *public page* in the console, `/platform`, without login. It lists every live organization with its number of clusters, projects and namespaces, plus platform totals. It shows no cluster or namespace names.
-* A *staff section* in DCIM, `/platform`. It shows the same organizations plus cluster and namespace names, nodes and pods per cluster, health, capacity against the organization's limits, and drift between the database and Gardener.
+* A *staff section* in DCIM, `/platform`. It shows the same organizations plus cluster and namespace names, nodes and pods per cluster, health, and drift between the database and Gardener.
 
 The pattern, not the code, comes from https://github.com/gardener/inventory[gardener/inventory]: a periodic collector per cluster upserts what it sees with a `last_seen` time, a Gardener-side inventory makes drift visible, and the views are SQL on top. gardener/inventory does not look inside shoots, so collecting nodes, pods and namespaces is our own.
 
@@ -47,7 +47,7 @@ One Go tree, `platform-api/`, builds two binaries, the way link:/funs/fun-20[FUN
 |USAGE on `tenant` and EXECUTE on `tenant.platform_overview()`. No table grants.
 
 |`fun_platform_admin_api`
-|SELECT, through `USING (true)` policies, on organizations, organization limits, clusters, node pools, projects, namespaces and the four inventory tables below. No write grants.
+|SELECT, through `USING (true)` policies, on organizations, clusters, node pools, projects, namespaces and the four inventory tables below. No write grants.
 
 |`fun_cluster_worker`
 |SELECT, INSERT and UPDATE on the four inventory tables. No DELETE: the database itself keeps rows from being removed.

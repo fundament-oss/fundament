@@ -56,9 +56,9 @@ const (
 type FleetServiceClient interface {
 	// Platform-wide totals for the overview tiles.
 	GetFleetSummary(context.Context, *v1.GetFleetSummaryRequest) (*v1.GetFleetSummaryResponse, error)
-	// Every live organization with its limits and aggregates.
+	// Every live organization with its aggregates.
 	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
-	// One live organization with its limits and aggregates.
+	// One live organization with its aggregates.
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// Live clusters, optionally of one organization and narrowed by a filter.
 	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)
@@ -192,9 +192,9 @@ func (c *fleetServiceClient) ListDriftFindings(ctx context.Context, req *v1.List
 type FleetServiceHandler interface {
 	// Platform-wide totals for the overview tiles.
 	GetFleetSummary(context.Context, *v1.GetFleetSummaryRequest) (*v1.GetFleetSummaryResponse, error)
-	// Every live organization with its limits and aggregates.
+	// Every live organization with its aggregates.
 	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
-	// One live organization with its limits and aggregates.
+	// One live organization with its aggregates.
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// Live clusters, optionally of one organization and narrowed by a filter.
 	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)

@@ -21,11 +21,11 @@ service FleetService {
   rpc GetFleetSummary(GetFleetSummaryRequest) returns (GetFleetSummaryResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
-  // Every live organization with its limits and aggregates.
+  // Every live organization with its aggregates.
   rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
-  // One live organization with its limits and aggregates.
+  // One live organization with its aggregates.
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
@@ -69,8 +69,6 @@ enum ClusterFilter {
   CLUSTER_FILTER_UNHEALTHY = 20;
   // Ready, with no snapshot or one older than stale_after.
   CLUSTER_FILTER_STALE = 30;
-  // At or over one of the organization's node limits.
-  CLUSTER_FILTER_OVER_LIMIT = 40;
 }
 
 enum DriftKind {
@@ -88,14 +86,6 @@ enum DriftKind {
   // The database and the shoot disagree on the Kubernetes version while the
   // cluster is not updating.
   DRIFT_KIND_KUBERNETES_VERSION_MISMATCH = 50;
-}
-
-// OrganizationLimits are the caps from tenant.organization_limits; an absent
-// field is unlimited.
-message OrganizationLimits {
-  int32 max_nodes_per_cluster = 10 [features.field_presence = EXPLICIT];
-  int32 max_node_pools_per_cluster = 20 [features.field_presence = EXPLICIT];
-  int32 max_nodes_per_node_pool = 30 [features.field_presence = EXPLICIT];
 }
 
 message FleetSummary {
@@ -123,7 +113,6 @@ message OrganizationSummary {
   string name = 20;
   string alias = 30;
   google.protobuf.Timestamp created = 40;
-  OrganizationLimits limits = 50;
   int32 clusters = 60;
   int32 clusters_unhealthy = 70;
   int32 nodes = 80;
@@ -166,8 +155,6 @@ message ClusterSummary {
   ClusterSnapshot snapshot = 140;
   // Ready with no snapshot, or one older than stale_after.
   bool stale = 150;
-  // At or over one of the organization's node limits.
-  bool over_limit = 160;
 }
 
 message NodePool {
@@ -257,7 +244,6 @@ message GetClusterRequest {
 
 message GetClusterResponse {
   ClusterSummary cluster = 10;
-  OrganizationLimits limits = 20;
   // Absent when cluster-worker has not seen a shoot for this cluster.
   GardenerShoot shoot = 30;
   repeated NodePool node_pools = 40;

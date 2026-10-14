@@ -3288,15 +3288,6 @@ CREATE POLICY organizations_select_platform_admin ON tenant.organizations
 	USING (true);
 -- ddl-end --
 
--- object: organization_limits_select_platform_admin | type: POLICY --
--- DROP POLICY IF EXISTS organization_limits_select_platform_admin ON tenant.organization_limits CASCADE;
-CREATE POLICY organization_limits_select_platform_admin ON tenant.organization_limits
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_platform_admin_api
-	USING (true);
--- ddl-end --
-
 -- object: clusters_select_platform_admin | type: POLICY --
 -- DROP POLICY IF EXISTS clusters_select_platform_admin ON tenant.clusters CASCADE;
 CREATE POLICY clusters_select_platform_admin ON tenant.clusters
@@ -5515,14 +5506,6 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_r_249f048c1b | type: PERMISSION --
 GRANT SELECT
    ON TABLE tenant.organizations
-   TO fun_platform_admin_api;
-
--- ddl-end --
-
-
--- object: grant_r_529a5fae46 | type: PERMISSION --
-GRANT SELECT
-   ON TABLE tenant.organization_limits
    TO fun_platform_admin_api;
 
 -- ddl-end --

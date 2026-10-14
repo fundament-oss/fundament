@@ -60,20 +60,6 @@ func unhealthy(row *db.ClusterListRow) bool {
 		clusterStatus(row.ShootStatus, row.ShootUpdating) == fleetv1.ClusterStatus_CLUSTER_STATUS_ERROR
 }
 
-// overLimit reports a cluster at or over one of its organization's node
-// limits: as many nodes as the cluster may have, as many node pools, or a pool
-// with as many nodes as a pool may have. Each means the next scale-up or new
-// pool is refused.
-func overLimit(row *db.ClusterListRow) bool {
-	if row.MaxNodesPerCluster.Valid && row.Nodes.Valid && row.Nodes.Int32 >= row.MaxNodesPerCluster.Int32 {
-		return true
-	}
-	if row.MaxNodePoolsPerCluster.Valid && row.NodePools >= row.MaxNodePoolsPerCluster.Int32 {
-		return true
-	}
-	return row.NodePoolAtLimit
-}
-
 func timestampOrNil(t pgtype.Timestamptz) *timestamppb.Timestamp {
 	if !t.Valid {
 		return nil
@@ -81,26 +67,11 @@ func timestampOrNil(t pgtype.Timestamptz) *timestamppb.Timestamp {
 	return timestamppb.New(t.Time)
 }
 
-func int32OrNil(v pgtype.Int4) *int32 {
-	if !v.Valid {
-		return nil
-	}
-	return &v.Int32
-}
-
 func stringOrNil(v pgtype.Text) *string {
 	if !v.Valid {
 		return nil
 	}
 	return &v.String
-}
-
-func limitsFrom(maxNodesPerCluster, maxNodePoolsPerCluster, maxNodesPerNodePool pgtype.Int4) *fleetv1.OrganizationLimits {
-	return fleetv1.OrganizationLimits_builder{
-		MaxNodesPerCluster:     int32OrNil(maxNodesPerCluster),
-		MaxNodePoolsPerCluster: int32OrNil(maxNodePoolsPerCluster),
-		MaxNodesPerNodePool:    int32OrNil(maxNodesPerNodePool),
-	}.Build()
 }
 
 func clusterSummaryFrom(row *db.ClusterListRow) *fleetv1.ClusterSummary {
@@ -119,7 +90,6 @@ func clusterSummaryFrom(row *db.ClusterListRow) *fleetv1.ClusterSummary {
 		NodesMin:          row.NodesMin,
 		NodesMax:          row.NodesMax,
 		Stale:             row.Stale,
-		OverLimit:         overLimit(row),
 	}
 	if row.HasSnapshot {
 		b.Snapshot = fleetv1.ClusterSnapshot_builder{
@@ -143,7 +113,6 @@ func organizationSummaryFrom(row *db.OrganizationListRow) *fleetv1.OrganizationS
 		Name:              row.Name,
 		Alias:             row.Alias,
 		Created:           timestampOrNil(row.Created),
-		Limits:            limitsFrom(row.MaxNodesPerCluster, row.MaxNodePoolsPerCluster, row.MaxNodesPerNodePool),
 		Clusters:          row.Clusters,
 		ClustersUnhealthy: row.ClustersUnhealthy,
 		Nodes:             row.Nodes,

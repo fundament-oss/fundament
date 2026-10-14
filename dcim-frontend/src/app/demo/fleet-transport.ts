@@ -23,8 +23,8 @@ const minutesAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 60
 const daysAgo = (n: number) => minutesAgo(n * 24 * 60);
 
 const ORGANIZATIONS = [
-  { id: 'org-utrecht', name: 'gemeente-utrecht', alias: 'Gemeente Utrecht', maxNodes: 20 },
-  { id: 'org-zwolle', name: 'gemeente-zwolle', alias: 'Gemeente Zwolle', maxNodes: 6 },
+  { id: 'org-utrecht', name: 'gemeente-utrecht', alias: 'Gemeente Utrecht' },
+  { id: 'org-zwolle', name: 'gemeente-zwolle', alias: 'Gemeente Zwolle' },
   { id: 'org-rvo', name: 'rvo', alias: 'Rijksdienst voor Ondernemend Nederland' },
 ];
 
@@ -131,7 +131,6 @@ function clusterSummary(c: DemoCluster): ClusterSummary {
       lastErrorAt: c.lastError ? minutesAgo(2) : undefined,
     },
     stale: (c.observedMinutesAgo ?? Infinity) * 60 > STALE_AFTER_SECONDS,
-    overLimit: organization.maxNodes !== undefined && nodes >= organization.maxNodes,
   });
 }
 
@@ -143,7 +142,6 @@ function organizationSummary(o: (typeof ORGANIZATIONS)[number]): OrganizationSum
     name: o.name,
     alias: o.alias,
     created: daysAgo(400),
-    limits: { maxNodesPerCluster: o.maxNodes },
     clusters: clusters.length,
     clustersUnhealthy: clusters.filter((c) => c.health === ClusterHealth.UNHEALTHY).length,
     nodes: summaries.reduce((sum, c) => sum + (c.snapshot?.nodes ?? 0), 0),
@@ -229,8 +227,6 @@ export default function createFleetDemoTransport(): Transport {
             return { clusters: clusters.filter((c) => c.health === ClusterHealth.UNHEALTHY) };
           case ClusterFilter.STALE:
             return { clusters: clusters.filter((c) => c.stale) };
-          case ClusterFilter.OVER_LIMIT:
-            return { clusters: clusters.filter((c) => c.overLimit) };
           case ClusterFilter.ALL:
           case ClusterFilter.UNSPECIFIED:
             return { clusters };
@@ -251,7 +247,6 @@ export default function createFleetDemoTransport(): Transport {
             : -1;
         return {
           cluster: clusterSummary(cluster),
-          limits: { maxNodesPerCluster: organization.maxNodes, maxNodesPerNodePool: 6 },
           shoot: {
             name: `${cluster.name}-${cluster.id.slice(-4)}`,
             namespace: `garden-${organization.name.slice(0, 6)}`,

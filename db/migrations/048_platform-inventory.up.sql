@@ -267,20 +267,6 @@ ALTER TABLE "tenant"."node_pool_snapshots" VALIDATE CONSTRAINT "node_pool_snapsh
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
 */
-CREATE POLICY "organization_limits_select_platform_admin" ON "tenant"."organization_limits"
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_platform_admin_api
-	USING (true);
-
-/* Hazards:
- - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
-*/
-GRANT SELECT ON "tenant"."organization_limits" TO "fun_platform_admin_api";
-
-/* Hazards:
- - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
-*/
 CREATE POLICY "organizations_select_platform_admin" ON "tenant"."organizations"
 	AS PERMISSIVE
 	FOR SELECT

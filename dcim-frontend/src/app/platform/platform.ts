@@ -26,10 +26,7 @@ import {
   driftKindTag,
   formatCores,
   formatDate,
-  formatLimit,
   formatMemory,
-  limitRows,
-  limitValue,
   nodesText,
   observed,
   poolFlag,
@@ -96,13 +93,7 @@ export default class PlatformComponent implements OnInit, OnDestroy {
 
   protected readonly formatMemory = formatMemory;
 
-  protected readonly formatLimit = formatLimit;
-
-  protected readonly limitRows = limitRows;
-
   protected readonly poolFlag = poolFlag;
-
-  protected readonly limitValue = limitValue;
 
   protected readonly date = formatDate;
 

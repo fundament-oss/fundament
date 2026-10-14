@@ -3872,10 +3872,6 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<policy name="organization_limits_select_platform_admin" table="tenant.organization_limits" command="SELECT" permissive="true">	<roles names="fun_platform_admin_api"/>
-	<expression type="using-exp"> <![CDATA[true]]> </expression>
-</policy>
-
 <policy name="clusters_select_platform_admin" table="tenant.clusters" command="SELECT" permissive="true">	<roles names="fun_platform_admin_api"/>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
@@ -5968,11 +5964,6 @@ ORDER BY tenant.organizations.alias, tenant.organizations.name]]> </definition>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>
-	<roles names="fun_platform_admin_api"/>
-	<privileges select="true"/>
-</permission>
-<permission>
-	<object name="tenant.organization_limits" type="table"/>
 	<roles names="fun_platform_admin_api"/>
 	<privileges select="true"/>
 </permission>

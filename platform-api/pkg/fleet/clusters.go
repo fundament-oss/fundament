@@ -44,8 +44,6 @@ func matchesFilter(row *db.ClusterListRow, filter fleetv1.ClusterFilter) bool {
 		return unhealthy(row)
 	case fleetv1.ClusterFilter_CLUSTER_FILTER_STALE:
 		return row.Stale
-	case fleetv1.ClusterFilter_CLUSTER_FILTER_OVER_LIMIT:
-		return overLimit(row)
 	default:
 		panic(fmt.Sprintf("unhandled cluster filter %v", filter))
 	}
@@ -81,7 +79,6 @@ func (s *Server) GetCluster(ctx context.Context, req *fleetv1.GetClusterRequest)
 
 	resp := fleetv1.GetClusterResponse_builder{
 		Cluster: clusterSummaryFrom(row),
-		Limits:  limitsFrom(row.MaxNodesPerCluster, row.MaxNodePoolsPerCluster, row.MaxNodesPerNodePool),
 	}
 
 	shoot, err := s.queries.GardenerShootGetByCluster(ctx, db.GardenerShootGetByClusterParams{ClusterID: clusterID})

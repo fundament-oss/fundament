@@ -53,20 +53,6 @@ SELECT
     tenant.cluster_snapshots.memory_allocatable_mi,
     tenant.cluster_snapshots.last_error,
     tenant.cluster_snapshots.last_error_at,
-    tenant.organization_limits.max_nodes_per_cluster,
-    tenant.organization_limits.max_node_pools_per_cluster,
-    tenant.organization_limits.max_nodes_per_node_pool,
-    (
-        tenant.organization_limits.max_nodes_per_node_pool IS NOT NULL
-        AND EXISTS (
-            SELECT 1
-            FROM tenant.node_pools
-            JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
-            WHERE tenant.node_pools.cluster_id = tenant.clusters.id
-                AND tenant.node_pools.deleted IS NULL
-                AND tenant.node_pool_snapshots.nodes >= tenant.organization_limits.max_nodes_per_node_pool
-        )
-    )::boolean AS node_pool_at_limit,
     (
         tenant.clusters.shoot_status = 'ready'
         AND coalesce(
@@ -79,8 +65,6 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
     LEFT JOIN tenant.cluster_snapshots ON tenant.cluster_snapshots.cluster_id = tenant.clusters.id
-    LEFT JOIN tenant.organization_limits ON tenant.organization_limits.organization_id = tenant.clusters.organization_id
-        AND tenant.organization_limits.deleted IS NULL
 WHERE
     tenant.clusters.deleted IS NULL
     AND tenant.organizations.deleted IS NULL
@@ -98,41 +82,35 @@ type ClusterListParams struct {
 }
 
 type ClusterListRow struct {
-	ID                     uuid.UUID
-	OrganizationID         uuid.UUID
-	OrganizationName       string
-	Name                   string
-	Region                 string
-	KubernetesVersion      string
-	ShootStatus            pgtype.Text
-	ShootStatusMessage     pgtype.Text
-	ShootHealth            pgtype.Text
-	ShootUpdating          bool
-	Created                pgtype.Timestamptz
-	NodePools              int32
-	NodesMin               int32
-	NodesMax               int32
-	HasSnapshot            bool
-	Observed               pgtype.Timestamptz
-	Nodes                  pgtype.Int4
-	NodesReady             pgtype.Int4
-	Pods                   pgtype.Int4
-	PodAllocatable         pgtype.Int4
-	CpuAllocatableM        pgtype.Int8
-	MemoryAllocatableMi    pgtype.Int8
-	LastError              pgtype.Text
-	LastErrorAt            pgtype.Timestamptz
-	MaxNodesPerCluster     pgtype.Int4
-	MaxNodePoolsPerCluster pgtype.Int4
-	MaxNodesPerNodePool    pgtype.Int4
-	NodePoolAtLimit        bool
-	Stale                  bool
+	ID                  uuid.UUID
+	OrganizationID      uuid.UUID
+	OrganizationName    string
+	Name                string
+	Region              string
+	KubernetesVersion   string
+	ShootStatus         pgtype.Text
+	ShootStatusMessage  pgtype.Text
+	ShootHealth         pgtype.Text
+	ShootUpdating       bool
+	Created             pgtype.Timestamptz
+	NodePools           int32
+	NodesMin            int32
+	NodesMax            int32
+	HasSnapshot         bool
+	Observed            pgtype.Timestamptz
+	Nodes               pgtype.Int4
+	NodesReady          pgtype.Int4
+	Pods                pgtype.Int4
+	PodAllocatable      pgtype.Int4
+	CpuAllocatableM     pgtype.Int8
+	MemoryAllocatableMi pgtype.Int8
+	LastError           pgtype.Text
+	LastErrorAt         pgtype.Timestamptz
+	Stale               bool
 }
 
 // Live clusters, optionally of one organization or just one cluster, with
-// their latest snapshot and the organization's limits. node_pool_at_limit is
-// whether one of its pools was last seen at the per-pool cap. stale is computed here
-// with the same rule as the SNAPSHOT_STALE drift query: a ready cluster whose
+// their latest snapshot. stale is computed here with the same rule as the SNAPSHOT_STALE drift query: a ready cluster whose
 // snapshot, or readiness when it has none, is older than stale_before.
 func (q *Queries) ClusterList(ctx context.Context, arg ClusterListParams) ([]ClusterListRow, error) {
 	rows, err := q.db.Query(ctx, clusterList, arg.StaleBefore, arg.OrganizationID, arg.ClusterID)
@@ -168,10 +146,6 @@ func (q *Queries) ClusterList(ctx context.Context, arg ClusterListParams) ([]Clu
 			&i.MemoryAllocatableMi,
 			&i.LastError,
 			&i.LastErrorAt,
-			&i.MaxNodesPerCluster,
-			&i.MaxNodePoolsPerCluster,
-			&i.MaxNodesPerNodePool,
-			&i.NodePoolAtLimit,
 			&i.Stale,
 		); err != nil {
 			return nil, err
@@ -428,9 +402,6 @@ SELECT
     tenant.organizations.name,
     tenant.organizations.alias,
     tenant.organizations.created,
-    tenant.organization_limits.max_nodes_per_cluster,
-    tenant.organization_limits.max_node_pools_per_cluster,
-    tenant.organization_limits.max_nodes_per_node_pool,
     (
         SELECT count(*)
         FROM tenant.clusters
@@ -477,8 +448,6 @@ SELECT
     )::integer AS namespaces
 FROM
     tenant.organizations
-    LEFT JOIN tenant.organization_limits ON tenant.organization_limits.organization_id = tenant.organizations.id
-        AND tenant.organization_limits.deleted IS NULL
 WHERE
     tenant.organizations.deleted IS NULL
     AND tenant.organizations.id <> '019b4000-0000-7000-8000-000000000000'::uuid
@@ -493,23 +462,20 @@ type OrganizationListParams struct {
 }
 
 type OrganizationListRow struct {
-	ID                     uuid.UUID
-	Name                   string
-	Alias                  string
-	Created                pgtype.Timestamptz
-	MaxNodesPerCluster     pgtype.Int4
-	MaxNodePoolsPerCluster pgtype.Int4
-	MaxNodesPerNodePool    pgtype.Int4
-	Clusters               int32
-	ClustersUnhealthy      int32
-	Nodes                  int32
-	NodesReady             int32
-	Pods                   int32
-	Namespaces             int32
+	ID                uuid.UUID
+	Name              string
+	Alias             string
+	Created           pgtype.Timestamptz
+	Clusters          int32
+	ClustersUnhealthy int32
+	Nodes             int32
+	NodesReady        int32
+	Pods              int32
+	Namespaces        int32
 }
 
-// Every live organization, or the one asked for, with its limits and the
-// aggregates of its live clusters.
+// Every live organization, or the one asked for, with the aggregates of its
+// live clusters.
 func (q *Queries) OrganizationList(ctx context.Context, arg OrganizationListParams) ([]OrganizationListRow, error) {
 	rows, err := q.db.Query(ctx, organizationList, arg.OrganizationID)
 	if err != nil {
@@ -524,9 +490,6 @@ func (q *Queries) OrganizationList(ctx context.Context, arg OrganizationListPara
 			&i.Name,
 			&i.Alias,
 			&i.Created,
-			&i.MaxNodesPerCluster,
-			&i.MaxNodePoolsPerCluster,
-			&i.MaxNodesPerNodePool,
 			&i.Clusters,
 			&i.ClustersUnhealthy,
 			&i.Nodes,

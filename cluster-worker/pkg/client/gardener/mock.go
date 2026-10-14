@@ -740,8 +740,7 @@ var (
 // WorkerPools reports the worker pools a cluster's shoot was last applied
 // with, as Gardener worker name -> autoscaler minimum, or nil when the cluster
 // has no shoot. The mock shoot access runs that many nodes per pool. It
-// follows buildWorkers: no node pools is one default worker, and a minimum
-// above the per-pool cap is lowered to it.
+// follows buildWorkers: no node pools is one default worker.
 func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -750,15 +749,12 @@ func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
 	if shoot == nil || shoot.DeletedAt != nil {
 		return nil
 	}
-	poolCap := shoot.Cluster.NodeLimits.MaxNodesPerNodePool
 	if len(shoot.Cluster.NodePools) == 0 {
-		return map[string]int32{
-			"default": min(defaultWorkerMinimum, clampedNodePoolMaximum(defaultWorkerMaximum, poolCap)),
-		}
+		return map[string]int32{"default": defaultWorkerMinimum}
 	}
 	pools := make(map[string]int32, len(shoot.Cluster.NodePools))
 	for _, np := range shoot.Cluster.NodePools {
-		pools[kubename.GenerateWorkerName(np.Name)] = min(np.AutoscaleMin, clampedNodePoolMaximum(np.AutoscaleMax, poolCap))
+		pools[kubename.GenerateWorkerName(np.Name)] = np.AutoscaleMin
 	}
 	return pools
 }

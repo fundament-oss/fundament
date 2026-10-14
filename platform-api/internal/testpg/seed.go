@@ -91,14 +91,6 @@ func (s *Seed) Status(clusterID uuid.UUID, status, health string, updating bool)
 		WHERE id = $1`, clusterID, status, health, updating)
 }
 
-// Limits gives an organization node caps; nil leaves one unlimited.
-func (s *Seed) Limits(orgID uuid.UUID, maxNodesPerCluster, maxNodePoolsPerCluster, maxNodesPerNodePool *int32) {
-	s.t.Helper()
-	s.exec(`INSERT INTO tenant.organization_limits
-		(organization_id, max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool)
-		VALUES ($1, $2, $3, $4)`, orgID, maxNodesPerCluster, maxNodePoolsPerCluster, maxNodesPerNodePool)
-}
-
 // ClusterSnapshot records an observation observedAgo ago.
 func (s *Seed) ClusterSnapshot(clusterID uuid.UUID, observedAgo time.Duration, nodes, nodesReady, pods, podAllocatable int32) {
 	s.t.Helper()

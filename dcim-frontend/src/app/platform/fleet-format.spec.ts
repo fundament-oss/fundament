@@ -1,17 +1,10 @@
-import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import {
-  ClusterHealth,
-  ClusterStatus,
-  DriftKind,
-  OrganizationLimitsSchema,
-} from '../../generated/fleet/v1/fleet_pb';
+import { ClusterHealth, ClusterStatus, DriftKind } from '../../generated/fleet/v1/fleet_pb';
 import {
   clusterTag,
   driftKindTag,
   formatCores,
   formatMemory,
-  limitRows,
   observed,
   poolFlag,
   timeAgo,
@@ -80,32 +73,22 @@ describe('capacity', () => {
   });
 });
 
-describe('limitRows', () => {
-  it('shows an absent cap as unlimited', () => {
-    const rows = limitRows(create(OrganizationLimitsSchema, { maxNodesPerCluster: 10 }));
-    expect(rows.map((row) => row.value)).toEqual(['10', 'Unlimited', 'Unlimited']);
-  });
-});
-
 describe('poolFlag', () => {
   const seen = timestampFromDate(now);
 
-  it('flags a pool below its minimum, at the organization cap or at its maximum', () => {
-    expect(
-      poolFlag({ nodes: 1, autoscaleMin: 2, autoscaleMax: 5, observed: seen }, undefined)?.text,
-    ).toBe('Below minimum');
-    expect(poolFlag({ nodes: 4, autoscaleMin: 1, autoscaleMax: 5, observed: seen }, 4)?.text).toBe(
-      'At pool cap',
+  it('flags a pool below its minimum or at its maximum', () => {
+    expect(poolFlag({ nodes: 1, autoscaleMin: 2, autoscaleMax: 5, observed: seen })?.text).toBe(
+      'Below minimum',
     );
-    expect(
-      poolFlag({ nodes: 5, autoscaleMin: 1, autoscaleMax: 5, observed: seen }, undefined)?.text,
-    ).toBe('At maximum');
-    expect(poolFlag({ nodes: 3, autoscaleMin: 1, autoscaleMax: 5, observed: seen }, 10)).toBeNull();
+    expect(poolFlag({ nodes: 5, autoscaleMin: 1, autoscaleMax: 5, observed: seen })?.text).toBe(
+      'At maximum',
+    );
+    expect(poolFlag({ nodes: 3, autoscaleMin: 1, autoscaleMax: 5, observed: seen })).toBeNull();
   });
 
   it('says nothing about a pool that was never observed', () => {
     expect(
-      poolFlag({ nodes: 0, autoscaleMin: 2, autoscaleMax: 5, observed: undefined }, 4),
+      poolFlag({ nodes: 0, autoscaleMin: 2, autoscaleMax: 5, observed: undefined }),
     ).toBeNull();
   });
 });

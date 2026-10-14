@@ -104,7 +104,7 @@
           <nldd-spacer size="12"></nldd-spacer>
           <nldd-table
             accessible-label="Organizations"
-            columns="minmax(180px, 1fr) 80px 100px 110px 80px 110px 110px"
+            columns="minmax(180px, 1fr) 80px 100px 110px 80px 110px"
             md-columns="minmax(160px, 1fr) 80px 100px 110px"
             sm-columns="minmax(140px, 1fr) 80px 100px"
           >
@@ -115,7 +115,6 @@
               <nldd-text-cell text="Nodes" hide-below="md"></nldd-text-cell>
               <nldd-text-cell text="Pods" hide-below="lg"></nldd-text-cell>
               <nldd-text-cell text="Namespaces" hide-below="lg"></nldd-text-cell>
-              <nldd-text-cell text="Node limit" hide-below="lg"></nldd-text-cell>
             </nldd-table-row>
             @for (organization of api.organizations(); track organization.id) {
               <nldd-table-row>
@@ -139,10 +138,6 @@
                 <nldd-text-cell
                   hide-below="lg"
                   [attr.text]="organization.namespaces"
-                ></nldd-text-cell>
-                <nldd-text-cell
-                  hide-below="lg"
-                  [attr.text]="formatLimit(limitValue(organization.limits, 'maxNodesPerCluster'))"
                 ></nldd-text-cell>
               </nldd-table-row>
             }
@@ -171,22 +166,6 @@
       <nldd-rich-text spacing="flat">
         <p>{{ organization.name }}, created {{ date(organization.created) }}</p>
       </nldd-rich-text>
-      <nldd-box>
-        <nldd-container padding="16">
-          <nldd-title size="4">
-            <h2>Limits</h2>
-          </nldd-title>
-          <nldd-spacer size="12"></nldd-spacer>
-          <nldd-table accessible-label="Limits" columns="minmax(180px, 1fr) 140px">
-            @for (row of limitRows(organization.limits); track row.label) {
-              <nldd-table-row>
-                <nldd-text-cell [attr.text]="row.label"></nldd-text-cell>
-                <nldd-text-cell [attr.text]="row.value"></nldd-text-cell>
-              </nldd-table-row>
-            }
-          </nldd-table>
-        </nldd-container>
-      </nldd-box>
       <nldd-box>
         <nldd-container padding="16">
           <nldd-title size="4">
@@ -231,11 +210,7 @@
                   [attr.text]="cluster.kubernetesVersion"
                 ></nldd-text-cell>
                 <nldd-text-cell hide-below="lg" [attr.text]="cluster.region"></nldd-text-cell>
-                <nldd-text-cell
-                  hide-below="md"
-                  [attr.text]="nodesText(cluster)"
-                  [attr.color]="cluster.overLimit ? 'critical' : null"
-                ></nldd-text-cell>
+                <nldd-text-cell hide-below="md" [attr.text]="nodesText(cluster)"></nldd-text-cell>
                 <nldd-cell hide-below="lg">
                   @if (cluster.snapshot?.observed) {
                     <nldd-progress-bar
@@ -349,10 +324,7 @@
               </nldd-table-row>
               <nldd-table-row>
                 <nldd-text-cell text="Nodes"></nldd-text-cell>
-                <nldd-text-cell
-                  [attr.text]="nodesText(cluster)"
-                  [attr.color]="cluster.overLimit ? 'critical' : null"
-                ></nldd-text-cell>
+                <nldd-text-cell [attr.text]="nodesText(cluster)"></nldd-text-cell>
               </nldd-table-row>
               @if (cluster.snapshot?.observed) {
                 <nldd-table-row>
@@ -408,7 +380,7 @@
             <nldd-spacer size="12"></nldd-spacer>
             <nldd-table
               accessible-label="Node pools"
-              columns="minmax(140px, 1fr) 150px 60px 60px 70px 70px 90px 140px"
+              columns="minmax(140px, 1fr) 150px 60px 60px 70px 70px 140px"
               md-columns="minmax(120px, 1fr) 60px 60px 70px 140px"
               sm-columns="minmax(120px, 1fr) 70px 140px"
             >
@@ -419,11 +391,10 @@
                 <nldd-text-cell text="Max" hide-below="md"></nldd-text-cell>
                 <nldd-text-cell text="Nodes"></nldd-text-cell>
                 <nldd-text-cell text="Ready" hide-below="lg"></nldd-text-cell>
-                <nldd-text-cell text="Pool cap" hide-below="lg"></nldd-text-cell>
                 <nldd-text-cell text=""></nldd-text-cell>
               </nldd-table-row>
               @for (pool of detail.nodePools; track pool.id) {
-                @let flag = poolFlag(pool, limitValue(detail.limits, 'maxNodesPerNodePool'));
+                @let flag = poolFlag(pool);
                 <nldd-table-row>
                   <nldd-text-cell [attr.text]="pool.name"></nldd-text-cell>
                   <nldd-text-cell hide-below="lg" [attr.text]="pool.machineType"></nldd-text-cell>
@@ -433,10 +404,6 @@
                   <nldd-text-cell
                     hide-below="lg"
                     [attr.text]="pool.observed ? pool.nodesReady : ''"
-                  ></nldd-text-cell>
-                  <nldd-text-cell
-                    hide-below="lg"
-                    [attr.text]="formatLimit(limitValue(detail.limits, 'maxNodesPerNodePool'))"
                   ></nldd-text-cell>
                   <nldd-cell>
                     @if (flag) {

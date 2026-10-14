@@ -14,37 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file fleet/v1/fleet.proto.
  */
 export const file_fleet_v1_fleet: GenFile = /*@__PURE__*/
-  fileDesc("ChRmbGVldC92MS9mbGVldC5wcm90bxIIZmxlZXQudjEijQEKEk9yZ2FuaXphdGlvbkxpbWl0cxIkChVtYXhfbm9kZXNfcGVyX2NsdXN0ZXIYCiABKAVCBaoBAggBEikKGm1heF9ub2RlX3Bvb2xzX3Blcl9jbHVzdGVyGBQgASgFQgWqAQIIARImChdtYXhfbm9kZXNfcGVyX25vZGVfcG9vbBgeIAEoBUIFqgECCAEijAMKDEZsZWV0U3VtbWFyeRIVCg1vcmdhbml6YXRpb25zGAogASgFEhAKCGNsdXN0ZXJzGBQgASgFEhoKEmNsdXN0ZXJzX3VuaGVhbHRoeRgeIAEoBRIZChFjbHVzdGVyc191cGRhdGluZxgoIAEoBRINCgVub2RlcxgyIAEoBRITCgtub2Rlc19yZWFkeRg8IAEoBRIMCgRwb2RzGEYgASgFEhcKD3BvZF9hbGxvY2F0YWJsZRhQIAEoBRIZChFjcHVfYWxsb2NhdGFibGVfbRhaIAEoAxIdChVtZW1vcnlfYWxsb2NhdGFibGVfbWkYZCABKAMSFgoOZHJpZnRfZmluZGluZ3MYbiABKAUSFwoPc3RhbGVfc25hcHNob3RzGHggASgFEkgKHGdhcmRlbmVyX2ludmVudG9yeV9yZWZyZXNoZWQYggEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESHAoTc3RhbGVfYWZ0ZXJfc2Vjb25kcxiMASABKAUijQIKE09yZ2FuaXphdGlvblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIsCgZsaW1pdHMYMiABKAsyHC5mbGVldC52MS5Pcmdhbml6YXRpb25MaW1pdHMSEAoIY2x1c3RlcnMYPCABKAUSGgoSY2x1c3RlcnNfdW5oZWFsdGh5GEYgASgFEg0KBW5vZGVzGFAgASgFEhMKC25vZGVzX3JlYWR5GFogASgFEgwKBHBvZHMYZCABKAUSEgoKbmFtZXNwYWNlcxhuIAEoBSKgAgoPQ2x1c3RlclNuYXBzaG90EjMKCG9ic2VydmVkGAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESDQoFbm9kZXMYFCABKAUSEwoLbm9kZXNfcmVhZHkYHiABKAUSDAoEcG9kcxgoIAEoBRIXCg9wb2RfYWxsb2NhdGFibGUYMiABKAUSGQoRY3B1X2FsbG9jYXRhYmxlX20YPCABKAMSHQoVbWVtb3J5X2FsbG9jYXRhYmxlX21pGEYgASgDEhkKCmxhc3RfZXJyb3IYUCABKAlCBaoBAggBEjgKDWxhc3RfZXJyb3JfYXQYWiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASKvAwoOQ2x1c3RlclN1bW1hcnkSCgoCaWQYCiABKAkSFwoPb3JnYW5pemF0aW9uX2lkGBQgASgJEhkKEW9yZ2FuaXphdGlvbl9uYW1lGB4gASgJEgwKBG5hbWUYKCABKAkSDgoGcmVnaW9uGDIgASgJEhoKEmt1YmVybmV0ZXNfdmVyc2lvbhg8IAEoCRInCgZzdGF0dXMYRiABKA4yFy5mbGVldC52MS5DbHVzdGVyU3RhdHVzEicKBmhlYWx0aBhQIAEoDjIXLmZsZWV0LnYxLkNsdXN0ZXJIZWFsdGgSFgoOc3RhdHVzX21lc3NhZ2UYWiABKAkSKwoHY3JlYXRlZBhkIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKbm9kZV9wb29scxhuIAEoBRIRCglub2Rlc19taW4YeCABKAUSEgoJbm9kZXNfbWF4GIIBIAEoBRIsCghzbmFwc2hvdBiMASABKAsyGS5mbGVldC52MS5DbHVzdGVyU25hcHNob3QSDgoFc3RhbGUYlgEgASgIEhMKCm92ZXJfbGltaXQYoAEgASgIIsEBCghOb2RlUG9vbBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDG1hY2hpbmVfdHlwZRgeIAEoCRIVCg1hdXRvc2NhbGVfbWluGCggASgFEhUKDWF1dG9zY2FsZV9tYXgYMiABKAUSDQoFbm9kZXMYPCABKAUSEwoLbm9kZXNfcmVhZHkYRiABKAUSMwoIb2JzZXJ2ZWQYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASJoCglOYW1lc3BhY2USCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIMCgRwb2RzGB4gASgFEjMKCG9ic2VydmVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiWwoHUHJvamVjdBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEg0KBWFsaWFzGB4gASgJEicKCm5hbWVzcGFjZXMYKCADKAsyEy5mbGVldC52MS5OYW1lc3BhY2UiuAEKDUdhcmRlbmVyU2hvb3QSDAoEbmFtZRgKIAEoCRIRCgluYW1lc3BhY2UYFCABKAkSGgoSa3ViZXJuZXRlc192ZXJzaW9uGB4gASgJEg4KBnJlZ2lvbhgoIAEoCRIrCgdjcmVhdGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIqECCgxEcmlmdEZpbmRpbmcSIQoEa2luZBgKIAEoDjITLmZsZWV0LnYxLkRyaWZ0S2luZBIeCg9vcmdhbml6YXRpb25faWQYFCABKAlCBaoBAggBEiAKEW9yZ2FuaXphdGlvbl9uYW1lGB4gASgJQgWqAQIIARISCgpjbHVzdGVyX2lkGCggASgJEhsKDGNsdXN0ZXJfbmFtZRgyIAEoCUIFqgECCAESGQoKc2hvb3RfbmFtZRg8IAEoCUIFqgECCAESHgoPc2hvb3RfbmFtZXNwYWNlGEYgASgJQgWqAQIIARIwCgVzaW5jZRhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEg4KBmRldGFpbBhaIAEoCSIYChZHZXRGbGVldFN1bW1hcnlSZXF1ZXN0IkIKF0dldEZsZWV0U3VtbWFyeVJlc3BvbnNlEicKB3N1bW1hcnkYCiABKAsyFi5mbGVldC52MS5GbGVldFN1bW1hcnkiGgoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0IlEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USNAoNb3JnYW5pemF0aW9ucxgKIAMoCzIdLmZsZWV0LnYxLk9yZ2FuaXphdGlvblN1bW1hcnkiOwoWR2V0T3JnYW5pemF0aW9uUmVxdWVzdBIhCg9vcmdhbml6YXRpb25faWQYCiABKAlCCLpIBXIDsAEBIk4KF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEjMKDG9yZ2FuaXphdGlvbhgKIAEoCzIdLmZsZWV0LnYxLk9yZ2FuaXphdGlvblN1bW1hcnkicAoTTGlzdENsdXN0ZXJzUmVxdWVzdBImCg9vcmdhbml6YXRpb25faWQYCiABKAlCDaoBAggBukgFcgOwAQESMQoGZmlsdGVyGBQgASgOMhcuZmxlZXQudjEuQ2x1c3RlckZpbHRlckIIukgFggECEAEiQgoUTGlzdENsdXN0ZXJzUmVzcG9uc2USKgoIY2x1c3RlcnMYCiADKAsyGC5mbGVldC52MS5DbHVzdGVyU3VtbWFyeSIxChFHZXRDbHVzdGVyUmVxdWVzdBIcCgpjbHVzdGVyX2lkGAogASgJQgi6SAVyA7ABASLiAQoSR2V0Q2x1c3RlclJlc3BvbnNlEikKB2NsdXN0ZXIYCiABKAsyGC5mbGVldC52MS5DbHVzdGVyU3VtbWFyeRIsCgZsaW1pdHMYFCABKAsyHC5mbGVldC52MS5Pcmdhbml6YXRpb25MaW1pdHMSJgoFc2hvb3QYHiABKAsyFy5mbGVldC52MS5HYXJkZW5lclNob290EiYKCm5vZGVfcG9vbHMYKCADKAsyEi5mbGVldC52MS5Ob2RlUG9vbBIjCghwcm9qZWN0cxgyIAMoCzIRLmZsZWV0LnYxLlByb2plY3QiGgoYTGlzdERyaWZ0RmluZGluZ3NSZXF1ZXN0IkUKGUxpc3REcmlmdEZpbmRpbmdzUmVzcG9uc2USKAoIZmluZGluZ3MYCiADKAsyFi5mbGVldC52MS5EcmlmdEZpbmRpbmcq3AEKDUNsdXN0ZXJTdGF0dXMSHgoaQ0xVU1RFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIfChtDTFVTVEVSX1NUQVRVU19QUk9WSVNJT05JTkcQChIaChZDTFVTVEVSX1NUQVRVU19SVU5OSU5HEBQSGwoXQ0xVU1RFUl9TVEFUVVNfVVBEQVRJTkcQHhIYChRDTFVTVEVSX1NUQVRVU19FUlJPUhAoEhsKF0NMVVNURVJfU1RBVFVTX0RFTEVUSU5HEDISGgoWQ0xVU1RFUl9TVEFUVVNfU1RPUFBFRBA8KmkKDUNsdXN0ZXJIZWFsdGgSHgoaQ0xVU1RFUl9IRUFMVEhfVU5TUEVDSUZJRUQQABIaChZDTFVTVEVSX0hFQUxUSF9IRUFMVEhZEAoSHAoYQ0xVU1RFUl9IRUFMVEhfVU5IRUFMVEhZEBQqngEKDUNsdXN0ZXJGaWx0ZXISHgoaQ0xVU1RFUl9GSUxURVJfVU5TUEVDSUZJRUQQABIWChJDTFVTVEVSX0ZJTFRFUl9BTEwQChIcChhDTFVTVEVSX0ZJTFRFUl9VTkhFQUxUSFkQFBIYChRDTFVTVEVSX0ZJTFRFUl9TVEFMRRAeEh0KGUNMVVNURVJfRklMVEVSX09WRVJfTElNSVQQKCrnAQoJRHJpZnRLaW5kEhoKFkRSSUZUX0tJTkRfVU5TUEVDSUZJRUQQABIkCiBEUklGVF9LSU5EX1NIT09UX1dJVEhPVVRfQ0xVU1RFUhAKEicKI0RSSUZUX0tJTkRfU0hPT1RfT0ZfREVMRVRFRF9DTFVTVEVSEBQSJAogRFJJRlRfS0lORF9DTFVTVEVSX1dJVEhPVVRfU0hPT1QQHhIdChlEUklGVF9LSU5EX1NOQVBTSE9UX1NUQUxFECgSKgomRFJJRlRfS0lORF9LVUJFUk5FVEVTX1ZFUlNJT05fTUlTTUFUQ0gQMjKwBAoMRmxlZXRTZXJ2aWNlElsKD0dldEZsZWV0U3VtbWFyeRIgLmZsZWV0LnYxLkdldEZsZWV0U3VtbWFyeVJlcXVlc3QaIS5mbGVldC52MS5HZXRGbGVldFN1bW1hcnlSZXNwb25zZSIDkAIBEmEKEUxpc3RPcmdhbml6YXRpb25zEiIuZmxlZXQudjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0GiMuZmxlZXQudjEuTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZSIDkAIBElsKD0dldE9yZ2FuaXphdGlvbhIgLmZsZWV0LnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaIS5mbGVldC52MS5HZXRPcmdhbml6YXRpb25SZXNwb25zZSIDkAIBElIKDExpc3RDbHVzdGVycxIdLmZsZWV0LnYxLkxpc3RDbHVzdGVyc1JlcXVlc3QaHi5mbGVldC52MS5MaXN0Q2x1c3RlcnNSZXNwb25zZSIDkAIBEkwKCkdldENsdXN0ZXISGy5mbGVldC52MS5HZXRDbHVzdGVyUmVxdWVzdBocLmZsZWV0LnYxLkdldENsdXN0ZXJSZXNwb25zZSIDkAIBEmEKEUxpc3REcmlmdEZpbmRpbmdzEiIuZmxlZXQudjEuTGlzdERyaWZ0RmluZGluZ3NSZXF1ZXN0GiMuZmxlZXQudjEuTGlzdERyaWZ0RmluZGluZ3NSZXNwb25zZSIDkAIBQlpaTmdpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvcGxhdGZvcm0tYXBpL3BrZy9wcm90by9nZW4vZmxlZXQvdjE7ZmxlZXR2MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
-
-/**
- * OrganizationLimits are the caps from tenant.organization_limits; an absent
- * field is unlimited.
- *
- * @generated from message fleet.v1.OrganizationLimits
- */
-export type OrganizationLimits = Message<"fleet.v1.OrganizationLimits"> & {
-  /**
-   * @generated from field: int32 max_nodes_per_cluster = 10 [features.field_presence = EXPLICIT];
-   */
-  maxNodesPerCluster: number;
-
-  /**
-   * @generated from field: int32 max_node_pools_per_cluster = 20 [features.field_presence = EXPLICIT];
-   */
-  maxNodePoolsPerCluster: number;
-
-  /**
-   * @generated from field: int32 max_nodes_per_node_pool = 30 [features.field_presence = EXPLICIT];
-   */
-  maxNodesPerNodePool: number;
-};
-
-/**
- * Describes the message fleet.v1.OrganizationLimits.
- * Use `create(OrganizationLimitsSchema)` to create a new message.
- */
-export const OrganizationLimitsSchema: GenMessage<OrganizationLimits> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 0);
+  fileDesc("ChRmbGVldC92MS9mbGVldC5wcm90bxIIZmxlZXQudjEijAMKDEZsZWV0U3VtbWFyeRIVCg1vcmdhbml6YXRpb25zGAogASgFEhAKCGNsdXN0ZXJzGBQgASgFEhoKEmNsdXN0ZXJzX3VuaGVhbHRoeRgeIAEoBRIZChFjbHVzdGVyc191cGRhdGluZxgoIAEoBRINCgVub2RlcxgyIAEoBRITCgtub2Rlc19yZWFkeRg8IAEoBRIMCgRwb2RzGEYgASgFEhcKD3BvZF9hbGxvY2F0YWJsZRhQIAEoBRIZChFjcHVfYWxsb2NhdGFibGVfbRhaIAEoAxIdChVtZW1vcnlfYWxsb2NhdGFibGVfbWkYZCABKAMSFgoOZHJpZnRfZmluZGluZ3MYbiABKAUSFwoPc3RhbGVfc25hcHNob3RzGHggASgFEkgKHGdhcmRlbmVyX2ludmVudG9yeV9yZWZyZXNoZWQYggEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESHAoTc3RhbGVfYWZ0ZXJfc2Vjb25kcxiMASABKAUi3wEKE09yZ2FuaXphdGlvblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghjbHVzdGVycxg8IAEoBRIaChJjbHVzdGVyc191bmhlYWx0aHkYRiABKAUSDQoFbm9kZXMYUCABKAUSEwoLbm9kZXNfcmVhZHkYWiABKAUSDAoEcG9kcxhkIAEoBRISCgpuYW1lc3BhY2VzGG4gASgFIqACCg9DbHVzdGVyU25hcHNob3QSMwoIb2JzZXJ2ZWQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARINCgVub2RlcxgUIAEoBRITCgtub2Rlc19yZWFkeRgeIAEoBRIMCgRwb2RzGCggASgFEhcKD3BvZF9hbGxvY2F0YWJsZRgyIAEoBRIZChFjcHVfYWxsb2NhdGFibGVfbRg8IAEoAxIdChVtZW1vcnlfYWxsb2NhdGFibGVfbWkYRiABKAMSGQoKbGFzdF9lcnJvchhQIAEoCUIFqgECCAESOAoNbGFzdF9lcnJvcl9hdBhaIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIpoDCg5DbHVzdGVyU3VtbWFyeRIKCgJpZBgKIAEoCRIXCg9vcmdhbml6YXRpb25faWQYFCABKAkSGQoRb3JnYW5pemF0aW9uX25hbWUYHiABKAkSDAoEbmFtZRgoIAEoCRIOCgZyZWdpb24YMiABKAkSGgoSa3ViZXJuZXRlc192ZXJzaW9uGDwgASgJEicKBnN0YXR1cxhGIAEoDjIXLmZsZWV0LnYxLkNsdXN0ZXJTdGF0dXMSJwoGaGVhbHRoGFAgASgOMhcuZmxlZXQudjEuQ2x1c3RlckhlYWx0aBIWCg5zdGF0dXNfbWVzc2FnZRhaIAEoCRIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpub2RlX3Bvb2xzGG4gASgFEhEKCW5vZGVzX21pbhh4IAEoBRISCglub2Rlc19tYXgYggEgASgFEiwKCHNuYXBzaG90GIwBIAEoCzIZLmZsZWV0LnYxLkNsdXN0ZXJTbmFwc2hvdBIOCgVzdGFsZRiWASABKAgiwQEKCE5vZGVQb29sEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMbWFjaGluZV90eXBlGB4gASgJEhUKDWF1dG9zY2FsZV9taW4YKCABKAUSFQoNYXV0b3NjYWxlX21heBgyIAEoBRINCgVub2Rlcxg8IAEoBRITCgtub2Rlc19yZWFkeRhGIAEoBRIzCghvYnNlcnZlZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBImgKCU5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEgwKBHBvZHMYHiABKAUSMwoIb2JzZXJ2ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASJbCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSDQoFYWxpYXMYHiABKAkSJwoKbmFtZXNwYWNlcxgoIAMoCzITLmZsZWV0LnYxLk5hbWVzcGFjZSK4AQoNR2FyZGVuZXJTaG9vdBIMCgRuYW1lGAogASgJEhEKCW5hbWVzcGFjZRgUIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YHiABKAkSDgoGcmVnaW9uGCggASgJEisKB2NyZWF0ZWQYMiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3Rfc2Vlbhg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAioQIKDERyaWZ0RmluZGluZxIhCgRraW5kGAogASgOMhMuZmxlZXQudjEuRHJpZnRLaW5kEh4KD29yZ2FuaXphdGlvbl9pZBgUIAEoCUIFqgECCAESIAoRb3JnYW5pemF0aW9uX25hbWUYHiABKAlCBaoBAggBEhIKCmNsdXN0ZXJfaWQYKCABKAkSGwoMY2x1c3Rlcl9uYW1lGDIgASgJQgWqAQIIARIZCgpzaG9vdF9uYW1lGDwgASgJQgWqAQIIARIeCg9zaG9vdF9uYW1lc3BhY2UYRiABKAlCBaoBAggBEjAKBXNpbmNlGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESDgoGZGV0YWlsGFogASgJIhgKFkdldEZsZWV0U3VtbWFyeVJlcXVlc3QiQgoXR2V0RmxlZXRTdW1tYXJ5UmVzcG9uc2USJwoHc3VtbWFyeRgKIAEoCzIWLmZsZWV0LnYxLkZsZWV0U3VtbWFyeSIaChhMaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QiUQoZTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRI0Cg1vcmdhbml6YXRpb25zGAogAygLMh0uZmxlZXQudjEuT3JnYW5pemF0aW9uU3VtbWFyeSI7ChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EiEKD29yZ2FuaXphdGlvbl9pZBgKIAEoCUIIukgFcgOwAQEiTgoXR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USMwoMb3JnYW5pemF0aW9uGAogASgLMh0uZmxlZXQudjEuT3JnYW5pemF0aW9uU3VtbWFyeSJwChNMaXN0Q2x1c3RlcnNSZXF1ZXN0EiYKD29yZ2FuaXphdGlvbl9pZBgKIAEoCUINqgECCAG6SAVyA7ABARIxCgZmaWx0ZXIYFCABKA4yFy5mbGVldC52MS5DbHVzdGVyRmlsdGVyQgi6SAWCAQIQASJCChRMaXN0Q2x1c3RlcnNSZXNwb25zZRIqCghjbHVzdGVycxgKIAMoCzIYLmZsZWV0LnYxLkNsdXN0ZXJTdW1tYXJ5IjEKEUdldENsdXN0ZXJSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIrQBChJHZXRDbHVzdGVyUmVzcG9uc2USKQoHY2x1c3RlchgKIAEoCzIYLmZsZWV0LnYxLkNsdXN0ZXJTdW1tYXJ5EiYKBXNob290GB4gASgLMhcuZmxlZXQudjEuR2FyZGVuZXJTaG9vdBImCgpub2RlX3Bvb2xzGCggAygLMhIuZmxlZXQudjEuTm9kZVBvb2wSIwoIcHJvamVjdHMYMiADKAsyES5mbGVldC52MS5Qcm9qZWN0IhoKGExpc3REcmlmdEZpbmRpbmdzUmVxdWVzdCJFChlMaXN0RHJpZnRGaW5kaW5nc1Jlc3BvbnNlEigKCGZpbmRpbmdzGAogAygLMhYuZmxlZXQudjEuRHJpZnRGaW5kaW5nKtwBCg1DbHVzdGVyU3RhdHVzEh4KGkNMVVNURVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHwobQ0xVU1RFUl9TVEFUVVNfUFJPVklTSU9OSU5HEAoSGgoWQ0xVU1RFUl9TVEFUVVNfUlVOTklORxAUEhsKF0NMVVNURVJfU1RBVFVTX1VQREFUSU5HEB4SGAoUQ0xVU1RFUl9TVEFUVVNfRVJST1IQKBIbChdDTFVTVEVSX1NUQVRVU19ERUxFVElORxAyEhoKFkNMVVNURVJfU1RBVFVTX1NUT1BQRUQQPCppCg1DbHVzdGVySGVhbHRoEh4KGkNMVVNURVJfSEVBTFRIX1VOU1BFQ0lGSUVEEAASGgoWQ0xVU1RFUl9IRUFMVEhfSEVBTFRIWRAKEhwKGENMVVNURVJfSEVBTFRIX1VOSEVBTFRIWRAUKn8KDUNsdXN0ZXJGaWx0ZXISHgoaQ0xVU1RFUl9GSUxURVJfVU5TUEVDSUZJRUQQABIWChJDTFVTVEVSX0ZJTFRFUl9BTEwQChIcChhDTFVTVEVSX0ZJTFRFUl9VTkhFQUxUSFkQFBIYChRDTFVTVEVSX0ZJTFRFUl9TVEFMRRAeKucBCglEcmlmdEtpbmQSGgoWRFJJRlRfS0lORF9VTlNQRUNJRklFRBAAEiQKIERSSUZUX0tJTkRfU0hPT1RfV0lUSE9VVF9DTFVTVEVSEAoSJwojRFJJRlRfS0lORF9TSE9PVF9PRl9ERUxFVEVEX0NMVVNURVIQFBIkCiBEUklGVF9LSU5EX0NMVVNURVJfV0lUSE9VVF9TSE9PVBAeEh0KGURSSUZUX0tJTkRfU05BUFNIT1RfU1RBTEUQKBIqCiZEUklGVF9LSU5EX0tVQkVSTkVURVNfVkVSU0lPTl9NSVNNQVRDSBAyMrAECgxGbGVldFNlcnZpY2USWwoPR2V0RmxlZXRTdW1tYXJ5EiAuZmxlZXQudjEuR2V0RmxlZXRTdW1tYXJ5UmVxdWVzdBohLmZsZWV0LnYxLkdldEZsZWV0U3VtbWFyeVJlc3BvbnNlIgOQAgESYQoRTGlzdE9yZ2FuaXphdGlvbnMSIi5mbGVldC52MS5MaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QaIy5mbGVldC52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlIgOQAgESWwoPR2V0T3JnYW5pemF0aW9uEiAuZmxlZXQudjEuR2V0T3JnYW5pemF0aW9uUmVxdWVzdBohLmZsZWV0LnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlIgOQAgESUgoMTGlzdENsdXN0ZXJzEh0uZmxlZXQudjEuTGlzdENsdXN0ZXJzUmVxdWVzdBoeLmZsZWV0LnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlIgOQAgESTAoKR2V0Q2x1c3RlchIbLmZsZWV0LnYxLkdldENsdXN0ZXJSZXF1ZXN0GhwuZmxlZXQudjEuR2V0Q2x1c3RlclJlc3BvbnNlIgOQAgESYQoRTGlzdERyaWZ0RmluZGluZ3MSIi5mbGVldC52MS5MaXN0RHJpZnRGaW5kaW5nc1JlcXVlc3QaIy5mbGVldC52MS5MaXN0RHJpZnRGaW5kaW5nc1Jlc3BvbnNlIgOQAgFCWlpOZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9wbGF0Zm9ybS1hcGkvcGtnL3Byb3RvL2dlbi9mbGVldC92MTtmbGVldHYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message fleet.v1.FleetSummary
@@ -131,7 +101,7 @@ export type FleetSummary = Message<"fleet.v1.FleetSummary"> & {
  * Use `create(FleetSummarySchema)` to create a new message.
  */
 export const FleetSummarySchema: GenMessage<FleetSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 1);
+  messageDesc(file_fleet_v1_fleet, 0);
 
 /**
  * @generated from message fleet.v1.OrganizationSummary
@@ -156,11 +126,6 @@ export type OrganizationSummary = Message<"fleet.v1.OrganizationSummary"> & {
    * @generated from field: google.protobuf.Timestamp created = 40;
    */
   created?: Timestamp | undefined;
-
-  /**
-   * @generated from field: fleet.v1.OrganizationLimits limits = 50;
-   */
-  limits?: OrganizationLimits | undefined;
 
   /**
    * @generated from field: int32 clusters = 60;
@@ -198,7 +163,7 @@ export type OrganizationSummary = Message<"fleet.v1.OrganizationSummary"> & {
  * Use `create(OrganizationSummarySchema)` to create a new message.
  */
 export const OrganizationSummarySchema: GenMessage<OrganizationSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 2);
+  messageDesc(file_fleet_v1_fleet, 1);
 
 /**
  * ClusterSnapshot is the latest observation cluster-worker stored. observed is
@@ -260,7 +225,7 @@ export type ClusterSnapshot = Message<"fleet.v1.ClusterSnapshot"> & {
  * Use `create(ClusterSnapshotSchema)` to create a new message.
  */
 export const ClusterSnapshotSchema: GenMessage<ClusterSnapshot> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 3);
+  messageDesc(file_fleet_v1_fleet, 2);
 
 /**
  * @generated from message fleet.v1.ClusterSummary
@@ -346,13 +311,6 @@ export type ClusterSummary = Message<"fleet.v1.ClusterSummary"> & {
    * @generated from field: bool stale = 150;
    */
   stale: boolean;
-
-  /**
-   * At or over one of the organization's node limits.
-   *
-   * @generated from field: bool over_limit = 160;
-   */
-  overLimit: boolean;
 };
 
 /**
@@ -360,7 +318,7 @@ export type ClusterSummary = Message<"fleet.v1.ClusterSummary"> & {
  * Use `create(ClusterSummarySchema)` to create a new message.
  */
 export const ClusterSummarySchema: GenMessage<ClusterSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 4);
+  messageDesc(file_fleet_v1_fleet, 3);
 
 /**
  * @generated from message fleet.v1.NodePool
@@ -412,7 +370,7 @@ export type NodePool = Message<"fleet.v1.NodePool"> & {
  * Use `create(NodePoolSchema)` to create a new message.
  */
 export const NodePoolSchema: GenMessage<NodePool> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 5);
+  messageDesc(file_fleet_v1_fleet, 4);
 
 /**
  * @generated from message fleet.v1.Namespace
@@ -444,7 +402,7 @@ export type Namespace = Message<"fleet.v1.Namespace"> & {
  * Use `create(NamespaceSchema)` to create a new message.
  */
 export const NamespaceSchema: GenMessage<Namespace> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 6);
+  messageDesc(file_fleet_v1_fleet, 5);
 
 /**
  * @generated from message fleet.v1.Project
@@ -476,7 +434,7 @@ export type Project = Message<"fleet.v1.Project"> & {
  * Use `create(ProjectSchema)` to create a new message.
  */
 export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 7);
+  messageDesc(file_fleet_v1_fleet, 6);
 
 /**
  * GardenerShoot is what cluster-worker last saw of the cluster's shoot.
@@ -520,7 +478,7 @@ export type GardenerShoot = Message<"fleet.v1.GardenerShoot"> & {
  * Use `create(GardenerShootSchema)` to create a new message.
  */
 export const GardenerShootSchema: GenMessage<GardenerShoot> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 8);
+  messageDesc(file_fleet_v1_fleet, 7);
 
 /**
  * @generated from message fleet.v1.DriftFinding
@@ -581,7 +539,7 @@ export type DriftFinding = Message<"fleet.v1.DriftFinding"> & {
  * Use `create(DriftFindingSchema)` to create a new message.
  */
 export const DriftFindingSchema: GenMessage<DriftFinding> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 9);
+  messageDesc(file_fleet_v1_fleet, 8);
 
 /**
  * @generated from message fleet.v1.GetFleetSummaryRequest
@@ -594,7 +552,7 @@ export type GetFleetSummaryRequest = Message<"fleet.v1.GetFleetSummaryRequest"> 
  * Use `create(GetFleetSummaryRequestSchema)` to create a new message.
  */
 export const GetFleetSummaryRequestSchema: GenMessage<GetFleetSummaryRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 10);
+  messageDesc(file_fleet_v1_fleet, 9);
 
 /**
  * @generated from message fleet.v1.GetFleetSummaryResponse
@@ -611,7 +569,7 @@ export type GetFleetSummaryResponse = Message<"fleet.v1.GetFleetSummaryResponse"
  * Use `create(GetFleetSummaryResponseSchema)` to create a new message.
  */
 export const GetFleetSummaryResponseSchema: GenMessage<GetFleetSummaryResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 11);
+  messageDesc(file_fleet_v1_fleet, 10);
 
 /**
  * @generated from message fleet.v1.ListOrganizationsRequest
@@ -624,7 +582,7 @@ export type ListOrganizationsRequest = Message<"fleet.v1.ListOrganizationsReques
  * Use `create(ListOrganizationsRequestSchema)` to create a new message.
  */
 export const ListOrganizationsRequestSchema: GenMessage<ListOrganizationsRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 12);
+  messageDesc(file_fleet_v1_fleet, 11);
 
 /**
  * @generated from message fleet.v1.ListOrganizationsResponse
@@ -641,7 +599,7 @@ export type ListOrganizationsResponse = Message<"fleet.v1.ListOrganizationsRespo
  * Use `create(ListOrganizationsResponseSchema)` to create a new message.
  */
 export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 13);
+  messageDesc(file_fleet_v1_fleet, 12);
 
 /**
  * @generated from message fleet.v1.GetOrganizationRequest
@@ -658,7 +616,7 @@ export type GetOrganizationRequest = Message<"fleet.v1.GetOrganizationRequest"> 
  * Use `create(GetOrganizationRequestSchema)` to create a new message.
  */
 export const GetOrganizationRequestSchema: GenMessage<GetOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 14);
+  messageDesc(file_fleet_v1_fleet, 13);
 
 /**
  * @generated from message fleet.v1.GetOrganizationResponse
@@ -675,7 +633,7 @@ export type GetOrganizationResponse = Message<"fleet.v1.GetOrganizationResponse"
  * Use `create(GetOrganizationResponseSchema)` to create a new message.
  */
 export const GetOrganizationResponseSchema: GenMessage<GetOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 15);
+  messageDesc(file_fleet_v1_fleet, 14);
 
 /**
  * @generated from message fleet.v1.ListClustersRequest
@@ -697,7 +655,7 @@ export type ListClustersRequest = Message<"fleet.v1.ListClustersRequest"> & {
  * Use `create(ListClustersRequestSchema)` to create a new message.
  */
 export const ListClustersRequestSchema: GenMessage<ListClustersRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 16);
+  messageDesc(file_fleet_v1_fleet, 15);
 
 /**
  * @generated from message fleet.v1.ListClustersResponse
@@ -714,7 +672,7 @@ export type ListClustersResponse = Message<"fleet.v1.ListClustersResponse"> & {
  * Use `create(ListClustersResponseSchema)` to create a new message.
  */
 export const ListClustersResponseSchema: GenMessage<ListClustersResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 17);
+  messageDesc(file_fleet_v1_fleet, 16);
 
 /**
  * @generated from message fleet.v1.GetClusterRequest
@@ -731,7 +689,7 @@ export type GetClusterRequest = Message<"fleet.v1.GetClusterRequest"> & {
  * Use `create(GetClusterRequestSchema)` to create a new message.
  */
 export const GetClusterRequestSchema: GenMessage<GetClusterRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 18);
+  messageDesc(file_fleet_v1_fleet, 17);
 
 /**
  * @generated from message fleet.v1.GetClusterResponse
@@ -741,11 +699,6 @@ export type GetClusterResponse = Message<"fleet.v1.GetClusterResponse"> & {
    * @generated from field: fleet.v1.ClusterSummary cluster = 10;
    */
   cluster?: ClusterSummary | undefined;
-
-  /**
-   * @generated from field: fleet.v1.OrganizationLimits limits = 20;
-   */
-  limits?: OrganizationLimits | undefined;
 
   /**
    * Absent when cluster-worker has not seen a shoot for this cluster.
@@ -770,7 +723,7 @@ export type GetClusterResponse = Message<"fleet.v1.GetClusterResponse"> & {
  * Use `create(GetClusterResponseSchema)` to create a new message.
  */
 export const GetClusterResponseSchema: GenMessage<GetClusterResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 19);
+  messageDesc(file_fleet_v1_fleet, 18);
 
 /**
  * @generated from message fleet.v1.ListDriftFindingsRequest
@@ -783,7 +736,7 @@ export type ListDriftFindingsRequest = Message<"fleet.v1.ListDriftFindingsReques
  * Use `create(ListDriftFindingsRequestSchema)` to create a new message.
  */
 export const ListDriftFindingsRequestSchema: GenMessage<ListDriftFindingsRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 20);
+  messageDesc(file_fleet_v1_fleet, 19);
 
 /**
  * @generated from message fleet.v1.ListDriftFindingsResponse
@@ -800,7 +753,7 @@ export type ListDriftFindingsResponse = Message<"fleet.v1.ListDriftFindingsRespo
  * Use `create(ListDriftFindingsResponseSchema)` to create a new message.
  */
 export const ListDriftFindingsResponseSchema: GenMessage<ListDriftFindingsResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 21);
+  messageDesc(file_fleet_v1_fleet, 20);
 
 /**
  * ClusterStatus follows the console's reading of tenant.clusters.shoot_status.
@@ -907,13 +860,6 @@ export enum ClusterFilter {
    * @generated from enum value: CLUSTER_FILTER_STALE = 30;
    */
   STALE = 30,
-
-  /**
-   * At or over one of the organization's node limits.
-   *
-   * @generated from enum value: CLUSTER_FILTER_OVER_LIMIT = 40;
-   */
-  OVER_LIMIT = 40,
 }
 
 /**
@@ -998,7 +944,7 @@ export const FleetService: GenService<{
     output: typeof GetFleetSummaryResponseSchema;
   },
   /**
-   * Every live organization with its limits and aggregates.
+   * Every live organization with its aggregates.
    *
    * @generated from rpc fleet.v1.FleetService.ListOrganizations
    */
@@ -1008,7 +954,7 @@ export const FleetService: GenService<{
     output: typeof ListOrganizationsResponseSchema;
   },
   /**
-   * One live organization with its limits and aggregates.
+   * One live organization with its aggregates.
    *
    * @generated from rpc fleet.v1.FleetService.GetOrganization
    */
