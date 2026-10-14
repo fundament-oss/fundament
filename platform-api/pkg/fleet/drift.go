@@ -42,7 +42,10 @@ func (s *Server) driftFindings(ctx context.Context) ([]*fleetv1.DriftFinding, er
 	}
 
 	slices.SortStableFunc(findings, func(a, b *fleetv1.DriftFinding) int {
-		return cmp.Compare(a.GetKind(), b.GetKind())
+		return cmp.Or(
+			cmp.Compare(a.GetKind(), b.GetKind()),
+			a.GetSince().AsTime().Compare(b.GetSince().AsTime()),
+		)
 	})
 	return findings, nil
 }

@@ -17,6 +17,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import SecondaryNavService from '../shell/secondary-nav.service';
+import opensElsewhere from '../shared/opens-elsewhere';
 import { ConfigService } from '../config.service';
 import PlatformApiService from './platform-api.service';
 import {
@@ -229,7 +230,9 @@ export default class PlatformComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  /** Routes in-app; a click that asks for another tab or window is left to the browser. */
   protected go(event: Event, path: string): void {
+    if (opensElsewhere(event)) return;
     event.preventDefault();
     this.router.navigateByUrl(path);
   }

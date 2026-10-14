@@ -18,9 +18,9 @@ const DEFAULT_STALE_AFTER_SECONDS = 45 * 60;
  *
  * The fleet-wide reads (the summary, every organization, the drift findings)
  * load once per visit to the section and feed the menu as well as the
- * overview. One organization or one cluster loads when it is opened; a read
+ * overview. One organization or one cluster loads when it is opened. A read
  * that a newer one overtook is dropped, so clicking through quickly cannot
- * leave the page showing the cluster before last.
+ * leave the page showing the cluster before last, nor an older fleet.
  */
 @Injectable({ providedIn: 'root' })
 export default class PlatformApiService {
@@ -50,9 +50,13 @@ export default class PlatformApiService {
     () => this.summary()?.staleAfterSeconds || DEFAULT_STALE_AFTER_SECONDS,
   );
 
+  private fleetRequest = 0;
+
   private detailRequest = 0;
 
   async loadFleet(): Promise<void> {
+    this.fleetRequest += 1;
+    const request = this.fleetRequest;
     this.fleetError.set(null);
     try {
       const [summary, organizations, findings] = await Promise.all([
@@ -60,12 +64,13 @@ export default class PlatformApiService {
         firstValueFrom(this.client.listOrganizations({})),
         firstValueFrom(this.client.listDriftFindings({})),
       ]);
+      if (request !== this.fleetRequest) return;
       this.summary.set(summary.summary);
       this.organizations.set(organizations.organizations);
       this.findings.set(findings.findings);
       this.fleetLoaded.set(true);
     } catch (err) {
-      this.fleetError.set(connectErrorMessage(err));
+      if (request === this.fleetRequest) this.fleetError.set(connectErrorMessage(err));
     }
   }
 

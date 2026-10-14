@@ -25,6 +25,9 @@ import (
 // DefaultCacheTTL is how long one database read serves every caller.
 const DefaultCacheTTL = time.Minute
 
+// readTimeout bounds the one database read that callers share.
+const readTimeout = 10 * time.Second
+
 type Config struct {
 	// CORSAllowedOrigins is the console origin. The page is anonymous, so no
 	// credentials are allowed.

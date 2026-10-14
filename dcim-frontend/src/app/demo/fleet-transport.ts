@@ -244,6 +244,11 @@ export default function createFleetDemoTransport(): Transport {
         if (!cluster) throw new ConnectError('cluster not found', Code.NotFound);
         const organization = organizationOf(cluster.organizationId);
         const projects = [...new Set(cluster.namespaces.map((ns) => ns.project))];
+        // The node the summary counts as not ready sits in the first pool that has nodes.
+        const notReadyPool =
+          cluster.health === ClusterHealth.UNHEALTHY
+            ? cluster.pools.findIndex((p) => p.nodes > 0)
+            : -1;
         return {
           cluster: clusterSummary(cluster),
           limits: { maxNodesPerCluster: organization.maxNodes, maxNodesPerNodePool: 6 },
@@ -262,7 +267,7 @@ export default function createFleetDemoTransport(): Transport {
             autoscaleMin: p.min,
             autoscaleMax: p.max,
             nodes: p.nodes,
-            nodesReady: p.nodes,
+            nodesReady: i === notReadyPool ? p.nodes - 1 : p.nodes,
             observed: minutesAgo(cluster.observedMinutesAgo ?? 0),
           })),
           projects: projects.map((name, i) => ({

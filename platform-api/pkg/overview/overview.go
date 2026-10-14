@@ -3,6 +3,7 @@ package overview
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 
 	"connectrpc.com/connect"
@@ -17,8 +18,11 @@ func (s *Server) GetPlatformOverview(ctx context.Context, _ *platformv1.GetPlatf
 		return nil, err
 	}
 
+	// Browsers and proxies may keep it only for what is left of the TTL, so
+	// the TTL stays the bound on how stale the counts are.
 	if callInfo, ok := connect.CallInfoForHandlerContext(ctx); ok {
-		callInfo.ResponseHeader().Set("Cache-Control", "public, max-age="+strconv.Itoa(int(s.ttl.Seconds())))
+		remaining := max(s.ttl-s.clock().Sub(resp.GetGeneratedAt().AsTime()), 0)
+		callInfo.ResponseHeader().Set("Cache-Control", "public, max-age="+strconv.Itoa(int(math.Ceil(remaining.Seconds()))))
 	}
 
 	return resp, nil
@@ -36,9 +40,13 @@ func (s *Server) overview(ctx context.Context) (*platformv1.GetPlatformOverviewR
 	s.mu.Unlock()
 
 	// The read runs detached from the first caller's context, so that caller
-	// hanging up does not fail everyone sharing the flight.
+	// hanging up does not fail everyone sharing the flight. It has a deadline
+	// of its own: a stalled query would otherwise hold the flight, and so
+	// every later caller, indefinitely.
 	ch := s.group.DoChan("overview", func() (any, error) {
-		resp, err := s.read(context.WithoutCancel(ctx))
+		readCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), readTimeout)
+		defer cancel()
+		resp, err := s.read(readCtx)
 		if err != nil {
 			return nil, err
 		}

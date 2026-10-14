@@ -143,7 +143,7 @@ func TestOverviewExposesNoNamesOrIDs(t *testing.T) {
 }
 
 // Within the TTL every caller gets the same read, and browsers and proxies
-// are told they may cache it for as long.
+// are told they may cache it for what is left of the TTL.
 func TestOverviewIsCached(t *testing.T) {
 	env := testpg.NewEnv(t, testDBPort)
 	seed := env.Seed(t)
@@ -158,6 +158,13 @@ func TestOverviewIsCached(t *testing.T) {
 	second, _, _ := getOverview(t, ts)
 	assert.Equal(t, int32(1), findOrganization(second, "cached").GetClusters(), "served from the cache")
 	assert.Equal(t, first.GetGeneratedAt().AsTime(), second.GetGeneratedAt().AsTime())
+
+	// A cached answer is advertised for what remains of the TTL, not afresh.
+	ageing := newServer(t, env, 2*time.Second)
+	getOverview(t, ageing)
+	time.Sleep(1100 * time.Millisecond)
+	_, resp, _ = getOverview(t, ageing)
+	assert.Equal(t, "public, max-age=1", resp.Header.Get("Cache-Control"))
 
 	// A server with a short TTL reads again once it has passed.
 	short := newServer(t, env, 10*time.Millisecond)

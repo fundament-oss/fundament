@@ -71,8 +71,12 @@ describe('platformViewOf', () => {
 
 describe('findingPath', () => {
   it('links a finding to its cluster only while that cluster is live', () => {
-    expect(findingPath({ kind: DriftKind.SNAPSHOT_STALE, clusterId: 'c1' })).toBe(
-      '/platform/clusters/c1',
+    [
+      DriftKind.CLUSTER_WITHOUT_SHOOT,
+      DriftKind.SNAPSHOT_STALE,
+      DriftKind.KUBERNETES_VERSION_MISMATCH,
+    ].forEach((kind) =>
+      expect(findingPath({ kind, clusterId: 'c1' })).toBe('/platform/clusters/c1'),
     );
     expect(findingPath({ kind: DriftKind.SHOOT_OF_DELETED_CLUSTER, clusterId: 'c1' })).toBeNull();
     expect(findingPath({ kind: DriftKind.SHOOT_WITHOUT_CLUSTER, clusterId: 'c1' })).toBeNull();

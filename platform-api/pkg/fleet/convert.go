@@ -61,13 +61,17 @@ func unhealthy(row *db.ClusterListRow) bool {
 }
 
 // overLimit reports a cluster at or over one of its organization's node
-// limits: as many nodes as the cluster may have, or as many node pools. Either
-// means the next scale-up or new pool is refused.
+// limits: as many nodes as the cluster may have, as many node pools, or a pool
+// with as many nodes as a pool may have. Each means the next scale-up or new
+// pool is refused.
 func overLimit(row *db.ClusterListRow) bool {
 	if row.MaxNodesPerCluster.Valid && row.Nodes.Valid && row.Nodes.Int32 >= row.MaxNodesPerCluster.Int32 {
 		return true
 	}
-	return row.MaxNodePoolsPerCluster.Valid && row.NodePools >= row.MaxNodePoolsPerCluster.Int32
+	if row.MaxNodePoolsPerCluster.Valid && row.NodePools >= row.MaxNodePoolsPerCluster.Int32 {
+		return true
+	}
+	return row.NodePoolAtLimit
 }
 
 func timestampOrNil(t pgtype.Timestamptz) *timestamppb.Timestamp {

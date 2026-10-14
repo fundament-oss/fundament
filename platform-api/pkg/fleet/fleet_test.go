@@ -21,9 +21,6 @@ func clusterIDs(clusters []*fleetv1.ClusterSummary) []string {
 	return ids
 }
 
-//go:fix inline
-func ptr(v int32) *int32 { return new(v) }
-
 // Soft-deleted organizations, clusters, node pools, projects and namespaces
 // are left out of every list and count.
 func TestFleetExcludesDeletedRows(t *testing.T) {
@@ -135,7 +132,7 @@ func TestListClustersFilters(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("filter-org", "Filter Org")
-	seed.Limits(org, ptr(5), ptr(2), nil)
+	seed.Limits(org, new(int32(5)), new(int32(2)), new(int32(3)))
 
 	fine := seed.Cluster(org, "fine")
 	seed.Ready(fine, time.Minute)
@@ -159,6 +156,11 @@ func TestListClustersFilters(t *testing.T) {
 	seed.NodePool(pools, "a", 1, 1)
 	seed.NodePool(pools, "b", 1, 1)
 
+	poolFull := seed.Cluster(org, "pool-full")
+	seed.Ready(poolFull, time.Minute)
+	seed.ClusterSnapshot(poolFull, time.Minute, 3, 3, 10, 330)
+	seed.NodePoolSnapshot(seed.NodePool(poolFull, "workers", 1, 3), 3, 3)
+
 	list := func(filter fleetv1.ClusterFilter) []string {
 		t.Helper()
 		resp, err := client.ListClusters(t.Context(), fleetv1.ListClustersRequest_builder{
@@ -169,11 +171,11 @@ func TestListClustersFilters(t *testing.T) {
 		return clusterIDs(resp.GetClusters())
 	}
 
-	assert.Len(t, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL), 5)
+	assert.Len(t, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL), 6)
 	assert.ElementsMatch(t, []string{broken.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_UNHEALTHY))
 	assert.ElementsMatch(t, []string{stale.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_STALE))
-	assert.ElementsMatch(t, []string{full.String(), pools.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_OVER_LIMIT),
-		"at the node cap, or at the node pool cap")
+	assert.ElementsMatch(t, []string{full.String(), pools.String(), poolFull.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_OVER_LIMIT),
+		"at the node cap, the node pool cap, or a pool at the per-pool node cap")
 }
 
 func TestGetClusterDetail(t *testing.T) {
@@ -182,7 +184,7 @@ func TestGetClusterDetail(t *testing.T) {
 	client := staffClient(t, env)
 
 	org := seed.Organization("detail-org", "Detail Org")
-	seed.Limits(org, nil, nil, ptr(4))
+	seed.Limits(org, nil, nil, new(int32(4)))
 	cluster := seed.Cluster(org, "detail")
 	seed.Ready(cluster, time.Minute)
 	seed.ClusterSnapshot(cluster, time.Minute, 3, 3, 12, 330)
@@ -219,6 +221,8 @@ func TestGetClusterDetail(t *testing.T) {
 	for _, p := range resp.GetNodePools() {
 		pools[p.GetId()] = p
 	}
+	require.Contains(t, pools, pool.String())
+	require.Contains(t, pools, unobserved.String())
 	assert.Equal(t, int32(3), pools[pool.String()].GetNodes())
 	assert.True(t, pools[pool.String()].HasObserved())
 	assert.False(t, pools[unobserved.String()].HasObserved(), "a pool without a snapshot has no observed time")

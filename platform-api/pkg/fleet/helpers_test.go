@@ -65,6 +65,13 @@ func bearer(token string) connect.ClientOption {
 // no organization ids) and authn-api's user token for the console issuer.
 func mintToken(t *testing.T, issuer string, audience jwt.ClaimStrings) string {
 	t.Helper()
+	return mintTokenWithSecret(t, testJWTSecret, issuer, audience)
+}
+
+// mintTokenWithSecret is mintToken signed with secret: a token valid in every
+// claim, so only the signature can make it fail.
+func mintTokenWithSecret(t *testing.T, secret []byte, issuer string, audience jwt.ClaimStrings) string {
+	t.Helper()
 
 	now := time.Now()
 	claims := auth.Claims{
@@ -76,7 +83,7 @@ func mintToken(t *testing.T, issuer string, audience jwt.ClaimStrings) string {
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},
 	}
-	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(testJWTSecret)
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
 	require.NoError(t, err)
 	return signed
 }

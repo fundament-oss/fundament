@@ -336,6 +336,9 @@ export default class App implements OnInit {
     this.isBarePage.set(isBarePageUrl(this.router.url));
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
+    // A signed-in visit to a bare page such as /login may already have been
+    // redirected into the console, and that NavigationEnd went unheard.
+    this.requestOrganizations();
 
     // Initialize sidebar state from current route
     this.updateSidebarStateFromRoute();

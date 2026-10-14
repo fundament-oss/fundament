@@ -37,8 +37,21 @@ type Config struct {
 	Interval time.Duration `env:"INTERVAL" envDefault:"15m"`
 	// Workers is how many clusters are collected at once.
 	Workers int `env:"WORKERS" envDefault:"4"`
-	// Timeout bounds one cluster's collection, credentials included.
+	// Timeout bounds one cluster's collection, credentials and storing
+	// included.
 	Timeout time.Duration `env:"TIMEOUT" envDefault:"30s"`
+}
+
+// Validate rejects settings the worker cannot run with: time.NewTicker panics
+// on a non-positive interval, and a non-positive timeout fails every collection.
+func (c Config) Validate() error {
+	if c.Interval <= 0 {
+		return fmt.Errorf("INVENTORY_INTERVAL must be positive, got %s", c.Interval)
+	}
+	if c.Timeout <= 0 {
+		return fmt.Errorf("INVENTORY_TIMEOUT must be positive, got %s", c.Timeout)
+	}
+	return nil
 }
 
 // Worker queues every ready cluster on each tick and collects them with a
@@ -151,7 +164,7 @@ func (w *Worker) Collect(ctx context.Context, clusterID uuid.UUID) error {
 		return fmt.Errorf("read inventory: %w", err)
 	}
 
-	return w.store(ctx, clusterID, inv)
+	return w.store(readCtx, clusterID, inv)
 }
 
 func (w *Worker) store(ctx context.Context, clusterID uuid.UUID, inv *shoot.Inventory) error {

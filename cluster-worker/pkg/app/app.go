@@ -197,6 +197,9 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	outboxWorker := outbox.New(pool, registry, logger, cfg.Outbox)
 	statusWorker := status.New(registry, logger, cfg.Status)
 	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
+	if err := cfg.Inventory.Validate(); err != nil {
+		return nil, err
+	}
 	inventoryWorker := inventory.New(pool, inventoryReader, logger, cfg.Inventory)
 
 	// Health server. The inventory worker is left out on purpose: snapshots are

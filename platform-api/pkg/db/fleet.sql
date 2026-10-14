@@ -31,7 +31,8 @@ FROM
     LEFT JOIN tenant.cluster_snapshots ON tenant.cluster_snapshots.cluster_id = tenant.clusters.id
 WHERE
     tenant.clusters.deleted IS NULL
-    AND tenant.organizations.deleted IS NULL;
+    AND tenant.organizations.deleted IS NULL
+    AND tenant.organizations.id <> '019b4000-0000-7000-8000-000000000000'::uuid;
 
 -- name: OrganizationList :many
 -- Every live organization, or the one asked for, with its limits and the
@@ -102,7 +103,8 @@ ORDER BY
 
 -- name: ClusterList :many
 -- Live clusters, optionally of one organization or just one cluster, with
--- their latest snapshot and the organization's limits. stale is computed here
+-- their latest snapshot and the organization's limits. node_pool_at_limit is
+-- whether one of its pools was last seen at the per-pool cap. stale is computed here
 -- with the same rule as the SNAPSHOT_STALE drift query: a ready cluster whose
 -- snapshot, or readiness when it has none, is older than stale_before.
 SELECT
@@ -148,6 +150,17 @@ SELECT
     tenant.organization_limits.max_nodes_per_cluster,
     tenant.organization_limits.max_node_pools_per_cluster,
     tenant.organization_limits.max_nodes_per_node_pool,
+    (
+        tenant.organization_limits.max_nodes_per_node_pool IS NOT NULL
+        AND EXISTS (
+            SELECT 1
+            FROM tenant.node_pools
+            JOIN tenant.node_pool_snapshots ON tenant.node_pool_snapshots.node_pool_id = tenant.node_pools.id
+            WHERE tenant.node_pools.cluster_id = tenant.clusters.id
+                AND tenant.node_pools.deleted IS NULL
+                AND tenant.node_pool_snapshots.nodes >= tenant.organization_limits.max_nodes_per_node_pool
+        )
+    )::boolean AS node_pool_at_limit,
     (
         tenant.clusters.shoot_status = 'ready'
         AND coalesce(

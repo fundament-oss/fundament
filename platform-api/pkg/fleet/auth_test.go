@@ -30,11 +30,8 @@ func TestFleetRequiresStaffToken(t *testing.T) {
 	})
 
 	t.Run("token signed with another secret", func(t *testing.T) {
-		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, auth.Claims{
-			RegisteredClaims: jwt.RegisteredClaims{Issuer: auth.DCIMIssuer, Subject: "019b4000-1000-7000-8000-000000000001"},
-		}).SignedString([]byte("not-the-secret"))
-		require.NoError(t, err)
-		_, err = newClient(t, env, bearer(token)).GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
+		token := mintTokenWithSecret(t, []byte("not-the-secret"), auth.DCIMIssuer, nil)
+		_, err := newClient(t, env, bearer(token)).GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
 		assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 	})
 

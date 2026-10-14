@@ -73,7 +73,7 @@
                   placeholder="Filter organizations"
                   accessible-label="Filter organizations"
                   [attr.value]="query()"
-                  (input)="query.set($any($event).detail.value)"
+                  (input)="query.set($any($event.target).value)"
                 ></nldd-search-field>
               </nldd-toolbar-item>
             </nldd-toolbar>
