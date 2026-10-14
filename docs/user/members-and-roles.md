@@ -26,8 +26,8 @@ projects. Service accounts follow the same model.
 Organization admins can invite new members, change roles and remove members.
 
 **Organization → Settings** and **Organization → Limits** are also
-admin-only; limits bound what the organization's clusters and projects may
-consume in total.
+admin-only; limits set the resource requests and limits containers get in the
+organization's namespaces when a workload does not set its own.
 
 ## Managing project members
 
@@ -35,8 +35,10 @@ consume in total.
 admin can manage members and settings for that project; a viewer has read-only
 access.
 
-**Project → Limits** bounds the resources the project's namespaces can consume,
-within whatever the organization allows.
+**Project → Limits** sets the same container defaults for the project's
+namespaces, within whatever the organization allows: a project may lower a
+value, never raise it. Like the organization's, they are defaults, not caps; a
+workload that sets its own requests and limits keeps them.
 
 ## Namespace role bindings
 

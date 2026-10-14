@@ -52,9 +52,6 @@ func Test_OrganizationLimits_Get_NoLimitsSet(t *testing.T) {
 
 	limits := res.GetLimits()
 	require.NotNil(t, limits)
-	assert.False(t, limits.HasMaxNodesPerCluster())
-	assert.False(t, limits.HasMaxNodePoolsPerCluster())
-	assert.False(t, limits.HasMaxNodesPerNodePool())
 	assert.False(t, limits.HasDefaultMemoryRequestMi())
 	assert.False(t, limits.HasDefaultMemoryLimitMi())
 	assert.False(t, limits.HasDefaultCpuRequestM())
@@ -63,9 +60,6 @@ func Test_OrganizationLimits_Get_NoLimitsSet(t *testing.T) {
 	// Platform defaults are always returned, even when the organization has no limits set.
 	defaults := res.GetDefaults()
 	require.NotNil(t, defaults)
-	assert.EqualValues(t, 10, defaults.GetMaxNodesPerCluster())
-	assert.EqualValues(t, 5, defaults.GetMaxNodePoolsPerCluster())
-	assert.EqualValues(t, 5, defaults.GetMaxNodesPerNodePool())
 	assert.EqualValues(t, 256, defaults.GetDefaultMemoryRequestMi())
 	assert.EqualValues(t, 512, defaults.GetDefaultMemoryLimitMi())
 	assert.EqualValues(t, 100, defaults.GetDefaultCpuRequestM())
@@ -88,9 +82,6 @@ func Test_OrganizationLimits_Get(t *testing.T) {
 
 	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                     orgID.String(),
-		MaxNodesPerCluster:     proto.Int32(50),
-		MaxNodePoolsPerCluster: proto.Int32(10),
-		MaxNodesPerNodePool:    proto.Int32(20),
 		DefaultMemoryRequestMi: proto.Int32(128),
 		DefaultMemoryLimitMi:   proto.Int32(256),
 		DefaultCpuRequestM:     proto.Int32(100),
@@ -113,9 +104,6 @@ func Test_OrganizationLimits_Get(t *testing.T) {
 
 	limits := res.GetLimits()
 	require.NotNil(t, limits)
-	assert.EqualValues(t, 50, limits.GetMaxNodesPerCluster())
-	assert.EqualValues(t, 10, limits.GetMaxNodePoolsPerCluster())
-	assert.EqualValues(t, 20, limits.GetMaxNodesPerNodePool())
 	assert.EqualValues(t, 128, limits.GetDefaultMemoryRequestMi())
 	assert.EqualValues(t, 256, limits.GetDefaultMemoryLimitMi())
 	assert.EqualValues(t, 100, limits.GetDefaultCpuRequestM())

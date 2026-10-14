@@ -10,7 +10,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
+import { PROJECT, NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
@@ -95,8 +95,6 @@ export default class ProjectMemberSheetComponent implements OnInit {
   private router = inject(Router);
 
   private projectClient = inject(PROJECT);
-
-  private memberClient = inject(MEMBER);
 
   private namespaceClient = inject(NAMESPACE);
 
@@ -242,13 +240,14 @@ export default class ProjectMemberSheetComponent implements OnInit {
   async load() {
     this.isLoading.set(true);
     try {
-      const [projectResponse, orgResponse] = await Promise.all([
+      const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
-        firstValueFrom(this.memberClient.listMembers({})),
+        // Through the shared cache, so the sidebar's count is of this same list.
+        this.organizationData.reloadMembers(),
       ]);
 
       const orgRoleByUserId = new Map(
-        orgResponse.members.filter((m) => m.externalRef).map((m) => [m.userId, m.permission]),
+        orgMembers.filter((m) => m.externalRef).map((m) => [m.userId, m.permission]),
       );
       const found = projectResponse.members.find((m) => m.id === this.memberId());
       this.member.set(

@@ -111,9 +111,7 @@
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
-                  [attr.text]="
-                    clusterData.basics.region ? clusterData.basics.region.toUpperCase() : 'Unknown'
-                  "
+                  [attr.text]="clusterData.basics.region || 'Unknown'"
                 ></nldd-text-cell>
               </nldd-list-item>
               <nldd-list-item>
