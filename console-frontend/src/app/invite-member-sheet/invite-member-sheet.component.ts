@@ -20,6 +20,7 @@ import AutofocusDirective from '../autofocus.directive';
 import InvitationEmailComponent from '../invitation-email/invitation-email.component';
 import { organizationPermissionLabel } from '../utils/role-label';
 
+import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/cell';
 import '@nldd/design-system/form';
