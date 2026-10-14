@@ -1,3 +1,4 @@
+import { ConnectError } from '@connectrpc/connect';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -187,7 +188,7 @@ export default class ProjectDefaultsBlockComponent implements OnInit {
     } catch (err) {
       // An InvalidArgument says which value is too high and what the cluster
       // allows, so the API's own message is what belongs here.
-      this.saveError.set(err instanceof Error ? err.message : 'The request failed.');
+      this.saveError.set(ConnectError.from(err).rawMessage);
     } finally {
       this.saving.set(false);
     }

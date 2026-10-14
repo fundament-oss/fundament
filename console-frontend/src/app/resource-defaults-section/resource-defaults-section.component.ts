@@ -97,7 +97,8 @@ function lowest(a: number | undefined, b: number | undefined): number | undefine
 }
 
 function ceilingHint(ceiling: number | undefined, unit: string): string | null {
-  return ceiling === undefined ? null : `At most ${ceiling} ${unit}, the cluster's default`;
+  if (ceiling === undefined) return null;
+  return `Leave empty to inherit the cluster's ${ceiling} ${unit}; at most that`;
 }
 
 /** The mode that stores nothing, which differs in what it then means. */
@@ -194,9 +195,11 @@ export default class ResourceDefaultsSectionComponent {
 
   /**
    * The off mode stores undefined, which is how the API encodes "no value of
-   * its own"; suggested writes the platform's values; custom keeps what is
-   * there and only fills the halves that are empty, so a saved value is never
-   * overwritten.
+   * its own"; suggested writes the platform's values. Custom keeps what is
+   * there: on a cluster it fills the halves that are empty with the
+   * suggestion, so a saved value is never overwritten; on a project it fills
+   * nothing, because a copied cluster value would be saved as the project's
+   * own and stop following the cluster, where an empty field keeps inheriting.
    */
   protected select(mode: ResourceMode): void {
     const seed = this.seed();
@@ -211,6 +214,7 @@ export default class ResourceDefaultsSectionComponent {
       this.limit.set(seed.limit);
       return;
     }
+    if (this.scope() === 'project') return;
     if (this.request() === undefined) this.request.set(seed.request);
     if (this.limit() === undefined) this.limit.set(seed.limit);
   }

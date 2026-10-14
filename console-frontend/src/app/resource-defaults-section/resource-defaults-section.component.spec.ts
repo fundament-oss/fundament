@@ -142,14 +142,18 @@ describe('ResourceDefaultsSectionComponent on a project', () => {
     expect(host.textContent).not.toContain('Suggested');
   });
 
-  it('starts a custom pair at the values it was inheriting', () => {
+  // A copied cluster value would be saved as the project's own and stop
+  // following the cluster; an empty field keeps inheriting, so the pair
+  // starts empty and the user fills only what the project should pin.
+  it('starts a custom pair empty, still inheriting both halves', () => {
     const fixture = buildProject();
     const component = fixture.componentInstance;
 
     (component as unknown as Internals).select('custom');
 
-    expect(component.request()).toBe(100);
-    expect(component.limit()).toBe(500);
+    expect(component.mode()).toBe('custom');
+    expect(component.request()).toBeUndefined();
+    expect(component.limit()).toBeUndefined();
   });
 
   it('clears both halves when Inherit is picked', () => {
@@ -192,7 +196,7 @@ describe('ResourceDefaultsSectionComponent on a project', () => {
     const fixture = buildProject();
     const internals = fixture.componentInstance as unknown as Internals;
 
-    expect(internals.requestHint()).toBe("At most 100 MiB, the cluster's default");
+    expect(internals.requestHint()).toBe("Leave empty to inherit the cluster's 100 MiB; at most that");
   });
 
   it('has no ceiling where the cluster sets no value', () => {

@@ -1,3 +1,4 @@
+import { ConnectError } from '@connectrpc/connect';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -180,7 +181,7 @@ export default class ClusterDefaultsBlockComponent implements OnInit {
     } catch (err) {
       // A FailedPrecondition names the project to lower first, so the API's own
       // message is more use here than anything this page could write.
-      this.saveError.set(err instanceof Error ? err.message : 'The request failed.');
+      this.saveError.set(ConnectError.from(err).rawMessage);
     } finally {
       this.saving.set(false);
     }
