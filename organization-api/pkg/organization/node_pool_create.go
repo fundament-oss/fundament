@@ -70,6 +70,9 @@ func (s *Server) CreateNodePool(
 			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolQuotaExceeded {
 				return nil, connect.NewError(connect.CodeResourceExhausted, errors.New(pgErr.Message))
 			}
+			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolQuotaUnresolvable {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(pgErr.Message))
+			}
 			// The region-match constraint trigger: the resolved row's region does
 			// not match the cluster's region_id (e.g. a pre-catalog cluster whose
 			// region_id is still NULL).

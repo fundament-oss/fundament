@@ -82,7 +82,7 @@ func nodePoolTestCluster(t *testing.T, env *testEnv, orgID uuid.UUID, token stri
 	clusterID := res.GetClusterId()
 	for _, name := range []string{"workers", "spot"} {
 		_, err = env.adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max) VALUES ($1, $2, 'm1.small', 1, 3)",
+			"INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max) VALUES ($1, $2, 'n1-standard-1', 1, 3)",
 			clusterID, name,
 		)
 		require.NoError(t, err)

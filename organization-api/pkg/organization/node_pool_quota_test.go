@@ -1,7 +1,10 @@
 package organization_test
 
 import (
+	"strings"
 	"testing"
+
+	"connectrpc.com/connect"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -184,6 +187,51 @@ func Test_NodePool_Create_DeletedClusterCountsUntilTornDown(t *testing.T) {
 	require.NoError(t, err)
 	_, err = q.createNodePool(second, "workers", "n1-standard-1", 3)
 	require.NoError(t, err)
+}
+
+// A pool from before the catalog: with a machine type the region offers it is
+// matched and counted like any other; with one it does not offer, nothing
+// covers it, so it may shrink but not grow.
+func Test_NodePool_Update_LegacyPoolsAreMatchedOrFrozen(t *testing.T) {
+	t.Parallel()
+	q := newQuotaEnv(t)
+	clusterID, err := q.createCluster("c")
+	require.NoError(t, err)
+	q.setNodeQuota(t, offeringN1Standard1, 5)
+
+	var matched, orphan string
+	for _, statement := range []string{
+		`ALTER TABLE tenant.node_pools DISABLE TRIGGER verify_quota`,
+		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
+		 VALUES ($1, 'matched', 'n1-standard-1', 1, 3)`,
+		`INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
+		 VALUES ($1, 'orphan', 'm1.small', 1, 3)`,
+		`ALTER TABLE tenant.node_pools ENABLE TRIGGER verify_quota`,
+	} {
+		if strings.Contains(statement, "$1") {
+			_, err = q.env.adminPool.Exec(t.Context(), statement, clusterID)
+		} else {
+			_, err = q.env.adminPool.Exec(t.Context(), statement)
+		}
+		require.NoError(t, err)
+	}
+	err = q.env.adminPool.QueryRow(t.Context(), `SELECT id FROM tenant.node_pools WHERE name = 'matched'`).Scan(&matched)
+	require.NoError(t, err)
+	err = q.env.adminPool.QueryRow(t.Context(), `SELECT id FROM tenant.node_pools WHERE name = 'orphan'`).Scan(&orphan)
+	require.NoError(t, err)
+
+	// The matched one counts: 3 + 3 > 5, growth refused like any pool's.
+	err = q.updateNodePool(matched, 1, 6)
+	requireResourceExhausted(t, err, "node pools of machine type n1-standard-1 in region eu-west-1 would total 6 nodes, over the organization's quota of 5")
+	require.NoError(t, q.updateNodePool(matched, 1, 2))
+
+	// The orphan may shrink, and is refused when it would grow.
+	require.NoError(t, q.updateNodePool(orphan, 1, 2))
+	err = q.updateNodePool(orphan, 1, 4)
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+	assert.Contains(t, connectErr.Message(), "node pool orphan has machine type m1.small, which the catalog does not offer in its region")
 }
 
 // Lowering a quota under what the organization runs leaves its pools alone:

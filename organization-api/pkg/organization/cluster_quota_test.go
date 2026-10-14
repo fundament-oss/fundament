@@ -32,8 +32,11 @@ func newQuotaEnv(t *testing.T) *quotaEnv {
 		WithUser(&UserArgs{ID: userID, Name: "quota-admin", OrgIDs: []uuid.UUID{orgID}}),
 	)
 
-	// The harness gives organizations room; this is about the real default.
+	// The harness gives organizations room; this is about the real defaults:
+	// one cluster, and no node quota at all.
 	_, err := env.adminPool.Exec(t.Context(), `UPDATE tenant.organizations SET quota_clusters = DEFAULT WHERE id = $1`, orgID)
+	require.NoError(t, err)
+	_, err = env.adminPool.Exec(t.Context(), `DELETE FROM tenant.organization_machine_quotas WHERE organization_id = $1`, orgID)
 	require.NoError(t, err)
 
 	ctx, callInfo := connect.NewClientContext(context.Background())

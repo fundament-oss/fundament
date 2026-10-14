@@ -123,6 +123,10 @@ funops organization quota get-clusters acme-corp
 funops organization quota list-nodes acme-corp
 ```
 
+The migration also links pools from before the catalog to their machine type
+offering where the cluster's region still offers it, so they count. A pool it
+cannot link keeps running but cannot grow until an operator links it.
+
 They show what is in use, the node list including machine types the organization runs
 without a quota row yet (quota 0, no "updated" time), so `set-clusters` and
 `set-nodes` can give each organization at least the room it already uses.
