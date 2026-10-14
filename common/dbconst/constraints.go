@@ -205,10 +205,18 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintNotesCkSingleRef is defined on dcim.notes.
 	ConstraintNotesCkSingleRef = "notes_ck_single_ref"
+	// ConstraintOrganizationMachineQuotasCkMaxNodes is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasCkMaxNodes = "organization_machine_quotas_ck_max_nodes"
+	// ConstraintOrganizationMachineQuotasFkOrganization is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasFkOrganization = "organization_machine_quotas_fk_organization"
+	// ConstraintOrganizationMachineQuotasFkRegionMachineType is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasFkRegionMachineType = "organization_machine_quotas_fk_region_machine_type"
 	// ConstraintOrganizationsCkAlias is defined on tenant.organizations.
 	ConstraintOrganizationsCkAlias = "organizations_ck_alias"
 	// ConstraintOrganizationsCkName is defined on tenant.organizations.
 	ConstraintOrganizationsCkName = "organizations_ck_name"
+	// ConstraintOrganizationsCkQuotaClusters is defined on tenant.organizations.
+	ConstraintOrganizationsCkQuotaClusters = "organizations_ck_quota_clusters"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
 	// ConstraintOrganizationsUsersCkPermission is defined on tenant.organizations_users.
@@ -381,4 +389,6 @@ const (
 	ConstraintVerifyDefaults = "verify_defaults"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"
+	// ConstraintVerifyQuota is defined on (constraint trigger).
+	ConstraintVerifyQuota = "verify_quota"
 )

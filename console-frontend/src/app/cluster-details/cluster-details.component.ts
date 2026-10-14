@@ -18,6 +18,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
+import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
 import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -312,17 +313,25 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   /** Pools the form asked for and did not get. Handed over as navigation state
    *  by the summary, which cannot show it itself: it closes on the way here. */
-  nodePoolsNotCreated = signal<string[]>(
-    (window.history.state as { nodePoolsNotCreated?: string[] } | null)?.nodePoolsNotCreated ?? [],
+  nodePoolsNotCreated = signal<NodePoolNotCreated[]>(
+    (window.history.state as { nodePoolsNotCreated?: NodePoolNotCreated[] } | null)
+      ?.nodePoolsNotCreated ?? [],
   );
 
   /** The cluster is there, so this is not a failure of the page you are on: it
    *  is one thing you asked for that is missing from it. */
   nodePoolsNotCreatedText = computed(() => {
-    const names = this.nodePoolsNotCreated();
-    if (names.length === 0) return null;
-    if (names.length === 1) return `Node pool '${names[0]}' was not created`;
-    return `${names.length} node pools were not created`;
+    const pools = this.nodePoolsNotCreated();
+    if (pools.length === 0) return null;
+    if (pools.length === 1) return `Node pool '${pools[0].name}' was not created`;
+    return `${pools.length} node pools were not created`;
+  });
+
+  /** Why, pool by pool: a pool refused for its quota is not one to add again,
+   *  so each name comes with its own reason rather than a single piece of advice. */
+  nodePoolsNotCreatedDetail = computed(() => {
+    const pools = this.nodePoolsNotCreated();
+    return pools.length > 0 ? describeRefusals(pools) : null;
   });
 
   isLoading = signal<boolean>(true);

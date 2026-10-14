@@ -20,7 +20,7 @@ WHERE EXISTS (
     FROM tenant.organizations
     WHERE id = $1
       AND deleted IS NULL
-    FOR SHARE
+    FOR NO KEY UPDATE
 )
 AND NOT EXISTS (
     SELECT 1
@@ -44,10 +44,13 @@ type ClusterCreateParams struct {
 // Create a cluster if no active or pending-delete cluster with the same name exists.
 // Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 // Returns NULL if blocked (caller should check for pgx.ErrNoRows).
-// The organization must be live. FOR SHARE waits for a funops organization
-// delete holding FOR UPDATE on the row; under read committed the deleted check
-// is then re-evaluated against the committed row, so the insert finds nothing
-// instead of creating a cluster nobody can manage.
+// The organization must be live. FOR NO KEY UPDATE waits for a funops
+// organization delete holding FOR UPDATE on the row; under read committed the
+// deleted check is then re-evaluated against the committed row, so the insert
+// finds nothing instead of creating a cluster nobody can manage. It also
+// serialises cluster creation per organization, which the quota trigger
+// (clusters_tr_verify_quota) relies on: it takes the same lock, and two
+// inserts that first held FOR SHARE would deadlock upgrading to it.
 // region_id/kubernetes_version_id are the catalog references (expand phase: the
 // legacy text columns are written alongside them).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {

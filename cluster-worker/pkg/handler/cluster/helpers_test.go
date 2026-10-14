@@ -103,8 +103,8 @@ func insertCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string) uuid.
 
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
-		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-		 VALUES ($1, $2, 'eu-west-1', '1.31.1')
+		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id)
+		 VALUES ($1, $2, 'eu-west-1', '1.31.1', (SELECT catalog.regions.id FROM catalog.regions WHERE catalog.regions.name = 'eu-west-1'))
 		 RETURNING id`,
 		orgID, name,
 	).Scan(&id)
@@ -119,8 +119,8 @@ func insertDeletedCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string
 
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
-		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted)
-		 VALUES ($1, $2, 'eu-west-1', '1.31.1', now())
+		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted, region_id)
+		 VALUES ($1, $2, 'eu-west-1', '1.31.1', now(), (SELECT catalog.regions.id FROM catalog.regions WHERE catalog.regions.name = 'eu-west-1'))
 		 RETURNING id`,
 		orgID, name,
 	).Scan(&id)

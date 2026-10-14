@@ -44,7 +44,10 @@ INSERT INTO catalog.kubernetes_versions (id, version) VALUES
 
 INSERT INTO catalog.machine_types (id, name, lcpu, memory) VALUES
     ('019b4000-5200-7000-8000-000000000003', 'n1-standard-1', 1, 4026531840),  -- 3.75 GiB
-    ('019b4000-5200-7000-8000-000000000004', 'n1-standard-2', 2, 8053063680);  -- 7.5 GiB
+    ('019b4000-5200-7000-8000-000000000004', 'n1-standard-2', 2, 8053063680),  -- 7.5 GiB
+    -- The cluster-worker integration tests build pools of these two.
+    ('019b4000-5200-7000-8000-000000000005', 'n1-standard-4', 4, 16106127360), -- 15 GiB
+    ('019b4000-5200-7000-8000-000000000006', 'n1-highmem-8', 8, 55834574848);  -- 52 GiB
 
 INSERT INTO catalog.region_kubernetes_versions (region_id, kubernetes_version_id) VALUES
     ('019b4000-5000-7000-8000-000000000002', '019b4000-5100-7000-8000-000000000003'),
@@ -53,7 +56,9 @@ INSERT INTO catalog.region_kubernetes_versions (region_id, kubernetes_version_id
 
 INSERT INTO catalog.region_machine_types (id, region_id, machine_type_id) VALUES
     ('019b4000-5300-7000-8000-000000000003', '019b4000-5000-7000-8000-000000000002', '019b4000-5200-7000-8000-000000000003'),
-    ('019b4000-5300-7000-8000-000000000004', '019b4000-5000-7000-8000-000000000002', '019b4000-5200-7000-8000-000000000004');
+    ('019b4000-5300-7000-8000-000000000004', '019b4000-5000-7000-8000-000000000002', '019b4000-5200-7000-8000-000000000004'),
+    ('019b4000-5300-7000-8000-000000000005', '019b4000-5000-7000-8000-000000000002', '019b4000-5200-7000-8000-000000000005'),
+    ('019b4000-5300-7000-8000-000000000006', '019b4000-5000-7000-8000-000000000002', '019b4000-5200-7000-8000-000000000006');
 
 -- Link the pre-catalog tenant fixtures to the catalog (the region-match trigger
 -- rejects node pools on clusters whose region_id is NULL).
