@@ -80,6 +80,18 @@ BEGIN
       AND tenant.organization_machine_quotas.region_machine_type_id = NEW.region_machine_type_id;
     v_quota := coalesce(v_quota, 0);
 
+    -- No quota means no pool of this kind at all, however small: a maximum of
+    -- 0 would otherwise slip under the sum check.
+    IF v_quota = 0 THEN
+        SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+        WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
+        RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
+                    USING HINT = 'node_pool_quota_exceeded';
+    END IF;
+
     v_in_use := tenant.organization_nodes_in_use(v_organization_id, NEW.region_machine_type_id);
     IF v_in_use > v_quota THEN
         SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
@@ -87,11 +99,6 @@ BEGIN
         JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
         JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
         WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
-
-        IF v_quota = 0 THEN
-            RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
-                        USING HINT = 'node_pool_quota_exceeded';
-        END IF;
         RAISE EXCEPTION 'node pools of machine type % in region % would total % nodes, over the organization''s quota of %', v_machine_type, v_region, v_in_use, v_quota
                     USING HINT = 'node_pool_quota_exceeded';
     END IF;
@@ -106,7 +113,7 @@ $function$
 CREATE OR REPLACE FUNCTION tenant.organization_clusters_in_use(p_organization_id uuid)
  RETURNS bigint
  LANGUAGE plpgsql
- STABLE SECURITY DEFINER COST 1
+ STABLE COST 1
 AS $function$
 BEGIN
     -- What counts against quota_clusters: the organization's live clusters, and
@@ -129,7 +136,7 @@ $function$
 CREATE OR REPLACE FUNCTION tenant.organization_nodes_in_use(p_organization_id uuid, p_region_machine_type_id uuid)
  RETURNS bigint
  LANGUAGE plpgsql
- STABLE SECURITY DEFINER COST 1
+ STABLE COST 1
 AS $function$
 BEGIN
     -- What counts against a machine quota: the autoscale maxima of the live
