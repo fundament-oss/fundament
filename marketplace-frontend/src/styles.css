@@ -101,6 +101,12 @@
     var(--primitives-color-accent-200) 0 0 0 4px;
 }
 
+/* The test-environment status bar (app.html) is a link to the PoC. The design
+   system gives links the default cursor; this one says it can be clicked. */
+nldd-status-bar {
+  --semantics-controls-link-cursor: pointer;
+}
+
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
 

@@ -34,6 +34,12 @@ export interface AppConfiguration {
   mockMetrics?: boolean;
   /** Same as mockMetrics, for the logs backend. */
   mockLogs?: boolean;
+  /**
+   * The same site on the PoC. Set only in a test environment (PR previews, the
+   * sandbox): a banner above the app then says so and links here. Empty means
+   * this is the real thing and there is no banner.
+   */
+  pocUrl?: string;
 }
 
 @Injectable({
