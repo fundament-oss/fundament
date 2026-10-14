@@ -10,31 +10,37 @@ import (
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 )
 
-// mergedLimitDefaults computes the namespace's effective per-container
-// resource defaults from the raw org/project limits columns: per field the
-// lowest non-NULL value wins, so a project default can only tighten the
-// organization default. hasAny reports whether any field is set.
+// effectiveDefaults computes the namespace's per-container resource defaults
+// from the cluster and project default_* columns. hasAny reports whether any
+// field is set.
 //
-// The request/limit guard only triggers on mixed-NULL combinations (e.g. the
-// org sets only a limit and the project only a higher request): when both
+// Per field the lowest non-NULL value wins. The database rejects a project
+// value above its cluster's, so for anything written through the API this is
+// the same as "the project's value, else the cluster's"; taking the lower one
+// also keeps rows written before those triggers existed within the cluster's
+// defaults.
+//
+// The request/limit guard is the backstop for the rule the project trigger
+// enforces at write time. It only triggers on mixed-NULL combinations (the
+// cluster sets only a limit and the project only a higher request): when both
 // sources define both bounds, min(request) <= min(limit) follows from each row
-// satisfying request <= limit. The kube-apiserver would reject such a
+// satisfying its own request <= limit. The kube-apiserver would reject such a
 // LimitRange, so the sync fails visibly instead of applying it.
-func mergedLimitDefaults(row *db.NamespaceGetForSyncRow) (defaults shoot.LimitDefaults, hasAny bool, err error) {
-	defaults = shoot.LimitDefaults{
-		CPURequestMilli: leastInt4(row.ProjectDefaultCpuRequestM, row.OrgDefaultCpuRequestM),
-		CPULimitMilli:   leastInt4(row.ProjectDefaultCpuLimitM, row.OrgDefaultCpuLimitM),
-		MemoryRequestMi: leastInt4(row.ProjectDefaultMemoryRequestMi, row.OrgDefaultMemoryRequestMi),
-		MemoryLimitMi:   leastInt4(row.ProjectDefaultMemoryLimitMi, row.OrgDefaultMemoryLimitMi),
+func effectiveDefaults(row *db.NamespaceGetForSyncRow) (defaults shoot.ContainerDefaults, hasAny bool, err error) {
+	defaults = shoot.ContainerDefaults{
+		CPURequestMilli: leastInt4(row.ProjectDefaultCpuRequestM, row.ClusterDefaultCpuRequestM),
+		CPULimitMilli:   leastInt4(row.ProjectDefaultCpuLimitM, row.ClusterDefaultCpuLimitM),
+		MemoryRequestMi: leastInt4(row.ProjectDefaultMemoryRequestMi, row.ClusterDefaultMemoryRequestMi),
+		MemoryLimitMi:   leastInt4(row.ProjectDefaultMemoryLimitMi, row.ClusterDefaultMemoryLimitMi),
 	}
 
 	if defaults.CPURequestMilli != nil && defaults.CPULimitMilli != nil && *defaults.CPURequestMilli > *defaults.CPULimitMilli {
-		return shoot.LimitDefaults{}, false, fmt.Errorf(
+		return shoot.ContainerDefaults{}, false, fmt.Errorf(
 			"invalid merged resource defaults: cpu request %dm exceeds cpu limit %dm",
 			*defaults.CPURequestMilli, *defaults.CPULimitMilli)
 	}
 	if defaults.MemoryRequestMi != nil && defaults.MemoryLimitMi != nil && *defaults.MemoryRequestMi > *defaults.MemoryLimitMi {
-		return shoot.LimitDefaults{}, false, fmt.Errorf(
+		return shoot.ContainerDefaults{}, false, fmt.Errorf(
 			"invalid merged resource defaults: memory request %dMi exceeds memory limit %dMi",
 			*defaults.MemoryRequestMi, *defaults.MemoryLimitMi)
 	}
@@ -62,12 +68,13 @@ func leastInt4(a, b pgtype.Int4) *int32 {
 	}
 }
 
-// reconcileLimitRange materializes the merged resource defaults as the managed
-// fundament-defaults LimitRange in the (already ensured) namespace, or removes
-// it when no defaults apply. Runs inside the namespace ensure path, so it
-// inherits its shoot-readiness gate and namespace-before-LimitRange ordering.
+// reconcileLimitRange materializes the effective resource defaults as the
+// managed fundament-defaults LimitRange in the (already ensured) namespace, or
+// removes it when no defaults apply. Runs inside the namespace ensure path, so
+// it inherits its shoot-readiness gate and namespace-before-LimitRange
+// ordering.
 func (h *Handler) reconcileLimitRange(ctx context.Context, row *db.NamespaceGetForSyncRow, name string) error {
-	defaults, hasAny, err := mergedLimitDefaults(row)
+	defaults, hasAny, err := effectiveDefaults(row)
 	if err != nil {
 		return fmt.Errorf("namespace %s: %w", name, err)
 	}

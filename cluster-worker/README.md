@@ -57,7 +57,7 @@ sequenceDiagram
 ```
 
 - **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
-  limits insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
+  container defaults insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
   claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
   run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
   whose precondition is not met yet (for example, the project namespace does not exist)
@@ -261,16 +261,37 @@ depends on it. The `local-gardener` Skaffold profile turns it on; see
 [Running with a local Gardener](../docs/developer/fundament/local-gardener.md) for turning
 it off locally.
 
-## Organization limits
+## Container defaults
 
-The per-container resource defaults from the Limits page
-(`organization_limits`/`project_limits` `default_*` columns) are materialized as
-a managed `fundament-defaults` `LimitRange` in each project namespace during
-namespace sync. Per field the lowest of the org and project value wins, so a
-project can only tighten the org default; when no defaults apply the managed
-`LimitRange` is removed. A mixed-NULL combination where a merged request exceeds
-the merged limit fails the namespace sync visibly rather than applying an object
-the kube-apiserver would reject.
+What a container gets when a workload sets no resources of its own lives in
+four columns on both `tenant.clusters` and `tenant.projects`:
+`default_memory_request_mi`, `default_memory_limit_mi`, `default_cpu_request_m`
+and `default_cpu_limit_m`. NULL means no default is set for that field. A
+project inherits the cluster's value where it sets none, and may set a lower
+one but never a higher one.
+
+The database enforces that at write time, so there is nothing to catch here
+after the fact:
+
+- `tenant.projects_tr_verify_defaults` refuses a project value above its
+  cluster's, and an effective request above the effective limit.
+- `tenant.clusters_tr_verify_defaults` refuses lowering a cluster default below
+  an active project's, naming the project to lower first.
+
+Namespace sync materializes the effective values as a managed
+`fundament-defaults` `LimitRange` in each project namespace, and removes it when
+no defaults apply. Per field it takes the lower of the cluster and project
+value: with the triggers in place that is the same as "the project's value,
+else the cluster's", and it keeps rows written before those triggers existed
+within the cluster's defaults. A mixed-NULL combination where the effective
+request exceeds the effective limit fails the namespace sync visibly rather
+than applying an object the kube-apiserver would reject — the backstop for the
+rule the project trigger already enforces.
+
+`clusters_defaults_outbox_trigger` and `projects_defaults_outbox_trigger`
+enqueue the affected namespaces when a default changes.
+`cluster_outbox_cluster_trigger` ignores these columns, so a defaults change
+does not re-apply the Shoot.
 
 ## Plugin machinery
 

@@ -128,114 +128,6 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="organization_limits" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="14" z-value="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<position x="840" y="1280"/>
-	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="organization_id" not-null="true">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="default_memory_request_mi">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_memory_limit_mi">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_cpu_request_m">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_cpu_limit_m">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="created" not-null="true" default-value="now()">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="deleted">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<constraint name="organization_limits_pk" type="pk-constr" table="tenant.organization_limits">
-		<columns names="id" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="organization_limits_uq_org" type="uq-constr" nulls-not-distinct="true" table="tenant.organization_limits">
-		<columns names="organization_id,deleted" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="organization_limits_ck_default_memory_request_mi" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
-	</constraint>
-	<constraint name="organization_limits_ck_default_memory_limit_mi" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
-	</constraint>
-	<constraint name="organization_limits_ck_default_cpu_request_m" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
-	</constraint>
-	<constraint name="organization_limits_ck_default_cpu_limit_m" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
-	</constraint>
-	<constraint name="organization_limits_ck_memory_limit_gte_request" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
-	</constraint>
-	<constraint name="organization_limits_ck_cpu_limit_gte_request" type="ck-constr" table="tenant.organization_limits">
-			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
-	</constraint>
-</table>
-
-<table name="project_limits" layers="0" collapse-mode="1" pagination="true" attribs-page="0" ext-attribs-page="0" rls-enabled="true" max-obj-count="10" z-value="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<position x="1480" y="80"/>
-	<column name="id" not-null="true" default-value="uuidv7()">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="project_id" not-null="true">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="default_memory_request_mi">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_memory_limit_mi">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_cpu_request_m">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="default_cpu_limit_m">
-		<type name="integer" length="0"/>
-	</column>
-	<column name="created" not-null="true" default-value="now()">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="deleted">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<constraint name="project_limits_pk" type="pk-constr" table="tenant.project_limits">
-		<columns names="id" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="project_limits_uq_project" type="uq-constr" nulls-not-distinct="true" table="tenant.project_limits">
-		<columns names="project_id,deleted" ref-type="src-columns"/>
-	</constraint>
-	<constraint name="project_limits_ck_default_memory_request_mi" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
-	</constraint>
-	<constraint name="project_limits_ck_default_memory_limit_mi" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
-	</constraint>
-	<constraint name="project_limits_ck_default_cpu_request_m" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
-	</constraint>
-	<constraint name="project_limits_ck_default_cpu_limit_m" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
-	</constraint>
-	<constraint name="project_limits_ck_memory_limit_gte_request" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
-	</constraint>
-	<constraint name="project_limits_ck_cpu_limit_gte_request" type="ck-constr" table="tenant.project_limits">
-			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
-	</constraint>
-</table>
-
 <table name="projects" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -258,6 +150,18 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="default_memory_request_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_memory_limit_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_request_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_limit_m">
+		<type name="integer" length="0"/>
+	</column>
 	<constraint name="projects_pk" type="pk-constr" table="tenant.projects">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -266,6 +170,24 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 	<constraint name="projects_ck_alias" type="ck-constr" table="tenant.projects">
 			<expression> <![CDATA[char_length(alias) >= 1 AND char_length(alias) <= 255]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_memory_request_mi" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_memory_limit_mi" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_cpu_request_m" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_cpu_limit_m" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_memory_limit_gte_request" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
+	</constraint>
+	<constraint name="projects_ck_default_cpu_limit_gte_request" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
 	</constraint>
 </table>
 
@@ -387,6 +309,258 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="project_defaults_violation"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="IMMUTABLE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL SAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="text" length="0"/>
+	</return-type>
+	<parameter name="p_cluster_memory_request_mi" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_cluster_memory_limit_mi" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_cluster_cpu_request_m" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_cluster_cpu_limit_m" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_project_memory_request_mi" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_project_memory_limit_mi" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_project_cpu_request_m" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<parameter name="p_project_cpu_limit_m" in="true">
+		<type name="integer" length="0"/>
+	</parameter>
+	<definition> <![CDATA[BEGIN
+    -- A project default may never be higher than the cluster's, per field and
+    -- only where both are set: an unset cluster default is no ceiling at all.
+    -- The effective pair (the project's value, else the cluster's) must also
+    -- stay a valid LimitRange, which a mix of set and unset values can break
+    -- even though neither row violates its own limit >= request constraint.
+    -- A comparison against NULL yields NULL, so every check below is skipped
+    -- unless both of its sides are set.
+
+    -- CPU, in millicores.
+    IF p_project_cpu_request_m > p_cluster_cpu_request_m THEN
+        RETURN format('default CPU request %sm exceeds the cluster''s %sm',
+                      p_project_cpu_request_m, p_cluster_cpu_request_m);
+    END IF;
+
+    IF p_project_cpu_limit_m > p_cluster_cpu_limit_m THEN
+        RETURN format('default CPU limit %sm exceeds the cluster''s %sm',
+                      p_project_cpu_limit_m, p_cluster_cpu_limit_m);
+    END IF;
+
+    IF COALESCE(p_project_cpu_request_m, p_cluster_cpu_request_m)
+       > COALESCE(p_project_cpu_limit_m, p_cluster_cpu_limit_m)
+    THEN
+        RETURN format('effective default CPU request %sm exceeds the effective limit %sm',
+                      COALESCE(p_project_cpu_request_m, p_cluster_cpu_request_m),
+                      COALESCE(p_project_cpu_limit_m, p_cluster_cpu_limit_m));
+    END IF;
+
+    -- Memory, in mebibytes.
+    IF p_project_memory_request_mi > p_cluster_memory_request_mi THEN
+        RETURN format('default memory request %sMi exceeds the cluster''s %sMi',
+                      p_project_memory_request_mi, p_cluster_memory_request_mi);
+    END IF;
+
+    IF p_project_memory_limit_mi > p_cluster_memory_limit_mi THEN
+        RETURN format('default memory limit %sMi exceeds the cluster''s %sMi',
+                      p_project_memory_limit_mi, p_cluster_memory_limit_mi);
+    END IF;
+
+    IF COALESCE(p_project_memory_request_mi, p_cluster_memory_request_mi)
+       > COALESCE(p_project_memory_limit_mi, p_cluster_memory_limit_mi)
+    THEN
+        RETURN format('effective default memory request %sMi exceeds the effective limit %sMi',
+                      COALESCE(p_project_memory_request_mi, p_cluster_memory_request_mi),
+                      COALESCE(p_project_memory_limit_mi, p_cluster_memory_limit_mi));
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="projects_tr_verify_defaults"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[DECLARE
+    v_cluster tenant.clusters;
+    v_reason text;
+BEGIN
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- FOR SHARE, not a plain read: a cluster lowering its defaults holds the
+    -- lock on its row, so under READ COMMITTED this check waits for it instead
+    -- of passing against values that transaction is about to replace. The
+    -- trigger body is volatile, so its query takes a fresh snapshot and sees
+    -- whichever transaction committed first.
+    SELECT * INTO v_cluster
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = NEW.cluster_id
+    FOR SHARE;
+
+    v_reason := tenant.project_defaults_violation(
+        v_cluster.default_memory_request_mi, v_cluster.default_memory_limit_mi,
+        v_cluster.default_cpu_request_m, v_cluster.default_cpu_limit_m,
+        NEW.default_memory_request_mi, NEW.default_memory_limit_mi,
+        NEW.default_cpu_request_m, NEW.default_cpu_limit_m);
+    IF v_reason IS NOT NULL THEN
+        RAISE EXCEPTION '%', v_reason
+                    USING HINT = 'project_defaults_exceed_cluster';
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="clusters_tr_verify_defaults"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[DECLARE
+    v_project tenant.projects;
+    v_reason text;
+BEGIN
+    -- Lowering a cluster default below a project's is rejected rather than
+    -- cascaded: the message names the project to lower first.
+    FOR v_project IN
+        SELECT *
+        FROM tenant.projects
+        WHERE tenant.projects.cluster_id = NEW.id
+          AND tenant.projects.deleted IS NULL
+        ORDER BY tenant.projects.name
+    LOOP
+        v_reason := tenant.project_defaults_violation(
+            NEW.default_memory_request_mi, NEW.default_memory_limit_mi,
+            NEW.default_cpu_request_m, NEW.default_cpu_limit_m,
+            v_project.default_memory_request_mi, v_project.default_memory_limit_mi,
+            v_project.default_cpu_request_m, v_project.default_cpu_limit_m);
+        IF v_reason IS NOT NULL THEN
+            RAISE EXCEPTION 'project %: %', v_project.name, v_reason
+                        USING HINT = 'cluster_defaults_below_project';
+        END IF;
+    END LOOP;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="clusters_defaults_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Reconcile the LimitRange of every active namespace on the cluster. No
+    -- INSERT branch: a new cluster has no projects yet.
+    IF NEW.deleted IS NULL
+       AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+            OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+            OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+            OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m)
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+        WHERE tenant.projects.cluster_id = NEW.id
+          AND tenant.projects.deleted IS NULL
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="projects_defaults_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Reconcile the LimitRange of the project's active namespaces. No INSERT
+    -- branch: a new project has no namespaces yet.
+    IF NEW.deleted IS NULL
+       AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+            OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+            OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+            OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m)
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        WHERE tenant.namespaces.project_id = NEW.id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="namespace_outbox_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -415,103 +589,6 @@ END;]]> </definition>
             'trigger'
         );
     END IF;
-    RETURN NULL;
-END;]]> </definition>
-</function>
-
-<function name="organization_limits_outbox_trigger"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY DEFINER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    -- Reconcile each active namespace's LimitRange. A deleted change only
-    -- matters when the row carries default values in OLD or NEW; otherwise the
-    -- reconcile would be a guaranteed no-op.
-    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
-                              OR NEW.default_memory_limit_mi IS NOT NULL
-                              OR NEW.default_cpu_request_m IS NOT NULL
-                              OR NEW.default_cpu_limit_m IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
-                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
-                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
-                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.default_memory_request_mi IS NOT NULL
-                                          OR OLD.default_memory_limit_mi IS NOT NULL
-                                          OR OLD.default_cpu_request_m IS NOT NULL
-                                          OR OLD.default_cpu_limit_m IS NOT NULL
-                                          OR NEW.default_memory_request_mi IS NOT NULL
-                                          OR NEW.default_memory_limit_mi IS NOT NULL
-                                          OR NEW.default_cpu_request_m IS NOT NULL
-                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-        SELECT tenant.namespaces.id, 'updated', 'trigger'
-        FROM tenant.namespaces
-        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
-        JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
-        WHERE tenant.clusters.organization_id = NEW.organization_id
-          AND tenant.namespaces.deleted IS NULL;
-    END IF;
-
-    RETURN NULL;
-END;]]> </definition>
-</function>
-
-<function name="project_limits_outbox_trigger"
-		window-func="false"
-		returns-setof="false"
-		behavior-type="CALLED ON NULL INPUT"
-		function-type="VOLATILE"
-		security-type="SECURITY DEFINER"
-		parallel-type="PARALLEL UNSAFE"
-		execution-cost="1"
-		row-amount="0">
-	<schema name="tenant"/>
-	<role name="fun_owner"/>
-	<language name="plpgsql"/>
-	<return-type>
-	<type name="trigger" length="0"/>
-	</return-type>
-	<definition> <![CDATA[BEGIN
-    -- A deleted change only matters when the row carries default values in
-    -- OLD or NEW; otherwise the LimitRange reconcile would be a no-op.
-    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
-                              OR NEW.default_memory_limit_mi IS NOT NULL
-                              OR NEW.default_cpu_request_m IS NOT NULL
-                              OR NEW.default_cpu_limit_m IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
-                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
-                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
-                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.default_memory_request_mi IS NOT NULL
-                                          OR OLD.default_memory_limit_mi IS NOT NULL
-                                          OR OLD.default_cpu_request_m IS NOT NULL
-                                          OR OLD.default_cpu_limit_m IS NOT NULL
-                                          OR NEW.default_memory_request_mi IS NOT NULL
-                                          OR NEW.default_memory_limit_mi IS NOT NULL
-                                          OR NEW.default_cpu_request_m IS NOT NULL
-                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-        SELECT tenant.namespaces.id, 'updated', 'trigger'
-        FROM tenant.namespaces
-        WHERE tenant.namespaces.project_id = NEW.project_id
-          AND tenant.namespaces.deleted IS NULL;
-    END IF;
-
     RETURN NULL;
 END;]]> </definition>
 </function>
@@ -1220,6 +1297,18 @@ END;]]> </definition>
 	<column name="kubernetes_version_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="default_memory_request_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_memory_limit_mi">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_request_m">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="default_cpu_limit_m">
+		<type name="integer" length="0"/>
+	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -1228,6 +1317,24 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="clusters_ck_shoot_health" type="ck-constr" table="tenant.clusters">
 			<expression> <![CDATA[shoot_health IN ('healthy','unhealthy')]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_memory_request_mi" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_memory_request_mi IS NULL OR default_memory_request_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_memory_limit_mi" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_cpu_request_m" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_cpu_request_m IS NULL OR default_cpu_request_m > 0]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_cpu_limit_m" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_memory_limit_gte_request" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi]]> </expression>
+	</constraint>
+	<constraint name="clusters_ck_default_cpu_limit_gte_request" type="ck-constr" table="tenant.clusters">
+			<expression> <![CDATA[default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m]]> </expression>
 	</constraint>
 	<constraint name="clusters_fk_region_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_kubernetes_versions" table="tenant.clusters">
 		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
@@ -2040,22 +2147,6 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL)]]> </expression>
 </policy>
 
-<policy name="organization_limits_organization_policy" table="tenant.organization_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
-</policy>
-
-<policy name="project_limits_project_policy" table="tenant.project_limits" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
-</policy>
-
-<policy name="organization_limits_cluster_worker_read" table="tenant.organization_limits" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
-	<expression type="using-exp"> <![CDATA[true]]> </expression>
-</policy>
-
-<policy name="project_limits_cluster_worker_read" table="tenant.project_limits" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
-	<expression type="using-exp"> <![CDATA[true]]> </expression>
-</policy>
-
 <table name="cluster_events" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -2587,23 +2678,39 @@ END;]]> </definition>
 		<function signature="tenant.node_pool_region_match_trigger()"/>
 </trigger>
 
+<trigger name="verify_defaults" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.projects">
+		<function signature="tenant.projects_tr_verify_defaults()"/>
+		<columns names="cluster_id,default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m"/>
+</trigger>
+
+<trigger name="defaults_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.projects">
+		<function signature="tenant.projects_defaults_outbox_trigger()"/>
+		<columns names="default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m"/>
+</trigger>
+
+<trigger name="verify_defaults" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.clusters_tr_verify_defaults()"/>
+		<columns names="default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m"/>
+</trigger>
+
+<trigger name="defaults_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.clusters">
+		<function signature="tenant.clusters_defaults_outbox_trigger()"/>
+		<columns names="default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m"/>
+</trigger>
+
 <trigger name="namespace_outbox" firing-type="AFTER" per-line="true" constraint="false"
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.namespaces">
 		<function signature="tenant.namespace_outbox_trigger()"/>
 		<columns names="name,deleted"/>
-</trigger>
-
-<trigger name="organization_limits_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.organization_limits">
-		<function signature="tenant.organization_limits_outbox_trigger()"/>
-</trigger>
-
-<trigger name="project_limits_outbox" firing-type="AFTER" per-line="true" constraint="false"
-	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
-	 table="tenant.project_limits">
-		<function signature="tenant.project_limits_outbox_trigger()"/>
 </trigger>
 
 <index name="namespaces_idx_project_id" table="tenant.namespaces"
@@ -3673,18 +3780,6 @@ END;]]> </definition>
 	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
 </index>
 
-<constraint name="organization_limits_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organization_limits">
-	<columns names="organization_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="project_limits_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_limits">
-	<columns names="project_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
 <constraint name="projects_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.projects">
 	<columns names="cluster_id" ref-type="src-columns"/>
@@ -4229,18 +4324,6 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="tenant.clusters"
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_organization_limits_organizations" type="relfk" layers="0"
-	 custom-color="#f0f0f0"
-	 src-table="tenant.organization_limits"
-	 dst-table="tenant.organizations" reference-fk="organization_limits_fk_organization"
-	 src-required="false" dst-required="true"/>
-
-<relationship name="rel_project_limits_projects" type="relfk" layers="0"
-	 custom-color="#f0f0f0"
-	 src-table="tenant.project_limits"
-	 dst-table="tenant.projects" reference-fk="project_limits_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_cluster_events_clusters" type="relfk" layers="0"
@@ -4808,26 +4891,6 @@ END;]]> </definition>
 	<object name="tenant" type="schema"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges usage="true"/>
-</permission>
-<permission>
-	<object name="tenant.organization_limits" type="table"/>
-	<roles names="fun_fundament_api"/>
-	<privileges select="true" insert="true" update="true"/>
-</permission>
-<permission>
-	<object name="tenant.project_limits" type="table"/>
-	<roles names="fun_fundament_api"/>
-	<privileges select="true" insert="true" update="true"/>
-</permission>
-<permission>
-	<object name="tenant.organization_limits" type="table"/>
-	<roles names="fun_cluster_worker"/>
-	<privileges select="true"/>
-</permission>
-<permission>
-	<object name="tenant.project_limits" type="table"/>
-	<roles names="fun_cluster_worker"/>
-	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>

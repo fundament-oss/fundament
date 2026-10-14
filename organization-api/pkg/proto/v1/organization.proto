@@ -21,11 +21,6 @@ service OrganizationService {
   // UpdateOrganization updates the user's organization
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
 
-  // GetOrganizationLimits retrieves the resource limits for an organization
-  rpc GetOrganizationLimits(GetOrganizationLimitsRequest) returns (GetOrganizationLimitsResponse);
-
-  // UpdateOrganizationLimits sets the resource limits for an organization
-  rpc UpdateOrganizationLimits(UpdateOrganizationLimitsRequest) returns (UpdateOrganizationLimitsResponse);
 }
 
 // Organization information
@@ -74,66 +69,3 @@ message ListOrganizationsResponse {
   // List of organizations the user belongs to
   repeated Organization organizations = 10;
 }
-
-// OrganizationLimits holds the Kubernetes namespace LimitRange defaults
-message OrganizationLimits {
-  // 10, 20 and 30 carried the node caps (per cluster, per cluster's node pools
-  // and per node pool). They bound nobody: the organization admin that set them
-  // is the same role that creates and edits node pools.
-  reserved 10, 20, 30;
-  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
-  // Default memory request applied to containers via LimitRange (mebibytes)
-  int32 default_memory_request_mi = 40 [features.field_presence = EXPLICIT];
-  // Default memory limit applied to containers via LimitRange (mebibytes)
-  int32 default_memory_limit_mi = 50 [features.field_presence = EXPLICIT];
-  // Default CPU request applied to containers via LimitRange (millicores)
-  int32 default_cpu_request_m = 60 [features.field_presence = EXPLICIT];
-  // Default CPU limit applied to containers via LimitRange (millicores)
-  int32 default_cpu_limit_m = 70 [features.field_presence = EXPLICIT];
-}
-
-// GetOrganizationLimits request
-message GetOrganizationLimitsRequest {
-  // ID of the organization
-  string id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// GetOrganizationLimits response
-message GetOrganizationLimitsResponse {
-  // The current limits for the organization (absent fields mean no limit is set)
-  OrganizationLimits limits = 10;
-  // The platform default limits, used to pre-fill the form and by "Reset to defaults"
-  OrganizationLimits defaults = 20;
-}
-
-// UpdateOrganizationLimits request
-message UpdateOrganizationLimitsRequest {
-  // ID of the organization to update
-  string id = 10 [(buf.validate.field).string = {uuid: true}];
-  // 20, 30 and 40 carried the node caps, see OrganizationLimits.
-  reserved 20, 30, 40;
-  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
-  // Default memory request applied to containers via LimitRange (mebibytes)
-  int32 default_memory_request_mi = 50 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default memory limit applied to containers via LimitRange (mebibytes)
-  int32 default_memory_limit_mi = 60 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default CPU request applied to containers via LimitRange (millicores)
-  int32 default_cpu_request_m = 70 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default CPU limit applied to containers via LimitRange (millicores)
-  int32 default_cpu_limit_m = 80 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-}
-
-// UpdateOrganizationLimits response
-message UpdateOrganizationLimitsResponse {}
