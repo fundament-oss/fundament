@@ -3,6 +3,9 @@ import { Injectable } from '@angular/core';
 export interface AppConfiguration {
   authnApiUrl: string;
   apiUrl: string;
+  /** The staff fleet API (fleet.v1, FUN-23). Optional: the Platform section
+   *  says it is not available when this is empty. */
+  platformApiUrl?: string;
 }
 
 @Injectable({

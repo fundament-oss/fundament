@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -3176,6 +3176,270 @@ USING btree
 WHERE (deleted IS NULL);
 -- ddl-end --
 
+-- object: tenant.cluster_snapshots | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.cluster_snapshots CASCADE;
+CREATE TABLE tenant.cluster_snapshots (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	cluster_id uuid NOT NULL,
+	observed timestamptz,
+	nodes integer NOT NULL DEFAULT 0,
+	nodes_ready integer NOT NULL DEFAULT 0,
+	pods integer NOT NULL DEFAULT 0,
+	pod_allocatable integer NOT NULL DEFAULT 0,
+	cpu_allocatable_m bigint NOT NULL DEFAULT 0,
+	memory_allocatable_mi bigint NOT NULL DEFAULT 0,
+	last_error text,
+	last_error_at timestamptz,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT cluster_snapshots_pk PRIMARY KEY (id),
+	CONSTRAINT cluster_snapshots_uq_cluster UNIQUE (cluster_id),
+	CONSTRAINT cluster_snapshots_ck_counts CHECK (nodes >= 0 AND nodes_ready >= 0 AND nodes_ready <= nodes AND pods >= 0 AND pod_allocatable >= 0 AND cpu_allocatable_m >= 0 AND memory_allocatable_mi >= 0),
+	CONSTRAINT cluster_snapshots_ck_last_error CHECK ((last_error IS NULL) = (last_error_at IS NULL))
+);
+-- ddl-end --
+ALTER TABLE tenant.cluster_snapshots OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.cluster_snapshots ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: tenant.node_pool_snapshots | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.node_pool_snapshots CASCADE;
+CREATE TABLE tenant.node_pool_snapshots (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	node_pool_id uuid NOT NULL,
+	observed timestamptz NOT NULL,
+	nodes integer NOT NULL,
+	nodes_ready integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT node_pool_snapshots_pk PRIMARY KEY (id),
+	CONSTRAINT node_pool_snapshots_uq_node_pool UNIQUE (node_pool_id),
+	CONSTRAINT node_pool_snapshots_ck_counts CHECK (nodes >= 0 AND nodes_ready >= 0 AND nodes_ready <= nodes)
+);
+-- ddl-end --
+ALTER TABLE tenant.node_pool_snapshots OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.node_pool_snapshots ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: tenant.namespace_snapshots | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.namespace_snapshots CASCADE;
+CREATE TABLE tenant.namespace_snapshots (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	namespace_id uuid NOT NULL,
+	observed timestamptz NOT NULL,
+	pods integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT namespace_snapshots_pk PRIMARY KEY (id),
+	CONSTRAINT namespace_snapshots_uq_namespace UNIQUE (namespace_id),
+	CONSTRAINT namespace_snapshots_ck_pods CHECK (pods >= 0)
+);
+-- ddl-end --
+ALTER TABLE tenant.namespace_snapshots OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.namespace_snapshots ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: tenant.gardener_shoots | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.gardener_shoots CASCADE;
+CREATE TABLE tenant.gardener_shoots (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	shoot_uid text NOT NULL,
+	shoot_name text NOT NULL,
+	shoot_namespace text NOT NULL,
+	cluster_id uuid NOT NULL,
+	kubernetes_version text NOT NULL,
+	region text NOT NULL,
+	shoot_created timestamptz NOT NULL,
+	first_seen timestamptz NOT NULL DEFAULT now(),
+	last_seen timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT gardener_shoots_pk PRIMARY KEY (id),
+	CONSTRAINT gardener_shoots_uq_shoot_uid UNIQUE NULLS NOT DISTINCT (shoot_uid,deleted)
+);
+-- ddl-end --
+ALTER TABLE tenant.gardener_shoots OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.gardener_shoots ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: gardener_shoots_idx_cluster_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.gardener_shoots_idx_cluster_id CASCADE;
+CREATE INDEX gardener_shoots_idx_cluster_id ON tenant.gardener_shoots
+USING btree
+(
+	cluster_id
+)
+WHERE (deleted IS NULL);
+-- ddl-end --
+
+-- object: cluster_snapshots_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_snapshots_cluster_worker_policy ON tenant.cluster_snapshots CASCADE;
+CREATE POLICY cluster_snapshots_cluster_worker_policy ON tenant.cluster_snapshots
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: node_pool_snapshots_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS node_pool_snapshots_cluster_worker_policy ON tenant.node_pool_snapshots CASCADE;
+CREATE POLICY node_pool_snapshots_cluster_worker_policy ON tenant.node_pool_snapshots
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: namespace_snapshots_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS namespace_snapshots_cluster_worker_policy ON tenant.namespace_snapshots CASCADE;
+CREATE POLICY namespace_snapshots_cluster_worker_policy ON tenant.namespace_snapshots
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: gardener_shoots_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS gardener_shoots_cluster_worker_policy ON tenant.gardener_shoots CASCADE;
+CREATE POLICY gardener_shoots_cluster_worker_policy ON tenant.gardener_shoots
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: organizations_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_platform_admin ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_platform_admin ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: organization_limits_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS organization_limits_select_platform_admin ON tenant.organization_limits CASCADE;
+CREATE POLICY organization_limits_select_platform_admin ON tenant.organization_limits
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: clusters_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS clusters_select_platform_admin ON tenant.clusters CASCADE;
+CREATE POLICY clusters_select_platform_admin ON tenant.clusters
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: node_pools_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS node_pools_select_platform_admin ON tenant.node_pools CASCADE;
+CREATE POLICY node_pools_select_platform_admin ON tenant.node_pools
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: projects_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS projects_select_platform_admin ON tenant.projects CASCADE;
+CREATE POLICY projects_select_platform_admin ON tenant.projects
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: namespaces_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS namespaces_select_platform_admin ON tenant.namespaces CASCADE;
+CREATE POLICY namespaces_select_platform_admin ON tenant.namespaces
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: cluster_snapshots_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS cluster_snapshots_select_platform_admin ON tenant.cluster_snapshots CASCADE;
+CREATE POLICY cluster_snapshots_select_platform_admin ON tenant.cluster_snapshots
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: node_pool_snapshots_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS node_pool_snapshots_select_platform_admin ON tenant.node_pool_snapshots CASCADE;
+CREATE POLICY node_pool_snapshots_select_platform_admin ON tenant.node_pool_snapshots
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: namespace_snapshots_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS namespace_snapshots_select_platform_admin ON tenant.namespace_snapshots CASCADE;
+CREATE POLICY namespace_snapshots_select_platform_admin ON tenant.namespace_snapshots
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: gardener_shoots_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS gardener_shoots_select_platform_admin ON tenant.gardener_shoots CASCADE;
+CREATE POLICY gardener_shoots_select_platform_admin ON tenant.gardener_shoots
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: tenant.platform_overview | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.platform_overview() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.platform_overview ()
+	RETURNS TABLE (organization_name text, organization_alias text, clusters bigint, projects bigint, namespaces bigint)
+	LANGUAGE sql
+	STABLE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL SAFE
+	COST 100
+	SET search_path = pg_catalog, pg_temp
+	AS 
+$function$
+-- The public platform page (FUN-23) reads through here only: its role has no
+-- table grants, so names and counts are all it can ever see. Counts follow the
+-- chain organization -> cluster -> project -> namespace with every level live.
+-- The seeded system organization owns first-party plugins and is no tenant.
+SELECT
+    tenant.organizations.name,
+    tenant.organizations.alias,
+    count(DISTINCT tenant.clusters.id),
+    count(DISTINCT tenant.projects.id),
+    count(DISTINCT tenant.namespaces.id)
+FROM tenant.organizations
+LEFT JOIN tenant.clusters
+    ON tenant.clusters.organization_id = tenant.organizations.id
+    AND tenant.clusters.deleted IS NULL
+LEFT JOIN tenant.projects
+    ON tenant.projects.cluster_id = tenant.clusters.id
+    AND tenant.projects.deleted IS NULL
+LEFT JOIN tenant.namespaces
+    ON tenant.namespaces.project_id = tenant.projects.id
+    AND tenant.namespaces.deleted IS NULL
+WHERE tenant.organizations.deleted IS NULL
+    AND tenant.organizations.id <> '019b4000-0000-7000-8000-000000000000'::uuid
+GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
+ORDER BY tenant.organizations.alias, tenant.organizations.name
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.platform_overview() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: organization_limits_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.organization_limits DROP CONSTRAINT IF EXISTS organization_limits_fk_organization CASCADE;
 ALTER TABLE tenant.organization_limits ADD CONSTRAINT organization_limits_fk_organization FOREIGN KEY (organization_id)
@@ -3845,6 +4109,27 @@ ON DELETE CASCADE ON UPDATE NO ACTION;
 -- ALTER TABLE dcim.task_steps DROP CONSTRAINT IF EXISTS dcim_task_steps_fk_task CASCADE;
 ALTER TABLE dcim.task_steps ADD CONSTRAINT dcim_task_steps_fk_task FOREIGN KEY (task_id)
 REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_snapshots_fk_cluster | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_snapshots DROP CONSTRAINT IF EXISTS cluster_snapshots_fk_cluster CASCADE;
+ALTER TABLE tenant.cluster_snapshots ADD CONSTRAINT cluster_snapshots_fk_cluster FOREIGN KEY (cluster_id)
+REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: node_pool_snapshots_fk_node_pool | type: CONSTRAINT --
+-- ALTER TABLE tenant.node_pool_snapshots DROP CONSTRAINT IF EXISTS node_pool_snapshots_fk_node_pool CASCADE;
+ALTER TABLE tenant.node_pool_snapshots ADD CONSTRAINT node_pool_snapshots_fk_node_pool FOREIGN KEY (node_pool_id)
+REFERENCES tenant.node_pools (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: namespace_snapshots_fk_namespace | type: CONSTRAINT --
+-- ALTER TABLE tenant.namespace_snapshots DROP CONSTRAINT IF EXISTS namespace_snapshots_fk_namespace CASCADE;
+ALTER TABLE tenant.namespace_snapshots ADD CONSTRAINT namespace_snapshots_fk_namespace FOREIGN KEY (namespace_id)
+REFERENCES tenant.namespaces (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -5204,6 +5489,134 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.organizations
    TO fun_marketplace_install_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_2343bc0eee" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA tenant
+   TO fun_platform_public_api,fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_X_ac0f652a8e" | type: PERMISSION --
+GRANT EXECUTE
+   ON FUNCTION tenant.platform_overview()
+   TO fun_platform_public_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_c8cd23765f | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.cluster_snapshots
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_59c7e43e54 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.node_pool_snapshots
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_07aa0d1978 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.namespace_snapshots
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_raw_d04e798862 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.gardener_shoots
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_249f048c1b | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organizations
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_529a5fae46 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organization_limits
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_8b10f6852a | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.clusters
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d5fefdcc55 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pools
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_c80aef7457 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.projects
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_4f38499348 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespaces
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_301f3dc1f0 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.cluster_snapshots
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d730526bee | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pool_snapshots
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_d42dd4618b | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.namespace_snapshots
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_8659ef073b | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.gardener_shoots
+   TO fun_platform_admin_api;
 
 -- ddl-end --
 

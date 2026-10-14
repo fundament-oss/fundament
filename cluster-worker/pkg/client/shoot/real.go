@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
@@ -40,6 +41,9 @@ type RealShootAccess struct {
 	// newAPIExtClient is the apiextensions counterpart of newClient, used by
 	// EnsureCRD.
 	newAPIExtClient func(ctx context.Context, clusterID uuid.UUID) (apiextensionsclientset.Interface, error)
+	// newMetadataClient is the metadata-only counterpart of newClient, used by
+	// ReadInventory to count pods without fetching them.
+	newMetadataClient func(ctx context.Context, clusterID uuid.UUID) (metadata.Interface, error)
 }
 
 // NewRealShootAccess creates a ShootAccess backed by real Gardener
@@ -73,6 +77,18 @@ func NewRealShootAccess(gardenerClient gardener.Client, logger *slog.Logger) *Re
 			return nil, fmt.Errorf("create apiextensions clientset: %w", err)
 		}
 		return cs, nil
+	}
+
+	r.newMetadataClient = func(ctx context.Context, clusterID uuid.UUID) (metadata.Interface, error) {
+		cfg, err := r.restConfigForCluster(ctx, clusterID)
+		if err != nil {
+			return nil, err
+		}
+		mc, err := metadata.NewForConfig(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("create metadata client: %w", err)
+		}
+		return mc, nil
 	}
 
 	return r

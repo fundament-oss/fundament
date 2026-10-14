@@ -34,6 +34,14 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
+            # Fleet inventory (FUN-23): node, pod and namespace counts per
+            # ready shoot, read by the staff fleet view.
+            - name: INVENTORY_INTERVAL
+              value: {{ $.Values.clusterWorker.inventory.interval | quote }}
+            - name: INVENTORY_WORKERS
+              value: {{ $.Values.clusterWorker.inventory.workers | quote }}
+            - name: INVENTORY_TIMEOUT
+              value: {{ $.Values.clusterWorker.inventory.timeout | quote }}
             {{- if $.Values.pluginController.provisionShoots }}
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.

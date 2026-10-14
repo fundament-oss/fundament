@@ -329,10 +329,14 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 		}
 
 		shoots = append(shoots, ShootInfo{
-			Name:      shoot.Name,
-			Namespace: shoot.Namespace,
-			ClusterID: clusterID,
-			Labels:    shoot.Labels,
+			Name:              shoot.Name,
+			Namespace:         shoot.Namespace,
+			ClusterID:         clusterID,
+			Labels:            shoot.Labels,
+			UID:               string(shoot.UID),
+			KubernetesVersion: shoot.Spec.Kubernetes.Version,
+			Region:            shoot.Spec.Region,
+			Created:           shoot.CreationTimestamp.Time,
 		})
 	}
 
