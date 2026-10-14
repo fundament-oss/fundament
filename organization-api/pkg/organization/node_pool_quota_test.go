@@ -72,6 +72,26 @@ func Test_NodePool_Create_NoQuotaRefusesEverything(t *testing.T) {
 	assert.Zero(t, q.livePools(t))
 }
 
+// A pool with a maximum of 0 adds nothing to the sum, but no quota means no
+// pool of that kind at all: the request validator allows 0, the worker does
+// not, and the refusal should come from the quota, not from Gardener later.
+func Test_NodePool_Create_NoQuotaRefusesAZeroMaximumToo(t *testing.T) {
+	t.Parallel()
+	q := newQuotaEnv(t)
+	clusterID, err := q.createCluster("c")
+	require.NoError(t, err)
+
+	_, err = q.client.CreateNodePool(q.ctx, organizationv1.CreateNodePoolRequest_builder{
+		ClusterId:    clusterID,
+		Name:         "empty",
+		MachineType:  "n1-standard-1",
+		AutoscaleMin: 0,
+		AutoscaleMax: 0,
+	}.Build())
+	requireResourceExhausted(t, err, "the organization has no quota for machine type n1-standard-1 in region eu-west-1")
+	assert.Zero(t, q.livePools(t))
+}
+
 func Test_NodePool_Create_SumOfMaximaStaysWithinQuota(t *testing.T) {
 	t.Parallel()
 	q := newQuotaEnv(t)
