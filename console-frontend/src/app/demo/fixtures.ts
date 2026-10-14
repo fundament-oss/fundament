@@ -3,7 +3,10 @@
 // out of the production bundle.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { OrganizationSchema } from '../../generated/v1/organization_pb';
+import {
+  GetOrganizationQuotasResponseSchema,
+  OrganizationSchema,
+} from '../../generated/v1/organization_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
@@ -56,6 +59,24 @@ export const organization = create(OrganizationSchema, {
   created: daysAgo(420),
 });
 
+// What the operator allowed the organization, next to what its pools use: the
+// maxima of the pools below add up per machine type. Every state the page can
+// show is in here: room to spare, all used, a quota lowered under what runs
+// (e2-standard-2), and an offering in use with no quota at all (e2-highmem-2,
+// staging's batch pool from before quotas existed; the type is in the
+// catalog so the Nodes editor can show it). The clusters line is
+// counted live by the mock, as the demo can add clusters.
+export const organizationQuotas = create(GetOrganizationQuotasResponseSchema, {
+  clusters: { quota: 3, inUse: 0 },
+  nodes: [
+    { region: 'local', machineType: 'e2-highmem-2', quota: 0, inUse: 2 },
+    { region: 'local', machineType: 'e2-highmem-4', quota: 3, inUse: 3 },
+    { region: 'local', machineType: 'e2-standard-2', quota: 3, inUse: 4 },
+    { region: 'local', machineType: 'e2-standard-4', quota: 10, inUse: 6 },
+    { region: 'nl-north-1', machineType: 'e2-standard-4', quota: 8, inUse: 0 },
+  ],
+});
+
 // Per cluster now, keyed by cluster id: production runs tighter than staging,
 // which is the point of moving them off the organization.
 export const clusterDefaults = new Map([
@@ -97,7 +118,7 @@ export const clusterSummaries = [
     status: ClusterStatus.RUNNING,
     region: 'local',
     projectCount: 1,
-    nodePoolCount: 1,
+    nodePoolCount: 2,
   }),
 ];
 
@@ -161,6 +182,18 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
         status: NodePoolStatus.HEALTHY,
         version: '1.33.0',
       }),
+      // From before quotas existed: its machine type has no quota row, and
+      // the Quotas page says "2 in use, none allowed".
+      create(NodePoolSchema, {
+        id: 'np-batch',
+        name: 'batch',
+        machineType: 'e2-highmem-2',
+        currentNodes: 1,
+        minNodes: 1,
+        maxNodes: 2,
+        status: NodePoolStatus.HEALTHY,
+        version: '1.33.0',
+      }),
     ],
   ],
 ]);
@@ -184,6 +217,7 @@ const machineType = (name: string, lcpu: number, memoryGib: number) =>
 const MACHINE_TYPES = [
   machineType('e2-standard-2', 2, 8),
   machineType('e2-standard-4', 4, 16),
+  machineType('e2-highmem-2', 2, 16),
   machineType('e2-highmem-4', 4, 32),
 ];
 

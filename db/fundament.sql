@@ -1242,6 +1242,15 @@ ALTER TABLE tenant.organization_machine_quotas OWNER TO fun_owner;
 ALTER TABLE tenant.organization_machine_quotas ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
+-- object: organization_machine_quotas_organization_select | type: POLICY --
+-- DROP POLICY IF EXISTS organization_machine_quotas_organization_select ON tenant.organization_machine_quotas CASCADE;
+CREATE POLICY organization_machine_quotas_organization_select ON tenant.organization_machine_quotas
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id());
+-- ddl-end --
+
 -- object: tenant.clusters | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.clusters CASCADE;
 CREATE TABLE tenant.clusters (
@@ -4231,6 +4240,14 @@ GRANT USAGE
 -- object: grant_raw_6dafe3fd95 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.organizations
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_719859ceb3 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organization_machine_quotas
    TO fun_fundament_api;
 
 -- ddl-end --

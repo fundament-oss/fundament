@@ -32,7 +32,8 @@ node quotas: such a cluster runs on the platform's default worker pool, which
 is outside the quota. So a fresh organization asks its operator before adding
 node pools or a second cluster. Quotas stop new clusters and new or larger
 node pools; they never touch what already runs, even when lowered below it.
-See [Quotas](./clusters.md#quotas).
+**Organization → Quotas** shows where you stand; to request an increase,
+contact a Fundament operator. See [Quotas](./clusters.md#quotas).
 
 ## Project
 

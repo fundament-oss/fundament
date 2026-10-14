@@ -1023,6 +1023,23 @@ const securityOfficer: Tour = {
       drive: [{ scroll: 'app-cluster-defaults-block' }],
     },
     {
+      id: 'quotas',
+      title: loc('Wat je mag bouwen', 'What you may build'),
+      lead: loc(
+        'De beheerder van het platform stelt per organisatie in hoeveel clusters en nodes er mogen zijn; hier zie je waar je staat.',
+        'The platform operator sets how many clusters and nodes an organization may have; this is where you see where you stand.',
+      ),
+      bullets: [
+        loc(
+          'Een verlaagd quotum raakt niets dat draait, alleen wat er nog bij zou komen.',
+          'A lowered quota touches nothing that runs, only what would be added.',
+        ),
+        loc('Meer nodig? Vraag het een Fundament-operator.', 'Need more? Ask a Fundament operator.'),
+      ],
+      route: '/quotas',
+      skippable: true,
+    },
+    {
       id: 'plugin-detail',
       title: loc('Wat je binnenhaalt', 'What you are bringing in'),
       lead: loc(
