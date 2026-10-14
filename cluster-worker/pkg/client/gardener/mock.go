@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // MockEvent represents an event in the mock client's history.
@@ -233,6 +235,8 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 				LabelClusterID:      cluster.ID.String(),
 				LabelOrganizationID: cluster.OrganizationID.String(),
 			},
+			UID:     uuid.NewString(),
+			Created: now,
 		},
 		CreatedAt: now,
 		Cluster:   *cluster,
@@ -295,9 +299,24 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 			delete(m.shoots, name) // Clean up
 			continue
 		}
-		result = append(result, s.Info)
+		info := s.Info
+		// Version and region follow the latest apply, as a real Shoot's spec does.
+		info.KubernetesVersion = s.Cluster.KubernetesVersion
+		info.Region = mockRegion(&s.Cluster)
+		result = append(result, info)
 	}
 	return result, nil
+}
+
+// mockRegion mirrors RealClient.region with the local provider's default.
+func mockRegion(cluster *ClusterToSync) string {
+	if cluster.CloudProfileRegion != "" {
+		return cluster.CloudProfileRegion
+	}
+	if cluster.Region != "" {
+		return cluster.Region
+	}
+	return NewProviderConfig().Region
 }
 
 // GetShootStatus returns the status of a shoot with realistic progression.
@@ -717,3 +736,29 @@ var (
 	ErrEmptyName      = errors.New("name must not be empty")
 	ErrInvalidName    = errors.New("name must match DNS label format")
 )
+
+// WorkerPools reports the worker pools a cluster's shoot was last applied
+// with, as Gardener worker name -> autoscaler minimum, or nil when the cluster
+// has no shoot. The mock shoot access runs that many nodes per pool. It
+// follows buildWorkers: no node pools is one default worker, and a minimum
+// above the per-pool cap is lowered to it.
+func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	shoot, _ := m.findShootByClusterID(clusterID)
+	if shoot == nil || shoot.DeletedAt != nil {
+		return nil
+	}
+	poolCap := shoot.Cluster.NodeLimits.MaxNodesPerNodePool
+	if len(shoot.Cluster.NodePools) == 0 {
+		return map[string]int32{
+			"default": min(defaultWorkerMinimum, clampedNodePoolMaximum(defaultWorkerMaximum, poolCap)),
+		}
+	}
+	pools := make(map[string]int32, len(shoot.Cluster.NodePools))
+	for _, np := range shoot.Cluster.NodePools {
+		pools[kubename.GenerateWorkerName(np.Name)] = min(np.AutoscaleMin, clampedNodePoolMaximum(np.AutoscaleMax, poolCap))
+	}
+	return pools
+}

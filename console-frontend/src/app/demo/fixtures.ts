@@ -35,6 +35,7 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
+import { OrganizationOverviewSchema } from '../../generated/platform/v1/overview_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
@@ -1159,3 +1160,25 @@ export const logLines: DemoLogLine[] = [
     fields: { controllers: '6' },
   },
 ];
+
+// The public platform overview (FUN-23): the demo organization among a few
+// neighbours, so the page shows a table rather than a single row.
+export const platformOrganizations = [
+  { name: organization.name, alias: organization.alias, clusters: 3, projects: 5, namespaces: 12 },
+  {
+    name: 'gemeente-utrecht',
+    alias: 'Gemeente Utrecht',
+    clusters: 3,
+    projects: 12,
+    namespaces: 40,
+  },
+  { name: 'gemeente-zwolle', alias: 'Gemeente Zwolle', clusters: 1, projects: 4, namespaces: 9 },
+  {
+    name: 'rvo',
+    alias: 'Rijksdienst voor Ondernemend Nederland',
+    clusters: 2,
+    projects: 7,
+    namespaces: 21,
+  },
+  { name: 'vng', alias: 'VNG', clusters: 2, projects: 6, namespaces: 14 },
+].map((o) => create(OrganizationOverviewSchema, o));

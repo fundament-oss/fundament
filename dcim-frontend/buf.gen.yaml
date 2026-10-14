@@ -7,3 +7,8 @@ plugins:
     include_imports: true
 inputs:
   - directory: ../dcim-api/pkg/proto
+  # The staff fleet view (FUN-23). Only fleet.v1: the public overview belongs
+  # to the console.
+  - directory: ../platform-api/pkg/proto
+    paths:
+      - ../platform-api/pkg/proto/fleet

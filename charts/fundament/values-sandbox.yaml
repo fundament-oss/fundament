@@ -20,6 +20,8 @@ externalUrls:
   marketplaceRegistryApi: https://marketplace-registry-api.fundament.projects.digilab.network
   marketplaceAdmin: https://marketplace-admin.fundament.projects.digilab.network
   marketplaceAdminApi: https://marketplace-admin-api.fundament.projects.digilab.network
+  platformPublicApi: https://platform-api.fundament.projects.digilab.network
+  platformAdminApi: https://platform-admin-api.fundament.projects.digilab.network
   corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://marketplace-admin.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
@@ -229,5 +231,16 @@ marketplaceRegistryApi:
 
 # Review backoffice API: validates the reviewer's DCIM token (staff IDP).
 marketplaceAdminApi:
+  enabled: true
+  replicas: 2
+
+# Anonymous platform overview: the console's /platform page reads it (FUN-23).
+platformPublicApi:
+  enabled: true
+  replicas: 2
+
+# Staff fleet view: validates the DCIM token (staff IDP), like the review
+# backoffice API.
+platformAdminApi:
   enabled: true
   replicas: 2

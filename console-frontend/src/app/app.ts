@@ -99,10 +99,15 @@ function parentOf(url: string): string {
   return project ? `/projects/${project[1]}` : '/';
 }
 
-/** Whether a router URL is the login page. The query does not count: another
- *  surface handing a visitor over opens it as `/login?app=…&path=…`. */
-function isLoginUrl(url: string): boolean {
-  return url.split(/[?#]/)[0] === '/login';
+/** Pages that stand on their own: the login page and the public platform
+ *  overview. They render without the console's shell and load no organization,
+ *  which would also rewrite the address into one. */
+const BARE_PAGES = ['/login', '/platform'];
+
+/** Whether a router URL is a bare page. The query does not count: another
+ *  surface handing a visitor over opens the login page as `/login?app=…&path=…`. */
+export function isBarePageUrl(url: string): boolean {
+  return BARE_PAGES.includes(url.split(/[?#]/)[0]);
 }
 
 @Component({
@@ -209,7 +214,12 @@ export default class App implements OnInit {
   selectedOrgId = signal<string | null>(null);
 
   // Route state
-  isLoginPage = signal(window.location.pathname === '/login');
+  isBarePage = signal(isBarePageUrl(window.location.pathname));
+
+  /** Whether this user's organizations were asked for yet. A bare page asks for
+   *  none, so a visitor who signed in and then opened one gets them on the way
+   *  into the console instead. */
+  private organizationsRequested = false;
 
   currentUrl = signal(window.location.pathname);
 
@@ -270,7 +280,10 @@ export default class App implements OnInit {
     const initialUser = await firstValueFrom(this.apiService.currentUser$);
     this.currentUser.set(initialUser);
     if (initialUser) {
-      await this.loadUserOrganizations();
+      if (!this.isBarePage()) {
+        this.organizationsRequested = true;
+        await this.loadUserOrganizations();
+      }
       // Only once signed in: the check is an authenticated call.
       this.metricsHealth.start();
     }
@@ -279,7 +292,8 @@ export default class App implements OnInit {
     this.apiService.currentUser$.pipe(skip(1)).subscribe((user) => {
       this.currentUser.set(user);
       if (user) {
-        this.loadUserOrganizations();
+        this.organizationsRequested = false;
+        this.requestOrganizations();
         // Signing in during the session is the other way to become authenticated;
         // without this the badge stays "unknown" until the next full load.
         // start() is idempotent, so an already-running poller is left alone.
@@ -296,7 +310,8 @@ export default class App implements OnInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        this.isLoginPage.set(isLoginUrl(event.urlAfterRedirects));
+        this.isBarePage.set(isBarePageUrl(event.urlAfterRedirects));
+        this.requestOrganizations();
         // A sheet the shell owns stands over the page it was opened from, so
         // arriving somewhere else takes it away. One arrival is exempt: the
         // redirect that an address like /clusters/new makes to bring its own
@@ -318,15 +333,26 @@ export default class App implements OnInit {
     // guard may have redirected on the way (an overlay address lands on '/').
     // Reading the router rather than the address bar we started from keeps the
     // pane behind the sheet from rendering the URL we no longer are at.
-    this.isLoginPage.set(isLoginUrl(this.router.url));
+    this.isBarePage.set(isBarePageUrl(this.router.url));
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
+    // A signed-in visit to a bare page such as /login may already have been
+    // redirected into the console, and that NavigationEnd went unheard.
+    this.requestOrganizations();
 
     // Initialize sidebar state from current route
     this.updateSidebarStateFromRoute();
   }
 
   reloadApp = reloadApp;
+
+  /** Loads the user's organizations once, as soon as there is a user and the
+   *  page is part of the console. */
+  private requestOrganizations(): void {
+    if (this.organizationsRequested || !this.currentUser() || this.isBarePage()) return;
+    this.organizationsRequested = true;
+    this.loadUserOrganizations();
+  }
 
   /**
    * Load the user's organizations and determine which one to select.

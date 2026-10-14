@@ -238,6 +238,15 @@ jobs:
             dockerfile: marketplace-frontend/Dockerfile
             context: "."
             build-args: BUILD_SCRIPT=build:admin
+          # One source tree, one image per binary (FUN-23).
+          - image-name: platform-public-api
+            dockerfile: platform-api/Dockerfile
+            context: "."
+            build-args: BINARY=platform-public-api
+          - image-name: platform-admin-api
+            dockerfile: platform-api/Dockerfile
+            context: "."
+            build-args: BINARY=platform-admin-api
     permissions:
       contents: read
       packages: write
@@ -489,6 +498,8 @@ jobs:
             | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Platform API | https://platform-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Platform Admin API | https://platform-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Chart:** `${{ needs.publish-chart.outputs.chart_version }}`
             **Namespace:** `tn-fundament-preview-${{ env.PR_NUMBER }}`

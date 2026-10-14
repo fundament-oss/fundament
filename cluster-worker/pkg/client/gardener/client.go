@@ -137,4 +137,10 @@ type ShootInfo struct {
 	Namespace string
 	ClusterID uuid.UUID
 	Labels    map[string]string
+	// UID, KubernetesVersion, Region and Created feed the Gardener inventory
+	// that drift detection compares against the database (FUN-23).
+	UID               string
+	KubernetesVersion string
+	Region            string
+	Created           time.Time
 }

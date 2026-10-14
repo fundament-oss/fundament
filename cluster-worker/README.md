@@ -213,6 +213,31 @@ every reconcile task, when a condition message changes and on the cache's period
 resync, and those are dropped. A Shoot event that arrives just before the cluster's
 first sync is marked completed is checked again shortly.
 
+## Fleet inventory
+
+The staff fleet view in DCIM (FUN-23) reads what runs on each cluster from snapshots
+cluster-worker keeps. Every `INVENTORY_INTERVAL` the inventory worker queues every ready
+cluster of a live organization and `INVENTORY_WORKERS` workers count them, apart from the
+status sweep and outside readiness. Per cluster it lists nodes, the namespaces carrying
+`fundament.io/namespace-id` and the metadata of pods not in a terminal phase, all with
+`resourceVersion=0` so the API server answers from its watch cache. One transaction then
+stores the latest numbers:
+
+- `tenant.cluster_snapshots`: nodes, ready nodes, pods and allocatable pods, CPU and
+  memory. A failed read sets `last_error` and keeps the previous numbers and `observed`.
+- `tenant.node_pool_snapshots`: nodes per pool, matched on Gardener's
+  `worker.gardener.cloud/pool` label. A pool without nodes is stored as zero.
+- `tenant.namespace_snapshots`: pods per fundament namespace. A namespace missing on the
+  shoot keeps its old row, so it goes stale instead of reporting zero.
+
+Only the latest observation is kept. The rows are updated in place and never deleted:
+`fun_cluster_worker` has no DELETE on these tables.
+
+The reconcile loop also records every shoot Gardener lists in `tenant.gardener_shoots`
+(name, namespace, Kubernetes version, region, first and last seen) and soft-deletes the
+rows of shoots no longer listed. A failed list changes nothing. The fleet view compares
+this with the clusters table to report drift.
+
 ## Configuration
 
 Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
@@ -242,6 +267,9 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
+| `INVENTORY_INTERVAL` | `15m` | how often every ready cluster is counted; see [Fleet inventory](#fleet-inventory) |
+| `INVENTORY_WORKERS` | `4` | clusters counted at once |
+| `INVENTORY_TIMEOUT` | `30s` | bound on one cluster's count, credentials included |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 
 ## Immediate cluster deletion
