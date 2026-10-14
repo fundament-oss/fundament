@@ -385,7 +385,8 @@ func (b0 UpdateOrganizationResponse_builder) Build() *UpdateOrganizationResponse
 	return m0
 }
 
-// GetOrganizationQuotas request: the organization is the one of the request.
+// GetOrganizationQuotas request. It has no fields: the organization is the
+// one named by the request's Fun-Organization header.
 type GetOrganizationQuotasRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields

@@ -144,7 +144,8 @@ export const UpdateOrganizationResponseSchema: GenMessage<UpdateOrganizationResp
   messageDesc(file_v1_organization, 4);
 
 /**
- * GetOrganizationQuotas request: the organization is the one of the request.
+ * GetOrganizationQuotas request. It has no fields: the organization is the
+ * one named by the request's Fun-Organization header.
  *
  * @generated from message organization.v1.GetOrganizationQuotasRequest
  */

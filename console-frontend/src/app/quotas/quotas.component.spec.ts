@@ -78,6 +78,19 @@ describe('QuotasComponent', () => {
     expect(fixture.componentInstance['anyOver']()).toBe(true);
   });
 
+  it('says so too when the only node rows are pools from before quotas existed', async () => {
+    const fixture = await build(
+      create(GetOrganizationQuotasResponseSchema, {
+        clusters: { quota: 1, inUse: 1 },
+        nodes: [{ region: 'local', machineType: 'old-type', quota: 0, inUse: 2 }],
+      }),
+    );
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('no node pool of your own can be added');
+    expect(cellTexts(fixture)).toContain('2 in use, none allowed|');
+  });
+
   it('says that no node pool can be made while no node quota is set', async () => {
     const fixture = await build(
       create(GetOrganizationQuotasResponseSchema, { clusters: { quota: 1, inUse: 0 }, nodes: [] }),

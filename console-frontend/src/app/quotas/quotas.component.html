@@ -72,7 +72,7 @@
         <h2>Nodes</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      @if (nodes().length === 0) {
+      @if (noNodeQuota()) {
         <nldd-rich-text spacing="flat">
           <p>
             No node quota is set yet, so no node pool of your own can be added. A cluster
@@ -81,7 +81,9 @@
             machine types you need.
           </p>
         </nldd-rich-text>
-      } @else {
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (nodes().length > 0) {
         <!-- One line per machine type and region, the way funops lists them:
              the name as the text, the region as its supporting line, and the
              numbers on the right where they line up. -->

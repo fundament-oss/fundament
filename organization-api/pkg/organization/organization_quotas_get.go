@@ -47,25 +47,15 @@ func (s *Server) GetOrganizationQuotas(
 			Region:      rows[i].Region,
 			MachineType: rows[i].MachineType,
 			Quota:       rows[i].MaxNodes,
-			InUse:       clampInt32(rows[i].NodesInUse),
+			InUse:       countAsInt32(rows[i].NodesInUse),
 		}.Build()
 	}
 
 	return organizationv1.GetOrganizationQuotasResponse_builder{
 		Clusters: organizationv1.ClusterQuota_builder{
 			Quota: clusters.QuotaClusters,
-			InUse: clampInt32(clusters.ClustersInUse),
+			InUse: countAsInt32(clusters.ClustersInUse),
 		}.Build(),
 		Nodes: nodes,
 	}.Build(), nil
-}
-
-// clampInt32 narrows a count to the proto's int32; a sum of int32 maxima can
-// in theory exceed it, and then the ceiling says enough.
-func clampInt32(n int64) int32 {
-	const maxInt32 = int64(^uint32(0) >> 1)
-	if n > maxInt32 {
-		return int32(maxInt32)
-	}
-	return int32(n)
 }

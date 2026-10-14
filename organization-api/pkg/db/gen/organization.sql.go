@@ -110,20 +110,29 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 }
 
 const organizationMachineQuotaList = `-- name: OrganizationMachineQuotaList :many
+WITH offering AS (
+    SELECT
+        catalog.regions.name AS region,
+        catalog.machine_types.name AS machine_type,
+        coalesce(tenant.organization_machine_quotas.max_nodes, 0)::integer AS max_nodes,
+        tenant.organization_machine_quotas.organization_id AS quota_organization_id,
+        tenant.organization_nodes_in_use($1, catalog.region_machine_types.id)::bigint AS nodes_in_use
+    FROM catalog.region_machine_types
+    JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+    JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+    LEFT JOIN tenant.organization_machine_quotas
+        ON tenant.organization_machine_quotas.region_machine_type_id = catalog.region_machine_types.id
+       AND tenant.organization_machine_quotas.organization_id = $1
+)
 SELECT
-    catalog.regions.name AS region,
-    catalog.machine_types.name AS machine_type,
-    coalesce(tenant.organization_machine_quotas.max_nodes, 0)::integer AS max_nodes,
-    tenant.organization_nodes_in_use($1, catalog.region_machine_types.id)::bigint AS nodes_in_use
-FROM catalog.region_machine_types
-JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
-JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
-LEFT JOIN tenant.organization_machine_quotas
-    ON tenant.organization_machine_quotas.region_machine_type_id = catalog.region_machine_types.id
-   AND tenant.organization_machine_quotas.organization_id = $1
-WHERE tenant.organization_machine_quotas.organization_id IS NOT NULL
-   OR tenant.organization_nodes_in_use($1, catalog.region_machine_types.id) > 0
-ORDER BY region, machine_type
+    offering.region,
+    offering.machine_type,
+    offering.max_nodes,
+    offering.nodes_in_use
+FROM offering
+WHERE offering.quota_organization_id IS NOT NULL
+   OR offering.nodes_in_use > 0
+ORDER BY offering.region, offering.machine_type
 `
 
 type OrganizationMachineQuotaListParams struct {
@@ -139,8 +148,9 @@ type OrganizationMachineQuotaListRow struct {
 
 // Every offering the organization has a quota row for, and every offering it
 // has nodes of without one (pools from before quotas existed), as quota 0.
-// Same shape as funops' MachineQuotaList; the policy on the quota rows scopes
-// it to the current organization.
+// Same shape as funops' MachineQuotaList; the policy on the quota rows and on
+// the pools the counter reads scope it to the current organization. The usage
+// is counted once per offering, in the CTE, and filtered on from there.
 func (q *Queries) OrganizationMachineQuotaList(ctx context.Context, arg OrganizationMachineQuotaListParams) ([]OrganizationMachineQuotaListRow, error) {
 	rows, err := q.db.Query(ctx, organizationMachineQuotaList, arg.OrganizationID)
 	if err != nil {

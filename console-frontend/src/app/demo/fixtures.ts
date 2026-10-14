@@ -183,7 +183,7 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
         version: '1.33.0',
       }),
       // From before quotas existed: its machine type has no quota row, and
-      // the Quotas page shows it as 0 of 2.
+      // the Quotas page says "2 in use, none allowed".
       create(NodePoolSchema, {
         id: 'np-batch',
         name: 'batch',

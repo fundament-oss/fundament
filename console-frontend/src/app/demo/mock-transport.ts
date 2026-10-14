@@ -210,14 +210,27 @@ export default function createDemoTransport(): Transport {
       },
       // The clusters in use are counted off the list the demo adds to, so the
       // page agrees with the cluster list after a cluster was created here.
+      // Both lines are counted off what the demo has, so the page follows a
+      // cluster created or a pool added, resized or removed here: the clusters
+      // off the list, the nodes as the sum of the pool maxima per region and
+      // machine type, which is what the real counters do.
       getOrganizationQuotas: async () => {
         await delay();
+        const nodesInUse = (region: string, machineType: string) =>
+          fx.clusterSummaries
+            .filter((c) => c.region === region)
+            .flatMap((c) => fx.nodePoolsByCluster.get(c.id) ?? [])
+            .filter((pool) => pool.machineType === machineType)
+            .reduce((sum, pool) => sum + pool.maxNodes, 0);
         return create(GetOrganizationQuotasResponseSchema, {
           clusters: {
             quota: fx.organizationQuotas.clusters?.quota ?? 0,
             inUse: fx.clusterSummaries.length,
           },
-          nodes: fx.organizationQuotas.nodes,
+          nodes: fx.organizationQuotas.nodes.map((node) => ({
+            ...node,
+            inUse: nodesInUse(node.region, node.machineType),
+          })),
         });
       },
     });
