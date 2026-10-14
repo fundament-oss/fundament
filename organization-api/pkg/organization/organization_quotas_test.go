@@ -96,6 +96,10 @@ func Test_Organization_Quotas_IsolatedPerOrganization(t *testing.T) {
 	)
 	_, err := env.adminPool.Exec(t.Context(), `UPDATE tenant.organizations SET quota_clusters = 7 WHERE id = $1`, richID)
 	require.NoError(t, err)
+	// The harness seeds node quotas for every test organization; poor is the
+	// fresh one here, and rich keeps one row of its own.
+	_, err = env.adminPool.Exec(t.Context(), `DELETE FROM tenant.organization_machine_quotas WHERE organization_id IN ($1, $2)`, richID, poorID)
+	require.NoError(t, err)
 	_, err = env.adminPool.Exec(t.Context(), `
 		INSERT INTO tenant.organization_machine_quotas (organization_id, region_machine_type_id, max_nodes)
 		VALUES ($1, $2, 10)`, richID, offeringN1Standard1)
