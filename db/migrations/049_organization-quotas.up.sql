@@ -44,14 +44,13 @@ CREATE OR REPLACE FUNCTION tenant.node_pools_tr_verify_quota()
 AS $function$
 DECLARE
     v_organization_id uuid;
+    v_offering uuid;
     v_quota integer;
     v_in_use bigint;
     v_machine_type text;
     v_region text;
 BEGIN
-    -- A pool without a catalog reference cannot be matched to a quota entry;
-    -- see organization_nodes_in_use.
-    IF NEW.deleted IS NOT NULL OR NEW.region_machine_type_id IS NULL THEN
+    IF NEW.deleted IS NOT NULL THEN
         RETURN NULL;
     END IF;
 
@@ -68,6 +67,24 @@ BEGIN
     FROM tenant.clusters
     WHERE tenant.clusters.id = NEW.cluster_id;
 
+    -- A pool from before the catalog carries no offering: match it on the
+    -- cluster's region and its machine type name, as the migration did for
+    -- the rows it could. One that matches nothing is outside every quota, so
+    -- it may keep running but not grow.
+    v_offering := NEW.region_machine_type_id;
+    IF v_offering IS NULL THEN
+        SELECT catalog.region_machine_types.id INTO v_offering
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN tenant.clusters ON tenant.clusters.region_id = catalog.region_machine_types.region_id
+        WHERE tenant.clusters.id = NEW.cluster_id
+          AND catalog.machine_types.name = NEW.machine_type;
+        IF v_offering IS NULL THEN
+            RAISE EXCEPTION 'node pool % has machine type %, which the catalog does not offer in its region, so no quota covers it; it cannot be added or grown until an operator links it', NEW.name, NEW.machine_type
+                        USING HINT = 'node_pool_quota_unresolvable';
+        END IF;
+    END IF;
+
     -- Serialises the sum with the other node pool changes of the organization.
     PERFORM 1
     FROM tenant.organizations
@@ -77,7 +94,7 @@ BEGIN
     SELECT tenant.organization_machine_quotas.max_nodes INTO v_quota
     FROM tenant.organization_machine_quotas
     WHERE tenant.organization_machine_quotas.organization_id = v_organization_id
-      AND tenant.organization_machine_quotas.region_machine_type_id = NEW.region_machine_type_id;
+      AND tenant.organization_machine_quotas.region_machine_type_id = v_offering;
     v_quota := coalesce(v_quota, 0);
 
     -- No quota means no pool of this kind at all, however small: a maximum of
@@ -87,18 +104,18 @@ BEGIN
         FROM catalog.region_machine_types
         JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
         JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
-        WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
+        WHERE catalog.region_machine_types.id = v_offering;
         RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
                     USING HINT = 'node_pool_quota_exceeded';
     END IF;
 
-    v_in_use := tenant.organization_nodes_in_use(v_organization_id, NEW.region_machine_type_id);
+    v_in_use := tenant.organization_nodes_in_use(v_organization_id, v_offering);
     IF v_in_use > v_quota THEN
         SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
         FROM catalog.region_machine_types
         JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
         JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
-        WHERE catalog.region_machine_types.id = NEW.region_machine_type_id;
+        WHERE catalog.region_machine_types.id = v_offering;
         RAISE EXCEPTION 'node pools of machine type % in region % would total % nodes, over the organization''s quota of %', v_machine_type, v_region, v_in_use, v_quota
                     USING HINT = 'node_pool_quota_exceeded';
     END IF;
@@ -142,22 +159,48 @@ BEGIN
     -- What counts against a machine quota: the autoscale maxima of the live
     -- node pools of that machine type and region on the organization's
     -- clusters, deleted clusters included until their shoot is gone. A pool
-    -- without a catalog reference (pre-catalog rows) has nothing to count
-    -- against and is skipped, as node_pool_region_match_trigger skips it.
+    -- the migration could not link to the catalog is outside every quota and
+    -- is not counted; the trigger stops it from growing.
+    -- A pool without a catalog reference counts when its cluster's region and
+    -- its machine type name resolve to the offering, as the trigger resolves it.
     RETURN (
         SELECT coalesce(sum(tenant.node_pools.autoscale_max), 0)
         FROM tenant.node_pools
         JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
         WHERE tenant.clusters.organization_id = p_organization_id
-          AND tenant.node_pools.region_machine_type_id = p_region_machine_type_id
           AND tenant.node_pools.deleted IS NULL
           AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+          AND (tenant.node_pools.region_machine_type_id = p_region_machine_type_id
+               OR (tenant.node_pools.region_machine_type_id IS NULL
+                   AND EXISTS (
+                       SELECT 1
+                       FROM catalog.region_machine_types
+                       JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+                       WHERE catalog.region_machine_types.id = p_region_machine_type_id
+                         AND catalog.region_machine_types.region_id = tenant.clusters.region_id
+                         AND catalog.machine_types.name = tenant.node_pools.machine_type)))
     );
 END;
 $function$
 ;
 
 CREATE CONSTRAINT TRIGGER verify_quota AFTER INSERT ON tenant.clusters NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION tenant.clusters_tr_verify_quota();
+
+-- Data: link the pools from before the catalog to their offering, on the
+-- cluster's region and the machine type name, so the quota counts them. This
+-- runs before the node pool quota trigger exists, since it is the kind of
+-- update that trigger checks. A pool whose machine type the region does not
+-- offer stays unlinked: it keeps running and cannot grow until an operator
+-- links it (see node_pools_tr_verify_quota).
+UPDATE tenant.node_pools
+SET region_machine_type_id = catalog.region_machine_types.id
+FROM tenant.clusters, catalog.region_machine_types, catalog.machine_types
+WHERE tenant.clusters.id = tenant.node_pools.cluster_id
+  AND catalog.region_machine_types.region_id = tenant.clusters.region_id
+  AND catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+  AND catalog.machine_types.name = tenant.node_pools.machine_type
+  AND tenant.node_pools.region_machine_type_id IS NULL
+  AND tenant.node_pools.deleted IS NULL;
 
 CREATE CONSTRAINT TRIGGER verify_quota AFTER INSERT OR UPDATE OF autoscale_max, region_machine_type_id ON tenant.node_pools NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION tenant.node_pools_tr_verify_quota();
 

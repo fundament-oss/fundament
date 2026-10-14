@@ -11,6 +11,8 @@ const (
 	HintNodePoolRegionMismatch = "node_pool_region_mismatch"
 	// HintNodePoolQuotaExceeded can be thrown by tenant.node_pools_tr_verify_quota.
 	HintNodePoolQuotaExceeded = "node_pool_quota_exceeded"
+	// HintNodePoolQuotaUnresolvable can be thrown by tenant.node_pools_tr_verify_quota.
+	HintNodePoolQuotaUnresolvable = "node_pool_quota_unresolvable"
 	// HintProjectContainsOneAdmin can be thrown by tenant.project_members_tr_protect_last_admin.
 	HintProjectContainsOneAdmin = "project_contains_one_admin"
 	// HintProjectDefaultsExceedCluster can be thrown by tenant.projects_tr_verify_defaults.
