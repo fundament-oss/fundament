@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { create } from '@bufbuild/protobuf';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { OrganizationDataService } from './organization-data.service';
 import { CLUSTER, ORGANIZATION, PROJECT, MEMBER } from '../connect/tokens';
@@ -11,7 +11,12 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../generated/v1/cluster_pb';
 import { ClusterStatus } from '../generated/v1/common_pb';
-import { ListMembersResponseSchema, MemberSchema, type Member } from '../generated/v1/member_pb';
+import {
+  ListMembersResponseSchema,
+  MemberSchema,
+  type ListMembersResponse,
+  type Member,
+} from '../generated/v1/member_pb';
 
 const ORGANIZATION_ID = '019b4000-1000-7000-8000-000000000001';
 
@@ -26,12 +31,24 @@ function summary(id: string, name: string, status: ClusterStatus): ClusterSummar
 }
 
 function member(id: string, status: 'accepted' | 'pending'): Member {
-  return create(MemberSchema, { id, userId: `user-${id}`, name: id, permission: 'member', status });
+  return create(MemberSchema, { id, userId: `user-${id}`, name: id, permission: 'viewer', status });
+}
+
+/** A ListMembers the server has not answered yet: `answer()` makes it, in
+ *  whichever order the test wants the answers to land. */
+class PendingMembers {
+  readonly response = new Subject<ListMembersResponse>();
+
+  answer(members: Member[]) {
+    this.response.next(create(ListMembersResponseSchema, { members }));
+    this.response.complete();
+  }
 }
 
 /** The service behind a ListClusters the test drives: `listed` is what the
  *  server answers with, and `fail` makes it answer with an error instead.
- *  `members` is what ListMembers answers. */
+ *  `members` is what ListMembers answers, `membersFail` makes it an error, and
+ *  with `holdMembers` the answers wait in `pendingMembers` for the test. */
 function build(listed: ClusterSummary[]) {
   const server = {
     listed,
@@ -42,6 +59,9 @@ function build(listed: ClusterSummary[]) {
       member('cas', 'accepted'),
       member('dee', 'pending'),
     ],
+    membersFail: false,
+    holdMembers: false,
+    pendingMembers: [] as PendingMembers[],
   };
 
   TestBed.configureTestingModule({
@@ -74,7 +94,15 @@ function build(listed: ClusterSummary[]) {
       {
         provide: MEMBER,
         useValue: {
-          listMembers: () => of(create(ListMembersResponseSchema, { members: server.members })),
+          listMembers: () => {
+            if (server.membersFail) return throwError(() => new Error('unreachable'));
+            if (!server.holdMembers) {
+              return of(create(ListMembersResponseSchema, { members: server.members }));
+            }
+            const pending = new PendingMembers();
+            server.pendingMembers.push(pending);
+            return pending.response.asObservable();
+          },
         },
       },
     ],
@@ -218,6 +246,15 @@ describe('OrganizationDataService setClusters', () => {
 describe('OrganizationDataService members', () => {
   const alpha = summary('cluster-a', 'alpha', ClusterStatus.RUNNING);
 
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Load the organization and wait for its member list too, which the load
+   *  itself does not wait for. */
+  async function loaded(service: OrganizationDataService) {
+    await service.loadOrganizationData(ORGANIZATION_ID);
+    await vi.waitFor(() => expect(service.membersLoaded()).toBe(true));
+  }
+
   it('counts the accepted members once the list is in, leaving invitations out', async () => {
     const { service } = build([alpha]);
     expect(service.memberCount()).toBeNull();
@@ -230,13 +267,86 @@ describe('OrganizationDataService members', () => {
 
   it('follows the list a page fetched through it', async () => {
     const { service, server } = build([alpha]);
-    await service.loadOrganizationData(ORGANIZATION_ID);
-    await vi.waitFor(() => expect(service.membersLoaded()).toBe(true));
+    await loaded(service);
 
     server.members = [member('ann', 'accepted')];
     const listed = await service.reloadMembers();
 
     expect(listed).toHaveLength(1);
     expect(service.memberCount()).toBe(1);
+  });
+
+  it('keeps the list it had when a fetch fails, and lets the page know', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    server.membersFail = true;
+    await expect(service.reloadMembers()).rejects.toThrow('unreachable');
+
+    expect(service.members().map((m) => m.id)).toEqual(['ann', 'bob', 'cas', 'dee']);
+    expect(service.memberCount()).toBe(3);
+  });
+
+  it('leaves a list behind that was overtaken by one asked for later', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    // The page asks for a list, then removes someone and asks again; the
+    // server answers the second before the first.
+    server.holdMembers = true;
+    const before = service.reloadMembers();
+    const after = service.reloadMembers();
+    const [first, second] = server.pendingMembers;
+    second.answer([member('ann', 'accepted')]);
+    await after;
+    first.answer(server.members);
+
+    // The earlier list resolves to what the cache holds, not to its own
+    // out-of-date response.
+    expect((await before).map((m) => m.id)).toEqual(['ann']);
+    expect(service.memberCount()).toBe(1);
+  });
+
+  it('drops a list that comes back after the organization is gone', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    server.holdMembers = true;
+    const listing = service.reloadMembers();
+    service.clearAll();
+    server.pendingMembers[0].answer(server.members);
+
+    await expect(listing).rejects.toThrow('organization changed');
+    expect(service.members()).toEqual([]);
+    expect(service.memberCount()).toBeNull();
+  });
+
+  it('fetches again when a sheet reports a change, whatever page is open', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+
+    server.members = [...server.members, member('eve', 'accepted')];
+    service.membersChanged.update((count) => count + 1);
+    TestBed.tick();
+
+    await vi.waitFor(() => expect(service.memberCount()).toBe(4));
+  });
+
+  it('does not report a change-driven fetch that crossed an organization switch', async () => {
+    const { service, server } = build([alpha]);
+    await loaded(service);
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    server.holdMembers = true;
+    service.membersChanged.update((count) => count + 1);
+    TestBed.tick();
+    service.clearAll();
+    server.pendingMembers[0].answer(server.members);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(reported).not.toHaveBeenCalled();
+    expect(service.memberCount()).toBeNull();
   });
 });

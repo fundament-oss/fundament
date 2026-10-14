@@ -4,7 +4,6 @@ import {
   OnInit,
   signal,
   computed,
-  effect,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
@@ -216,8 +215,25 @@ export default class OrganizationMembersComponent implements OnInit {
       : failed.message;
   });
 
-  // All members loaded from API (includes pending, active, declined and revoked)
-  allMembers = signal<OrganizationMember[]>([]);
+  private currentUser = toSignal(this.authnService.currentUser$);
+
+  /** Everyone ListMembers reports, invitations included, as the shared cache
+   *  holds them: the sidebar counts that same list, so the two cannot disagree,
+   *  and a change made from a sheet over another page is already in it when
+   *  this page opens. */
+  allMembers = computed<OrganizationMember[]>(() => {
+    const currentUserId = this.currentUser()?.id;
+    return this.organizationDataService.members().map((member) => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      externalRef: member.externalRef,
+      permission: member.permission,
+      status: member.status,
+      isCurrentUser: currentUserId === member.userId,
+      created: member.created ? timestampDate(member.created) : undefined,
+    }));
+  });
 
   activeMembers = computed(() => this.allMembers().filter((m) => m.status === 'accepted'));
 
@@ -282,40 +298,16 @@ export default class OrganizationMembersComponent implements OnInit {
     this.loadMembers();
   }
 
-  /** What membersChanged stood at when this list was built. An effect runs once
-   *  on creation, and ngOnInit already loads, so only a later bump is news. */
-  private seenMembersChanged = this.organizationDataService.membersChanged();
-
-  /** The sheet that invites one lives in the shell and may well be standing over
-   *  this very list, so the list hears about the invitation from there. */
-  private readonly reloadOnInvite = effect(() => {
-    const changed = this.organizationDataService.membersChanged();
-    if (changed === this.seenMembersChanged) return;
-    this.seenMembersChanged = changed;
-    this.loadMembers();
-  });
-
+  /** Ask the shared cache for a fresh list: on arrival, and after an action
+   *  here changed it. The sheet that invites someone lives in the shell and
+   *  may well be standing over this very list, but the cache hears about that
+   *  itself, and this page shows whatever the cache holds. */
   async loadMembers() {
     this.isLoading.set(true);
     this.error.set(null);
 
     try {
-      const currentUser = await firstValueFrom(this.authnService.currentUser$);
-      // Through the shared cache, so the sidebar's count is of this same list.
-      const listed = await this.organizationDataService.reloadMembers();
-
-      const members: OrganizationMember[] = listed.map((member) => ({
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        externalRef: member.externalRef,
-        permission: member.permission,
-        status: member.status,
-        isCurrentUser: currentUser?.id === member.userId,
-        created: member.created ? timestampDate(member.created) : undefined,
-      }));
-
-      this.allMembers.set(members);
+      await this.organizationDataService.reloadMembers();
     } catch (err) {
       this.error.set(
         err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',

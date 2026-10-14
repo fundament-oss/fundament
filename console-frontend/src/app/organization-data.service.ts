@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
@@ -50,6 +50,9 @@ export interface ClusterListTicket {
   readonly seq: number;
 }
 
+/** The same for a member list; reloadMembers() mints and settles its own. */
+type MemberListTicket = ClusterListTicket;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -89,11 +92,26 @@ export class OrganizationDataService {
 
   /** The organization's members as ListMembers reports them, pending
    *  invitations included, fetched with the organization the way the clusters
-   *  are. The Members page fetches through reloadMembers(), so the two agree. */
+   *  are. The Members page shows this very list, so it and the sidebar's count
+   *  cannot disagree. */
   members = signal<Member[]>([]);
 
   /** True once the member list has come back for the current org. */
   membersLoaded = signal(false);
+
+  /** What membersChanged stood at when the list was last asked for. An effect
+   *  runs once on creation, and that first run is not a change. */
+  private seenMembersChanged = this.membersChanged();
+
+  /** The sheets that bump membersChanged belong to the shell and may be
+   *  standing over any page at all, so the cache hears about the change here,
+   *  at the root, rather than through whichever page happens to be mounted. */
+  private readonly reloadOnMembersChanged = effect(() => {
+    const changed = this.membersChanged();
+    if (changed === this.seenMembersChanged) return;
+    this.seenMembersChanged = changed;
+    this.refreshMembers();
+  });
 
   /** How many accepted members the organization has, for the sidebar next to
    *  Members, as Clusters shows the length of its list. A pending invitation is
@@ -180,6 +198,17 @@ export class OrganizationDataService {
     return { generation: this.generation, seq: this.clusterListRequests };
   }
 
+  /** The same two for member lists. The organization load, the Members page
+   *  and a removal on it can all have one on its way at the same time. */
+  private memberListRequests = 0;
+
+  private appliedMemberList = 0;
+
+  private beginMemberListFetch(): MemberListTicket {
+    this.memberListRequests += 1;
+    return { generation: this.generation, seq: this.memberListRequests };
+  }
+
   private loadProjectsPromise: Promise<void> | null = null;
 
   /** True once loadProjectsAndNamespaces() has completed successfully for the current org. */
@@ -207,10 +236,7 @@ export class OrganizationDataService {
     try {
       // Alongside, not in the Promise.all: the sidebar's count is the only
       // thing waiting on it, and that is no reason to hold up the organization.
-      this.reloadMembers().catch((error: unknown) => {
-        // eslint-disable-next-line no-console
-        console.error('Error loading members:', error);
-      });
+      this.refreshMembers();
 
       const orgRequest = create(GetOrganizationRequestSchema, { id: orgId });
 
@@ -491,23 +517,43 @@ export class OrganizationDataService {
     ];
   }
 
+  /** Fetch the member list for the cache's own sake, with no page waiting on
+   *  it. A failure is logged, unless the organization changed meanwhile: that
+   *  organization's own load asks again, and this list was never for it. */
+  private refreshMembers(): void {
+    const { generation } = this;
+    this.reloadMembers().catch((error: unknown) => {
+      if (generation !== this.generation) return;
+      // eslint-disable-next-line no-console
+      console.error('Error loading members:', error);
+    });
+  }
+
   /**
    * Fetch the member list from the server: with the organization, and again
    * after an invitation or a removal, so the sidebar's count follows. Resolves
-   * to the list for the page that asked for it, and throws when the list could
-   * not be fetched, so that page can say so; the cache keeps what it had then.
+   * to what the cache holds once the response is in: the response itself, or
+   * the newer list that overtook it on the way, never one the cache dropped.
+   * Throws when the list could not be fetched, so a page can say so, and when
+   * the organization changed while it was on its way, since the cache then
+   * belongs to another organization; it keeps what it had in both cases.
    */
   async reloadMembers(): Promise<Member[]> {
-    const { generation } = this;
+    const ticket = this.beginMemberListFetch();
     const response = await firstValueFrom(
       this.memberClient.listMembers(create(ListMembersRequestSchema, {})),
     );
-    // Dropped when the organization changed while the list was on its way.
-    if (generation === this.generation) {
+    if (ticket.generation !== this.generation) {
+      throw new Error('The organization changed while its members were being listed');
+    }
+    // A list asked for later has landed first: this one is behind the cache,
+    // not ahead of it.
+    if (ticket.seq > this.appliedMemberList) {
+      this.appliedMemberList = ticket.seq;
       this.members.set(response.members);
       this.membersLoaded.set(true);
     }
-    return response.members;
+    return this.members();
   }
 
   /**
