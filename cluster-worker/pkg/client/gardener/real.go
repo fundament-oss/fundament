@@ -351,8 +351,22 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 
 // shootStatusOf derives fundament's status for a Shoot; nil is a Shoot
 // Gardener does not have. It is pure, so the watch's change filter and the
-// status step derive exactly the same thing from the same object.
+// status step derive exactly the same thing from the same object. The worker
+// detail — the EveryNodeReady message and lastErrors, which name the machine
+// deployments that cannot get machines — is attached here, once, so every
+// lifecycle branch carries it.
 func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
+	status := shootLifecycleStatusOf(shoot)
+	if shoot != nil && shoot.DeletionTimestamp == nil {
+		status.EveryNodeReadyMessage = everyNodeReadyMessage(shoot)
+		status.LastErrors = shootLastErrors(shoot)
+	}
+	return status
+}
+
+// shootLifecycleStatusOf maps the Shoot's last operation to fundament's
+// lifecycle status.
+func shootLifecycleStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	if shoot == nil {
 		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
 	}
@@ -412,6 +426,35 @@ func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 
 	// No last operation, likely still being created
 	return &ShootStatus{Status: StatusProgressing, Message: "Shoot is being created"}
+}
+
+// everyNodeReadyMessage returns the EveryNodeReady condition's message while
+// the condition is not satisfied; it names the machine deployments that wait.
+// Progressing counts as satisfied: it means "was True, currently
+// transitioning", and surfacing a reason then would flag routine scale-ups.
+func everyNodeReadyMessage(shoot *gardencorev1beta1.Shoot) string {
+	for i := range shoot.Status.Conditions {
+		c := &shoot.Status.Conditions[i]
+		if c.Type != gardencorev1beta1.ShootEveryNodeReady {
+			continue
+		}
+		if c.Status == gardencorev1beta1.ConditionTrue || c.Status == gardencorev1beta1.ConditionProgressing {
+			return ""
+		}
+		return c.Message
+	}
+	return ""
+}
+
+func shootLastErrors(shoot *gardencorev1beta1.Shoot) []string {
+	if len(shoot.Status.LastErrors) == 0 {
+		return nil
+	}
+	errs := make([]string, len(shoot.Status.LastErrors))
+	for i := range shoot.Status.LastErrors {
+		errs[i] = shoot.Status.LastErrors[i].Description
+	}
+	return errs
 }
 
 // RequestAdminKubeconfig requests a short-lived admin kubeconfig for a shoot.
@@ -672,6 +715,7 @@ func shootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
+		gardencorev1beta1.ShootEveryNodeReady,
 	}
 
 	conditionMap := make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.ConditionStatus)

@@ -185,6 +185,8 @@ const (
 	ConstraintNamespacesFkProject = "namespaces_fk_project"
 	// ConstraintNamespacesUqName is defined on tenant.namespaces.
 	ConstraintNamespacesUqName = "namespaces_uq_name"
+	// ConstraintNodePoolsCkStatus is defined on tenant.node_pools.
+	ConstraintNodePoolsCkStatus = "node_pools_ck_status"
 	// ConstraintNodePoolsFkCluster is defined on tenant.node_pools.
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
 	// ConstraintNodePoolsFkRegionMachineType is defined on tenant.node_pools.

@@ -77,6 +77,36 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
+-- name: NodePoolListStatusByClusterID :many
+-- The status path needs only identity and the stored classification; the
+-- worker-group build query above, with its catalog joins, stays with sync.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id;
+
+-- name: NodePoolUpdateStatus :exec
+-- Record what Gardener reports about one pool's machines. Keyed by id: the
+-- row was just read by the same check, and with soft deletes (cluster_id,
+-- name) could meanwhile mean a recreated pool.
+UPDATE tenant.node_pools
+SET
+    status = @status,
+    status_message = @message,
+    status_updated = now()
+WHERE
+    id = @node_pool_id
+    AND deleted IS NULL;
+
 -- name: NodePoolGetClusterID :one
 -- Returns the cluster_id for a node pool (including soft-deleted node pools).
 -- Used by the cluster handler to resolve node_pool_id → cluster_id.
@@ -132,6 +162,7 @@ SELECT
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
