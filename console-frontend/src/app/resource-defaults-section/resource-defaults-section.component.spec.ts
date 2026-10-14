@@ -138,8 +138,16 @@ describe('ResourceDefaultsSectionComponent on a project', () => {
     const fixture = buildProject();
     const host = fixture.nativeElement as HTMLElement;
 
-    expect(host.textContent).toContain('Inherit');
-    expect(host.textContent).not.toContain('Suggested');
+    // The design system's toggle buttons carry their label as an attribute,
+    // not as text, so the buttons themselves are what to look at.
+    const buttons = [...host.querySelectorAll('nldd-toggle-button')].map((button) => ({
+      value: button.getAttribute('value'),
+      text: button.getAttribute('text'),
+    }));
+    expect(buttons).toEqual([
+      { value: 'inherit', text: 'Inherit' },
+      { value: 'custom', text: 'Custom' },
+    ]);
   });
 
   // A copied cluster value would be saved as the project's own and stop
