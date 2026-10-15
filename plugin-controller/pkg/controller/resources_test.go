@@ -9,6 +9,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	psaapi "k8s.io/pod-security-admission/api"
+	"k8s.io/pod-security-admission/policy"
 
 	"github.com/fundament-oss/fundament/common/kubename"
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
@@ -193,4 +195,50 @@ func TestMutateDeployment_UsesManifestImage(t *testing.T) {
 	assert.NotNil(t, container.ReadinessProbe)
 	assert.Equal(t, "/livez", container.LivenessProbe.HTTPGet.Path)
 	assert.Equal(t, "/readyz", container.ReadinessProbe.HTTPGet.Path)
+}
+
+func TestMutateDeployment_MeetsRestrictedPodSecurity(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{Image: "repo@sha256:" + strings.Repeat("a", 64)},
+	}
+
+	deploy := &appsv1.Deployment{}
+	mutateDeployment(deploy, cr, &def, nil)
+
+	evaluator, err := policy.NewEvaluator(policy.DefaultChecks(), nil)
+	require.NoError(t, err)
+	lv := psaapi.LevelVersion{Level: psaapi.LevelRestricted, Version: psaapi.LatestVersion()}
+	for _, res := range evaluator.EvaluatePod(lv, &deploy.Spec.Template.ObjectMeta, &deploy.Spec.Template.Spec) {
+		assert.True(t, res.Allowed, "%s: %s", res.ForbiddenReason, res.ForbiddenDetail)
+	}
+}
+
+func TestMutateDeployment_GivesHelmAWritableHome(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+	def := pluginruntime.PluginDefinition{
+		Spec: pluginruntime.PluginSpec{Image: "repo@sha256:" + strings.Repeat("a", 64)},
+	}
+
+	deploy := &appsv1.Deployment{}
+	mutateDeployment(deploy, cr, &def, nil)
+
+	container := deploy.Spec.Template.Spec.Containers[0]
+	// A non-root uid without a passwd entry gets HOME=/, where helm cannot
+	// create its cache; HOME must point at the writable emptyDir.
+	assert.Contains(t, container.Env, corev1.EnvVar{Name: "HOME", Value: "/tmp"})
+	assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
+	require.Len(t, deploy.Spec.Template.Spec.Volumes, 1)
+	assert.Equal(t, "tmp", deploy.Spec.Template.Spec.Volumes[0].Name)
+	assert.NotNil(t, deploy.Spec.Template.Spec.Volumes[0].EmptyDir)
+}
+
+func TestMutateNamespace_EnforcesRestrictedPodSecurity(t *testing.T) {
+	cr := newInstallation("acme--cert-manager", "acme", "cert-manager")
+
+	ns := &corev1.Namespace{}
+	mutateNamespace(ns, cr)
+
+	assert.Equal(t, "restricted", ns.Labels["pod-security.kubernetes.io/enforce"])
+	assert.Equal(t, "plugin-controller", ns.Labels["app.kubernetes.io/managed-by"])
 }
