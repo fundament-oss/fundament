@@ -12,7 +12,6 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 )
 
@@ -92,12 +91,8 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 	if s.tokenCache != nil {
 		saToken, err := s.tokenCache.GetToken(ctx, claims.UserID(), clusterID.String())
 		if err != nil {
-			if errors.Is(err, gardener.ErrSyncPending) {
-				http.Error(w, "service account sync pending, try again shortly", http.StatusServiceUnavailable)
-				return
-			}
 			s.logger.ErrorContext(ctx, "failed to get SA token", "error", err)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			kube.WriteStepError(w, kube.StepUserCredentials, err)
 			return
 		}
 		ctx = WithSAToken(ctx, saToken)

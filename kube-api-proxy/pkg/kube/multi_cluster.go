@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"golang.org/x/sync/singleflight"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
@@ -60,10 +61,18 @@ func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fail closed: Rewrite would otherwise forward the request without any
+	// credentials, as an anonymous request.
+	if saToken, _ := r.Context().Value(SATokenContextKey{}).(string); saToken == "" {
+		m.logger.ErrorContext(r.Context(), "missing SA token in context", "cluster", clusterID)
+		WriteStatus(w, http.StatusInternalServerError, metav1.StatusReasonInternalError, "no credentials for this cluster")
+		return
+	}
+
 	proxy, err := m.proxyFor(r.Context(), clusterID)
 	if err != nil {
 		m.logger.ErrorContext(r.Context(), "failed to build proxy for cluster", "cluster", clusterID, "error", err)
-		http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
+		WriteStepError(w, StepGardenerCredentials, err)
 		return
 	}
 
@@ -125,17 +134,13 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 			req.Header.Del("Authorization")
 			req.Header.Del("Cookie")
 			applyImpersonation(req)
-			// Inject per-user SA token from context.
-			saToken, ok := req.Context().Value(SATokenContextKey{}).(string)
-			if !ok || saToken == "" {
-				logger.ErrorContext(req.Context(), "missing SA token in context")
-				return
-			}
+			// Inject per-user SA token from context; ServeHTTP checked it is set.
+			saToken, _ := req.Context().Value(SATokenContextKey{}).(string)
 			req.Header.Set("Authorization", "Bearer "+saToken)
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
 			logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)
-			http.Error(w, "failed to contact kubernetes API", http.StatusBadGateway)
+			WriteStatus(w, http.StatusServiceUnavailable, metav1.StatusReasonServiceUnavailable, "the cluster's API server could not be reached")
 		},
 	}
 }

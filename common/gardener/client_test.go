@@ -61,6 +61,7 @@ func TestFindShootNoMatch(t *testing.T) {
 
 	_, err := c.FindShoot(context.Background(), "cluster-missing")
 	require.Error(t, err)
+	require.ErrorIs(t, err, ErrShootNotFound)
 	assert.ErrorContains(t, err, "no shoot found for cluster cluster-missing")
 }
 

@@ -19,6 +19,11 @@ import (
 // refreshRatio is the fraction of TTL at which to proactively refresh (80%).
 const refreshRatio = 0.8
 
+// failureTTL is how long a failed token request is answered from the cache.
+// While a cluster is still being created every kubectl call would otherwise
+// cost an AdminKubeconfigRequest on the garden API server.
+const failureTTL = 5 * time.Second
+
 // cacheKey uniquely identifies a cached token: a ServiceAccount in
 // fundament-system on one cluster.
 type cacheKey struct {
@@ -38,6 +43,16 @@ func (ct *cachedToken) shouldRefresh() bool {
 	return time.Now().After(refreshAt)
 }
 
+// newFailureCache keeps failures for ttl from when they happened: a hit must
+// not extend it (ttlcache does by default), or steady traffic against a
+// failing cluster would keep the failure forever.
+func newFailureCache(ttl time.Duration) *ttlcache.Cache[cacheKey, error] {
+	return ttlcache.New(
+		ttlcache.WithTTL[cacheKey, error](ttl),
+		ttlcache.WithDisableTouchOnHit[cacheKey, error](),
+	)
+}
+
 // Requester issues ServiceAccount tokens; *gardener.Client satisfies it.
 type Requester interface {
 	RequestNamedSAToken(ctx context.Context, clusterID, saName string) (*gardener.SAToken, error)
@@ -48,7 +63,8 @@ type Cache struct {
 	requester Requester
 	logger    *slog.Logger
 	tokens    *ttlcache.Cache[cacheKey, *cachedToken]
-	group     singleflight.Group // deduplicates concurrent token requests
+	failures  *ttlcache.Cache[cacheKey, error] // recent failed requests, see failureTTL
+	group     singleflight.Group               // deduplicates concurrent token requests
 }
 
 // NewCache creates a new token cache.
@@ -60,9 +76,11 @@ func NewCache(requester Requester, logger *slog.Logger) *Cache {
 			// No default TTL — each entry gets its own TTL from the API server response.
 			ttlcache.WithTTL[cacheKey, *cachedToken](ttlcache.NoTTL),
 		),
+		failures: newFailureCache(failureTTL),
 	}
-	// Start the automatic expired-entry cleanup goroutine.
+	// Start the automatic expired-entry cleanup goroutines.
 	go c.tokens.Start()
+	go c.failures.Start()
 	return c
 }
 
@@ -82,11 +100,16 @@ func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, er
 func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
 	if item := c.tokens.Get(key); item != nil {
 		ct := item.Value()
-		if ct.shouldRefresh() {
-			// Proactive async refresh — don't block the request.
+		// Proactive async refresh — don't block the request. A refresh that
+		// failed recently is not retried before failureTTL, the same as a fetch.
+		if ct.shouldRefresh() && c.failures.Get(key) == nil {
 			go c.refresh(context.WithoutCancel(ctx), key)
 		}
 		return ct.token, nil
+	}
+
+	if item := c.failures.Get(key); item != nil {
+		return "", item.Value()
 	}
 
 	// Cache miss or expired — synchronous fetch.
@@ -121,8 +144,14 @@ func (c *Cache) refresh(ctx context.Context, key cacheKey) {
 func (c *Cache) requestToken(ctx context.Context, key cacheKey) (string, error) {
 	saToken, err := c.requester.RequestNamedSAToken(ctx, key.clusterID, key.saName)
 	if err != nil {
-		return "", fmt.Errorf("request SA token: %w", err)
+		err = fmt.Errorf("request SA token: %w", err)
+		// A caller that went away says nothing about the cluster.
+		if ctx.Err() == nil {
+			c.failures.Set(key, err, ttlcache.DefaultTTL)
+		}
+		return "", err
 	}
+	c.failures.Delete(key)
 
 	now := time.Now()
 	ttl := saToken.ExpiresAt.Sub(now)
