@@ -259,6 +259,7 @@ export const namespaces = [
   create(NamespaceSchema, {
     id: 'ns-burgerzaken-prod',
     name: 'burgerzaken-prod',
+    clusterSideName: 'tnt-burgerzaken--burgerzaken-prod',
     projectId: 'pr-burgerzaken',
     clusterId: 'cl-production',
     created: daysAgo(120),
@@ -266,6 +267,7 @@ export const namespaces = [
   create(NamespaceSchema, {
     id: 'ns-belastingen-prod',
     name: 'belastingen-prod',
+    clusterSideName: 'tnt-belastingen--belastingen-prod',
     projectId: 'pr-belastingen',
     clusterId: 'cl-production',
     created: daysAgo(95),
@@ -273,6 +275,7 @@ export const namespaces = [
   create(NamespaceSchema, {
     id: 'ns-burgerzaken-staging',
     name: 'burgerzaken-staging',
+    clusterSideName: 'tnt-burgerzaken--burgerzaken-staging',
     projectId: 'pr-burgerzaken-staging',
     clusterId: 'cl-staging',
     created: daysAgo(60),

@@ -24,6 +24,9 @@ import {
   integerFieldError,
   resourceNameError,
   wireSubmit,
+  formFieldHtml,
+  formActionsHtml,
+  errorBannerHtml,
 } from './_shared.js';
 import { mountBucketsSection } from './bucket-pages.js';
 
@@ -116,13 +119,12 @@ function intFieldValue(form, field) {
   return Number(form.querySelector(`[name="${field.name}"]`).value);
 }
 
-// fieldsError validates the kind's integer fields; first error wins.
-function fieldsError(cfg, form) {
-  for (const field of cfg.intFields) {
-    const invalid = integerFieldError(field, intFieldValue(form, field));
-    if (invalid) return invalid;
-  }
-  return null;
+// intFieldChecks validates the kind's integer fields, each under its own field.
+function intFieldChecks(cfg, form) {
+  return cfg.intFields.map((field) => [
+    form.querySelector(`[name="${field.name}"]`),
+    (value) => integerFieldError(field, Number(value)),
+  ]);
 }
 
 // intFieldsHtml renders the kind's integer inputs for a create or edit form;
@@ -269,31 +271,29 @@ export async function consumerDetailPage(cfg) {
     if (!sheet) return;
     const { body, close } = sheet;
     body.insertAdjacentHTML('beforeend', `
-      <form class="plugin-form" novalidate>
-        <div class="plugin-error" data-role="error" hidden></div>
+      <nldd-form>
+        <form novalidate>
+          ${errorBannerHtml('edit-error')}
 
-        ${replicasFieldHtml(item.spec?.replicas)}
+          ${replicasFieldHtml(item.spec?.replicas)}
 
-        ${intFieldsHtml(cfg, item.spec)}
+          ${intFieldsHtml(cfg, item.spec)}
 
-        ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
+          ${cfg.defaultToggle ? defaultFieldHtml(item.spec?.default === true) : ''}
 
-        <div class="plugin-actions">
-          <button type="submit" class="plugin-button" data-role="save">Save</button>
-          <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
-        </div>
-      </form>
+          ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
+        </form>
+      </nldd-form>
     `);
 
     const form = body.querySelector('form');
-    body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
+    body.querySelector('#cancel-btn').addEventListener('click', () => close());
 
     wireSubmit(form, {
-      button: body.querySelector('[data-role="save"]'),
-      errorBox: body.querySelector('[data-role="error"]'),
-      busyLabel: 'Saving…',
+      button: body.querySelector('#save-btn'),
+      errorBanner: body.querySelector('#edit-error'),
       failPrefix: 'Failed to save',
-      validate: () => fieldsError(cfg, form),
+      checks: intFieldChecks(cfg, form),
       action: async () => {
         // Merge-patch of spec only: status is untouched.
         await fundament.k8s.patch({ ...resource, name }, { spec: specFrom(cfg, form) });
@@ -318,52 +318,49 @@ export async function consumerDetailPage(cfg) {
 // page opens it.
 function renderCreateForm(cfg, body, close) {
   body.insertAdjacentHTML('beforeend', `
-    <p class="plugin-text">
-      ${cfg.createIntro}
-    </p>
+    <nldd-rich-text>
+      <p>${cfg.createIntro}</p>
+    </nldd-rich-text>
+    <nldd-spacer size="12"></nldd-spacer>
 
-    <form class="plugin-form" novalidate>
-      <div class="plugin-error" data-role="error" hidden></div>
+    <nldd-form>
+      <form novalidate>
+        ${errorBannerHtml('error-banner')}
 
-      <div class="plugin-field">
-        <label class="plugin-label" for="consumer-name">Name</label>
-        <input id="consumer-name" name="name" type="text" class="plugin-input"
-               placeholder="default" required
-               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" maxlength="${cfg.nameMaxLength}" />
-        <span class="plugin-hint">Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).</span>
-      </div>
+        ${formFieldHtml(
+          'Name',
+          `<nldd-text-field id="consumer-name" name="name" placeholder="default"
+                            required maxlength="${cfg.nameMaxLength}" no-spellcheck></nldd-text-field>`,
+          {
+            errorId: 'consumer-name-error',
+            hint: `Lowercase letters, digits and dashes. Names the resulting StorageClass (prefixed ${cfg.storageClassPrefix}).`,
+          },
+        )}
 
-      ${replicasFieldHtml()}
+        ${replicasFieldHtml()}
 
-      ${intFieldsHtml(cfg)}
+        ${intFieldsHtml(cfg)}
 
-      ${cfg.defaultToggle ? defaultFieldHtml() : ''}
+        ${cfg.defaultToggle ? defaultFieldHtml() : ''}
 
-      <div class="plugin-actions">
-        <button type="submit" class="plugin-button" data-role="submit">Create ${cfg.label}</button>
-        <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
-      </div>
-    </form>
+        ${formActionsHtml({ submitId: 'submit-btn', submitText: `Create ${cfg.label}`, cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
   `);
 
   const form = body.querySelector('form');
   const nameInput = form.querySelector('[name="name"]');
 
-  body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
+  body.querySelector('#cancel-btn').addEventListener('click', () => close());
 
   wireSubmit(form, {
-    button: body.querySelector('[data-role="submit"]'),
-    errorBox: body.querySelector('[data-role="error"]'),
-    busyLabel: 'Creating…',
+    button: body.querySelector('#submit-btn'),
+    errorBanner: body.querySelector('#error-banner'),
     failPrefix: `Failed to create ${cfg.label}`,
-    validate: () => {
-      const invalid = resourceNameError(nameInput.value.trim(), cfg.nameMaxLength);
-      if (invalid) {
-        nameInput.focus();
-        return invalid;
-      }
-      return fieldsError(cfg, form);
-    },
+    checks: [
+      [nameInput, (value) => resourceNameError(value, cfg.nameMaxLength)],
+      ...intFieldChecks(cfg, form),
+    ],
     action: async () => {
       const name = nameInput.value.trim();
       await fundament.k8s.create(

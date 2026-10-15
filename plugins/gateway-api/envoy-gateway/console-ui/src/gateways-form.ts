@@ -86,7 +86,7 @@ export function clusterIssuerControlHtml(issuers: string[]): string {
       .join('');
     return `<nldd-dropdown unmet="cluster-issuer-error"><select id="cluster-issuer" name="cluster-issuer" aria-label="Cluster issuer">${options}</select></nldd-dropdown>`;
   }
-  return `<nldd-text-field id="cluster-issuer" name="cluster-issuer" unmet="cluster-issuer-error" placeholder="letsencrypt"></nldd-text-field>`;
+  return `<nldd-text-field id="cluster-issuer" name="cluster-issuer" required unmet="cluster-issuer-error" placeholder="letsencrypt"></nldd-text-field>`;
 }
 
 export function validateForm(root: ParentNode): boolean {

@@ -15,6 +15,7 @@ export type HostMessage =
       view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
       namespaces?: string[];
+      namespaceDisplayNames?: Record<string, string>;
       // FUN-17: plugins call kube-api-proxy directly with the token below.
       // Both fields are surfaced in the SDK's `fundament.init` so plugin JS can
       // build fetch URLs without knowing about the host.

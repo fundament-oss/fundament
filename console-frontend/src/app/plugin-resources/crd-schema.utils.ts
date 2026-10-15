@@ -212,6 +212,16 @@ function titleCase(words: string[]): string[] {
 }
 
 /**
+ * Convert a CRD kind (PascalCase) to a human-readable singular label, one word
+ * per case transition and acronyms intact.
+ * Examples: "Certificate" → "Certificate", "ClusterIssuer" → "Cluster Issuer",
+ * "FSCInstallation" → "FSC Installation"
+ */
+export function kindToSingularLabel(kind: string): string {
+  return titleCase(splitWords(kind)).join(' ');
+}
+
+/**
  * Convert a CRD kind (PascalCase) to a human-readable plural label, one word per
  * case transition and acronyms intact.
  * Examples: "Certificate" → "Certificates", "CertificateRequest" → "Certificate

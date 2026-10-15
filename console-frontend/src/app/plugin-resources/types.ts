@@ -41,6 +41,7 @@ export interface PluginMenu {
 export interface PluginMenuItem {
   crd: string;
   label?: string;
+  singularLabel?: string;
   icon?: string;
 }
 

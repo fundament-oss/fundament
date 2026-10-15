@@ -18,6 +18,7 @@ on:
         required: true
         options:
           - cert-manager
+          - cloudnativepg
           - external-dns
           - gateway-api/envoy-gateway
           - gateway-api/istio

@@ -1,38 +1,65 @@
-@if (errorMessage()) {
-  <nldd-banner
-    variant="critical"
-    [attr.text]="errorMessage()"
-  ></nldd-banner>
-} @else if (loading()) {
-  <nldd-inline-dialog
-    variant="loading"
-    text="Loading..."
-  ></nldd-inline-dialog>
-} @else if (customUIUrl()) {
-  <app-plugin-iframe
-    [src]="customUIUrl()!"
-    [pluginName]="pluginName()"
-    [pluginVersion]="installationVersion()"
-    [installationId]="installationId()"
-    [crdKind]="crdDef()!.kind"
-    view="create"
-    [clusterId]="clusterContext.selectedClusterId()!"
-    [namespaces]="namespaces()"
-  />
-} @else {
-  <!-- The plugin ships no create screen, so the console has nothing to show:
-       one line saying so and the way back. -->
-  <nldd-inline-dialog
-    icon="plugin"
-    icon-color="secondary"
-    text="Creating this resource from the console is not available"
-    supporting-text="This plugin does not ship a screen for it."
-  >
-    <nldd-button
-      slot="actions"
-      [routerLink]="listLink"
-      text="Back to list"
-      variant="primary"
-    ></nldd-button>
-  </nldd-inline-dialog>
-}
+<!-- Same outer layout as the other pages, so a plugin's own create screen
+     gets the page padding and column the native forms have. -->
+<nldd-page>
+  <nldd-simple-section>
+    @if (errorMessage()) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
+    } @else if (loading()) {
+      <nldd-inline-dialog
+        variant="loading"
+        text="Loading..."
+      ></nldd-inline-dialog>
+    } @else if (namespacesUnavailable()) {
+      <nldd-banner
+        variant="critical"
+        text="Failed to load the project's namespaces. Reload the page to try again."
+      ></nldd-banner>
+    } @else if (customUIUrl() && needsNamespace()) {
+      <nldd-inline-dialog
+        icon="brackets-ellipsis"
+        icon-color="secondary"
+        text="No namespaces in this project yet"
+        supporting-text="This is created in a namespace. Add one to the project first, then come back here."
+      >
+        <nldd-button
+          slot="actions"
+          [attr.href]="pageNav.path(namespacesLink())"
+          text="Go to namespaces"
+          variant="primary"
+          (click)="pageNav.navigate($event, namespacesLink())"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    } @else if (customUIUrl()) {
+      <app-plugin-iframe
+        [src]="customUIUrl()!"
+        [pluginName]="pluginName()"
+        [pluginVersion]="installationVersion()"
+        [installationId]="installationId()"
+        [crdKind]="crdDef()!.kind"
+        view="create"
+        [clusterId]="clusterContext.selectedClusterId()!"
+        [namespaces]="namespaces()"
+        [namespaceDisplayNames]="namespaceDisplayNames()"
+      />
+    } @else {
+      <!-- The plugin ships no create screen, so the console has nothing to show:
+           one line saying so and the way back. -->
+      <nldd-inline-dialog
+        icon="plugin"
+        icon-color="secondary"
+        text="Creating this resource from the console is not available"
+        supporting-text="This plugin does not ship a screen for it."
+      >
+        <nldd-button
+          slot="actions"
+          [routerLink]="listLink"
+          text="Back to list"
+          variant="primary"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    }
+  </nldd-simple-section>
+</nldd-page>

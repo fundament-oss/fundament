@@ -8,6 +8,9 @@ import {
   humanizeQuantity,
   renderDefList,
   wireSubmit,
+  formActionsHtml,
+  errorBannerHtml,
+  loadErrorBanner,
 } from './_shared.js';
 import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
@@ -119,7 +122,10 @@ async function showEdit(item) {
   const sheet = await openSheet({ label: 'Edit Disk Pool' });
   if (!sheet) return;
   const { body, close } = sheet;
-  body.insertAdjacentHTML('beforeend', '<p class="plugin-text">Loading disks…</p>');
+  body.insertAdjacentHTML(
+    'beforeend',
+    '<nldd-activity-indicator show-text text="Loading disks…"></nldd-activity-indicator>',
+  );
   const current = item.spec?.disks ?? [];
   const currentNames = current.map((d) => d.name);
 
@@ -128,7 +134,7 @@ async function showEdit(item) {
     const { items } = await fundament.k8s.list(RESOURCE_DISKS);
     disks = selectableDisks(items, name);
   } catch (err) {
-    body.lastElementChild.outerHTML = errorBox(err, 'Failed to load disks');
+    body.lastElementChild.replaceWith(loadErrorBanner(`Failed to load disks: ${err?.message ?? err}`));
     return;
   }
 
@@ -143,38 +149,36 @@ async function showEdit(item) {
   const preservedNote =
     preserved.length === 0
       ? ''
-      : `<p class="plugin-hint">
+      : `<nldd-text size="sm" color="secondary">
            Kept as they are, because this form cannot show them: a disk is listed here only
            when it exists and is either free or already claimed by this pool:
            ${escapeHtml(preserved.map((d) => d.name).join(', '))}. Saving leaves them in the pool; use kubectl
            to remove one.
-         </p>`;
+         </nldd-text>`;
 
   body.lastElementChild.outerHTML = `
-    <form class="plugin-form" novalidate>
-      <div class="plugin-error" data-role="error" hidden></div>
+    <nldd-form>
+      <form novalidate>
+        ${errorBannerHtml('edit-error')}
 
-      <div class="plugin-field">
-        <span class="plugin-label">Disks</span>
-        ${renderDiskPicker(disks, currentNames)}
-        ${preservedNote}
-        <span class="plugin-hint">
-          Unchecking a disk removes it from the shared Ceph cluster's device list, but its
-          storage daemon (OSD) keeps running until it is purged from Ceph manually, and
-          data may rebalance in the meantime.
-        </span>
-      </div>
+        <nldd-form-section text="Disks">
+          ${renderDiskPicker(disks, currentNames)}
+          ${preservedNote}
+          <nldd-text size="sm" color="secondary">
+            Unchecking a disk removes it from the shared Ceph cluster's device list, but its
+            storage daemon (OSD) keeps running until it is purged from Ceph manually, and
+            data may rebalance in the meantime.
+          </nldd-text>
+        </nldd-form-section>
 
-      <div class="plugin-actions">
-        <button type="submit" class="plugin-button" data-role="save">Save</button>
-        <button type="button" class="plugin-button-secondary" data-role="cancel">Cancel</button>
-      </div>
-    </form>
+        ${formActionsHtml({ submitId: 'save-btn', submitText: 'Save', cancelId: 'cancel-btn' })}
+      </form>
+    </nldd-form>
   `;
 
   const form = body.querySelector('form');
 
-  body.querySelector('[data-role="cancel"]').addEventListener('click', () => close());
+  body.querySelector('#cancel-btn').addEventListener('click', () => close());
 
   // Disjoint by construction: preserved is exactly what the picker did not
   // render, so this cannot produce the duplicate name the CRD's listType=map
@@ -182,11 +186,15 @@ async function showEdit(item) {
   const selected = () => [...readSelectedDisks(form, current), ...preserved];
 
   wireSubmit(form, {
-    button: body.querySelector('[data-role="save"]'),
-    errorBox: body.querySelector('[data-role="error"]'),
-    busyLabel: 'Saving…',
+    button: body.querySelector('#save-btn'),
+    errorBanner: body.querySelector('#edit-error'),
     failPrefix: 'Failed to save',
-    validate: () => (selected().length === 0 ? 'Select at least one disk.' : null),
+    checks: [
+      [
+        body.querySelector('#disk-picker'),
+        () => (selected().length === 0 ? 'Select at least one disk.' : null),
+      ],
+    ],
     action: async () => {
       // Merge-patch of spec only: status is untouched and disks is replaced
       // wholesale, not merged element-wise.

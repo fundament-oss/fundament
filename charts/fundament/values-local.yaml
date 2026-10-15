@@ -92,6 +92,10 @@ clusterWorker:
   replicas: 1
   logLevel: debug
   gardenerMode: mock
+  # Create project namespaces on the k3d-fundament-plugin sandbox, where
+  # kube-api-proxy sends plugin requests. Same Secret plugin-proxy uses —
+  # created by: just plugin-sandbox-kubeconfig
+  sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
 
 # Shoot proxy for local Gardener development (enabled by local-gardener profile).
 # Forwards port 443 on the k3d node to the Gardener istio ingress NodePort,

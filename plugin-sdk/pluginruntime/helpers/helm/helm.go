@@ -3,7 +3,10 @@
 package helm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -73,20 +76,27 @@ func (c *Client) InstallFromOCI(ctx context.Context, releaseName, chartRef, vers
 // the plugin SA's scope is granted (see the BANDAID note above). Any other
 // failure returns immediately.
 func (c *Client) runInstall(ctx context.Context, args []string) error {
+	return retryOnRBACForbidden(ctx, "install", func() (string, error) {
+		output, err := exec.CommandContext(ctx, "helm", args...).CombinedOutput() //nolint:gosec // args are constructed internally
+		return strings.TrimSpace(string(output)), err
+	})
+}
+
+// retryOnRBACForbidden runs attempt until it succeeds, fails for a reason other
+// than RBAC, or rbacRetryTimeout passes. attempt returns helm's error output.
+func retryOnRBACForbidden(ctx context.Context, op string, attempt func() (string, error)) error {
 	deadline := time.Now().Add(rbacRetryTimeout)
 	for {
-		cmd := exec.CommandContext(ctx, "helm", args...) //nolint:gosec // args are constructed internally
-		output, err := cmd.CombinedOutput()
+		out, err := attempt()
 		if err == nil {
 			return nil
 		}
-		out := strings.TrimSpace(string(output))
 		if !isRBACForbidden(out) || time.Now().After(deadline) {
-			return fmt.Errorf("helm install failed: %s: %w", out, err)
+			return fmt.Errorf("helm %s failed: %s: %w", op, out, err)
 		}
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("helm install cancelled while awaiting plugin RBAC: %w", ctx.Err())
+			return fmt.Errorf("helm %s cancelled while awaiting plugin RBAC: %w", op, ctx.Err())
 		case <-time.After(rbacRetryInterval):
 		}
 	}
@@ -98,13 +108,166 @@ func isRBACForbidden(output string) bool {
 	return strings.Contains(output, "is forbidden")
 }
 
-// IsInstalled checks whether a Helm release exists in the client's namespace.
+// IsInstalled checks whether a Helm release exists in the client's namespace,
+// in any state. Only a missing release reports false; any other helm failure
+// (cluster unreachable, RBAC still forbidden after the retries) is an error.
+// Unlike Status, it needs no chart version, so it runs only `helm status`.
 func (c *Client) IsInstalled(ctx context.Context, releaseName string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "helm", "status", releaseName, "--namespace", c.namespace) //nolint:gosec // args are constructed internally
-	if err := cmd.Run(); err != nil {
-		return false, nil //nolint:nilerr // non-zero exit means release not found, not an error
+	status, err := c.readRelease(ctx, "status", releaseName)
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	return status != nil, nil
+}
+
+// ReleaseStatus is what a plugin needs to decide whether to (re)install a
+// release: `helm status -o json` for the state and its timestamps, and
+// `helm get metadata -o json` for the chart version, since helm status strips
+// the chart from its output.
+type ReleaseStatus struct {
+	// Status is Helm's release status: deployed, failed, pending-install,
+	// pending-upgrade, pending-rollback, uninstalling, superseded or uninstalled.
+	Status string
+	// Revision is the latest revision's number, which Status and ChartVersion
+	// both describe.
+	Revision int
+	// ChartVersion is the latest revision's chart version, e.g. "0.24.0".
+	ChartVersion string
+	// LastDeployed is when the latest operation on the release started; for a
+	// pending release, when that operation began. Zero when helm omits it.
+	LastDeployed time.Time
+	// Deleted is when an uninstall started; set for an uninstalling or
+	// uninstalled release, zero otherwise.
+	Deleted time.Time
+}
+
+// Pending reports whether a Helm operation holds the release. Another install
+// fails with "another operation is in progress" until it finishes, or forever
+// when the process running it was killed.
+func (s *ReleaseStatus) Pending() bool {
+	return strings.HasPrefix(s.Status, "pending-")
+}
+
+// statusReadAttempts bounds how often Status reads the release again when an
+// operation recorded a new revision between its two helm calls.
+const statusReadAttempts = 3
+
+// Status returns the state of a release's latest revision in the client's
+// namespace, or nil when the release does not exist. Like the installs, it
+// retries while the plugin SA cannot yet read Helm's release Secrets (see the
+// BANDAID note above): it typically runs first in Start, and failing there
+// would restart the pod.
+//
+// The state and the chart version come from two helm calls. An operation that
+// records a new revision between them would pair the old revision's state
+// with the new one's version, so Status reads both again until they name the
+// same revision.
+func (c *Client) Status(ctx context.Context, releaseName string) (*ReleaseStatus, error) {
+	for range statusReadAttempts {
+		statusJSON, err := c.readRelease(ctx, "status", releaseName)
+		if err != nil || statusJSON == nil {
+			return nil, err
+		}
+		status, err := parseReleaseStatus(statusJSON)
+		if err != nil {
+			return nil, err
+		}
+		metadataJSON, err := c.readRelease(ctx, "get metadata", releaseName)
+		if err != nil {
+			return nil, err
+		}
+		if metadataJSON == nil {
+			// Uninstalled between the two calls.
+			return nil, nil
+		}
+		version, revision, err := parseChartVersion(metadataJSON)
+		if err != nil {
+			return nil, err
+		}
+		if status.Revision != revision {
+			continue
+		}
+		status.ChartVersion = version
+		return status, nil
+	}
+	return nil, fmt.Errorf("release %s kept changing while it was read", releaseName)
+}
+
+// readRelease runs a read-only helm command (op is "status" or "get metadata")
+// with JSON output and returns its stdout, or nil when the release does not
+// exist.
+func (c *Client) readRelease(ctx context.Context, op, releaseName string) ([]byte, error) {
+	var stdout bytes.Buffer
+	notFound := false
+	args := append(strings.Fields(op), releaseName, "--namespace", c.namespace, "--output", "json")
+	err := retryOnRBACForbidden(ctx, op, func() (string, error) {
+		stdout.Reset()
+		var stderr bytes.Buffer
+		cmd := exec.CommandContext(ctx, "helm", args...) //nolint:gosec // args are constructed internally
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		out := strings.TrimSpace(stderr.String())
+		if err != nil && isReleaseNotFound(out) {
+			notFound = true
+			return out, nil
+		}
+		return out, err //nolint:wrapcheck // retryOnRBACForbidden wraps it with helm's output
+	})
+	if err != nil {
+		return nil, err
+	}
+	if notFound {
+		return nil, nil
+	}
+	return stdout.Bytes(), nil
+}
+
+func isReleaseNotFound(output string) bool {
+	return strings.Contains(output, "release: not found")
+}
+
+// parseReleaseStatus reads `helm status -o json`. Its ChartVersion stays empty:
+// helm status has no chart in its output.
+func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
+	var release struct {
+		// Version is the revision number, not the chart's version.
+		Version int `json:"version"`
+		Info    struct {
+			Status       string `json:"status"`
+			LastDeployed string `json:"last_deployed"`
+			Deleted      string `json:"deleted"`
+		} `json:"info"`
+	}
+	if err := json.Unmarshal(data, &release); err != nil {
+		return nil, fmt.Errorf("parse helm status: %w", err)
+	}
+	// A missing or unparseable timestamp stays zero, which a caller reads as
+	// "long ago".
+	lastDeployed, _ := time.Parse(time.RFC3339Nano, release.Info.LastDeployed)
+	deleted, _ := time.Parse(time.RFC3339Nano, release.Info.Deleted)
+	return &ReleaseStatus{
+		Status:       release.Info.Status,
+		Revision:     release.Version,
+		LastDeployed: lastDeployed,
+		Deleted:      deleted,
+	}, nil
+}
+
+// parseChartVersion reads the chart version and the revision it belongs to
+// from `helm get metadata -o json`.
+func parseChartVersion(data []byte) (version string, revision int, err error) {
+	var metadata struct {
+		Version  string `json:"version"`
+		Revision int    `json:"revision"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return "", 0, fmt.Errorf("parse helm get metadata: %w", err)
+	}
+	if metadata.Version == "" {
+		return "", 0, errors.New("helm get metadata: no chart version")
+	}
+	return metadata.Version, metadata.Revision, nil
 }
 
 func appendSortedValues(args []string, values map[string]string) []string {

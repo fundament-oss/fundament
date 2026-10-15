@@ -1,0 +1,25 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Create a test database (namespace cnpg-test, Cluster test-db) and wait for it to become Ready
+test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubectl() { command kubectl --context {{ kube_context }} "$@"; }
+
+    kubectl apply -f test-resources.yaml
+
+    # The first run pulls the PostgreSQL image, so allow for that.
+    echo "Waiting for database test-db to become Ready..."
+    if ! kubectl wait --for=condition=Ready cluster/test-db -n cnpg-test --timeout=300s; then
+        echo >&2
+        echo "Database test-db did not become Ready. Phase:" >&2
+        kubectl get cluster test-db -n cnpg-test -o jsonpath='{.status.phase}{"\n"}' >&2
+        exit 1
+    fi
+
+    kubectl get cluster test-db -n cnpg-test
+    kubectl get secret test-db-app -n cnpg-test
+
+# Remove the test database and its namespace
+test-cleanup:
+    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found

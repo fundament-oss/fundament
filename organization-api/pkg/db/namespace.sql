@@ -5,7 +5,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -20,7 +21,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -63,7 +65,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -78,7 +81,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id

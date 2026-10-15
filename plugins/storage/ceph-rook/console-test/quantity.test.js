@@ -47,7 +47,7 @@ describe('humanizeQuantity', () => {
     expect(humanizeQuantity(1073741824)).toBe('1 GiB');
   });
 
-  test.each(['20 Gi', '20GB', '1K', '1Ki1', '1e', 'garbage', '1.2.3'])('shows %p as written', (quantity) => {
+  test.each(['20 Gi', '20GB', '1K', '1Ki1', '1e', 'garbage', '1.2.3', '0e999', '1e999'])('shows %p as written', (quantity) => {
     expect(humanizeQuantity(quantity)).toBe(quantity);
   });
 

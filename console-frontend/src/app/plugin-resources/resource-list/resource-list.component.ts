@@ -27,6 +27,7 @@ import {
   getListColumns,
   crdRefToLabel,
   kindToLabel,
+  kindToSingularLabel,
   labelMidSentence,
 } from '../crd-schema.utils';
 import opensElsewhere from '../../opens-elsewhere';
@@ -155,23 +156,36 @@ export default class ResourceListComponent implements OnInit {
 
   protected readonly isDroppedWhenNarrow = isDroppedWhenNarrow;
 
+  private menuItem = computed(() =>
+    this.plugin()?.menu.project?.find((i) => i.crd === this.resourceKind()),
+  );
+
+  /** The plugin's own menu label wins, so the page title matches the nav item
+   *  (CloudNativePG calls its Clusters "Databases"). */
   kindLabel = computed(() => {
+    const label = this.menuItem()?.label;
+    if (label) return label;
+
     const crd = this.crdDef();
     if (crd) return kindToLabel(crd.kind);
 
-    const plugin = this.plugin();
-    const resourceKind = this.resourceKind();
-    const allItems = [...(plugin?.menu.project ?? [])];
-    const item = allItems.find((i) => i.crd === resourceKind);
     // The route param is a CRD reference ("certificates.cert-manager.io"), not a
     // kind, so it must not go through kindToLabel — that would pluralize the group.
-    return item?.label ?? crdRefToLabel(resourceKind);
+    return crdRefToLabel(this.resourceKind());
   });
 
   /** The list's name as it reads inside a sentence ("No DNS endpoints found").
    *  A plain toLowerCase() on the label flattened the acronym too: "no dns
    *  endpoints found". */
   kindLabelMidSentence = computed(() => labelMidSentence(this.kindLabel()));
+
+  /** One item, for the create button: "New database…", not "New databases…".
+   *  Only shown once the CRD is loaded, so the kind is always there to fall back on. */
+  singularKindLabelMidSentence = computed(() =>
+    labelMidSentence(
+      this.menuItem()?.singularLabel ?? kindToSingularLabel(this.crdDef()?.kind ?? ''),
+    ),
+  );
 
   constructor() {
     effect(() => {

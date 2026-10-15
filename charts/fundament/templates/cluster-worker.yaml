@@ -8,6 +8,11 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
+    {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+    # Mounted optional: true and created after the platform is up, so `auto`
+    # never sees it referenced. Name it, so creating it restarts the pod.
+    secret.reloader.stakater.com/reload: {{ $.Values.clusterWorker.sandboxKubeconfigSecret | quote }}
+    {{- end }}
 spec:
   replicas: {{ $.Values.clusterWorker.replicas }}
   selector:
@@ -32,6 +37,10 @@ spec:
                   key: uri
             - name: GARDENER_MODE
               value: {{ $.Values.clusterWorker.gardenerMode }}
+            {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+            - name: GARDENER_SANDBOX_KUBECONFIG
+              value: /etc/plugin-sandbox/kubeconfig
+            {{- end }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
             {{- if $.Values.pluginController.provisionShoots }}
@@ -119,18 +128,36 @@ spec:
             - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
               value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}
-          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.clusterWorker.sandboxKubeconfigSecret }}
           volumeMounts:
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: gardener-kubeconfig
               mountPath: /etc/gardener
               readOnly: true
+            {{- end }}
+            {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+            - name: plugin-sandbox-kubeconfig
+              mountPath: /etc/plugin-sandbox
+              readOnly: true
+            {{- end }}
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
-      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.clusterWorker.sandboxKubeconfigSecret }}
       volumes:
+        {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+        - name: plugin-sandbox-kubeconfig
+          secret:
+            secretName: {{ $.Values.clusterWorker.sandboxKubeconfigSecret }}
+            optional: true
+            items:
+              - key: kubeconfig
+                path: kubeconfig
+        {{- end }}
       {{- end }}
 {{- end }}
