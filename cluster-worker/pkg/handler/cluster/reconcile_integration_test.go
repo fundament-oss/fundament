@@ -1,9 +1,12 @@
 package cluster_test
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
@@ -47,32 +50,101 @@ func TestReconcileNoDriftForUnsyncedCluster(t *testing.T) {
 	assertNoOutboxReconcile(t, db, clusterID)
 }
 
-func TestReconcileOrphanCleanup(t *testing.T) {
+func TestReconcileKeepsShootWithoutCluster(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	// Create a shoot in Gardener for a cluster ID that doesn't exist in the DB.
-	orphanClusterID := uuid.New()
-	orphanShootName := kubename.GenerateShootName("orphan", orphanClusterID)
+	// A shoot for a cluster ID that has no row in the DB, as after a database
+	// reset or for a shoot of another installation.
+	unknownClusterID := uuid.New()
+	applyTestShoot(t, mock, unknownClusterID, "unknown")
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	assert.Empty(t, mock.DeleteByClusterID)
+	assert.True(t, mock.HasShootForCluster(unknownClusterID))
+}
+
+func TestReconcileDeletesShootOfDeletedCluster(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	// The cluster was deleted by a user, but its shoot still exists.
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "reconcile-deleted")
+	applyTestShoot(t, mock, clusterID, "reconcile-deleted")
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	assert.Equal(t, []uuid.UUID{clusterID}, mock.DeleteByClusterID)
+}
+
+func TestReconcileRefusesMassDeletion(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	// One more deleted cluster with a shoot than a pass may delete.
+	for i := range 4 {
+		name := fmt.Sprintf("reconcile-mass-%d", i)
+		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
+		applyTestShoot(t, mock, clusterID, name)
+	}
+
+	err := h.Reconcile(t.Context())
+	require.ErrorContains(t, err, "refusing to delete 4 shoots")
+
+	assert.Empty(t, mock.DeleteByClusterID)
+}
+
+func TestReconcileMassDeletionIgnoresShootsAlreadyDeleting(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	mock.DeleteDelay = time.Hour // keep deleting shoots listed
+	h := newTestHandler(t, db, mock)
+
+	// Four deleted clusters whose shoots are already being deleted, as after
+	// a user deleted them through the sync path.
+	var clusterIDs []uuid.UUID
+	for i := range 4 {
+		name := fmt.Sprintf("reconcile-deleting-%d", i)
+		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
+		applyTestShoot(t, mock, clusterID, name)
+		require.NoError(t, mock.DeleteShootByClusterID(t.Context(), clusterID))
+		clusterIDs = append(clusterIDs, clusterID)
+	}
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	// The deletion is repeated for each, on top of the four from the setup.
+	assert.Len(t, mock.DeleteByClusterID, 8)
+	assert.ElementsMatch(t, clusterIDs, mock.DeleteByClusterID[4:])
+}
+
+func applyTestShoot(t *testing.T, mock *gardener.MockClient, clusterID uuid.UUID, name string) {
+	t.Helper()
+
 	_, err := mock.ApplyShoot(t.Context(), &gardener.ClusterToSync{
-		ID:                orphanClusterID,
+		ID:                clusterID,
 		OrganizationID:    acmeCorpOrgID,
 		OrganizationName:  "acme-corp",
-		Name:              "orphan",
-		ShootName:         orphanShootName,
+		Name:              name,
+		ShootName:         kubename.GenerateShootName(name, clusterID),
 		Namespace:         "garden-test",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.31.1",
 	})
 	require.NoError(t, err)
-
-	err = h.Reconcile(t.Context())
-	require.NoError(t, err)
-
-	// Orphan shoot should have been deleted.
-	require.Len(t, mock.DeleteByClusterID, 1)
-	require.Equal(t, orphanClusterID, mock.DeleteByClusterID[0])
 }
