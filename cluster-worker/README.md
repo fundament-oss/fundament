@@ -292,6 +292,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
+| `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 
 ## Immediate cluster deletion

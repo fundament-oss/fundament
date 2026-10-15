@@ -56,9 +56,11 @@ ORDER BY
 
 -- name: ClusterListDeletedByIDs :many
 -- Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
--- Periodic reconciliation only deletes a Shoot whose cluster a user deleted.
+-- Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+-- and only once the delete sync (outbox_status) has settled.
 SELECT
-    tenant.clusters.id
+    tenant.clusters.id,
+    tenant.clusters.outbox_status
 FROM
     tenant.clusters
 WHERE

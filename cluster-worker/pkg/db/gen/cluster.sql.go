@@ -398,7 +398,8 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 
 const clusterListDeletedByIDs = `-- name: ClusterListDeletedByIDs :many
 SELECT
-    tenant.clusters.id
+    tenant.clusters.id,
+    tenant.clusters.outbox_status
 FROM
     tenant.clusters
 WHERE
@@ -412,21 +413,27 @@ type ClusterListDeletedByIDsParams struct {
 	ClusterIds []uuid.UUID
 }
 
+type ClusterListDeletedByIDsRow struct {
+	ID           uuid.UUID
+	OutboxStatus pgtype.Text
+}
+
 // Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
-// Periodic reconciliation only deletes a Shoot whose cluster a user deleted.
-func (q *Queries) ClusterListDeletedByIDs(ctx context.Context, arg ClusterListDeletedByIDsParams) ([]uuid.UUID, error) {
+// Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+// and only once the delete sync (outbox_status) has settled.
+func (q *Queries) ClusterListDeletedByIDs(ctx context.Context, arg ClusterListDeletedByIDsParams) ([]ClusterListDeletedByIDsRow, error) {
 	rows, err := q.db.Query(ctx, clusterListDeletedByIDs, arg.ClusterIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []ClusterListDeletedByIDsRow
 	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i ClusterListDeletedByIDsRow
+		if err := rows.Scan(&i.ID, &i.OutboxStatus); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

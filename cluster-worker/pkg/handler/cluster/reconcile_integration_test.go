@@ -99,14 +99,35 @@ func TestReconcileDeletesShootOfDeletedCluster(t *testing.T) {
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	// The cluster was deleted by a user, but its shoot still exists.
+	// The cluster was deleted by a user, the delete sync gave up, and its
+	// shoot still exists.
 	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "reconcile-deleted")
+	markOutboxFailed(t, db, clusterID)
 	applyTestShoot(t, mock, clusterID, "reconcile-deleted")
 
 	err := h.Reconcile(t.Context())
 	require.NoError(t, err)
 
 	assert.Equal(t, []uuid.UUID{clusterID}, mock.DeleteByClusterID)
+}
+
+func TestReconcileLeavesShootWhileDeleteSyncRuns(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	// The cluster was just deleted: its outbox row is still pending, so the
+	// delete sync has yet to delete the shoot.
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "reconcile-syncing")
+	applyTestShoot(t, mock, clusterID, "reconcile-syncing")
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	assert.Empty(t, mock.DeleteByClusterID)
+	assert.True(t, mock.HasShootForCluster(clusterID))
 }
 
 func TestReconcileRefusesMassDeletion(t *testing.T) {
@@ -120,11 +141,14 @@ func TestReconcileRefusesMassDeletion(t *testing.T) {
 	for i := range 4 {
 		name := fmt.Sprintf("reconcile-mass-%d", i)
 		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
+		markOutboxFailed(t, db, clusterID)
 		applyTestShoot(t, mock, clusterID, name)
 	}
 
+	// Refusing is logged, not returned: a failed pass counts towards stopping
+	// the worker.
 	err := h.Reconcile(t.Context())
-	require.ErrorContains(t, err, "refusing to delete 4 shoots")
+	require.NoError(t, err)
 
 	assert.Empty(t, mock.DeleteByClusterID)
 }
@@ -145,6 +169,7 @@ func TestReconcileMassDeletionIgnoresShootsAlreadyDeleting(t *testing.T) {
 		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
 		applyTestShoot(t, mock, clusterID, name)
 		require.NoError(t, mock.DeleteShootByClusterID(t.Context(), clusterID))
+		markOutboxCompleted(t, db, clusterID)
 		clusterIDs = append(clusterIDs, clusterID)
 	}
 
