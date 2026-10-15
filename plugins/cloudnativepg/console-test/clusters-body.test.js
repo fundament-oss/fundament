@@ -33,7 +33,9 @@ describe('storageSizeError', () => {
     expect(storageSizeError(size)).toBe(want);
   });
 
-  test.each(['', '10 Gi', '10GB', '1K', 'Gi', 'ten'])('rejects %p as no quantity', (size) => {
+  // Quantity grammar, but beyond a number: 0 * 10 ** 999 is NaN, which
+  // would pass both range checks.
+  test.each(['', '10 Gi', '10GB', '1K', 'Gi', 'ten', '0e999', '1e999', '-0e999'])('rejects %p as no quantity', (size) => {
     expect(storageSizeError(size)).toBe('Enter a size like 10Gi, 500Mi or 20G.');
   });
 });

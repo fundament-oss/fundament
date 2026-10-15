@@ -167,6 +167,9 @@ func TestForeignOwner(t *testing.T) {
 		// but adds a second operator.
 		{"second operator", []client.Object{ourCRD(CRDNames[0]), ourDeployment(), otherOperator}, "Deployment cnpg-system/cnpg-controller-manager runs the CloudNativePG operator"},
 		{"unrelated deployment", []client.Object{ourCRD(CRDNames[0]), deployment("team-a", "web", "nginx:1.27")}, ""},
+		// Helm checks every CRD of the chart, so the plugin does too.
+		{"another CRD of the chart", []client.Object{ourCRD(CRDNames[0]), otherReleaseCRD("poolers.postgresql.cnpg.io")}, "CRD poolers.postgresql.cnpg.io belongs to Helm release cnpg-system/cnpg"},
+		{"unrelated CRD", []client.Object{ourCRD(CRDNames[0]), otherReleaseCRD("certificates.cert-manager.io")}, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,6 +214,12 @@ func TestIsOperatorImage(t *testing.T) {
 	} {
 		assert.Equal(t, want, isOperatorImage(image), image)
 	}
+}
+
+func otherReleaseCRD(name string) *apiextensionsv1.CustomResourceDefinition {
+	crd := ourCRD(name)
+	crd.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	return crd
 }
 
 func ourCRD(name string) *apiextensionsv1.CustomResourceDefinition {

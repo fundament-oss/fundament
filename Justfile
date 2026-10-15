@@ -260,20 +260,26 @@ plugin-sandbox-kubeconfig:
     #
     # After the restart: cluster-worker's startup status sweep finds no shoot for the seeded
     # cluster in mock Gardener and sets it back to pending. Its pod is Ready once the sweep
-    # has queued the checks, not once they ran, so mark it ready until it stays that way.
+    # has queued the checks, not once they ran, so mark it ready until it stays that way on
+    # two reads 5 seconds apart; the mock answers a queued check right away.
     # The next sweep (30 minutes) still flips it back; mock Gardener has no shoot for it.
     echo "- marking the local cluster(s) ready so the console allows plugin installs"
     psql_fundament() {
         kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
             psql -U postgres -d fundament -qtAc "$1"
     }
+    not_ready() {
+        psql_fundament "SELECT count(*) FROM tenant.clusters \
+            WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';"
+    }
     marked=false
     for i in $(seq 1 6); do
         psql_fundament "UPDATE tenant.clusters SET shoot_status = 'ready', shoot_status_updated = now() \
             WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" > /dev/null || break
         sleep 5
-        if [ "$(psql_fundament "SELECT count(*) FROM tenant.clusters \
-            WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';")" = "0" ]; then
+        [ "$(not_ready)" = "0" ] || continue
+        sleep 5
+        if [ "$(not_ready)" = "0" ]; then
             marked=true
             break
         fi

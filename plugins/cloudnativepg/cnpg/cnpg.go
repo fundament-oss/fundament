@@ -21,7 +21,7 @@ import (
 	"golang.org/x/mod/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
@@ -184,8 +184,8 @@ func pendingRecovery(status string) string {
 
 // ForeignOwner returns who else runs the CloudNativePG operator on the
 // cluster, and how to hand it over to this plugin, or "" when nobody else
-// does: there is no CRD yet, or the CRD is this plugin's release's and no other
-// operator Deployment runs. CRDs kept from this plugin's own uninstall still
+// does: there is no CRD yet, or every postgresql.cnpg.io CRD is this plugin's
+// release's and no other operator Deployment runs. CRDs kept from this plugin's own uninstall still
 // name its release, so a reinstall counts as its own. CRDs kept from someone
 // else's uninstall still name theirs, so the plugin goes ahead only once they
 // are pointed at its release: it does not take them over by itself.
@@ -194,22 +194,28 @@ func pendingRecovery(status string) string {
 // manifests or `helm install --take-ownership`, which skip helm's ownership
 // check. It makes one visible.
 func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
-	var clusters apiextensionsv1.CustomResourceDefinition
-	err := kube.Get(ctx, client.ObjectKey{Name: CRDNames[0]}, &clusters)
-	switch {
-	case apierrors.IsNotFound(err):
-	case err != nil:
-		return "", fmt.Errorf("get CRD %s: %w", CRDNames[0], err)
-	default:
-		release := clusters.Annotations["meta.helm.sh/release-name"]
-		namespace := clusters.Annotations["meta.helm.sh/release-namespace"]
+	// Every CRD of the chart, not only the ones the plugin uses: Helm refuses
+	// the install when any of them carries another release's annotations.
+	// Metadata only, since CRD schemas are large.
+	crds := &metav1.PartialObjectMetadataList{}
+	crds.SetGroupVersionKind(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinitionList"))
+	if err := kube.List(ctx, crds); err != nil {
+		return "", fmt.Errorf("list CRDs: %w", err)
+	}
+	for i := range crds.Items {
+		crd := &crds.Items[i]
+		if !strings.HasSuffix(crd.Name, "."+crdGroup) {
+			continue
+		}
+		release := crd.Annotations["meta.helm.sh/release-name"]
+		namespace := crd.Annotations["meta.helm.sh/release-namespace"]
 		if release == "" {
 			return fmt.Sprintf("CRD %s was not installed with Helm. To hand the operator to this plugin, remove that install but keep its CRDs (deleting them deletes every database), %s",
-				CRDNames[0], adoptCRDs), nil
+				crd.Name, adoptCRDs), nil
 		}
 		if release != Release || namespace != Namespace {
 			return fmt.Sprintf("CRD %s belongs to Helm release %s/%s. To hand the operator to this plugin, run `helm -n %s uninstall %s` (its CRDs and databases stay), %s",
-				CRDNames[0], namespace, release, namespace, release, adoptCRDs), nil
+				crd.Name, namespace, release, namespace, release, adoptCRDs), nil
 		}
 	}
 
@@ -230,6 +236,9 @@ func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
 	}
 	return "", nil
 }
+
+// crdGroup is the API group of every CRD the chart installs.
+const crdGroup = "postgresql.cnpg.io"
 
 // adoptCRDs ends ForeignOwner's hand-over for CRDs someone else installed:
 // Helm adopts an existing object only when it carries the release's

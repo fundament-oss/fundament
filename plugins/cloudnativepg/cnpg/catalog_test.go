@@ -45,6 +45,23 @@ func TestParseCatalogWithoutMaxMajor(t *testing.T) {
 	assert.Error(t, err)
 }
 
+// The plugin applies the catalog cluster-wide, so an entry that is not
+// digest-pinned or not of its own major is a defect of the image.
+func TestParseCatalogRejectsEntry(t *testing.T) {
+	t.Parallel()
+	const digest = "@sha256:fe22b9fcd038dcd08c2019b17d95f517f137801e5f39d857a895d65e8c63033b"
+	for name, image := range map[string]string{
+		"no digest":     "ghcr.io/cloudnative-pg/postgresql:17.11-202610120828-standard-bookworm",
+		"short digest":  pg17,
+		"other major":   "ghcr.io/cloudnative-pg/postgresql:16.15-202610120828-standard-bookworm" + digest,
+		"no tag":        "ghcr.io/cloudnative-pg/postgresql" + digest,
+		"tag not minor": "ghcr.io/cloudnative-pg/postgresql:latest" + digest,
+	} {
+		_, err := ParseCatalog([]byte("spec:\n  images:\n  - major: 17\n    image: " + image + "\n"))
+		assert.Error(t, err, name)
+	}
+}
+
 func TestMergeCatalog(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

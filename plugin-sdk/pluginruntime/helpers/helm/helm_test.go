@@ -64,6 +64,7 @@ func TestParseReleaseStatus(t *testing.T) {
 	status, err := parseReleaseStatus(out)
 	require.NoError(t, err)
 	assert.Equal(t, "deployed", status.Status)
+	assert.Equal(t, 14, status.Revision)
 	assert.Empty(t, status.ChartVersion)
 	assert.True(t, time.Date(2026, 10, 12, 17, 51, 4, 941537591, time.UTC).Equal(status.LastDeployed))
 	assert.True(t, status.Deleted.IsZero())
@@ -94,15 +95,16 @@ func TestParseChartVersion(t *testing.T) {
 	// `helm get metadata cnpg -n cnpg-system -o json` from helm 3.16.
 	out := []byte(`{"name":"cnpg","chart":"cloudnative-pg","version":"0.24.0","appVersion":"1.26.0","namespace":"cnpg-system","revision":14,"status":"deployed","deployedAt":"2026-10-12T17:51:04Z"}`)
 
-	version, err := parseChartVersion(out)
+	version, revision, err := parseChartVersion(out)
 	require.NoError(t, err)
 	assert.Equal(t, "0.24.0", version)
+	assert.Equal(t, 14, revision)
 }
 
 // An empty version would read as older than every pin and downgrade a newer
 // release, so it is an error rather than "".
 func TestParseChartVersionMissing(t *testing.T) {
-	_, err := parseChartVersion([]byte(`{"name":"cnpg","namespace":"cnpg-system"}`))
+	_, _, err := parseChartVersion([]byte(`{"name":"cnpg","namespace":"cnpg-system"}`))
 	assert.Error(t, err)
 }
 

@@ -14,7 +14,8 @@ const QUANTITY_MULTIPLIERS = {
 const QUANTITY_PATTERN = /^([+-]?(?:\d+\.?\d*|\.\d+))(?:([KMGTPE]i)|[eE]([+-]?\d+)|([numkMGTPE]?))$/;
 
 // Whole bytes, rounded up like Quantity.Value(). null for anything outside the
-// grammar.
+// grammar, and for an exponent too large for a number: "0e999" would
+// otherwise be NaN, which passes every range check.
 export function parseQuantity(quantity) {
   const match = QUANTITY_PATTERN.exec(quantity);
   if (!match) return null;
@@ -22,7 +23,7 @@ export function parseQuantity(quantity) {
   const value = exponent !== undefined
     ? Number(number) * 10 ** Number(exponent)
     : Number(number) * QUANTITY_MULTIPLIERS[binarySI ?? decimalSI];
-  return Math.ceil(value);
+  return Number.isFinite(value) ? Math.ceil(value) : null;
 }
 
 // The console's memory format (RegionCatalogService.formatMemory): truncated

@@ -4,7 +4,7 @@ Installs the CloudNativePG operator and lets project members create PostgreSQL d
 
 - Helm chart `cloudnative-pg` 0.24.0 (operator v1.26.0) from `https://cloudnative-pg.github.io/charts`, release `fundament-cloudnativepg` in `cnpg-system`, chart default values
 - CRDs: Cluster (`clusters.postgresql.cnpg.io`), ClusterImageCatalog (`clusterimagecatalogs.postgresql.cnpg.io`)
-- ClusterImageCatalog `fundament-postgresql`: CloudNativePG's [standard bookworm catalog](https://github.com/cloudnative-pg/artifacts/blob/main/image-catalogs/catalog-standard-bookworm.yaml), fetched when the image is built
+- ClusterImageCatalog `fundament-postgresql`: CloudNativePG's [standard bookworm catalog](https://github.com/cloudnative-pg/artifacts/blob/main/image-catalogs/catalog-standard-bookworm.yaml), fetched when the image is built. The plugin refuses to start with an entry that is not digest-pinned or not tagged with its own major
 - Console: create and detail pages in `console/`; the list is the console's generated one, labelled Databases. The detail page deletes a database after the user types its name
 - Config: none
 
@@ -32,7 +32,7 @@ Not yet: fetching the catalog at runtime, so fixes do not wait for a plugin rele
 
 A cluster runs one CloudNativePG operator, and every operator version change restarts every database on the cluster. The plugin does not share the operator, so that no other writer changes its version at a moment the plugin does not know about. It installs its own release, `fundament-cloudnativepg`, rather than the chart's usual `cnpg`, which openfsc installs (`cnpg/`):
 
-- On every start and every reconcile it checks that the operator is its own: the Helm annotations on `clusters.postgresql.cnpg.io` name its release, and no other Deployment runs the operator image. No CRD, or its own: it installs, upgrades or repairs as below. CRDs kept from its own uninstall still carry its annotations, so a reinstall counts as its own.
+- On every start and every reconcile it checks that the operator is its own: the Helm annotations on every `postgresql.cnpg.io` CRD name its release (Helm refuses the install when any of the chart's CRDs names another), and no other Deployment runs the operator image. No CRD, or its own: it installs, upgrades or repairs as below. CRDs kept from its own uninstall still carry its annotations, so a reinstall counts as its own.
 - Someone else's at start: the plugin reports Failed, names the owner and how to hand the operator over (below), and retries every 30 seconds, so it goes ahead once the hand-over is done. Removing the other install alone is not enough: its kept CRDs still name its release, and the plugin does not take them over by itself. Someone else's later: it reports Degraded, names the owner, and stops repairing and upgrading.
 - It keeps the chart's default values.
 - It never downgrades: it installs the newer of its pinned chart version and the release's own, whatever state the release is in, so a plugin rollback keeps a newer operator and its CRDs.

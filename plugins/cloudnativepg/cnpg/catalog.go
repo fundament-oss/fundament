@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,9 +39,14 @@ type CatalogImage struct {
 	Image string `json:"image"`
 }
 
+// pinnedDigest matches the digest a catalog image must end in.
+var pinnedDigest = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
+
 // ParseCatalog reads CloudNativePG's published ClusterImageCatalog (the image
 // carries the one fetched at build time) and keeps the majors operator 1.26
-// runs.
+// runs. Every entry it keeps must be digest-pinned and tagged with its own
+// major, since the plugin applies them cluster-wide: a catalog that is not
+// makes the image defective rather than reach the databases.
 func ParseCatalog(data []byte) ([]CatalogImage, error) {
 	var catalog struct {
 		Spec struct {
@@ -54,7 +60,28 @@ func ParseCatalog(data []byte) ([]CatalogImage, error) {
 	if !slices.ContainsFunc(images, func(i CatalogImage) bool { return i.Major == MaxMajor }) {
 		return nil, fmt.Errorf("image catalog has no PostgreSQL %d", MaxMajor)
 	}
+	for _, image := range images {
+		if err := validateCatalogImage(image); err != nil {
+			return nil, fmt.Errorf("image catalog: PostgreSQL %d: %w", image.Major, err)
+		}
+	}
 	return images, nil
+}
+
+// validateCatalogImage checks that an entry names a digest-pinned image whose
+// tag has the entry's major, e.g. 17.11-202610120828-standard-bookworm for 17.
+func validateCatalogImage(image CatalogImage) error {
+	if !pinnedDigest.MatchString(image.Image) {
+		return fmt.Errorf("image %q is not pinned to a sha256 digest", image.Image)
+	}
+	version, err := imageVersion(image.Image)
+	if err != nil {
+		return err
+	}
+	if version[0] != image.Major {
+		return fmt.Errorf("image %q is not PostgreSQL %d", image.Image, image.Major)
+	}
+	return nil
 }
 
 // ApplyCatalog creates or updates CatalogName with images, but only raises an
