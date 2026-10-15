@@ -44,12 +44,14 @@ type Config struct {
 	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
 	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 	// MaxReconcileDeletions is the most Shoots one reconcile pass starts to
-	// delete. A pass that would delete more deletes none and fails, since that
-	// points at a database problem rather than users deleting clusters.
+	// delete. A pass that would delete more deletes none and logs an error,
+	// since that points at a database problem rather than users deleting
+	// clusters. Zero turns off deletions started by reconcile.
 	MaxReconcileDeletions int `env:"MAX_RECONCILE_DELETIONS" envDefault:"3"`
 }
 
-// Handler manages cluster lifecycle in Gardener (sync, status, orphan cleanup).
+// Handler manages cluster lifecycle in Gardener (sync, status, finishing
+// deletions of deleted clusters).
 //
 // Precondition dependency graph:
 //
