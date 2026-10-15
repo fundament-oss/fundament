@@ -75,6 +75,8 @@ func NewCache(requester Requester, logger *slog.Logger) *Cache {
 		tokens: ttlcache.New(
 			// No default TTL — each entry gets its own TTL from the API server response.
 			ttlcache.WithTTL[cacheKey, *cachedToken](ttlcache.NoTTL),
+			// Expire at the token's own expiry, not extended by reads.
+			ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken](),
 		),
 		failures: newFailureCache(failureTTL),
 	}
