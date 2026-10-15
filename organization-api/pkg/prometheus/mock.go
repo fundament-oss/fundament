@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // ClusterInfo contains the cluster data needed for mock metric generation.
@@ -220,7 +222,9 @@ func mockGenerate(q string, t time.Time, clusters []ClusterInfo) []Sample {
 }
 
 // mockNodeLabels answers kube_node_labels: one series per node carrying the
-// Gardener worker-pool label, which is what maps a node back to its pool.
+// Gardener worker-pool label, which is what maps a node back to its pool. Like
+// on a real shoot, the label holds the worker name cluster-worker derives from
+// the pool name, not the pool name itself.
 func mockNodeLabels(clusters []ClusterInfo) []Sample {
 	var result []Sample
 	for _, cl := range clusters {
@@ -229,7 +233,7 @@ func mockNodeLabels(clusters []ClusterInfo) []Sample {
 				Labels: map[string]string{
 					"node":                             n.name,
 					"cluster":                          n.clusterName,
-					"label_worker_gardener_cloud_pool": n.poolName,
+					"label_worker_gardener_cloud_pool": kubename.GenerateWorkerName(n.poolName),
 				},
 				Value: 1,
 			})
