@@ -11,7 +11,7 @@ A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labell
 
 | Handler | Runs on | Does |
 |---|---|---|
-| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; deletes orphaned shoots |
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
 | `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
 | `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
 | `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
