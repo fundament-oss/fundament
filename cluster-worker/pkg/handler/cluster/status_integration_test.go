@@ -431,3 +431,77 @@ func TestCheckClusterRecordsThrottledProgress(t *testing.T) {
 	message, _ := getShootState(t, db, clusterID)
 	assert.Equal(t, "Create: Waiting until the Kubernetes API server is ready", message, "the row still shows the live message")
 }
+
+// The API server of a cluster being created answering is recorded once, with
+// an api_available outbox row, before the cluster is ready.
+func TestCheckClusterAPIServerAvailableBeforeReady(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-api-available")
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "progressing")
+
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Message: "Create: Waiting until shoot worker nodes have been reconciled",
+		Operation: gardener.OperationCreate, APIServerAvailable: true,
+	})
+
+	countAPIAvailable := func() (outbox int, available bool) {
+		t.Helper()
+		require.NoError(t, db.adminPool.QueryRow(t.Context(),
+			`SELECT
+				(SELECT count(*) FROM tenant.cluster_outbox WHERE cluster_id = $1 AND event = 'api_available'),
+				(SELECT shoot_api_available IS NOT NULL FROM tenant.clusters WHERE id = $1)`,
+			clusterID,
+		).Scan(&outbox, &available))
+		return outbox, available
+	}
+
+	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	outbox, available := countAPIAvailable()
+	assert.Equal(t, 1, outbox)
+	assert.True(t, available)
+	assertEventExists(t, db, clusterID, "status_api_available")
+	assert.Equal(t, 0, countReadyOutboxRows(t, db, clusterID), "not ready yet")
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "progressing", *status)
+
+	// A second check records nothing new.
+	require.NoError(t, h.CheckCluster(t.Context(), clusterID))
+	outbox, _ = countAPIAvailable()
+	assert.Equal(t, 1, outbox)
+}
+
+// A deleted cluster whose Shoot is confirmed gone forgets that its API server
+// was available, so namespace syncs queued for it do not treat it as reachable.
+func TestCheckStatusDeletedClearsAPIAvailable(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "status-deleted-api")
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "deleting")
+	_, err := db.adminPool.Exec(t.Context(), `UPDATE tenant.clusters SET shoot_api_available = now() WHERE id = $1`, clusterID)
+	require.NoError(t, err)
+
+	require.NoError(t, checkStatus(t, h))
+
+	var available bool
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT shoot_api_available IS NOT NULL FROM tenant.clusters WHERE id = $1`, clusterID,
+	).Scan(&available))
+	assert.False(t, available)
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "deleted", *status)
+}

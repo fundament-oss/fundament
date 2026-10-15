@@ -1,11 +1,14 @@
 package cluster_test
 
 import (
+	"errors"
 	"log/slog"
+	"net"
 	"os"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
@@ -466,4 +469,47 @@ func TestReconcileCRBMismatchFixed(t *testing.T) {
 
 	require.True(t, mock.HasSA(clusterID, userID), "SA should be kept (still project member)")
 	require.False(t, mock.HasCRB(clusterID, userID), "stale CRB should be deleted (no longer admin)")
+}
+
+// An org member added while one of the org's clusters is announced but does
+// not answer yet is deferred as a whole. The run that defers records no
+// success on the clusters that did sync; they are synced and recorded again on
+// the run that completes, so each gets one event.
+func TestSyncOrgUserDefersUnreachableClusterWithoutSuccessEvents(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMockShootAccess(t)
+	h := newUserSyncHandler(t, db, mock)
+
+	readyID := insertCluster(t, db, acmeCorpOrgID, "sync-defer-ready")
+	makeClusterReady(t, db, readyID)
+	markOutboxCompleted(t, db, readyID)
+
+	newID := insertCluster(t, db, acmeCorpOrgID, "sync-defer-new")
+	setShootStatus(t, db, newID, "progressing")
+	markOutboxCompleted(t, db, newID)
+	_, err := db.adminPool.Exec(t.Context(), `UPDATE tenant.clusters SET shoot_api_available = now() WHERE id = $1`, newID)
+	require.NoError(t, err)
+	mock.EnsureNamespaceErrorFor = map[uuid.UUID]error{newID: &net.DNSError{Err: "no such host", Name: "api.new", IsNotFound: true}}
+
+	userID := insertUser(t, db, "Deferred User")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
+	orgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
+	sc := handler.SyncContext{EntityType: handler.EntityOrgUser, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+
+	for range 3 {
+		err = h.Sync(t.Context(), orgUserID, sc)
+		_, deferred := errors.AsType[*handler.PreconditionError](err)
+		require.True(t, deferred, "an unreachable cluster before ready defers the row: %v", err)
+	}
+	assert.True(t, mock.HasSA(readyID, userID), "the reachable cluster is synced meanwhile")
+	assert.Equal(t, 0, countEvents(t, db, readyID, "user_sync_succeeded"), "no success recorded while deferred")
+	assertNoEvent(t, db, newID, "user_sync_failed")
+
+	mock.EnsureNamespaceErrorFor = nil
+	require.NoError(t, h.Sync(t.Context(), orgUserID, sc))
+	assert.Equal(t, 1, countEvents(t, db, readyID, "user_sync_succeeded"))
+	assert.Equal(t, 1, countEvents(t, db, newID, "user_sync_succeeded"))
+	assert.True(t, mock.HasSA(newID, userID))
 }

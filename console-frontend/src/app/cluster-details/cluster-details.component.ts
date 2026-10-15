@@ -42,6 +42,7 @@ import {
   getStatusBadgeColor,
   getStatusLabel,
   isKubeconfigAvailable,
+  kubeconfigHint,
   isTransitionalStatus,
 } from '../utils/cluster-status';
 import getPluginIconName from '../utils/plugin-icon-name';
@@ -186,6 +187,7 @@ const getEventTypeLabel = (eventType: string): string => {
     status_unhealthy: 'Cluster unhealthy',
     status_warning: 'Cluster warning',
     status_lost: 'Cluster lost',
+    status_api_available: 'API server available',
     user_sync_succeeded: 'Users synced',
     user_sync_failed: 'User sync failed',
   };
@@ -612,6 +614,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   canDownloadKubeconfig(): boolean {
     return isKubeconfigAvailable(this.clusterData.status);
+  }
+
+  kubeconfigHint(): string | null {
+    return kubeconfigHint(this.clusterData.status);
   }
 
   async downloadKubeconfig(): Promise<void> {

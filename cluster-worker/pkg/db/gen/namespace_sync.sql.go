@@ -22,6 +22,7 @@ SELECT
     tenant.namespaces.name,
     tenant.namespaces.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_api_available,
     tenant.clusters.default_cpu_request_m AS cluster_default_cpu_request_m,
     tenant.clusters.default_cpu_limit_m AS cluster_default_cpu_limit_m,
     tenant.clusters.default_memory_request_mi AS cluster_default_memory_request_mi,
@@ -49,6 +50,7 @@ type NamespaceGetForSyncRow struct {
 	Name                          string
 	Deleted                       pgtype.Timestamptz
 	ShootStatus                   pgtype.Text
+	ShootApiAvailable             pgtype.Timestamptz
 	ClusterDefaultCpuRequestM     pgtype.Int4
 	ClusterDefaultCpuLimitM       pgtype.Int4
 	ClusterDefaultMemoryRequestMi pgtype.Int4
@@ -85,6 +87,7 @@ func (q *Queries) NamespaceGetForSync(ctx context.Context, arg NamespaceGetForSy
 		&i.Name,
 		&i.Deleted,
 		&i.ShootStatus,
+		&i.ShootApiAvailable,
 		&i.ClusterDefaultCpuRequestM,
 		&i.ClusterDefaultCpuLimitM,
 		&i.ClusterDefaultMemoryRequestMi,
@@ -110,7 +113,7 @@ type NamespaceListActiveForClusterParams struct {
 }
 
 // List the ids of active (deleted IS NULL) namespaces owned by a cluster.
-// Used by the cluster-ready fan-out and by reconcile: this is the desired
+// Used by the api_available fan-out and by reconcile: this is the desired
 // set of cluster-side namespaces. A cluster-side namespace whose id is not in
 // this set is an orphan (DB row missing or soft-deleted).
 func (q *Queries) NamespaceListActiveForCluster(ctx context.Context, arg NamespaceListActiveForClusterParams) ([]uuid.UUID, error) {

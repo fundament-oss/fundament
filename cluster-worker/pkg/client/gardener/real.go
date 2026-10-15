@@ -353,6 +353,14 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 // Gardener does not have. It is pure, so the watch's change filter and the
 // status step derive exactly the same thing from the same object.
 func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
+	status := shootLifecycleOf(shoot)
+	status.APIServerAvailable = shoot != nil && shoot.DeletionTimestamp == nil &&
+		shootConditionTrue(shoot, gardencorev1beta1.ShootAPIServerAvailable)
+	return status
+}
+
+// shootLifecycleOf derives the status, message, operation and health of a Shoot.
+func shootLifecycleOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	if shoot == nil {
 		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}
 	}
@@ -674,20 +682,23 @@ func shootHealthy(shoot *gardencorev1beta1.Shoot) bool {
 		gardencorev1beta1.ShootSystemComponentsHealthy,
 	}
 
-	conditionMap := make(map[gardencorev1beta1.ConditionType]gardencorev1beta1.ConditionStatus)
-	for i := range shoot.Status.Conditions {
-		c := &shoot.Status.Conditions[i]
-		conditionMap[c.Type] = c.Status
-	}
-
 	for _, required := range requiredConditions {
-		status, exists := conditionMap[required]
-		if !exists || status != gardencorev1beta1.ConditionTrue {
+		if !shootConditionTrue(shoot, required) {
 			return false
 		}
 	}
 
 	return true
+}
+
+// shootConditionTrue reports whether the Shoot has the condition and it is True.
+func shootConditionTrue(shoot *gardencorev1beta1.Shoot, conditionType gardencorev1beta1.ConditionType) bool {
+	for i := range shoot.Status.Conditions {
+		if shoot.Status.Conditions[i].Type == conditionType {
+			return shoot.Status.Conditions[i].Status == gardencorev1beta1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // shootAnnotations returns the base annotations for a new Shoot.

@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1267,6 +1267,7 @@ CREATE TABLE tenant.clusters (
 	shoot_status_updated timestamptz,
 	shoot_health text,
 	shoot_updating boolean NOT NULL DEFAULT false,
+	shoot_api_available timestamptz,
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
@@ -2257,7 +2258,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','user_sync_succeeded','user_sync_failed')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','status_api_available','user_sync_succeeded','user_sync_failed')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
@@ -2320,7 +2321,7 @@ CREATE TABLE tenant.cluster_outbox (
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
 	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id, namespace_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
-	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')),
+	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready', 'api_available')),
 	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'status'))
 );
 -- ddl-end --

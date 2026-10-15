@@ -1543,6 +1543,9 @@ END;]]> </definition>
 	<column name="shoot_updating" not-null="true" default-value="false">
 		<type name="boolean" length="0"/>
 	</column>
+	<column name="shoot_api_available">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<column name="outbox_status">
 		<type name="text" length="0"/>
 	</column>
@@ -2437,7 +2440,7 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_events_ck_event_type" type="ck-constr" table="tenant.cluster_events">
-			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','user_sync_succeeded','user_sync_failed')]]> </expression>
+			<expression> <![CDATA[event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','status_api_available','user_sync_succeeded','user_sync_failed')]]> </expression>
 	</constraint>
 	<constraint name="cluster_events_ck_sync_action" type="ck-constr" table="tenant.cluster_events">
 			<expression> <![CDATA[sync_action IN ('sync','delete')]]> </expression>
@@ -2529,7 +2532,7 @@ END;]]> </definition>
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_event" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')]]> </expression>
+			<expression> <![CDATA[event IN ('created', 'updated', 'deleted', 'reconcile', 'ready', 'api_available')]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_source" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[source IN ('trigger', 'reconcile', 'manual', 'status')]]> </expression>

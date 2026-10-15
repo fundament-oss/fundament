@@ -40,6 +40,9 @@ type MockShootAccess struct {
 	Roles map[uuid.UUID]map[string]MockClusterRole
 
 	// Configurable errors for testing
+	// EnsureNamespaceErrorFor fails EnsureNamespace for one cluster only,
+	// e.g. a shoot whose API server does not answer yet.
+	EnsureNamespaceErrorFor       map[uuid.UUID]error
 	EnsureNamespaceError          error
 	EnsureServiceAccountError     error
 	EnsureClusterRoleBindingError error
@@ -96,6 +99,9 @@ func (m *MockShootAccess) EnsureNamespace(_ context.Context, clusterID uuid.UUID
 
 	if m.EnsureNamespaceError != nil {
 		return m.EnsureNamespaceError
+	}
+	if err := m.EnsureNamespaceErrorFor[clusterID]; err != nil {
+		return err
 	}
 
 	if m.Namespaces[clusterID] == nil {

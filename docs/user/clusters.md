@@ -151,9 +151,18 @@ functl cluster kubeconfig <CLUSTER_ID> > ~/.kube/fundament.yaml
 ```
 
 Both require view access on the cluster, which every member of the owning
-organization has: organization admins and members alike. The cluster must be
-ready; asking for a kubeconfig while it is still being provisioned fails with
-"cluster not ready yet".
+organization has: organization admins and members alike. The kubeconfig is
+available as soon as the cluster is created. While the cluster is still being
+provisioned, kubectl answers with an explanation instead of a result, for
+example:
+
+```
+Error from server (ServiceUnavailable): getting your credentials for this cluster failed: Gardener has no shoot for this cluster yet
+```
+
+Access works shortly after the cluster's API server is up, which is before the
+cluster is ready: the worker nodes may still be joining. In the seconds between,
+while your access is being set up, kubectl says so and asks you to try again.
 
 ### Using it
 

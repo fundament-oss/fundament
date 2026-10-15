@@ -22,6 +22,7 @@ SELECT
     tenant.namespaces.name,
     tenant.namespaces.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_api_available,
     tenant.clusters.default_cpu_request_m AS cluster_default_cpu_request_m,
     tenant.clusters.default_cpu_limit_m AS cluster_default_cpu_limit_m,
     tenant.clusters.default_memory_request_mi AS cluster_default_memory_request_mi,
@@ -37,7 +38,7 @@ WHERE tenant.namespaces.id = @id;
 
 -- name: NamespaceListActiveForCluster :many
 -- List the ids of active (deleted IS NULL) namespaces owned by a cluster.
--- Used by the cluster-ready fan-out and by reconcile: this is the desired
+-- Used by the api_available fan-out and by reconcile: this is the desired
 -- set of cluster-side namespaces. A cluster-side namespace whose id is not in
 -- this set is an orphan (DB row missing or soft-deleted).
 SELECT tenant.namespaces.id

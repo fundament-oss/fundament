@@ -17,10 +17,6 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// shootStatusReady mirrors cluster-worker's gardener.StatusReady value
-// written to cluster.shoot_status in the DB.
-const shootStatusReady = "ready"
-
 func (s *Server) GetClusterByName(
 	ctx context.Context,
 	req *organizationv1.GetClusterByNameRequest,
@@ -153,8 +149,11 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != shootStatusReady {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
+	// The kubeconfig only names the cluster and the proxy, so it is handed out
+	// from creation on; until the API server is up, kubectl gets the proxy's
+	// explanation instead of an answer.
+	if cluster.Deleted.Valid {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
 	if s.config.KubeAPIProxyURL == "" {

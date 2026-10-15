@@ -45,6 +45,9 @@ func pluginSANamespace(installationName string) string {
 // ErrSyncPending indicates the service account has not been provisioned yet.
 var ErrSyncPending = errors.New("service account sync pending")
 
+// ErrShootNotFound means Gardener has no Shoot for the cluster yet.
+var ErrShootNotFound = gardener.ErrShootNotFound
+
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
 type AdminKubeconfig = gardener.AdminKubeconfig
 
@@ -82,7 +85,12 @@ func (c *Client) RequestNamedSAToken(ctx context.Context, clusterID, saName stri
 	if err != nil {
 		return nil, fmt.Errorf("create shoot client: %w", err)
 	}
+	return issueSAToken(ctx, shootClient, saName)
+}
 
+// issueSAToken issues a short-lived token for the named ServiceAccount in
+// fundament-system.
+func issueSAToken(ctx context.Context, shootClient kubernetes.Interface, saName string) (*SAToken, error) {
 	expSeconds := saTokenExpiry
 
 	tokenReq := &authenticationv1.TokenRequest{
@@ -97,6 +105,12 @@ func (c *Client) RequestNamedSAToken(ctx context.Context, clusterID, saName stri
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("service account %s not found: %w", saName, ErrSyncPending)
+		}
+		// Gardener issues the admin kubeconfig before it has set up the shoot's
+		// RBAC for it: for a short while during a create the shoot denies the
+		// request. That is setup still running, not a lack of access.
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			return nil, fmt.Errorf("create token for SA %s: %w: %w", saName, ErrSyncPending, err)
 		}
 		return nil, fmt.Errorf("create token for SA %s: %w", saName, err)
 	}

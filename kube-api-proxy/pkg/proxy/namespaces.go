@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/shootidentity"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
 )
@@ -203,12 +201,8 @@ func (n *namespaceLister) serve(w http.ResponseWriter, r *http.Request, userID, 
 
 	token, err := n.proxyToken(ctx, clusterID.String())
 	if err != nil {
-		if errors.Is(err, gardener.ErrSyncPending) {
-			http.Error(w, "service account sync pending, try again shortly", http.StatusServiceUnavailable)
-			return
-		}
 		n.logger.ErrorContext(ctx, "get kube-api-proxy SA token", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		kube.WriteStepError(w, kube.StepProxyCredentials, err)
 		return
 	}
 

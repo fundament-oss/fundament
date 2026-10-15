@@ -77,6 +77,20 @@ WHERE NOT EXISTS (
       AND tenant.cluster_outbox.status IN ('pending', 'retrying')
 );
 
+-- name: OutboxInsertAPIAvailable :exec
+-- Insert an 'api_available' event outbox row for a cluster.
+-- Used by the status worker when a shoot's API server is first seen available,
+-- usually well before the shoot is ready.
+-- Skips insert if there's already a pending/retrying api_available row.
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT @cluster_id, 'api_available', 'status'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+      AND tenant.cluster_outbox.event = 'api_available'
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+);
+
 -- name: OutboxInsertReconcile :exec
 -- Conditionally insert a reconcile outbox row for a cluster.
 -- Skips insert if the cluster already has an active (pending/retrying) row
