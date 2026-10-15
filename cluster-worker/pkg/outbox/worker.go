@@ -67,8 +67,8 @@ func shootForbidden(err error) bool {
 type Config struct {
 	PollInterval             time.Duration `env:"POLL_INTERVAL" envDefault:"5s"`
 	BaseBackoff              time.Duration `env:"BASE_BACKOFF" envDefault:"500ms"`
-	MaxBackoff               time.Duration `env:"MAX_BACKOFF" envDefault:"1m"`
-	MaxRetries               int32         `env:"MAX_RETRIES" envDefault:"10"`
+	MaxBackoff               time.Duration `env:"MAX_BACKOFF" envDefault:"2m"`
+	MaxRetries               int32         `env:"MAX_RETRIES" envDefault:"15"`
 	BackoffDelay             time.Duration `env:"BACKOFF_DELAY" envDefault:"5s"`
 	PreconditionDelay        time.Duration `env:"PRECONDITION_DELAY" envDefault:"30s"`
 	MaxPreconditionDeferrals int32         `env:"MAX_PRECONDITION_DEFERRALS" envDefault:"100"`
