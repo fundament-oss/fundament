@@ -40,7 +40,7 @@ func (s *Server) ListNodePools(
 
 	result := make([]*organizationv1.NodePool, 0, len(nodePools))
 	for i := range nodePools {
-		result = append(result, nodePoolFromRow(&nodePools[i], runtimes[nodePools[i].Name]))
+		result = append(result, nodePoolFromRow(&nodePools[i], runtimes.forPool(nodePools[i].Name)))
 	}
 
 	return organizationv1.ListNodePoolsResponse_builder{

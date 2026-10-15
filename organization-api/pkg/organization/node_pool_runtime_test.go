@@ -130,3 +130,19 @@ func TestNodePoolRuntime_ZeroValueIsUnknown(t *testing.T) {
 	assert.Equal(t, int32(0), runtime.nodes)
 	assert.Empty(t, runtime.version)
 }
+
+// Nodes carry the worker name cluster-worker derives from the pool name, so a
+// pool is found under that name and not under its own.
+func TestPoolRuntimes_ForPoolUsesWorkerName(t *testing.T) {
+	runtimes := nodePoolRuntimesFromSamples(
+		[]prom.Sample{poolLabel("node-a", "extre78f"), poolLabel("node-b", "extre78f")},
+		[]prom.Sample{readySample("node-a", true), readySample("node-b", true)},
+		nil,
+	)
+
+	extra := runtimes.forPool("extra")
+	assert.Equal(t, int32(2), extra.nodes)
+	assert.Equal(t, organizationv1.NodePoolStatus_NODE_POOL_STATUS_HEALTHY, extra.status())
+
+	assert.Zero(t, runtimes.forPool("extre78f"))
+}
