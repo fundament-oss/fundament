@@ -132,6 +132,7 @@ SELECT
     tenant.clusters.shoot_status_message,
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_api_available,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -153,12 +154,20 @@ WHERE
 -- updating is set while an update fundament pushed rolls out. Writes nothing
 -- when the row changed since it was read (checked_at is the
 -- shoot_status_updated read then), such as the sync handler marking an update.
+-- shoot_api_available keeps the first time the API server was seen available;
+-- api_gone clears it when the Shoot is gone or being deleted, so a recreated
+-- Shoot is announced again.
 UPDATE tenant.clusters
 SET
     shoot_status = @status,
     shoot_status_message = @message,
     shoot_health = @health,
     shoot_updating = @updating,
+    shoot_api_available = CASE
+        WHEN @api_gone::boolean THEN NULL
+        WHEN @api_available::boolean THEN COALESCE(shoot_api_available, now())
+        ELSE shoot_api_available
+    END,
     shoot_status_updated = now()
 WHERE
     id = @cluster_id

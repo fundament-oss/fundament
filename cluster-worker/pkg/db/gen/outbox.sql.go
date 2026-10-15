@@ -98,6 +98,30 @@ func (q *Queries) OutboxGetAndLock(ctx context.Context) (OutboxGetAndLockRow, er
 	return i, err
 }
 
+const outboxInsertAPIAvailable = `-- name: OutboxInsertAPIAvailable :exec
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+SELECT $1, 'api_available', 'status'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = $1
+      AND tenant.cluster_outbox.event = 'api_available'
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+)
+`
+
+type OutboxInsertAPIAvailableParams struct {
+	ClusterID pgtype.UUID
+}
+
+// Insert an 'api_available' event outbox row for a cluster.
+// Used by the status worker when a shoot's API server is first seen available,
+// usually well before the shoot is ready.
+// Skips insert if there's already a pending/retrying api_available row.
+func (q *Queries) OutboxInsertAPIAvailable(ctx context.Context, arg OutboxInsertAPIAvailableParams) error {
+	_, err := q.db.Exec(ctx, outboxInsertAPIAvailable, arg.ClusterID)
+	return err
+}
+
 const outboxInsertReady = `-- name: OutboxInsertReady :exec
 INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
 SELECT $1, 'ready', 'status'

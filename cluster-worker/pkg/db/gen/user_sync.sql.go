@@ -29,6 +29,87 @@ func (q *Queries) ClusterCreateUserSyncEvent(ctx context.Context, arg ClusterCre
 	return err
 }
 
+const clusterListAccessible = `-- name: ClusterListAccessible :many
+SELECT
+    tenant.clusters.id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS ready
+FROM tenant.clusters
+WHERE (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
+  AND tenant.clusters.deleted IS NULL
+`
+
+type ClusterListAccessibleRow struct {
+	ID    uuid.UUID
+	Ready bool
+}
+
+// List all clusters whose API server is reachable: it was seen available, or
+// the cluster is ready from before that was recorded. What users and the
+// proxy need on a cluster (ServiceAccounts, namespaces, RBAC) is provisioned
+// on these; what needs worker nodes waits for ClusterListReady. ready tells a
+// cluster still being created apart: its API server may not answer from here
+// yet, which a reconcile tick skips instead of counting as a failure.
+func (q *Queries) ClusterListAccessible(ctx context.Context) ([]ClusterListAccessibleRow, error) {
+	rows, err := q.db.Query(ctx, clusterListAccessible)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClusterListAccessibleRow
+	for rows.Next() {
+		var i ClusterListAccessibleRow
+		if err := rows.Scan(&i.ID, &i.Ready); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clusterListAccessibleForOrg = `-- name: ClusterListAccessibleForOrg :many
+SELECT
+    tenant.clusters.id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS ready
+FROM tenant.clusters
+WHERE tenant.clusters.organization_id = $1
+  AND (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
+  AND tenant.clusters.deleted IS NULL
+`
+
+type ClusterListAccessibleForOrgParams struct {
+	OrganizationID uuid.UUID
+}
+
+type ClusterListAccessibleForOrgRow struct {
+	ID    uuid.UUID
+	Ready bool
+}
+
+// List an organization's clusters whose API server is reachable.
+// Used by the UserSyncHandler when an org membership changes.
+func (q *Queries) ClusterListAccessibleForOrg(ctx context.Context, arg ClusterListAccessibleForOrgParams) ([]ClusterListAccessibleForOrgRow, error) {
+	rows, err := q.db.Query(ctx, clusterListAccessibleForOrg, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClusterListAccessibleForOrgRow
+	for rows.Next() {
+		var i ClusterListAccessibleForOrgRow
+		if err := rows.Scan(&i.ID, &i.Ready); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const clusterListReady = `-- name: ClusterListReady :many
 SELECT tenant.clusters.id
 FROM tenant.clusters
@@ -39,40 +120,6 @@ WHERE tenant.clusters.shoot_status = 'ready'
 // List all ready clusters (for reconciliation).
 func (q *Queries) ClusterListReady(ctx context.Context) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, clusterListReady)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const clusterListReadyForOrg = `-- name: ClusterListReadyForOrg :many
-SELECT tenant.clusters.id
-FROM tenant.clusters
-WHERE tenant.clusters.organization_id = $1
-  AND tenant.clusters.shoot_status = 'ready'
-  AND tenant.clusters.deleted IS NULL
-`
-
-type ClusterListReadyForOrgParams struct {
-	OrganizationID uuid.UUID
-}
-
-// List all ready clusters for an organization.
-// Used by the UserSyncHandler when an org membership changes.
-func (q *Queries) ClusterListReadyForOrg(ctx context.Context, arg ClusterListReadyForOrgParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, clusterListReadyForOrg, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +169,13 @@ func (q *Queries) OrgUserGetForSync(ctx context.Context, arg OrgUserGetForSyncPa
 const projectMemberGetForSync = `-- name: ProjectMemberGetForSync :one
 SELECT
     tenant.project_members.user_id,
-    tenant.projects.cluster_id
+    tenant.projects.cluster_id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS cluster_ready
 FROM tenant.project_members
 JOIN tenant.projects ON tenant.projects.id = tenant.project_members.project_id
 JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
 WHERE tenant.project_members.id = $1
-  AND tenant.clusters.shoot_status = 'ready'
+  AND (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
   AND tenant.clusters.deleted IS NULL
 `
 
@@ -136,17 +184,19 @@ type ProjectMemberGetForSyncParams struct {
 }
 
 type ProjectMemberGetForSyncRow struct {
-	UserID    uuid.UUID
-	ClusterID uuid.UUID
+	UserID       uuid.UUID
+	ClusterID    uuid.UUID
+	ClusterReady bool
 }
 
 // Get the user_id and cluster_id for a project_members row.
-// Only returns a result if the cluster is ready (shoot_status = 'ready').
-// Non-ready clusters are skipped — the event=ready trigger will handle them later.
+// Only returns a result if the cluster's API server is reachable (it was seen
+// available, or the cluster is ready from before that was recorded).
+// Other clusters are skipped — the api_available event will handle them later.
 func (q *Queries) ProjectMemberGetForSync(ctx context.Context, arg ProjectMemberGetForSyncParams) (ProjectMemberGetForSyncRow, error) {
 	row := q.db.QueryRow(ctx, projectMemberGetForSync, arg.ID)
 	var i ProjectMemberGetForSyncRow
-	err := row.Scan(&i.UserID, &i.ClusterID)
+	err := row.Scan(&i.UserID, &i.ClusterID, &i.ClusterReady)
 	return i, err
 }
 

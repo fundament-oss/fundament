@@ -7,7 +7,6 @@ package proxyidentity
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -30,15 +29,16 @@ const (
 	componentValue = "kube-api-proxy"
 )
 
-// ReadyClusterLister lists ready clusters; *db.Queries satisfies it.
-type ReadyClusterLister interface {
-	ClusterListReady(ctx context.Context) ([]uuid.UUID, error)
+// AccessibleClusterLister lists clusters whose API server is reachable;
+// *db.Queries satisfies it.
+type AccessibleClusterLister interface {
+	ClusterListAccessible(ctx context.Context) ([]db.ClusterListAccessibleRow, error)
 }
 
-// Handler provisions the proxy identity on cluster-ready and re-asserts it on
-// every reconcile tick.
+// Handler provisions the proxy identity once the cluster's API server is
+// available and re-asserts it on every reconcile tick.
 type Handler struct {
-	queries ReadyClusterLister
+	queries AccessibleClusterLister
 	shoot   shoot.ShootAccess
 	logger  *slog.Logger
 }
@@ -51,41 +51,34 @@ func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, logger *slog.Logger)
 	}
 }
 
-// Sync handles the cluster-ready outbox event: the row id is the cluster id.
+// Sync handles the api_available outbox event: the row id is the cluster id.
 func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
 	switch sc.EntityType {
 	case handler.EntityCluster:
-		return h.Provision(ctx, id)
+		err := h.Provision(ctx, id)
+		// Announced before its API server answers from here: wait for it.
+		if shoot.IsUnreachable(err) {
+			return handler.NewShootUnreachableError(err)
+		}
+		return err
 	default:
 		return fmt.Errorf("unexpected entity type %s for proxyidentity handler", sc.EntityType)
 	}
 }
 
-// Reconcile re-asserts the identity on every ready cluster, isolating
-// per-cluster failures.
+// Reconcile re-asserts the identity on every cluster whose API server is
+// reachable, isolating per-cluster failures.
 func (h *Handler) Reconcile(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return nil //nolint:nilerr // graceful shutdown
 	}
 
-	clusterIDs, err := h.queries.ClusterListReady(ctx)
+	clusters, err := h.queries.ClusterListAccessible(ctx)
 	if err != nil {
-		return fmt.Errorf("list ready clusters: %w", err)
+		return fmt.Errorf("list accessible clusters: %w", err)
 	}
 
-	var errs []error
-	for _, clusterID := range clusterIDs {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // graceful shutdown
-		}
-		err := h.Provision(ctx, clusterID)
-		if err != nil {
-			h.logger.Error("failed to provision kube-api-proxy identity", "cluster_id", clusterID, "error", err)
-			errs = append(errs, err)
-		}
-	}
-
-	err = errors.Join(errs...)
+	err = handler.ReconcileAccessible(ctx, h.logger, clusters, h.Provision)
 	if err != nil {
 		return fmt.Errorf("proxy identity reconcile: %w", err)
 	}

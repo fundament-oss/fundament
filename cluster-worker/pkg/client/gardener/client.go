@@ -53,6 +53,10 @@ type ShootStatus struct {
 	// Retrying marks a StatusError that Gardener will retry by itself
 	// (lastOperation state Error or Aborted), as opposed to Failed.
 	Retrying bool
+	// APIServerAvailable is Gardener's APIServerAvailable condition: its care
+	// controller reached the shoot's /healthz. During a create this turns True
+	// well before the Shoot is ready, while the worker nodes still join.
+	APIServerAvailable bool
 }
 
 // Status message constants for consistent messaging.

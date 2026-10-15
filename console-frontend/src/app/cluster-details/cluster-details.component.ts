@@ -187,6 +187,7 @@ const getEventTypeLabel = (eventType: string): string => {
     status_unhealthy: 'Cluster unhealthy',
     status_warning: 'Cluster warning',
     status_lost: 'Cluster lost',
+    status_api_available: 'API server available',
     user_sync_succeeded: 'Users synced',
     user_sync_failed: 'User sync failed',
   };

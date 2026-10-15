@@ -333,6 +333,24 @@ func TestProcessingDescriptionChangeIsAStatusChange(t *testing.T) {
 	assert.True(t, shootStatusChanged(oldShoot, newShoot), "the message shows the running task")
 }
 
+// TestAPIServerAvailableIsAStatusChange pins that the watch alone reports the
+// API server of a cluster being created becoming available: the care
+// controller's condition flips while the create's description may stay put.
+func TestAPIServerAvailableIsAStatusChange(t *testing.T) {
+	t.Parallel()
+
+	clusterID := uuid.New()
+	op := lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateProcessing, "Waiting until shoot worker nodes have been reconciled")
+	oldShoot := statusTestShoot(clusterID, op)
+	newShoot := statusTestShoot(clusterID, op, gardencorev1beta1.Condition{
+		Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue,
+	})
+
+	assert.False(t, shootStatusOf(oldShoot).APIServerAvailable)
+	assert.True(t, shootStatusOf(newShoot).APIServerAvailable)
+	assert.True(t, shootStatusChanged(oldShoot, newShoot))
+}
+
 func TestUnwrapTombstone(t *testing.T) {
 	t.Parallel()
 

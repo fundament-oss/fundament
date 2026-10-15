@@ -55,9 +55,11 @@ type Config struct {
 //	    (checks EnsureProject returns non-empty namespace)
 //
 //	Usersync handler (not declared here, query-level gates):
-//	    EntityOrgUser → fans out only to clusters where shoot_status = 'ready'
-//	    EntityProjectMember → only if cluster shoot_status = 'ready'
-//	    EntityCluster (event=ready) → cluster is ready by definition
+//	    EntityOrgUser → fans out only to accessible clusters
+//	        (shoot_api_available set, or shoot_status = 'ready')
+//	    EntityProjectMember → only if the cluster is accessible
+//	    EntityCluster (event=api_available or ready) → accessible by definition;
+//	        defers while the shoot does not answer from here yet
 type Handler struct {
 	pool          *pgxpool.Pool
 	queries       *db.Queries

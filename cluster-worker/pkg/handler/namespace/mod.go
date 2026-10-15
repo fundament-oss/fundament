@@ -72,15 +72,15 @@ func New(pool *pgxpool.Pool, shootAccess shoot.ShootAccess, maxRetries int32, lo
 }
 
 // Sync dispatches an outbox row to the right handler. Namespace rows converge a
-// single namespace; the cluster-ready event fans out a sync for every active
-// namespace on that cluster (the handler subscribes to the ready event directly,
-// so the cluster status handler stays free of namespace concerns).
+// single namespace; the api_available cluster event fans out a sync for every
+// active namespace on that cluster (the handler subscribes to the event
+// directly, so the cluster status handler stays free of namespace concerns).
 func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext) error {
 	switch sc.EntityType {
 	case handler.EntityNamespace:
 		return h.syncNamespace(ctx, id)
 	case handler.EntityCluster:
-		// id is the cluster id for the ready event.
+		// id is the cluster id for the api_available event.
 		return h.enqueueClusterNamespaces(ctx, id)
 	default:
 		return fmt.Errorf("unexpected entity type %s for namespace sync handler", sc.EntityType)
@@ -101,16 +101,25 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("get namespace for sync: %w", err)
 	}
 
-	// Gate on shoot readiness — defer (don't fail) until the shoot is ready.
-	// The cluster-ready fan-out re-enqueues these rows once the shoot is up.
-	if !row.ShootStatus.Valid || row.ShootStatus.String != string(gardener.StatusReady) {
-		return handler.NewPreconditionError("shoot not ready")
+	// Gate on the shoot's API server — defer (don't fail) until it was seen
+	// available, or the cluster is ready from before that was recorded. The
+	// api_available fan-out re-enqueues these rows once it is.
+	ready := row.ShootStatus.Valid && row.ShootStatus.String == string(gardener.StatusReady)
+	if !ready && !row.ShootApiAvailable.Valid {
+		return handler.NewPreconditionError("shoot API server not available yet")
 	}
 
 	if row.Deleted.Valid {
-		return h.delete(ctx, &row)
+		err = h.delete(ctx, &row)
+	} else {
+		err = h.ensure(ctx, &row)
 	}
-	return h.ensure(ctx, &row)
+	// A cluster still being created can be announced before its API server
+	// answers from here; wait for it instead of spending retries.
+	if !ready && shoot.IsUnreachable(err) {
+		return handler.NewShootUnreachableError(err)
+	}
+	return err
 }
 
 // ensure creates or label-reconciles the cluster-side namespace for an active
@@ -252,10 +261,10 @@ func (h *Handler) findOwned(ctx context.Context, row *db.NamespaceGetForSyncRow)
 }
 
 // enqueueClusterNamespaces fans out a sync for every active namespace on a
-// cluster that just became ready. Namespaces created while the shoot was still
-// provisioning materialize once they are picked up again. The conditional
-// insert makes this safe to call repeatedly. Mirrors how usersync reacts to the
-// same cluster-ready event by provisioning all of the cluster's users.
+// cluster whose API server just became available. Namespaces created before
+// that materialize once they are picked up again. The conditional insert makes
+// this safe to call repeatedly. Mirrors how usersync reacts to the same
+// api_available event by provisioning all of the cluster's users.
 func (h *Handler) enqueueClusterNamespaces(ctx context.Context, clusterID uuid.UUID) error {
 	namespaceIDs, err := h.queries.NamespaceListActiveForCluster(ctx, db.NamespaceListActiveForClusterParams{
 		ClusterID: clusterID,
@@ -288,25 +297,14 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 
 	h.logger.Info("starting namespace sync reconciliation")
 
-	clusterIDs, err := h.queries.ClusterListReady(ctx)
+	clusters, err := h.queries.ClusterListAccessible(ctx)
 	if err != nil {
-		return fmt.Errorf("list ready clusters: %w", err)
+		return fmt.Errorf("list accessible clusters: %w", err)
 	}
 
-	var errs []error
-	for _, clusterID := range clusterIDs {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // graceful shutdown
-		}
-		if err := h.reconcileCluster(ctx, clusterID); err != nil {
-			h.logger.Error("failed to reconcile namespaces for cluster",
-				"cluster_id", clusterID, "error", err)
-			errs = append(errs, err)
-		}
-	}
-
-	h.logger.Info("namespace sync reconciliation complete", "clusters", len(clusterIDs))
-	if err := errors.Join(errs...); err != nil {
+	err = handler.ReconcileAccessible(ctx, h.logger, clusters, h.reconcileCluster)
+	h.logger.Info("namespace sync reconciliation complete", "clusters", len(clusters))
+	if err != nil {
 		return fmt.Errorf("namespace sync reconcile: %w", err)
 	}
 	return nil

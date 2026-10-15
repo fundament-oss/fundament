@@ -93,6 +93,8 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		Message:  cluster.ShootStatusMessage.String,
 		Health:   dbconst.ClusterShootHealth(cluster.ShootHealth.String),
 		Updating: cluster.ShootUpdating,
+
+		APIAvailable: cluster.ShootApiAvailable.Valid,
 	}
 	if shootStatus.Status == gardener.StatusError && shootStatus.Retrying {
 		lastWarning, err := h.queries.ClusterGetLastWarningMessage(ctx, db.ClusterGetLastWarningMessageParams{ClusterID: cluster.ID})
@@ -175,9 +177,17 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		return fmt.Errorf("get deleted shoot status: %w", err)
 	}
 
+	// The Shoot of a deleted cluster is going or gone: forget that its API
+	// server was available, so nothing queued for it treats it as reachable.
+	apiGone := cluster.ShootApiAvailable.Valid
+
 	if shootStatus.Status != gardener.StatusPending || shootStatus.Message != gardener.MsgShootNotFound {
-		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message}
-		if deleting.unchanged(storedShootState{Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String}) {
+		deleting := shootStatusUpdate{Status: gardener.StatusDeleting, Message: shootStatus.Message, APIGone: apiGone}
+		stored := storedShootState{
+			Status: gardener.ShootStatusType(cluster.ShootStatus.String), Message: cluster.ShootStatusMessage.String,
+			APIAvailable: cluster.ShootApiAvailable.Valid,
+		}
+		if deleting.unchanged(stored) {
 			return nil
 		}
 		if _, err := h.writeShootStatus(ctx, cluster, &deleting); err != nil {
@@ -191,6 +201,7 @@ func (h *Handler) checkDeletedCluster(ctx context.Context, cluster *db.ClusterGe
 		Status:  gardener.StatusDeleted,
 		Message: msgShootConfirmedDeleted,
 		Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusDeleted, Message: msgShootConfirmedDeleted}},
+		APIGone: apiGone,
 	})
 	if err != nil {
 		return err
@@ -221,6 +232,9 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 		Health:    pgtype.Text{String: string(update.Health), Valid: update.Health != ""},
 		Updating:  update.Updating,
 		CheckedAt: cluster.ShootStatusUpdated,
+
+		ApiAvailable: update.APIAvailable,
+		ApiGone:      update.APIGone,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update shoot status: %w", err)
@@ -247,6 +261,16 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 			ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
 		}); err != nil {
 			return false, fmt.Errorf("insert ready outbox row: %w", err)
+		}
+	}
+
+	// The API server of a cluster still being created answers: give users
+	// and the proxy their access now, not once the worker nodes have joined.
+	if update.InsertAPIAvailable {
+		if err := qtx.OutboxInsertAPIAvailable(ctx, db.OutboxInsertAPIAvailableParams{
+			ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+		}); err != nil {
+			return false, fmt.Errorf("insert api_available outbox row: %w", err)
 		}
 	}
 
