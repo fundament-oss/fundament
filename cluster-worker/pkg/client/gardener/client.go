@@ -157,4 +157,6 @@ type ShootInfo struct {
 	Namespace string
 	ClusterID uuid.UUID
 	Labels    map[string]string
+	// Deleting is set once the Shoot's deletion has started.
+	Deleting bool
 }

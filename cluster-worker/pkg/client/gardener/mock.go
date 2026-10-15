@@ -301,7 +301,9 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 			delete(m.shoots, name) // Clean up
 			continue
 		}
-		result = append(result, s.Info)
+		info := s.Info
+		info.Deleting = s.DeletedAt != nil
+		result = append(result, info)
 	}
 	return result, nil
 }
