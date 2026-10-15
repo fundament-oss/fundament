@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fundament-oss/fundament/common/shootidentity"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
 
@@ -51,9 +50,10 @@ func TestCache_UserAndProxyTokensAreSeparateAndCached(t *testing.T) {
 }
 
 type failingRequester struct {
-	mu    sync.Mutex
-	calls int
-	err   error
+	mu        sync.Mutex
+	calls     int
+	err       error
+	expiresIn time.Duration // zero means 15 minutes
 }
 
 func (f *failingRequester) RequestNamedSAToken(context.Context, string, string) (*gardener.SAToken, error) {
@@ -63,7 +63,17 @@ func (f *failingRequester) RequestNamedSAToken(context.Context, string, string) 
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &gardener.SAToken{Token: "tok", ExpiresAt: time.Now().Add(15 * time.Minute)}, nil
+	expiresIn := f.expiresIn
+	if expiresIn == 0 {
+		expiresIn = 15 * time.Minute
+	}
+	return &gardener.SAToken{Token: "tok", ExpiresAt: time.Now().Add(expiresIn)}, nil
+}
+
+func (f *failingRequester) fail(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.err = err
 }
 
 // TestCache_FailureIsCachedBriefly pins that a cluster still being created
@@ -146,16 +156,17 @@ func TestCache_CancelledRequestIsNotCached(t *testing.T) {
 
 func TestCache_EntryExpiresAtTokenTTLDespiteReads(t *testing.T) {
 	t.Parallel()
-	c := NewCache(&failingRequester{err: errors.New("token request failed")}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	req := &failingRequester{expiresIn: 200 * time.Millisecond}
+	c := NewCache(req, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx := context.Background()
-	key := cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: "c1"}
 
-	const ttl = 200 * time.Millisecond
 	start := time.Now()
-	// Long ct.ttl keeps shouldRefresh false so only the cache TTL is under test.
-	c.tokens.Set(key, &cachedToken{token: "tok", issuedAt: start, ttl: time.Hour}, ttl)
+	_, err := c.GetProxyToken(ctx, "c1")
+	require.NoError(t, err)
+	req.fail(errors.New("token request failed"))
 
-	// With touch-on-hit, each read would push expiry to read time + ttl.
+	// With touch-on-hit, each read would push expiry to read time + TTL. Reads
+	// stop before the 80% refresh point, so only expiry is under test.
 	for time.Since(start) < 150*time.Millisecond {
 		tok, err := c.GetProxyToken(ctx, "c1")
 		require.NoError(t, err)
@@ -164,6 +175,24 @@ func TestCache_EntryExpiresAtTokenTTLDespiteReads(t *testing.T) {
 	}
 
 	time.Sleep(time.Until(start.Add(300 * time.Millisecond)))
-	_, err := c.GetProxyToken(ctx, "c1")
+	_, err = c.GetProxyToken(ctx, "c1")
 	assert.Error(t, err, "expired token must not be served")
+}
+
+func TestCache_TokenWithoutRemainingLifetimeIsNotServedFromCache(t *testing.T) {
+	t.Parallel()
+	// ttlcache never expires an entry stored with a TTL <= 0, e.g. when the
+	// proxy's clock runs ahead of the shoot's.
+	for _, expiresIn := range []time.Duration{-time.Second, -time.Nanosecond} {
+		req := &failingRequester{expiresIn: expiresIn}
+		c := NewCache(req, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		ctx := context.Background()
+
+		_, err := c.GetProxyToken(ctx, "c1")
+		require.NoError(t, err)
+		req.fail(errors.New("token request failed"))
+
+		_, err = c.GetProxyToken(ctx, "c1")
+		assert.Error(t, err, "expiresIn %v: expired token must not be served", expiresIn)
+	}
 }
