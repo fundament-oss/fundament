@@ -264,6 +264,7 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: new(false),
+						ReadOnlyRootFilesystem:   new(true),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},

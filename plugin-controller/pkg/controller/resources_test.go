@@ -227,6 +227,9 @@ func TestMutateDeployment_GivesHelmAWritableHome(t *testing.T) {
 	// A non-root uid without a passwd entry gets HOME=/, where helm cannot
 	// create its cache; HOME must point at the writable emptyDir.
 	assert.Contains(t, container.Env, corev1.EnvVar{Name: "HOME", Value: "/tmp"})
+	// The emptyDir is the only writable path: the image filesystem is read-only.
+	require.NotNil(t, container.SecurityContext)
+	assert.Equal(t, new(true), container.SecurityContext.ReadOnlyRootFilesystem)
 	assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
 	require.Len(t, deploy.Spec.Template.Spec.Volumes, 1)
 	assert.Equal(t, "tmp", deploy.Spec.Template.Spec.Volumes[0].Name)
