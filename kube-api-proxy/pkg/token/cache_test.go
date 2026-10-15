@@ -2,6 +2,7 @@ package token
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"sync"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/common/shootidentity"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
 
@@ -140,4 +142,28 @@ func TestCache_CancelledRequestIsNotCached(t *testing.T) {
 	tok, err := c.GetProxyToken(context.Background(), "c1")
 	require.NoError(t, err)
 	assert.Equal(t, "tok", tok)
+}
+
+func TestCache_EntryExpiresAtTokenTTLDespiteReads(t *testing.T) {
+	t.Parallel()
+	c := NewCache(&failingRequester{err: errors.New("token request failed")}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	key := cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: "c1"}
+
+	const ttl = 200 * time.Millisecond
+	start := time.Now()
+	// Long ct.ttl keeps shouldRefresh false so only the cache TTL is under test.
+	c.tokens.Set(key, &cachedToken{token: "tok", issuedAt: start, ttl: time.Hour}, ttl)
+
+	// With touch-on-hit, each read would push expiry to read time + ttl.
+	for time.Since(start) < 150*time.Millisecond {
+		tok, err := c.GetProxyToken(ctx, "c1")
+		require.NoError(t, err)
+		require.Equal(t, "tok", tok)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	time.Sleep(time.Until(start.Add(300 * time.Millisecond)))
+	_, err := c.GetProxyToken(ctx, "c1")
+	assert.Error(t, err, "expired token must not be served")
 }
