@@ -91,27 +91,12 @@ WHERE NOT EXISTS (
       AND tenant.cluster_outbox.status IN ('pending', 'retrying')
 );
 
--- name: OutboxInsertReconcile :exec
--- Conditionally insert a reconcile outbox row for a cluster.
--- Skips insert if the cluster already has an active (pending/retrying) row
--- or an exhausted failed row (retries >= max_retries).
-INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-SELECT @cluster_id, 'reconcile', 'reconcile'
-WHERE NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
-      AND (
-          tenant.cluster_outbox.status IN ('pending', 'retrying')
-          OR (tenant.cluster_outbox.status = 'failed' AND tenant.cluster_outbox.retries >= @max_retries)
-      )
-);
-
 -- name: OutboxInsertReconcileForNamespace :exec
 -- Conditionally insert a reconcile outbox row for a namespace.
 -- Skips insert if the namespace already has an active (pending/retrying) row
--- or an exhausted failed row (retries >= max_retries). Mirrors
--- OutboxInsertReconcile for clusters. Used by the cluster-ready fan-out and
--- the periodic reconcile loop; safe to call repeatedly (idempotent).
+-- or an exhausted failed row (retries >= max_retries). Used by the
+-- cluster-ready fan-out and the periodic reconcile loop; safe to call
+-- repeatedly (idempotent).
 -- The NOT EXISTS guard is evaluated against the caller's snapshot, so two
 -- concurrent callers (ready fan-out + reconcile loop) could both pass it; the
 -- ON CONFLICT clause lets the partial unique index cluster_outbox_uq_ns_reconcile

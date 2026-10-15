@@ -186,7 +186,9 @@ type namespaceLister struct {
 	logger     *slog.Logger
 	visibility *visibilityResolver
 	proxyToken func(ctx context.Context, clusterID string) (string, error)
-	upstream   http.Handler
+	// forgetProxyToken drops a proxy token the cluster rejected.
+	forgetProxyToken func(clusterID, token string)
+	upstream         http.Handler
 }
 
 func (n *namespaceLister) serve(w http.ResponseWriter, r *http.Request, userID, clusterID uuid.UUID) {
@@ -215,6 +217,7 @@ func (n *namespaceLister) serve(w http.ResponseWriter, r *http.Request, userID, 
 		"projects", len(vis.projectIDs), "query", r.URL.RawQuery)
 
 	ctx = WithSAToken(ctx, token)
+	ctx = kube.WithTokenRejected(ctx, func() { n.forgetProxyToken(clusterID.String(), token) })
 	ctx = kube.WithImpersonation(ctx, kube.Impersonation{
 		User:   shootidentity.UserServiceAccountUsername(userID.String()),
 		Groups: []string{shootidentity.NamespaceListerGroup},

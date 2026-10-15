@@ -115,6 +115,7 @@ func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
 		return false, &stuckError{msg: fmt.Sprintf("cluster is %s and will not run", clusterStatusToString(cluster.GetStatus()))}
 	default:
 		// Provisioning, starting, upgrading, error, unspecified: keep polling.
+		// So is lost: the change being applied creates the cluster again.
 		return false, nil
 	}
 }

@@ -12,8 +12,8 @@ import (
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 )
 
-// Reconcile compares DB state with Gardener state to detect drift and to
-// finish deleting the shoots of deleted clusters.
+// Reconcile compares DB state with Gardener state to report lost shoots and
+// to finish deleting the shoots of deleted clusters.
 func (h *Handler) Reconcile(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return nil //nolint:nilerr // graceful shutdown
@@ -48,22 +48,31 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		}
 	}
 
-	// Drift detection: synced clusters missing in Gardener
-	var driftedCount int
+	// Synced clusters whose shoot is missing in Gardener are not recreated: a
+	// new, empty shoot under the same name would hide that the workloads and
+	// data are gone. The status check records the cluster as lost; a change
+	// to the cluster creates the shoot again.
+	//
+	// The status check only calls a shoot lost once it has seen it, since
+	// Gardener can report a just-created shoot as not found. A shoot that
+	// disappears before its first check therefore stays pending, and is
+	// logged here on every pass until a change to the cluster creates it
+	// again.
+	var missingCount int
 	for _, cluster := range dbClusters {
-		if cluster.HasCompletedOutbox {
-			if _, exists := shootByClusterID[cluster.ID]; !exists {
-				h.logger.Warn("drift detected: shoot missing in Gardener",
-					"cluster_id", cluster.ID, "name", cluster.Name)
-				if err := h.queries.OutboxInsertReconcile(ctx, db.OutboxInsertReconcileParams{
-					ClusterID:  pgtype.UUID{Bytes: cluster.ID, Valid: true},
-					MaxRetries: h.cfg.MaxRetries,
-				}); err != nil {
-					h.logger.Error("failed to insert reconcile outbox row", "cluster_id", cluster.ID, "error", err)
-				}
-				driftedCount++
-			}
+		if !cluster.HasCompletedOutbox {
+			continue
 		}
+		if _, exists := shootByClusterID[cluster.ID]; exists {
+			continue
+		}
+		missingCount++
+		if gardener.ShootStatusType(cluster.ShootStatus.String) == gardener.StatusLost {
+			continue
+		}
+		h.logger.Error("shoot missing in Gardener, not recreating it",
+			"cluster_id", cluster.ID, "name", cluster.Name)
+		h.EnqueueStatusCheck(cluster.ID)
 	}
 
 	unknownCount, err := h.cleanupOrphans(ctx, dbClusterByID, shootByClusterID)
@@ -71,7 +80,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	h.logger.Info("cluster reconciliation complete",
 		"clusters", len(dbClusters),
 		"shoots", len(shoots),
-		"drift_detected", driftedCount,
+		"shoots_missing", missingCount,
 		"unknown_shoots", unknownCount)
 
 	return err
