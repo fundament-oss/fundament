@@ -90,15 +90,47 @@ export function getStatusLabel(status: ClusterStatus): string {
   return labels[status];
 }
 
+const KUBECONFIG_STATUSES: ReadonlySet<ClusterStatus> = new Set([
+  ClusterStatus.PROVISIONING,
+  ClusterStatus.STARTING,
+  ClusterStatus.RUNNING,
+  ClusterStatus.UPGRADING,
+  ClusterStatus.ERROR,
+]);
+
 /**
  * Whether a kubeconfig can be downloaded for a cluster in this status.
  *
- * Mirrors the organization-api gate in `GetKubeconfig`: it only serves a
- * kubeconfig once the shoot reports `ready`, which maps to `RUNNING`, or to
- * `UPGRADING` while an update rolls out on the ready cluster. Any other status
- * would be rejected with "cluster not ready yet", so the UI should not offer
- * the download.
+ * The kubeconfig only names the cluster and the kube-api-proxy, so
+ * organization-api hands it out from creation on and only refuses a deleted
+ * cluster. A cluster on its way out, or one whose status this console does not
+ * know (an unspecified or newer value), gets no download.
  */
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
-  return status === ClusterStatus.RUNNING || status === ClusterStatus.UPGRADING;
+  return KUBECONFIG_STATUSES.has(status);
+}
+
+/**
+ * The tooltip on the kubeconfig download, or null when there is nothing to
+ * add. While a cluster is still coming up the file works, but kubectl only
+ * gets answers once the API server is reachable.
+ */
+export function kubeconfigHint(status: ClusterStatus): string | null {
+  const waiting = "kubectl works once the cluster's API server is up";
+  const removed = 'Not available for a cluster that is being removed';
+  const hints: Record<ClusterStatus, string | null> = {
+    [ClusterStatus.PROVISIONING]: waiting,
+    [ClusterStatus.STARTING]: waiting,
+    // Usually a running cluster whose last operation failed: its API server
+    // tends to answer, and the badge already says what is wrong.
+    [ClusterStatus.ERROR]: null,
+    [ClusterStatus.RUNNING]: null,
+    [ClusterStatus.UPGRADING]: null,
+    [ClusterStatus.STOPPING]: removed,
+    [ClusterStatus.STOPPED]: removed,
+    [ClusterStatus.DELETING]: removed,
+    [ClusterStatus.UNSPECIFIED]: 'Available once the cluster status is known',
+  };
+  // A status newer than this console has no entry.
+  return status in hints ? hints[status] : hints[ClusterStatus.UNSPECIFIED];
 }

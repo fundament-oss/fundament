@@ -42,6 +42,7 @@ import {
   getStatusBadgeColor,
   getStatusLabel,
   isKubeconfigAvailable,
+  kubeconfigHint,
   isTransitionalStatus,
 } from '../utils/cluster-status';
 import getPluginIconName from '../utils/plugin-icon-name';
@@ -612,6 +613,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   canDownloadKubeconfig(): boolean {
     return isKubeconfigAvailable(this.clusterData.status);
+  }
+
+  kubeconfigHint(): string | null {
+    return kubeconfigHint(this.clusterData.status);
   }
 
   async downloadKubeconfig(): Promise<void> {

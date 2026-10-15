@@ -58,11 +58,10 @@
         -->
         <nldd-toolbar-item slot="start">
           <!-- The span carries the hover: a disabled button fires no pointer
-               events, so the tooltip would never open on the one state it has
-               something to say about. -->
+               events, so the tooltip would never open on a disabled button. -->
           <nldd-tooltip
-            [attr.text]="canDownloadKubeconfig() ? null : 'Available once the cluster is running'"
-            [attr.timing]="canDownloadKubeconfig() ? 'never' : 'default'"
+            [attr.text]="kubeconfigHint()"
+            [attr.timing]="kubeconfigHint() ? 'default' : 'never'"
           >
             <span class="inline-flex">
               <nldd-button
