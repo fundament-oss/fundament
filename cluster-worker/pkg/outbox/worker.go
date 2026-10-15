@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -25,6 +26,15 @@ import (
 // errNonRetryable marks errors that will never self-resolve (invalid row, missing handler).
 // The outbox worker fails these immediately instead of burning through retries.
 var errNonRetryable = errors.New("non-retryable")
+
+// failsNow reports whether a row fails at once instead of being retried: a
+// non-retryable error, or a request the Kubernetes or Gardener API rejected as
+// invalid or malformed, which a retry would only send again. Forbidden is not
+// one: a namespace still terminating, or credentials mid-rotation, answer
+// forbidden for a while and then succeed.
+func failsNow(err error) bool {
+	return errors.Is(err, errNonRetryable) || apierrors.IsInvalid(err) || apierrors.IsBadRequest(err)
+}
 
 // Config holds configuration for the outbox worker.
 type Config struct {
@@ -268,8 +278,8 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 // On other error: rollback tx (releases lock), then mark retry/failed via pool.
 func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, processErr error) (bool, error) {
 	if processErr != nil {
-		// Non-retryable errors (invalid row, missing handler) fail immediately.
-		if errors.Is(processErr, errNonRetryable) {
+		// Errors a retry cannot fix fail immediately.
+		if failsNow(processErr) {
 			w.logger.Error("non-retryable error, marking as failed",
 				"outbox_id", row.ID,
 				"entity_type", entityType,
