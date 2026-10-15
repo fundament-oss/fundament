@@ -122,8 +122,8 @@ func TestReconcileRefusesMassDeletion(t *testing.T) {
 		applyTestShoot(t, mock, clusterID, name)
 	}
 
-	// Refusing is logged, not returned: a failed pass counts towards stopping
-	// the worker.
+	// Refusing is logged, not returned, so a refused pass does not count
+	// towards the failures that stop the worker.
 	err := h.Reconcile(t.Context())
 	require.NoError(t, err)
 
