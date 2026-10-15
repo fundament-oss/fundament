@@ -93,39 +93,50 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 		return 0, nil
 	}
 
-	deletedIDs, err := h.queries.ClusterListDeletedByIDs(ctx, db.ClusterListDeletedByIDsParams{ClusterIds: orphanIDs})
+	deletedClusters, err := h.queries.ClusterListDeletedByIDs(ctx, db.ClusterListDeletedByIDsParams{ClusterIds: orphanIDs})
 	if err != nil {
 		h.logger.Error("failed to list deleted clusters from DB", "error", err)
 		return 0, fmt.Errorf("list deleted clusters: %w", err)
 	}
-	deleted := make(map[uuid.UUID]bool, len(deletedIDs))
-	for _, id := range deletedIDs {
-		deleted[id] = true
-	}
 
-	var unknownCount, newDeletions int
-	for _, clusterID := range orphanIDs {
-		shoot := shootByClusterID[clusterID]
-		switch {
-		case !deleted[clusterID]:
-			h.logger.Warn("shoot has no cluster in the database, not deleting it",
-				"shoot", shoot.Name, "namespace", shoot.Namespace, "cluster_id", clusterID)
-			unknownCount++
-		case !shoot.Deleting:
+	deleted := make(map[uuid.UUID]bool, len(deletedClusters))
+	var toDelete []uuid.UUID
+	var newDeletions int
+	for _, c := range deletedClusters {
+		deleted[c.ID] = true
+		// The delete sync is still working on this cluster; it deletes the
+		// shoot itself, or settles as failed and leaves it to a later pass.
+		if deleteSyncRunning(c.OutboxStatus) {
+			continue
+		}
+		toDelete = append(toDelete, c.ID)
+		// Shoots already being deleted do not count: their deletion was started
+		// before, and repeating it only adds the confirmations Gardener may still need.
+		if !shootByClusterID[c.ID].Deleting {
 			newDeletions++
 		}
 	}
 
-	// Shoots already being deleted do not count: their deletion was started
-	// before, and repeating it only adds the confirmations Gardener may still need.
+	var unknownCount int
+	for _, clusterID := range orphanIDs {
+		if !deleted[clusterID] {
+			shoot := shootByClusterID[clusterID]
+			h.logger.Warn("shoot has no cluster in the database, not deleting it",
+				"shoot", shoot.Name, "namespace", shoot.Namespace, "cluster_id", clusterID)
+			unknownCount++
+		}
+	}
+
+	// Refusing does not fail the pass: the reconcile worker exits after a few
+	// failed passes, which would stop the outbox and status workers as well.
 	if newDeletions > h.cfg.MaxReconcileDeletions {
 		h.logger.Error("refusing to delete shoots: too many in one pass, check the database",
 			"shoots_to_delete", newDeletions,
 			"max", h.cfg.MaxReconcileDeletions)
-		return unknownCount, fmt.Errorf("refusing to delete %d shoots in one pass (max %d)", newDeletions, h.cfg.MaxReconcileDeletions)
+		return unknownCount, nil
 	}
 
-	for _, clusterID := range deletedIDs {
+	for _, clusterID := range toDelete {
 		shoot := shootByClusterID[clusterID]
 		h.logger.Warn("deleting shoot of deleted cluster in Gardener",
 			"shoot", shoot.Name, "cluster_id", clusterID)
@@ -136,4 +147,20 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 	}
 
 	return unknownCount, nil
+}
+
+// deleteSyncRunning reports whether the cluster's latest outbox row is still
+// being processed.
+func deleteSyncRunning(outboxStatus pgtype.Text) bool {
+	if !outboxStatus.Valid {
+		return false
+	}
+	switch outboxStatus.String {
+	case "pending", "retrying":
+		return true
+	case "completed", "failed":
+		return false
+	default:
+		panic(fmt.Sprintf("unknown outbox status %q", outboxStatus.String))
+	}
 }

@@ -176,6 +176,27 @@ func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one outbox row to be marked completed")
 }
 
+// markOutboxFailed sets the latest outbox row for a cluster to failed, as when
+// its sync ran out of retries. The trigger propagates this to
+// clusters.outbox_status.
+func markOutboxFailed(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	result, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox
+		 SET status = 'failed', processed = now()
+		 WHERE id = (
+		     SELECT id FROM tenant.cluster_outbox
+		     WHERE cluster_id = $1
+		     ORDER BY id DESC
+		     LIMIT 1
+		 )`,
+		clusterID,
+	)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, result.RowsAffected(), "expected exactly one outbox row to be marked failed")
+}
+
 // setShootStatus directly sets shoot_status with updated = now() - 1 min to avoid
 // the 30-second throttle in status queries.
 func setShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID, status string) {
