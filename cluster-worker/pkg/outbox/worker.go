@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -25,6 +27,41 @@ import (
 // errNonRetryable marks errors that will never self-resolve (invalid row, missing handler).
 // The outbox worker fails these immediately instead of burning through retries.
 var errNonRetryable = errors.New("non-retryable")
+
+// failsNow reports whether a row fails at once instead of being retried: a
+// non-retryable error, or a request the Kubernetes or Gardener API rejected as
+// invalid or malformed, which a retry would only send again. Gardener's
+// admission rejects a Shoot spec, such as a Kubernetes version its cloud
+// profile does not offer, as forbidden on the Shoot: that is a rejection too.
+// Any other forbidden is not: a namespace still terminating, or credentials
+// mid-rotation, answer forbidden for a while and then succeed.
+func failsNow(err error) bool {
+	return errors.Is(err, errNonRetryable) || apierrors.IsInvalid(err) || apierrors.IsBadRequest(err) || shootForbidden(err)
+}
+
+// rbacDenial matches the message Kubernetes gives when authorization, not
+// admission, refuses a request: `... is forbidden: User "x" cannot create
+// resource ...`.
+var rbacDenial = regexp.MustCompile(`is forbidden: User ".*" cannot `)
+
+// shootForbidden reports whether err is Gardener's admission refusing a Shoot.
+// The worker lacking permission is forbidden on the Shoot too, but that can
+// pass, such as while Gardener sets up a new project's members, so it is
+// retried.
+func shootForbidden(err error) bool {
+	if !apierrors.IsForbidden(err) {
+		return false
+	}
+	var status apierrors.APIStatus
+	if !errors.As(err, &status) {
+		return false
+	}
+	details := status.Status().Details
+	if details == nil || details.Group != "core.gardener.cloud" || details.Kind != "shoots" {
+		return false
+	}
+	return !rbacDenial.MatchString(status.Status().Message)
+}
 
 // Config holds configuration for the outbox worker.
 type Config struct {
@@ -268,8 +305,8 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 // On other error: rollback tx (releases lock), then mark retry/failed via pool.
 func (w *Worker) complete(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, processErr error) (bool, error) {
 	if processErr != nil {
-		// Non-retryable errors (invalid row, missing handler) fail immediately.
-		if errors.Is(processErr, errNonRetryable) {
+		// Errors a retry cannot fix fail immediately.
+		if failsNow(processErr) {
 			w.logger.Error("non-retryable error, marking as failed",
 				"outbox_id", row.ID,
 				"entity_type", entityType,

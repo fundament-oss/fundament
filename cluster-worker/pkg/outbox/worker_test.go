@@ -3,6 +3,7 @@ package outbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -12,6 +13,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
@@ -223,5 +228,38 @@ func TestHandleProcessingError_MarkFailedFails(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "mark outbox failed") {
 		t.Errorf("expected error to contain 'mark outbox failed', got: %v", err)
+	}
+}
+
+// A row fails at once on an error a retry cannot fix, and is retried on one
+// that can pass: an outage, a conflict, or forbidden while something settles.
+// Gardener's admission refusing a Shoot spec is forbidden on the Shoot.
+func TestFailsNow(t *testing.T) {
+	shoot := schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}
+	namespaces := schema.GroupResource{Resource: "namespaces"}
+	invalid := apierrors.NewInvalid(schema.GroupKind{Group: "core.gardener.cloud", Kind: "Shoot"}, "c1",
+		field.ErrorList{field.NotSupported(field.NewPath("spec", "kubernetes", "version"), "1.31.0", []string{"1.33.0"})})
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "non-retryable", err: fmt.Errorf("process: %w", errNonRetryable), want: true},
+		{name: "invalid, wrapped by the handler", err: fmt.Errorf("apply shoot: %w", invalid), want: true},
+		{name: "invalid, joined with another error", err: errors.Join(errors.New("other"), invalid), want: true},
+		{name: "bad request", err: apierrors.NewBadRequest("malformed"), want: true},
+		{name: "shoot spec refused by Gardener's admission", err: fmt.Errorf("apply shoot: %w", apierrors.NewForbidden(shoot, "c1", errors.New(`spec.kubernetes.version: Unsupported value: "1.31.0"`))), want: true},
+		{name: "the worker not yet allowed on the project's shoots", err: fmt.Errorf("apply shoot: %w", apierrors.NewForbidden(shoot, "c1", errors.New(`User "system:serviceaccount:garden-acme:fundament" cannot create resource "shoots" in API group "core.gardener.cloud" in the namespace "garden-acme"`))), want: false},
+		{name: "forbidden on a terminating namespace", err: apierrors.NewForbidden(namespaces, "tnt-a", errors.New("namespace is being terminated")), want: false},
+		{name: "conflict", err: apierrors.NewConflict(shoot, "c1", errors.New("modified")), want: false},
+		{name: "unavailable", err: apierrors.NewServiceUnavailable("down"), want: false},
+		{name: "timeout", err: apierrors.NewTimeoutError("slow", 5), want: false},
+		{name: "plain error", err: errors.New("connection refused"), want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, failsNow(tt.err))
+		})
 	}
 }

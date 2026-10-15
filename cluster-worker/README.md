@@ -59,7 +59,9 @@ sequenceDiagram
 - **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
   container defaults insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
   claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
-  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
+  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`, except
+  a request the Kubernetes or Gardener API rejects as invalid or malformed, or a Shoot spec
+  Gardener's admission refuses, which fails at once: a retry would only send it again. A row
   whose precondition is not met yet (for example, the project namespace does not exist)
   is deferred instead of failed.
 - **Status.** A cluster's status is checked when its Shoot changes (see
