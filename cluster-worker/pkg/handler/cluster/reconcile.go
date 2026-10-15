@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -105,8 +106,10 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 	}
 
 	deleted := make(map[uuid.UUID]bool, len(deletedClusters))
-	var toDelete []uuid.UUID
-	var newDeletions int
+	// Shoots already being deleted are only confirmed again: their deletion was
+	// started before, and repeating it only adds the confirmations Gardener may
+	// still need. They do not count towards the limit.
+	var toConfirm, toStart []uuid.UUID
 	for _, c := range deletedClusters {
 		deleted[c.ID] = true
 		// The delete sync is still working on this cluster; it deletes the
@@ -114,11 +117,10 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 		if deleteSyncRunning(c.OutboxStatus) {
 			continue
 		}
-		toDelete = append(toDelete, c.ID)
-		// Shoots already being deleted do not count: their deletion was started
-		// before, and repeating it only adds the confirmations Gardener may still need.
-		if !shootByClusterID[c.ID].Deleting {
-			newDeletions++
+		if shootByClusterID[c.ID].Deleting {
+			toConfirm = append(toConfirm, c.ID)
+		} else {
+			toStart = append(toStart, c.ID)
 		}
 	}
 
@@ -134,14 +136,14 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 
 	// Refusing does not fail the pass: the reconcile worker exits after a few
 	// failed passes, which would stop the outbox and status workers as well.
-	if newDeletions > h.cfg.MaxReconcileDeletions {
+	if len(toStart) > h.cfg.MaxReconcileDeletions {
 		h.logger.Error("refusing to delete shoots: too many in one pass, check the database",
-			"shoots_to_delete", newDeletions,
+			"shoots_to_delete", len(toStart),
 			"max", h.cfg.MaxReconcileDeletions)
-		return unknownCount, nil
+		toStart = nil
 	}
 
-	for _, clusterID := range toDelete {
+	for _, clusterID := range slices.Concat(toConfirm, toStart) {
 		shoot := shootByClusterID[clusterID]
 		h.logger.Warn("deleting shoot of deleted cluster in Gardener",
 			"shoot", shoot.Name, "cluster_id", clusterID)

@@ -153,6 +153,35 @@ func TestReconcileRefusesMassDeletion(t *testing.T) {
 	assert.Empty(t, mock.DeleteByClusterID)
 }
 
+func TestReconcileRefusedPassStillConfirmsDeletingShoots(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	mock.DeleteDelay = time.Hour // keep deleting shoots listed
+	h := newTestHandler(t, db, mock)
+
+	// A shoot whose deletion is already under way.
+	deletingID := insertDeletedCluster(t, db, acmeCorpOrgID, "reconcile-refused-deleting")
+	applyTestShoot(t, mock, deletingID, "reconcile-refused-deleting")
+	require.NoError(t, mock.DeleteShootByClusterID(t.Context(), deletingID))
+	markOutboxCompleted(t, db, deletingID)
+
+	// One more new deletion than a pass may start.
+	for i := range 4 {
+		name := fmt.Sprintf("reconcile-refused-%d", i)
+		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
+		markOutboxFailed(t, db, clusterID)
+		applyTestShoot(t, mock, clusterID, name)
+	}
+
+	err := h.Reconcile(t.Context())
+	require.NoError(t, err)
+
+	// Only the deleting shoot is confirmed again, on top of the setup's delete.
+	assert.Equal(t, []uuid.UUID{deletingID, deletingID}, mock.DeleteByClusterID)
+}
+
 func TestReconcileMassDeletionIgnoresShootsAlreadyDeleting(t *testing.T) {
 	t.Parallel()
 
