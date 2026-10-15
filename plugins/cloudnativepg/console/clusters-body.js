@@ -1,16 +1,25 @@
 // The Cluster the create form submits, and the rules for its inputs. Pure: no
 // DOM, no SDK. test-resources.yaml carries the same shape; keep them in step.
 
+import { parseQuantity } from './quantity.js';
+
 export const CLUSTER_RESOURCE = { group: 'postgresql.cnpg.io', version: 'v1', resource: 'clusters' };
 
+// The ClusterImageCatalog the plugin keeps (cnpg/catalog.go): the current,
+// digest-pinned image per PostgreSQL major. A database names only its major,
+// so it moves to a new minor, with a restart, when a plugin upgrade raises
+// the catalog.
+const IMAGE_CATALOG = 'fundament-postgresql';
+
 // Operator 1.26 runs PostgreSQL 13 to 17; 18 needs operator 1.27. First is the
-// default. Exact minor tags, so a database never changes version on its own.
-export const POSTGRES_IMAGES = [
-  { image: 'ghcr.io/cloudnative-pg/postgresql:17.4', label: 'PostgreSQL 17.4' },
-  { image: 'ghcr.io/cloudnative-pg/postgresql:16.8', label: 'PostgreSQL 16.8' },
+// default.
+export const POSTGRES_MAJORS = [
+  { major: 17, label: 'PostgreSQL 17' },
+  { major: 16, label: 'PostgreSQL 16' },
 ];
 
-export const DEFAULT_STORAGE_SIZE = '1Gi';
+// Room to grow: growing a volume takes an organization admin.
+export const DEFAULT_STORAGE_SIZE = '5Gi';
 
 // Explicit, so a small LimitRange default in the namespace cannot starve or
 // OOM-kill Postgres. No CPU limit: throttling a database hurts more than it
@@ -46,15 +55,18 @@ export function namespaceError(namespace) {
 // PostgreSQL lets grow toward max_wal_size (1GB) between checkpoints. Below
 // 1Gi a database can fail to start or fill its disk at once, and one stuck
 // that way cannot be deleted from the console.
-const MIN_STORAGE_MI = 1024;
-const UNIT_MI = { Mi: 1, Gi: 1024, Ti: 1024 * 1024 };
+const MIN_STORAGE_BYTES = 2 ** 30;
+// A single-instance database without backups; anything near this size wants
+// an organization admin's attention anyway. It also keeps the request inside
+// what a provisioner accepts: rbd refuses a size near 2^63 bytes, and the
+// database then waits for its volume for good.
+const MAX_STORAGE_BYTES = 2 ** 40;
 
 export function storageSizeError(size) {
-  const match = /^([1-9][0-9]*)(Mi|Gi|Ti)$/.exec(size);
-  if (!match) {
-    return 'Enter the storage size as a whole number followed by Mi, Gi or Ti, for example 1Gi.';
-  }
-  if (Number(match[1]) * UNIT_MI[match[2]] < MIN_STORAGE_MI) return 'Use at least 1Gi.';
+  const bytes = parseQuantity(size);
+  if (bytes === null) return 'Enter a size like 10Gi, 500Mi or 20G.';
+  if (bytes < MIN_STORAGE_BYTES) return 'Use at least 1Gi.';
+  if (bytes > MAX_STORAGE_BYTES) return 'Use at most 1Ti.';
   return null;
 }
 
@@ -79,7 +91,7 @@ function isDnsSubdomain(value) {
 // No bootstrap block: CNPG's default initdb creates database "app" owned by
 // user "app", with the credentials in Secret <name>-app. No backup, no
 // postgresql.parameters, no extensions: out of scope for this version.
-export function buildCluster({ name, namespace, imageName, size, storageClass }) {
+export function buildCluster({ name, namespace, major, size, storageClass }) {
   return {
     apiVersion: 'postgresql.cnpg.io/v1',
     kind: 'Cluster',
@@ -90,7 +102,16 @@ export function buildCluster({ name, namespace, imageName, size, storageClass })
     },
     spec: {
       instances: 1,
-      imageName,
+      imageCatalogRef: {
+        apiGroup: 'postgresql.cnpg.io',
+        kind: 'ClusterImageCatalog',
+        name: IMAGE_CATALOG,
+        major,
+      },
+      // With one instance, CNPG's PodDisruptionBudget allows no disruption at
+      // all, which blocks every node drain during node pool rollouts and
+      // maintenance. The database is down while its node drains either way.
+      enablePDB: false,
       resources: RESOURCES,
       // No storageClass means the cluster's default StorageClass.
       storage: { size, ...(storageClass ? { storageClass } : {}) },

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"sort"
@@ -118,13 +119,15 @@ func (c *Client) IsInstalled(ctx context.Context, releaseName string) (bool, err
 	return status != nil, nil
 }
 
-// ReleaseStatus is the part of `helm status -o json` a plugin needs to decide
-// whether to (re)install a release.
+// ReleaseStatus is what a plugin needs to decide whether to (re)install a
+// release: `helm status -o json` for the state and its timestamps, and
+// `helm get metadata -o json` for the chart version, since helm status strips
+// the chart from its output.
 type ReleaseStatus struct {
 	// Status is Helm's release status: deployed, failed, pending-install,
 	// pending-upgrade, pending-rollback, uninstalling, superseded or uninstalled.
 	Status string
-	// ChartVersion is the deployed chart's version, e.g. "0.24.0".
+	// ChartVersion is the latest revision's chart version, e.g. "0.24.0".
 	ChartVersion string
 	// LastDeployed is when the latest operation on the release started; for a
 	// pending release, when that operation began. Zero when helm omits it.
@@ -141,17 +144,45 @@ func (s *ReleaseStatus) Pending() bool {
 	return strings.HasPrefix(s.Status, "pending-")
 }
 
-// Status returns the deployed state of a release in the client's namespace, or
-// nil when the release does not exist. Like the installs, it retries while the
-// plugin SA cannot yet read Helm's release Secrets (see the BANDAID note above):
-// it typically runs first in Start, and failing there would restart the pod.
+// Status returns the state of a release's latest revision in the client's
+// namespace, or nil when the release does not exist. Like the installs, it
+// retries while the plugin SA cannot yet read Helm's release Secrets (see the
+// BANDAID note above): it typically runs first in Start, and failing there
+// would restart the pod.
 func (c *Client) Status(ctx context.Context, releaseName string) (*ReleaseStatus, error) {
+	statusJSON, err := c.readRelease(ctx, "status", releaseName)
+	if err != nil || statusJSON == nil {
+		return nil, err
+	}
+	status, err := parseReleaseStatus(statusJSON)
+	if err != nil {
+		return nil, err
+	}
+	metadataJSON, err := c.readRelease(ctx, "get metadata", releaseName)
+	if err != nil {
+		return nil, err
+	}
+	if metadataJSON == nil {
+		// Uninstalled between the two calls.
+		return nil, nil
+	}
+	if status.ChartVersion, err = parseChartVersion(metadataJSON); err != nil {
+		return nil, err
+	}
+	return status, nil
+}
+
+// readRelease runs a read-only helm command (op is "status" or "get metadata")
+// with JSON output and returns its stdout, or nil when the release does not
+// exist.
+func (c *Client) readRelease(ctx context.Context, op, releaseName string) ([]byte, error) {
 	var stdout bytes.Buffer
 	notFound := false
-	err := retryOnRBACForbidden(ctx, "status", func() (string, error) {
+	args := append(strings.Fields(op), releaseName, "--namespace", c.namespace, "--output", "json")
+	err := retryOnRBACForbidden(ctx, op, func() (string, error) {
 		stdout.Reset()
 		var stderr bytes.Buffer
-		cmd := exec.CommandContext(ctx, "helm", "status", releaseName, "--namespace", c.namespace, "--output", "json") //nolint:gosec // args are constructed internally
+		cmd := exec.CommandContext(ctx, "helm", args...) //nolint:gosec // args are constructed internally
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 		err := cmd.Run()
@@ -168,13 +199,15 @@ func (c *Client) Status(ctx context.Context, releaseName string) (*ReleaseStatus
 	if notFound {
 		return nil, nil
 	}
-	return parseReleaseStatus(stdout.Bytes())
+	return stdout.Bytes(), nil
 }
 
 func isReleaseNotFound(output string) bool {
 	return strings.Contains(output, "release: not found")
 }
 
+// parseReleaseStatus reads `helm status -o json`. Its ChartVersion stays empty:
+// helm status has no chart in its output.
 func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 	var release struct {
 		Info struct {
@@ -182,11 +215,6 @@ func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 			LastDeployed string `json:"last_deployed"`
 			Deleted      string `json:"deleted"`
 		} `json:"info"`
-		Chart struct {
-			Metadata struct {
-				Version string `json:"version"`
-			} `json:"metadata"`
-		} `json:"chart"`
 	}
 	if err := json.Unmarshal(data, &release); err != nil {
 		return nil, fmt.Errorf("parse helm status: %w", err)
@@ -197,10 +225,23 @@ func parseReleaseStatus(data []byte) (*ReleaseStatus, error) {
 	deleted, _ := time.Parse(time.RFC3339Nano, release.Info.Deleted)
 	return &ReleaseStatus{
 		Status:       release.Info.Status,
-		ChartVersion: release.Chart.Metadata.Version,
 		LastDeployed: lastDeployed,
 		Deleted:      deleted,
 	}, nil
+}
+
+// parseChartVersion reads the chart version from `helm get metadata -o json`.
+func parseChartVersion(data []byte) (string, error) {
+	var metadata struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return "", fmt.Errorf("parse helm get metadata: %w", err)
+	}
+	if metadata.Version == "" {
+		return "", errors.New("helm get metadata: no chart version")
+	}
+	return metadata.Version, nil
 }
 
 func appendSortedValues(args []string, values map[string]string) []string {

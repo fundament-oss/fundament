@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -52,8 +53,7 @@ func userRoles() []*rbacv1.ClusterRole {
 	}
 }
 
-// applyUserRoles creates or updates userRoles. Uninstalling the plugin leaves
-// them, like the operator and the databases.
+// applyUserRoles creates or updates userRoles.
 func applyUserRoles(ctx context.Context, kube client.Client) error {
 	for _, want := range userRoles() {
 		role := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: want.Name}}
@@ -63,6 +63,17 @@ func applyUserRoles(ctx context.Context, kube client.Client) error {
 			return nil
 		}); err != nil {
 			return fmt.Errorf("apply ClusterRole %s: %w", want.Name, err)
+		}
+	}
+	return nil
+}
+
+// deleteUserRoles deletes userRoles, on uninstall: without the plugin, project
+// admins must not keep creating databases nobody can see in the console.
+func deleteUserRoles(ctx context.Context, kube client.Client) error {
+	for _, role := range userRoles() {
+		if err := kube.Delete(ctx, role); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete ClusterRole %s: %w", role.Name, err)
 		}
 	}
 	return nil

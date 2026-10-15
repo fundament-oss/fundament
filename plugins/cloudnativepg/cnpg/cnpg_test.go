@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,7 +31,7 @@ func TestInstallVersion(t *testing.T) {
 	}{
 		{"absent", nil, Version},
 		{"deployed at the same version", &helm.ReleaseStatus{Status: "deployed", ChartVersion: Version}, Version},
-		// Another plugin, built later, installed a newer chart: keep it.
+		// A newer plugin installed a newer chart before a rollback: keep it.
 		{"deployed newer", &helm.ReleaseStatus{Status: "deployed", ChartVersion: "99.0.1"}, "99.0.1"},
 		{"deployed older", &helm.ReleaseStatus{Status: "deployed", ChartVersion: "0.1.2"}, Version},
 		// Semver, not string order: 0.9 is older than 0.24.
@@ -59,14 +60,14 @@ func TestInstallVersionPendingStale(t *testing.T) {
 		lastDeployed time.Time
 		recovery     string
 	}{
-		{"pending-upgrade", now.Add(-time.Hour), "helm -n cnpg-system rollback cnpg"},
-		{"pending-rollback", now.Add(-time.Hour), "helm -n cnpg-system rollback cnpg"},
+		{"pending-upgrade", now.Add(-time.Hour), "helm -n cnpg-system rollback fundament-cloudnativepg"},
+		{"pending-rollback", now.Add(-time.Hour), "helm -n cnpg-system rollback fundament-cloudnativepg"},
 		// A first install has no earlier revision to roll back to.
-		{"pending-install", now.Add(-time.Hour), "helm -n cnpg-system uninstall cnpg"},
+		{"pending-install", now.Add(-time.Hour), "helm -n cnpg-system uninstall fundament-cloudnativepg"},
 		// No timestamp: cannot tell it is recent, so give the way out.
-		{"pending-install", time.Time{}, "helm -n cnpg-system uninstall cnpg"},
+		{"pending-install", time.Time{}, "helm -n cnpg-system uninstall fundament-cloudnativepg"},
 		// An interrupted uninstall is finished, not undone.
-		{"uninstalling", now.Add(-time.Hour), "helm -n cnpg-system uninstall cnpg"},
+		{"uninstalling", now.Add(-time.Hour), "helm -n cnpg-system uninstall fundament-cloudnativepg"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.status, func(t *testing.T) {
@@ -81,7 +82,7 @@ func TestInstallVersionPendingStale(t *testing.T) {
 	}
 }
 
-// Another plugin's install still in --wait: report it as in progress, and do
+// An earlier pod's install still in --wait: report it as in progress, and do
 // not tell the admin to uninstall it.
 func TestInstallVersionPendingRecent(t *testing.T) {
 	t.Parallel()
@@ -122,20 +123,15 @@ func TestConcurrentOperation(t *testing.T) {
 
 func TestOperatorPresent(t *testing.T) {
 	t.Parallel()
-	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-		Name:      "cnpg-cloudnative-pg",
-		Namespace: Namespace,
-		Labels:    map[string]string{"app.kubernetes.io/name": Chart, "app.kubernetes.io/instance": Release},
-	}}
-	crds := &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: CRDNames[0]}}
 	tests := []struct {
 		name    string
 		objects []client.Object
 		want    bool
 	}{
-		{"all there", []client.Object{deployment, crds}, true},
-		{"deployment deleted", []client.Object{crds}, false},
-		{"CRD deleted", []client.Object{deployment}, false},
+		{"all there", []client.Object{ourDeployment(), ourCRD(CRDNames[0]), ourCRD(CRDNames[1])}, true},
+		{"deployment deleted", []client.Object{ourCRD(CRDNames[0]), ourCRD(CRDNames[1])}, false},
+		{"Cluster CRD deleted", []client.Object{ourDeployment(), ourCRD(CRDNames[1])}, false},
+		{"catalog CRD deleted", []client.Object{ourDeployment(), ourCRD(CRDNames[0])}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,6 +141,76 @@ func TestOperatorPresent(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
+	}
+}
+
+func TestForeignOwner(t *testing.T) {
+	t.Parallel()
+	openfscCRD := ourCRD(CRDNames[0])
+	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	kubectlCRD := ourCRD(CRDNames[0])
+	kubectlCRD.Annotations = nil
+	otherOperator := deployment("cnpg-system", "cnpg-controller-manager", "ghcr.io/cloudnative-pg/cloudnative-pg:1.25.1")
+	tests := []struct {
+		name    string
+		objects []client.Object
+		want    string
+	}{
+		{"nothing installed", nil, ""},
+		{"ours", []client.Object{ourCRD(CRDNames[0]), ourDeployment()}, ""},
+		// Kept from our own uninstall: a reinstall adopts it.
+		{"our CRD without operator", []client.Object{ourCRD(CRDNames[0])}, ""},
+		{"openfsc's release", []client.Object{openfscCRD}, "CRD clusters.postgresql.cnpg.io belongs to Helm release cnpg-system/cnpg"},
+		{"plain manifests", []client.Object{kubectlCRD}, "CRD clusters.postgresql.cnpg.io was not installed with Helm"},
+		// kubectl apply of the manifests over our CRDs keeps our annotations,
+		// but adds a second operator.
+		{"second operator", []client.Object{ourCRD(CRDNames[0]), ourDeployment(), otherOperator}, "Deployment cnpg-system/cnpg-controller-manager runs the CloudNativePG operator"},
+		{"unrelated deployment", []client.Object{ourCRD(CRDNames[0]), deployment("team-a", "web", "nginx:1.27")}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tt.objects...).Build()
+			got, err := ForeignOwner(context.Background(), kube)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestIsOperatorImage(t *testing.T) {
+	t.Parallel()
+	for image, want := range map[string]bool{
+		"ghcr.io/cloudnative-pg/cloudnative-pg:1.26.0":      true,
+		"ghcr.io/cloudnative-pg/cloudnative-pg@sha256:0123": true,
+		"registry.local:5000/mirror/cloudnative-pg:1.26.0":  true,
+		"cloudnative-pg": true,
+		"ghcr.io/cloudnative-pg/postgresql:17.11-202610120828-standard-bookworm": false,
+		"registry.local:5000/cloudnative-pg-plugin:v1":                           false,
+	} {
+		assert.Equal(t, want, isOperatorImage(image), image)
+	}
+}
+
+func ourCRD(name string) *apiextensionsv1.CustomResourceDefinition {
+	return &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{
+		Name:        name,
+		Annotations: map[string]string{"meta.helm.sh/release-name": Release, "meta.helm.sh/release-namespace": Namespace},
+	}}
+}
+
+func ourDeployment() *appsv1.Deployment {
+	d := deployment(Namespace, Release+"-cloudnative-pg", "ghcr.io/cloudnative-pg/cloudnative-pg:1.26.0")
+	d.Labels = map[string]string{"app.kubernetes.io/name": Chart, "app.kubernetes.io/instance": Release}
+	return d
+}
+
+func deployment(namespace, name, image string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "manager", Image: image}},
+		}}},
 	}
 }
 

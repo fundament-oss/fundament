@@ -35,7 +35,7 @@ func TestSandboxShootAccess_NamespacesOnSandbox(t *testing.T) {
 	require.NotNil(t, found)
 	assert.Equal(t, "tnt-p--web", found.Name)
 
-	require.NoError(t, s.EnsureLimitRange(ctx, clusterID, "tnt-p--web", LimitDefaults{}, nil))
+	require.NoError(t, s.EnsureLimitRange(ctx, clusterID, "tnt-p--web", ContainerDefaults{}, nil))
 	lrs, err := cs.CoreV1().LimitRanges("tnt-p--web").List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	assert.Empty(t, lrs.Items, "LimitRanges do not reach the sandbox")

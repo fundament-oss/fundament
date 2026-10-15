@@ -9,6 +9,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,10 +33,8 @@ func TestPluginImplementsInterfaces(t *testing.T) {
 	var _ pluginruntime.Reconciler = plugin
 	var _ pluginruntime.ConsoleProvider = plugin
 
-	// No Installer: uninstalling removes only the UI. The operator is shared
-	// with openfsc, and the databases must outlive the plugin.
-	_, isInstaller := any(plugin).(pluginruntime.Installer)
-	assert.False(t, isInstaller)
+	// For Uninstall, which refuses while databases exist.
+	var _ pluginruntime.Installer = plugin
 }
 
 // newFakeClient builds a client whose scheme mirrors newPlugin's, plus the CNPG
@@ -71,7 +70,19 @@ func storageClass(name string, isDefault bool) *storagev1.StorageClass {
 	return sc
 }
 
-var clustersCRD = &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "clusters.postgresql.cnpg.io"}}
+func ourCRD(name string) *apiextensionsv1.CustomResourceDefinition {
+	return &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{
+		Name:        name,
+		Annotations: map[string]string{"meta.helm.sh/release-name": cnpg.Release, "meta.helm.sh/release-namespace": cnpg.Namespace},
+	}}
+}
+
+var (
+	clustersCRD = ourCRD(cnpg.CRDNames[0])
+	catalogCRD  = ourCRD(cnpg.CRDNames[1])
+)
+
+const testImage = "ghcr.io/cloudnative-pg/postgresql:17.11-202610120828-standard-bookworm@sha256:fe22"
 
 func operatorDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
@@ -91,6 +102,11 @@ func newTestPlugin(t *testing.T) *Plugin {
 		t.Error("unexpected operator install")
 		return nil
 	}
+	plugin.uninstallOperator = func(context.Context) error {
+		t.Error("unexpected operator uninstall")
+		return nil
+	}
+	plugin.catalog = []cnpg.CatalogImage{{Major: 17, Image: testImage}}
 	return plugin
 }
 
@@ -126,7 +142,7 @@ func TestReconcileReportsStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			plugin := newTestPlugin(t)
-			kube := newFakeClient(t, append(tt.objs, clustersCRD, operatorDeployment())...)
+			kube := newFakeClient(t, append(tt.objs, clustersCRD, catalogCRD, operatorDeployment())...)
 			plugin.kube.Store(&kube)
 			host := sdktesting.NewMockHost()
 
@@ -141,7 +157,7 @@ func TestReconcileReportsStatus(t *testing.T) {
 func TestReconcileReinstallsDeletedOperator(t *testing.T) {
 	t.Parallel()
 	plugin := newTestPlugin(t)
-	kube := newFakeClient(t, storageClass("local-path", true), clustersCRD)
+	kube := newFakeClient(t, storageClass("local-path", true), clustersCRD, catalogCRD)
 	plugin.kube.Store(&kube)
 	installs := 0
 	plugin.install = func(ctx context.Context, kube client.Client) error {
@@ -165,7 +181,7 @@ func TestReconcileReinstallFails(t *testing.T) {
 		phase pluginruntime.PluginPhase
 	}{
 		{"helm error", fmt.Errorf("helm install failed"), pluginruntime.PhaseDegraded},
-		// openfsc's install of the same release is still running.
+		// An earlier pod's install is still running.
 		{"in progress", fmt.Errorf("%w: release is pending-upgrade", cnpg.ErrInProgress), pluginruntime.PhaseInstalling},
 	}
 	for _, tt := range tests {
@@ -249,5 +265,122 @@ func TestUserRolesGrantNoModification(t *testing.T) {
 				assert.NotContains(t, rule.Verbs, verb, "%s must not grant %s", role.Name, verb)
 			}
 		}
+	}
+}
+
+// An operator someone took over after Start is reported, not repaired or
+// upgraded: every operator version change restarts every database.
+func TestReconcileLeavesForeignOperator(t *testing.T) {
+	t.Parallel()
+	plugin := newTestPlugin(t)
+	openfscCRD := ourCRD(cnpg.CRDNames[0])
+	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	kube := newFakeClient(t, openfscCRD)
+	plugin.kube.Store(&kube)
+	host := sdktesting.NewMockHost()
+
+	require.NoError(t, plugin.Reconcile(t.Context(), host))
+	status := host.CurrentStatus()
+	assert.Equal(t, pluginruntime.PhaseDegraded, status.Phase)
+	assert.Contains(t, status.Message, "belongs to Helm release cnpg-system/cnpg")
+}
+
+// A deleted catalog comes back: databases referring to it do not start
+// without it.
+func TestReconcileRestoresCatalog(t *testing.T) {
+	t.Parallel()
+	plugin := newTestPlugin(t)
+	kube := newFakeClient(t, storageClass("local-path", true), clustersCRD, catalogCRD, operatorDeployment())
+	plugin.kube.Store(&kube)
+
+	require.NoError(t, plugin.Reconcile(t.Context(), sdktesting.NewMockHost()))
+	catalog := &unstructured.Unstructured{}
+	catalog.SetGroupVersionKind(cnpg.CatalogGVK)
+	require.NoError(t, kube.Get(t.Context(), client.ObjectKey{Name: cnpg.CatalogName}, catalog))
+}
+
+func TestSetUp(t *testing.T) {
+	t.Parallel()
+	plugin := newTestPlugin(t)
+	kube := newFakeClient(t)
+	plugin.install = func(ctx context.Context, kube client.Client) error {
+		for _, crd := range []client.Object{ourCRD(cnpg.CRDNames[0]), ourCRD(cnpg.CRDNames[1])} {
+			if err := kube.Create(ctx, crd); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	require.NoError(t, plugin.setUp(t.Context(), kube))
+	catalog := &unstructured.Unstructured{}
+	catalog.SetGroupVersionKind(cnpg.CatalogGVK)
+	require.NoError(t, kube.Get(t.Context(), client.ObjectKey{Name: cnpg.CatalogName}, catalog))
+	var role rbacv1.ClusterRole
+	require.NoError(t, kube.Get(t.Context(), client.ObjectKey{Name: "fundament-cloudnativepg-admin"}, &role))
+}
+
+func TestSetUpFailurePhase(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, pluginruntime.PhaseFailed, setUpFailurePhase(fmt.Errorf("install operator: %w: CRD x belongs to Helm release a/b", cnpg.ErrForeignOperator)))
+	assert.Equal(t, pluginruntime.PhaseInstalling, setUpFailurePhase(fmt.Errorf("install operator: %w", cnpg.ErrInProgress)))
+	assert.Equal(t, pluginruntime.PhaseDegraded, setUpFailurePhase(fmt.Errorf("helm install failed")))
+}
+
+func TestUninstallRefusesWithDatabases(t *testing.T) {
+	t.Parallel()
+	plugin := newTestPlugin(t)
+	kube := newFakeClient(t, clustersCRD, cluster("orders", healthyPhase))
+	require.NoError(t, applyUserRoles(t.Context(), kube))
+	plugin.kube.Store(&kube)
+	host := sdktesting.NewMockHost()
+
+	err := plugin.Uninstall(t.Context(), host)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "team-a/orders")
+	assert.Equal(t, pluginruntime.PhaseDegraded, host.CurrentStatus().Phase)
+	// Project admins keep managing their databases.
+	var role rbacv1.ClusterRole
+	require.NoError(t, kube.Get(t.Context(), client.ObjectKey{Name: "fundament-cloudnativepg-admin"}, &role))
+}
+
+func TestUninstall(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		crd           *apiextensionsv1.CustomResourceDefinition
+		wantUninstall bool
+	}{
+		{"ours", clustersCRD, true},
+		{"someone else's", func() *apiextensionsv1.CustomResourceDefinition {
+			crd := ourCRD(cnpg.CRDNames[0])
+			crd.Annotations = nil
+			return crd
+		}(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			plugin := newTestPlugin(t)
+			kube := newFakeClient(t, tt.crd)
+			require.NoError(t, applyUserRoles(t.Context(), kube))
+			require.NoError(t, cnpg.ApplyCatalog(t.Context(), kube, plugin.catalog))
+			plugin.kube.Store(&kube)
+			uninstalls := 0
+			plugin.uninstallOperator = func(context.Context) error {
+				uninstalls++
+				return nil
+			}
+
+			require.NoError(t, plugin.Uninstall(t.Context(), sdktesting.NewMockHost()))
+			assert.Equal(t, tt.wantUninstall, uninstalls == 1)
+			for _, role := range userRoles() {
+				err := kube.Get(t.Context(), client.ObjectKey{Name: role.Name}, &rbacv1.ClusterRole{})
+				assert.True(t, apierrors.IsNotFound(err), role.Name)
+			}
+			catalog := &unstructured.Unstructured{}
+			catalog.SetGroupVersionKind(cnpg.CatalogGVK)
+			assert.True(t, apierrors.IsNotFound(kube.Get(t.Context(), client.ObjectKey{Name: cnpg.CatalogName}, catalog)))
+		})
 	}
 }

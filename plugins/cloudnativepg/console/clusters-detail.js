@@ -7,6 +7,7 @@ import {
   wireSubmit,
 } from './_shared.js';
 import { CLUSTER_RESOURCE } from './clusters-body.js';
+import { humanizeQuantity } from './quantity.js';
 
 await Promise.all([loadSdk(), loadNlddDesignSystem()]);
 const ctx = await fundament.init;
@@ -40,6 +41,25 @@ function appDatabase(item) {
     // Only a Secret CNPG generates carries the uri key.
     generatedSecret: !source.secret?.name,
   };
+}
+
+// The running image, else the one asked for: an exact image, or a major from
+// the plugin's image catalog, which the operator resolves to one.
+function imageText(item) {
+  const major = item.spec?.imageCatalogRef?.major;
+  return item.status?.image ?? item.spec?.imageName ?? (major ? `PostgreSQL ${major}` : 'Unknown');
+}
+
+// Why a database that is not healthy is stuck, as far as CNPG knows: its
+// phase reason, and the message of a Ready condition that is not True. A
+// volume that cannot be provisioned keeps the phase at "Setting up primary";
+// the PVC's own events are not visible to project members here.
+function problemText(item) {
+  const status = item.status ?? {};
+  if (status.phase === 'Cluster in healthy state') return null;
+  const ready = (status.conditions ?? []).find((c) => c.type === 'Ready' && c.status !== 'True');
+  const reasons = [status.phaseReason, ready?.message].filter(Boolean);
+  return reasons.length > 0 ? [...new Set(reasons)].join(' ') : null;
 }
 
 // The create form configures neither; a Cluster made with kubectl can have both.
@@ -85,11 +105,13 @@ function render(item) {
   const spec = item.spec ?? {};
   const app = appDatabase(item);
 
+  const problem = problemText(item);
   const statusPairs = [
     ['Phase', status.phase ?? 'Unknown'],
+    ...(problem ? [['Reason', problem]] : []),
     ['Ready instances', readyText(item)],
-    ['Image', spec.imageName ?? status.image ?? 'Unknown'],
-    ['Storage', spec.storage?.size ?? 'Unknown'],
+    ['Image', imageText(item)],
+    ['Storage', humanizeQuantity(spec.storage?.size)],
     ['StorageClass', spec.storage?.storageClass ?? 'Cluster default'],
   ];
 

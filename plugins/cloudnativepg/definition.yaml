@@ -35,12 +35,20 @@ spec:
         resources: ["storageclasses"]
         verbs: ["get", "list", "watch"]
 
+      # The image catalog databases refer to (cnpg/catalog.go).
+      - apiGroups: ["postgresql.cnpg.io"]
+        resources: ["clusterimagecatalogs"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install --create-namespace --wait` for
-      # CloudNativePG 0.24.0 (release cnpg in cnpg-system, shared with openfsc).
-      # These rules cover Helm's release storage and what the chart creates: CRDs,
-      # webhooks, the operator Deployment, ServiceAccount, Service, ConfigMap and
-      # RBAC. clusterroles also covers the plugin's two aggregated ClusterRoles.
+      # CloudNativePG 0.24.0 (release fundament-cloudnativepg in cnpg-system), and
+      # `helm uninstall` on uninstall. These rules cover Helm's release storage and
+      # what the chart creates: CRDs, webhooks, the operator Deployment,
+      # ServiceAccount, Service, ConfigMap and cluster-wide RBAC (no Role or
+      # RoleBinding with the default values). clusterroles also covers the
+      # plugin's two aggregated ClusterRoles. Listing deployments in every
+      # namespace finds an operator someone else runs (cnpg.ForeignOwner).
       - apiGroups: [""]
         resources: ["namespaces"] # helm --create-namespace
         verbs: ["get", "list", "watch", "create"]
@@ -63,10 +71,10 @@ spec:
         resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
       - apiGroups: ["rbac.authorization.k8s.io"]
-        resources: ["clusterroles", "roles"]
+        resources: ["clusterroles"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "bind", "escalate"]
       - apiGroups: ["rbac.authorization.k8s.io"]
-        resources: ["clusterrolebindings", "rolebindings"]
+        resources: ["clusterrolebindings"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   crds:
     - clusters.postgresql.cnpg.io

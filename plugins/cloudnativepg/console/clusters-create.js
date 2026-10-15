@@ -1,7 +1,7 @@
 import { loadSdk, loadNlddDesignSystem, escapeHtml, navigateToDetail, navigateBack, wireSubmit } from './_shared.js';
 import {
   CLUSTER_RESOURCE,
-  POSTGRES_IMAGES,
+  POSTGRES_MAJORS,
   DEFAULT_STORAGE_SIZE,
   buildCluster,
   clusterNameError,
@@ -94,13 +94,15 @@ function namespaceFieldHtml(namespaces, displayNames = {}) {
 }
 
 function versionFieldHtml() {
-  const options = POSTGRES_IMAGES.map(({ image, label }, i) =>
-    optionHtml(image, label, { selected: i === 0 }),
+  const options = POSTGRES_MAJORS.map(({ major, label }, i) =>
+    optionHtml(String(major), label, { selected: i === 0 }),
   ).join('');
   return formFieldHtml(
     'PostgreSQL version',
-    `<nldd-dropdown><select id="db-version" name="imageName">${options}</select></nldd-dropdown>`,
-    { hint: 'The version cannot be changed after creation.' },
+    `<nldd-dropdown><select id="db-version" name="major">${options}</select></nldd-dropdown>`,
+    {
+      hint: 'The major version cannot be changed after creation. Plugin upgrades move the database to the latest minor version, with a short restart.',
+    },
   );
 }
 
@@ -121,10 +123,13 @@ function storageClassFieldHtml(classes) {
     );
   }
 
-  const classOptions = classes
-    .map((sc) => optionHtml(sc.name, `${sc.name}${sc.isDefault ? ' (default)' : ''}`))
-    .join('');
   const defaultName = classes.find((sc) => sc.isDefault)?.name;
+  // The default class is the "Cluster default" option, so it is not listed
+  // a second time by name.
+  const classOptions = classes
+    .filter((sc) => !sc.isDefault)
+    .map((sc) => optionHtml(sc.name, sc.name))
+    .join('');
 
   if (!defaultName) {
     const hint =
@@ -177,7 +182,7 @@ function showForm(storageClasses) {
                             required no-spellcheck></nldd-text-field>`,
           {
             errorId: 'db-size-error',
-            hint: 'At least 1Gi, for example 1Gi or 20Gi. The size cannot be changed after creation.',
+            hint: 'From 1Gi to 1Ti, for example 5Gi or 20Gi. Only an organization admin can grow it later.',
           },
         )}
 
@@ -215,16 +220,26 @@ function showForm(storageClasses) {
     action: async () => {
       const name = fieldValue('name');
       const namespace = fieldValue('namespace');
-      await fundament.k8s.create(
-        { ...CLUSTER_RESOURCE, namespace },
-        buildCluster({
-          name,
-          namespace,
-          imageName: fieldValue('imageName'),
-          size: fieldValue('size'),
-          storageClass: fieldValue('storageClass'),
-        }),
-      );
+      try {
+        await fundament.k8s.create(
+          { ...CLUSTER_RESOURCE, namespace },
+          buildCluster({
+            name,
+            namespace,
+            major: Number(fieldValue('major')),
+            size: fieldValue('size'),
+            storageClass: fieldValue('storageClass'),
+          }),
+        );
+      } catch (err) {
+        // A project viewer gets the form too: the console offers Create to
+        // everyone who can see the list.
+        if (err?.code === 'forbidden') {
+          const shown = ctx.namespaceDisplayNames?.[namespace] ?? namespace;
+          throw new Error(`you need the project admin role in ${shown}`);
+        }
+        throw err;
+      }
       navigateToDetail(name, namespace);
     },
   });

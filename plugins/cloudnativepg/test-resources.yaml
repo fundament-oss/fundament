@@ -13,7 +13,12 @@ metadata:
     app.kubernetes.io/managed-by: fundament-cloudnativepg
 spec:
   instances: 1
-  imageName: ghcr.io/cloudnative-pg/postgresql:17.4
+  imageCatalogRef:
+    apiGroup: postgresql.cnpg.io
+    kind: ClusterImageCatalog
+    name: fundament-postgresql
+    major: 17
+  enablePDB: false
   resources:
     requests:
       cpu: 100m
@@ -21,4 +26,4 @@ spec:
     limits:
       memory: 1Gi
   storage:
-    size: 1Gi
+    size: 5Gi

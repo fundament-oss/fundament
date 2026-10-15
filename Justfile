@@ -242,6 +242,14 @@ plugin-sandbox-kubeconfig:
         --dry-run=client -o yaml | \
         kubectl --context k3d-fundament-plugin apply -f -
 
+    # All four consumers read the Secret only at startup, and Reloader does not reliably pick
+    # this one up, so restart them here rather than leave a Secret that has no effect.
+    echo "- restarting plugin-proxy, kube-api-proxy, authn-api and cluster-worker to pick the Secret up"
+    kubectl --context k3d-fundament -n fundament rollout restart \
+        deployment/plugin-proxy deployment/kube-api-proxy deployment/authn-api deployment/cluster-worker > /dev/null
+    kubectl --context k3d-fundament -n fundament rollout status deployment/cluster-worker --timeout=180s > /dev/null
+    kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
+
     # The console refuses a plugin install unless the cluster reports RUNNING, which
     # organization-api derives from tenant.clusters.shoot_status = 'ready'. Locally there is
     # no Gardener to set it, so the seeded row stays NULL and the cluster shows as
@@ -249,19 +257,30 @@ plugin-sandbox-kubeconfig:
     # kube-api-proxy/pkg/kube/sandbox_proxy.go), so the sandbox just wired up is what those
     # rows stand for — which makes this the point where "ready" becomes true. A db.reset
     # clears it again, and re-running this recipe is already the documented step after one.
+    #
+    # After the restart: cluster-worker's startup status sweep finds no shoot for the seeded
+    # cluster in mock Gardener and sets it back to pending. Its pod is Ready once the sweep
+    # has queued the checks, not once they ran, so mark it ready until it stays that way.
+    # The next sweep (30 minutes) still flips it back; mock Gardener has no shoot for it.
     echo "- marking the local cluster(s) ready so the console allows plugin installs"
-    kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
-        psql -U postgres -d fundament -qc \
-        "UPDATE tenant.clusters SET shoot_status = 'ready', shoot_status_updated = now() \
-         WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" \
-        || echo "  (could not reach the database — the console will still show provisioning)" >&2
-
-    # All three consumers read the Secret only at startup, and Reloader does not reliably pick
-    # this one up, so restart them here rather than leave a Secret that has no effect.
-    echo "- restarting plugin-proxy, kube-api-proxy and authn-api to pick the Secret up"
-    kubectl --context k3d-fundament -n fundament rollout restart \
-        deployment/plugin-proxy deployment/kube-api-proxy deployment/authn-api > /dev/null
-    kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
+    psql_fundament() {
+        kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
+            psql -U postgres -d fundament -qtAc "$1"
+    }
+    marked=false
+    for i in $(seq 1 6); do
+        psql_fundament "UPDATE tenant.clusters SET shoot_status = 'ready', shoot_status_updated = now() \
+            WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" > /dev/null || break
+        sleep 5
+        if [ "$(psql_fundament "SELECT count(*) FROM tenant.clusters \
+            WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';")" = "0" ]; then
+            marked=true
+            break
+        fi
+    done
+    if [ "$marked" != true ]; then
+        echo "  (could not mark the cluster(s) ready — the console will still show provisioning)" >&2
+    fi
 
     # Confirm the new pod actually switched off the in-memory mock. `rollout status`
     # returns slightly before the logs are attached, so poll rather than read once.
