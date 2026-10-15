@@ -152,6 +152,8 @@ func formatClusterStatus(status organizationv1.ClusterStatus) string {
 		return "stopping"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 		return "stopped"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_LOST:
+		return "lost"
 	default:
 		return "unknown"
 	}

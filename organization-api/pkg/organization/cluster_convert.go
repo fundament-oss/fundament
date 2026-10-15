@@ -61,6 +61,8 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, sh
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
+	case "lost":
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_LOST
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
 	}

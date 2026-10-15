@@ -49,6 +49,7 @@ func TestClusterStatusFromDB(t *testing.T) {
 		{name: "unhealthy wins over updating", deleted: active, status: shoot("ready"), health: unhealthy, updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY},
 		{name: "progressing unaffected by health", deleted: active, status: shoot("progressing"), health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
 		{name: "failed", deleted: active, status: shoot("error"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
+		{name: "shoot gone from Gardener", deleted: active, status: shoot("lost"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST},
 		{name: "deleted while updating", deleted: deleted, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
 		{name: "settling after create is starting, not unhealthy", deleted: active, status: shoot("ready"), message: awaiting, health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING},
 		{name: "unhealthy after settling once the message moves on", deleted: active, status: shoot("ready"), message: pgtype.Text{String: "Shoot reconciled but not all conditions healthy", Valid: true}, health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY},

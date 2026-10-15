@@ -291,20 +291,6 @@ func assertNoEvent(t *testing.T, db *testDB, clusterID uuid.UUID, eventType stri
 	require.Equalf(t, 0, count, "expected no %q event for cluster %s", eventType, clusterID)
 }
 
-// assertOutboxReconcileExists asserts a reconcile outbox row exists for the cluster.
-func assertOutboxReconcileExists(t *testing.T, db *testDB, clusterID uuid.UUID) {
-	t.Helper()
-
-	var count int
-	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
-	require.NoError(t, err)
-	require.Greaterf(t, count, 0, "expected a reconcile outbox row for cluster %s", clusterID)
-}
-
 // assertNoOutboxReconcile asserts no reconcile outbox row exists for the cluster.
 func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()

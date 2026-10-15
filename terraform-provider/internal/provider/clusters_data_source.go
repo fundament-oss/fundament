@@ -191,6 +191,8 @@ func clusterStatusToString(status organizationv1.ClusterStatus) string {
 		return "stopped"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING:
 		return "deleting"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_LOST:
+		return "lost"
 	default:
 		return "unspecified"
 	}

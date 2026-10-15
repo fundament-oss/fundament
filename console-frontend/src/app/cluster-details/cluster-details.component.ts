@@ -162,6 +162,7 @@ const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
     progressing: 'mintgroen',
     pending: 'lichtblauw',
     error: 'critical',
+    lost: 'critical',
     deleting: 'oranje',
   };
   return colors[syncState.shootStatus ?? ''] || 'neutral';

@@ -103,10 +103,32 @@ func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, er
 	return c.get(ctx, cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: clusterID})
 }
 
+// ForgetToken drops the user's cached token for the cluster if it is still
+// token, after the cluster rejected it. A token fetched since is kept.
+func (c *Cache) ForgetToken(userID uuid.UUID, clusterID, token string) {
+	c.forget(cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID}, token)
+}
+
+// ForgetProxyToken drops kube-api-proxy's own cached token for the cluster if
+// it is still token, after the cluster rejected it.
+func (c *Cache) ForgetProxyToken(clusterID, token string) {
+	c.forget(cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: clusterID}, token)
+}
+
+func (c *Cache) forget(key cacheKey, token string) {
+	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
+	if item == nil || item.Value().token != token {
+		return
+	}
+	c.tokens.Delete(key)
+	c.logger.Info("cluster rejected SA token, dropped it from the cache",
+		"service_account", key.saName, "cluster_id", key.clusterID)
+}
+
 // get uses a cached token if available and not expired, triggering an async
 // refresh if the token has passed 80% of its TTL.
 func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
-	item := c.tokens.Get(key)
+	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
 	if item != nil && !item.Value().expired() {
 		ct := item.Value()
 		// Proactive async refresh — don't block the request. A refresh that

@@ -352,7 +352,16 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.organizations.name AS organization_name
+    tenant.clusters.shoot_status,
+    tenant.organizations.name AS organization_name,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -363,14 +372,19 @@ ORDER BY
 `
 
 type ClusterListActiveRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	OrganizationName string
+	ID                 uuid.UUID
+	Name               string
+	Deleted            pgtype.Timestamptz
+	ShootStatus        pgtype.Text
+	OrganizationName   string
+	HasCompletedOutbox bool
 }
 
-// Used by periodic reconciliation to compare with Gardener state. Whether a
-// cluster missing in Gardener is repaired is OutboxInsertReconcile's decision.
+// Used by periodic reconciliation to compare with Gardener state.
+// has_completed_outbox: the cluster's own latest sync row completed, so a
+// missing Shoot is not one a queued or failing sync has yet to create. "Latest
+// sync row" is the cluster_sync_state view's row
+// (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
 func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
 	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
@@ -384,7 +398,9 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
+			&i.ShootStatus,
 			&i.OrganizationName,
+			&i.HasCompletedOutbox,
 		); err != nil {
 			return nil, err
 		}

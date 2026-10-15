@@ -24,6 +24,9 @@ const (
 	StatusError       ShootStatusType = "error"
 	StatusDeleting    ShootStatusType = "deleting"
 	StatusDeleted     ShootStatusType = "deleted"
+	// StatusLost is fundament's own: the Shoot of an active cluster
+	// disappeared after fundament had seen it. Gardener never reports it.
+	StatusLost ShootStatusType = "lost"
 )
 
 // OperationType is the Gardener operation a status was derived from
@@ -76,7 +79,9 @@ func (s *ShootStatus) equal(other *ShootStatus) bool {
 
 // Status message constants for consistent messaging.
 const (
-	MsgShootNotFound  = "Shoot not found in Gardener"
+	MsgShootNotFound = "Shoot not found in Gardener"
+	// MsgShootLost is the message of a lost cluster.
+	MsgShootLost      = "The cluster no longer exists in Gardener; changing the cluster creates it again, empty"
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
 	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
