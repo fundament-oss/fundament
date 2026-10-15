@@ -42,7 +42,6 @@ type Config struct {
 	// StatusProgressEventInterval is the shortest time between two recorded
 	// progress messages of one cluster while Gardener runs an operation.
 	StatusProgressEventInterval time.Duration `env:"STATUS_PROGRESS_EVENT_INTERVAL" envDefault:"1m"`
-	MaxRetries                  int32         `env:"MAX_RETRIES" envDefault:"10"`
 	// MaxReconcileDeletions is the most Shoots one reconcile pass starts to
 	// delete. A pass that would delete more deletes none and logs an error,
 	// since that points at a database problem rather than users deleting

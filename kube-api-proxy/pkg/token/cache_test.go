@@ -141,3 +141,32 @@ func TestCache_CancelledRequestIsNotCached(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "tok", tok)
 }
+
+// TestCache_ForgetDropsOnlyTheRejectedToken pins that a token a cluster
+// rejects, as after the cluster was created again, is fetched anew, while a
+// token fetched since is kept.
+func TestCache_ForgetDropsOnlyTheRejectedToken(t *testing.T) {
+	t.Parallel()
+	req := &fakeRequester{}
+	c := NewCache(req, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	userID := uuid.New()
+
+	userTok, err := c.GetToken(ctx, userID, "c1")
+	require.NoError(t, err)
+	proxyTok, err := c.GetProxyToken(ctx, "c1")
+	require.NoError(t, err)
+
+	c.ForgetToken(userID, "c1", "an older token")
+	c.ForgetProxyToken("c1", proxyTok)
+	_, err = c.GetToken(ctx, userID, "c1")
+	require.NoError(t, err)
+	_, err = c.GetProxyToken(ctx, "c1")
+	require.NoError(t, err)
+	assert.Len(t, req.calls, 3, "only the proxy token was fetched again")
+
+	c.ForgetToken(userID, "c1", userTok)
+	_, err = c.GetToken(ctx, userID, "c1")
+	require.NoError(t, err)
+	assert.Len(t, req.calls, 4, "the rejected user token was fetched again")
+}

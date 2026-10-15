@@ -35,6 +35,9 @@ const (
 	ClusterStatus_CLUSTER_STATUS_STOPPING     ClusterStatus = 6
 	ClusterStatus_CLUSTER_STATUS_STOPPED      ClusterStatus = 7
 	ClusterStatus_CLUSTER_STATUS_DELETING     ClusterStatus = 8 // Cluster deletion in progress
+	// The cluster no longer exists in Gardener, with its workloads and data. It
+	// is not recreated by itself; a change to the cluster creates it again, empty.
+	ClusterStatus_CLUSTER_STATUS_LOST ClusterStatus = 9
 )
 
 // Enum value maps for ClusterStatus.
@@ -49,6 +52,7 @@ var (
 		6: "CLUSTER_STATUS_STOPPING",
 		7: "CLUSTER_STATUS_STOPPED",
 		8: "CLUSTER_STATUS_DELETING",
+		9: "CLUSTER_STATUS_LOST",
 	}
 	ClusterStatus_value = map[string]int32{
 		"CLUSTER_STATUS_UNSPECIFIED":  0,
@@ -60,6 +64,7 @@ var (
 		"CLUSTER_STATUS_STOPPING":     6,
 		"CLUSTER_STATUS_STOPPED":      7,
 		"CLUSTER_STATUS_DELETING":     8,
+		"CLUSTER_STATUS_LOST":         9,
 	}
 )
 
@@ -407,7 +412,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\rcpu_request_m\x18\x1e \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\vcpuRequestM\x12,\n" +
 	"\vcpu_limit_m\x18( \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\tcpuLimitM:\xdb\x02\xbaH\xd7\x02\x1a\xb6\x01\n" +
 	"\x18memory_limit_gte_request\x12,memory_limit_mi must be >= memory_request_mi\x1al!has(this.memory_limit_mi) || !has(this.memory_request_mi) || this.memory_limit_mi >= this.memory_request_mi\x1a\x9b\x01\n" +
-	"\x15cpu_limit_gte_request\x12$cpu_limit_m must be >= cpu_request_m\x1a\\!has(this.cpu_limit_m) || !has(this.cpu_request_m) || this.cpu_limit_m >= this.cpu_request_m*\x97\x02\n" +
+	"\x15cpu_limit_gte_request\x12$cpu_limit_m must be >= cpu_request_m\x1a\\!has(this.cpu_limit_m) || !has(this.cpu_request_m) || this.cpu_limit_m >= this.cpu_request_m*\xb0\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\x01\x12\x1b\n" +
@@ -417,7 +422,8 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x14CLUSTER_STATUS_ERROR\x10\x05\x12\x1b\n" +
 	"\x17CLUSTER_STATUS_STOPPING\x10\x06\x12\x1a\n" +
 	"\x16CLUSTER_STATUS_STOPPED\x10\a\x12\x1b\n" +
-	"\x17CLUSTER_STATUS_DELETING\x10\b*\x8f\x01\n" +
+	"\x17CLUSTER_STATUS_DELETING\x10\b\x12\x17\n" +
+	"\x13CLUSTER_STATUS_LOST\x10\t*\x8f\x01\n" +
 	"\x0eNodePoolStatus\x12 \n" +
 	"\x1cNODE_POOL_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18NODE_POOL_STATUS_HEALTHY\x10\x01\x12\x1d\n" +

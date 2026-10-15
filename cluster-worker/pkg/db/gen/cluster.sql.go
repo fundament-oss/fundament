@@ -287,6 +287,7 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
     tenant.organizations.name AS organization_name,
     COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
 FROM
@@ -302,6 +303,7 @@ type ClusterListActiveRow struct {
 	ID                 uuid.UUID
 	Name               string
 	Deleted            pgtype.Timestamptz
+	ShootStatus        pgtype.Text
 	OrganizationName   string
 	HasCompletedOutbox bool
 }
@@ -320,6 +322,7 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
+			&i.ShootStatus,
 			&i.OrganizationName,
 			&i.HasCompletedOutbox,
 		); err != nil {

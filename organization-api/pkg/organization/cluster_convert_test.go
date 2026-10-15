@@ -29,6 +29,7 @@ func TestClusterStatusFromDB(t *testing.T) {
 		{name: "ready", deleted: active, status: shoot("ready"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
 		{name: "ready while an update rolls out", deleted: active, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING},
 		{name: "failed", deleted: active, status: shoot("error"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
+		{name: "shoot gone from Gardener", deleted: active, status: shoot("lost"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST},
 		{name: "deleted while updating", deleted: deleted, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
 	}
 
