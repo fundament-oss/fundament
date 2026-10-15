@@ -7,7 +7,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /ceph-rook-plugin ./plugins/storage/ceph-rook/
 
-FROM alpine:3.21
+FROM alpine:3.24
 
 RUN apk add --no-cache helm
 

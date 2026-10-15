@@ -94,6 +94,11 @@ async function runStep(doc: Document, step: DriveStep, signal: AbortSignal): Pro
     (inner ?? (el as HTMLElement | null))?.click();
     return;
   }
+  if (step.scroll) {
+    const el = await waitForElement(doc, step.scroll, signal);
+    el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return;
+  }
   if (step.submit) {
     const el = await waitForElement(doc, step.submit, signal);
     el?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

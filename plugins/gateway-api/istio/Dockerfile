@@ -7,7 +7,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -o /bin/gateway-api ./plugins/gateway-api/istio
 
-FROM alpine:3.22
+FROM alpine:3.24
 
 RUN apk add --no-cache helm
 

@@ -47,6 +47,18 @@ const (
 	ConstraintClusterOutboxFkProjectMember = "cluster_outbox_fk_project_member"
 	// ConstraintClusterOutboxUqNsReconcile is defined on tenant.cluster_outbox.
 	ConstraintClusterOutboxUqNsReconcile = "cluster_outbox_uq_ns_reconcile"
+	// ConstraintClustersCkDefaultCpuLimitGteRequest is defined on tenant.clusters.
+	ConstraintClustersCkDefaultCpuLimitGteRequest = "clusters_ck_default_cpu_limit_gte_request"
+	// ConstraintClustersCkDefaultCpuLimitM is defined on tenant.clusters.
+	ConstraintClustersCkDefaultCpuLimitM = "clusters_ck_default_cpu_limit_m"
+	// ConstraintClustersCkDefaultCpuRequestM is defined on tenant.clusters.
+	ConstraintClustersCkDefaultCpuRequestM = "clusters_ck_default_cpu_request_m"
+	// ConstraintClustersCkDefaultMemoryLimitGteRequest is defined on tenant.clusters.
+	ConstraintClustersCkDefaultMemoryLimitGteRequest = "clusters_ck_default_memory_limit_gte_request"
+	// ConstraintClustersCkDefaultMemoryLimitMi is defined on tenant.clusters.
+	ConstraintClustersCkDefaultMemoryLimitMi = "clusters_ck_default_memory_limit_mi"
+	// ConstraintClustersCkDefaultMemoryRequestMi is defined on tenant.clusters.
+	ConstraintClustersCkDefaultMemoryRequestMi = "clusters_ck_default_memory_request_mi"
 	// ConstraintClustersCkShootHealth is defined on tenant.clusters.
 	ConstraintClustersCkShootHealth = "clusters_ck_shoot_health"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
@@ -193,32 +205,18 @@ const (
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintNotesCkSingleRef is defined on dcim.notes.
 	ConstraintNotesCkSingleRef = "notes_ck_single_ref"
-	// ConstraintOrganizationLimitsCkCpuLimitGteRequest is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkCpuLimitGteRequest = "organization_limits_ck_cpu_limit_gte_request"
-	// ConstraintOrganizationLimitsCkDefaultCpuLimitM is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkDefaultCpuLimitM = "organization_limits_ck_default_cpu_limit_m"
-	// ConstraintOrganizationLimitsCkDefaultCpuRequestM is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkDefaultCpuRequestM = "organization_limits_ck_default_cpu_request_m"
-	// ConstraintOrganizationLimitsCkDefaultMemoryLimitMi is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkDefaultMemoryLimitMi = "organization_limits_ck_default_memory_limit_mi"
-	// ConstraintOrganizationLimitsCkDefaultMemoryRequestMi is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkDefaultMemoryRequestMi = "organization_limits_ck_default_memory_request_mi"
-	// ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodePoolsPerCluster = "organization_limits_ck_max_node_pools_per_cluster"
-	// ConstraintOrganizationLimitsCkMaxNodesPerCluster is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodesPerCluster = "organization_limits_ck_max_nodes_per_cluster"
-	// ConstraintOrganizationLimitsCkMaxNodesPerNodePool is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMaxNodesPerNodePool = "organization_limits_ck_max_nodes_per_node_pool"
-	// ConstraintOrganizationLimitsCkMemoryLimitGteRequest is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsCkMemoryLimitGteRequest = "organization_limits_ck_memory_limit_gte_request"
-	// ConstraintOrganizationLimitsFkOrganization is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsFkOrganization = "organization_limits_fk_organization"
-	// ConstraintOrganizationLimitsUqOrg is defined on tenant.organization_limits.
-	ConstraintOrganizationLimitsUqOrg = "organization_limits_uq_org"
+	// ConstraintOrganizationMachineQuotasCkMaxNodes is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasCkMaxNodes = "organization_machine_quotas_ck_max_nodes"
+	// ConstraintOrganizationMachineQuotasFkOrganization is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasFkOrganization = "organization_machine_quotas_fk_organization"
+	// ConstraintOrganizationMachineQuotasFkRegionMachineType is defined on tenant.organization_machine_quotas.
+	ConstraintOrganizationMachineQuotasFkRegionMachineType = "organization_machine_quotas_fk_region_machine_type"
 	// ConstraintOrganizationsCkAlias is defined on tenant.organizations.
 	ConstraintOrganizationsCkAlias = "organizations_ck_alias"
 	// ConstraintOrganizationsCkName is defined on tenant.organizations.
 	ConstraintOrganizationsCkName = "organizations_ck_name"
+	// ConstraintOrganizationsCkQuotaClusters is defined on tenant.organizations.
+	ConstraintOrganizationsCkQuotaClusters = "organizations_ck_quota_clusters"
 	// ConstraintOrganizationsUqName is defined on tenant.organizations.
 	ConstraintOrganizationsUqName = "organizations_uq_name"
 	// ConstraintOrganizationsUsersCkPermission is defined on tenant.organizations_users.
@@ -311,22 +309,6 @@ const (
 	ConstraintPortDefinitionsUqCatalogName = "port_definitions_uq_catalog_name"
 	// ConstraintPresetsUqName is defined on appstore.presets.
 	ConstraintPresetsUqName = "presets_uq_name"
-	// ConstraintProjectLimitsCkCpuLimitGteRequest is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkCpuLimitGteRequest = "project_limits_ck_cpu_limit_gte_request"
-	// ConstraintProjectLimitsCkDefaultCpuLimitM is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkDefaultCpuLimitM = "project_limits_ck_default_cpu_limit_m"
-	// ConstraintProjectLimitsCkDefaultCpuRequestM is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkDefaultCpuRequestM = "project_limits_ck_default_cpu_request_m"
-	// ConstraintProjectLimitsCkDefaultMemoryLimitMi is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkDefaultMemoryLimitMi = "project_limits_ck_default_memory_limit_mi"
-	// ConstraintProjectLimitsCkDefaultMemoryRequestMi is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkDefaultMemoryRequestMi = "project_limits_ck_default_memory_request_mi"
-	// ConstraintProjectLimitsCkMemoryLimitGteRequest is defined on tenant.project_limits.
-	ConstraintProjectLimitsCkMemoryLimitGteRequest = "project_limits_ck_memory_limit_gte_request"
-	// ConstraintProjectLimitsFkProject is defined on tenant.project_limits.
-	ConstraintProjectLimitsFkProject = "project_limits_fk_project"
-	// ConstraintProjectLimitsUqProject is defined on tenant.project_limits.
-	ConstraintProjectLimitsUqProject = "project_limits_uq_project"
 	// ConstraintProjectMembersCkRole is defined on tenant.project_members.
 	ConstraintProjectMembersCkRole = "project_members_ck_role"
 	// ConstraintProjectMembersFkProject is defined on tenant.project_members.
@@ -337,6 +319,18 @@ const (
 	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
 	// ConstraintProjectsCkAlias is defined on tenant.projects.
 	ConstraintProjectsCkAlias = "projects_ck_alias"
+	// ConstraintProjectsCkDefaultCpuLimitGteRequest is defined on tenant.projects.
+	ConstraintProjectsCkDefaultCpuLimitGteRequest = "projects_ck_default_cpu_limit_gte_request"
+	// ConstraintProjectsCkDefaultCpuLimitM is defined on tenant.projects.
+	ConstraintProjectsCkDefaultCpuLimitM = "projects_ck_default_cpu_limit_m"
+	// ConstraintProjectsCkDefaultCpuRequestM is defined on tenant.projects.
+	ConstraintProjectsCkDefaultCpuRequestM = "projects_ck_default_cpu_request_m"
+	// ConstraintProjectsCkDefaultMemoryLimitGteRequest is defined on tenant.projects.
+	ConstraintProjectsCkDefaultMemoryLimitGteRequest = "projects_ck_default_memory_limit_gte_request"
+	// ConstraintProjectsCkDefaultMemoryLimitMi is defined on tenant.projects.
+	ConstraintProjectsCkDefaultMemoryLimitMi = "projects_ck_default_memory_limit_mi"
+	// ConstraintProjectsCkDefaultMemoryRequestMi is defined on tenant.projects.
+	ConstraintProjectsCkDefaultMemoryRequestMi = "projects_ck_default_memory_request_mi"
 	// ConstraintProjectsFkCluster is defined on tenant.projects.
 	ConstraintProjectsFkCluster = "projects_fk_cluster"
 	// ConstraintProjectsUqClusterName is defined on tenant.projects.
@@ -391,6 +385,10 @@ const (
 	ConstraintUsersUqEmail = "users_uq_email"
 	// ConstraintUsersUqExternalRef is defined on tenant.users.
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
+	// ConstraintVerifyDefaults is defined on (constraint trigger).
+	ConstraintVerifyDefaults = "verify_defaults"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"
+	// ConstraintVerifyQuota is defined on (constraint trigger).
+	ConstraintVerifyQuota = "verify_quota"
 )

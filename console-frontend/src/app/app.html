@@ -1,5 +1,12 @@
 <!-- Above the app, not in it: this says something about the page you are on
      rather than about anything inside it. -->
+@if (pocUrl) {
+  <nldd-status-bar
+    variant="warning"
+    text="This is a test environment. Go to the Fundament PoC"
+    [attr.href]="pocUrl"
+  ></nldd-status-bar>
+}
 @if (apiVersionMismatch()) {
   <nldd-banner
     variant="warning"
@@ -384,6 +391,28 @@
                         <nldd-text-cell text="General"></nldd-text-cell>
                       </nldd-list-item>
                       <nldd-list-item
+                        [attr.href]="path('/members')"
+                        [attr.current]="isNavActive('/members') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/members')"
+                      >
+                        <nldd-icon-cell
+                          icon="users"
+                          size="20"
+                        ></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Members"></nldd-text-cell>
+                        @if (organizationDataService.memberCount() !== null) {
+                          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                          <nldd-text-cell
+                            width="fit-content"
+                            horizontal-alignment="right"
+                            color="secondary"
+                            [attr.text]="organizationDataService.memberCount()"
+                          ></nldd-text-cell>
+                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                        }
+                      </nldd-list-item>
+                      <nldd-list-item
                         [attr.href]="path('/clusters')"
                         [attr.current]="isClustersActive() ? '' : null"
                         (click)="navigateFromSidebar($event, '/clusters')"
@@ -454,28 +483,16 @@
                         <nldd-text-cell text="Logs"></nldd-text-cell>
                       </nldd-list-item>
                       <nldd-list-item
-                        [attr.href]="path('/members')"
-                        [attr.current]="isNavActive('/members') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/members')"
+                        [attr.href]="path('/quotas')"
+                        [attr.current]="isNavActive('/quotas') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/quotas')"
                       >
                         <nldd-icon-cell
-                          icon="users"
+                          icon="score-meter"
                           size="20"
                         ></nldd-icon-cell>
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Members"></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item
-                        [attr.href]="path('/limits')"
-                        [attr.current]="isNavActive('/limits') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/limits')"
-                      >
-                        <nldd-icon-cell
-                          icon="hand"
-                          size="20"
-                        ></nldd-icon-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Limits"></nldd-text-cell>
+                        <nldd-text-cell text="Quotas"></nldd-text-cell>
                       </nldd-list-item>
                     </nldd-list>
                     <!-- The projects themselves, not a link to a list of them: this

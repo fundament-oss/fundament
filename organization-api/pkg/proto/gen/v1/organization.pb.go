@@ -385,6 +385,317 @@ func (b0 UpdateOrganizationResponse_builder) Build() *UpdateOrganizationResponse
 	return m0
 }
 
+// GetOrganizationQuotas request. It has no fields: the organization is the
+// one named by the request's Fun-Organization header.
+type GetOrganizationQuotasRequest struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrganizationQuotasRequest) Reset() {
+	*x = GetOrganizationQuotasRequest{}
+	mi := &file_v1_organization_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrganizationQuotasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrganizationQuotasRequest) ProtoMessage() {}
+
+func (x *GetOrganizationQuotasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type GetOrganizationQuotasRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 GetOrganizationQuotasRequest_builder) Build() *GetOrganizationQuotasRequest {
+	m0 := &GetOrganizationQuotasRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
+// GetOrganizationQuotas response
+type GetOrganizationQuotasResponse struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Clusters *ClusterQuota          `protobuf:"bytes,10,opt,name=clusters"`
+	xxx_hidden_Nodes    *[]*NodeQuota          `protobuf:"bytes,20,rep,name=nodes"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetOrganizationQuotasResponse) Reset() {
+	*x = GetOrganizationQuotasResponse{}
+	mi := &file_v1_organization_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrganizationQuotasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrganizationQuotasResponse) ProtoMessage() {}
+
+func (x *GetOrganizationQuotasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetOrganizationQuotasResponse) GetClusters() *ClusterQuota {
+	if x != nil {
+		return x.xxx_hidden_Clusters
+	}
+	return nil
+}
+
+func (x *GetOrganizationQuotasResponse) GetNodes() []*NodeQuota {
+	if x != nil {
+		if x.xxx_hidden_Nodes != nil {
+			return *x.xxx_hidden_Nodes
+		}
+	}
+	return nil
+}
+
+func (x *GetOrganizationQuotasResponse) SetClusters(v *ClusterQuota) {
+	x.xxx_hidden_Clusters = v
+}
+
+func (x *GetOrganizationQuotasResponse) SetNodes(v []*NodeQuota) {
+	x.xxx_hidden_Nodes = &v
+}
+
+func (x *GetOrganizationQuotasResponse) HasClusters() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Clusters != nil
+}
+
+func (x *GetOrganizationQuotasResponse) ClearClusters() {
+	x.xxx_hidden_Clusters = nil
+}
+
+type GetOrganizationQuotasResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// How many clusters the organization may have, and has
+	Clusters *ClusterQuota
+	// Per region and machine type: how many nodes it may have, and has. Only
+	// offerings with a quota or with nodes in use are listed.
+	Nodes []*NodeQuota
+}
+
+func (b0 GetOrganizationQuotasResponse_builder) Build() *GetOrganizationQuotasResponse {
+	m0 := &GetOrganizationQuotasResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Clusters = b.Clusters
+	x.xxx_hidden_Nodes = &b.Nodes
+	return m0
+}
+
+// The cluster quota next to what counts against it
+type ClusterQuota struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Quota int32                  `protobuf:"varint,10,opt,name=quota"`
+	xxx_hidden_InUse int32                  `protobuf:"varint,20,opt,name=in_use,json=inUse"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ClusterQuota) Reset() {
+	*x = ClusterQuota{}
+	mi := &file_v1_organization_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClusterQuota) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClusterQuota) ProtoMessage() {}
+
+func (x *ClusterQuota) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ClusterQuota) GetQuota() int32 {
+	if x != nil {
+		return x.xxx_hidden_Quota
+	}
+	return 0
+}
+
+func (x *ClusterQuota) GetInUse() int32 {
+	if x != nil {
+		return x.xxx_hidden_InUse
+	}
+	return 0
+}
+
+func (x *ClusterQuota) SetQuota(v int32) {
+	x.xxx_hidden_Quota = v
+}
+
+func (x *ClusterQuota) SetInUse(v int32) {
+	x.xxx_hidden_InUse = v
+}
+
+type ClusterQuota_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Maximum number of clusters
+	Quota int32
+	// Clusters counted against it: live ones, and deleted ones until torn down
+	InUse int32
+}
+
+func (b0 ClusterQuota_builder) Build() *ClusterQuota {
+	m0 := &ClusterQuota{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Quota = b.Quota
+	x.xxx_hidden_InUse = b.InUse
+	return m0
+}
+
+// A node quota next to what counts against it
+type NodeQuota struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Region      string                 `protobuf:"bytes,10,opt,name=region"`
+	xxx_hidden_MachineType string                 `protobuf:"bytes,20,opt,name=machine_type,json=machineType"`
+	xxx_hidden_Quota       int32                  `protobuf:"varint,30,opt,name=quota"`
+	xxx_hidden_InUse       int32                  `protobuf:"varint,40,opt,name=in_use,json=inUse"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *NodeQuota) Reset() {
+	*x = NodeQuota{}
+	mi := &file_v1_organization_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeQuota) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeQuota) ProtoMessage() {}
+
+func (x *NodeQuota) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_organization_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *NodeQuota) GetRegion() string {
+	if x != nil {
+		return x.xxx_hidden_Region
+	}
+	return ""
+}
+
+func (x *NodeQuota) GetMachineType() string {
+	if x != nil {
+		return x.xxx_hidden_MachineType
+	}
+	return ""
+}
+
+func (x *NodeQuota) GetQuota() int32 {
+	if x != nil {
+		return x.xxx_hidden_Quota
+	}
+	return 0
+}
+
+func (x *NodeQuota) GetInUse() int32 {
+	if x != nil {
+		return x.xxx_hidden_InUse
+	}
+	return 0
+}
+
+func (x *NodeQuota) SetRegion(v string) {
+	x.xxx_hidden_Region = v
+}
+
+func (x *NodeQuota) SetMachineType(v string) {
+	x.xxx_hidden_MachineType = v
+}
+
+func (x *NodeQuota) SetQuota(v int32) {
+	x.xxx_hidden_Quota = v
+}
+
+func (x *NodeQuota) SetInUse(v int32) {
+	x.xxx_hidden_InUse = v
+}
+
+type NodeQuota_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Region name
+	Region string
+	// Machine type name
+	MachineType string
+	// Maximum nodes of this machine type in this region; 0 means none allowed
+	Quota int32
+	// The sum of the autoscale maxima of the organization's node pools of it
+	InUse int32
+}
+
+func (b0 NodeQuota_builder) Build() *NodeQuota {
+	m0 := &NodeQuota{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Region = b.Region
+	x.xxx_hidden_MachineType = b.MachineType
+	x.xxx_hidden_Quota = b.Quota
+	x.xxx_hidden_InUse = b.InUse
+	return m0
+}
+
 // ListOrganizations request
 type ListOrganizationsRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
@@ -394,7 +705,7 @@ type ListOrganizationsRequest struct {
 
 func (x *ListOrganizationsRequest) Reset() {
 	*x = ListOrganizationsRequest{}
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -406,7 +717,7 @@ func (x *ListOrganizationsRequest) String() string {
 func (*ListOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[5]
+	mi := &file_v1_organization_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +750,7 @@ type ListOrganizationsResponse struct {
 
 func (x *ListOrganizationsResponse) Reset() {
 	*x = ListOrganizationsResponse{}
-	mi := &file_v1_organization_proto_msgTypes[6]
+	mi := &file_v1_organization_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +762,7 @@ func (x *ListOrganizationsResponse) String() string {
 func (*ListOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[6]
+	mi := &file_v1_organization_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -490,746 +801,6 @@ func (b0 ListOrganizationsResponse_builder) Build() *ListOrganizationsResponse {
 	return m0
 }
 
-// OrganizationLimits holds Gardener cluster quotas and Kubernetes namespace LimitRange defaults
-type OrganizationLimits struct {
-	state                             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_MaxNodesPerCluster     int32                  `protobuf:"varint,10,opt,name=max_nodes_per_cluster,json=maxNodesPerCluster"`
-	xxx_hidden_MaxNodePoolsPerCluster int32                  `protobuf:"varint,20,opt,name=max_node_pools_per_cluster,json=maxNodePoolsPerCluster"`
-	xxx_hidden_MaxNodesPerNodePool    int32                  `protobuf:"varint,30,opt,name=max_nodes_per_node_pool,json=maxNodesPerNodePool"`
-	xxx_hidden_DefaultMemoryRequestMi int32                  `protobuf:"varint,40,opt,name=default_memory_request_mi,json=defaultMemoryRequestMi"`
-	xxx_hidden_DefaultMemoryLimitMi   int32                  `protobuf:"varint,50,opt,name=default_memory_limit_mi,json=defaultMemoryLimitMi"`
-	xxx_hidden_DefaultCpuRequestM     int32                  `protobuf:"varint,60,opt,name=default_cpu_request_m,json=defaultCpuRequestM"`
-	xxx_hidden_DefaultCpuLimitM       int32                  `protobuf:"varint,70,opt,name=default_cpu_limit_m,json=defaultCpuLimitM"`
-	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
-	XXX_presence                      [1]uint32
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
-}
-
-func (x *OrganizationLimits) Reset() {
-	*x = OrganizationLimits{}
-	mi := &file_v1_organization_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *OrganizationLimits) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OrganizationLimits) ProtoMessage() {}
-
-func (x *OrganizationLimits) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *OrganizationLimits) GetMaxNodesPerCluster() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodesPerCluster
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetMaxNodePoolsPerCluster() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodePoolsPerCluster
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetMaxNodesPerNodePool() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodesPerNodePool
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetDefaultMemoryRequestMi() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultMemoryRequestMi
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetDefaultMemoryLimitMi() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultMemoryLimitMi
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetDefaultCpuRequestM() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultCpuRequestM
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) GetDefaultCpuLimitM() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultCpuLimitM
-	}
-	return 0
-}
-
-func (x *OrganizationLimits) SetMaxNodesPerCluster(v int32) {
-	x.xxx_hidden_MaxNodesPerCluster = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 7)
-}
-
-func (x *OrganizationLimits) SetMaxNodePoolsPerCluster(v int32) {
-	x.xxx_hidden_MaxNodePoolsPerCluster = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 7)
-}
-
-func (x *OrganizationLimits) SetMaxNodesPerNodePool(v int32) {
-	x.xxx_hidden_MaxNodesPerNodePool = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 7)
-}
-
-func (x *OrganizationLimits) SetDefaultMemoryRequestMi(v int32) {
-	x.xxx_hidden_DefaultMemoryRequestMi = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
-}
-
-func (x *OrganizationLimits) SetDefaultMemoryLimitMi(v int32) {
-	x.xxx_hidden_DefaultMemoryLimitMi = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 7)
-}
-
-func (x *OrganizationLimits) SetDefaultCpuRequestM(v int32) {
-	x.xxx_hidden_DefaultCpuRequestM = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 7)
-}
-
-func (x *OrganizationLimits) SetDefaultCpuLimitM(v int32) {
-	x.xxx_hidden_DefaultCpuLimitM = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 7)
-}
-
-func (x *OrganizationLimits) HasMaxNodesPerCluster() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *OrganizationLimits) HasMaxNodePoolsPerCluster() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *OrganizationLimits) HasMaxNodesPerNodePool() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *OrganizationLimits) HasDefaultMemoryRequestMi() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *OrganizationLimits) HasDefaultMemoryLimitMi() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *OrganizationLimits) HasDefaultCpuRequestM() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
-}
-
-func (x *OrganizationLimits) HasDefaultCpuLimitM() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
-}
-
-func (x *OrganizationLimits) ClearMaxNodesPerCluster() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_MaxNodesPerCluster = 0
-}
-
-func (x *OrganizationLimits) ClearMaxNodePoolsPerCluster() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_MaxNodePoolsPerCluster = 0
-}
-
-func (x *OrganizationLimits) ClearMaxNodesPerNodePool() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_MaxNodesPerNodePool = 0
-}
-
-func (x *OrganizationLimits) ClearDefaultMemoryRequestMi() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_DefaultMemoryRequestMi = 0
-}
-
-func (x *OrganizationLimits) ClearDefaultMemoryLimitMi() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_DefaultMemoryLimitMi = 0
-}
-
-func (x *OrganizationLimits) ClearDefaultCpuRequestM() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
-	x.xxx_hidden_DefaultCpuRequestM = 0
-}
-
-func (x *OrganizationLimits) ClearDefaultCpuLimitM() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
-	x.xxx_hidden_DefaultCpuLimitM = 0
-}
-
-type OrganizationLimits_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	// Maximum total number of nodes across all node pools in a shoot cluster
-	MaxNodesPerCluster *int32
-	// Maximum number of node pools per shoot cluster
-	MaxNodePoolsPerCluster *int32
-	// Maximum number of nodes in a single node pool (autoscaler max)
-	MaxNodesPerNodePool *int32
-	// Default memory request applied to containers via LimitRange (mebibytes)
-	DefaultMemoryRequestMi *int32
-	// Default memory limit applied to containers via LimitRange (mebibytes)
-	DefaultMemoryLimitMi *int32
-	// Default CPU request applied to containers via LimitRange (millicores)
-	DefaultCpuRequestM *int32
-	// Default CPU limit applied to containers via LimitRange (millicores)
-	DefaultCpuLimitM *int32
-}
-
-func (b0 OrganizationLimits_builder) Build() *OrganizationLimits {
-	m0 := &OrganizationLimits{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.MaxNodesPerCluster != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 7)
-		x.xxx_hidden_MaxNodesPerCluster = *b.MaxNodesPerCluster
-	}
-	if b.MaxNodePoolsPerCluster != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 7)
-		x.xxx_hidden_MaxNodePoolsPerCluster = *b.MaxNodePoolsPerCluster
-	}
-	if b.MaxNodesPerNodePool != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 7)
-		x.xxx_hidden_MaxNodesPerNodePool = *b.MaxNodesPerNodePool
-	}
-	if b.DefaultMemoryRequestMi != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
-		x.xxx_hidden_DefaultMemoryRequestMi = *b.DefaultMemoryRequestMi
-	}
-	if b.DefaultMemoryLimitMi != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
-		x.xxx_hidden_DefaultMemoryLimitMi = *b.DefaultMemoryLimitMi
-	}
-	if b.DefaultCpuRequestM != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 7)
-		x.xxx_hidden_DefaultCpuRequestM = *b.DefaultCpuRequestM
-	}
-	if b.DefaultCpuLimitM != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 7)
-		x.xxx_hidden_DefaultCpuLimitM = *b.DefaultCpuLimitM
-	}
-	return m0
-}
-
-// GetOrganizationLimits request
-type GetOrganizationLimitsRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetOrganizationLimitsRequest) Reset() {
-	*x = GetOrganizationLimitsRequest{}
-	mi := &file_v1_organization_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetOrganizationLimitsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetOrganizationLimitsRequest) ProtoMessage() {}
-
-func (x *GetOrganizationLimitsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetOrganizationLimitsRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *GetOrganizationLimitsRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-type GetOrganizationLimitsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	// ID of the organization
-	Id string
-}
-
-func (b0 GetOrganizationLimitsRequest_builder) Build() *GetOrganizationLimitsRequest {
-	m0 := &GetOrganizationLimitsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	return m0
-}
-
-// GetOrganizationLimits response
-type GetOrganizationLimitsResponse struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Limits   *OrganizationLimits    `protobuf:"bytes,10,opt,name=limits"`
-	xxx_hidden_Defaults *OrganizationLimits    `protobuf:"bytes,20,opt,name=defaults"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *GetOrganizationLimitsResponse) Reset() {
-	*x = GetOrganizationLimitsResponse{}
-	mi := &file_v1_organization_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetOrganizationLimitsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetOrganizationLimitsResponse) ProtoMessage() {}
-
-func (x *GetOrganizationLimitsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *GetOrganizationLimitsResponse) GetLimits() *OrganizationLimits {
-	if x != nil {
-		return x.xxx_hidden_Limits
-	}
-	return nil
-}
-
-func (x *GetOrganizationLimitsResponse) GetDefaults() *OrganizationLimits {
-	if x != nil {
-		return x.xxx_hidden_Defaults
-	}
-	return nil
-}
-
-func (x *GetOrganizationLimitsResponse) SetLimits(v *OrganizationLimits) {
-	x.xxx_hidden_Limits = v
-}
-
-func (x *GetOrganizationLimitsResponse) SetDefaults(v *OrganizationLimits) {
-	x.xxx_hidden_Defaults = v
-}
-
-func (x *GetOrganizationLimitsResponse) HasLimits() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Limits != nil
-}
-
-func (x *GetOrganizationLimitsResponse) HasDefaults() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Defaults != nil
-}
-
-func (x *GetOrganizationLimitsResponse) ClearLimits() {
-	x.xxx_hidden_Limits = nil
-}
-
-func (x *GetOrganizationLimitsResponse) ClearDefaults() {
-	x.xxx_hidden_Defaults = nil
-}
-
-type GetOrganizationLimitsResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	// The current limits for the organization (absent fields mean no limit is set)
-	Limits *OrganizationLimits
-	// The platform default limits, used to pre-fill the form and by "Reset to defaults"
-	Defaults *OrganizationLimits
-}
-
-func (b0 GetOrganizationLimitsResponse_builder) Build() *GetOrganizationLimitsResponse {
-	m0 := &GetOrganizationLimitsResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Limits = b.Limits
-	x.xxx_hidden_Defaults = b.Defaults
-	return m0
-}
-
-// UpdateOrganizationLimits request
-type UpdateOrganizationLimitsRequest struct {
-	state                             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id                     string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_MaxNodesPerCluster     int32                  `protobuf:"varint,20,opt,name=max_nodes_per_cluster,json=maxNodesPerCluster"`
-	xxx_hidden_MaxNodePoolsPerCluster int32                  `protobuf:"varint,30,opt,name=max_node_pools_per_cluster,json=maxNodePoolsPerCluster"`
-	xxx_hidden_MaxNodesPerNodePool    int32                  `protobuf:"varint,40,opt,name=max_nodes_per_node_pool,json=maxNodesPerNodePool"`
-	xxx_hidden_DefaultMemoryRequestMi int32                  `protobuf:"varint,50,opt,name=default_memory_request_mi,json=defaultMemoryRequestMi"`
-	xxx_hidden_DefaultMemoryLimitMi   int32                  `protobuf:"varint,60,opt,name=default_memory_limit_mi,json=defaultMemoryLimitMi"`
-	xxx_hidden_DefaultCpuRequestM     int32                  `protobuf:"varint,70,opt,name=default_cpu_request_m,json=defaultCpuRequestM"`
-	xxx_hidden_DefaultCpuLimitM       int32                  `protobuf:"varint,80,opt,name=default_cpu_limit_m,json=defaultCpuLimitM"`
-	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
-	XXX_presence                      [1]uint32
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
-}
-
-func (x *UpdateOrganizationLimitsRequest) Reset() {
-	*x = UpdateOrganizationLimitsRequest{}
-	mi := &file_v1_organization_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateOrganizationLimitsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateOrganizationLimitsRequest) ProtoMessage() {}
-
-func (x *UpdateOrganizationLimitsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetId() string {
-	if x != nil {
-		return x.xxx_hidden_Id
-	}
-	return ""
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetMaxNodesPerCluster() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodesPerCluster
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetMaxNodePoolsPerCluster() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodePoolsPerCluster
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetMaxNodesPerNodePool() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxNodesPerNodePool
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetDefaultMemoryRequestMi() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultMemoryRequestMi
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetDefaultMemoryLimitMi() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultMemoryLimitMi
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetDefaultCpuRequestM() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultCpuRequestM
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) GetDefaultCpuLimitM() int32 {
-	if x != nil {
-		return x.xxx_hidden_DefaultCpuLimitM
-	}
-	return 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetId(v string) {
-	x.xxx_hidden_Id = v
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetMaxNodesPerCluster(v int32) {
-	x.xxx_hidden_MaxNodesPerCluster = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetMaxNodePoolsPerCluster(v int32) {
-	x.xxx_hidden_MaxNodePoolsPerCluster = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetMaxNodesPerNodePool(v int32) {
-	x.xxx_hidden_MaxNodesPerNodePool = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetDefaultMemoryRequestMi(v int32) {
-	x.xxx_hidden_DefaultMemoryRequestMi = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetDefaultMemoryLimitMi(v int32) {
-	x.xxx_hidden_DefaultMemoryLimitMi = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetDefaultCpuRequestM(v int32) {
-	x.xxx_hidden_DefaultCpuRequestM = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) SetDefaultCpuLimitM(v int32) {
-	x.xxx_hidden_DefaultCpuLimitM = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasMaxNodesPerCluster() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasMaxNodePoolsPerCluster() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasMaxNodesPerNodePool() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasDefaultMemoryRequestMi() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasDefaultMemoryLimitMi() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasDefaultCpuRequestM() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
-}
-
-func (x *UpdateOrganizationLimitsRequest) HasDefaultCpuLimitM() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearMaxNodesPerCluster() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_MaxNodesPerCluster = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearMaxNodePoolsPerCluster() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_MaxNodePoolsPerCluster = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearMaxNodesPerNodePool() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_MaxNodesPerNodePool = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearDefaultMemoryRequestMi() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_DefaultMemoryRequestMi = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearDefaultMemoryLimitMi() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
-	x.xxx_hidden_DefaultMemoryLimitMi = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearDefaultCpuRequestM() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
-	x.xxx_hidden_DefaultCpuRequestM = 0
-}
-
-func (x *UpdateOrganizationLimitsRequest) ClearDefaultCpuLimitM() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
-	x.xxx_hidden_DefaultCpuLimitM = 0
-}
-
-type UpdateOrganizationLimitsRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	// ID of the organization to update
-	Id string
-	// Maximum total number of nodes across all node pools in a shoot cluster
-	MaxNodesPerCluster *int32
-	// Maximum number of node pools per shoot cluster
-	MaxNodePoolsPerCluster *int32
-	// Maximum number of nodes in a single node pool (autoscaler max)
-	MaxNodesPerNodePool *int32
-	// Default memory request applied to containers via LimitRange (mebibytes)
-	DefaultMemoryRequestMi *int32
-	// Default memory limit applied to containers via LimitRange (mebibytes)
-	DefaultMemoryLimitMi *int32
-	// Default CPU request applied to containers via LimitRange (millicores)
-	DefaultCpuRequestM *int32
-	// Default CPU limit applied to containers via LimitRange (millicores)
-	DefaultCpuLimitM *int32
-}
-
-func (b0 UpdateOrganizationLimitsRequest_builder) Build() *UpdateOrganizationLimitsRequest {
-	m0 := &UpdateOrganizationLimitsRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Id = b.Id
-	if b.MaxNodesPerCluster != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 8)
-		x.xxx_hidden_MaxNodesPerCluster = *b.MaxNodesPerCluster
-	}
-	if b.MaxNodePoolsPerCluster != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 8)
-		x.xxx_hidden_MaxNodePoolsPerCluster = *b.MaxNodePoolsPerCluster
-	}
-	if b.MaxNodesPerNodePool != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
-		x.xxx_hidden_MaxNodesPerNodePool = *b.MaxNodesPerNodePool
-	}
-	if b.DefaultMemoryRequestMi != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
-		x.xxx_hidden_DefaultMemoryRequestMi = *b.DefaultMemoryRequestMi
-	}
-	if b.DefaultMemoryLimitMi != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 8)
-		x.xxx_hidden_DefaultMemoryLimitMi = *b.DefaultMemoryLimitMi
-	}
-	if b.DefaultCpuRequestM != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 8)
-		x.xxx_hidden_DefaultCpuRequestM = *b.DefaultCpuRequestM
-	}
-	if b.DefaultCpuLimitM != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
-		x.xxx_hidden_DefaultCpuLimitM = *b.DefaultCpuLimitM
-	}
-	return m0
-}
-
-// UpdateOrganizationLimits response
-type UpdateOrganizationLimitsResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateOrganizationLimitsResponse) Reset() {
-	*x = UpdateOrganizationLimitsResponse{}
-	mi := &file_v1_organization_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateOrganizationLimitsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateOrganizationLimitsResponse) ProtoMessage() {}
-
-func (x *UpdateOrganizationLimitsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_organization_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateOrganizationLimitsResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateOrganizationLimitsResponse_builder) Build() *UpdateOrganizationLimitsResponse {
-	m0 := &UpdateOrganizationLimitsResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_organization_proto protoreflect.FileDescriptor
 
 const file_v1_organization_proto_rawDesc = "" +
@@ -1252,79 +823,63 @@ const file_v1_organization_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x05alias\x18\x14 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x05alias\"\x1c\n" +
-	"\x1aUpdateOrganizationResponse\"\x1a\n" +
+	"\x1aUpdateOrganizationResponse\"\x1e\n" +
+	"\x1cGetOrganizationQuotasRequest\"\x8c\x01\n" +
+	"\x1dGetOrganizationQuotasResponse\x129\n" +
+	"\bclusters\x18\n" +
+	" \x01(\v2\x1d.organization.v1.ClusterQuotaR\bclusters\x120\n" +
+	"\x05nodes\x18\x14 \x03(\v2\x1a.organization.v1.NodeQuotaR\x05nodes\";\n" +
+	"\fClusterQuota\x12\x14\n" +
+	"\x05quota\x18\n" +
+	" \x01(\x05R\x05quota\x12\x15\n" +
+	"\x06in_use\x18\x14 \x01(\x05R\x05inUse\"s\n" +
+	"\tNodeQuota\x12\x16\n" +
+	"\x06region\x18\n" +
+	" \x01(\tR\x06region\x12!\n" +
+	"\fmachine_type\x18\x14 \x01(\tR\vmachineType\x12\x14\n" +
+	"\x05quota\x18\x1e \x01(\x05R\x05quota\x12\x15\n" +
+	"\x06in_use\x18( \x01(\x05R\x05inUse\"\x1a\n" +
 	"\x18ListOrganizationsRequest\"`\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +
 	"\rorganizations\x18\n" +
-	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations\"\xbe\x03\n" +
-	"\x12OrganizationLimits\x128\n" +
-	"\x15max_nodes_per_cluster\x18\n" +
-	" \x01(\x05B\x05\xaa\x01\x02\b\x01R\x12maxNodesPerCluster\x12A\n" +
-	"\x1amax_node_pools_per_cluster\x18\x14 \x01(\x05B\x05\xaa\x01\x02\b\x01R\x16maxNodePoolsPerCluster\x12;\n" +
-	"\x17max_nodes_per_node_pool\x18\x1e \x01(\x05B\x05\xaa\x01\x02\b\x01R\x13maxNodesPerNodePool\x12@\n" +
-	"\x19default_memory_request_mi\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\x16defaultMemoryRequestMi\x12<\n" +
-	"\x17default_memory_limit_mi\x182 \x01(\x05B\x05\xaa\x01\x02\b\x01R\x14defaultMemoryLimitMi\x128\n" +
-	"\x15default_cpu_request_m\x18< \x01(\x05B\x05\xaa\x01\x02\b\x01R\x12defaultCpuRequestM\x124\n" +
-	"\x13default_cpu_limit_m\x18F \x01(\x05B\x05\xaa\x01\x02\b\x01R\x10defaultCpuLimitM\"8\n" +
-	"\x1cGetOrganizationLimitsRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x9d\x01\n" +
-	"\x1dGetOrganizationLimitsResponse\x12;\n" +
-	"\x06limits\x18\n" +
-	" \x01(\v2#.organization.v1.OrganizationLimitsR\x06limits\x12?\n" +
-	"\bdefaults\x18\x14 \x01(\v2#.organization.v1.OrganizationLimitsR\bdefaults\"\x96\x04\n" +
-	"\x1fUpdateOrganizationLimitsRequest\x12\x18\n" +
-	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12?\n" +
-	"\x15max_nodes_per_cluster\x18\x14 \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x12maxNodesPerCluster\x12H\n" +
-	"\x1amax_node_pools_per_cluster\x18\x1e \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x16maxNodePoolsPerCluster\x12B\n" +
-	"\x17max_nodes_per_node_pool\x18( \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x13maxNodesPerNodePool\x12G\n" +
-	"\x19default_memory_request_mi\x182 \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x16defaultMemoryRequestMi\x12C\n" +
-	"\x17default_memory_limit_mi\x18< \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x14defaultMemoryLimitMi\x12?\n" +
-	"\x15default_cpu_request_m\x18F \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x12defaultCpuRequestM\x12;\n" +
-	"\x13default_cpu_limit_m\x18P \x01(\x05B\f\xbaH\x04\x1a\x02(\x01\xaa\x01\x02\b\x01R\x10defaultCpuLimitM\"\"\n" +
-	" UpdateOrganizationLimitsResponse2\xcf\x04\n" +
+	" \x03(\v2\x1d.organization.v1.OrganizationR\rorganizations2\xce\x03\n" +
 	"\x13OrganizationService\x12j\n" +
 	"\x11ListOrganizations\x12).organization.v1.ListOrganizationsRequest\x1a*.organization.v1.ListOrganizationsResponse\x12d\n" +
 	"\x0fGetOrganization\x12'.organization.v1.GetOrganizationRequest\x1a(.organization.v1.GetOrganizationResponse\x12m\n" +
 	"\x12UpdateOrganization\x12*.organization.v1.UpdateOrganizationRequest\x1a+.organization.v1.UpdateOrganizationResponse\x12v\n" +
-	"\x15GetOrganizationLimits\x12-.organization.v1.GetOrganizationLimitsRequest\x1a..organization.v1.GetOrganizationLimitsResponse\x12\x7f\n" +
-	"\x18UpdateOrganizationLimits\x120.organization.v1.UpdateOrganizationLimitsRequest\x1a1.organization.v1.UpdateOrganizationLimitsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x15GetOrganizationQuotas\x12-.organization.v1.GetOrganizationQuotasRequest\x1a..organization.v1.GetOrganizationQuotasResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_v1_organization_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_organization_proto_goTypes = []any{
-	(*Organization)(nil),                     // 0: organization.v1.Organization
-	(*GetOrganizationRequest)(nil),           // 1: organization.v1.GetOrganizationRequest
-	(*GetOrganizationResponse)(nil),          // 2: organization.v1.GetOrganizationResponse
-	(*UpdateOrganizationRequest)(nil),        // 3: organization.v1.UpdateOrganizationRequest
-	(*UpdateOrganizationResponse)(nil),       // 4: organization.v1.UpdateOrganizationResponse
-	(*ListOrganizationsRequest)(nil),         // 5: organization.v1.ListOrganizationsRequest
-	(*ListOrganizationsResponse)(nil),        // 6: organization.v1.ListOrganizationsResponse
-	(*OrganizationLimits)(nil),               // 7: organization.v1.OrganizationLimits
-	(*GetOrganizationLimitsRequest)(nil),     // 8: organization.v1.GetOrganizationLimitsRequest
-	(*GetOrganizationLimitsResponse)(nil),    // 9: organization.v1.GetOrganizationLimitsResponse
-	(*UpdateOrganizationLimitsRequest)(nil),  // 10: organization.v1.UpdateOrganizationLimitsRequest
-	(*UpdateOrganizationLimitsResponse)(nil), // 11: organization.v1.UpdateOrganizationLimitsResponse
-	(*timestamppb.Timestamp)(nil),            // 12: google.protobuf.Timestamp
+	(*Organization)(nil),                  // 0: organization.v1.Organization
+	(*GetOrganizationRequest)(nil),        // 1: organization.v1.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),       // 2: organization.v1.GetOrganizationResponse
+	(*UpdateOrganizationRequest)(nil),     // 3: organization.v1.UpdateOrganizationRequest
+	(*UpdateOrganizationResponse)(nil),    // 4: organization.v1.UpdateOrganizationResponse
+	(*GetOrganizationQuotasRequest)(nil),  // 5: organization.v1.GetOrganizationQuotasRequest
+	(*GetOrganizationQuotasResponse)(nil), // 6: organization.v1.GetOrganizationQuotasResponse
+	(*ClusterQuota)(nil),                  // 7: organization.v1.ClusterQuota
+	(*NodeQuota)(nil),                     // 8: organization.v1.NodeQuota
+	(*ListOrganizationsRequest)(nil),      // 9: organization.v1.ListOrganizationsRequest
+	(*ListOrganizationsResponse)(nil),     // 10: organization.v1.ListOrganizationsResponse
+	(*timestamppb.Timestamp)(nil),         // 11: google.protobuf.Timestamp
 }
 var file_v1_organization_proto_depIdxs = []int32{
-	12, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
+	11, // 0: organization.v1.Organization.created:type_name -> google.protobuf.Timestamp
 	0,  // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
-	0,  // 2: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
-	7,  // 3: organization.v1.GetOrganizationLimitsResponse.limits:type_name -> organization.v1.OrganizationLimits
-	7,  // 4: organization.v1.GetOrganizationLimitsResponse.defaults:type_name -> organization.v1.OrganizationLimits
-	5,  // 5: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
+	7,  // 2: organization.v1.GetOrganizationQuotasResponse.clusters:type_name -> organization.v1.ClusterQuota
+	8,  // 3: organization.v1.GetOrganizationQuotasResponse.nodes:type_name -> organization.v1.NodeQuota
+	0,  // 4: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
+	9,  // 5: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
 	1,  // 6: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
 	3,  // 7: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	8,  // 8: organization.v1.OrganizationService.GetOrganizationLimits:input_type -> organization.v1.GetOrganizationLimitsRequest
-	10, // 9: organization.v1.OrganizationService.UpdateOrganizationLimits:input_type -> organization.v1.UpdateOrganizationLimitsRequest
-	6,  // 10: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
-	2,  // 11: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	4,  // 12: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
-	9,  // 13: organization.v1.OrganizationService.GetOrganizationLimits:output_type -> organization.v1.GetOrganizationLimitsResponse
-	11, // 14: organization.v1.OrganizationService.UpdateOrganizationLimits:output_type -> organization.v1.UpdateOrganizationLimitsResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
+	5,  // 8: organization.v1.OrganizationService.GetOrganizationQuotas:input_type -> organization.v1.GetOrganizationQuotasRequest
+	10, // 9: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
+	2,  // 10: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
+	4,  // 11: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
+	6,  // 12: organization.v1.OrganizationService.GetOrganizationQuotas:output_type -> organization.v1.GetOrganizationQuotasResponse
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1341,7 +896,7 @@ func file_v1_organization_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_organization_proto_rawDesc), len(file_v1_organization_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

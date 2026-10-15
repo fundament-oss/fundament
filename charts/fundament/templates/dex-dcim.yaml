@@ -48,7 +48,7 @@ spec:
     spec:
       containers:
         - name: dex-dcim
-          image: ghcr.io/dexidp/dex:v2.41.1
+          image: ghcr.io/dexidp/dex:v2.46.0
           command:
             - /usr/local/bin/dex
             - serve

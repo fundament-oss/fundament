@@ -1,5 +1,6 @@
 data "fundament_project" "example" {
-  name = "my-project"
+  cluster_name = "my-cluster"
+  name         = "my-project"
 }
 
 data "fundament_project_namespaces" "all" {

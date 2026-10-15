@@ -16,7 +16,7 @@ import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
+import { PROJECT, NAMESPACE } from '../../connect/tokens';
 import { ListProjectNamespacesRequestSchema } from '../../generated/v1/namespace_pb';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
@@ -79,8 +79,6 @@ export default class AddProjectMemberSheetComponent {
   private fb = inject(FormBuilder);
 
   private projectClient = inject(PROJECT);
-
-  private memberClient = inject(MEMBER);
 
   private namespaceClient = inject(NAMESPACE);
 
@@ -185,9 +183,10 @@ export default class AddProjectMemberSheetComponent {
   }
 
   private async load(projectId: string) {
-    const [project, organization, namespaces] = await Promise.all([
+    const [project, organizationMembers, namespaces] = await Promise.all([
       firstValueFrom(this.projectClient.listProjectMembers({ projectId })).catch(() => null),
-      firstValueFrom(this.memberClient.listMembers({})).catch(() => null),
+      // Through the shared cache, so the sidebar's count is of this same list.
+      this.organizationData.reloadMembers().catch(() => null),
       firstValueFrom(
         this.namespaceClient.listProjectNamespaces(
           create(ListProjectNamespacesRequestSchema, { projectId }),
@@ -196,7 +195,7 @@ export default class AddProjectMemberSheetComponent {
     ]);
 
     const inProject = new Set((project?.members ?? []).map((member) => member.userId));
-    const available = (organization?.members ?? [])
+    const available = (organizationMembers ?? [])
       .filter((member) => member.externalRef && !inProject.has(member.userId))
       .map((member) => ({ id: member.userId, name: member.name }));
     this.availableUsers.set(available);

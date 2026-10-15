@@ -16,7 +16,7 @@ import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import PageNavService from '../page-nav.service';
 import { OverlayService } from '../overlay.service';
-import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
+import { PROJECT, NAMESPACE } from '../../connect/tokens';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import { NotificationService } from '../notification.service';
@@ -144,8 +144,6 @@ export default class ProjectMembersComponent implements OnInit {
 
   private idempotency = createIdempotencyRef();
 
-  private memberClient = inject(MEMBER);
-
   private namespaceClient = inject(NAMESPACE);
 
   private notificationService = inject(NotificationService);
@@ -235,14 +233,15 @@ export default class ProjectMembersComponent implements OnInit {
     this.error.set(null);
 
     try {
-      const [projectResponse, orgResponse] = await Promise.all([
+      const [projectResponse, orgMembers] = await Promise.all([
         firstValueFrom(this.projectClient.listProjectMembers({ projectId: this.projectId() })),
-        firstValueFrom(this.memberClient.listMembers({})),
+        // Through the shared cache, so the sidebar's count is of this same list.
+        this.organizationData.reloadMembers(),
       ]);
 
       // Build a map of org member id → org role string
       const orgRoleByUserId = new Map<string, string>();
-      orgResponse.members
+      orgMembers
         .filter((m) => m.externalRef)
         .forEach((m) => orgRoleByUserId.set(m.userId, m.permission));
 
@@ -271,7 +270,7 @@ export default class ProjectMembersComponent implements OnInit {
 
       // Available users for "add member": org members not yet in project
       const projectUserIds = new Set(projectResponse.members.map((m) => m.userId));
-      const available = orgResponse.members
+      const available = orgMembers
         .filter((m) => m.externalRef && !projectUserIds.has(m.userId))
         .map((m) => ({ id: m.userId, name: m.name }));
 

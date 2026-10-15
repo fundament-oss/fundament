@@ -15,6 +15,9 @@ infrastructure provisioned with metal-stack; see
 [**Clusters → Add cluster**](https://console.fundament.projects.digilab.network/clusters/add)
 starts a three-step wizard.
 
+How many clusters your organization may have is a [quota](#quotas) set by the
+platform operator; a new organization may have one.
+
 ### Step 1: Cluster
 
 | Field | Notes |
@@ -71,22 +74,8 @@ longer needed, within that range. The **Nodes** tab shows each pool's current
 node count alongside its bounds. There is no manual "set the node count to N"
 operation; set the minimum instead.
 
-### Interaction with organization limits
-
-The node limits on **Organization → Limits** bound what a cluster may ask for,
-and they behave differently per limit:
-
-- **Maximum nodes per node pool** silently clamps each pool's maximum (and its
-  minimum, if that would end up above the clamped maximum). A pool asking for
-  more nodes than the limit allows is applied at the limit rather than
-  rejected.
-- **Maximum node pools per cluster** and **maximum nodes per cluster** (the sum
-  of all clamped pool maxima) reject the change: the cluster fails to apply
-  with an "organization node limit exceeded" error instead of silently
-  shrinking.
-
 A cluster with no node pools at all still gets one default worker pool, sized
-1 to 3 nodes.
+1 to 3 nodes. That pool is not counted against your [quota](#quotas).
 
 ### Applying changes
 
@@ -95,6 +84,44 @@ them and the platform reconciles the cluster's worker pools with Gardener in
 the background. Nodes are replaced rather than modified: adding, removing or
 shrinking a pool takes the nodes involved out of service, so drain-sensitive
 workloads should have a PodDisruptionBudget.
+
+## Quotas
+
+The platform operator sets, per organization, how many clusters it may have and
+how many nodes of each machine type it may have in a region. Both are enforced
+when something new is made, never against what already runs:
+
+- **Clusters.** Adding a cluster beyond the quota fails with a message saying
+  so. A new organization may have one cluster. A deleted cluster counts until
+  the platform has torn it down, so the room it took comes back a little after
+  the delete.
+- **Nodes.** Per region and machine type, the maximum size of every node pool
+  with that machine type counts, across all the organization's clusters,
+  whether or not the autoscaler ever reaches it. A new organization has no node
+  quota at all, so its first node pool needs the operator first: without a
+  quota the refusal says so. With one, creating a pool, or raising a pool's
+  maximum, that would take the sum over the quota is refused with a message
+  naming the sum and the quota. Pools on a deleted cluster count until the
+  cluster is torn down.
+
+A quota lowered below what you already run changes nothing about it: your
+clusters and pools keep running, and a pool may still be shrunk. It only stops
+the next cluster, or the next new or larger pool, until there is room again.
+
+**Organization → Quotas** shows every quota next to what counts against it:
+the clusters you have, and per region and machine type the sum of your pools'
+maximum sizes. It is read-only. To request an increase in quotas, contact a
+Fundament operator; the [funops](../developer/fundament/funops.md) page says
+what they run.
+
+## Defaults
+
+The **Defaults** block sets the resource requests and limits containers on this
+cluster get for each request or limit they leave unset. Every namespace
+Fundament manages on the cluster inherits them (one created straight on the
+cluster with `kubectl` gets nothing), and a project may narrow them but never
+widen them. See
+[Defaults](./namespaces.md#defaults).
 
 ## Namespaces
 

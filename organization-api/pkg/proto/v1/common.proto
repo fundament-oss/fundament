@@ -2,6 +2,7 @@ edition = "2023";
 
 package organization.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/go_features.proto";
 
 option features.(pb.go).api_level = API_OPAQUE;
@@ -34,4 +35,39 @@ enum NodePoolStatus {
   NODE_POOL_STATUS_HEALTHY = 1;
   NODE_POOL_STATUS_DEGRADED = 2;
   NODE_POOL_STATUS_UNHEALTHY = 3;
+}
+
+// Per-container resource defaults, applied to namespaces as the
+// fundament-defaults LimitRange. An absent field means no default is set.
+message ContainerDefaults {
+  option (buf.validate.message).cel = {
+    id: "memory_limit_gte_request"
+    message: "memory_limit_mi must be >= memory_request_mi"
+    expression: "!has(this.memory_limit_mi) || !has(this.memory_request_mi) || this.memory_limit_mi >= this.memory_request_mi"
+  };
+  option (buf.validate.message).cel = {
+    id: "cpu_limit_gte_request"
+    message: "cpu_limit_m must be >= cpu_request_m"
+    expression: "!has(this.cpu_limit_m) || !has(this.cpu_request_m) || this.cpu_limit_m >= this.cpu_request_m"
+  };
+  // Memory request, in mebibytes
+  int32 memory_request_mi = 10 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // Memory limit, in mebibytes
+  int32 memory_limit_mi = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // CPU request, in millicores
+  int32 cpu_request_m = 30 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
+  // CPU limit, in millicores
+  int32 cpu_limit_m = 40 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).int32 = {gte: 1}
+  ];
 }

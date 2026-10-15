@@ -1,0 +1,11 @@
+---
+import Default from '@astrojs/starlight/components/PageFrame.astro';
+import EnvironmentBanner from '../EnvironmentBanner.astro';
+---
+
+<EnvironmentBanner fixed />
+<Default>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  <slot />
+</Default>

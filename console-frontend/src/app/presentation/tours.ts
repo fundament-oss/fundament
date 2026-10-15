@@ -284,14 +284,15 @@ const intro: Tour = {
       route: '/projects/pr-burgerzaken/members',
     },
     {
-      id: 'project-limits',
-      title: loc('Resource limits', 'Resource limits'),
+      id: 'project-defaults',
+      title: loc('Standaardwaarden', 'Resource defaults'),
       lead: loc(
-        'Standaard resource requests en limits per project.',
-        'Default resource requests and limits, per project.',
+        'Standaard resource requests en limits per project, binnen die van het cluster.',
+        "Default resource requests and limits for each project, capped by the cluster's defaults.",
       ),
-      route: '/projects/pr-burgerzaken/limits',
+      route: '/projects/pr-burgerzaken/general',
       skippable: true,
+      drive: [{ scroll: 'app-project-defaults-block' }],
     },
     storefrontSlide(
       loc(
@@ -709,7 +710,7 @@ const developer: Tour = {
       route: '/projects/pr-burgerzaken/namespaces',
     },
     {
-      id: 'limits',
+      id: 'defaults',
       title: loc('Binnen welke grenzen', 'The limits you work within'),
       lead: loc(
         'Standaard requests en limits, zodat één dienst nooit het cluster opeet.',
@@ -721,7 +722,7 @@ const developer: Tour = {
           'You see the limits up front, instead of discovering them during an incident.',
         ),
       ],
-      route: '/projects/pr-burgerzaken/limits',
+      route: '/projects/pr-burgerzaken/general',
       skippable: true,
     },
     {
@@ -1009,13 +1010,33 @@ const securityOfficer: Tour = {
       route: '/clusters/cl-production',
     },
     {
-      id: 'org-limits',
-      title: loc('Grenzen die centraal vastliggen', 'Limits fixed centrally'),
+      id: 'cluster-defaults',
+      title: loc('Grenzen per cluster', 'Limits set per cluster'),
       lead: loc(
-        'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
-        'Maximum nodes and default resource limits apply across the whole organisation.',
+        'Elk cluster heeft eigen standaardwaarden voor requests en limits; waar het cluster een waarde zet, kan een project alleen lager.',
+        'Every cluster has its own default requests and limits; wherever the cluster sets one, a project can only go lower.',
       ),
-      route: '/limits',
+      route: '/clusters/cl-production',
+      skippable: true,
+      // The block sits below the status, usage and node pools; the slide
+      // before this one is on the same page, so nothing scrolls on its own.
+      drive: [{ scroll: 'app-cluster-defaults-block' }],
+    },
+    {
+      id: 'quotas',
+      title: loc('Wat je mag bouwen', 'What you may build'),
+      lead: loc(
+        'De beheerder van het platform stelt per organisatie in hoeveel clusters en nodes er mogen zijn; hier zie je waar je staat.',
+        'The platform operator sets how many clusters and nodes an organization may have; this is where you see where you stand.',
+      ),
+      bullets: [
+        loc(
+          'Een verlaagd quotum raakt niets dat draait, alleen wat er nog bij zou komen.',
+          'A lowered quota touches nothing that runs, only what would be added.',
+        ),
+        loc('Meer nodig? Vraag het een Fundament-operator.', 'Need more? Ask a Fundament operator.'),
+      ],
+      route: '/quotas',
       skippable: true,
     },
     {

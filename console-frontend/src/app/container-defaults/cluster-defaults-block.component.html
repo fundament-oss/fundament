@@ -1,0 +1,115 @@
+<nldd-box>
+  <nldd-container padding="16">
+    <nldd-title size="5">
+      <h3>Defaults</h3>
+      <!-- Disabled until the stored values are known: a draft seeded from
+           nothing would save as "clear everything". -->
+      <nldd-button
+        slot="end"
+        type="button"
+        (click)="openEdit()"
+        [attr.disabled]="canEdit() ? null : ''"
+        text="Edit"
+        start-icon="pencil"
+        variant="secondary"
+        size="sm"
+      ></nldd-button>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <nldd-rich-text spacing="flat">
+      <p>
+        Default resource requests and limits, each filling in what a container leaves unset, applied to
+        every namespace on this cluster through a LimitRange.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="16"></nldd-spacer>
+    @if (loadError(); as message) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="message"
+      ></nldd-banner>
+    } @else if (loading()) {
+      <!-- Same shape as the summary it will turn into, so the box does not
+           change height under you when the answer arrives. -->
+      <nldd-inline-dialog
+        variant="loading"
+        text="Loading defaults..."
+      ></nldd-inline-dialog>
+    } @else {
+      <app-container-defaults-summary
+        [sections]="sections()"
+        (edit)="openEdit()"
+      ></app-container-defaults-summary>
+    }
+  </nldd-container>
+</nldd-box>
+<nldd-sheet
+  #editSheet
+  appSheetSync
+  [show]="showEdit()"
+  accessible-label="Edit cluster defaults"
+  placement="right"
+  (close)="showEdit.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit defaults"
+      collapse-anchor="edit-cluster-defaults-title"
+      dismiss-text="Cancel"
+      (dismiss)="showEdit.set(false)"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title
+        id="edit-cluster-defaults-title"
+        size="3"
+      >
+        <h1>Edit defaults</h1>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- Here, not on the page behind it: this is where the changes are, and
+           closing the sheet now would lose them. -->
+      @if (saveError(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your changes are not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      <nldd-form
+        (submit)="save($event)"
+        (keydown.enter)="save($event)"
+      >
+        <app-resource-defaults-section
+          scope="cluster"
+          [disabled]="saving()"
+          [copy]="MEMORY_SECTION"
+          [seed]="memorySeed()"
+          [(mode)]="draftMemoryMode"
+          [(request)]="draftMemoryRequestMi"
+          [(limit)]="draftMemoryLimitMi"
+        ></app-resource-defaults-section>
+        <app-resource-defaults-section
+          scope="cluster"
+          [disabled]="saving()"
+          [copy]="CPU_SECTION"
+          [seed]="cpuSeed()"
+          [(mode)]="draftCpuMode"
+          [(request)]="draftCpuRequestM"
+          [(limit)]="draftCpuLimitM"
+        ></app-resource-defaults-section>
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="save()"
+            text="Save defaults"
+            [attr.loading]="saving() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

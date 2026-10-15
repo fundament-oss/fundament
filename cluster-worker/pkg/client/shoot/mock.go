@@ -71,7 +71,7 @@ type MockClusterRole struct {
 
 // MockLimitRange is the in-memory representation of the managed LimitRange.
 type MockLimitRange struct {
-	Defaults LimitDefaults
+	Defaults ContainerDefaults
 	Labels   map[string]string
 }
 
@@ -411,7 +411,7 @@ func (m *MockShootAccess) HasCRB(clusterID, userID uuid.UUID) bool {
 	return ok
 }
 
-func (m *MockShootAccess) EnsureLimitRange(_ context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
+func (m *MockShootAccess) EnsureLimitRange(_ context.Context, clusterID uuid.UUID, namespace string, defaults ContainerDefaults, labels map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -20,7 +20,7 @@ WHERE EXISTS (
     FROM tenant.organizations
     WHERE id = $1
       AND deleted IS NULL
-    FOR SHARE
+    FOR NO KEY UPDATE
 )
 AND NOT EXISTS (
     SELECT 1
@@ -44,10 +44,13 @@ type ClusterCreateParams struct {
 // Create a cluster if no active or pending-delete cluster with the same name exists.
 // Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 // Returns NULL if blocked (caller should check for pgx.ErrNoRows).
-// The organization must be live. FOR SHARE waits for a funops organization
-// delete holding FOR UPDATE on the row; under read committed the deleted check
-// is then re-evaluated against the committed row, so the insert finds nothing
-// instead of creating a cluster nobody can manage.
+// The organization must be live. FOR NO KEY UPDATE waits for a funops
+// organization delete holding FOR UPDATE on the row; under read committed the
+// deleted check is then re-evaluated against the committed row, so the insert
+// finds nothing instead of creating a cluster nobody can manage. It also
+// serialises cluster creation per organization, which the quota trigger
+// (clusters_tr_verify_quota) relies on: it takes the same lock, and two
+// inserts that first held FOR SHARE would deadlock upgrading to it.
 // region_id/kubernetes_version_id are the catalog references (expand phase: the
 // legacy text columns are written alongside them).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
@@ -82,6 +85,75 @@ type ClusterCreateSyncRequestedEventParams struct {
 func (q *Queries) ClusterCreateSyncRequestedEvent(ctx context.Context, arg ClusterCreateSyncRequestedEventParams) error {
 	_, err := q.db.Exec(ctx, clusterCreateSyncRequestedEvent, arg.ClusterID, arg.SyncAction)
 	return err
+}
+
+const clusterDefaultsGet = `-- name: ClusterDefaultsGet :one
+SELECT
+    default_memory_request_mi,
+    default_memory_limit_mi,
+    default_cpu_request_m,
+    default_cpu_limit_m
+FROM tenant.clusters
+WHERE id = $1
+  AND deleted IS NULL
+`
+
+type ClusterDefaultsGetParams struct {
+	ID uuid.UUID
+}
+
+type ClusterDefaultsGetRow struct {
+	DefaultMemoryRequestMi pgtype.Int4
+	DefaultMemoryLimitMi   pgtype.Int4
+	DefaultCpuRequestM     pgtype.Int4
+	DefaultCpuLimitM       pgtype.Int4
+}
+
+// The cluster's per-container resource defaults. A NULL column means no
+// default is set for that field.
+func (q *Queries) ClusterDefaultsGet(ctx context.Context, arg ClusterDefaultsGetParams) (ClusterDefaultsGetRow, error) {
+	row := q.db.QueryRow(ctx, clusterDefaultsGet, arg.ID)
+	var i ClusterDefaultsGetRow
+	err := row.Scan(
+		&i.DefaultMemoryRequestMi,
+		&i.DefaultMemoryLimitMi,
+		&i.DefaultCpuRequestM,
+		&i.DefaultCpuLimitM,
+	)
+	return i, err
+}
+
+const clusterDefaultsUpdate = `-- name: ClusterDefaultsUpdate :execrows
+UPDATE tenant.clusters
+SET default_memory_request_mi = $1,
+    default_memory_limit_mi   = $2,
+    default_cpu_request_m     = $3,
+    default_cpu_limit_m       = $4
+WHERE id = $5 AND deleted IS NULL
+`
+
+type ClusterDefaultsUpdateParams struct {
+	DefaultMemoryRequestMi pgtype.Int4
+	DefaultMemoryLimitMi   pgtype.Int4
+	DefaultCpuRequestM     pgtype.Int4
+	DefaultCpuLimitM       pgtype.Int4
+	ID                     uuid.UUID
+}
+
+// Replaces all four defaults: a NULL argument clears that default. Lowering a
+// default below an active project's raises cluster_defaults_below_project.
+func (q *Queries) ClusterDefaultsUpdate(ctx context.Context, arg ClusterDefaultsUpdateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterDefaultsUpdate,
+		arg.DefaultMemoryRequestMi,
+		arg.DefaultMemoryLimitMi,
+		arg.DefaultCpuRequestM,
+		arg.DefaultCpuLimitM,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const clusterDelete = `-- name: ClusterDelete :execrows

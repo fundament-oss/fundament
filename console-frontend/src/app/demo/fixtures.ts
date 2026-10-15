@@ -3,7 +3,10 @@
 // out of the production bundle.
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { OrganizationSchema, OrganizationLimitsSchema } from '../../generated/v1/organization_pb';
+import {
+  GetOrganizationQuotasResponseSchema,
+  OrganizationSchema,
+} from '../../generated/v1/organization_pb';
 import {
   ListClustersResponse_ClusterSummarySchema,
   ClusterDetailsSchema,
@@ -17,7 +20,6 @@ import { NamespaceSchema } from '../../generated/v1/namespace_pb';
 import {
   ProjectSchema,
   ProjectMemberSchema,
-  ProjectLimitsSchema,
   ProjectMemberRole,
 } from '../../generated/v1/project_pb';
 import { MemberSchema } from '../../generated/v1/member_pb';
@@ -33,7 +35,7 @@ import {
   type PluginDetail,
   type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
+import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
@@ -57,15 +59,46 @@ export const organization = create(OrganizationSchema, {
   created: daysAgo(420),
 });
 
-export const organizationLimits = create(OrganizationLimitsSchema, {
-  maxNodesPerCluster: 20,
-  maxNodePoolsPerCluster: 5,
-  maxNodesPerNodePool: 10,
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 250,
-  defaultCpuLimitM: 500,
+// What the operator allowed the organization, next to what its pools use: the
+// maxima of the pools below add up per machine type. Every state the page can
+// show is in here: room to spare, all used, a quota lowered under what runs
+// (e2-standard-2), and an offering in use with no quota at all (e2-highmem-2,
+// staging's batch pool from before quotas existed; the type is in the
+// catalog so the Nodes editor can show it). The clusters line is
+// counted live by the mock, as the demo can add clusters.
+export const organizationQuotas = create(GetOrganizationQuotasResponseSchema, {
+  clusters: { quota: 3, inUse: 0 },
+  nodes: [
+    { region: 'local', machineType: 'e2-highmem-2', quota: 0, inUse: 2 },
+    { region: 'local', machineType: 'e2-highmem-4', quota: 3, inUse: 3 },
+    { region: 'local', machineType: 'e2-standard-2', quota: 3, inUse: 4 },
+    { region: 'local', machineType: 'e2-standard-4', quota: 10, inUse: 6 },
+    { region: 'nl-north-1', machineType: 'e2-standard-4', quota: 8, inUse: 0 },
+  ],
 });
+
+// Per cluster now, keyed by cluster id: production runs tighter than staging,
+// which is the point of moving them off the organization.
+export const clusterDefaults = new Map([
+  [
+    'cl-production',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 256,
+      memoryLimitMi: 512,
+      cpuRequestM: 250,
+      cpuLimitM: 500,
+    }),
+  ],
+  [
+    'cl-staging',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 128,
+      memoryLimitMi: 1024,
+      cpuRequestM: 100,
+      cpuLimitM: 1000,
+    }),
+  ],
+]);
 
 // --- Clusters -------------------------------------------------------------
 
@@ -85,7 +118,7 @@ export const clusterSummaries = [
     status: ClusterStatus.RUNNING,
     region: 'local',
     projectCount: 1,
-    nodePoolCount: 1,
+    nodePoolCount: 2,
   }),
 ];
 
@@ -149,6 +182,18 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
         status: NodePoolStatus.HEALTHY,
         version: '1.33.0',
       }),
+      // From before quotas existed: its machine type has no quota row, and
+      // the Quotas page says "2 in use, none allowed".
+      create(NodePoolSchema, {
+        id: 'np-batch',
+        name: 'batch',
+        machineType: 'e2-highmem-2',
+        currentNodes: 1,
+        minNodes: 1,
+        maxNodes: 2,
+        status: NodePoolStatus.HEALTHY,
+        version: '1.33.0',
+      }),
     ],
   ],
 ]);
@@ -172,6 +217,7 @@ const machineType = (name: string, lcpu: number, memoryGib: number) =>
 const MACHINE_TYPES = [
   machineType('e2-standard-2', 2, 8),
   machineType('e2-standard-4', 4, 16),
+  machineType('e2-highmem-2', 2, 16),
   machineType('e2-highmem-4', 4, 32),
 ];
 
@@ -344,31 +390,33 @@ export const projectMembersByProject = new Map([
   ],
 ]);
 
-export const projectLimits = create(ProjectLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 250,
-  defaultCpuLimitM: 500,
-});
+// Per project, keyed by project id. Burgerzaken tightens the CPU limit its
+// cluster allows and inherits the rest; a project with no entry inherits
+// everything.
+export const projectDefaults = new Map([
+  [
+    'pr-burgerzaken',
+    create(ContainerDefaultsSchema, {
+      cpuLimitM: 250,
+    }),
+  ],
+  [
+    'pr-belastingen',
+    create(ContainerDefaultsSchema, {
+      memoryRequestMi: 128,
+      memoryLimitMi: 256,
+    }),
+  ],
+]);
 
-// The platform's starting values, hardcoded in organization-api's
-// limit_defaults.go. Handing back the saved limits instead would make every
-// project look like it is still on the platform's numbers.
-export const platformProjectLimits = create(ProjectLimitsSchema, {
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 100,
-  defaultCpuLimitM: 500,
-});
-
-export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
-  maxNodesPerCluster: 10,
-  maxNodePoolsPerCluster: 5,
-  maxNodesPerNodePool: 5,
-  defaultMemoryRequestMi: 256,
-  defaultMemoryLimitMi: 512,
-  defaultCpuRequestM: 100,
-  defaultCpuLimitM: 500,
+// The platform's suggestion, hardcoded in organization-api's
+// suggested_defaults.go. Handing back the saved values instead would make every
+// cluster look like it is still on the platform's numbers.
+export const suggestedDefaults = create(ContainerDefaultsSchema, {
+  memoryRequestMi: 256,
+  memoryLimitMi: 512,
+  cpuRequestM: 100,
+  cpuLimitM: 500,
 });
 
 // --- Metrics --------------------------------------------------------------
@@ -848,7 +896,7 @@ export const members = [
     externalRef: 'demi',
     email: 'demi@fundament.example',
     permission: 'admin',
-    status: 'active',
+    status: 'accepted',
     created: daysAgo(420),
   }),
   create(MemberSchema, {
@@ -857,8 +905,8 @@ export const members = [
     name: 'Sanne Bakker',
     externalRef: 'sanne',
     email: 'sanne@fundament.example',
-    permission: 'member',
-    status: 'active',
+    permission: 'viewer',
+    status: 'accepted',
     created: daysAgo(300),
   }),
   create(MemberSchema, {
@@ -867,8 +915,8 @@ export const members = [
     name: 'Omar El Amrani',
     externalRef: 'omar',
     email: 'omar@fundament.example',
-    permission: 'member',
-    status: 'active',
+    permission: 'viewer',
+    status: 'accepted',
     created: daysAgo(30),
   }),
 ];

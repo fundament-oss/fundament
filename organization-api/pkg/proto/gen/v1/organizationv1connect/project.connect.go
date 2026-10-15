@@ -66,12 +66,12 @@ const (
 	// ProjectServiceRemoveProjectMemberProcedure is the fully-qualified name of the ProjectService's
 	// RemoveProjectMember RPC.
 	ProjectServiceRemoveProjectMemberProcedure = "/organization.v1.ProjectService/RemoveProjectMember"
-	// ProjectServiceGetProjectLimitsProcedure is the fully-qualified name of the ProjectService's
-	// GetProjectLimits RPC.
-	ProjectServiceGetProjectLimitsProcedure = "/organization.v1.ProjectService/GetProjectLimits"
-	// ProjectServiceUpdateProjectLimitsProcedure is the fully-qualified name of the ProjectService's
-	// UpdateProjectLimits RPC.
-	ProjectServiceUpdateProjectLimitsProcedure = "/organization.v1.ProjectService/UpdateProjectLimits"
+	// ProjectServiceGetProjectDefaultsProcedure is the fully-qualified name of the ProjectService's
+	// GetProjectDefaults RPC.
+	ProjectServiceGetProjectDefaultsProcedure = "/organization.v1.ProjectService/GetProjectDefaults"
+	// ProjectServiceUpdateProjectDefaultsProcedure is the fully-qualified name of the ProjectService's
+	// UpdateProjectDefaults RPC.
+	ProjectServiceUpdateProjectDefaultsProcedure = "/organization.v1.ProjectService/UpdateProjectDefaults"
 )
 
 // ProjectServiceClient is a client for the organization.v1.ProjectService service.
@@ -98,10 +98,12 @@ type ProjectServiceClient interface {
 	UpdateProjectMemberRole(context.Context, *v1.UpdateProjectMemberRoleRequest) (*v1.UpdateProjectMemberRoleResponse, error)
 	// Remove a member from a project (requires admin role)
 	RemoveProjectMember(context.Context, *v1.RemoveProjectMemberRequest) (*v1.RemoveProjectMemberResponse, error)
-	// GetProjectLimits retrieves the namespace resource defaults for a project
-	GetProjectLimits(context.Context, *v1.GetProjectLimitsRequest) (*v1.GetProjectLimitsResponse, error)
-	// UpdateProjectLimits sets the namespace resource defaults for a project
-	UpdateProjectLimits(context.Context, *v1.UpdateProjectLimitsRequest) (*v1.UpdateProjectLimitsResponse, error)
+	// GetProjectDefaults retrieves the project's per-container resource defaults
+	// and the cluster's, which are both the ceiling and what an unset field
+	// inherits
+	GetProjectDefaults(context.Context, *v1.GetProjectDefaultsRequest) (*v1.GetProjectDefaultsResponse, error)
+	// UpdateProjectDefaults replaces the project's per-container resource defaults
+	UpdateProjectDefaults(context.Context, *v1.UpdateProjectDefaultsRequest) (*v1.UpdateProjectDefaultsResponse, error)
 }
 
 // NewProjectServiceClient constructs a client for the organization.v1.ProjectService service. By
@@ -181,16 +183,16 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
 			connect.WithClientOptions(opts...),
 		),
-		getProjectLimits: connect.NewClient[v1.GetProjectLimitsRequest, v1.GetProjectLimitsResponse](
+		getProjectDefaults: connect.NewClient[v1.GetProjectDefaultsRequest, v1.GetProjectDefaultsResponse](
 			httpClient,
-			baseURL+ProjectServiceGetProjectLimitsProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("GetProjectLimits")),
+			baseURL+ProjectServiceGetProjectDefaultsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("GetProjectDefaults")),
 			connect.WithClientOptions(opts...),
 		),
-		updateProjectLimits: connect.NewClient[v1.UpdateProjectLimitsRequest, v1.UpdateProjectLimitsResponse](
+		updateProjectDefaults: connect.NewClient[v1.UpdateProjectDefaultsRequest, v1.UpdateProjectDefaultsResponse](
 			httpClient,
-			baseURL+ProjectServiceUpdateProjectLimitsProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("UpdateProjectLimits")),
+			baseURL+ProjectServiceUpdateProjectDefaultsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("UpdateProjectDefaults")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -209,8 +211,8 @@ type projectServiceClient struct {
 	addProjectMember        *connect.Client[v1.AddProjectMemberRequest, v1.AddProjectMemberResponse]
 	updateProjectMemberRole *connect.Client[v1.UpdateProjectMemberRoleRequest, v1.UpdateProjectMemberRoleResponse]
 	removeProjectMember     *connect.Client[v1.RemoveProjectMemberRequest, v1.RemoveProjectMemberResponse]
-	getProjectLimits        *connect.Client[v1.GetProjectLimitsRequest, v1.GetProjectLimitsResponse]
-	updateProjectLimits     *connect.Client[v1.UpdateProjectLimitsRequest, v1.UpdateProjectLimitsResponse]
+	getProjectDefaults      *connect.Client[v1.GetProjectDefaultsRequest, v1.GetProjectDefaultsResponse]
+	updateProjectDefaults   *connect.Client[v1.UpdateProjectDefaultsRequest, v1.UpdateProjectDefaultsResponse]
 }
 
 // ListProjects calls organization.v1.ProjectService.ListProjects.
@@ -312,18 +314,18 @@ func (c *projectServiceClient) RemoveProjectMember(ctx context.Context, req *v1.
 	return nil, err
 }
 
-// GetProjectLimits calls organization.v1.ProjectService.GetProjectLimits.
-func (c *projectServiceClient) GetProjectLimits(ctx context.Context, req *v1.GetProjectLimitsRequest) (*v1.GetProjectLimitsResponse, error) {
-	response, err := c.getProjectLimits.CallUnary(ctx, connect.NewRequest(req))
+// GetProjectDefaults calls organization.v1.ProjectService.GetProjectDefaults.
+func (c *projectServiceClient) GetProjectDefaults(ctx context.Context, req *v1.GetProjectDefaultsRequest) (*v1.GetProjectDefaultsResponse, error) {
+	response, err := c.getProjectDefaults.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
 		return response.Msg, err
 	}
 	return nil, err
 }
 
-// UpdateProjectLimits calls organization.v1.ProjectService.UpdateProjectLimits.
-func (c *projectServiceClient) UpdateProjectLimits(ctx context.Context, req *v1.UpdateProjectLimitsRequest) (*v1.UpdateProjectLimitsResponse, error) {
-	response, err := c.updateProjectLimits.CallUnary(ctx, connect.NewRequest(req))
+// UpdateProjectDefaults calls organization.v1.ProjectService.UpdateProjectDefaults.
+func (c *projectServiceClient) UpdateProjectDefaults(ctx context.Context, req *v1.UpdateProjectDefaultsRequest) (*v1.UpdateProjectDefaultsResponse, error) {
+	response, err := c.updateProjectDefaults.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
 		return response.Msg, err
 	}
@@ -354,10 +356,12 @@ type ProjectServiceHandler interface {
 	UpdateProjectMemberRole(context.Context, *v1.UpdateProjectMemberRoleRequest) (*v1.UpdateProjectMemberRoleResponse, error)
 	// Remove a member from a project (requires admin role)
 	RemoveProjectMember(context.Context, *v1.RemoveProjectMemberRequest) (*v1.RemoveProjectMemberResponse, error)
-	// GetProjectLimits retrieves the namespace resource defaults for a project
-	GetProjectLimits(context.Context, *v1.GetProjectLimitsRequest) (*v1.GetProjectLimitsResponse, error)
-	// UpdateProjectLimits sets the namespace resource defaults for a project
-	UpdateProjectLimits(context.Context, *v1.UpdateProjectLimitsRequest) (*v1.UpdateProjectLimitsResponse, error)
+	// GetProjectDefaults retrieves the project's per-container resource defaults
+	// and the cluster's, which are both the ceiling and what an unset field
+	// inherits
+	GetProjectDefaults(context.Context, *v1.GetProjectDefaultsRequest) (*v1.GetProjectDefaultsResponse, error)
+	// UpdateProjectDefaults replaces the project's per-container resource defaults
+	UpdateProjectDefaults(context.Context, *v1.UpdateProjectDefaultsRequest) (*v1.UpdateProjectDefaultsResponse, error)
 }
 
 // NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -433,16 +437,16 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("RemoveProjectMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	projectServiceGetProjectLimitsHandler := connect.NewUnaryHandlerSimple(
-		ProjectServiceGetProjectLimitsProcedure,
-		svc.GetProjectLimits,
-		connect.WithSchema(projectServiceMethods.ByName("GetProjectLimits")),
+	projectServiceGetProjectDefaultsHandler := connect.NewUnaryHandlerSimple(
+		ProjectServiceGetProjectDefaultsProcedure,
+		svc.GetProjectDefaults,
+		connect.WithSchema(projectServiceMethods.ByName("GetProjectDefaults")),
 		connect.WithHandlerOptions(opts...),
 	)
-	projectServiceUpdateProjectLimitsHandler := connect.NewUnaryHandlerSimple(
-		ProjectServiceUpdateProjectLimitsProcedure,
-		svc.UpdateProjectLimits,
-		connect.WithSchema(projectServiceMethods.ByName("UpdateProjectLimits")),
+	projectServiceUpdateProjectDefaultsHandler := connect.NewUnaryHandlerSimple(
+		ProjectServiceUpdateProjectDefaultsProcedure,
+		svc.UpdateProjectDefaults,
+		connect.WithSchema(projectServiceMethods.ByName("UpdateProjectDefaults")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/organization.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -469,10 +473,10 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceUpdateProjectMemberRoleHandler.ServeHTTP(w, r)
 		case ProjectServiceRemoveProjectMemberProcedure:
 			projectServiceRemoveProjectMemberHandler.ServeHTTP(w, r)
-		case ProjectServiceGetProjectLimitsProcedure:
-			projectServiceGetProjectLimitsHandler.ServeHTTP(w, r)
-		case ProjectServiceUpdateProjectLimitsProcedure:
-			projectServiceUpdateProjectLimitsHandler.ServeHTTP(w, r)
+		case ProjectServiceGetProjectDefaultsProcedure:
+			projectServiceGetProjectDefaultsHandler.ServeHTTP(w, r)
+		case ProjectServiceUpdateProjectDefaultsProcedure:
+			projectServiceUpdateProjectDefaultsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -526,10 +530,10 @@ func (UnimplementedProjectServiceHandler) RemoveProjectMember(context.Context, *
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.RemoveProjectMember is not implemented"))
 }
 
-func (UnimplementedProjectServiceHandler) GetProjectLimits(context.Context, *v1.GetProjectLimitsRequest) (*v1.GetProjectLimitsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.GetProjectLimits is not implemented"))
+func (UnimplementedProjectServiceHandler) GetProjectDefaults(context.Context, *v1.GetProjectDefaultsRequest) (*v1.GetProjectDefaultsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.GetProjectDefaults is not implemented"))
 }
 
-func (UnimplementedProjectServiceHandler) UpdateProjectLimits(context.Context, *v1.UpdateProjectLimitsRequest) (*v1.UpdateProjectLimitsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.UpdateProjectLimits is not implemented"))
+func (UnimplementedProjectServiceHandler) UpdateProjectDefaults(context.Context, *v1.UpdateProjectDefaultsRequest) (*v1.UpdateProjectDefaultsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ProjectService.UpdateProjectDefaults is not implemented"))
 }

@@ -195,9 +195,17 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	t.Cleanup(ts.Close)
 
 	for id, name := range opts.organizations {
+		// Room for every cluster and pool a test wants to make: the defaults are
+		// one cluster and no nodes. The quota tests overwrite these explicitly.
 		_, err = adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.organizations (id, name, alias) VALUES ($1, $2, $3)",
+			"INSERT INTO tenant.organizations (id, name, alias, quota_clusters) VALUES ($1, $2, $3, 100)",
 			id, name, name,
+		)
+		require.NoError(t, err)
+		_, err = adminPool.Exec(t.Context(), `
+			INSERT INTO tenant.organization_machine_quotas (organization_id, region_machine_type_id, max_nodes)
+			SELECT $1, catalog.region_machine_types.id, 100 FROM catalog.region_machine_types`,
+			id,
 		)
 		require.NoError(t, err)
 	}

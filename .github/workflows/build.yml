@@ -489,7 +489,7 @@ jobs:
             | Marketplace Catalog API | https://marketplace-catalog-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Registry API | https://marketplace-registry-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Marketplace Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Marketplace Plugin Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Chart:** `${{ needs.publish-chart.outputs.chart_version }}`

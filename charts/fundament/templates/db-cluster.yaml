@@ -9,7 +9,7 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db" "component" "database") | nindent 4 }}
 spec:
   instances: {{ $.Values.db.instances }}
-  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  imageName: {{ $.Values.db.image }}
   enableSuperuserAccess: true
   {{- if $.Values.db.postgresql }}
   postgresql:

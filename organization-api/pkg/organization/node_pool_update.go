@@ -2,13 +2,17 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -31,6 +35,19 @@ func (s *Server) UpdateNodePool(
 
 	rowsAffected, err := s.queries.NodePoolUpdate(ctx, params)
 	if err != nil {
+		// The quota trigger: raising the maximum would take the organization
+		// over its node quota. Lowering it is never refused, even when the
+		// organization is already over a quota that was lowered since.
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.RaiseException {
+			switch pgErr.Hint {
+			case dbconst.HintNodePoolQuotaExceeded:
+				return nil, connect.NewError(connect.CodeResourceExhausted, errors.New(pgErr.Message))
+			// A pool from before the catalog whose machine type it does not
+			// offer: it runs, but it cannot grow until an operator links it.
+			case dbconst.HintNodePoolQuotaUnresolvable:
+				return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(pgErr.Message))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update node pool: %w", err))
 	}
 

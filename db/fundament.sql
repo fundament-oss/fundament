@@ -60,73 +60,17 @@ CREATE TABLE tenant.organizations (
 	alias text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	quota_clusters integer NOT NULL DEFAULT 1,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
 	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--'),
-	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
+	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255),
+	CONSTRAINT organizations_ck_quota_clusters CHECK (quota_clusters >= 0)
 );
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;
 -- ddl-end --
 ALTER TABLE tenant.organizations ENABLE ROW LEVEL SECURITY;
--- ddl-end --
-
--- object: tenant.organization_limits | type: TABLE --
--- DROP TABLE IF EXISTS tenant.organization_limits CASCADE;
-CREATE TABLE tenant.organization_limits (
-	id uuid NOT NULL DEFAULT uuidv7(),
-	organization_id uuid NOT NULL,
-	max_nodes_per_cluster integer,
-	max_node_pools_per_cluster integer,
-	max_nodes_per_node_pool integer,
-	default_memory_request_mi integer,
-	default_memory_limit_mi integer,
-	default_cpu_request_m integer,
-	default_cpu_limit_m integer,
-	created timestamptz NOT NULL DEFAULT now(),
-	deleted timestamptz,
-	CONSTRAINT organization_limits_pk PRIMARY KEY (id),
-	CONSTRAINT organization_limits_uq_org UNIQUE NULLS NOT DISTINCT (organization_id,deleted),
-	CONSTRAINT organization_limits_ck_max_nodes_per_cluster CHECK (max_nodes_per_cluster IS NULL OR max_nodes_per_cluster > 0),
-	CONSTRAINT organization_limits_ck_max_node_pools_per_cluster CHECK (max_node_pools_per_cluster IS NULL OR max_node_pools_per_cluster > 0),
-	CONSTRAINT organization_limits_ck_max_nodes_per_node_pool CHECK (max_nodes_per_node_pool IS NULL OR max_nodes_per_node_pool > 0),
-	CONSTRAINT organization_limits_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
-	CONSTRAINT organization_limits_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
-	CONSTRAINT organization_limits_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
-	CONSTRAINT organization_limits_ck_default_cpu_limit_m CHECK (default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0),
-	CONSTRAINT organization_limits_ck_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
-	CONSTRAINT organization_limits_ck_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
-);
--- ddl-end --
-ALTER TABLE tenant.organization_limits OWNER TO fun_owner;
--- ddl-end --
-ALTER TABLE tenant.organization_limits ENABLE ROW LEVEL SECURITY;
--- ddl-end --
-
--- object: tenant.project_limits | type: TABLE --
--- DROP TABLE IF EXISTS tenant.project_limits CASCADE;
-CREATE TABLE tenant.project_limits (
-	id uuid NOT NULL DEFAULT uuidv7(),
-	project_id uuid NOT NULL,
-	default_memory_request_mi integer,
-	default_memory_limit_mi integer,
-	default_cpu_request_m integer,
-	default_cpu_limit_m integer,
-	created timestamptz NOT NULL DEFAULT now(),
-	deleted timestamptz,
-	CONSTRAINT project_limits_pk PRIMARY KEY (id),
-	CONSTRAINT project_limits_uq_project UNIQUE NULLS NOT DISTINCT (project_id,deleted),
-	CONSTRAINT project_limits_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
-	CONSTRAINT project_limits_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
-	CONSTRAINT project_limits_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
-	CONSTRAINT project_limits_ck_default_cpu_limit_m CHECK (default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0),
-	CONSTRAINT project_limits_ck_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
-	CONSTRAINT project_limits_ck_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
-);
--- ddl-end --
-ALTER TABLE tenant.project_limits OWNER TO fun_owner;
--- ddl-end --
-ALTER TABLE tenant.project_limits ENABLE ROW LEVEL SECURITY;
 -- ddl-end --
 
 -- object: tenant.projects | type: TABLE --
@@ -138,9 +82,19 @@ CREATE TABLE tenant.projects (
 	alias text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	default_memory_request_mi integer,
+	default_memory_limit_mi integer,
+	default_cpu_request_m integer,
+	default_cpu_limit_m integer,
 	CONSTRAINT projects_pk PRIMARY KEY (id),
 	CONSTRAINT projects_uq_cluster_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted),
-	CONSTRAINT projects_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
+	CONSTRAINT projects_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255),
+	CONSTRAINT projects_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
+	CONSTRAINT projects_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
+	CONSTRAINT projects_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
+	CONSTRAINT projects_ck_default_cpu_limit_m CHECK (default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0),
+	CONSTRAINT projects_ck_default_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
+	CONSTRAINT projects_ck_default_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
 );
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO fun_owner;
@@ -254,6 +208,441 @@ $function$;
 ALTER FUNCTION tenant.node_pool_region_match_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.organization_clusters_in_use | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organization_clusters_in_use(uuid) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organization_clusters_in_use (IN p_organization_id uuid)
+	RETURNS bigint
+	LANGUAGE plpgsql
+	STABLE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- What counts against quota_clusters: the organization's live clusters, and
+    -- its deleted ones until Gardener confirms the shoot is gone, since those
+    -- still hold machines. The same definition as OrganizationCountLiveClusters
+    -- in funops.
+    RETURN (
+        SELECT count(*)
+        FROM tenant.clusters
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+    );
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organization_clusters_in_use(uuid) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organization_nodes_in_use | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organization_nodes_in_use(uuid,uuid) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organization_nodes_in_use (IN p_organization_id uuid, IN p_region_machine_type_id uuid)
+	RETURNS bigint
+	LANGUAGE plpgsql
+	STABLE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- What counts against a machine quota: the autoscale maxima of the live
+    -- node pools of that machine type and region on the organization's
+    -- clusters, deleted clusters included until their shoot is gone. A pool
+    -- the migration could not link to the catalog is outside every quota and
+    -- is not counted; the trigger stops it from growing.
+    -- A pool without a catalog reference counts when its cluster's region and
+    -- its machine type name resolve to the offering, as the trigger resolves it.
+    RETURN (
+        SELECT coalesce(sum(tenant.node_pools.autoscale_max), 0)
+        FROM tenant.node_pools
+        JOIN tenant.clusters ON tenant.clusters.id = tenant.node_pools.cluster_id
+        WHERE tenant.clusters.organization_id = p_organization_id
+          AND tenant.node_pools.deleted IS NULL
+          AND (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+          AND (tenant.node_pools.region_machine_type_id = p_region_machine_type_id
+               OR (tenant.node_pools.region_machine_type_id IS NULL
+                   AND EXISTS (
+                       SELECT 1
+                       FROM catalog.region_machine_types
+                       JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+                       WHERE catalog.region_machine_types.id = p_region_machine_type_id
+                         AND catalog.region_machine_types.region_id = tenant.clusters.region_id
+                         AND catalog.machine_types.name = tenant.node_pools.machine_type)))
+    );
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organization_nodes_in_use(uuid,uuid) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.clusters_tr_verify_quota | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.clusters_tr_verify_quota() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_quota ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_quota integer;
+BEGIN
+    -- Only creation is checked: a quota lowered below what an organization
+    -- already runs leaves its clusters alone and stops the next one.
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- FOR NO KEY UPDATE serialises the count with other cluster inserts for
+    -- this organization, without blocking the key-share locks of foreign keys.
+    SELECT tenant.organizations.quota_clusters INTO v_quota
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = NEW.organization_id
+    FOR NO KEY UPDATE;
+
+    IF tenant.organization_clusters_in_use(NEW.organization_id) > v_quota THEN
+        RAISE EXCEPTION 'the organization has reached its quota of % cluster(s)', v_quota
+                    USING HINT = 'cluster_quota_exceeded';
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.clusters_tr_verify_quota() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.node_pools_tr_verify_quota | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pools_tr_verify_quota() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pools_tr_verify_quota ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_organization_id uuid;
+    v_offering uuid;
+    v_quota integer;
+    v_in_use bigint;
+    v_machine_type text;
+    v_region text;
+BEGIN
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Only growth is checked: a pool that shrinks or keeps its maximum stays
+    -- valid under a quota lowered below what the organization already runs.
+    IF TG_OP = 'UPDATE'
+       AND NEW.autoscale_max <= OLD.autoscale_max
+       AND NEW.region_machine_type_id IS NOT DISTINCT FROM OLD.region_machine_type_id
+    THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT tenant.clusters.organization_id INTO v_organization_id
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = NEW.cluster_id;
+
+    -- A pool from before the catalog carries no offering: match it on the
+    -- cluster's region and its machine type name, as the migration did for
+    -- the rows it could. One that matches nothing is outside every quota, so
+    -- it may keep running but not grow.
+    v_offering := NEW.region_machine_type_id;
+    IF v_offering IS NULL THEN
+        SELECT catalog.region_machine_types.id INTO v_offering
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN tenant.clusters ON tenant.clusters.region_id = catalog.region_machine_types.region_id
+        WHERE tenant.clusters.id = NEW.cluster_id
+          AND catalog.machine_types.name = NEW.machine_type;
+        IF v_offering IS NULL THEN
+            RAISE EXCEPTION 'node pool % has machine type %, which the catalog does not offer in its region, so no quota covers it; it cannot be added or grown until an operator links it', NEW.name, NEW.machine_type
+                        USING HINT = 'node_pool_quota_unresolvable';
+        END IF;
+    END IF;
+
+    -- Serialises the sum with the other node pool changes of the organization.
+    PERFORM 1
+    FROM tenant.organizations
+    WHERE tenant.organizations.id = v_organization_id
+    FOR NO KEY UPDATE;
+
+    SELECT tenant.organization_machine_quotas.max_nodes INTO v_quota
+    FROM tenant.organization_machine_quotas
+    WHERE tenant.organization_machine_quotas.organization_id = v_organization_id
+      AND tenant.organization_machine_quotas.region_machine_type_id = v_offering;
+    v_quota := coalesce(v_quota, 0);
+
+    -- No quota means no pool of this kind at all, however small: a maximum of
+    -- 0 would otherwise slip under the sum check.
+    IF v_quota = 0 THEN
+        SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+        WHERE catalog.region_machine_types.id = v_offering;
+        RAISE EXCEPTION 'the organization has no quota for machine type % in region %', v_machine_type, v_region
+                    USING HINT = 'node_pool_quota_exceeded';
+    END IF;
+
+    v_in_use := tenant.organization_nodes_in_use(v_organization_id, v_offering);
+    IF v_in_use > v_quota THEN
+        SELECT catalog.machine_types.name, catalog.regions.name INTO v_machine_type, v_region
+        FROM catalog.region_machine_types
+        JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+        JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+        WHERE catalog.region_machine_types.id = v_offering;
+        RAISE EXCEPTION 'node pools of machine type % in region % would total % nodes, over the organization''s quota of %', v_machine_type, v_region, v_in_use, v_quota
+                    USING HINT = 'node_pool_quota_exceeded';
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.node_pools_tr_verify_quota() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.project_defaults_violation | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.project_defaults_violation(integer,integer,integer,integer,integer,integer,integer,integer) CASCADE;
+CREATE OR REPLACE FUNCTION tenant.project_defaults_violation (IN p_cluster_memory_request_mi integer, IN p_cluster_memory_limit_mi integer, IN p_cluster_cpu_request_m integer, IN p_cluster_cpu_limit_m integer, IN p_project_memory_request_mi integer, IN p_project_memory_limit_mi integer, IN p_project_cpu_request_m integer, IN p_project_cpu_limit_m integer)
+	RETURNS text
+	LANGUAGE plpgsql
+	IMMUTABLE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL SAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- A project default may never be higher than the cluster's, per field and
+    -- only where both are set: an unset cluster default is no ceiling at all.
+    -- The effective pair (the project's value, else the cluster's) must also
+    -- stay a valid LimitRange, which a mix of set and unset values can break
+    -- even though neither row violates its own limit >= request constraint.
+    -- A comparison against NULL yields NULL, so every check below is skipped
+    -- unless both of its sides are set.
+
+    -- CPU, in millicores.
+    IF p_project_cpu_request_m > p_cluster_cpu_request_m THEN
+        RETURN format('default CPU request %sm exceeds the cluster''s %sm',
+                      p_project_cpu_request_m, p_cluster_cpu_request_m);
+    END IF;
+
+    IF p_project_cpu_limit_m > p_cluster_cpu_limit_m THEN
+        RETURN format('default CPU limit %sm exceeds the cluster''s %sm',
+                      p_project_cpu_limit_m, p_cluster_cpu_limit_m);
+    END IF;
+
+    IF COALESCE(p_project_cpu_request_m, p_cluster_cpu_request_m)
+       > COALESCE(p_project_cpu_limit_m, p_cluster_cpu_limit_m)
+    THEN
+        RETURN format('effective default CPU request %sm exceeds the effective limit %sm',
+                      COALESCE(p_project_cpu_request_m, p_cluster_cpu_request_m),
+                      COALESCE(p_project_cpu_limit_m, p_cluster_cpu_limit_m));
+    END IF;
+
+    -- Memory, in mebibytes.
+    IF p_project_memory_request_mi > p_cluster_memory_request_mi THEN
+        RETURN format('default memory request %sMi exceeds the cluster''s %sMi',
+                      p_project_memory_request_mi, p_cluster_memory_request_mi);
+    END IF;
+
+    IF p_project_memory_limit_mi > p_cluster_memory_limit_mi THEN
+        RETURN format('default memory limit %sMi exceeds the cluster''s %sMi',
+                      p_project_memory_limit_mi, p_cluster_memory_limit_mi);
+    END IF;
+
+    IF COALESCE(p_project_memory_request_mi, p_cluster_memory_request_mi)
+       > COALESCE(p_project_memory_limit_mi, p_cluster_memory_limit_mi)
+    THEN
+        RETURN format('effective default memory request %sMi exceeds the effective limit %sMi',
+                      COALESCE(p_project_memory_request_mi, p_cluster_memory_request_mi),
+                      COALESCE(p_project_memory_limit_mi, p_cluster_memory_limit_mi));
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.project_defaults_violation(integer,integer,integer,integer,integer,integer,integer,integer) OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.projects_tr_verify_defaults | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.projects_tr_verify_defaults() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.projects_tr_verify_defaults ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_cluster tenant.clusters;
+    v_reason text;
+BEGIN
+    IF NEW.deleted IS NOT NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- FOR SHARE, not a plain read: a cluster lowering its defaults holds the
+    -- lock on its row, so under READ COMMITTED this check waits for it instead
+    -- of passing against values that transaction is about to replace. The
+    -- trigger body is volatile, so its query takes a fresh snapshot and sees
+    -- whichever transaction committed first.
+    SELECT * INTO v_cluster
+    FROM tenant.clusters
+    WHERE tenant.clusters.id = NEW.cluster_id
+    FOR SHARE;
+
+    v_reason := tenant.project_defaults_violation(
+        v_cluster.default_memory_request_mi, v_cluster.default_memory_limit_mi,
+        v_cluster.default_cpu_request_m, v_cluster.default_cpu_limit_m,
+        NEW.default_memory_request_mi, NEW.default_memory_limit_mi,
+        NEW.default_cpu_request_m, NEW.default_cpu_limit_m);
+    IF v_reason IS NOT NULL THEN
+        RAISE EXCEPTION '%', v_reason
+                    USING HINT = 'project_defaults_exceed_cluster';
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.projects_tr_verify_defaults() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.clusters_tr_verify_defaults | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.clusters_tr_verify_defaults() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.clusters_tr_verify_defaults ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+DECLARE
+    v_project tenant.projects;
+    v_reason text;
+BEGIN
+    -- Lowering a cluster default below a project's is rejected rather than
+    -- cascaded: the message names the project to lower first.
+    FOR v_project IN
+        SELECT *
+        FROM tenant.projects
+        WHERE tenant.projects.cluster_id = NEW.id
+          AND tenant.projects.deleted IS NULL
+        ORDER BY tenant.projects.name
+    LOOP
+        v_reason := tenant.project_defaults_violation(
+            NEW.default_memory_request_mi, NEW.default_memory_limit_mi,
+            NEW.default_cpu_request_m, NEW.default_cpu_limit_m,
+            v_project.default_memory_request_mi, v_project.default_memory_limit_mi,
+            v_project.default_cpu_request_m, v_project.default_cpu_limit_m);
+        IF v_reason IS NOT NULL THEN
+            RAISE EXCEPTION 'project %: %', v_project.name, v_reason
+                        USING HINT = 'cluster_defaults_below_project';
+        END IF;
+    END LOOP;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.clusters_tr_verify_defaults() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.clusters_defaults_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.clusters_defaults_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.clusters_defaults_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- Reconcile the LimitRange of every active namespace on the cluster. No
+    -- INSERT branch: a new cluster has no projects yet.
+    IF NEW.deleted IS NULL
+       AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+            OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+            OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+            OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m)
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+        WHERE tenant.projects.cluster_id = NEW.id
+          AND tenant.projects.deleted IS NULL
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.clusters_defaults_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.projects_defaults_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.projects_defaults_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.projects_defaults_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- Reconcile the LimitRange of the project's active namespaces. No INSERT
+    -- branch: a new project has no namespaces yet.
+    IF NEW.deleted IS NULL
+       AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+            OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+            OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+            OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m)
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        WHERE tenant.namespaces.project_id = NEW.id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.projects_defaults_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.namespace_outbox_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.namespace_outbox_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.namespace_outbox_trigger ()
@@ -284,126 +673,6 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.namespace_outbox_trigger() OWNER TO fun_owner;
--- ddl-end --
-
--- object: tenant.organization_limits_outbox_trigger | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.organization_limits_outbox_trigger() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.organization_limits_outbox_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    -- Node-cap branch: re-apply each active cluster's shoot spec. A deleted
-    -- change only matters when the row carries node-cap values in OLD or NEW;
-    -- otherwise the re-apply would be a guaranteed no-op.
-    IF (TG_OP = 'INSERT' AND (NEW.max_nodes_per_cluster IS NOT NULL
-                              OR NEW.max_node_pools_per_cluster IS NOT NULL
-                              OR NEW.max_nodes_per_node_pool IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.max_nodes_per_cluster IS DISTINCT FROM NEW.max_nodes_per_cluster
-                                 OR OLD.max_node_pools_per_cluster IS DISTINCT FROM NEW.max_node_pools_per_cluster
-                                 OR OLD.max_nodes_per_node_pool IS DISTINCT FROM NEW.max_nodes_per_node_pool
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.max_nodes_per_cluster IS NOT NULL
-                                          OR OLD.max_node_pools_per_cluster IS NOT NULL
-                                          OR OLD.max_nodes_per_node_pool IS NOT NULL
-                                          OR NEW.max_nodes_per_cluster IS NOT NULL
-                                          OR NEW.max_node_pools_per_cluster IS NOT NULL
-                                          OR NEW.max_nodes_per_node_pool IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-        SELECT tenant.clusters.id, 'updated', 'trigger'
-        FROM tenant.clusters
-        WHERE tenant.clusters.organization_id = NEW.organization_id
-          AND tenant.clusters.deleted IS NULL;
-    END IF;
-
-    -- Per-container-default branch: reconcile each active namespace's
-    -- LimitRange. Same deleted-change scoping as above, on the default columns.
-    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
-                              OR NEW.default_memory_limit_mi IS NOT NULL
-                              OR NEW.default_cpu_request_m IS NOT NULL
-                              OR NEW.default_cpu_limit_m IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
-                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
-                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
-                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.default_memory_request_mi IS NOT NULL
-                                          OR OLD.default_memory_limit_mi IS NOT NULL
-                                          OR OLD.default_cpu_request_m IS NOT NULL
-                                          OR OLD.default_cpu_limit_m IS NOT NULL
-                                          OR NEW.default_memory_request_mi IS NOT NULL
-                                          OR NEW.default_memory_limit_mi IS NOT NULL
-                                          OR NEW.default_cpu_request_m IS NOT NULL
-                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-        SELECT tenant.namespaces.id, 'updated', 'trigger'
-        FROM tenant.namespaces
-        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
-        JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
-        WHERE tenant.clusters.organization_id = NEW.organization_id
-          AND tenant.namespaces.deleted IS NULL;
-    END IF;
-
-    RETURN NULL;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.organization_limits_outbox_trigger() OWNER TO fun_owner;
--- ddl-end --
-
--- object: tenant.project_limits_outbox_trigger | type: FUNCTION --
--- DROP FUNCTION IF EXISTS tenant.project_limits_outbox_trigger() CASCADE;
-CREATE OR REPLACE FUNCTION tenant.project_limits_outbox_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE 
-	CALLED ON NULL INPUT
-	SECURITY DEFINER
-	PARALLEL UNSAFE
-	COST 1
-	AS 
-$function$
-BEGIN
-    -- A deleted change only matters when the row carries default values in
-    -- OLD or NEW; otherwise the LimitRange reconcile would be a no-op.
-    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
-                              OR NEW.default_memory_limit_mi IS NOT NULL
-                              OR NEW.default_cpu_request_m IS NOT NULL
-                              OR NEW.default_cpu_limit_m IS NOT NULL))
-       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
-                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
-                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
-                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
-                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
-                                     AND (OLD.default_memory_request_mi IS NOT NULL
-                                          OR OLD.default_memory_limit_mi IS NOT NULL
-                                          OR OLD.default_cpu_request_m IS NOT NULL
-                                          OR OLD.default_cpu_limit_m IS NOT NULL
-                                          OR NEW.default_memory_request_mi IS NOT NULL
-                                          OR NEW.default_memory_limit_mi IS NOT NULL
-                                          OR NEW.default_cpu_request_m IS NOT NULL
-                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
-    THEN
-        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-        SELECT tenant.namespaces.id, 'updated', 'trigger'
-        FROM tenant.namespaces
-        WHERE tenant.namespaces.project_id = NEW.project_id
-          AND tenant.namespaces.deleted IS NULL;
-    END IF;
-
-    RETURN NULL;
-END;
-$function$;
--- ddl-end --
-ALTER FUNCTION tenant.project_limits_outbox_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
@@ -956,6 +1225,32 @@ CREATE TABLE catalog.region_machine_types (
 ALTER TABLE catalog.region_machine_types OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.organization_machine_quotas | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.organization_machine_quotas CASCADE;
+CREATE TABLE tenant.organization_machine_quotas (
+	organization_id uuid NOT NULL,
+	region_machine_type_id uuid NOT NULL,
+	max_nodes integer NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	updated timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT organization_machine_quotas_pk PRIMARY KEY (organization_id,region_machine_type_id),
+	CONSTRAINT organization_machine_quotas_ck_max_nodes CHECK (max_nodes >= 0)
+);
+-- ddl-end --
+ALTER TABLE tenant.organization_machine_quotas OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.organization_machine_quotas ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: organization_machine_quotas_organization_select | type: POLICY --
+-- DROP POLICY IF EXISTS organization_machine_quotas_organization_select ON tenant.organization_machine_quotas CASCADE;
+CREATE POLICY organization_machine_quotas_organization_select ON tenant.organization_machine_quotas
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id());
+-- ddl-end --
+
 -- object: tenant.clusters | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.clusters CASCADE;
 CREATE TABLE tenant.clusters (
@@ -977,9 +1272,19 @@ CREATE TABLE tenant.clusters (
 	outbox_error text,
 	region_id uuid,
 	kubernetes_version_id uuid,
+	default_memory_request_mi integer,
+	default_memory_limit_mi integer,
+	default_cpu_request_m integer,
+	default_cpu_limit_m integer,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
-	CONSTRAINT clusters_ck_shoot_health CHECK (shoot_health IN ('healthy','unhealthy'))
+	CONSTRAINT clusters_ck_shoot_health CHECK (shoot_health IN ('healthy','unhealthy')),
+	CONSTRAINT clusters_ck_default_memory_request_mi CHECK (default_memory_request_mi IS NULL OR default_memory_request_mi > 0),
+	CONSTRAINT clusters_ck_default_memory_limit_mi CHECK (default_memory_limit_mi IS NULL OR default_memory_limit_mi > 0),
+	CONSTRAINT clusters_ck_default_cpu_request_m CHECK (default_cpu_request_m IS NULL OR default_cpu_request_m > 0),
+	CONSTRAINT clusters_ck_default_cpu_limit_m CHECK (default_cpu_limit_m IS NULL OR default_cpu_limit_m > 0),
+	CONSTRAINT clusters_ck_default_memory_limit_gte_request CHECK (default_memory_limit_mi IS NULL OR default_memory_request_mi IS NULL OR default_memory_limit_mi >= default_memory_request_mi),
+	CONSTRAINT clusters_ck_default_cpu_limit_gte_request CHECK (default_cpu_limit_m IS NULL OR default_cpu_request_m IS NULL OR default_cpu_limit_m >= default_cpu_request_m)
 );
 -- ddl-end --
 ALTER TABLE tenant.clusters OWNER TO fun_owner;
@@ -1941,42 +2246,6 @@ CREATE POLICY organizations_select_admin ON tenant.organizations
 	USING (deleted IS NULL AND EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL));
 -- ddl-end --
 
--- object: organization_limits_organization_policy | type: POLICY --
--- DROP POLICY IF EXISTS organization_limits_organization_policy ON tenant.organization_limits CASCADE;
-CREATE POLICY organization_limits_organization_policy ON tenant.organization_limits
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id());
--- ddl-end --
-
--- object: project_limits_project_policy | type: POLICY --
--- DROP POLICY IF EXISTS project_limits_project_policy ON tenant.project_limits CASCADE;
-CREATE POLICY project_limits_project_policy ON tenant.project_limits
-	AS PERMISSIVE
-	FOR ALL
-	TO fun_fundament_api
-	USING (authn.is_project_in_organization(project_id));
--- ddl-end --
-
--- object: organization_limits_cluster_worker_read | type: POLICY --
--- DROP POLICY IF EXISTS organization_limits_cluster_worker_read ON tenant.organization_limits CASCADE;
-CREATE POLICY organization_limits_cluster_worker_read ON tenant.organization_limits
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_cluster_worker
-	USING (true);
--- ddl-end --
-
--- object: project_limits_cluster_worker_read | type: POLICY --
--- DROP POLICY IF EXISTS project_limits_cluster_worker_read ON tenant.project_limits CASCADE;
-CREATE POLICY project_limits_cluster_worker_read ON tenant.project_limits
-	AS PERMISSIVE
-	FOR SELECT
-	TO fun_cluster_worker
-	USING (true);
--- ddl-end --
-
 -- object: tenant.cluster_events | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
 CREATE TABLE tenant.cluster_events (
@@ -2440,6 +2709,64 @@ CREATE CONSTRAINT TRIGGER region_match
 	EXECUTE PROCEDURE tenant.node_pool_region_match_trigger();
 -- ddl-end --
 
+-- object: verify_quota | type: TRIGGER --
+-- verify_quota ON tenant.node_pools CASCADE;
+CREATE CONSTRAINT TRIGGER verify_quota
+	AFTER INSERT OR UPDATE OF autoscale_max,region_machine_type_id
+	ON tenant.node_pools
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.node_pools_tr_verify_quota();
+-- ddl-end --
+
+-- object: verify_quota | type: TRIGGER --
+-- verify_quota ON tenant.clusters CASCADE;
+CREATE CONSTRAINT TRIGGER verify_quota
+	AFTER INSERT 
+	ON tenant.clusters
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.clusters_tr_verify_quota();
+-- ddl-end --
+
+-- object: verify_defaults | type: TRIGGER --
+-- verify_defaults ON tenant.projects CASCADE;
+CREATE CONSTRAINT TRIGGER verify_defaults
+	AFTER INSERT OR UPDATE OF cluster_id,default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m
+	ON tenant.projects
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.projects_tr_verify_defaults();
+-- ddl-end --
+
+-- object: defaults_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS defaults_outbox ON tenant.projects CASCADE;
+CREATE OR REPLACE TRIGGER defaults_outbox
+	AFTER UPDATE OF default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m
+	ON tenant.projects
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.projects_defaults_outbox_trigger();
+-- ddl-end --
+
+-- object: verify_defaults | type: TRIGGER --
+-- verify_defaults ON tenant.clusters CASCADE;
+CREATE CONSTRAINT TRIGGER verify_defaults
+	AFTER UPDATE OF default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m
+	ON tenant.clusters
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.clusters_tr_verify_defaults();
+-- ddl-end --
+
+-- object: defaults_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS defaults_outbox ON tenant.clusters CASCADE;
+CREATE OR REPLACE TRIGGER defaults_outbox
+	AFTER UPDATE OF default_memory_request_mi,default_memory_limit_mi,default_cpu_request_m,default_cpu_limit_m
+	ON tenant.clusters
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.clusters_defaults_outbox_trigger();
+-- ddl-end --
+
 -- object: namespace_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS namespace_outbox ON tenant.namespaces CASCADE;
 CREATE OR REPLACE TRIGGER namespace_outbox
@@ -2447,24 +2774,6 @@ CREATE OR REPLACE TRIGGER namespace_outbox
 	ON tenant.namespaces
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.namespace_outbox_trigger();
--- ddl-end --
-
--- object: organization_limits_outbox | type: TRIGGER --
--- DROP TRIGGER IF EXISTS organization_limits_outbox ON tenant.organization_limits CASCADE;
-CREATE OR REPLACE TRIGGER organization_limits_outbox
-	AFTER INSERT OR UPDATE
-	ON tenant.organization_limits
-	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.organization_limits_outbox_trigger();
--- ddl-end --
-
--- object: project_limits_outbox | type: TRIGGER --
--- DROP TRIGGER IF EXISTS project_limits_outbox ON tenant.project_limits CASCADE;
-CREATE OR REPLACE TRIGGER project_limits_outbox
-	AFTER INSERT OR UPDATE
-	ON tenant.project_limits
-	FOR EACH ROW
-	EXECUTE PROCEDURE tenant.project_limits_outbox_trigger();
 -- ddl-end --
 
 -- object: namespaces_idx_project_id | type: INDEX --
@@ -3176,20 +3485,6 @@ USING btree
 WHERE (deleted IS NULL);
 -- ddl-end --
 
--- object: organization_limits_fk_organization | type: CONSTRAINT --
--- ALTER TABLE tenant.organization_limits DROP CONSTRAINT IF EXISTS organization_limits_fk_organization CASCADE;
-ALTER TABLE tenant.organization_limits ADD CONSTRAINT organization_limits_fk_organization FOREIGN KEY (organization_id)
-REFERENCES tenant.organizations (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
--- object: project_limits_fk_project | type: CONSTRAINT --
--- ALTER TABLE tenant.project_limits DROP CONSTRAINT IF EXISTS project_limits_fk_project CASCADE;
-ALTER TABLE tenant.project_limits ADD CONSTRAINT project_limits_fk_project FOREIGN KEY (project_id)
-REFERENCES tenant.projects (id) MATCH SIMPLE
-ON DELETE NO ACTION ON UPDATE NO ACTION;
--- ddl-end --
-
 -- object: projects_fk_cluster | type: CONSTRAINT --
 -- ALTER TABLE tenant.projects DROP CONSTRAINT IF EXISTS projects_fk_cluster CASCADE;
 ALTER TABLE tenant.projects ADD CONSTRAINT projects_fk_cluster FOREIGN KEY (cluster_id)
@@ -3243,6 +3538,20 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ALTER TABLE catalog.region_machine_types DROP CONSTRAINT IF EXISTS region_machine_types_fk_machine_type CASCADE;
 ALTER TABLE catalog.region_machine_types ADD CONSTRAINT region_machine_types_fk_machine_type FOREIGN KEY (machine_type_id)
 REFERENCES catalog.machine_types (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: organization_machine_quotas_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE tenant.organization_machine_quotas DROP CONSTRAINT IF EXISTS organization_machine_quotas_fk_organization CASCADE;
+ALTER TABLE tenant.organization_machine_quotas ADD CONSTRAINT organization_machine_quotas_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: organization_machine_quotas_fk_region_machine_type | type: CONSTRAINT --
+-- ALTER TABLE tenant.organization_machine_quotas DROP CONSTRAINT IF EXISTS organization_machine_quotas_fk_region_machine_type CASCADE;
+ALTER TABLE tenant.organization_machine_quotas ADD CONSTRAINT organization_machine_quotas_fk_region_machine_type FOREIGN KEY (region_machine_type_id)
+REFERENCES catalog.region_machine_types (id) MATCH SIMPLE
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
@@ -3928,41 +4237,17 @@ GRANT USAGE
 -- ddl-end --
 
 
--- object: grant_raw_26cce2624c | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.organization_limits
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_raw_15384c10e5 | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
-   ON TABLE tenant.project_limits
-   TO fun_fundament_api;
-
--- ddl-end --
-
-
--- object: grant_r_931c18b720 | type: PERMISSION --
-GRANT SELECT
-   ON TABLE tenant.organization_limits
-   TO fun_cluster_worker;
-
--- ddl-end --
-
-
--- object: grant_r_c195a6ae79 | type: PERMISSION --
-GRANT SELECT
-   ON TABLE tenant.project_limits
-   TO fun_cluster_worker;
-
--- ddl-end --
-
-
 -- object: grant_raw_6dafe3fd95 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.organizations
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_719859ceb3 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organization_machine_quotas
    TO fun_fundament_api;
 
 -- ddl-end --

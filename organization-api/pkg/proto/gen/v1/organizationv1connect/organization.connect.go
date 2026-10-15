@@ -42,12 +42,9 @@ const (
 	// OrganizationServiceUpdateOrganizationProcedure is the fully-qualified name of the
 	// OrganizationService's UpdateOrganization RPC.
 	OrganizationServiceUpdateOrganizationProcedure = "/organization.v1.OrganizationService/UpdateOrganization"
-	// OrganizationServiceGetOrganizationLimitsProcedure is the fully-qualified name of the
-	// OrganizationService's GetOrganizationLimits RPC.
-	OrganizationServiceGetOrganizationLimitsProcedure = "/organization.v1.OrganizationService/GetOrganizationLimits"
-	// OrganizationServiceUpdateOrganizationLimitsProcedure is the fully-qualified name of the
-	// OrganizationService's UpdateOrganizationLimits RPC.
-	OrganizationServiceUpdateOrganizationLimitsProcedure = "/organization.v1.OrganizationService/UpdateOrganizationLimits"
+	// OrganizationServiceGetOrganizationQuotasProcedure is the fully-qualified name of the
+	// OrganizationService's GetOrganizationQuotas RPC.
+	OrganizationServiceGetOrganizationQuotasProcedure = "/organization.v1.OrganizationService/GetOrganizationQuotas"
 )
 
 // OrganizationServiceClient is a client for the organization.v1.OrganizationService service.
@@ -58,10 +55,9 @@ type OrganizationServiceClient interface {
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
 	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
-	// GetOrganizationLimits retrieves the resource limits for an organization
-	GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error)
-	// UpdateOrganizationLimits sets the resource limits for an organization
-	UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error)
+	// GetOrganizationQuotas shows what the current organization may build and
+	// what it has. Quotas are set by a platform operator; here they are read.
+	GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error)
 }
 
 // NewOrganizationServiceClient constructs a client for the organization.v1.OrganizationService
@@ -93,16 +89,10 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 			connect.WithClientOptions(opts...),
 		),
-		getOrganizationLimits: connect.NewClient[v1.GetOrganizationLimitsRequest, v1.GetOrganizationLimitsResponse](
+		getOrganizationQuotas: connect.NewClient[v1.GetOrganizationQuotasRequest, v1.GetOrganizationQuotasResponse](
 			httpClient,
-			baseURL+OrganizationServiceGetOrganizationLimitsProcedure,
-			connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationLimits")),
-			connect.WithClientOptions(opts...),
-		),
-		updateOrganizationLimits: connect.NewClient[v1.UpdateOrganizationLimitsRequest, v1.UpdateOrganizationLimitsResponse](
-			httpClient,
-			baseURL+OrganizationServiceUpdateOrganizationLimitsProcedure,
-			connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganizationLimits")),
+			baseURL+OrganizationServiceGetOrganizationQuotasProcedure,
+			connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationQuotas")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -110,11 +100,10 @@ func NewOrganizationServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // organizationServiceClient implements OrganizationServiceClient.
 type organizationServiceClient struct {
-	listOrganizations        *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
-	getOrganization          *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
-	updateOrganization       *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
-	getOrganizationLimits    *connect.Client[v1.GetOrganizationLimitsRequest, v1.GetOrganizationLimitsResponse]
-	updateOrganizationLimits *connect.Client[v1.UpdateOrganizationLimitsRequest, v1.UpdateOrganizationLimitsResponse]
+	listOrganizations     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	getOrganization       *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
+	updateOrganization    *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	getOrganizationQuotas *connect.Client[v1.GetOrganizationQuotasRequest, v1.GetOrganizationQuotasResponse]
 }
 
 // ListOrganizations calls organization.v1.OrganizationService.ListOrganizations.
@@ -144,18 +133,9 @@ func (c *organizationServiceClient) UpdateOrganization(ctx context.Context, req 
 	return nil, err
 }
 
-// GetOrganizationLimits calls organization.v1.OrganizationService.GetOrganizationLimits.
-func (c *organizationServiceClient) GetOrganizationLimits(ctx context.Context, req *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error) {
-	response, err := c.getOrganizationLimits.CallUnary(ctx, connect.NewRequest(req))
-	if response != nil {
-		return response.Msg, err
-	}
-	return nil, err
-}
-
-// UpdateOrganizationLimits calls organization.v1.OrganizationService.UpdateOrganizationLimits.
-func (c *organizationServiceClient) UpdateOrganizationLimits(ctx context.Context, req *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error) {
-	response, err := c.updateOrganizationLimits.CallUnary(ctx, connect.NewRequest(req))
+// GetOrganizationQuotas calls organization.v1.OrganizationService.GetOrganizationQuotas.
+func (c *organizationServiceClient) GetOrganizationQuotas(ctx context.Context, req *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error) {
+	response, err := c.getOrganizationQuotas.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
 		return response.Msg, err
 	}
@@ -171,10 +151,9 @@ type OrganizationServiceHandler interface {
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
 	// UpdateOrganization updates the user's organization
 	UpdateOrganization(context.Context, *v1.UpdateOrganizationRequest) (*v1.UpdateOrganizationResponse, error)
-	// GetOrganizationLimits retrieves the resource limits for an organization
-	GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error)
-	// UpdateOrganizationLimits sets the resource limits for an organization
-	UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error)
+	// GetOrganizationQuotas shows what the current organization may build and
+	// what it has. Quotas are set by a platform operator; here they are read.
+	GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error)
 }
 
 // NewOrganizationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -202,16 +181,10 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
-	organizationServiceGetOrganizationLimitsHandler := connect.NewUnaryHandlerSimple(
-		OrganizationServiceGetOrganizationLimitsProcedure,
-		svc.GetOrganizationLimits,
-		connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationLimits")),
-		connect.WithHandlerOptions(opts...),
-	)
-	organizationServiceUpdateOrganizationLimitsHandler := connect.NewUnaryHandlerSimple(
-		OrganizationServiceUpdateOrganizationLimitsProcedure,
-		svc.UpdateOrganizationLimits,
-		connect.WithSchema(organizationServiceMethods.ByName("UpdateOrganizationLimits")),
+	organizationServiceGetOrganizationQuotasHandler := connect.NewUnaryHandlerSimple(
+		OrganizationServiceGetOrganizationQuotasProcedure,
+		svc.GetOrganizationQuotas,
+		connect.WithSchema(organizationServiceMethods.ByName("GetOrganizationQuotas")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/organization.v1.OrganizationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -222,10 +195,8 @@ func NewOrganizationServiceHandler(svc OrganizationServiceHandler, opts ...conne
 			organizationServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationServiceUpdateOrganizationProcedure:
 			organizationServiceUpdateOrganizationHandler.ServeHTTP(w, r)
-		case OrganizationServiceGetOrganizationLimitsProcedure:
-			organizationServiceGetOrganizationLimitsHandler.ServeHTTP(w, r)
-		case OrganizationServiceUpdateOrganizationLimitsProcedure:
-			organizationServiceUpdateOrganizationLimitsHandler.ServeHTTP(w, r)
+		case OrganizationServiceGetOrganizationQuotasProcedure:
+			organizationServiceGetOrganizationQuotasHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -247,10 +218,6 @@ func (UnimplementedOrganizationServiceHandler) UpdateOrganization(context.Contex
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganization is not implemented"))
 }
 
-func (UnimplementedOrganizationServiceHandler) GetOrganizationLimits(context.Context, *v1.GetOrganizationLimitsRequest) (*v1.GetOrganizationLimitsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganizationLimits is not implemented"))
-}
-
-func (UnimplementedOrganizationServiceHandler) UpdateOrganizationLimits(context.Context, *v1.UpdateOrganizationLimitsRequest) (*v1.UpdateOrganizationLimitsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.UpdateOrganizationLimits is not implemented"))
+func (UnimplementedOrganizationServiceHandler) GetOrganizationQuotas(context.Context, *v1.GetOrganizationQuotasRequest) (*v1.GetOrganizationQuotasResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.OrganizationService.GetOrganizationQuotas is not implemented"))
 }
