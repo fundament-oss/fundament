@@ -38,6 +38,12 @@ const catalogPath = "/app/image-catalog.yaml"
 // setUpRetryInterval is how long Start waits before it retries a failed set-up.
 const setUpRetryInterval = 30 * time.Second
 
+// uninstallLockWait is how long Uninstall waits for a set-up or reconcile in
+// progress, which can be a `helm upgrade --wait` of up to five minutes. Past
+// it, Uninstall fails and plugin-controller retries it 10 seconds later,
+// rather than run into its own 5-minute timeout on the call.
+const uninstallLockWait = time.Minute
+
 // Plugin installs the CloudNativePG operator and lets project members create
 // single-instance PostgreSQL databases (CNPG Clusters) from the console. It
 // runs no controller of its own: the operator reconciles the Clusters, so
@@ -56,6 +62,14 @@ type Plugin struct {
 	// kube is set by Start once the operator is set up, and read by Reconcile,
 	// which runs concurrently.
 	kube atomic.Pointer[client.Client]
+	// lock serializes what changes the operator, the image catalog and the
+	// user roles: Start's set-up, Reconcile and Uninstall, which all run
+	// concurrently. Without it a repair could put back what an uninstall is
+	// removing. Held by sending, so a wait for it can end with its context.
+	lock chan struct{}
+	// uninstalling is set under lock once Uninstall goes ahead. Start and
+	// Reconcile then change nothing: the pod is about to go away.
+	uninstalling bool
 }
 
 func newPlugin() (*Plugin, error) {
@@ -68,7 +82,27 @@ func newPlugin() (*Plugin, error) {
 			return nil, fmt.Errorf("build scheme: %w", err)
 		}
 	}
-	return &Plugin{scheme: scheme, install: cnpg.Install, uninstallOperator: cnpg.Uninstall, catalogPath: catalogPath}, nil
+	return &Plugin{
+		scheme:            scheme,
+		install:           cnpg.Install,
+		uninstallOperator: cnpg.Uninstall,
+		catalogPath:       catalogPath,
+		lock:              make(chan struct{}, 1),
+	}, nil
+}
+
+// acquire takes p.lock, or reports false when ctx ends first.
+func (p *Plugin) acquire(ctx context.Context) bool {
+	select {
+	case p.lock <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (p *Plugin) release() {
+	<-p.lock
 }
 
 func (p *Plugin) newClient() (client.Client, error) {
@@ -101,13 +135,7 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	// goes through once, for example, a release held by a killed pod is
 	// cleared.
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing the CloudNativePG operator"})
-	for {
-		err := p.setUp(ctx, kube)
-		if err == nil {
-			break
-		}
-		host.Logger().Error("set up CloudNativePG", "error", err)
-		host.ReportStatus(pluginruntime.PluginStatus{Phase: setUpFailurePhase(err), Message: err.Error()})
+	for p.setUpOnce(ctx, host, kube) != nil {
 		select {
 		case <-ctx.Done():
 			return nil
@@ -115,11 +143,29 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		}
 	}
 
+	<-ctx.Done()
+	return nil
+}
+
+// setUpOnce is one attempt of Start's set-up, under p.lock, and reports its
+// outcome. It returns nil when there is nothing left to try: the set-up
+// succeeded, ctx ended, or an uninstall went ahead in the meantime.
+func (p *Plugin) setUpOnce(ctx context.Context, host pluginruntime.Host, kube client.Client) error {
+	if !p.acquire(ctx) {
+		return nil
+	}
+	defer p.release()
+	if p.uninstalling {
+		return nil
+	}
+	if err := p.setUp(ctx, kube); err != nil {
+		host.Logger().Error("set up CloudNativePG", "error", err)
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: setUpFailurePhase(err), Message: err.Error()})
+		return err
+	}
 	p.kube.Store(&kube)
 	host.ReportReady()
 	reportStatus(ctx, host, kube)
-
-	<-ctx.Done()
 	return nil
 }
 
@@ -170,15 +216,25 @@ func (p *Plugin) Upgrade(_ context.Context, _ pluginruntime.Host) error {
 	return nil
 }
 
-// Uninstall refuses while databases exist: without the plugin they would keep
-// running with no console page to find or delete them. Otherwise it removes
-// the user roles, the image catalog and the operator release. The CRDs stay
-// (the chart marks them resource-policy: keep). An operator someone else
-// installed is left alone.
+// Uninstall refuses while databases depend on the plugin: without it they
+// would keep running with no console page to find or delete them. With the
+// operator its own, that is every database, since the operator goes too. With
+// someone else's, it is the databases on the plugin's image catalog, which
+// cannot start once the catalog is gone; the others belong to whoever runs
+// that operator. Otherwise it removes the user roles, the image catalog and,
+// when it is its own, the operator release. The CRDs stay (the chart marks
+// them resource-policy: keep).
 //
 // plugin-controller skips this when the pod is unreachable, so the refusal
 // only holds while the plugin is up.
 func (p *Plugin) Uninstall(ctx context.Context, host pluginruntime.Host) error {
+	lockCtx, cancel := context.WithTimeout(ctx, uninstallLockWait)
+	defer cancel()
+	if !p.acquire(lockCtx) {
+		return errors.New("the plugin is still installing or repairing the operator; retry the uninstall once it is done")
+	}
+	defer p.release()
+
 	kubePtr := p.kube.Load()
 	var kube client.Client
 	if kubePtr != nil {
@@ -192,7 +248,11 @@ func (p *Plugin) Uninstall(ctx context.Context, host pluginruntime.Host) error {
 		}
 	}
 
-	names, err := databaseNames(ctx, kube)
+	owner, err := cnpg.ForeignOwner(ctx, kube)
+	if err != nil {
+		return err //nolint:wrapcheck // names what it read
+	}
+	names, err := databaseNames(ctx, kube, owner != "")
 	if err != nil {
 		return err
 	}
@@ -202,15 +262,14 @@ func (p *Plugin) Uninstall(ctx context.Context, host pluginruntime.Host) error {
 		return err
 	}
 
+	// From here on the uninstall goes ahead; a step that fails is retried by
+	// plugin-controller, and Start and Reconcile must not undo the others.
+	p.uninstalling = true
 	if err := deleteUserRoles(ctx, kube); err != nil {
 		return err
 	}
 	if err := cnpg.DeleteCatalog(ctx, kube); err != nil {
 		return err //nolint:wrapcheck // names the catalog
-	}
-	owner, err := cnpg.ForeignOwner(ctx, kube)
-	if err != nil {
-		return err //nolint:wrapcheck // names what it read
 	}
 	if owner != "" {
 		return nil
@@ -221,8 +280,9 @@ func (p *Plugin) Uninstall(ctx context.Context, host pluginruntime.Host) error {
 	return nil
 }
 
-// databaseNames lists every Cluster as namespace/name. No CRD means none.
-func databaseNames(ctx context.Context, kube client.Client) ([]string, error) {
+// databaseNames lists the Clusters as namespace/name: every one, or with
+// onlyCatalog those on the plugin's image catalog. No CRD means none.
+func databaseNames(ctx context.Context, kube client.Client, onlyCatalog bool) ([]string, error) {
 	clusters := &unstructured.UnstructuredList{}
 	clusters.SetGroupVersionKind(clusterListGVK)
 	if err := kube.List(ctx, clusters); err != nil {
@@ -233,9 +293,21 @@ func databaseNames(ctx context.Context, kube client.Client) ([]string, error) {
 	}
 	names := make([]string, 0, len(clusters.Items))
 	for i := range clusters.Items {
-		names = append(names, clusters.Items[i].GetNamespace()+"/"+clusters.Items[i].GetName())
+		item := &clusters.Items[i]
+		if onlyCatalog && !usesCatalog(item) {
+			continue
+		}
+		names = append(names, item.GetNamespace()+"/"+item.GetName())
 	}
 	return names, nil
+}
+
+// usesCatalog reports whether a Cluster takes its image from the plugin's
+// ClusterImageCatalog.
+func usesCatalog(item *unstructured.Unstructured) bool {
+	kind, _, _ := unstructured.NestedString(item.Object, "spec", "imageCatalogRef", "kind")
+	name, _, _ := unstructured.NestedString(item.Object, "spec", "imageCatalogRef", "name")
+	return kind == cnpg.CatalogGVK.Kind && name == cnpg.CatalogName
 }
 
 func (p *Plugin) Reconcile(ctx context.Context, host pluginruntime.Host) error {
@@ -244,6 +316,13 @@ func (p *Plugin) Reconcile(ctx context.Context, host pluginruntime.Host) error {
 		return nil
 	}
 	kube := *kubePtr
+	if !p.acquire(ctx) {
+		return nil
+	}
+	defer p.release()
+	if p.uninstalling {
+		return nil
+	}
 
 	// Someone took the operator over after Start: report it, and do not fight
 	// it, since every operator version change restarts every database.
@@ -253,7 +332,7 @@ func (p *Plugin) Reconcile(ctx context.Context, host pluginruntime.Host) error {
 		return fmt.Errorf("reconcile: check operator owner: %w", pluginerrors.NewTransient(err))
 	}
 	if owner != "" {
-		message := fmt.Sprintf("%s: %s; the plugin no longer repairs or upgrades it", cnpg.ErrForeignOperator, owner)
+		message := fmt.Sprintf("%s, so it no longer repairs or upgrades it: %s", cnpg.ErrForeignOperator, owner)
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: message})
 		return nil
 	}

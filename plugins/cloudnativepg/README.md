@@ -33,7 +33,7 @@ Not yet: fetching the catalog at runtime, so fixes do not wait for a plugin rele
 A cluster runs one CloudNativePG operator, and every operator version change restarts every database on the cluster. The plugin does not share the operator, so that no other writer changes its version at a moment the plugin does not know about. It installs its own release, `fundament-cloudnativepg`, rather than the chart's usual `cnpg`, which openfsc installs (`cnpg/`):
 
 - On every start and every reconcile it checks that the operator is its own: the Helm annotations on `clusters.postgresql.cnpg.io` name its release, and no other Deployment runs the operator image. No CRD, or its own: it installs, upgrades or repairs as below. CRDs kept from its own uninstall still carry its annotations, so a reinstall counts as its own.
-- Someone else's at start: the plugin reports Failed, names the owner, and retries every 30 seconds, so it goes ahead once the other install is gone. Someone else's later: it reports Degraded, names the owner, and stops repairing and upgrading.
+- Someone else's at start: the plugin reports Failed, names the owner and how to hand the operator over (below), and retries every 30 seconds, so it goes ahead once the hand-over is done. Removing the other install alone is not enough: its kept CRDs still name its release, and the plugin does not take them over by itself. Someone else's later: it reports Degraded, names the owner, and stops repairing and upgrading.
 - It keeps the chart's default values.
 - It never downgrades: it installs the newer of its pinned chart version and the release's own, whatever state the release is in, so a plugin rollback keeps a newer operator and its CRDs.
 - It skips the install when the release is deployed at that version and the operator Deployment and CRDs exist. When one was deleted, it reinstalls at the deployed version to restore it, at startup and on every reconcile (every 5 minutes, so the plugin reports Running until the next reconcile notices).
@@ -41,13 +41,17 @@ A cluster runs one CloudNativePG operator, and every operator version change res
 
 This cannot prevent a takeover: organization admins are cluster-admin on the cluster, and `kubectl apply` of the CNPG manifests or `helm install --take-ownership` skip Helm's ownership check. It makes one visible, and the plugin does not fight it.
 
-openfsc and this plugin are mutually exclusive on one cluster until openfsc stops bundling CloudNativePG ([miscellaneous#1289](https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1289)). To hand an operator someone else installed over to the plugin, remove the other install, then point the kept CRDs at the plugin's release:
+openfsc and this plugin are mutually exclusive on one cluster until openfsc stops bundling CloudNativePG ([miscellaneous#1289](https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1289)). To hand an operator someone else installed over to the plugin, remove the other install, then point the kept CRDs at the plugin's release. Helm adopts an existing object only when it carries the release's annotations and Helm's `managed-by` label:
 
 ```shell
 helm -n cnpg-system uninstall cnpg   # the CRDs and databases stay
-kubectl get crd -o name | grep postgresql.cnpg.io | xargs kubectl annotate --overwrite \
+crds=$(kubectl get crd -o name | grep postgresql.cnpg.io)
+kubectl label --overwrite $crds app.kubernetes.io/managed-by=Helm
+kubectl annotate --overwrite $crds \
   meta.helm.sh/release-name=fundament-cloudnativepg meta.helm.sh/release-namespace=cnpg-system
 ```
+
+An operator installed from CloudNativePG's manifests rather than a Helm release has no `helm uninstall`. Delete everything it created except the CRDs: deleting a CRD deletes every database of its kind. An extra operator Deployment next to the plugin's only needs that Deployment deleted.
 
 ## User RBAC
 
@@ -64,7 +68,9 @@ A project viewer still gets the create form, since the console offers Create to 
 
 ## Uninstall
 
-Uninstalling refuses while databases exist, and names them: without the plugin they would keep running with no console page to find or delete them. With none left, it deletes the two ClusterRoles, the image catalog and the operator release. The CRDs stay (`resource-policy: keep`). An operator someone else installed is left alone.
+Uninstalling refuses while databases depend on the plugin, and names them: without the plugin they would keep running with no console page to find or delete them. With the operator its own, that is every database, since the operator goes too. With someone else's operator, it is only the databases on the plugin's image catalog, which cannot start once the catalog is gone; the others belong to whoever runs that operator. With none left, it deletes the two ClusterRoles, the image catalog and, when it is its own, the operator release. The CRDs stay (`resource-policy: keep`).
+
+Once the uninstall goes ahead, the plugin stops installing and repairing: a reconcile in between would put back what the uninstall removes.
 
 plugin-controller skips the plugin's uninstall when its pod is unreachable, so the refusal only holds while the plugin is up.
 

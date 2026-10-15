@@ -183,10 +183,12 @@ func pendingRecovery(status string) string {
 }
 
 // ForeignOwner returns who else runs the CloudNativePG operator on the
-// cluster, or "" when nobody does: there is no CRD yet, or the CRD is this
-// plugin's release's and no other operator Deployment runs. CRDs kept from
-// this plugin's own uninstall still name its release, so a reinstall counts
-// as its own.
+// cluster, and how to hand it over to this plugin, or "" when nobody else
+// does: there is no CRD yet, or the CRD is this plugin's release's and no other
+// operator Deployment runs. CRDs kept from this plugin's own uninstall still
+// name its release, so a reinstall counts as its own. CRDs kept from someone
+// else's uninstall still name theirs, so the plugin goes ahead only once they
+// are pointed at its release: it does not take them over by itself.
 //
 // It cannot prevent a takeover: an org admin can `kubectl apply` the CNPG
 // manifests or `helm install --take-ownership`, which skip helm's ownership
@@ -202,10 +204,12 @@ func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
 		release := clusters.Annotations["meta.helm.sh/release-name"]
 		namespace := clusters.Annotations["meta.helm.sh/release-namespace"]
 		if release == "" {
-			return fmt.Sprintf("CRD %s was not installed with Helm", CRDNames[0]), nil
+			return fmt.Sprintf("CRD %s was not installed with Helm. To hand the operator to this plugin, remove that install but keep its CRDs (deleting them deletes every database), %s",
+				CRDNames[0], adoptCRDs), nil
 		}
 		if release != Release || namespace != Namespace {
-			return fmt.Sprintf("CRD %s belongs to Helm release %s/%s", CRDNames[0], namespace, release), nil
+			return fmt.Sprintf("CRD %s belongs to Helm release %s/%s. To hand the operator to this plugin, run `helm -n %s uninstall %s` (its CRDs and databases stay), %s",
+				CRDNames[0], namespace, release, namespace, release, adoptCRDs), nil
 		}
 	}
 
@@ -220,12 +224,18 @@ func ForeignOwner(ctx context.Context, kube client.Client) (string, error) {
 		}
 		for _, c := range d.Spec.Template.Spec.Containers {
 			if isOperatorImage(c.Image) {
-				return fmt.Sprintf("Deployment %s/%s runs the CloudNativePG operator", d.Namespace, d.Name), nil
+				return fmt.Sprintf("Deployment %s/%s runs the CloudNativePG operator. To hand the operator to this plugin, delete that Deployment", d.Namespace, d.Name), nil
 			}
 		}
 	}
 	return "", nil
 }
+
+// adoptCRDs ends ForeignOwner's hand-over for CRDs someone else installed:
+// Helm adopts an existing object only when it carries the release's
+// annotations and Helm's managed-by label.
+var adoptCRDs = fmt.Sprintf("then label every postgresql.cnpg.io CRD app.kubernetes.io/managed-by=Helm and annotate it meta.helm.sh/release-name=%s meta.helm.sh/release-namespace=%s",
+	Release, Namespace)
 
 // isOperatorImage reports whether an image is the CloudNativePG operator's,
 // from any registry: its repository ends in cloudnative-pg. PostgreSQL images

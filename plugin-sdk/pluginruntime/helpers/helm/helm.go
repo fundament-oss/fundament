@@ -111,8 +111,9 @@ func isRBACForbidden(output string) bool {
 // IsInstalled checks whether a Helm release exists in the client's namespace,
 // in any state. Only a missing release reports false; any other helm failure
 // (cluster unreachable, RBAC still forbidden after the retries) is an error.
+// Unlike Status, it needs no chart version, so it runs only `helm status`.
 func (c *Client) IsInstalled(ctx context.Context, releaseName string) (bool, error) {
-	status, err := c.Status(ctx, releaseName)
+	status, err := c.readRelease(ctx, "status", releaseName)
 	if err != nil {
 		return false, err
 	}

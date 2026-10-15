@@ -3,6 +3,7 @@ package cnpg
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,9 +174,29 @@ func TestForeignOwner(t *testing.T) {
 			kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(tt.objects...).Build()
 			got, err := ForeignOwner(context.Background(), kube)
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			if tt.want == "" {
+				assert.Empty(t, got)
+				return
+			}
+			// Followed by how to hand the operator over.
+			assert.True(t, strings.HasPrefix(got, tt.want+". To hand the operator to this plugin, "), got)
 		})
 	}
+}
+
+// The hand-over for kept CRDs names the commands, since the plugin status is
+// all an organization admin sees in the console.
+func TestForeignOwnerHandOver(t *testing.T) {
+	t.Parallel()
+	openfscCRD := ourCRD(CRDNames[0])
+	openfscCRD.Annotations = map[string]string{"meta.helm.sh/release-name": "cnpg", "meta.helm.sh/release-namespace": "cnpg-system"}
+	kube := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(openfscCRD).Build()
+
+	got, err := ForeignOwner(context.Background(), kube)
+	require.NoError(t, err)
+	assert.Contains(t, got, "`helm -n cnpg-system uninstall cnpg`")
+	assert.Contains(t, got, "app.kubernetes.io/managed-by=Helm")
+	assert.Contains(t, got, "meta.helm.sh/release-name=fundament-cloudnativepg meta.helm.sh/release-namespace=cnpg-system")
 }
 
 func TestIsOperatorImage(t *testing.T) {
