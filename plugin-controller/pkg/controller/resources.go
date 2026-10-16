@@ -29,6 +29,23 @@ const (
 	// childResourceName names every namespace-scoped child, shared with
 	// plugin-proxy and kube-api-proxy so the three cannot disagree.
 	childResourceName = kubename.PluginChildName
+
+	// labelPodSecurityEnforce makes the API server enforce a Pod Security
+	// Standard on the plugin namespace, and tells cluster admins (and their own
+	// admission policies) which level the plugin pod is built to meet.
+	labelPodSecurityEnforce = "pod-security.kubernetes.io/enforce"
+	podSecurityRestricted   = "restricted"
+
+	// pluginUID runs the plugin as a fixed non-root user: plugin images are not
+	// required to declare a USER, and runAsNonRoot alone refuses an image that
+	// runs as root. 65532 is the conventional "nonroot" uid of distroless.
+	pluginUID int64 = 65532
+
+	// tmpVolumeName is the plugin's only writable path. HOME points there too,
+	// so the helm CLI (pluginruntime/helpers/helm) can write its cache and
+	// config: a uid without a passwd entry gets HOME=/, which is read-only.
+	tmpVolumeName = "tmp"
+	tmpMountPath  = "/tmp"
 )
 
 // maxInstallationNameLen caps metadata.name so the cluster-scoped
@@ -126,6 +143,7 @@ func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 // mutateNamespace applies the desired state to an existing or empty Namespace.
 func mutateNamespace(ns *corev1.Namespace, cr *pluginsv1.PluginInstallation) {
 	ns.Labels = mergeLabels(ns.Labels, childLabels(cr))
+	ns.Labels[labelPodSecurityEnforce] = podSecurityRestricted
 }
 
 // mutateServiceAccount applies the desired state to an existing or empty ServiceAccount.
@@ -201,7 +219,8 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 	labels := childLabels(cr)
 	replicas := int32(1)
 
-	envVars := make([]corev1.EnvVar, 0, len(cr.Spec.Config)+len(fundEnvVars))
+	envVars := make([]corev1.EnvVar, 0, 1+len(cr.Spec.Config)+len(fundEnvVars))
+	envVars = append(envVars, corev1.EnvVar{Name: "HOME", Value: tmpMountPath})
 	envVars = append(envVars, fundEnvVars...)
 	configKeys := make([]string, 0, len(cr.Spec.Config))
 	for k := range cr.Spec.Config {
@@ -223,11 +242,37 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: childResourceName,
+			// Pod Security Standard "restricted", so the plugin also starts on a
+			// cluster whose admission policies enforce it, such as Kyverno.
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: new(true),
+				RunAsUser:    new(pluginUID),
+				RunAsGroup:   new(pluginUID),
+				FSGroup:      new(pluginUID),
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
+			Volumes: []corev1.Volume{{
+				Name:         tmpVolumeName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			}},
 			Containers: []corev1.Container{
 				{
 					Name:            childResourceName,
 					Image:           def.Spec.Image,
 					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: new(false),
+						ReadOnlyRootFilesystem:   new(true),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      tmpVolumeName,
+						MountPath: tmpMountPath,
+					}},
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "http",
