@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
+	psaapi "k8s.io/pod-security-admission/api"
+	"k8s.io/pod-security-admission/policy"
 	"sigs.k8s.io/yaml"
 )
 
@@ -210,4 +212,16 @@ func TestDeploymentProjectedToken(t *testing.T) {
 	assert.Equal(t, "/var/run/secrets/fundament", c.VolumeMounts[0].MountPath)
 	assert.True(t, c.VolumeMounts[0].ReadOnly)
 	assert.Nil(t, d.Spec.Template.Spec.AutomountServiceAccountToken, "controller-runtime still needs the kube token")
+}
+
+func TestDeploymentMeetsRestrictedPodSecurity(t *testing.T) {
+	t.Parallel()
+	d := Deployment(&DeploymentParams{Image: "img", ClusterID: "c", OrganizationID: "o", CatalogAPIURL: "u", AuthnAPIURL: "a"})
+
+	evaluator, err := policy.NewEvaluator(policy.DefaultChecks(), nil)
+	require.NoError(t, err)
+	lv := psaapi.LevelVersion{Level: psaapi.LevelRestricted, Version: psaapi.LatestVersion()}
+	for _, res := range evaluator.EvaluatePod(lv, &d.Spec.Template.ObjectMeta, &d.Spec.Template.Spec) {
+		assert.True(t, res.Allowed, "%s: %s", res.ForbiddenReason, res.ForbiddenDetail)
+	}
 }
