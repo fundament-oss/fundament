@@ -128,7 +128,12 @@ SELECT
     catalog.regions.cloud_profile_region,
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )::boolean AS synced
 FROM
     tenant.clusters
@@ -288,7 +293,14 @@ SELECT
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.organizations.name AS organization_name,
-    COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.created DESC, tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS has_completed_outbox
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -307,6 +319,9 @@ type ClusterListActiveRow struct {
 }
 
 // Used by periodic reconciliation to compare with Gardener state.
+// has_completed_outbox is whether the cluster's own latest sync row completed
+// (the same row as view cluster_sync_state): a cluster whose latest sync is
+// still running or failed for good is not repaired for drift.
 func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
 	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
@@ -341,7 +356,12 @@ FROM
 WHERE
     (
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status = 'completed'
+        OR EXISTS (
+            SELECT 1
+            FROM tenant.cluster_outbox
+            WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+              AND tenant.cluster_outbox.status = 'completed'
+        )
     )
     AND (
         tenant.clusters.deleted IS NULL
