@@ -27,6 +27,9 @@ enum ClusterStatus {
   CLUSTER_STATUS_STOPPING = 6;
   CLUSTER_STATUS_STOPPED = 7;
   CLUSTER_STATUS_DELETING = 8; // Cluster deletion in progress
+  // The cluster no longer exists in Gardener, with its workloads and data. It
+  // is not recreated by itself; a change to the cluster creates it again, empty.
+  CLUSTER_STATUS_LOST = 9;
 }
 
 // Node pool status
