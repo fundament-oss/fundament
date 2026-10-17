@@ -2,6 +2,7 @@ package token
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"sync"
@@ -49,9 +50,10 @@ func TestCache_UserAndProxyTokensAreSeparateAndCached(t *testing.T) {
 }
 
 type failingRequester struct {
-	mu    sync.Mutex
-	calls int
-	err   error
+	mu        sync.Mutex
+	calls     int
+	err       error
+	expiresIn time.Duration // zero means 15 minutes
 }
 
 func (f *failingRequester) RequestNamedSAToken(context.Context, string, string) (*gardener.SAToken, error) {
@@ -61,7 +63,17 @@ func (f *failingRequester) RequestNamedSAToken(context.Context, string, string) 
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &gardener.SAToken{Token: "tok", ExpiresAt: time.Now().Add(15 * time.Minute)}, nil
+	expiresIn := f.expiresIn
+	if expiresIn == 0 {
+		expiresIn = 15 * time.Minute
+	}
+	return &gardener.SAToken{Token: "tok", ExpiresAt: time.Now().Add(expiresIn)}, nil
+}
+
+func (f *failingRequester) fail(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.err = err
 }
 
 // TestCache_FailureIsCachedBriefly pins that a cluster still being created
@@ -140,4 +152,47 @@ func TestCache_CancelledRequestIsNotCached(t *testing.T) {
 	tok, err := c.GetProxyToken(context.Background(), "c1")
 	require.NoError(t, err)
 	assert.Equal(t, "tok", tok)
+}
+
+func TestCache_EntryExpiresAtTokenTTLDespiteReads(t *testing.T) {
+	t.Parallel()
+	req := &failingRequester{expiresIn: 200 * time.Millisecond}
+	c := NewCache(req, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+
+	start := time.Now()
+	_, err := c.GetProxyToken(ctx, "c1")
+	require.NoError(t, err)
+	req.fail(errors.New("token request failed"))
+
+	// With touch-on-hit, each read would push expiry to read time + TTL. Reads
+	// stop before the 80% refresh point, so only expiry is under test.
+	for time.Since(start) < 150*time.Millisecond {
+		tok, err := c.GetProxyToken(ctx, "c1")
+		require.NoError(t, err)
+		require.Equal(t, "tok", tok)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	time.Sleep(time.Until(start.Add(300 * time.Millisecond)))
+	_, err = c.GetProxyToken(ctx, "c1")
+	assert.Error(t, err, "expired token must not be served")
+}
+
+func TestCache_TokenWithoutRemainingLifetimeIsNotServedFromCache(t *testing.T) {
+	t.Parallel()
+	// ttlcache never expires an entry stored with a TTL <= 0, e.g. when the
+	// proxy's clock runs ahead of the shoot's.
+	for _, expiresIn := range []time.Duration{-time.Second, -time.Nanosecond} {
+		req := &failingRequester{expiresIn: expiresIn}
+		c := NewCache(req, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		ctx := context.Background()
+
+		_, err := c.GetProxyToken(ctx, "c1")
+		require.NoError(t, err)
+		req.fail(errors.New("token request failed"))
+
+		_, err = c.GetProxyToken(ctx, "c1")
+		assert.Error(t, err, "expiresIn %v: expired token must not be served", expiresIn)
+	}
 }
