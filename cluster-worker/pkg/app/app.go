@@ -134,6 +134,10 @@ type App struct {
 
 // New creates and wires up the cluster-worker application.
 func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
+	if cfg.Cluster.MaxReconcileDeletions < 0 {
+		return nil, fmt.Errorf("invalid CLUSTER_MAX_RECONCILE_DELETIONS: %d (must be 0 or more)", cfg.Cluster.MaxReconcileDeletions)
+	}
+
 	gardenerClient, err := createGardenerClient(cfg, logger)
 	if err != nil {
 		return nil, err
