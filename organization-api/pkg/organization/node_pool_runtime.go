@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -21,9 +22,11 @@ import (
 // the page.
 
 const (
-	// Gardener labels every node with the worker pool it was created for.
-	// kube-state-metrics exposes node labels on kube_node_labels, prefixed with
-	// `label_` and with every non-alphanumeric character turned into `_`.
+	// Gardener labels every node with the worker pool it was created for. That
+	// is the worker name cluster-worker derives from the pool name, not the pool
+	// name itself (see poolRuntimes.forPool). kube-state-metrics exposes node
+	// labels on kube_node_labels, prefixed with `label_` and with every
+	// non-alphanumeric character turned into `_`.
 	nodePoolNodeLabel = "label_worker_gardener_cloud_pool"
 
 	queryNodePoolMembership = `kube_node_labels`
@@ -54,10 +57,26 @@ func (r nodePoolRuntime) status() organizationv1.NodePoolStatus {
 	}
 }
 
+// poolRuntimes holds the live state of every worker pool on a cluster, keyed by
+// the Gardener worker name its nodes carry.
+type poolRuntimes map[string]nodePoolRuntime
+
+// forPool returns the live state of the node pool named poolName. cluster-worker
+// names each Gardener worker kubename.GenerateWorkerName(poolName) ("extra"
+// becomes "extre78f"), and that derived name is what the nodes are labelled
+// with, so the lookup has to derive it the same way.
+//
+// There is deliberately no fallback to the raw pool name: cluster-worker
+// rewrites a shoot's workers on every sync, so a worker named before names were
+// bounded is renamed on its cluster's next reconcile.
+func (r poolRuntimes) forPool(poolName string) nodePoolRuntime {
+	return r[kubename.GenerateWorkerName(poolName)]
+}
+
 // nodePoolRuntimes reads the live state of every pool on a cluster, keyed by
-// pool name. A cluster with no reachable Prometheus returns an empty map, so
+// worker name. A cluster with no reachable Prometheus returns an empty map, so
 // every pool falls back to the zero value.
-func (s *Server) nodePoolRuntimes(ctx context.Context, clusterID uuid.UUID, pools int) map[string]nodePoolRuntime {
+func (s *Server) nodePoolRuntimes(ctx context.Context, clusterID uuid.UUID, pools int) poolRuntimes {
 	// A cluster without pools has nothing to enrich, and asking anyway costs
 	// three round trips to the seed ingress.
 	if pools == 0 {
@@ -99,10 +118,10 @@ func (s *Server) nodePoolRuntimes(ctx context.Context, clusterID uuid.UUID, pool
 }
 
 // nodePoolRuntimesFromSamples folds three per-node sample sets into one entry
-// per pool. Membership decides which nodes count: a node kube-state-metrics
+// per worker pool. Membership decides which nodes count: a node kube-state-metrics
 // reports without a pool label belongs to no pool we know of and is left out
 // rather than guessed at.
-func nodePoolRuntimesFromSamples(membership, ready, info []prom.Sample) map[string]nodePoolRuntime {
+func nodePoolRuntimesFromSamples(membership, ready, info []prom.Sample) poolRuntimes {
 	readyNodes := make(map[string]bool, len(ready))
 	for _, sample := range ready {
 		readyNodes[sample.Labels["node"]] = sample.Value == 1
@@ -118,7 +137,7 @@ func nodePoolRuntimesFromSamples(membership, ready, info []prom.Sample) map[stri
 	poolVersions := make(map[string]string, len(membership))
 	mixed := make(map[string]bool, len(membership))
 
-	runtimes := make(map[string]nodePoolRuntime, len(membership))
+	runtimes := make(poolRuntimes, len(membership))
 	for _, sample := range membership {
 		pool := sample.Labels[nodePoolNodeLabel]
 		if pool == "" {

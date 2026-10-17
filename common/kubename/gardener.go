@@ -68,6 +68,11 @@ func ProjectName(orgName string) string {
 // limit regardless of the user-supplied pool name length. The hash suffix is
 // derived from the original pool name so names stay unique within a cluster and
 // stable across reconciles.
+//
+// cluster-worker is not the only caller: organization-api derives the same name
+// to match a cluster's nodes (labelled worker.gardener.cloud/pool) back to their
+// node pool. Changing the format renames every existing worker, and both
+// services must ship the change together.
 func GenerateWorkerName(poolName string) string {
 	return Bounded(SanitizeDNS1035(poolName), HashHex([]byte(poolName)),
 		WorkerNamePrefixLength, WorkerNameHashLength, WorkerNamePrefixLength)
