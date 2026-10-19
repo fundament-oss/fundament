@@ -20,6 +20,10 @@ funops organization quota set-nodes <organization> <region> <machine-type> <max-
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
+funops plugin list [--status <status|all>]
+funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] [--feedback <text>]
+funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
+funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
 ```
 
 Signing in never creates an organization. A new user shows up in
@@ -60,6 +64,14 @@ memberships and API keys. It refuses while the organization still has clusters,
 including deleted ones whose shoot Gardener has not removed yet, or publishes
 plugins. The name of a deleted organization that ever had a cluster cannot be
 reused, because its Gardener project is named after it and is not removed yet.
+
+The plugin commands are the operator path to the same review decisions the
+marketplace admin console makes ([FUN-20](../docs/funs/FUN-20.adoc)): only a
+pending version with an open submission round can be decided, approval is what
+publishes it, and the decision is recorded on the round under the reviewer
+named by `--reviewer` (a DCIM staff user). A plugin is addressed by the ID
+`funops plugin list` shows, or by name with `--organization` — plugin names
+are unique only within an organization.
 
 Against the local development instance, run it as `just funops <args>` from the
 repo root. For other installations, see the
