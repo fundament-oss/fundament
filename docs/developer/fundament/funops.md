@@ -52,9 +52,9 @@ funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
 funops plugin list [--status <status|all>]
-funops plugin approve <plugin|plugin-id> <version> --reviewer <user-id|email> [--feedback <text>]
-funops plugin request-changes <plugin|plugin-id> <version> --reviewer <user-id|email> --feedback <text>
-funops plugin reject <plugin|plugin-id> <version> --reviewer <user-id|email> --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
+funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] [--feedback <text>]
+funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
+funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
 ```
 
 Organizations are addressed by name, users by ID or email address. Every
@@ -111,5 +111,5 @@ sends it back with feedback for the publisher to resubmit, and `reject`
 refuses it with a reason. Every decision closes the round and records the
 reviewer named by `--reviewer`, a DCIM staff user's ID or email address.
 
-Plugins are addressed by name, or by ID when several organizations publish
-under one name; `--organization` also narrows a name down.
+Plugins are addressed by the plugin ID `funops plugin list` shows, or by name
+with `--organization` — plugin names are unique only within an organization.

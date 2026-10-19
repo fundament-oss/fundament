@@ -13,64 +13,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const pluginFindByName = `-- name: PluginFindByName :many
-
-SELECT
-  appstore.plugins.id,
-  tenant.organizations.name AS organization_name
-FROM appstore.plugins
-INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
-WHERE appstore.plugins.name = $1::text
-  AND ($2::text = '' OR tenant.organizations.name = $2::text)
-  AND appstore.plugins.deleted IS NULL
-ORDER BY organization_name
-`
-
-type PluginFindByNameParams struct {
-	Name             string
-	OrganizationName string
-}
-
-type PluginFindByNameRow struct {
-	ID               uuid.UUID
-	OrganizationName string
-}
-
-// Plugin review queries. funops is a second operator path to the same
-// transitions marketplace-admin-api's ReviewService makes: only a PENDING
-// version with an open submission round can be decided, and the version's
-// status column stays authoritative (FUN-20).
-// Plugin names are unique per organization, not globally, so a bare name can
-// match several rows; the caller refuses the ambiguity unless an organization
-// narrows it down.
-func (q *Queries) PluginFindByName(ctx context.Context, arg PluginFindByNameParams) ([]PluginFindByNameRow, error) {
-	rows, err := q.db.Query(ctx, pluginFindByName, arg.Name, arg.OrganizationName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PluginFindByNameRow
-	for rows.Next() {
-		var i PluginFindByNameRow
-		if err := rows.Scan(&i.ID, &i.OrganizationName); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const pluginGetByID = `-- name: PluginGetByID :one
 SELECT
   appstore.plugins.id,
+  appstore.plugins.name,
   tenant.organizations.name AS organization_name
 FROM appstore.plugins
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.id = $1
   AND appstore.plugins.deleted IS NULL
+  AND tenant.organizations.deleted IS NULL
 `
 
 type PluginGetByIDParams struct {
@@ -79,13 +31,55 @@ type PluginGetByIDParams struct {
 
 type PluginGetByIDRow struct {
 	ID               uuid.UUID
+	Name             string
 	OrganizationName string
 }
 
 func (q *Queries) PluginGetByID(ctx context.Context, arg PluginGetByIDParams) (PluginGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, pluginGetByID, arg.ID)
 	var i PluginGetByIDRow
-	err := row.Scan(&i.ID, &i.OrganizationName)
+	err := row.Scan(&i.ID, &i.Name, &i.OrganizationName)
+	return i, err
+}
+
+const pluginGetByName = `-- name: PluginGetByName :one
+
+SELECT
+  appstore.plugins.id,
+  appstore.plugins.name,
+  tenant.organizations.name AS organization_name
+FROM appstore.plugins
+INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
+WHERE appstore.plugins.name = $1::text
+  AND tenant.organizations.name = $2::text
+  AND appstore.plugins.deleted IS NULL
+  AND tenant.organizations.deleted IS NULL
+`
+
+type PluginGetByNameParams struct {
+	Name             string
+	OrganizationName string
+}
+
+type PluginGetByNameRow struct {
+	ID               uuid.UUID
+	Name             string
+	OrganizationName string
+}
+
+// Plugin review queries. funops is a second operator path to the same
+// transitions marketplace-admin-api's ReviewService makes: only a PENDING
+// version with an open submission round can be decided, and the version's
+// status column stays authoritative (FUN-20).
+// Plugin names are unique per organization (plugins_uq_name), so a name
+// qualified by its organization is exact. The organization must be live:
+// a soft-deleted organization frees its name for reuse
+// (organizations_uq_name), so without the filter a reused name could match
+// two rows and resolve to the deleted organization's plugin.
+func (q *Queries) PluginGetByName(ctx context.Context, arg PluginGetByNameParams) (PluginGetByNameRow, error) {
+	row := q.db.QueryRow(ctx, pluginGetByName, arg.Name, arg.OrganizationName)
+	var i PluginGetByNameRow
+	err := row.Scan(&i.ID, &i.Name, &i.OrganizationName)
 	return i, err
 }
 
@@ -151,6 +145,7 @@ func (q *Queries) PluginVersionGet(ctx context.Context, arg PluginVersionGetPara
 const pluginVersionList = `-- name: PluginVersionList :many
 SELECT
   tenant.organizations.name AS organization_name,
+  appstore.plugins.id AS plugin_id,
   appstore.plugins.name AS plugin_name,
   appstore.plugin_definitions.plugin_version,
   appstore.plugin_definitions.status,
@@ -165,18 +160,20 @@ SELECT
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
-WHERE ($1::text = '' OR appstore.plugin_definitions.status = $1::text)
+WHERE ($1::text IS NULL OR appstore.plugin_definitions.status = $1::text)
   AND appstore.plugin_definitions.deleted IS NULL
   AND appstore.plugins.deleted IS NULL
+  AND tenant.organizations.deleted IS NULL
 ORDER BY submitted, organization_name, plugin_name, version_created
 `
 
 type PluginVersionListParams struct {
-	Status string
+	Status pgtype.Text
 }
 
 type PluginVersionListRow struct {
 	OrganizationName string
+	PluginID         uuid.UUID
 	PluginName       string
 	PluginVersion    string
 	Status           dbconst.PluginDefinitionStatus
@@ -201,6 +198,7 @@ func (q *Queries) PluginVersionList(ctx context.Context, arg PluginVersionListPa
 		var i PluginVersionListRow
 		if err := rows.Scan(
 			&i.OrganizationName,
+			&i.PluginID,
 			&i.PluginName,
 			&i.PluginVersion,
 			&i.Status,

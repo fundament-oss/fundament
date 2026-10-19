@@ -3,28 +3,33 @@
 -- version with an open submission round can be decided, and the version's
 -- status column stays authoritative (FUN-20).
 
--- name: PluginFindByName :many
--- Plugin names are unique per organization, not globally, so a bare name can
--- match several rows; the caller refuses the ambiguity unless an organization
--- narrows it down.
+-- name: PluginGetByName :one
+-- Plugin names are unique per organization (plugins_uq_name), so a name
+-- qualified by its organization is exact. The organization must be live:
+-- a soft-deleted organization frees its name for reuse
+-- (organizations_uq_name), so without the filter a reused name could match
+-- two rows and resolve to the deleted organization's plugin.
 SELECT
   appstore.plugins.id,
+  appstore.plugins.name,
   tenant.organizations.name AS organization_name
 FROM appstore.plugins
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.name = @name::text
-  AND (@organization_name::text = '' OR tenant.organizations.name = @organization_name::text)
+  AND tenant.organizations.name = @organization_name::text
   AND appstore.plugins.deleted IS NULL
-ORDER BY organization_name;
+  AND tenant.organizations.deleted IS NULL;
 
 -- name: PluginGetByID :one
 SELECT
   appstore.plugins.id,
+  appstore.plugins.name,
   tenant.organizations.name AS organization_name
 FROM appstore.plugins
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
 WHERE appstore.plugins.id = @id
-  AND appstore.plugins.deleted IS NULL;
+  AND appstore.plugins.deleted IS NULL
+  AND tenant.organizations.deleted IS NULL;
 
 -- name: PluginVersionGet :one
 -- The version and its open review round, if any. submissions_uq_open pins a
@@ -50,6 +55,7 @@ WHERE appstore.plugin_definitions.plugin_id = @plugin_id
 -- last, by creation.
 SELECT
   tenant.organizations.name AS organization_name,
+  appstore.plugins.id AS plugin_id,
   appstore.plugins.name AS plugin_name,
   appstore.plugin_definitions.plugin_version,
   appstore.plugin_definitions.status,
@@ -64,9 +70,10 @@ SELECT
 FROM appstore.plugin_definitions
 INNER JOIN appstore.plugins ON appstore.plugins.id = appstore.plugin_definitions.plugin_id
 INNER JOIN tenant.organizations ON tenant.organizations.id = appstore.plugins.organization_id
-WHERE (@status::text = '' OR appstore.plugin_definitions.status = @status::text)
+WHERE (sqlc.narg('status')::text IS NULL OR appstore.plugin_definitions.status = sqlc.narg('status')::text)
   AND appstore.plugin_definitions.deleted IS NULL
   AND appstore.plugins.deleted IS NULL
+  AND tenant.organizations.deleted IS NULL
 ORDER BY submitted, organization_name, plugin_name, version_created;
 
 -- name: PluginVersionApprove :execrows

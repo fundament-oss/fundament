@@ -90,7 +90,7 @@ func TestPluginApprove_PublishesPendingVersion(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	require.NoError(t, (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex",
 		Reviewer: testReviewerAliceEmail, Feedback: "well packaged",
 	}).Run(ctx))
 
@@ -126,7 +126,7 @@ func TestPluginRequestChanges_RecordsFeedback(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	require.NoError(t, (&PluginRequestChangesCmd{
-		Plugin: "logging-operator", Version: "1.0.0",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex",
 		Reviewer: testReviewerAliceID, Feedback: "add release notes",
 	}).Run(ctx))
 
@@ -148,7 +148,7 @@ func TestPluginReject_RecordsReason(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	require.NoError(t, (&PluginRejectCmd{
-		Plugin: "logging-operator", Version: "1.0.0",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex",
 		Reviewer: testReviewerAliceEmail, Reason: "security_concerns",
 	}).Run(ctx))
 
@@ -167,7 +167,7 @@ func TestPluginDecide_RefusesNonPendingVersion(t *testing.T) {
 	_, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Draft)
 
 	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: testReviewerAliceEmail,
 	}).Run(ctx)
 	require.EqualError(t, err, `version "1.0.0" of plugin "logging-operator" is draft; only a pending version can be decided`)
 
@@ -181,7 +181,7 @@ func TestPluginDecide_RefusesVersionWithoutOpenRound(t *testing.T) {
 	seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 
 	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: testReviewerAliceEmail,
 	}).Run(ctx)
 	require.EqualError(t, err, `version "1.0.0" of plugin "logging-operator" has no open submission round`)
 }
@@ -192,7 +192,7 @@ func TestPluginDecide_RefusesUnknownReviewer(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: "nobody@example.com",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: "nobody@example.com",
 	}).Run(ctx)
 	require.EqualError(t, err, `reviewer "nobody@example.com" not found`)
 
@@ -204,9 +204,19 @@ func TestPluginDecide_RefusesUnknownPlugin(t *testing.T) {
 	ctx := newTestContext(t)
 
 	err := (&PluginApproveCmd{
-		Plugin: "no-such-plugin", Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+		Plugin: "no-such-plugin", Version: "1.0.0", Organization: "globex", Reviewer: testReviewerAliceEmail,
 	}).Run(ctx)
-	require.EqualError(t, err, `plugin "no-such-plugin" not found`)
+	require.EqualError(t, err, `plugin "no-such-plugin" not found in organization "globex"`)
+}
+
+func TestPluginDecide_RefusesUnknownPluginID(t *testing.T) {
+	ctx := newTestContext(t)
+
+	unknownID := uuid.MustParse("019b4000-dead-7000-8000-000000000001")
+	err := (&PluginApproveCmd{
+		Plugin: unknownID.String(), Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+	}).Run(ctx)
+	require.EqualError(t, err, `plugin "`+unknownID.String()+`" not found`)
 }
 
 func TestPluginDecide_RefusesUnknownVersion(t *testing.T) {
@@ -214,22 +224,31 @@ func TestPluginDecide_RefusesUnknownVersion(t *testing.T) {
 	seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 
 	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "9.9.9", Reviewer: testReviewerAliceEmail,
+		Plugin: "logging-operator", Version: "9.9.9", Organization: "globex", Reviewer: testReviewerAliceEmail,
 	}).Run(ctx)
 	require.EqualError(t, err, `plugin "logging-operator" has no version "9.9.9"`)
 }
 
-func TestPluginDecide_AmbiguousNameNeedsOrganization(t *testing.T) {
+func TestPluginDecide_NameNeedsOrganization(t *testing.T) {
+	ctx := newTestContext(t)
+	_, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
+	seedOpenRound(t, ctx, defID)
+
+	err := (&PluginApproveCmd{
+		Plugin: "logging-operator", Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+	}).Run(ctx)
+	require.EqualError(t, err, `plugin "logging-operator" is not a plugin ID: address a plugin by ID, or by name with --organization`)
+
+	status, _ := versionState(t, ctx, defID)
+	assert.Equal(t, "pending", status)
+}
+
+func TestPluginDecide_NameResolvesWithinItsOrganization(t *testing.T) {
 	ctx := newTestContext(t)
 	_, acmeDefID := seedPluginVersion(t, ctx, testOrgAcmeID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 	seedOpenRound(t, ctx, acmeDefID)
 	_, globexDefID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 	seedOpenRound(t, ctx, globexDefID)
-
-	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: testReviewerAliceEmail,
-	}).Run(ctx)
-	require.EqualError(t, err, `plugin "logging-operator" is published by 2 organizations (acme-corp, globex): pass --organization or the plugin ID`)
 
 	require.NoError(t, (&PluginApproveCmd{
 		Plugin: "logging-operator", Version: "1.0.0",
@@ -242,16 +261,17 @@ func TestPluginDecide_AmbiguousNameNeedsOrganization(t *testing.T) {
 	assert.Equal(t, "pending", status, "the other organization's version is untouched")
 }
 
-func TestPluginDecide_RefusesIDWithMismatchedOrganization(t *testing.T) {
+func TestPluginDecide_IDWithOrganizationIsANameLookup(t *testing.T) {
 	ctx := newTestContext(t)
 	pluginID, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 	seedOpenRound(t, ctx, defID)
 
+	// With --organization the ref is always a name; the hint points at the fix.
 	err := (&PluginApproveCmd{
 		Plugin: pluginID.String(), Version: "1.0.0",
-		Reviewer: testReviewerAliceEmail, Organization: "acme-corp",
+		Reviewer: testReviewerAliceEmail, Organization: "globex",
 	}).Run(ctx)
-	require.EqualError(t, err, `plugin "`+pluginID.String()+`" is published by organization "globex", not "acme-corp"`)
+	require.EqualError(t, err, `plugin "`+pluginID.String()+`" not found in organization "globex": a plugin ID needs no --organization`)
 
 	status, _ := versionState(t, ctx, defID)
 	assert.Equal(t, "pending", status)
@@ -266,6 +286,37 @@ func TestPluginDecide_UnknownOrganizationIsNotFound(t *testing.T) {
 		Reviewer: testReviewerAliceEmail, Organization: "initech",
 	}).Run(ctx)
 	require.EqualError(t, err, `plugin "logging-operator" not found in organization "initech"`)
+}
+
+func TestPluginDecide_DeletedOrganizationIsNotFound(t *testing.T) {
+	ctx := newTestContext(t)
+	pluginID, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
+	seedOpenRound(t, ctx, defID)
+
+	// organizations_uq_name frees a deleted organization's name for reuse, so a
+	// name lookup matching a deleted organization could resolve to the wrong
+	// plugin; by ID the plugin is gone with its publisher.
+	_, err := ctx.DB.Pool.Exec(t.Context(),
+		`UPDATE tenant.organizations SET deleted = now() WHERE id = $1`, testOrgGlobexID)
+	require.NoError(t, err)
+
+	err = (&PluginApproveCmd{
+		Plugin: "logging-operator", Version: "1.0.0",
+		Reviewer: testReviewerAliceEmail, Organization: "globex",
+	}).Run(ctx)
+	require.EqualError(t, err, `plugin "logging-operator" not found in organization "globex"`)
+
+	err = (&PluginApproveCmd{
+		Plugin: pluginID.String(), Version: "1.0.0", Reviewer: testReviewerAliceEmail,
+	}).Run(ctx)
+	require.EqualError(t, err, `plugin "`+pluginID.String()+`" not found`)
+
+	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: pgtype.Text{}})
+	require.NoError(t, err)
+	assert.Empty(t, rows, "a deleted organization's versions leave the review queue")
+
+	status, _ := versionState(t, ctx, defID)
+	assert.Equal(t, "pending", status)
 }
 
 func TestSubmissionDecide_IsPinnedToTheRoundItLoaded(t *testing.T) {
@@ -327,13 +378,14 @@ func TestPluginDecide_RefusesOverlongFeedback(t *testing.T) {
 
 func TestPluginDecide_UUIDShapedNameStillResolves(t *testing.T) {
 	ctx := newTestContext(t)
-	// plugins_ck_name allows an all-hex name that uuid.Parse also accepts.
+	// plugins_ck_name allows an all-hex name that uuid.Parse also accepts;
+	// --organization makes the ref a name, so it never collides with an ID.
 	_, defID := seedPluginVersion(t, ctx, testOrgGlobexID, "deadbeefdeadbeefdeadbeefdeadbeef", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 	seedOpenRound(t, ctx, defID)
 
 	require.NoError(t, (&PluginApproveCmd{
 		Plugin: "deadbeefdeadbeefdeadbeefdeadbeef", Version: "1.0.0",
-		Reviewer: testReviewerAliceID,
+		Reviewer: testReviewerAliceID, Organization: "globex",
 	}).Run(ctx))
 
 	status, _ := versionState(t, ctx, defID)
@@ -346,7 +398,7 @@ func TestPluginDecide_InvalidReviewerSaysReviewer(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	err := (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: "not an email",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: "not an email",
 	}).Run(ctx)
 	require.EqualError(t, err, `invalid reviewer "not an email": expected a user ID or an email address`)
 }
@@ -367,7 +419,7 @@ func TestPluginDecide_AmbiguousReviewerListsNames(t *testing.T) {
 	require.NoError(t, err)
 
 	err = (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: "dup@example.com",
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: "dup@example.com",
 	}).Run(ctx)
 	require.EqualError(t, err,
 		`2 reviewers match email "dup@example.com" (Rev One `+revOne+`, Rev Two `+revTwo+`): pass the user ID instead`)
@@ -379,10 +431,10 @@ func TestPluginList_ShowsSubmittedForDecidedVersions(t *testing.T) {
 	seedOpenRound(t, ctx, defID)
 
 	require.NoError(t, (&PluginApproveCmd{
-		Plugin: "logging-operator", Version: "1.0.0", Reviewer: testReviewerAliceID,
+		Plugin: "logging-operator", Version: "1.0.0", Organization: "globex", Reviewer: testReviewerAliceID,
 	}).Run(ctx))
 
-	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: "approved"})
+	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: pgtype.Text{String: "approved", Valid: true}})
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
 	assert.True(t, rows[0].Submitted.Valid, "a decided version still shows when it was submitted")
@@ -402,7 +454,7 @@ func TestPluginList_OrdersVersionsByCreation(t *testing.T) {
 		VALUES ($1, '1.10.0', '\x', 'testhash', 'draft')`, pluginID)
 	require.NoError(t, err)
 
-	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: "draft"})
+	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: pgtype.Text{String: "draft", Valid: true}})
 	require.NoError(t, err)
 	require.Len(t, rows, 2)
 	assert.Equal(t, "1.2.0", rows[0].PluginVersion)
@@ -411,21 +463,22 @@ func TestPluginList_OrdersVersionsByCreation(t *testing.T) {
 
 func TestPluginList_FiltersByStatus(t *testing.T) {
 	ctx := newTestContext(t)
-	_, pendingDefID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
+	pendingPluginID, pendingDefID := seedPluginVersion(t, ctx, testOrgGlobexID, "logging-operator", "1.0.0", dbconst.PluginDefinitionStatus_Pending)
 	seedOpenRound(t, ctx, pendingDefID)
 	seedPluginVersion(t, ctx, testOrgGlobexID, "metrics-operator", "2.0.0", dbconst.PluginDefinitionStatus_Draft)
 
-	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: "pending"})
+	rows, err := ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: pgtype.Text{String: "pending", Valid: true}})
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "globex", rows[0].OrganizationName)
 	assert.Equal(t, "logging-operator", rows[0].PluginName)
+	assert.Equal(t, pendingPluginID, rows[0].PluginID, "the list carries the ID the decision commands take")
 	assert.Equal(t, "1.0.0", rows[0].PluginVersion)
 	assert.Equal(t, dbconst.PluginDefinitionStatus_Pending, rows[0].Status)
 	assert.True(t, rows[0].Submitted.Valid, "the open round's submitted timestamp is listed")
 	assert.False(t, rows[0].Published.Valid)
 
-	rows, err = ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: ""})
+	rows, err = ctx.Queries.PluginVersionList(t.Context(), db.PluginVersionListParams{Status: pgtype.Text{}})
 	require.NoError(t, err)
 	assert.Len(t, rows, 2, "an empty status lists every version")
 

@@ -27,49 +27,47 @@ type PluginCmd struct {
 
 // PluginListCmd lists plugin versions.
 type PluginListCmd struct {
-	Status string `help:"Version status to list, or 'all'." enum:"pending,draft,changes_requested,approved,rejected,withdrawn,all" default:"pending"`
+	Status string `help:"Version status to list: ${enum}." enum:"pending,draft,changes_requested,approved,rejected,withdrawn,all" default:"pending"`
 }
 
 // PluginApproveCmd approves a pending plugin version. Approving a plugin's
 // first version makes the listing live in the public catalog: publication is
 // nothing more than the published timestamp this stamps.
 type PluginApproveCmd struct {
-	Plugin       string `arg:"" help:"Plugin name or plugin ID." required:""`
+	Plugin       string `arg:"" help:"Plugin ID, or plugin name with --organization." required:""`
 	Version      string `arg:"" help:"Plugin version." required:""`
 	Reviewer     string `help:"Reviewer recorded on the round: a DCIM user ID or email address." required:""`
-	Organization string `help:"Owning organization name, when the plugin name is ambiguous."`
+	Organization string `help:"Owning organization name; required when the plugin is addressed by name."`
 	Feedback     string `help:"Feedback for the publisher."`
 }
 
 // PluginRequestChangesCmd closes the round with feedback; the developer may
 // resubmit, which opens a fresh round rather than reviving this one.
 type PluginRequestChangesCmd struct {
-	Plugin       string `arg:"" help:"Plugin name or plugin ID." required:""`
+	Plugin       string `arg:"" help:"Plugin ID, or plugin name with --organization." required:""`
 	Version      string `arg:"" help:"Plugin version." required:""`
 	Reviewer     string `help:"Reviewer recorded on the round: a DCIM user ID or email address." required:""`
-	Organization string `help:"Owning organization name, when the plugin name is ambiguous."`
+	Organization string `help:"Owning organization name; required when the plugin is addressed by name."`
 	Feedback     string `help:"Feedback for the publisher." required:""`
 }
 
 // PluginRejectCmd refuses the version outright. Unlike request-changes this is
 // terminal: a rejected version is resubmitted as a new version, not revived.
 type PluginRejectCmd struct {
-	Plugin       string `arg:"" help:"Plugin name or plugin ID." required:""`
+	Plugin       string `arg:"" help:"Plugin ID, or plugin name with --organization." required:""`
 	Version      string `arg:"" help:"Plugin version." required:""`
 	Reviewer     string `help:"Reviewer recorded on the round: a DCIM user ID or email address." required:""`
-	Organization string `help:"Owning organization name, when the plugin name is ambiguous."`
-	Reason       string `help:"Rejection reason." enum:"incomplete_metadata,duplicate,security_concerns,naming_guidelines,out_of_scope,other" required:""`
+	Organization string `help:"Owning organization name; required when the plugin is addressed by name."`
+	Reason       string `help:"Rejection reason: ${enum}." enum:"incomplete_metadata,duplicate,security_concerns,naming_guidelines,out_of_scope,other" required:""`
 	Feedback     string `help:"Feedback for the publisher."`
 }
 
 // Run executes the plugin list command.
 func (c *PluginListCmd) Run(ctx *Context) error {
-	status := c.Status
-	if status == "all" {
-		status = ""
-	}
+	// 'all' means no status filter, which the query takes as NULL.
+	status := pgtype.Text{String: c.Status, Valid: c.Status != "all"}
 
-	ctx.Logger.Debug("listing plugin versions", "status", status)
+	ctx.Logger.Debug("listing plugin versions", "status", c.Status)
 
 	rows, err := ctx.Queries.PluginVersionList(context.Background(), db.PluginVersionListParams{Status: status})
 	if err != nil {
@@ -81,7 +79,7 @@ func (c *PluginListCmd) Run(ctx *Context) error {
 
 // Run executes the plugin approve command.
 func (c *PluginApproveCmd) Run(ctx *Context) error {
-	return decidePluginVersion(ctx, pluginDecision{
+	return decidePluginVersion(ctx, &pluginDecision{
 		plugin:       c.Plugin,
 		version:      c.Version,
 		organization: c.Organization,
@@ -98,7 +96,7 @@ func (c *PluginRequestChangesCmd) Run(ctx *Context) error {
 	if strings.TrimSpace(c.Feedback) == "" {
 		return errors.New("feedback is required: say what should change")
 	}
-	return decidePluginVersion(ctx, pluginDecision{
+	return decidePluginVersion(ctx, &pluginDecision{
 		plugin:       c.Plugin,
 		version:      c.Version,
 		organization: c.Organization,
@@ -110,7 +108,7 @@ func (c *PluginRequestChangesCmd) Run(ctx *Context) error {
 
 // Run executes the plugin reject command.
 func (c *PluginRejectCmd) Run(ctx *Context) error {
-	return decidePluginVersion(ctx, pluginDecision{
+	return decidePluginVersion(ctx, &pluginDecision{
 		plugin:          c.Plugin,
 		version:         c.Version,
 		organization:    c.Organization,
@@ -142,7 +140,7 @@ type pluginDecision struct {
 // can be decided, the version's status and the round's record move in one
 // transaction, and both writes are guarded so a decision racing a withdrawal
 // (or another reviewer) fails rather than half-landing.
-func decidePluginVersion(ctx *Context, d pluginDecision) error {
+func decidePluginVersion(ctx *Context, d *pluginDecision) error {
 	if utf8.RuneCountInString(d.feedback) > maxFeedbackLen {
 		return fmt.Errorf("feedback must be at most %d characters", maxFeedbackLen)
 	}
@@ -157,12 +155,12 @@ func decidePluginVersion(ctx *Context, d pluginDecision) error {
 
 	qtx := ctx.Queries.WithTx(tx)
 
-	pluginID, err := lookupPluginID(bgCtx, qtx, d.plugin, d.organization)
+	plug, err := lookupPlugin(bgCtx, qtx, d.plugin, d.organization)
 	if err != nil {
 		return err
 	}
 
-	ver, err := qtx.PluginVersionGet(bgCtx, db.PluginVersionGetParams{PluginID: pluginID, PluginVersion: d.version})
+	ver, err := qtx.PluginVersionGet(bgCtx, db.PluginVersionGetParams{PluginID: plug.id, PluginVersion: d.version})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("plugin %q has no version %q", d.plugin, d.version)
@@ -215,51 +213,53 @@ func decidePluginVersion(ctx *Context, d pluginDecision) error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	ctx.Logger.Info("decided plugin version", "plugin", d.plugin, "version", d.version,
-		"status", string(d.status), "reviewer", reviewerID.String())
+	ctx.Logger.Info("decided plugin version", "organization", plug.organization, "plugin", plug.name,
+		"version", d.version, "status", string(d.status), "reviewer", reviewerID.String())
 
 	return nil
 }
 
-// lookupPluginID resolves a plugin named by ID or by name. Names are unique
-// per organization, not globally, so a bare name matching several listings is
-// refused naming the organizations; --organization narrows it down. An
-// all-hex name can parse as a UUID too (plugins_ck_name allows it), so an ID
-// that matches nothing falls through to the name lookup.
-func lookupPluginID(ctx context.Context, queries *db.Queries, ref, organization string) (uuid.UUID, error) {
-	if id, err := uuid.Parse(ref); err == nil {
-		row, err := queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: id})
-		switch {
-		case err == nil:
-			if organization != "" && row.OrganizationName != organization {
-				return uuid.Nil, fmt.Errorf("plugin %q is published by organization %q, not %q", ref, row.OrganizationName, organization)
-			}
-			return row.ID, nil
-		case !errors.Is(err, pgx.ErrNoRows):
-			return uuid.Nil, fmt.Errorf("failed to look up plugin: %w", err)
+// resolvedPlugin is a plugin ref resolved to a row: the ID the queries key on
+// plus the name and organization the operator-facing output names it by.
+type resolvedPlugin struct {
+	id           uuid.UUID
+	name         string
+	organization string
+}
+
+// lookupPlugin resolves a plugin addressed by ID, or by name qualified with
+// --organization. The two forms never mix: without an organization the ref
+// must be a plugin ID, and with one it is always a name — even a name that
+// parses as a UUID (plugins_ck_name allows an all-hex one).
+func lookupPlugin(ctx context.Context, queries *db.Queries, ref, organization string) (resolvedPlugin, error) {
+	if organization == "" {
+		id, err := uuid.Parse(ref)
+		if err != nil {
+			return resolvedPlugin{}, fmt.Errorf("plugin %q is not a plugin ID: address a plugin by ID, or by name with --organization", ref)
 		}
+
+		row, err := queries.PluginGetByID(ctx, db.PluginGetByIDParams{ID: id})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return resolvedPlugin{}, fmt.Errorf("plugin %q not found", ref)
+			}
+			return resolvedPlugin{}, fmt.Errorf("failed to look up plugin: %w", err)
+		}
+
+		return resolvedPlugin{id: row.ID, name: row.Name, organization: row.OrganizationName}, nil
 	}
 
-	rows, err := queries.PluginFindByName(ctx, db.PluginFindByNameParams{Name: ref, OrganizationName: organization})
+	row, err := queries.PluginGetByName(ctx, db.PluginGetByNameParams{Name: ref, OrganizationName: organization})
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to look up plugin: %w", err)
-	}
-	switch len(rows) {
-	case 0:
-		if organization != "" {
-			return uuid.Nil, fmt.Errorf("plugin %q not found in organization %q", ref, organization)
+		if errors.Is(err, pgx.ErrNoRows) {
+			if _, idErr := uuid.Parse(ref); idErr == nil {
+				return resolvedPlugin{}, fmt.Errorf("plugin %q not found in organization %q: a plugin ID needs no --organization", ref, organization)
+			}
+			return resolvedPlugin{}, fmt.Errorf("plugin %q not found in organization %q", ref, organization)
 		}
-		return uuid.Nil, fmt.Errorf("plugin %q not found", ref)
-	case 1:
-		return rows[0].ID, nil
-	default:
-		names := make([]string, len(rows))
-		for i := range rows {
-			names[i] = rows[i].OrganizationName
-		}
-		return uuid.Nil, fmt.Errorf("plugin %q is published by %d organizations (%s): pass --organization or the plugin ID",
-			ref, len(rows), strings.Join(names, ", "))
+		return resolvedPlugin{}, fmt.Errorf("failed to look up plugin: %w", err)
 	}
+	return resolvedPlugin{id: row.ID, name: row.Name, organization: row.OrganizationName}, nil
 }
 
 // lookupReviewerID resolves a reviewer to a DCIM staff user (dcim.users), the
@@ -303,10 +303,13 @@ func lookupReviewerID(ctx context.Context, queries *db.Queries, reviewer string)
 	}
 }
 
-// pluginVersionOutput is the JSON output structure for a plugin version.
+// pluginVersionOutput is the JSON output structure for a plugin version. The
+// plugin ID is listed because it addresses a plugin in the decision commands
+// without naming its organization.
 type pluginVersionOutput struct {
 	Organization string `json:"organization"`
 	Plugin       string `json:"plugin"`
+	PluginID     string `json:"plugin_id"`
 	Version      string `json:"version"`
 	Status       string `json:"status"`
 	Submitted    string `json:"submitted,omitempty"`
@@ -322,6 +325,7 @@ func outputPluginVersionList(format OutputFormat, rows []db.PluginVersionListRow
 			output[i] = pluginVersionOutput{
 				Organization: row.OrganizationName,
 				Plugin:       row.PluginName,
+				PluginID:     row.PluginID.String(),
 				Version:      row.PluginVersion,
 				Status:       string(row.Status),
 				Submitted:    formatNullableTime(row.Submitted),
@@ -331,19 +335,27 @@ func outputPluginVersionList(format OutputFormat, rows []db.PluginVersionListRow
 		return PrintJSON(output)
 	case OutputTable:
 		w := NewTableWriter()
-		fmt.Fprintln(w, "ORGANIZATION\tPLUGIN\tVERSION\tSTATUS\tSUBMITTED\tPUBLISHED")
+		if _, err := fmt.Fprintln(w, "ORGANIZATION\tPLUGIN\tPLUGIN_ID\tVERSION\tSTATUS\tSUBMITTED\tPUBLISHED"); err != nil {
+			return fmt.Errorf("writing output: %w", err)
+		}
 		for i := range rows {
 			row := &rows[i]
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 				row.OrganizationName,
 				row.PluginName,
+				row.PluginID.String(),
 				row.PluginVersion,
 				row.Status,
 				formatNullableTime(row.Submitted),
 				formatNullableTime(row.Published),
-			)
+			); err != nil {
+				return fmt.Errorf("writing output: %w", err)
+			}
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("flushing output: %w", err)
+		}
+		return nil
 	default:
 		panic(fmt.Sprintf("unknown output format: %s", format))
 	}
