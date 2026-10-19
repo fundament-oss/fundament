@@ -187,7 +187,7 @@ Organization membership uses an invitation workflow:
 3. The user accepts or declines the invitation.
 4. An admin can revoke membership at any time. This removes the user from all of the organization's projects as well, so a later invitation grants only what it says. It is refused while the user is the last admin of a project.
 
-Only accepted members can be added to a project, so a pending or declined invitation never carries project memberships.
+Only accepted members can be added to a project. Project memberships that predate this rule can still exist for users who are not accepted members. They grant nothing on the clusters, but come back into effect if the user accepts an invitation later.
 
 There is no separate invitations table. The membership record tracks the full lifecycle: `pending` -> `accepted` (or `declined` or `revoked`).
 

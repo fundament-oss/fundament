@@ -197,6 +197,37 @@ func (q *Queries) MemberList(ctx context.Context) ([]MemberListRow, error) {
 	return items, nil
 }
 
+const memberLockAcceptedByUserID = `-- name: MemberLockAcceptedByUserID :one
+SELECT tenant.organizations_users.id
+FROM tenant.organizations_users
+WHERE tenant.organizations_users.user_id = $1
+    AND tenant.organizations_users.organization_id = authn.current_organization_id()
+    AND tenant.organizations_users.status = 'accepted'
+    AND tenant.organizations_users.deleted IS NULL
+    AND EXISTS (
+        SELECT 1
+        FROM tenant.users
+        WHERE tenant.users.id = tenant.organizations_users.user_id
+            AND tenant.users.deleted IS NULL
+    )
+FOR SHARE
+`
+
+type MemberLockAcceptedByUserIDParams struct {
+	UserID uuid.UUID
+}
+
+// Locks the user's accepted membership of the current organization against
+// removal until the transaction ends. DeleteMember revokes the membership
+// before it removes the project memberships, so a project member added under
+// this lock is either refused here or removed by that cleanup.
+func (q *Queries) MemberLockAcceptedByUserID(ctx context.Context, arg MemberLockAcceptedByUserIDParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, memberLockAcceptedByUserID, arg.UserID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const memberUpdatePermission = `-- name: MemberUpdatePermission :execrows
 UPDATE tenant.organizations_users
 SET permission = $2

@@ -55,6 +55,13 @@ func (s *Server) DeleteMember(
 
 	qtx := s.queries.WithTx(tx)
 
+	// The membership goes first: its row lock waits for a concurrent
+	// AddProjectMember to commit, so the cleanup below sees that new project
+	// membership too.
+	if err := qtx.MemberDelete(ctx, db.MemberDeleteParams{ID: id}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete member: %w", err))
+	}
+
 	// Project memberships go with the organization membership: left behind,
 	// they keep their RBAC on the clusters and come back into effect when the
 	// user is invited again.
@@ -65,10 +72,6 @@ func (s *Server) DeleteMember(
 			}
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to remove project memberships: %w", err))
-	}
-
-	if err := qtx.MemberDelete(ctx, db.MemberDeleteParams{ID: id}); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete member: %w", err))
 	}
 
 	if err := tx.Commit(ctx); err != nil {
