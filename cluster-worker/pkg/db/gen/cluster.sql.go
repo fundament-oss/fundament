@@ -597,7 +597,7 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 	return items, nil
 }
 
-const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :exec
+const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :execrows
 UPDATE tenant.node_pools
 SET
     status = $1,
@@ -617,7 +617,10 @@ type NodePoolUpdateStatusParams struct {
 // Record what Gardener reports about one pool's machines. Keyed by id: the
 // row was just read by the same check, and with soft deletes (cluster_id,
 // name) could meanwhile mean a recreated pool.
-func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) error {
-	_, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
-	return err
+func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

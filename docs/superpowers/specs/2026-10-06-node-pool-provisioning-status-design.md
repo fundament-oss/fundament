@@ -56,20 +56,22 @@ active node pools (reusing the sync path's query) and classifies each pool:
 | `waiting` | `EveryNodeReady` message or `lastErrors` name the pool's machine deployment; Gardener's text is the reason |
 | `error` | `lastOperation` is `Failed` and the failure names the pool |
 
-Machine deployment names embed the pool name; matching uses the `-<pool-name>-z` fragment to
-avoid prefix collisions (`web` vs `web2`), covered by unit tests.
+Machine deployment names carry the generated worker name
+(`kubename.GenerateWorkerName(pool)`), never the raw pool name; matching uses the
+`-<worker>-z` fragment to avoid prefix collisions (`web` vs `web2`) and the shoot's
+technical ID, covered by unit tests.
 
 Storage: three new columns on `tenant.node_pools` — `status text`, `status_message text`,
 `status_updated timestamptz` — with a CHECK constraint for the values (no postgres enums).
-Schema edited in `db/fundament.dbm`; migration 046 (on top of #494's 045) is generated with
-trek by the user, per workflow. `db/fundament.sql` regenerated via pgmodeler
-(`--pgsql-ver 18.0`).
+Schema edited in `db/fundament.dbm`; migration 052 (renumbered past master's 047–051 on
+rebase) is generated with trek by the user, per workflow. `db/fundament.sql` regenerated
+via pgmodeler (`--pgsql-ver 18.0`).
 
 Events: pool status transitions write `tenant.cluster_events` rows with new event types
 `nodepool_waiting`, `nodepool_error`, `nodepool_ready` (added to the CHECK constraint;
 `common/dbconst` regenerated). The message carries the pool name and Gardener's reason.
-`progressing` records no event. Like #494's `status_warning`, a `waiting`/`error` event is
-recorded once per distinct message, not per poll.
+`progressing` records no event. A `waiting`/`error` event is recorded once per transition
+into that status, not per poll; a changed reason refreshes the row silently.
 
 ## 3. organization-api: one derivation for all clients
 
@@ -88,10 +90,14 @@ created before this change) behaves as `ready`.
 
 Cluster status (`cluster_convert.go`), evaluated for shoots stored `ready`:
 
-1. `shoot_health = unhealthy` → `CLUSTER_STATUS_UNHEALTHY`.
-2. else any active pool `progressing`/`waiting` → `CLUSTER_STATUS_UPGRADING` (console label
-   becomes "Updating").
+1. `shoot_health = unhealthy` → `CLUSTER_STATUS_STARTING` while a new cluster still
+   awaits its first healthy verdict, `CLUSTER_STATUS_UNHEALTHY` after (a node pool
+   without machines lands here).
+2. else `shoot_updating` → `CLUSTER_STATUS_UPGRADING` (console label "Updating").
 3. else `CLUSTER_STATUS_RUNNING`.
+
+(Implemented from `shoot_health`/`shoot_updating`, not from pool rows: the shoot's own
+health already turns unhealthy while a pool waits, so no pending-pool query is needed.)
 
 Consumers updated: console labels/badges, functl `formatClusterStatus`, Terraform provider
 status handling (new enum value handled; exhaustive switches panic in default per

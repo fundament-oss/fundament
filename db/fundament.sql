@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -2698,7 +2698,7 @@ CREATE OR REPLACE TRIGGER clusters_outbox
 -- object: node_pools_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pools_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pools_outbox
-	AFTER INSERT OR UPDATE OF name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted
+	AFTER INSERT OR UPDATE OF cluster_id,name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.node_pools_sync_trigger();
@@ -4371,8 +4371,32 @@ GRANT SELECT,INSERT,UPDATE
 -- ddl-end --
 
 
--- object: grant_rw_428efc5f74 | type: PERMISSION --
-GRANT SELECT,UPDATE
+-- object: grant_r_428efc5f74 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_580c18972f | type: PERMISSION --
+GRANT UPDATE(status)
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_09808489d6 | type: PERMISSION --
+GRANT UPDATE(status_message)
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_ce2e269291 | type: PERMISSION --
+GRANT UPDATE(status_updated)
    ON TABLE tenant.node_pools
    TO fun_cluster_worker;
 

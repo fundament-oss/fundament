@@ -501,14 +501,22 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Polling fires the pool and event refreshes every tick without awaiting
+   *  them, so a slow response can land after a newer one; each request takes a
+   *  number and only the latest may write. */
+  private nodePoolsRequest = 0;
+  private eventsRequest = 0;
+
   /** What the node pool cards show. Its own method because the sheet that edits
    *  the pools stands over this page rather than replacing it, so this page has
    *  to fetch them again on its own. */
   private async loadNodePools(clusterId: string): Promise<void> {
+    const request = ++this.nodePoolsRequest;
     try {
       const response = await firstValueFrom(
         this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
       );
+      if (request !== this.nodePoolsRequest) return;
       this.clusterData.nodePools = response.nodePools;
       this.cdr.markForCheck();
     } catch {
@@ -867,17 +875,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async loadClusterEvents(clusterId: string): Promise<void> {
+    const requestNumber = ++this.eventsRequest;
     try {
       this.isLoadingEvents.set(true);
       const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });
       const response = await firstValueFrom(this.client.getClusterActivity(request));
+      if (requestNumber !== this.eventsRequest) return;
       this.clusterEvents.set(response.events);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load cluster events:', error);
       // No notification for events - it's not critical
     } finally {
-      this.isLoadingEvents.set(false);
+      if (requestNumber === this.eventsRequest) {
+        this.isLoadingEvents.set(false);
+      }
     }
   }
 

@@ -2943,7 +2943,7 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="authz.node_pools_sync_trigger()"/>
-		<columns names="name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted"/>
+		<columns names="cluster_id,name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted"/>
 </trigger>
 
 <trigger name="node_pool_outbox" firing-type="AFTER" per-line="true" constraint="false"
@@ -5264,7 +5264,22 @@ END;]]> </definition>
 <permission>
 	<object name="tenant.node_pools" type="table"/>
 	<roles names="fun_cluster_worker"/>
-	<privileges select="true" update="true"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="status" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="status_message" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="status_updated" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
 </permission>
 <permission>
 	<object name="appstore.plugin_documentation_links" type="table"/>

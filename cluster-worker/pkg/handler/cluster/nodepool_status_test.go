@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,19 +34,36 @@ func TestNextNodePoolStatuses(t *testing.T) {
 	readyHealthy := &gardener.ShootStatus{Status: gardener.StatusReady, Healthy: true}
 
 	tests := []struct {
-		name     string
-		stored   []storedNodePool
-		observed *gardener.ShootStatus
-		pushed   bool
-		want     []nodePoolUpdate
+		name        string
+		stored      []storedNodePool
+		observed    *gardener.ShootStatus
+		updating    bool
+		syncPending bool
+		want        []nodePoolUpdate
 	}{
 		{
 			name:     "named pool waits; settled pool keeps its status; new pool progresses",
 			stored:   []storedNodePool{{Name: "extra", Status: "ready"}, {Name: "fresh"}, {Name: "nomach", Status: "progressing"}},
 			observed: stuck,
-			pushed:   true,
+			updating: true,
 			want: []nodePoolUpdate{
 				{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing},
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
+			},
+		},
+		{
+			name:     "a node problem in a settled pool is left to its metrics",
+			stored:   []storedNodePool{{Name: "nomach", Status: "ready"}},
+			observed: stuck,
+			want:     nil,
+		},
+		{
+			name:     "a scale-up that cannot get machines turns a settled pool waiting",
+			stored:   []storedNodePool{{Name: "nomach", Status: "ready"}},
+			observed: stuck,
+			updating: true,
+			want: []nodePoolUpdate{
 				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
 					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
 			},
@@ -69,11 +87,28 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name:     "a new pool is progressing while its change is still being applied",
-			stored:   []storedNodePool{{Name: "fresh"}},
+			name:        "a new pool is progressing while its change is still being applied",
+			stored:      []storedNodePool{{Name: "fresh"}},
+			observed:    readyHealthy,
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing}},
+		},
+		{
+			name:        "a ready shoot says nothing about a pool whose change never reached Gardener",
+			stored:      []storedNodePool{{Name: "big", Status: "progressing"}, {Name: "web", Status: "ready"}},
+			observed:    readyHealthy,
+			syncPending: true,
+			want:        nil,
+		},
+		{
+			name:     "ready after the rollout settles the pool",
+			stored:   []storedNodePool{{Name: "big", Status: "progressing"}},
 			observed: readyHealthy,
-			pushed:   true,
-			want:     []nodePoolUpdate{{Name: "fresh", Status: dbconst.NodePoolStatus_Progressing}},
+			updating: true,
+			want: []nodePoolUpdate{
+				{Name: "big", Status: dbconst.NodePoolStatus_Ready,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool big: machines are ready"}}},
+			},
 		},
 		{
 			name:     "first classification of a settled pool is silent",
@@ -82,15 +117,15 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:     []nodePoolUpdate{{Name: "extra", Status: dbconst.NodePoolStatus_Ready}},
 		},
 		{
-			name:   "a cleared complaint returns a stuck pool to progressing",
-			stored: []storedNodePool{{Name: "fixed", Status: "waiting", Message: enrMessage("fixed")}, {Name: "nomach", Status: "waiting", Message: enrNomach}},
+			name:   "a stuck pool stays stuck while the detail names another pool",
+			stored: []storedNodePool{{Name: "tfpool", Status: "waiting", Message: enrMessage("tfpool")}, {Name: "nomach", Status: "waiting", Message: enrNomach}},
 			observed: &gardener.ShootStatus{
 				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
-				EveryNodeReadyMessage: enrNomach, // names nomach only; fixed recovered
+				// EveryNodeReady names only the first failing machine deployment;
+				// with two stuck pools the named one must not flip the other back.
+				EveryNodeReadyMessage: enrNomach,
 			},
-			want: []nodePoolUpdate{
-				{Name: "fixed", Status: dbconst.NodePoolStatus_Progressing},
-			},
+			want: nil,
 		},
 		{
 			name:     "a stuck pool keeps its reason while the report carries no detail",
@@ -122,6 +157,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 				EveryNodeReadyMessage: enrMessage("my-web"),
 			},
+			updating: true,
 			want: []nodePoolUpdate{
 				{Name: "my-web", Status: dbconst.NodePoolStatus_Waiting,
 					Message: enrMessage("my-web"),
@@ -162,7 +198,32 @@ func TestNextNodePoolStatuses(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.pushed))
+			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.updating, tt.syncPending))
 		})
 	}
+}
+
+// Gardener's reason is node and provider text: unbounded, and it can carry
+// terminal control codes. It is cleaned before it is stored or shown.
+func TestReasonText(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "plain reason", reasonText("plain reason"))
+	assert.Equal(t, "two  lines and a tab", reasonText("two \nlines\x1b and\a a\ttab"))
+
+	long := strings.Repeat("x", 2*maxReasonLen)
+	cleaned := reasonText(long)
+	assert.Equal(t, maxReasonLen, len([]rune(cleaned)))
+	assert.Equal(t, "…", string([]rune(cleaned)[maxReasonLen-1]))
+}
+
+// The waiting reason a pool stores went through reasonText.
+func TestPoolComplaintSanitizes(t *testing.T) {
+	t.Parallel()
+
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
+		EveryNodeReadyMessage: enrMessage("nomach") + "\x1b\x07\nsecond line",
+	}
+	assert.Equal(t, enrMessage("nomach")+" second line", poolComplaint("nomach", observed))
 }

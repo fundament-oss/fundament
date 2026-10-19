@@ -21,10 +21,15 @@ const (
 	outboxFailed    = "failed"
 )
 
-// waitForClusterRunning polls GetCluster until the cluster runs, cluster-worker
-// has applied every change to Gardener, and Gardener has rolled it out: a
-// change is pending in the outbox until cluster-worker has applied it, and
-// the cluster is upgrading from then until Gardener has finished.
+// waitForClusterRunning polls GetCluster until cluster-worker has applied
+// every change to Gardener and the cluster is usable: a change is pending in
+// the outbox until cluster-worker has applied it, and the cluster is upgrading
+// from then until Gardener has finished. The wait does not hold out for
+// health: a cluster that serves while its health checks settle (starting) or
+// while a health condition fails (unhealthy, such as a node pool that cannot
+// get machines) ends the wait too — Gardener may still be rolling nodes then,
+// and holding every apply hostage to a degraded node would never return.
+// Callers warn when the wait ends on one of those.
 //
 // A failed sync is fatal: cluster-worker has stopped retrying it. An error
 // status is not: Gardener retries most errors, so it only ends the wait when
@@ -95,6 +100,20 @@ func (e *stuckError) Error() string { return e.msg }
 func waitInconclusive(err error) bool {
 	var stuck *stuckError
 	return !errors.As(err, &stuck)
+}
+
+// clusterNotSettledWarning is the warning when a wait ends while the cluster
+// serves but is not plainly running, or "" when there is nothing to say.
+func clusterNotSettledWarning(cluster *organizationv1.ClusterDetails) string {
+	switch cluster.GetStatus() {
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING:
+		return "The cluster serves, but its health checks have not passed yet. Fundament keeps watching it; `tofu plan` shows its status."
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+		return "The cluster serves, but a health condition is failing — for example a node pool that cannot get machines. " +
+			"Gardener keeps working on it; the cluster's activity log and `tofu plan` show its status."
+	default:
+		return ""
+	}
 }
 
 // clusterRunning reports whether the cluster runs with all changes applied, or

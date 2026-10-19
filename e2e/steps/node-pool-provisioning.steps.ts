@@ -6,15 +6,16 @@
  * machine-controller-manager genuinely cannot place machines, then watches
  * ClusterService report that through the API. The default cucumber profile
  * excludes @real-gardener (see cucumber.json); run it explicitly with
- * `just e2e test-real-gardener` against `just dev -p local-gardener`.
+ * `just e2e test-real-gardener` against `just cluster-worker gardener-start`
+ * plus `just cluster-worker dev`.
  */
 
 import { execFileSync } from 'node:child_process';
 import { Given, When, Then, Before, After } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { ICustomWorld } from '../support/world.ts';
 import { ClusterService, type NodePool } from '../support/api/cluster-service.ts';
-import { ConnectRpcError } from '../support/api/client.ts';
 import { ClusterStatus, NodePoolStatus } from '../support/generated/v1/common_pb.ts';
 import { authenticateWithPassword, extractOrganizationId,
   waitForAuthzReady,
@@ -34,12 +35,31 @@ const seedNode = process.env.E2E_SEED_NODE ?? 'gardener-operator-local-control-p
 
 const POLL_INTERVAL_MS = 15_000;
 
+// scenarioStartedAt bounds the activity-log assertions: on a reused cluster
+// the log keeps nodepool_* events from earlier runs, and finding one of those
+// must not pass the scenario.
+let scenarioStartedAt = new Date(0);
+
+// True while this run holds the cordon, so cleanup never undoes a cordon
+// someone else set.
+let seedCordoned = false;
+
 function cordonSeed(on: boolean) {
+  // Only a local seed: this cordons a whole node.
+  if (!/^(kind|k3d)-/.test(seedContext)) {
+    throw new Error(
+      `E2E_SEED_CONTEXT "${seedContext}" is not a local kind/k3d context`,
+    );
+  }
+  if (!on && !seedCordoned) {
+    return;
+  }
   execFileSync(
     'kubectl',
     ['--context', seedContext, on ? 'cordon' : 'uncordon', seedNode],
     { stdio: 'inherit' },
   );
+  seedCordoned = on;
 }
 
 /**
@@ -90,6 +110,7 @@ function clusterStatusByName(name: string): ClusterStatus {
 Before({ tags: '@real-gardener', timeout: 10_000 }, async function (
   this: ICustomWorld,
 ) {
+  scenarioStartedAt = new Date();
   this.organizationApiUrl =
     process.env.ORGANIZATION_API_URL ||
     'https://organization.fundament.localhost:8443';
@@ -171,7 +192,7 @@ When(
     autoscaleMin: number,
     autoscaleMax: number,
   ) {
-    const response = await this.clusterService!.createNodePool({
+    await this.clusterService!.createNodePool({
       clusterId: this.realGardenerCluster!.id,
       name,
       machineType,
@@ -193,7 +214,9 @@ When(
 
 Then(
   'within {int} minutes the node pool {string} reports waiting for machines with a reason',
-  { timeout: 12 * 60_000 },
+  // No cucumber timeout: pollUntil enforces the {int} minutes the feature
+  // names, so changing the feature cannot run into a hardcoded step timeout.
+  { timeout: -1 },
   async function (this: ICustomWorld, minutes: number, name: string) {
     const pool = await pollUntil(
       minutes * 60_000,
@@ -245,12 +268,19 @@ Then(
   async function (this: ICustomWorld, eventType: string) {
     const event = await pollUntil(
       2 * 60_000,
-      `activity log containing a "${eventType}" event`,
+      `activity log containing a "${eventType}" event from this run`,
       async () => {
         const events = await this.clusterService!.getClusterActivity(
           this.realGardenerCluster!.id,
         );
-        return events.find((e) => e.eventType === eventType);
+        // Only events from this run: a reused cluster keeps the nodepool_*
+        // events of earlier runs in its log.
+        return events.find(
+          (e) =>
+            e.eventType === eventType &&
+            e.createdAt !== undefined &&
+            timestampDate(e.createdAt) >= scenarioStartedAt,
+        );
       },
     );
     expect(event.eventType).toBe(eventType);
@@ -258,30 +288,25 @@ Then(
 );
 
 Then(
-  'within {int} minutes the node pool {string} reports a healthy or provisioning state',
-  { timeout: 17 * 60_000 },
+  'within {int} minutes the node pool {string} reports a healthy state',
+  // No cucumber timeout: pollUntil enforces the {int} minutes the feature
+  // names, so changing the feature cannot run into a hardcoded step timeout.
+  { timeout: -1 },
   async function (this: ICustomWorld, minutes: number, name: string) {
     const pool = await pollUntil(
       minutes * 60_000,
-      `node pool "${name}" reporting HEALTHY or PROVISIONING`,
+      `node pool "${name}" reporting HEALTHY`,
       async () => {
         const pools = await this.clusterService!.listNodePools(
           this.realGardenerCluster!.id,
         );
         const found = findNodePool(pools, name);
-        if (
-          found &&
-          (found.status === NodePoolStatus.HEALTHY ||
-            found.status === NodePoolStatus.PROVISIONING)
-        ) {
-          return found;
-        }
-        return undefined;
+        return found && found.status === NodePoolStatus.HEALTHY
+          ? found
+          : undefined;
       },
     );
-    expect([NodePoolStatus.HEALTHY, NodePoolStatus.PROVISIONING]).toContain(
-      pool.status,
-    );
+    expect(pool.status).toBe(NodePoolStatus.HEALTHY);
   },
 );
 

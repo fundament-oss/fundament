@@ -29,7 +29,11 @@ CREATE POLICY "node_pools_cluster_worker_update" ON "tenant"."node_pools"
 /* Hazards:
  - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
 */
-GRANT UPDATE ON "tenant"."node_pools" TO "fun_cluster_worker";
+GRANT UPDATE ("status") ON "tenant"."node_pools" TO "fun_cluster_worker";
 
-CREATE OR REPLACE TRIGGER node_pools_outbox AFTER INSERT OR UPDATE OF name, machine_type, region_machine_type_id, autoscale_min, autoscale_max, deleted ON tenant.node_pools FOR EACH ROW EXECUTE FUNCTION authz.node_pools_sync_trigger();
+GRANT UPDATE ("status_message") ON "tenant"."node_pools" TO "fun_cluster_worker";
+
+GRANT UPDATE ("status_updated") ON "tenant"."node_pools" TO "fun_cluster_worker";
+
+CREATE OR REPLACE TRIGGER node_pools_outbox AFTER INSERT OR UPDATE OF cluster_id, name, machine_type, region_machine_type_id, autoscale_min, autoscale_max, deleted ON tenant.node_pools FOR EACH ROW EXECUTE FUNCTION authz.node_pools_sync_trigger();
 

@@ -36,20 +36,17 @@ const certManager: PluginSummary = create(PluginSummarySchema, {
   definitionHash: 'sha256:def',
 });
 
-// This page's bulk form has no per-plugin config step, so a plugin whose
-// definition declares required config (or whose schema the catalog cannot
-// read) must be refused before anything is installed or uninstalled.
-describe('ClusterPluginsComponent required-config guard', () => {
-  function build(
-    definitionResponse: {
-      configSchema: { name: string; required?: boolean }[];
-      configSchemaUnavailable?: boolean;
-    },
-    opts: {
-      plugins?: PluginSummary[];
-      installations?: { metadata: { name: string }; spec: { definitionRef: { pluginName: string } } }[];
-    } = {},
-  ) {
+function build(
+  definitionResponse: {
+    configSchema: { name: string; required?: boolean }[];
+    configSchemaUnavailable?: boolean;
+  },
+  opts: {
+    plugins?: PluginSummary[];
+    installations?: { metadata: { name: string }; spec: { definitionRef: { pluginName: string } } }[];
+    status?: ClusterStatus;
+  } = {},
+) {
     const installationService = {
       listInstallations: () => Promise.resolve(opts.installations ?? []),
       installPlugin: vi.fn().mockResolvedValue(undefined),
@@ -67,7 +64,7 @@ describe('ClusterPluginsComponent required-config guard', () => {
           provide: CLUSTER,
           useValue: {
             getCluster: () =>
-              of({ cluster: { name: 'production', status: ClusterStatus.RUNNING } }),
+              of({ cluster: { name: 'production', status: opts.status ?? ClusterStatus.RUNNING } }),
           } as unknown as ObservableClient<typeof ClusterService>,
         },
         {
@@ -88,10 +85,14 @@ describe('ClusterPluginsComponent required-config guard', () => {
         },
       ],
     });
-    const component = TestBed.createComponent(ClusterPluginsComponent).componentInstance;
-    return { component, installationService };
-  }
+  const component = TestBed.createComponent(ClusterPluginsComponent).componentInstance;
+  return { component, installationService };
+}
 
+// This page's bulk form has no per-plugin config step, so a plugin whose
+// definition declares required config (or whose schema the catalog cannot
+// read) must be refused before anything is installed or uninstalled.
+describe('ClusterPluginsComponent required-config guard', () => {
   it('installs a plugin whose schema declares no required keys', async () => {
     const { component, installationService } = build({
       configSchema: [{ name: 'MON_COUNT' }],
@@ -158,5 +159,34 @@ describe('ClusterPluginsComponent required-config guard', () => {
     expect(installationService.installPlugin).not.toHaveBeenCalled();
     expect(installationService.uninstallPlugin).toHaveBeenCalledWith('c1', 'acme--cert-manager');
     expect(component.errorMessage()).toContain('Ceph Rook');
+  });
+});
+
+// Plugin management talks to the cluster's API server, which answers in every
+// reachable status, not only RUNNING: starting, upgrading and unhealthy
+// clusters serve, while a stopped one does not.
+describe('ClusterPluginsComponent reachable gate', () => {
+  it.each([
+    ClusterStatus.STARTING,
+    ClusterStatus.UPGRADING,
+    ClusterStatus.UNHEALTHY,
+  ])('offers the form and submits on reachable status %i', async (status) => {
+    const { component, installationService } = build(
+      { configSchema: [] },
+      { status },
+    );
+    await component.load();
+
+    expect(component['notRunning']()).toBe(false);
+
+    await component.onFormSubmit({ preset: '', plugins: ['pl-1'] });
+    expect(installationService.installPlugin).toHaveBeenCalled();
+  });
+
+  it('shows the not-running notice for a stopped cluster', async () => {
+    const { component } = build({ configSchema: [] }, { status: ClusterStatus.STOPPED });
+    await component.load();
+
+    expect(component['notRunning']()).toBe(true);
   });
 });

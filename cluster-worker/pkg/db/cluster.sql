@@ -94,7 +94,7 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
--- name: NodePoolUpdateStatus :exec
+-- name: NodePoolUpdateStatus :execrows
 -- Record what Gardener reports about one pool's machines. Keyed by id: the
 -- row was just read by the same check, and with soft deletes (cluster_id,
 -- name) could meanwhile mean a recreated pool.
