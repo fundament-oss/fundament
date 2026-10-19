@@ -112,7 +112,10 @@ stateDiagram-v2
         ready --> deleting: cluster deleted
         progressing --> deleting: cluster deleted
         deleting --> deleted: shoot gone
+        progressing --> lost: shoot gone, cluster not deleted
         ready --> lost: shoot gone, cluster not deleted
+        error --> lost: shoot gone, cluster not deleted
+        deleting --> lost: shoot gone, cluster not deleted
         lost --> progressing: a change creates the shoot again
     }
 ```
