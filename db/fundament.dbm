@@ -48,6 +48,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_dcim_authn_api"
+ sql-disabled="true">
+</role>
+
 <role name="fun_marketplace_catalog_api"
  sql-disabled="true">
 </role>
@@ -3971,7 +3975,7 @@ END;]]> </definition>
 	</column>
 	<column name="external_ref">
 		<type name="text" length="0"/>
-		<comment> <![CDATA[Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+		<comment> <![CDATA[Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`); dcim-authn-api resolves it to the internal id at login, so the DCIM JWT `sub` is dcim.users.id. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
@@ -5889,6 +5893,16 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<object name="tenant.organizations" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="dcim" type="schema"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="dcim.users" type="table"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges select="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore" type="schema"/>

@@ -8,15 +8,17 @@
 -- The assignee dropdown source for task-management, and the identities the
 -- technician page resolves the logged-in user against.
 --
--- external_ref is the DCIM JWT subject, i.e. how the identity provider names
--- this person; GetCurrentUser matches on it and hands back the internal id that
--- tasks are actually assigned to. dcim-authn-api derives that subject from dex:
+-- external_ref is how the identity provider names this person; dcim-authn-api
+-- upserts on it at login and mints the DCIM JWT with the internal id (the
+-- JWT subject is dcim.users.id, never this reference). It derives the ref
+-- from dex:
 --   sub          = base64url(proto{user_id=<dex userID>, conn_id="local"})  (dex)
 --   external_ref = uuid.NewSHA1(6ba7b810-9dad-11d1-80b4-00c04fd430c8, sub)  (dcim-authn-api subjectUUID)
 -- The refs below are those of the dex-dcim dev accounts (charts/fundament/
--- values-local.yaml → dexDcim.staticPasswords), so any of them can log in and
--- land on a populated technician page with no manual DB edits. If the dev
--- accounts change, recompute these refs — verify against what /userinfo returns.
+-- values-local.yaml → dexDcim.staticPasswords), so any of them logs in onto
+-- their seeded row — a populated technician page with no manual DB edits. If
+-- the dev accounts change, recompute these refs; a mismatch only means the
+-- login creates a fresh row instead of landing on the seeded one.
 INSERT INTO dcim.users (id, external_ref, name, email) VALUES
     ('019dce30-0000-7000-8000-000000000001', '6b06ad37-5db1-5b84-8bea-57b287be639d', 'Alice', 'alice@acme-corp.com'),
     ('019dce30-0000-7000-8000-000000000002', '8c33fc91-9eae-5467-a3c0-d9a1b29acdf4', 'Bart',  'bart@acme-corp.com'),

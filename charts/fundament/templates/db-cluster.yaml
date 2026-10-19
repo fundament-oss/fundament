@@ -56,6 +56,10 @@ spec:
         login: true
         passwordSecret:
           name: db-fun-dcim-api
+      - name: fun_dcim_authn_api
+        login: true
+        passwordSecret:
+          name: db-fun-dcim-authn-api
       - name: fun_marketplace_catalog_api
         login: true
         passwordSecret:

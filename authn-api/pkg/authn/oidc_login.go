@@ -33,8 +33,10 @@ func (s *AuthnServer) upsertUser(ctx context.Context, queries *db.Queries, claim
 	})
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintUsersUqEmail {
+			// The external reference is deliberately not logged; the email is
+			// enough for the operator to find both accounts.
 			s.logger.Warn("sign-in refused: email address already belongs to another account",
-				"email", claims.Email, "external_ref", claims.Sub)
+				"email", claims.Email)
 			return db.UserUpsertRow{}, errEmailInUse
 		}
 		s.logger.Error("failed to upsert user", "error", err)

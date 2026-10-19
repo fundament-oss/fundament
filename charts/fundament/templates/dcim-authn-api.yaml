@@ -25,6 +25,11 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-fun-dcim-authn-api
+                  key: uri
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: OIDC_ISSUER
               value: {{ .Values.dexDcim.issuer }}

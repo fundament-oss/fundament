@@ -17,11 +17,14 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/common/psqldb"
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/dcimauthn"
 )
 
 type config struct {
 	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty"`
+	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"https://dex-dcim.fundament.localhost:8443"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"`
 	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"dcim"`
@@ -106,6 +109,15 @@ func run() error {
 	}
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
+	// The login flow provisions dcim.users entries just-in-time, so the
+	// service fails at startup rather than on the first login when the
+	// database is misconfigured.
+	database, err := psqldb.New(ctx, logger, psqldb.Config{URL: cfg.DatabaseURL})
+	if err != nil {
+		return fmt.Errorf("connecting to database: %w", err)
+	}
+	defer database.Close()
+
 	serverCfg := &dcimauthn.Config{
 		TokenExpiry:  cfg.TokenExpiry,
 		JWTSecret:    []byte(cfg.JWTSecret),
@@ -114,7 +126,7 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore)
+	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore, db.New(database.Pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(http.MethodGet+" /livez", func(w http.ResponseWriter, _ *http.Request) {

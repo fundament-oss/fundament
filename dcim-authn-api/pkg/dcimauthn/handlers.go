@@ -48,14 +48,14 @@ func (s *Server) HandlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.generateJWT(claims)
+	accessToken, userID, err := s.loginJWT(r.Context(), claims)
 	if err != nil {
 		s.logger.Error("failed to generate JWT", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	s.logger.Info("user logged in via password", "subject", subjectUUID(claims.Sub).String())
+	s.logger.Info("user logged in via password", "user_id", userID.String())
 
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
 	s.writeJSON(w, http.StatusOK, map[string]any{
@@ -132,14 +132,14 @@ func (s *Server) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.generateJWT(claims)
+	accessToken, userID, err := s.loginJWT(r.Context(), claims)
 	if err != nil {
 		s.logger.Error("failed to generate JWT", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	s.logger.Info("user logged in via OIDC", "subject", subjectUUID(claims.Sub).String())
+	s.logger.Info("user logged in via OIDC", "user_id", userID.String())
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))

@@ -1,6 +1,7 @@
 package dcimauthn
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -12,9 +13,11 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
 // Config holds the configuration for the DCIM auth server.
@@ -32,6 +35,7 @@ type Server struct {
 	oauth2Config  *oauth2.Config
 	oidcVerifier  *oidc.IDTokenVerifier
 	sessionStore  *SessionStore
+	queries       *db.Queries
 	logger        *slog.Logger
 	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
@@ -41,13 +45,14 @@ type Server struct {
 }
 
 // New creates a new DCIM auth Server.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore) *Server {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, queries *db.Queries) *Server {
 	return &Server{
 		config:        cfg,
 		logger:        logger,
 		oauth2Config:  oauth2Config,
 		oidcVerifier:  verifier,
 		sessionStore:  sessionStore,
+		queries:       queries,
 		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
 		returnOrigins: auth.NewReturnOrigins(logger, []string{cfg.FrontendURL}),
@@ -61,8 +66,10 @@ type oidcClaims struct {
 	Sub   string `json:"sub"`
 }
 
-// subjectUUID derives a deterministic UUIDv5 from the OIDC sub claim.
-// The Validator requires a UUID subject; dex's sub is not a UUID.
+// subjectUUID derives the deterministic UUIDv5 stored as
+// dcim.users.external_ref from the OIDC sub claim. It is a database key only:
+// the token subject is the internal dcim.users.id, and neither this value nor
+// the raw sub leaves this service.
 var dcimNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // UUID namespace DNS
 
 func subjectUUID(sub string) uuid.UUID {
@@ -85,11 +92,27 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 	return &claims, nil
 }
 
-// generateJWT mints the initial token for a freshly authenticated user. The
-// OIDC sub is mapped to a deterministic UUID subject.
-func (s *Server) generateJWT(claims *oidcClaims) (string, error) {
-	userID := subjectUUID(claims.Sub)
-	return s.mintJWT(userID.String(), claims.Name)
+// loginJWT mints the initial token for a freshly authenticated user. The
+// directory entry is provisioned just-in-time — the staff IdP is the access
+// boundary, so anyone who authenticates there belongs in the roster — and the
+// token subject is the internal dcim.users.id, the same user id every other
+// service records and resolves. The identity-provider reference stays in this
+// service: it is the upsert key and nothing more.
+func (s *Server) loginJWT(ctx context.Context, claims *oidcClaims) (string, uuid.UUID, error) {
+	row, err := s.queries.UserUpsert(ctx, db.UserUpsertParams{
+		Name:        claims.Name,
+		ExternalRef: pgtype.Text{String: subjectUUID(claims.Sub).String(), Valid: true},
+		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
+	})
+	if err != nil {
+		return "", uuid.Nil, fmt.Errorf("upserting user: %w", err)
+	}
+
+	token, err := s.mintJWT(row.ID.String(), row.Name)
+	if err != nil {
+		return "", uuid.Nil, err
+	}
+	return token, row.ID, nil
 }
 
 // mintJWT signs a DCIM token for the given (already-resolved) UUID subject.
