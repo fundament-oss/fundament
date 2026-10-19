@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -30,6 +31,18 @@ func (s *Server) AddProjectMember(
 
 	if err := s.checkPermission(ctx, authz.CanManageMembers(), authz.Project(projectID)); err != nil {
 		return nil, err
+	}
+
+	// Only accepted organization members can join a project: a membership for
+	// a pending invitee or a removed member grants nothing on the clusters, and
+	// would come back into effect when they join the organization later.
+	orgMember, err := s.queries.MemberGetByUserID(ctx, db.MemberGetByUserIDParams{UserID: userID})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization member: %w", err))
+	}
+	if err != nil || orgMember.Status != dbconst.OrganizationsUserStatus_Accepted {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("user is not an accepted member of the organization"))
 	}
 
 	memberID, err := s.queries.ProjectMemberCreate(ctx, db.ProjectMemberCreateParams{

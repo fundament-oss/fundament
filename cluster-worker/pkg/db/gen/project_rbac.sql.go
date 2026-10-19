@@ -26,11 +26,11 @@ WHERE tenant.projects.cluster_id = $1
     AND tenant.projects.deleted IS NULL
     AND tenant.namespaces.deleted IS NULL
     AND tenant.users.deleted IS NULL
-    AND NOT EXISTS (
+    AND EXISTS (
         SELECT 1 FROM tenant.organizations_users
         WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
             AND tenant.organizations_users.user_id = tenant.project_members.user_id
-            AND tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.permission != 'admin'
             AND tenant.organizations_users.status = 'accepted'
             AND tenant.organizations_users.deleted IS NULL
     )
@@ -47,8 +47,10 @@ type ProjectRoleBindingListForClusterRow struct {
 }
 
 // Desired project RoleBindings on a cluster (FUN-7): one row per active
-// project member and active namespace of that member's project. Accepted org
-// admins are excluded: their ClusterRoleBinding already grants cluster-admin.
+// project member and active namespace of that member's project. Only accepted
+// org members who are not org admins: a project membership without an org
+// membership grants nothing, and org admins' ClusterRoleBinding already grants
+// cluster-admin.
 // The namespace id (not its cluster-side name) is returned; the converger maps
 // it to the live namespace via the fundament.io/namespace-id label, which also
 // skips namespaces not yet created on the shoot.

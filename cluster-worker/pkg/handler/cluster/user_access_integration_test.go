@@ -50,6 +50,7 @@ func TestResolveUserAccessIgnoresDeletedProjectMembershipHistory(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "access-project-history")
 	projectAdminID := insertUser(t, db, "Project Admin")
 	userID := insertUser(t, db, "Project History User")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
 
 	projectID := insertProjectWithMembers(t, db, clusterID,
 		projectMember{
@@ -203,6 +204,54 @@ func TestResolveUserAccessMultiProject(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "member", access)
+}
+
+// A project membership grants nothing without an accepted organization
+// membership: one left behind by a removal would otherwise come back into
+// effect with a new invitation.
+func TestResolveUserAccessProjectMemberWithoutOrgMembership(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		Status  string
+		Deleted bool
+	}{
+		"removed":  {Status: "revoked", Deleted: true},
+		"pending":  {Status: "pending"},
+		"declined": {Status: "declined"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			db := createTestDB(t)
+			queries := dbgen.New(db.adminPool)
+
+			clusterID := insertCluster(t, db, acmeCorpOrgID, "access-no-org-"+name)
+			userID := insertUser(t, db, "No Org User "+name)
+			projectAdminID := insertUser(t, db, "Project Admin "+name)
+
+			_, err := db.adminPool.Exec(t.Context(),
+				`INSERT INTO tenant.organizations_users (organization_id, user_id, permission, status, deleted)
+				 VALUES ($1, $2, 'viewer', $3, CASE WHEN $4 THEN now() END)`,
+				acmeCorpOrgID, userID, tc.Status, tc.Deleted,
+			)
+			require.NoError(t, err)
+
+			insertProjectWithMembers(t, db, clusterID,
+				projectMember{UserID: projectAdminID, Role: "admin"},
+				projectMember{UserID: userID, Role: "viewer"},
+			)
+
+			access, err := queries.ResolveUserAccess(t.Context(), dbgen.ResolveUserAccessParams{
+				UserID:    userID,
+				ClusterID: clusterID,
+			})
+			require.NoError(t, err)
+			require.Equal(t, "none", access)
+		})
+	}
 }
 
 // insertOrgUser inserts an organizations_users row.

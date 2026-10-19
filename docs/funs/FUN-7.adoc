@@ -185,7 +185,9 @@ Organization membership uses an invitation workflow:
 1. An organization admin invites a user by email, specifying a permission level (`admin` or `viewer`). This creates a membership record in `pending` state.
 2. The invited user sees the invitation (via the `ListInvitations` endpoint, which is user-scoped and doesn't require the `Fun-Organization` header).
 3. The user accepts or declines the invitation.
-4. An admin can revoke membership at any time.
+4. An admin can revoke membership at any time. This removes the user from all of the organization's projects as well, so a later invitation grants only what it says. It is refused while the user is the last admin of a project.
+
+Only accepted members can be added to a project, so a pending or declined invitation never carries project memberships.
 
 There is no separate invitations table. The membership record tracks the full lifecycle: `pending` -> `accepted` (or `declined` or `revoked`).
 

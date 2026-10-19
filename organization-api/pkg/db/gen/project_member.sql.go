@@ -13,6 +13,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const projectListWhereUserIsLastAdmin = `-- name: ProjectListWhereUserIsLastAdmin :many
+SELECT tenant.projects.name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
+WHERE tenant.clusters.organization_id = authn.current_organization_id()
+  AND tenant.projects.deleted IS NULL
+  AND tenant.project_members.user_id = $1
+  AND tenant.project_members.role = 'admin'
+  AND tenant.project_members.deleted IS NULL
+  -- Inside this subquery tenant.project_members names the subquery's own rows,
+  -- the other members of the project, not the outer user's membership.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tenant.project_members
+    WHERE tenant.project_members.project_id = tenant.projects.id
+      AND tenant.project_members.role = 'admin'
+      AND tenant.project_members.deleted IS NULL
+      AND tenant.project_members.user_id != $1
+  )
+ORDER BY tenant.projects.name
+`
+
+type ProjectListWhereUserIsLastAdminParams struct {
+	UserID uuid.UUID
+}
+
+// Projects of the current organization whose only admin is the given user.
+func (q *Queries) ProjectListWhereUserIsLastAdmin(ctx context.Context, arg ProjectListWhereUserIsLastAdminParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, projectListWhereUserIsLastAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const projectMemberCreate = `-- name: ProjectMemberCreate :one
 INSERT INTO tenant.project_members (project_id, user_id, role)
 VALUES ($1, $2, $3)
@@ -49,6 +97,34 @@ func (q *Queries) ProjectMemberDelete(ctx context.Context, arg ProjectMemberDele
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const projectMemberDeleteByUserID = `-- name: ProjectMemberDeleteByUserID :exec
+UPDATE tenant.project_members
+SET deleted = now()
+WHERE tenant.project_members.user_id = $1
+  AND tenant.project_members.deleted IS NULL
+  AND tenant.project_members.project_id IN (
+    SELECT tenant.projects.id
+    FROM tenant.projects
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+    WHERE tenant.clusters.organization_id = authn.current_organization_id()
+      AND tenant.projects.deleted IS NULL
+  )
+`
+
+type ProjectMemberDeleteByUserIDParams struct {
+	UserID uuid.UUID
+}
+
+// Removes a user from every project of the current organization, for when the
+// user leaves it. A project membership left behind would come back into
+// effect with a new invitation, which should grant only what it says.
+// Deleted projects are skipped: their memberships grant nothing, and the
+// last-admin trigger would refuse removing their only admin.
+func (q *Queries) ProjectMemberDeleteByUserID(ctx context.Context, arg ProjectMemberDeleteByUserIDParams) error {
+	_, err := q.db.Exec(ctx, projectMemberDeleteByUserID, arg.UserID)
+	return err
 }
 
 const projectMemberGetByID = `-- name: ProjectMemberGetByID :one

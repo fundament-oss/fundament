@@ -44,3 +44,44 @@ UPDATE tenant.project_members
 SET deleted = now()
 WHERE id = $1
 AND deleted IS NULL;
+
+-- name: ProjectMemberDeleteByUserID :exec
+-- Removes a user from every project of the current organization, for when the
+-- user leaves it. A project membership left behind would come back into
+-- effect with a new invitation, which should grant only what it says.
+-- Deleted projects are skipped: their memberships grant nothing, and the
+-- last-admin trigger would refuse removing their only admin.
+UPDATE tenant.project_members
+SET deleted = now()
+WHERE tenant.project_members.user_id = @user_id
+  AND tenant.project_members.deleted IS NULL
+  AND tenant.project_members.project_id IN (
+    SELECT tenant.projects.id
+    FROM tenant.projects
+    JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+    WHERE tenant.clusters.organization_id = authn.current_organization_id()
+      AND tenant.projects.deleted IS NULL
+  );
+
+-- name: ProjectListWhereUserIsLastAdmin :many
+-- Projects of the current organization whose only admin is the given user.
+SELECT tenant.projects.name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
+WHERE tenant.clusters.organization_id = authn.current_organization_id()
+  AND tenant.projects.deleted IS NULL
+  AND tenant.project_members.user_id = @user_id
+  AND tenant.project_members.role = 'admin'
+  AND tenant.project_members.deleted IS NULL
+  -- Inside this subquery tenant.project_members names the subquery's own rows,
+  -- the other members of the project, not the outer user's membership.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tenant.project_members
+    WHERE tenant.project_members.project_id = tenant.projects.id
+      AND tenant.project_members.role = 'admin'
+      AND tenant.project_members.deleted IS NULL
+      AND tenant.project_members.user_id != @user_id
+  )
+ORDER BY tenant.projects.name;
