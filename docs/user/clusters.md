@@ -261,8 +261,10 @@ rather than erasing its record.
 A cluster can disappear from the underlying infrastructure without anyone
 deleting it in the platform, for instance after an operator error or the loss of
 the machines that ran its control plane. Its workloads and data are gone with
-it. The platform then shows the cluster as **Lost**, records a "Cluster lost"
-event, and offers no kubeconfig.
+it. If the platform had already seen the cluster in the infrastructure, it then
+shows the cluster as **Lost**, records a "Cluster lost" event, and offers no
+kubeconfig. A cluster that disappears before the platform first saw it stays
+**Pending**.
 
 A lost cluster is not rebuilt by itself. Any change to the cluster, such as
 resizing a node pool, creates it again under the same name. The new cluster is

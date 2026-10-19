@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,6 +70,7 @@ type Cache struct {
 	requester Requester
 	logger    *slog.Logger
 	tokens    *ttlcache.Cache[cacheKey, *cachedToken]
+	tokensMu  sync.Mutex                       // serializes storing a token with forget's compare-and-delete
 	failures  *ttlcache.Cache[cacheKey, error] // recent failed requests, see failureTTL
 	group     singleflight.Group               // deduplicates concurrent token requests
 }
@@ -116,11 +118,14 @@ func (c *Cache) ForgetProxyToken(clusterID, token string) {
 }
 
 func (c *Cache) forget(key cacheKey, token string) {
+	c.tokensMu.Lock()
 	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
 	if item == nil || item.Value().token != token {
+		c.tokensMu.Unlock()
 		return
 	}
 	c.tokens.Delete(key)
+	c.tokensMu.Unlock()
 	c.logger.Info("cluster rejected SA token, dropped it from the cache",
 		"service_account", key.saName, "cluster_id", key.clusterID)
 }
@@ -192,7 +197,9 @@ func (c *Cache) requestToken(ctx context.Context, key cacheKey) (string, error) 
 		ttl:      ttl,
 	}
 	// Store with actual TTL — ttlcache evicts automatically on expiry.
+	c.tokensMu.Lock()
 	c.tokens.Set(key, ct, ttl)
+	c.tokensMu.Unlock()
 
 	c.logger.InfoContext(ctx, "SA token issued",
 		"service_account", key.saName, "cluster_id", key.clusterID,
