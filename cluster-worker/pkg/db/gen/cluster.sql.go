@@ -121,6 +121,7 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
     tenant.clusters.shoot_api_available,
+    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -153,6 +154,7 @@ type ClusterGetForStatusCheckRow struct {
 	ShootHealth        pgtype.Text
 	ShootUpdating      bool
 	ShootApiAvailable  pgtype.Timestamptz
+	OutboxStatus       pgtype.Text
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -178,6 +180,7 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 		&i.ShootHealth,
 		&i.ShootUpdating,
 		&i.ShootApiAvailable,
+		&i.OutboxStatus,
 		&i.OrganizationID,
 		&i.ShootStatusUpdated,
 		&i.OrganizationName,
@@ -538,4 +541,83 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 		return nil, err
 	}
 	return items, nil
+}
+
+const nodePoolListStatusByClusterID = `-- name: NodePoolListStatusByClusterID :many
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = $1
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id
+`
+
+type NodePoolListStatusByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+type NodePoolListStatusByClusterIDRow struct {
+	ID            uuid.UUID
+	Name          string
+	Status        pgtype.Text
+	StatusMessage pgtype.Text
+}
+
+// The status path needs only identity and the stored classification; the
+// worker-group build query above, with its catalog joins, stays with sync.
+func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
+	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NodePoolListStatusByClusterIDRow
+	for rows.Next() {
+		var i NodePoolListStatusByClusterIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Status,
+			&i.StatusMessage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :exec
+UPDATE tenant.node_pools
+SET
+    status = $1,
+    status_message = $2,
+    status_updated = now()
+WHERE
+    id = $3
+    AND deleted IS NULL
+`
+
+type NodePoolUpdateStatusParams struct {
+	Status     pgtype.Text
+	Message    pgtype.Text
+	NodePoolID uuid.UUID
+}
+
+// Record what Gardener reports about one pool's machines. Keyed by id: the
+// row was just read by the same check, and with soft deletes (cluster_id,
+// name) could meanwhile mean a recreated pool.
+func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) error {
+	_, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
+	return err
 }

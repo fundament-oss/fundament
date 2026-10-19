@@ -75,7 +75,7 @@ type MockClient struct {
 	// Status change notifications, standing in for the real client's watch.
 	NotifyInterval time.Duration // How often RunStatusNotifier re-evaluates the shoots (default: 1s)
 	onStatusChange func(clusterID uuid.UUID)
-	notified       map[uuid.UUID]ShootStatus // Last status reported per cluster
+	notified       map[uuid.UUID]*ShootStatus // Last status reported per cluster
 }
 
 // mockShoot tracks a shoot's state and creation time for status progression.
@@ -98,6 +98,9 @@ type StatusOverride struct {
 	// APIServerAvailable is reported as is; tests that leave it false get the
 	// pre-ready path only through shoot_status = 'ready'.
 	APIServerAvailable bool
+	// EveryNodeReadyMessage and LastErrors feed the per-pool classification.
+	EveryNodeReadyMessage string
+	LastErrors            []string
 }
 
 // NewMock creates a new MockClient with default settings.
@@ -120,7 +123,7 @@ func NewMock(logger *slog.Logger) *MockClient {
 		SimulateAsyncNamespace: false, // Default: instant namespace (backwards compatible)
 		NamespaceReadyDelay:    2 * time.Second,
 		NotifyInterval:         time.Second,
-		notified:               make(map[uuid.UUID]ShootStatus),
+		notified:               make(map[uuid.UUID]*ShootStatus),
 	}
 }
 
@@ -362,6 +365,7 @@ func (m *MockClient) statusFor(clusterID uuid.UUID, shoot *mockShoot, now time.T
 		return &ShootStatus{
 			Status: override.Status, Message: override.Message, Operation: override.Operation,
 			Healthy: override.Healthy, Retrying: override.Retrying, APIServerAvailable: override.APIServerAvailable,
+			EveryNodeReadyMessage: override.EveryNodeReadyMessage, LastErrors: override.LastErrors,
 		}
 	}
 	if shoot == nil {
@@ -467,8 +471,8 @@ func (m *MockClient) NotifyStatusChanges() {
 	for _, shoot := range m.shoots {
 		clusterID := shoot.Info.ClusterID
 		present[clusterID] = true
-		status := *m.statusFor(clusterID, shoot, now)
-		if last, ok := m.notified[clusterID]; !ok || last != status {
+		status := m.statusFor(clusterID, shoot, now)
+		if last, ok := m.notified[clusterID]; !ok || !last.equal(status) {
 			m.notified[clusterID] = status
 			changed = append(changed, clusterID)
 		}
@@ -517,7 +521,7 @@ func (m *MockClient) Reset() {
 	m.ListError = nil
 	m.GetStatusError = nil
 	m.StatusOverrides = make(map[uuid.UUID]StatusOverride)
-	m.notified = make(map[uuid.UUID]ShootStatus)
+	m.notified = make(map[uuid.UUID]*ShootStatus)
 }
 
 // SetApplyError configures the mock to return an error on ApplyShoot.

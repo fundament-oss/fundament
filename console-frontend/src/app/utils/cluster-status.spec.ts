@@ -1,5 +1,10 @@
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { isKubeconfigAvailable, kubeconfigHint } from './cluster-status';
+import {
+  getStatusBadgeColor,
+  getStatusLabel,
+  isKubeconfigAvailable,
+  kubeconfigHint,
+} from './cluster-status';
 
 describe('isKubeconfigAvailable', () => {
   it('offers a kubeconfig from creation on', () => {
@@ -8,6 +13,7 @@ describe('isKubeconfigAvailable', () => {
       ClusterStatus.STARTING,
       ClusterStatus.RUNNING,
       ClusterStatus.UPGRADING,
+      ClusterStatus.UNHEALTHY,
       ClusterStatus.ERROR,
     ].forEach((status) => {
       expect(isKubeconfigAvailable(status)).toBe(true);
@@ -59,5 +65,18 @@ describe('kubeconfigHint', () => {
       expect(isKubeconfigAvailable(status)).toBe(false);
       expect(kubeconfigHint(status)).not.toBeNull();
     });
+  });
+});
+
+describe('getStatusBadgeColor', () => {
+  it('marks an unhealthy cluster critical', () => {
+    expect(getStatusBadgeColor(ClusterStatus.UNHEALTHY)).toBe('critical');
+  });
+});
+
+describe('getStatusLabel', () => {
+  it('labels unhealthy and upgrading clusters', () => {
+    expect(getStatusLabel(ClusterStatus.UNHEALTHY)).toBe('Unhealthy');
+    expect(getStatusLabel(ClusterStatus.UPGRADING)).toBe('Updating');
   });
 });

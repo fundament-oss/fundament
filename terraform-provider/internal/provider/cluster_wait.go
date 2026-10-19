@@ -106,7 +106,14 @@ func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
 	}
 
 	switch cluster.GetStatus() {
-	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+		// Starting (health checks settling after create) and unhealthy (health
+		// conditions failing, such as machines a node pool cannot get) are both
+		// ready in Gardener: the cluster is usable, and the wait must not hang
+		// on health a pool may never reach, nor hold every later apply hostage
+		// to a degraded node.
 		// The status is Gardener's last reading; a change still in the outbox has not reached it.
 		return !sync.HasOutboxStatus() || sync.GetOutboxStatus() == outboxCompleted, nil
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING,
@@ -114,7 +121,7 @@ func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
 		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 		return false, &stuckError{msg: fmt.Sprintf("cluster is %s and will not run", clusterStatusToString(cluster.GetStatus()))}
 	default:
-		// Provisioning, starting, upgrading, error, unspecified: keep polling.
+		// Provisioning, upgrading, error, unspecified: keep polling.
 		return false, nil
 	}
 }

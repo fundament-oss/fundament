@@ -36,7 +36,6 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
-import { ClusterStatus } from '../../generated/v1/common_pb';
 import {
   hasInvalidConfig,
   installPhase,
@@ -71,6 +70,7 @@ import '@nldd/design-system/tag';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title';
 import '@nldd/design-system/top-title-bar';
+import { isClusterReachable } from '../utils/cluster-status';
 // The detail page's own shape. catalog.v1 returns ids where organization.v1
 // returned names, and splits the author into two scalars; resolving that here
 // keeps the template as it was.
@@ -264,7 +264,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
             phase: installPhaseOf(installation),
             version: installation?.spec?.definitionRef?.pluginVersion ?? '',
             configInvalid: installation ? hasInvalidConfig(installation) : false,
-            running: cluster.status === ClusterStatus.RUNNING,
+            running: isClusterReachable(cluster.status),
           };
         }),
       );
@@ -396,7 +396,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         ...c,
         phase: resolved,
         configInvalid: install ? hasInvalidConfig(install) : false,
-        running: c.status === ClusterStatus.RUNNING,
+        running: isClusterReachable(c.status),
       };
     });
 

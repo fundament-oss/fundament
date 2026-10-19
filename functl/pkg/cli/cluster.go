@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -75,8 +76,25 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 
 	cluster := resp.GetCluster()
 
+	// The pool list is auxiliary: when it fails, the cluster — what the
+	// operator came for — still prints, with a warning on stderr.
+	var nodePools []*organizationv1.NodePool
+	npResp, npErr := apiClient.Clusters().ListNodePools(context.Background(), organizationv1.ListNodePoolsRequest_builder{
+		ClusterId: c.ClusterID,
+	}.Build())
+	if npErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to list node pools: %v\n", npErr)
+	} else {
+		nodePools = npResp.GetNodePools()
+	}
+
 	if ctx.Output == OutputJSON {
-		return PrintJSON(cluster)
+		// node_pools is null when the lookup failed, [] when there are none.
+		var pools any
+		if npErr == nil {
+			pools = nodePools
+		}
+		return PrintJSON(map[string]any{"cluster": cluster, "node_pools": pools})
 	}
 
 	w := NewTableWriter()
@@ -87,6 +105,19 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Status", formatClusterStatus(cluster.GetStatus()))
 	if cluster.GetCreated() != nil {
 		PrintKeyValue(w, "Created", cluster.GetCreated().AsTime().Format(TimeFormat))
+	}
+	if len(nodePools) > 0 {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "NAME\tTYPE\tNODES\tSTATUS\tREASON")
+		for _, pool := range nodePools {
+			fmt.Fprintf(w, "%s\t%s\t%d (min %d, max %d)\t%s\t%s\n",
+				pool.GetName(),
+				pool.GetMachineType(),
+				pool.GetCurrentNodes(), pool.GetMinNodes(), pool.GetMaxNodes(),
+				formatNodePoolStatus(pool.GetStatus()),
+				pool.GetStatusMessage(),
+			)
+		}
 	}
 	return w.Flush()
 }
@@ -103,13 +134,37 @@ func formatClusterStatus(status organizationv1.ClusterStatus) string {
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:
 		return "running"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
-		return "upgrading"
+		return "updating"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
+		return "unhealthy"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
 		return "error"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING:
 		return "stopping"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 		return "stopped"
+	default:
+		return "unknown"
+	}
+}
+
+// formatNodePoolStatus formats a node pool status for display.
+func formatNodePoolStatus(status organizationv1.NodePoolStatus) string {
+	switch status {
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_HEALTHY:
+		return "healthy"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_DEGRADED:
+		return "degraded"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNHEALTHY:
+		return "unhealthy"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_PROVISIONING:
+		return "provisioning"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_WAITING_FOR_MACHINES:
+		return "waiting for machines"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_FAILED:
+		return "failed"
+	case organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED:
+		return "unknown"
 	default:
 		return "unknown"
 	}
