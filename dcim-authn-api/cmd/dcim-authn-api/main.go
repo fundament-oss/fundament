@@ -133,7 +133,20 @@ func run() error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc(http.MethodGet+" /readyz", func(w http.ResponseWriter, _ *http.Request) {
+	// readyz reports the database because login and refresh can serve nothing
+	// without it; livez deliberately does not, so a brief outage does not get
+	// the container killed and restarted.
+	mux.HandleFunc(http.MethodGet+" /readyz", func(w http.ResponseWriter, r *http.Request) {
+		pingCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		if err := database.Pool.Ping(pingCtx); err != nil {
+			// The probe is public and a pgx error names the host, port,
+			// database and role, so the detail stays in the log.
+			logger.ErrorContext(pingCtx, "readiness probe failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database unavailable"))
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})

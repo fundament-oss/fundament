@@ -29,13 +29,20 @@ type Config struct {
 	FrontendURL  string
 }
 
+// Store is the directory access the server needs, satisfied by the generated
+// db.Queries; an interface so handler tests can stub it.
+type Store interface {
+	UserUpsert(ctx context.Context, arg db.UserUpsertParams) (db.UserUpsertRow, error)
+	UserGetByID(ctx context.Context, arg db.UserGetByIDParams) (db.UserGetByIDRow, error)
+}
+
 // Server handles DCIM authentication.
 type Server struct {
 	config        *Config
 	oauth2Config  *oauth2.Config
 	oidcVerifier  *oidc.IDTokenVerifier
 	sessionStore  *SessionStore
-	queries       *db.Queries
+	queries       Store
 	logger        *slog.Logger
 	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
@@ -45,7 +52,7 @@ type Server struct {
 }
 
 // New creates a new DCIM auth Server.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, queries *db.Queries) *Server {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, queries Store) *Server {
 	return &Server{
 		config:        cfg,
 		logger:        logger,

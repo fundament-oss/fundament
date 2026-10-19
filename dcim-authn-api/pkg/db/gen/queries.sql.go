@@ -12,6 +12,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const userGetByID = `-- name: UserGetByID :one
+SELECT id, name
+FROM dcim.users
+WHERE id = $1 AND deleted IS NULL
+`
+
+type UserGetByIDParams struct {
+	ID uuid.UUID
+}
+
+type UserGetByIDRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// Refresh resolves the token subject back onto the directory: a subject that
+// no longer resolves (a soft-deleted user, or a pre-rollover token whose
+// subject is an external reference rather than dcim.users.id) must not have
+// its session extended.
+func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserGetByIDRow, error) {
+	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
+	var i UserGetByIDRow
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
 const userUpsert = `-- name: UserUpsert :one
 INSERT INTO dcim.users (name, external_ref, email)
 VALUES ($1, $2, $3)

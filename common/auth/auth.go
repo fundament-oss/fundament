@@ -155,8 +155,8 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	// The subject is not logged: on DCIM tokens it is an external
-	// identity-provider reference, which must never appear in logs.
+	// The failed subject is not echoed into the log: it is unparsed,
+	// attacker-controllable input from an otherwise well-signed token.
 	if _, err := uuid.Parse(claims.Subject); err != nil {
 		v.logger.Debug("invalid user ID in token subject")
 		return nil, fmt.Errorf("invalid user ID in token subject: %w", err)

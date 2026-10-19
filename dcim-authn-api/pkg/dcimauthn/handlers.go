@@ -2,9 +2,14 @@ package dcimauthn
 
 import (
 	"encoding/json/v2"
+	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
+
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
 // maxLoginBodyBytes caps a login request body. The decoder reads the body to
@@ -154,8 +159,27 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Re-sign with fresh expiry using the same identity.
-	accessToken, err := s.mintJWT(claims.Subject, claims.Name)
+	// Refresh only extends a session whose subject still resolves to a live
+	// directory entry. A soft-deleted user cannot keep a session alive, and a
+	// pre-rollover token — whose subject is an external reference rather than
+	// dcim.users.id — fails here instead of being re-signed forever, forcing
+	// a fresh login that mints an internal-id token.
+	row, err := s.queries.UserGetByID(r.Context(), db.UserGetByIDParams{
+		ID: uuid.MustParse(claims.Subject),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
+			return
+		}
+		s.logger.Error("failed to resolve user on refresh", "error", err)
+		s.writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	// Re-sign with fresh expiry, taking the name from the directory so a
+	// rename lands on the next refresh.
+	accessToken, err := s.mintJWT(row.ID.String(), row.Name)
 	if err != nil {
 		s.logger.Error("failed to generate JWT on refresh", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
