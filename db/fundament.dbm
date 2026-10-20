@@ -48,6 +48,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
  sql-disabled="true">
 </role>
 
+<role name="fun_dcim_authn_api"
+ sql-disabled="true">
+</role>
+
 <role name="fun_marketplace_catalog_api"
  sql-disabled="true">
 </role>
@@ -3971,7 +3975,7 @@ END;]]> </definition>
 	</column>
 	<column name="external_ref">
 		<type name="text" length="0"/>
-		<comment> <![CDATA[Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+		<comment> <![CDATA[Identity-provider reference this user maps onto (the IdP `sub` verbatim), the login upsert key. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
@@ -5889,6 +5893,31 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 	<object name="tenant.organizations" type="table"/>
 	<roles names="fun_marketplace_admin_api"/>
 	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="dcim" type="schema"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="dcim.users" type="table"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="name" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="external_ref" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="email" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore" type="schema"/>

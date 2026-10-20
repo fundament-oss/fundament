@@ -266,9 +266,9 @@ dexDcim:
   # DCIM is a separate trust domain from the console/tenant. For dev convenience
   # the same test credentials (emails + password) work here, but each user gets
   # a DCIM-specific userID (019d0000 prefix) that is intentionally distinct from
-  # the tenant userID in `dex` above. dcim-authn-api derives the JWT subject from
-  # the dex `sub` and never correlates it with tenant.users, so these IDs must
-  # stay decoupled — do not reuse the tenant userIDs here.
+  # the tenant userID in `dex` above. dcim-authn-api derives dcim.users.external_ref
+  # from the dex `sub` and never correlates it with tenant.users, so these IDs
+  # must stay decoupled — do not reuse the tenant userIDs here.
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
     - email: alice@acme-corp.com

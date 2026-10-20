@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -3413,7 +3413,7 @@ CREATE TABLE dcim.users (
 	CONSTRAINT users_pk PRIMARY KEY (id)
 );
 -- ddl-end --
-COMMENT ON COLUMN dcim.users.external_ref IS E'Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.';
+COMMENT ON COLUMN dcim.users.external_ref IS E'Identity-provider reference this user maps onto (the IdP `sub` verbatim), the login upsert key. Null for users that exist only in DCIM and cannot sign in.';
 -- ddl-end --
 ALTER TABLE dcim.users OWNER TO fun_owner;
 -- ddl-end --
@@ -5399,6 +5399,46 @@ GRANT SELECT
 GRANT SELECT
    ON TABLE tenant.organizations
    TO fun_marketplace_admin_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_2ff84b3919" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA dcim
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_737d11721a | type: PERMISSION --
+GRANT SELECT
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_aw_6ec0c94e69 | type: PERMISSION --
+GRANT INSERT(name),UPDATE(name)
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_d8bdd69736 | type: PERMISSION --
+GRANT INSERT(external_ref)
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_aw_a274691c4e | type: PERMISSION --
+GRANT INSERT(email),UPDATE(email)
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
 
 -- ddl-end --
 

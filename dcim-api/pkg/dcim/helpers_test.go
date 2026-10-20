@@ -15,7 +15,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,9 +37,9 @@ type testEnv struct {
 	server    *httptest.Server
 	adminPool *pgxpool.Pool
 	testToken string
-	// subject is the JWT subject testToken is signed with. GetCurrentUser
-	// matches it against dcim.users.external_ref, so tests that need the caller
-	// to resolve onto a directory entry seed a user with this as external_ref.
+	// subject is the JWT subject testToken is signed with: the caller's
+	// dcim.users.id. Tests that need the caller to resolve onto a directory
+	// entry seed a user with this as id.
 	subject string
 }
 
@@ -299,25 +298,26 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 	return resp.GetPlacementId()
 }
 
-// createUser seeds a directory entry. There is no CreateUser RPC — the DCIM API
-// role only holds SELECT on dcim.users — so this goes in over the admin pool.
-// Pass an empty externalRef for a user with no identity-provider link.
-func createUser(t *testing.T, env *testEnv, name, email, externalRef string) string {
+// createUser seeds a directory entry. There is no CreateUser RPC — entries are
+// provisioned by dcim-authn-api at login, and the DCIM API role only holds
+// SELECT on dcim.users — so this goes in over the admin pool. Pass env.subject
+// as id to make the row the authenticated caller's own entry, or an empty id
+// for a generated one.
+func createUser(t *testing.T, env *testEnv, name, email, id string) string {
 	t.Helper()
 
-	var ref pgtype.Text
-	if externalRef != "" {
-		ref = pgtype.Text{String: externalRef, Valid: true}
+	userID := uuid.New()
+	if id != "" {
+		userID = uuid.MustParse(id)
 	}
 
-	var id uuid.UUID
-	err := env.adminPool.QueryRow(context.Background(),
-		`INSERT INTO dcim.users (external_ref, name, email) VALUES ($1, $2, $3) RETURNING id`,
-		ref, name, email,
-	).Scan(&id)
+	_, err := env.adminPool.Exec(context.Background(),
+		`INSERT INTO dcim.users (id, name, email) VALUES ($1, $2, $3)`,
+		userID, name, email,
+	)
 	require.NoError(t, err)
 
-	return id.String()
+	return userID.String()
 }
 
 func createTask(t *testing.T, env *testEnv, req *dcimv1.CreateTaskRequest) string {

@@ -28,6 +28,7 @@ var Roles = []Role{
 	{Name: "fun_cluster_worker"},
 	{Name: "fun_authz_worker", BypassRLS: true},
 	{Name: "fun_dcim_api"},
+	{Name: "fun_dcim_authn_api"},
 	{Name: "fun_marketplace_catalog_api"},
 	{Name: "fun_marketplace_registry_api"},
 	{Name: "fun_marketplace_admin_api"},

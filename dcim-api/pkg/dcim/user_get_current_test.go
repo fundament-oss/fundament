@@ -12,17 +12,14 @@ import (
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 )
 
-// The JWT subject is an identity-provider reference, not a DCIM user id, so the
-// entry has to be found via external_ref and hand back the internal id that
-// tasks are assigned to.
 func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
 	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
 
-	// Seed a decoy whose external_ref does not match, so a lookup that ignores
-	// the subject cannot pass by returning an arbitrary row.
+	// Seed a decoy whose id does not match, so a lookup that ignores the
+	// subject cannot pass by returning an arbitrary row.
 	createUser(t, env, "Someone Else", "someone@example.com", "00000000-0000-0000-0000-0000000000ff")
 	userID := createUser(t, env, "Current User", "current@example.com", env.subject)
 
@@ -80,7 +77,8 @@ func TestUserService_GetCurrentUser_NotFound(t *testing.T) {
 }
 
 // A soft-deleted entry must read as absent: the roster query filters on
-// deleted IS NULL, and the unique index on external_ref is partial to match.
+// deleted IS NULL, so a user removed while holding a live token reads as
+// NotFound rather than resolving.
 func TestUserService_GetCurrentUser_SoftDeleted(t *testing.T) {
 	t.Parallel()
 

@@ -49,7 +49,10 @@ export default class AuthService {
       credentials: 'include',
     })
       .then(async (resp) => {
-        if (!resp.ok) throw new Error('unauthenticated');
+        // Only a 401 means the session is over; any other failure (the
+        // service or its database briefly unavailable) must not end it.
+        if (resp.status === 401) throw new Error('unauthenticated');
+        if (!resp.ok) throw new Error('userinfo unavailable');
         const user = (await resp.json()) as DcimUser;
         this.currentUser.set(user);
         return user;
@@ -65,9 +68,13 @@ export default class AuthService {
       this.currentUser.set(undefined);
       return;
     }
-    await this.getUserInfo().catch(() => {
+    await this.getUserInfo().catch((err: unknown) => {
       this.currentUser.set(undefined);
-      localStorage.removeItem('dcim_auth_hint');
+      // Keep the hint on a transient failure: the cookie may still be
+      // valid, and the next navigation retries.
+      if (err instanceof Error && err.message === 'unauthenticated') {
+        localStorage.removeItem('dcim_auth_hint');
+      }
     });
   }
 
