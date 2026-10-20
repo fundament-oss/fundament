@@ -8,21 +8,20 @@
 -- The assignee dropdown source for task-management, and the identities the
 -- technician page resolves the logged-in user against.
 --
--- external_ref is how the identity provider names this person; dcim-authn-api
--- upserts on it at login. It derives the ref from dex:
---   sub          = base64url(proto{user_id=<dex userID>, conn_id="local"})  (dex)
---   external_ref = uuid.NewSHA1(6ba7b810-9dad-11d1-80b4-00c04fd430c8, sub)  (dcim-authn-api subjectUUID)
--- The refs below are those of the dex-dcim dev accounts (charts/fundament/
--- values-local.yaml → dexDcim.staticPasswords), so any of them logs in onto
--- their seeded row — a populated technician page with no manual DB edits. If
--- the dev accounts change, recompute these refs; a mismatch only means the
--- login creates a fresh row instead of landing on the seeded one.
+-- external_ref is how the identity provider names this person — the dex `sub`
+-- verbatim, i.e. base64url(proto{user_id=<dex userID>, conn_id="local"}) —
+-- and dcim-authn-api upserts on it at login. The refs below are those of the
+-- dex-dcim dev accounts (charts/fundament/values-local.yaml →
+-- dexDcim.staticPasswords), so any of them logs in onto their seeded row — a
+-- populated technician page with no manual DB edits. If the dev accounts
+-- change, recompute these refs; a mismatch only means the login creates a
+-- fresh row instead of landing on the seeded one.
 INSERT INTO dcim.users (id, external_ref, name, email) VALUES
-    ('019dce30-0000-7000-8000-000000000001', '6b06ad37-5db1-5b84-8bea-57b287be639d', 'Alice', 'alice@acme-corp.com'),
-    ('019dce30-0000-7000-8000-000000000002', '8c33fc91-9eae-5467-a3c0-d9a1b29acdf4', 'Bart',  'bart@acme-corp.com'),
-    ('019dce30-0000-7000-8000-000000000003', 'c1cbb965-2a8b-5794-bebc-b1827c4bc0dd', 'Cindy', 'cindy@acme-corp.com'),
-    ('019dce30-0000-7000-8000-000000000004', 'd6a18af6-af2b-5272-83aa-e9990309a99d', 'David', 'david@globex.com'),
-    ('019dce30-0000-7000-8000-000000000005', 'fe571fce-3faa-5d6f-82dc-218e710071f6', 'Emily', 'emily@globex.com');
+    ('019dce30-0000-7000-8000-000000000001', 'CiQwMTlkMDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDESBWxvY2Fs', 'Alice', 'alice@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000002', 'CiQwMTlkMDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDISBWxvY2Fs', 'Bart',  'bart@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000003', 'CiQwMTlkMDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMSBWxvY2Fs', 'Cindy', 'cindy@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000004', 'CiQwMTlkMDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDQSBWxvY2Fs', 'David', 'david@globex.com'),
+    ('019dce30-0000-7000-8000-000000000005', 'CiQwMTlkMDAwMC0xMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDUSBWxvY2Fs', 'Emily', 'emily@globex.com');
 
 -- ── Tasks (work orders) ─────────────────────────────────────────────────────
 -- TT=e1. The three technician-flow tasks (01-03) are assigned to Alice so her

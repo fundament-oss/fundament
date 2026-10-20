@@ -73,14 +73,6 @@ type oidcClaims struct {
 	Sub   string `json:"sub"`
 }
 
-// subjectUUID derives the deterministic UUIDv5 stored as
-// dcim.users.external_ref from the OIDC sub claim.
-var dcimNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // UUID namespace DNS
-
-func subjectUUID(sub string) uuid.UUID {
-	return uuid.NewSHA1(dcimNamespace, []byte(sub))
-}
-
 func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oidcClaims, error) {
 	idToken, err := s.oidcVerifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
@@ -104,7 +96,7 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 func (s *Server) loginJWT(ctx context.Context, claims *oidcClaims) (string, uuid.UUID, error) {
 	row, err := s.queries.UserUpsert(ctx, db.UserUpsertParams{
 		Name:        claims.Name,
-		ExternalRef: pgtype.Text{String: subjectUUID(claims.Sub).String(), Valid: true},
+		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
 		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
 	})
 	if err != nil {

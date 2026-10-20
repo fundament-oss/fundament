@@ -17,17 +17,6 @@ func testServer(frontendURL string) *Server {
 	}
 }
 
-func TestSubjectUUID_Deterministic(t *testing.T) {
-	a := subjectUUID("CgNkZXg")
-	b := subjectUUID("CgNkZXg")
-	if a != b {
-		t.Fatalf("subjectUUID not deterministic: %v != %v", a, b)
-	}
-	if c := subjectUUID("other"); c == a {
-		t.Fatal("subjectUUID collided for different subjects")
-	}
-}
-
 func TestState_RoundTrip(t *testing.T) {
 	state, err := generateState("https://dcim.fundament.localhost:8443/racks")
 	if err != nil {

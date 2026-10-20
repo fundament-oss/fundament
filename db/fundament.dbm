@@ -3975,7 +3975,7 @@ END;]]> </definition>
 	</column>
 	<column name="external_ref">
 		<type name="text" length="0"/>
-		<comment> <![CDATA[Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`), the login upsert key. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+		<comment> <![CDATA[Identity-provider reference this user maps onto (the IdP `sub` verbatim), the login upsert key. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
