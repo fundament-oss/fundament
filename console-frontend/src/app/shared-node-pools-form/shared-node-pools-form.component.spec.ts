@@ -49,6 +49,26 @@ describe('shared node pools form under a node quota', () => {
     expect(form.nodePools.at(0).get('machineType')?.value).toBe('local-medium');
   });
 
+  it('starts a new pool on no more than the room its machine type has left', () => {
+    const form = build();
+    form.nodeQuotas = new Map([['local-medium', { quota: 10, inUse: 8 }]]);
+    expect(form.nodePools.at(0).get('autoscaleMax')?.value).toBe(2);
+    expect(form.nodePoolsForm.valid).toBe(true);
+
+    form.nodePools.at(0).get('autoscaleMax')?.setValue(1);
+    form.addNodePool();
+    expect(form.nodePools.at(1).get('machineType')?.value).toBe('local-medium');
+    expect(form.nodePools.at(1).get('autoscaleMax')?.value).toBe(1);
+    expect(form.nodePoolsForm.valid).toBe(true);
+  });
+
+  it('leaves a maximum the user set when the quotas come in', () => {
+    const form = build();
+    form.setAutoscaleMax(0, 5);
+    form.nodeQuotas = new Map([['local-medium', { quota: 10, inUse: 8 }]]);
+    expect(form.nodePools.at(0).get('autoscaleMax')?.value).toBe(5);
+  });
+
   it('says at the machine type when there is no quota for it', () => {
     const form = build();
     form.nodeQuotas = quotas;

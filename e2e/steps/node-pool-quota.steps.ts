@@ -232,17 +232,23 @@ Then(
 After({ tags: '@node-pool-quota' }, async function (this: ICustomWorld) {
   const s = this.testData.nodePoolQuota as QuotaState | undefined;
   if (!s) return;
+  // Ignore cleanup errors: the scenario's own result is what counts. But a pool
+  // that fails to go must not keep the cluster from going too.
   try {
     const { nodePools } = await s.clusters.listNodePools({
       clusterId: s.clusterId,
     });
-    await Promise.all(
+    await Promise.allSettled(
       nodePools.map((pool) =>
         s.clusters.deleteNodePool({ nodePoolId: pool.id }),
       ),
     );
+  } catch {
+    // The cluster's deletion below takes its pools along, in time.
+  }
+  try {
     await s.clusters.deleteCluster({ clusterId: s.clusterId });
   } catch {
-    // Ignore cleanup errors: the scenario's own result is what counts.
+    // Nothing left to try.
   }
 });

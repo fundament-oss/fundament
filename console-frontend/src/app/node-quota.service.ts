@@ -12,7 +12,8 @@ export interface NodeQuotaUsage {
   inUse: number;
 }
 
-/** Per machine type name. A machine type that is not in the map has no quota. */
+/** Per machine type name. A machine type that is not in the map has a quota of
+ *  0, as the API reads a missing quota: no pool of that type is allowed. */
 export type NodeQuotas = ReadonlyMap<string, NodeQuotaUsage>;
 
 // Not cached, unlike the region catalog: another user or cluster can use up the

@@ -10,7 +10,8 @@ export interface PoolDraft {
 /** How much of its machine type's node quota one pool in the form may take. */
 export interface PoolRoom {
   machineType: string;
-  /** The organization's quota for the machine type; 0 means none is set. */
+  /** The organization's quota for the machine type; 0 when none is set, which
+   *  allows no pool of that type. */
   quota: number;
   /** The highest maximum this pool can have, with every other pool, in this
    *  form and in the organization's other clusters, as it is now. Can be

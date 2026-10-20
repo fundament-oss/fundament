@@ -128,7 +128,7 @@
                 [value]="maxControl?.value"
                 [invalid]="!!(maxControl?.invalid && formSubmitted())"
                 [attr.unmet]="'autoscale-max-error-' + $index"
-                (input)="$any($event).detail && maxControl?.setValue($any($event).detail.value)"
+                (input)="$any($event).detail && setAutoscaleMax($index, $any($event).detail.value)"
                 min="1"
                 step="1"
               ></nldd-number-field>

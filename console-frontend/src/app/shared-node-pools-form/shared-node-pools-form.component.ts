@@ -44,6 +44,14 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/title';
 import '@nldd/design-system/validation-list';
 
+/** A new pool's maximum, when its machine type has the room for it. */
+const DEFAULT_AUTOSCALE_MAX = 3;
+
+/** A new pool starts on the default maximum, or on what is left when that is
+ *  less, so the form does not open on a refusal. */
+const startingAutoscaleMax = (room: number): number =>
+  room > 0 ? Math.min(DEFAULT_AUTOSCALE_MAX, room) : DEFAULT_AUTOSCALE_MAX;
+
 export interface NodePoolData {
   name: string;
   machineType: string; // catalog machine type name - what the create request sends
@@ -109,16 +117,21 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   @Input() set nodeQuotas(quotas: NodeQuotas | null) {
     this.quotas = quotas;
     if (quotas) {
-      // A new pool nobody picked a machine type for yet moves off one it could
-      // not have, so the form does not open on a refusal.
-      this.nodePools.controls.forEach((control) => {
+      // A new pool nobody picked a machine type or maximum for yet moves off a
+      // type it could not have, and down to the room that type has left, so
+      // the form does not open on a refusal.
+      this.nodePools.controls.forEach((control, index) => {
+        if (this.originals.has(control.get('name')?.value)) return;
         const mt = control.get('machineType');
-        if (
-          mt?.pristine &&
-          !this.originals.has(control.get('name')?.value) &&
-          !quotas.get(mt.value)?.quota
-        ) {
+        if (mt?.pristine && !quotas.get(mt.value)?.quota) {
           mt.setValue(this.preferredMachineType(), { emitEvent: false });
+        }
+        const max = control.get('autoscaleMax');
+        if (max?.pristine) {
+          const { limit } = poolRoom(index, this.poolDrafts(), this.originals, quotas);
+          max.setValue(Math.min(Number(max.value), startingAutoscaleMax(limit)), {
+            emitEvent: false,
+          });
         }
       });
     }
@@ -145,6 +158,12 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   selectMachineType(index: number, value: string): void {
     const control = this.nodePools.at(index).get('machineType');
+    control?.setValue(value);
+    control?.markAsDirty();
+  }
+
+  setAutoscaleMax(index: number, value: number): void {
+    const control = this.nodePools.at(index).get('autoscaleMax');
     control?.setValue(value);
     control?.markAsDirty();
   }
@@ -180,6 +199,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   }
 
   createNodePoolFormGroup(data?: NodePoolData): FormGroup {
+    const machineType = this.initialMachineTypeValue(data);
     return this.fb.group({
       name: [
         data?.name || SharedNodePoolsFormComponent.generateNodePoolName(),
@@ -190,13 +210,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
           this.uniqueNodePoolNameValidator.bind(this),
         ],
       ],
-      machineType: [
-        this.initialMachineTypeValue(data),
-        [Validators.required, this.machineTypeQuotaValidator.bind(this)],
-      ],
+      machineType: [machineType, [Validators.required, this.machineTypeQuotaValidator.bind(this)]],
       autoscaleMin: [data?.autoscaleMin || 1, [Validators.required, Validators.min(1)]],
       autoscaleMax: [
-        data?.autoscaleMax || 3,
+        data?.autoscaleMax || this.initialAutoscaleMax(machineType),
         [Validators.required, Validators.min(1), this.autoscaleMaxQuotaValidator.bind(this)],
       ],
     });
@@ -220,6 +237,16 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     return (
       this.machineTypes.find((mt) => roomForNewPool(mt.value, pools, this.originals, quotas) > 0)
         ?.value ?? first
+    );
+  }
+
+  /** For a new pool: the default maximum, or the room its machine type has
+   *  left next to the pools already in the form when that is less. */
+  private initialAutoscaleMax(machineType: string): number {
+    const { quotas } = this;
+    if (!quotas || !this.nodePoolsForm) return DEFAULT_AUTOSCALE_MAX;
+    return startingAutoscaleMax(
+      roomForNewPool(machineType, this.poolDrafts(), this.originals, quotas),
     );
   }
 
