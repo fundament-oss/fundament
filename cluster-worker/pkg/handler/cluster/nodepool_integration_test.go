@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -455,21 +456,27 @@ func TestSyncCluster_DeletedWithoutNodePoolDoesNotPark(t *testing.T) {
 	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
 }
 
-func TestSyncCluster_SyncedBeforeDoesNotPark(t *testing.T) {
+func TestSyncCluster_SyncedBeforeWithoutPoolsFails(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	// A cluster that reached Gardener and has no pool (only a legacy cluster
-	// can) is not parked: its Shoot exists.
+	// A cluster that reached Gardener and has no pool is not parked (its Shoot
+	// exists), and its Shoot is not touched: no Shoot is updated to zero
+	// workers or given one fundament does not list.
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "park-synced")
 	markOutboxCompleted(t, db, clusterID)
 
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Updated, Source: dbconst.ClusterOutboxSource_Trigger}
-	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
-	require.Len(t, mock.ApplyCalls, 1)
+	err := h.Sync(t.Context(), clusterID, sc)
+	require.ErrorIs(t, err, gardener.ErrNoNodePools)
+	assert.ErrorIs(t, err, handler.ErrNonRetryable, "fails at once: a retry cannot add the pool")
+	var precondErr *handler.PreconditionError
+	assert.NotErrorAs(t, err, &precondErr, "a failure, not a wait")
+	assert.Empty(t, mock.ApplyCalls)
+	assertEventExists(t, db, clusterID, "sync_failed")
 }
 
 // --- Group 17: End-to-end vertical slice tests ---

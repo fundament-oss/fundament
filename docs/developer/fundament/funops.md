@@ -93,7 +93,9 @@ somebody has signed in to.
 ## Set quotas
 
 A new organization may create one cluster and no node pools: its cluster quota
-is one and it has no node quota. Set what it may build:
+is one and it has no node quota. A cluster starts with its first node pool, so
+the organization's cluster waits until a node quota is set. Set what it may
+build:
 
 ```bash
 funops organization quota set-clusters acme-corp 3
