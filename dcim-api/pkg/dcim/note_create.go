@@ -22,9 +22,10 @@ func (s *Server) CreateNote(
 	}
 
 	// Attribute the note to the authenticated caller, never to a client-supplied
-	// value, so the author cannot be spoofed. The roster is provisioned out of
-	// band, so a caller who is not in it writes an unattributed note rather than
-	// being refused — note-taking must not depend on directory coverage.
+	// value, so the author cannot be spoofed. The interceptor guarantees a live
+	// directory entry; found=false covers only the race where the caller is
+	// soft-deleted mid-request, and then the note lands unattributed rather
+	// than lost.
 	author, found, err := s.lookupCurrentUser(ctx)
 	if err != nil {
 		return nil, err

@@ -23,8 +23,14 @@ import (
 // subject reads as absent, like a soft-deleted user's.
 const refreshSubject = "019b4000-1000-7000-8000-000000000001"
 
-// stubStore satisfies Store without a database. Refresh is the only handler
-// exercised here, so UserUpsert is never reached.
+// stubStore satisfies Store without a database. Refresh and userinfo are the
+// only handlers exercised here, so UserUpsert is never reached.
+//
+// The directory name deliberately differs from the Name claim the test tokens
+// carry ("Alice"): both endpoints must answer from the directory, and with
+// equal names a regression to echoing the claims would be invisible.
+const directoryName = "Alice Renamed"
+
 type stubStore struct{}
 
 func (stubStore) UserUpsert(context.Context, db.UserUpsertParams) (db.UserUpsertRow, error) {
@@ -35,7 +41,7 @@ func (stubStore) UserGetByID(_ context.Context, arg db.UserGetByIDParams) (db.Us
 	if arg.ID != uuid.MustParse(refreshSubject) {
 		return db.UserGetByIDRow{}, pgx.ErrNoRows
 	}
-	return db.UserGetByIDRow{ID: arg.ID, Name: "Alice"}, nil
+	return db.UserGetByIDRow{ID: arg.ID, Name: directoryName}, nil
 }
 
 func refreshTestServer() *Server {
@@ -81,7 +87,22 @@ func TestHandleRefresh_ValidToken(t *testing.T) {
 	s.HandleRefresh(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.NotEmpty(t, rec.Result().Cookies(), "expected a refreshed auth cookie to be set")
+	cookies := rec.Result().Cookies()
+	require.NotEmpty(t, cookies, "expected a refreshed auth cookie to be set")
+
+	// The refreshed token carries the directory's view of the user, not the
+	// old token's claims: a rename lands on the next refresh.
+	refreshed := decodeToken(t, s.config.JWTSecret, cookies[0].Value)
+	assert.Equal(t, refreshSubject, refreshed.Subject)
+	assert.Equal(t, directoryName, refreshed.Name)
+}
+
+func decodeToken(t *testing.T, secret []byte, token string) *auth.Claims {
+	t.Helper()
+	claims := &auth.Claims{}
+	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (any, error) { return secret, nil })
+	require.NoError(t, err)
+	return claims
 }
 
 // A well-signed token whose subject no longer resolves to a live directory
@@ -128,7 +149,7 @@ func TestHandleUserInfo_ResolvesDirectoryEntry(t *testing.T) {
 	s.HandleUserInfo(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"id": "`+refreshSubject+`", "name": "Alice"}`, rec.Body.String())
+	assert.JSONEq(t, `{"id": "`+refreshSubject+`", "name": "`+directoryName+`"}`, rec.Body.String())
 }
 
 func TestHandleUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {

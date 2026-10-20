@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/common/dbversion"
+	"github.com/fundament-oss/fundament/common/health"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/catalog"
 	"github.com/fundament-oss/fundament/marketplace-catalog-api/pkg/install"
@@ -99,7 +99,8 @@ func run() error {
 	// Readiness is the storefront's alone: the install pool is lazy and its
 	// database may lag a chart upgrade; taking the anonymous catalog out of
 	// rotation for that would be the wrong trade (FUN-22 review).
-	outerMux.HandleFunc("/readyz", readyz(logger, db.Pool))
+	outerMux.HandleFunc("/readyz",
+		health.Readyz(logger, health.Check{Name: "database", Probe: db.Pool.Ping}))
 	// install.v1 sits next to the storefront on the same host with its own
 	// (credentialed) CORS policy; the more specific pattern wins over "/".
 	outerMux.Handle(installServer.Path(), installServer.Handler())
@@ -124,22 +125,4 @@ func run() error {
 	}
 
 	return nil
-}
-
-// The probe is anonymous and publicly routed, and a pgx error names the host,
-// port, database and role, so the detail goes to the log and never to the body.
-func readyz(logger *slog.Logger, pool *pgxpool.Pool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		defer cancel()
-
-		if err := pool.Ping(ctx); err != nil {
-			logger.ErrorContext(ctx, "readiness probe failed", "error", err)
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("database unavailable"))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	}
 }

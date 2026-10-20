@@ -213,8 +213,9 @@ func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
 
 // resolveSubject looks a validated token's subject up in the directory and
 // writes the response when it cannot: 401 for a subject that no longer
-// resolves (the session must end), 500 for a database failure. The caller
-// proceeds only when ok is true.
+// resolves (the session must end), 503 for a database failure — the session
+// is still valid, and the frontend must be able to tell a transient outage
+// apart from being signed out. The caller proceeds only when ok is true.
 func (s *Server) resolveSubject(w http.ResponseWriter, r *http.Request, claims *auth.Claims) (db.UserGetByIDRow, bool) {
 	row, err := s.queries.UserGetByID(r.Context(), db.UserGetByIDParams{
 		ID: claims.UserID(),
@@ -225,7 +226,7 @@ func (s *Server) resolveSubject(w http.ResponseWriter, r *http.Request, claims *
 			return db.UserGetByIDRow{}, false
 		}
 		s.logger.Error("failed to resolve user", "error", err)
-		s.writeError(w, http.StatusInternalServerError, "internal server error")
+		s.writeError(w, http.StatusServiceUnavailable, "temporarily unavailable")
 		return db.UserGetByIDRow{}, false
 	}
 	return row, true

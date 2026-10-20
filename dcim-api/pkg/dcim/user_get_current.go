@@ -16,10 +16,9 @@ import (
 // lookupCurrentUser resolves the authenticated caller onto their directory
 // entry by the JWT subject, their dcim.users.id.
 //
-// A caller with a valid token but no directory entry is reported as found=false
-// rather than as an error: a user can be soft-deleted while their token is
-// still live, which is an ordinary state that some callers can carry on
-// without.
+// The auth interceptor already requires a live entry, so found=false covers
+// only the sliver where the user is soft-deleted between the interceptor's
+// check and this read; callers that can proceed without attribution do.
 func (s *Server) lookupCurrentUser(ctx context.Context) (row db.UserGetByIDRow, found bool, err error) {
 	subject, ok := auth.UserIDFromContext(ctx)
 	if !ok {

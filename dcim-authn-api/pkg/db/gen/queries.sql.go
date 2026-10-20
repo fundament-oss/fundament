@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const userGetByID = `-- name: UserGetByID :one
@@ -38,7 +37,7 @@ func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserG
 
 const userUpsert = `-- name: UserUpsert :one
 INSERT INTO dcim.users (name, external_ref, email)
-VALUES ($1, $2, $3)
+VALUES ($1::text, $2::text, NULLIF($3::text, ''))
 ON CONFLICT (external_ref) WHERE deleted IS NULL
 DO UPDATE SET
 	name = COALESCE(NULLIF(EXCLUDED.name, ''), users.name),
@@ -48,8 +47,8 @@ RETURNING id, name
 
 type UserUpsertParams struct {
 	Name        string
-	ExternalRef pgtype.Text
-	Email       pgtype.Text
+	ExternalRef string
+	Email       string
 }
 
 type UserUpsertRow struct {
@@ -64,7 +63,9 @@ type UserUpsertRow struct {
 //
 // The update is a patch, not a replace: a connector that omits the name or
 // email claim must not erase what the directory already holds, so an absent
-// value keeps the existing one.
+// value keeps the existing one. A first login simply records what the IdP
+// sent — there is nothing to preserve yet. The absent-claim rule lives here
+// and nowhere else: the caller passes claims verbatim.
 //
 // The conflict target is partial (deleted IS NULL), so a soft-deleted user who
 // still authenticates at the IdP gets a fresh row and id; their history stays

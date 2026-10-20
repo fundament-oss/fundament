@@ -96,7 +96,13 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
+	// The caller's own directory entry: the auth interceptor refuses any
+	// subject without a live row, so every test caller gets one up front.
 	subject := uuid.New().String()
+	_, err := adminPool.Exec(context.Background(),
+		`INSERT INTO dcim.users (id, name, email) VALUES ($1, $2, $3)`,
+		subject, callerName, callerEmail)
+	require.NoError(t, err)
 
 	return &testEnv{
 		server:    ts,
@@ -105,6 +111,12 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		subject:   subject,
 	}
 }
+
+// The pre-seeded directory entry every testEnv caller resolves onto.
+const (
+	callerName  = "Test Caller"
+	callerEmail = "caller@example.com"
+)
 
 func createTestDB(t *testing.T, logger *slog.Logger) (*psqldb.DB, *pgxpool.Pool) {
 	t.Helper()
@@ -311,10 +323,10 @@ func createUser(t *testing.T, env *testEnv, name, email, id string) string {
 		userID = uuid.MustParse(id)
 	}
 
-	err := env.adminPool.QueryRow(context.Background(),
-		`INSERT INTO dcim.users (id, name, email) VALUES ($1, $2, $3) RETURNING id`,
+	_, err := env.adminPool.Exec(context.Background(),
+		`INSERT INTO dcim.users (id, name, email) VALUES ($1, $2, $3)`,
 		userID, name, email,
-	).Scan(&userID)
+	)
 	require.NoError(t, err)
 
 	return userID.String()

@@ -21,7 +21,6 @@ func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	// Seed a decoy whose id does not match, so a lookup that ignores the
 	// subject cannot pass by returning an arbitrary row.
 	createUser(t, env, "Someone Else", "someone@example.com", "00000000-0000-0000-0000-0000000000ff")
-	userID := createUser(t, env, "Current User", "current@example.com", env.subject)
 
 	resp, err := client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
@@ -31,9 +30,9 @@ func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	user := resp.GetUser()
 	require.NotNil(t, user)
 
-	assert.Equal(t, userID, user.GetId())
-	assert.Equal(t, "Current User", user.GetName())
-	assert.Equal(t, "current@example.com", user.GetEmail())
+	assert.Equal(t, env.subject, user.GetId())
+	assert.Equal(t, callerName, user.GetName())
+	assert.Equal(t, callerEmail, user.GetEmail())
 }
 
 // email is nullable, and userToProtoWithEmail only sets it when the column is
@@ -44,10 +43,8 @@ func TestUserService_GetCurrentUser_NullEmail(t *testing.T) {
 	env := newTestAPI(t)
 	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
 
-	userID := createUser(t, env, "No Email User", "", env.subject)
-
 	_, err := env.adminPool.Exec(context.Background(),
-		`UPDATE dcim.users SET email = NULL WHERE id = $1`, userID)
+		`UPDATE dcim.users SET email = NULL WHERE id = $1`, env.subject)
 	require.NoError(t, err)
 
 	resp, err := client.GetCurrentUser(context.Background(),
@@ -58,41 +55,25 @@ func TestUserService_GetCurrentUser_NullEmail(t *testing.T) {
 	user := resp.GetUser()
 	require.NotNil(t, user)
 
-	assert.Equal(t, userID, user.GetId())
+	assert.Equal(t, env.subject, user.GetId())
 	assert.False(t, user.HasEmail())
 }
 
-// A valid token for someone with no directory entry is a 404, not a 500 — the
-// caller is authenticated, they just are not in the DCIM roster.
-func TestUserService_GetCurrentUser_NotFound(t *testing.T) {
-	t.Parallel()
-
-	env := newTestAPI(t)
-	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
-
-	_, err := client.GetCurrentUser(context.Background(),
-		&dcimv1.GetCurrentUserRequest{},
-	)
-	requireCode(t, err, connect.CodeNotFound)
-}
-
-// A soft-deleted entry must read as absent: the roster query filters on
-// deleted IS NULL, so a user removed while holding a live token reads as
-// NotFound rather than resolving.
+// A soft-deleted user's still-valid token is refused at the interceptor: a
+// signature alone is not a session, so revocation takes effect at the next
+// RPC rather than at token expiry.
 func TestUserService_GetCurrentUser_SoftDeleted(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
 	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
 
-	userID := createUser(t, env, "Deleted User", "deleted@example.com", env.subject)
-
 	_, err := env.adminPool.Exec(context.Background(),
-		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, userID)
+		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, env.subject)
 	require.NoError(t, err)
 
 	_, err = client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
 	)
-	requireCode(t, err, connect.CodeNotFound)
+	requireCode(t, err, connect.CodeUnauthenticated)
 }

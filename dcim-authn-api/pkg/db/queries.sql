@@ -6,14 +6,16 @@
 --
 -- The update is a patch, not a replace: a connector that omits the name or
 -- email claim must not erase what the directory already holds, so an absent
--- value keeps the existing one.
+-- value keeps the existing one. A first login simply records what the IdP
+-- sent — there is nothing to preserve yet. The absent-claim rule lives here
+-- and nowhere else: the caller passes claims verbatim.
 --
 -- The conflict target is partial (deleted IS NULL), so a soft-deleted user who
 -- still authenticates at the IdP gets a fresh row and id; their history stays
 -- on the dead row. Accepted: the IdP is the access boundary, and revoking
 -- access means removing the account there, not soft-deleting the row here.
 INSERT INTO dcim.users (name, external_ref, email)
-VALUES ($1, $2, $3)
+VALUES (sqlc.arg('name')::text, sqlc.arg('external_ref')::text, NULLIF(sqlc.arg('email')::text, ''))
 ON CONFLICT (external_ref) WHERE deleted IS NULL
 DO UPDATE SET
 	name = COALESCE(NULLIF(EXCLUDED.name, ''), users.name),

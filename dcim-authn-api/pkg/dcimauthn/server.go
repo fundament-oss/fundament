@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/common/auth"
@@ -94,10 +94,17 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 // boundary, so anyone who authenticates there belongs in the roster — and the
 // token subject is the dcim.users.id.
 func (s *Server) loginJWT(ctx context.Context, claims *oidcClaims) (string, uuid.UUID, error) {
+	// go-oidc verifies signature, issuer, audience and expiry, but not that
+	// the sub claim is present; an empty sub would merge every such login
+	// onto one external_ref='' directory row.
+	if claims.Sub == "" {
+		return "", uuid.Nil, errors.New("ID token has no subject")
+	}
+
 	row, err := s.queries.UserUpsert(ctx, db.UserUpsertParams{
 		Name:        claims.Name,
-		ExternalRef: pgtype.Text{String: claims.Sub, Valid: true},
-		Email:       pgtype.Text{String: claims.Email, Valid: claims.Email != ""},
+		ExternalRef: claims.Sub,
+		Email:       claims.Email,
 	})
 	if err != nil {
 		return "", uuid.Nil, fmt.Errorf("upserting user: %w", err)
