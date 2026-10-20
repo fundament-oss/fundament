@@ -197,6 +197,12 @@ export type HandleRefreshErrors = {
      * Internal server error
      */
     500: ErrorResponse;
+    /**
+     * Temporarily unavailable (e.g. the database cannot be reached). The
+     * session is still valid; the client must not treat this as a sign-out.
+     *
+     */
+    503: ErrorResponse;
 };
 
 export type HandleRefreshError = HandleRefreshErrors[keyof HandleRefreshErrors];
