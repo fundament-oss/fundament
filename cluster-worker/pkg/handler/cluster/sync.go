@@ -204,6 +204,15 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	if err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", err)
 	}
+	// A cluster not in Gardener yet waits for its first pool (a precondition), and
+	// the API never removes a cluster's last pool, so this is a cluster that kept
+	// a Shoot after losing every pool some other way. Its Shoot keeps the workers
+	// it has.
+	if len(nodePoolRows) == 0 {
+		// Fails at once: a retry cannot add the pool, and a cluster from before
+		// pools were required gets one from its owner, not from time.
+		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", handler.NonRetryable(gardener.ErrNoNodePools))
+	}
 
 	// 6. Build ClusterToSync and apply
 	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)

@@ -74,8 +74,9 @@ longer needed, within that range. The **Nodes** tab shows each pool's current
 node count alongside its bounds. There is no manual "set the node count to N"
 operation; set the minimum instead.
 
-A cluster with no node pools at all still gets one default worker pool, sized
-1 to 3 nodes. That pool is not counted against your [quota](#quotas).
+A cluster runs only the node pools you give it. A new cluster starts once its
+first node pool is added; until then it waits, and its events say why
+("No node pool yet").
 
 ### Applying changes
 
