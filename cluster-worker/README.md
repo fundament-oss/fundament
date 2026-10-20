@@ -203,7 +203,7 @@ active pool from the same report the cluster rules read and stores the outcome o
 
 | Status | Meaning |
 |---|---|
-| `progressing` | a change fundament pushed shapes this pool and has not finished: the pool was never classified and an operation runs, or the change still sits in the outbox — its machines are being created |
+| `progressing` | the cluster's initial create or a change fundament pushed shapes this pool and has not finished: the pool was never classified and an operation runs, or the change still sits in the outbox — its machines are being created |
 | `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
 | `error` | the operation failed for good, naming this pool |
 | `ready` | the shoot settled with every change applied, and nothing names the pool |
@@ -211,15 +211,18 @@ active pool from the same report the cluster rules read and stores the outcome o
 An operation that does not name an already classified pool leaves it where it is: a
 routine reconcile says nothing about pools whose machines stand, and relabeling them
 would hide their live metrics and spray ready events when the reconcile ends. A pool
-stored `waiting`/`error` stays stuck until the shoot turns ready: `EveryNodeReady`
-names only the first failing machine deployment, so a detail naming another pool does
-not mean this one recovered. A complaint naming a settled (`ready`) pool only turns it
-`waiting` while a change of ours is in flight — otherwise it is a node problem, which
-the pool's live metrics status describes. A ready shoot says nothing about a pool whose
-change has not left the outbox (pending, retrying or failed): that report predates the
-change, so the pool stays `progressing` rather than reading ready. A pool meeting this
-feature for the first time mid-reconcile (NULL status, no fundament change in flight)
-is left alone until the shoot settles. Matching uses the `-<worker>-z` fragment of
+stored `waiting`/`error` stays stuck while the worker detail exists: `EveryNodeReady`
+names only the first failing machine deployment, so a detail naming another pool —
+even on a shoot that turned ready while unhealthy — does not mean this one recovered.
+A complaint naming a settled pool (`ready`, or NULL from before this feature) only
+turns it `waiting` while the initial create runs or a change of ours is in flight —
+otherwise it is a node problem, which the pool's live metrics status describes. What
+Gardener reports predates a pool whose change has not left the outbox (pending,
+retrying or failed): the pool stays `progressing` rather than reading ready, and a
+complaint can only be about a deleted predecessor of the same name, so it is ignored.
+The in-flight state is read after the pool list (a pool's INSERT commits together with
+its outbox row), so a pool inserted mid-check is never classified from a stale
+nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
 Gardener's machine deployment names, so one pool can never match another's text, nor
 the shoot's technical ID. Gardener's reason text is cleaned before it is stored
 (control characters dropped, capped at 1 KiB): it is node and provider text. A failure

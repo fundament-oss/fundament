@@ -32,6 +32,7 @@ type SyncState struct {
 	xxx_hidden_ShootStatus     *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus"`
 	xxx_hidden_ShootMessage    *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage"`
 	xxx_hidden_StatusUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt"`
+	xxx_hidden_ShootUpdating   bool                   `protobuf:"varint,70,opt,name=shoot_updating,json=shootUpdating"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -117,9 +118,16 @@ func (x *SyncState) GetStatusUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SyncState) GetShootUpdating() bool {
+	if x != nil {
+		return x.xxx_hidden_ShootUpdating
+	}
+	return false
+}
+
 func (x *SyncState) SetOutboxStatus(v string) {
 	x.xxx_hidden_OutboxStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 7)
 }
 
 func (x *SyncState) SetOutboxRetries(v int32) {
@@ -128,21 +136,25 @@ func (x *SyncState) SetOutboxRetries(v int32) {
 
 func (x *SyncState) SetOutboxError(v string) {
 	x.xxx_hidden_OutboxError = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 7)
 }
 
 func (x *SyncState) SetShootStatus(v string) {
 	x.xxx_hidden_ShootStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
 }
 
 func (x *SyncState) SetShootMessage(v string) {
 	x.xxx_hidden_ShootMessage = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 7)
 }
 
 func (x *SyncState) SetStatusUpdatedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_StatusUpdatedAt = v
+}
+
+func (x *SyncState) SetShootUpdating(v bool) {
+	x.xxx_hidden_ShootUpdating = v
 }
 
 func (x *SyncState) HasOutboxStatus() bool {
@@ -215,6 +227,10 @@ type SyncState_builder struct {
 	// When shoot_status, shoot_message or the health last changed. Status is
 	// checked far more often than that; an unchanged check leaves it as it is.
 	StatusUpdatedAt *timestamppb.Timestamp
+	// True while Gardener rolls out a change fundament pushed: set when the
+	// spec change is accepted, cleared when the reconcile finishes. Lets a
+	// client tell an unhealthy cluster mid-rollout from one that settled.
+	ShootUpdating bool
 }
 
 func (b0 SyncState_builder) Build() *SyncState {
@@ -222,23 +238,24 @@ func (b0 SyncState_builder) Build() *SyncState {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.OutboxStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 7)
 		x.xxx_hidden_OutboxStatus = b.OutboxStatus
 	}
 	x.xxx_hidden_OutboxRetries = b.OutboxRetries
 	if b.OutboxError != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 7)
 		x.xxx_hidden_OutboxError = b.OutboxError
 	}
 	if b.ShootStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
 		x.xxx_hidden_ShootStatus = b.ShootStatus
 	}
 	if b.ShootMessage != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
 		x.xxx_hidden_ShootMessage = b.ShootMessage
 	}
 	x.xxx_hidden_StatusUpdatedAt = b.StatusUpdatedAt
+	x.xxx_hidden_ShootUpdating = b.ShootUpdating
 	return m0
 }
 
@@ -3310,7 +3327,7 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa6\x02\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xcd\x02\n" +
 	"\tSyncState\x12*\n" +
 	"\routbox_status\x18\n" +
 	" \x01(\tB\x05\xaa\x01\x02\b\x01R\foutboxStatus\x12%\n" +
@@ -3318,7 +3335,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\foutbox_error\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\voutboxError\x12(\n" +
 	"\fshoot_status\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\vshootStatus\x12*\n" +
 	"\rshoot_message\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fshootMessage\x12F\n" +
-	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\"\x15\n" +
+	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\x12%\n" +
+	"\x0eshoot_updating\x18F \x01(\bR\rshootUpdating\"\x15\n" +
 	"\x13ListClustersRequest\"\xf7\x02\n" +
 	"\x14ListClustersResponse\x12P\n" +
 	"\bclusters\x18\n" +

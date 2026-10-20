@@ -94,6 +94,19 @@ ORDER BY
     tenant.node_pools.created,
     tenant.node_pools.id;
 
+-- name: ClusterGetPushState :one
+-- What is in flight for the cluster, read AFTER the pool list: a pool's INSERT
+-- commits together with its cluster_outbox row, so any pool the list returned
+-- has its outbox row visible here. The state read with the cluster row at the
+-- start of a check is stale for pools inserted since.
+SELECT
+    tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = @cluster_id;
+
 -- name: NodePoolUpdateStatus :execrows
 -- Record what Gardener reports about one pool's machines. Keyed by id: the
 -- row was just read by the same check, and with soft deletes (cluster_id,
@@ -207,11 +220,17 @@ WHERE
 -- name: ClusterMarkShootUpdating :execrows
 -- Mark a ready cluster as updating once Gardener accepted a spec change. It
 -- stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
--- keeps working while the update rolls out.
+-- keeps working while the update rolls out. A cluster still settling after
+-- its create keeps the awaiting-health message: organization-api keys the
+-- STARTING status on that exact text, and an update mid-settle must not
+-- relabel the cluster unhealthy.
 UPDATE tenant.clusters
 SET
     shoot_updating = true,
-    shoot_status_message = @message,
+    shoot_status_message = CASE
+        WHEN tenant.clusters.shoot_status_message = @awaiting_message THEN tenant.clusters.shoot_status_message
+        ELSE @message
+    END,
     shoot_status_updated = now()
 WHERE
     id = @cluster_id

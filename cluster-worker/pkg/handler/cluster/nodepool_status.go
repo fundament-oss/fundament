@@ -66,15 +66,32 @@ func nextNodePoolStatuses(stored []storedNodePool, observed *gardener.ShootStatu
 // stored value: no shoot yet, shoot deleting, a failure that does not name
 // the pool, or an operation in flight that does not name it either — a
 // routine reconcile says nothing about pools whose machines stand. A pool
-// stored waiting/error stays stuck until the shoot turns ready: EveryNodeReady
-// names only the first failing machine deployment, so a detail naming another
-// pool does not mean this one recovered.
+// stored waiting/error stays stuck while the worker detail exists:
+// EveryNodeReady names only the first failing machine deployment, so a detail
+// naming another pool — even on a shoot that turned ready while unhealthy —
+// does not mean this one recovered.
 func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushed, syncPending bool) (status dbconst.NodePoolStatus, message string, ok bool) {
-	if complaint := poolComplaint(pool.Name, observed); complaint != "" {
-		if pool.Status == string(dbconst.NodePoolStatus_Ready) && !pushed {
+	operationRuns := observed.Status == gardener.StatusProgressing ||
+		(observed.Status == gardener.StatusError && observed.Retrying)
+
+	// The cluster's initial create builds every pool, so it explains a
+	// never-classified pool even though no outbox change of ours is pending:
+	// the create's own outbox row completes before the first check runs.
+	creating := operationRuns && observed.Operation == gardener.OperationCreate
+
+	// What Gardener reports predates this pool: its change has not left the
+	// outbox, so a complaint can only be about a deleted predecessor of the
+	// same name, and a ready shoot is the state before the change.
+	staleReport := syncPending &&
+		(pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Progressing))
+
+	if complaint := poolComplaint(pool.Name, observed); complaint != "" && !staleReport {
+		settled := pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Ready)
+		if settled && !pushed && !creating {
 			// A complaint about a settled pool with no change of ours in
 			// flight is a node problem (unhealthy, not unprovisioned): its
 			// live metrics status describes it better than Waiting would.
+			// A NULL status is a pool from before this feature: also settled.
 			return "", "", false
 		}
 		if observed.Status == gardener.StatusError && !observed.Retrying {
@@ -83,15 +100,9 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushe
 		return dbconst.NodePoolStatus_Waiting, complaint, true
 	}
 
-	operationRuns := observed.Status == gardener.StatusProgressing ||
-		(observed.Status == gardener.StatusError && observed.Retrying)
-
 	switch {
 	case observed.Status == gardener.StatusReady:
-		if syncPending && (pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Progressing)) {
-			// The change that shapes this pool has not reached Gardener (the
-			// sync is pending, retrying or failed): a ready shoot is the state
-			// before it and says nothing about the machines it will create.
+		if staleReport {
 			return dbconst.NodePoolStatus_Progressing, "", true
 		}
 		if pool.Status == "" && pushed {
@@ -99,12 +110,21 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushe
 			// on it: the pool's machines are coming.
 			return dbconst.NodePoolStatus_Progressing, "", true
 		}
+		if poolStuck(pool.Status) && hasWorkerDetail(observed) {
+			// The shoot turned ready while still unhealthy and the detail
+			// names another pool's failure: that says nothing about this one.
+			return "", "", false
+		}
 		return dbconst.NodePoolStatus_Ready, "", true
-	case operationRuns && pool.Status == "" && pushed:
+	case operationRuns && pool.Status == "" && (pushed || creating):
 		return dbconst.NodePoolStatus_Progressing, "", true
 	default:
 		return "", "", false
 	}
+}
+
+func poolStuck(status string) bool {
+	return status == string(dbconst.NodePoolStatus_Waiting) || status == string(dbconst.NodePoolStatus_Error)
 }
 
 func hasWorkerDetail(observed *gardener.ShootStatus) bool {
@@ -212,9 +232,17 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		stored[i] = storedNodePool{ID: rows[i].ID, Name: rows[i].Name, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String}
 	}
 
-	syncPending := cluster.OutboxStatus.Valid && cluster.OutboxStatus.String != string(dbconst.ClusterOutboxStatus_Completed)
+	// Read what is in flight after the pool list, not from the cluster row the
+	// check started with: a pool inserted since then commits together with its
+	// outbox row, and classifying it from the stale state would call it ready.
+	push, err := h.queries.ClusterGetPushState(ctx, db.ClusterGetPushStateParams{ClusterID: cluster.ID})
+	if err != nil {
+		h.logger.Warn("failed to load cluster push state for node pool status", "cluster_id", cluster.ID, "error", err)
+		return
+	}
+	syncPending := push.OutboxStatus.Valid && push.OutboxStatus.String != string(dbconst.ClusterOutboxStatus_Completed)
 
-	for _, update := range nextNodePoolStatuses(stored, observed, cluster.ShootUpdating, syncPending) {
+	for _, update := range nextNodePoolStatuses(stored, observed, push.ShootUpdating, syncPending) {
 		if err := h.writeNodePoolStatus(ctx, cluster.ID, update); err != nil {
 			h.logger.Warn("failed to update node pool status", "cluster_id", cluster.ID, "pool", update.Name, "error", err)
 			continue

@@ -55,6 +55,7 @@ func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClust
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
+			row.ShootUpdating,
 		),
 	}.Build()
 }

@@ -262,6 +262,36 @@ func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterG
 	return message, err
 }
 
+const clusterGetPushState = `-- name: ClusterGetPushState :one
+SELECT
+    tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = $1
+`
+
+type ClusterGetPushStateParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetPushStateRow struct {
+	ShootUpdating bool
+	OutboxStatus  pgtype.Text
+}
+
+// What is in flight for the cluster, read AFTER the pool list: a pool's INSERT
+// commits together with its cluster_outbox row, so any pool the list returned
+// has its outbox row visible here. The state read with the cluster row at the
+// start of a check is stale for pools inserted since.
+func (q *Queries) ClusterGetPushState(ctx context.Context, arg ClusterGetPushStateParams) (ClusterGetPushStateRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetPushState, arg.ClusterID)
+	var i ClusterGetPushStateRow
+	err := row.Scan(&i.ShootUpdating, &i.OutboxStatus)
+	return i, err
+}
+
 const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
 SELECT EXISTS (
     SELECT 1
@@ -381,23 +411,30 @@ const clusterMarkShootUpdating = `-- name: ClusterMarkShootUpdating :execrows
 UPDATE tenant.clusters
 SET
     shoot_updating = true,
-    shoot_status_message = $1,
+    shoot_status_message = CASE
+        WHEN tenant.clusters.shoot_status_message = $1 THEN tenant.clusters.shoot_status_message
+        ELSE $2
+    END,
     shoot_status_updated = now()
 WHERE
-    id = $2
+    id = $3
     AND shoot_status = 'ready'
 `
 
 type ClusterMarkShootUpdatingParams struct {
-	Message   pgtype.Text
-	ClusterID uuid.UUID
+	AwaitingMessage pgtype.Text
+	Message         pgtype.Text
+	ClusterID       uuid.UUID
 }
 
 // Mark a ready cluster as updating once Gardener accepted a spec change. It
 // stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
-// keeps working while the update rolls out.
+// keeps working while the update rolls out. A cluster still settling after
+// its create keeps the awaiting-health message: organization-api keys the
+// STARTING status on that exact text, and an update mid-settle must not
+// relabel the cluster unhealthy.
 func (q *Queries) ClusterMarkShootUpdating(ctx context.Context, arg ClusterMarkShootUpdatingParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterMarkShootUpdating, arg.Message, arg.ClusterID)
+	result, err := q.db.Exec(ctx, clusterMarkShootUpdating, arg.AwaitingMessage, arg.Message, arg.ClusterID)
 	if err != nil {
 		return 0, err
 	}

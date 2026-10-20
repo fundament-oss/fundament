@@ -21,6 +21,10 @@ message SyncState {
   // When shoot_status, shoot_message or the health last changed. Status is
   // checked far more often than that; an unchanged check leaves it as it is.
   google.protobuf.Timestamp status_updated_at = 60;
+  // True while Gardener rolls out a change fundament pushed: set when the
+  // spec change is accepted, cleared when the reconcile finishes. Lets a
+  // client tell an unhealthy cluster mid-rollout from one that settled.
+  bool shoot_updating = 70;
 }
 
 // ClusterService manages Kubernetes clusters

@@ -59,6 +59,36 @@ func TestNextNodePoolStatuses(t *testing.T) {
 			want:     nil,
 		},
 		{
+			name:     "a node problem in a pool from before this feature is left to its metrics",
+			stored:   []storedNodePool{{Name: "nomach"}},
+			observed: stuck,
+			want:     nil,
+		},
+		{
+			name:   "the initial create builds every pool",
+			stored: []storedNodePool{{Name: "workers"}, {Name: "gpu"}},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+				Message: "Create: Waiting until worker resource status is updated",
+			},
+			want: []nodePoolUpdate{
+				{Name: "workers", Status: dbconst.NodePoolStatus_Progressing},
+				{Name: "gpu", Status: dbconst.NodePoolStatus_Progressing},
+			},
+		},
+		{
+			name:   "a pool stuck during the initial create reports waiting",
+			stored: []storedNodePool{{Name: "nomach"}},
+			observed: &gardener.ShootStatus{
+				Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+				EveryNodeReadyMessage: enrNomach,
+			},
+			want: []nodePoolUpdate{
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
+			},
+		},
+		{
 			name:     "a scale-up that cannot get machines turns a settled pool waiting",
 			stored:   []storedNodePool{{Name: "nomach", Status: "ready"}},
 			observed: stuck,
@@ -126,6 +156,29 @@ func TestNextNodePoolStatuses(t *testing.T) {
 				EveryNodeReadyMessage: enrNomach,
 			},
 			want: nil,
+		},
+		{
+			name:   "a ready shoot still carrying worker detail settles no stuck pool",
+			stored: []storedNodePool{{Name: "tfpool", Status: "waiting", Message: enrMessage("tfpool")}, {Name: "nomach", Status: "waiting", Message: enrNomach}},
+			observed: &gardener.ShootStatus{
+				// The shoot turned ready while unhealthy: the detail names only
+				// nomach, which says nothing about tfpool's machines.
+				Status: gardener.StatusReady, Healthy: false,
+				EveryNodeReadyMessage: enrNomach,
+			},
+			want: nil,
+		},
+		{
+			name:   "a recreated pool does not inherit its predecessor's complaint",
+			stored: []storedNodePool{{Name: "nomach"}},
+			observed: &gardener.ShootStatus{
+				// The old pool of the same name was stuck; the new pool's change
+				// has not left the outbox, so this report predates it.
+				Status: gardener.StatusReady, Healthy: false,
+				EveryNodeReadyMessage: enrNomach,
+			},
+			syncPending: true,
+			want:        []nodePoolUpdate{{Name: "nomach", Status: dbconst.NodePoolStatus_Progressing}},
 		},
 		{
 			name:     "a stuck pool keeps its reason while the report carries no detail",

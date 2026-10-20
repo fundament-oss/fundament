@@ -190,6 +190,29 @@ func TestNextShootStatus(t *testing.T) {
 			},
 		},
 		{
+			// organization-api keys STARTING on the awaiting-health message, so a
+			// reconcile mid-settle must not swap it for Gardener's progress text.
+			name:     "routine reconcile during settle keeps the awaiting-health message",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: 10% done", Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+		},
+		{
+			name:     "update during settle keeps the awaiting-health message",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Waiting until worker nodes are ready", Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+		},
+		{
+			name:     "update finishing mid-settle stays settling",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
+			},
+		},
+		{
 			name:     "retried error during an update keeps the cluster updating",
 			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootUpdatePending, Health: healthy, Updating: true},
 			observed: &gardener.ShootStatus{Status: gardener.StatusError, Message: "machine not ready. Operation will be retried.", Operation: gardener.OperationReconcile, Retrying: true},

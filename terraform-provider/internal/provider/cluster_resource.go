@@ -62,9 +62,10 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 		Description: "Manages a Kubernetes cluster in Fundament.\n\n" +
 			"A create waits until Gardener has built the cluster and it serves; an update until Gardener has rolled out " +
 			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
-			"The wait does not hold out for health: when it ends while the cluster reports `starting` (health checks " +
-			"settling) or `unhealthy` (a health condition failing, such as a node pool that cannot get machines), the " +
-			"apply succeeds with a warning and Gardener keeps working on the cluster. " +
+			"The wait does not hold out for health: once the change is applied and no rollout is running, a cluster " +
+			"that reports `starting` (health checks settling) or `unhealthy` (a health condition failing, such as a " +
+			"node pool that cannot get machines) ends the wait too — the apply succeeds with a warning and Gardener " +
+			"keeps working on the cluster. " +
 			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
 			"cluster does not run within the timeout.\n\n" +
 			"When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. " +

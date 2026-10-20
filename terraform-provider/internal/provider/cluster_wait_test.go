@@ -12,8 +12,8 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-func clusterDetails(status organizationv1.ClusterStatus, outboxStatus string) *organizationv1.ClusterDetails {
-	sync := organizationv1.SyncState_builder{OutboxError: new("shoot rejected")}
+func clusterDetails(status organizationv1.ClusterStatus, outboxStatus string, updating bool) *organizationv1.ClusterDetails {
+	sync := organizationv1.SyncState_builder{OutboxError: new("shoot rejected"), ShootUpdating: updating}
 	if outboxStatus != "" {
 		sync.OutboxStatus = new(outboxStatus)
 	}
@@ -28,6 +28,7 @@ func TestClusterRunning(t *testing.T) {
 		name         string
 		status       organizationv1.ClusterStatus
 		outboxStatus string
+		updating     bool
 		done         bool
 		errContains  string
 	}{
@@ -40,6 +41,8 @@ func TestClusterRunning(t *testing.T) {
 		{name: "starting, change not yet applied", status: organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING, outboxStatus: "pending"},
 		{name: "unhealthy and synced", status: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY, outboxStatus: "completed", done: true},
 		{name: "unhealthy, change not yet applied", status: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY, outboxStatus: "pending"},
+		{name: "unhealthy while a rollout still runs", status: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY, outboxStatus: "completed", updating: true},
+		{name: "starting while a rollout still runs", status: organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING, outboxStatus: "completed", updating: true},
 		{name: "provisioning", status: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, outboxStatus: "completed"},
 		{name: "error that Gardener may retry", status: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, outboxStatus: "completed"},
 		{name: "sync given up", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, outboxStatus: "failed", errContains: "shoot rejected"},
@@ -48,7 +51,7 @@ func TestClusterRunning(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			done, err := clusterRunning(clusterDetails(tt.status, tt.outboxStatus))
+			done, err := clusterRunning(clusterDetails(tt.status, tt.outboxStatus, tt.updating))
 			if tt.errContains != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -61,15 +64,15 @@ func TestClusterRunning(t *testing.T) {
 }
 
 func TestSyncGivenUp(t *testing.T) {
-	sync := clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "retrying").GetSyncState()
+	sync := clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "retrying", false).GetSyncState()
 	require.NoError(t, syncGivenUp(sync, "deleting the cluster"))
 
-	sync = clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "failed").GetSyncState()
+	sync = clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "failed", false).GetSyncState()
 	require.ErrorContains(t, syncGivenUp(sync, "deleting the cluster"), "gave up deleting the cluster in Gardener: shoot rejected")
 }
 
 func TestDescribeClusterState(t *testing.T) {
-	cluster := clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, "retrying")
+	cluster := clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, "retrying", false)
 	cluster.GetSyncState().SetShootMessage("no free machines")
 	assert.Equal(t, "last status: error, no free machines; sync retrying: shoot rejected",
 		describeClusterState(cluster.GetStatus(), cluster.GetSyncState()))
@@ -93,10 +96,10 @@ func TestWaitError(t *testing.T) {
 	assert.Equal(t, "lost contact with Fundament while waiting for the cluster to run (last status: provisioning): polling cluster status: context deadline exceeded", lostAPI.Error())
 	assert.True(t, waitInconclusive(lostAPI), "a lost API says nothing about the cluster")
 
-	gaveUp := syncGivenUp(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, "failed").GetSyncState(), "applying the cluster")
+	gaveUp := syncGivenUp(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, "failed", false).GetSyncState(), "applying the cluster")
 	assert.Equal(t, gaveUp, waitError(context.Background(), gaveUp, "to run", "last status: provisioning"))
 	assert.False(t, waitInconclusive(gaveUp))
 
-	_, deleting := clusterRunning(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "completed"))
+	_, deleting := clusterRunning(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "completed", false))
 	assert.False(t, waitInconclusive(deleting))
 }

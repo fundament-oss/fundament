@@ -190,6 +190,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
+			row.ShootUpdating,
 		),
 	}
 	return builder.Build()

@@ -56,9 +56,11 @@ func syncStateFromRow(
 	shootStatus pgtype.Text,
 	shootStatusMessage pgtype.Text,
 	shootStatusUpdated pgtype.Timestamptz,
+	shootUpdating bool,
 ) *organizationv1.SyncState {
 	state := organizationv1.SyncState_builder{
 		OutboxRetries: outboxRetries,
+		ShootUpdating: shootUpdating,
 	}.Build()
 
 	if outboxStatus.Valid {

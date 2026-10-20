@@ -22,13 +22,12 @@ const (
 )
 
 // waitForClusterRunning polls GetCluster until cluster-worker has applied
-// every change to Gardener and the cluster is usable: a change is pending in
-// the outbox until cluster-worker has applied it, and the cluster is upgrading
-// from then until Gardener has finished. The wait does not hold out for
-// health: a cluster that serves while its health checks settle (starting) or
-// while a health condition fails (unhealthy, such as a node pool that cannot
-// get machines) ends the wait too — Gardener may still be rolling nodes then,
-// and holding every apply hostage to a degraded node would never return.
+// every change to Gardener, Gardener has finished rolling it out
+// (shoot_updating cleared), and the cluster is usable. The wait does not hold
+// out for health: a cluster that serves while its health checks settle
+// (starting) or while a health condition fails with no rollout running
+// (unhealthy, such as a node pool that cannot get machines) ends the wait too
+// — holding every apply hostage to a degraded node would never return.
 // Callers warn when the wait ends on one of those.
 //
 // A failed sync is fatal: cluster-worker has stopped retrying it. An error
@@ -130,11 +129,16 @@ func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
 		organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY:
 		// Starting (health checks settling after create) and unhealthy (health
 		// conditions failing, such as machines a node pool cannot get) are both
-		// ready in Gardener: the cluster is usable, and the wait must not hang
-		// on health a pool may never reach, nor hold every later apply hostage
-		// to a degraded node.
-		// The status is Gardener's last reading; a change still in the outbox has not reached it.
-		return !sync.HasOutboxStatus() || sync.GetOutboxStatus() == outboxCompleted, nil
+		// ready in Gardener: the cluster is usable, and the wait must not hold
+		// every later apply hostage to a degraded node. But while Gardener
+		// still rolls out a change of ours (shoot_updating), the picture is
+		// not final: returning then would hand downstream resources a
+		// half-rolled-out cluster, so the wait continues until the rollout
+		// ends — or the timeout passes, with the status in the error.
+		// The outbox gate: the status is Gardener's last reading, and a change
+		// still in the outbox has not reached it.
+		done := !sync.HasOutboxStatus() || sync.GetOutboxStatus() == outboxCompleted
+		return done && !sync.GetShootUpdating(), nil
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING,
 		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING,
 		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:

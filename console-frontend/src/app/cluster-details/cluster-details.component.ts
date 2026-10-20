@@ -44,6 +44,7 @@ import {
   isKubeconfigAvailable,
   kubeconfigHint,
   isTransitionalStatus,
+  shouldPollStatus,
 } from '../utils/cluster-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { PluginIconComponent } from '../icons';
@@ -537,6 +538,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     if (clusterId) this.loadNodePools(clusterId);
   });
 
+  /** Counts status poll ticks, to refresh pools and events at a slower pace
+   *  while the cluster sits still. */
+  private pollTick = 0;
+
   private async pollClusterStatus() {
     const clusterId = this.clusterData.basics.id;
     try {
@@ -548,15 +553,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         return;
       }
 
+      const statusChanged = this.clusterData.status !== response.cluster.status;
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
       this.clusterData.created = response.cluster.created;
-      // Node pool statuses and the activity timeline move with the cluster
-      // (a pool waiting for machines recovers, nodepool_* events arrive);
-      // refresh them on the same tick so the page never shows a stale badge
-      // next to a live cluster status.
-      this.loadNodePools(clusterId).catch(() => {});
-      this.loadClusterEvents(clusterId).catch(() => {});
+      // Node pool statuses and the activity timeline move with the cluster (a
+      // pool waiting for machines recovers, nodepool_* events arrive), so they
+      // refresh on the same tick while something happens: a status change, or
+      // a status that moves on its own. On a cluster sitting still they only
+      // refresh every 6th tick — listNodePools fans out to Prometheus server
+      // side, and an idle tab must not fire that every 5 seconds.
+      this.pollTick++;
+      if (statusChanged || shouldPollStatus(response.cluster.status) || this.pollTick % 6 === 0) {
+        this.loadNodePools(clusterId).catch(() => {});
+        this.loadClusterEvents(clusterId).catch(() => {});
+      }
       // The usage card loads once on init; when the cluster finishes
       // provisioning while the page is open, fetch it now instead of
       // requiring a page refresh.
