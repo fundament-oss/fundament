@@ -32,6 +32,7 @@ type SyncState struct {
 	xxx_hidden_ShootStatus     *string                `protobuf:"bytes,40,opt,name=shoot_status,json=shootStatus"`
 	xxx_hidden_ShootMessage    *string                `protobuf:"bytes,50,opt,name=shoot_message,json=shootMessage"`
 	xxx_hidden_StatusUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=status_updated_at,json=statusUpdatedAt"`
+	xxx_hidden_ShootUpdating   bool                   `protobuf:"varint,70,opt,name=shoot_updating,json=shootUpdating"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -117,9 +118,16 @@ func (x *SyncState) GetStatusUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SyncState) GetShootUpdating() bool {
+	if x != nil {
+		return x.xxx_hidden_ShootUpdating
+	}
+	return false
+}
+
 func (x *SyncState) SetOutboxStatus(v string) {
 	x.xxx_hidden_OutboxStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 7)
 }
 
 func (x *SyncState) SetOutboxRetries(v int32) {
@@ -128,21 +136,25 @@ func (x *SyncState) SetOutboxRetries(v int32) {
 
 func (x *SyncState) SetOutboxError(v string) {
 	x.xxx_hidden_OutboxError = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 7)
 }
 
 func (x *SyncState) SetShootStatus(v string) {
 	x.xxx_hidden_ShootStatus = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
 }
 
 func (x *SyncState) SetShootMessage(v string) {
 	x.xxx_hidden_ShootMessage = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 7)
 }
 
 func (x *SyncState) SetStatusUpdatedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_StatusUpdatedAt = v
+}
+
+func (x *SyncState) SetShootUpdating(v bool) {
+	x.xxx_hidden_ShootUpdating = v
 }
 
 func (x *SyncState) HasOutboxStatus() bool {
@@ -215,6 +227,10 @@ type SyncState_builder struct {
 	// When shoot_status, shoot_message or the health last changed. Status is
 	// checked far more often than that; an unchanged check leaves it as it is.
 	StatusUpdatedAt *timestamppb.Timestamp
+	// True while Gardener rolls out a change fundament pushed: set when the
+	// spec change is accepted, cleared when the reconcile finishes. Lets a
+	// client tell an unhealthy cluster mid-rollout from one that settled.
+	ShootUpdating bool
 }
 
 func (b0 SyncState_builder) Build() *SyncState {
@@ -222,23 +238,24 @@ func (b0 SyncState_builder) Build() *SyncState {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.OutboxStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 7)
 		x.xxx_hidden_OutboxStatus = b.OutboxStatus
 	}
 	x.xxx_hidden_OutboxRetries = b.OutboxRetries
 	if b.OutboxError != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 7)
 		x.xxx_hidden_OutboxError = b.OutboxError
 	}
 	if b.ShootStatus != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
 		x.xxx_hidden_ShootStatus = b.ShootStatus
 	}
 	if b.ShootMessage != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
 		x.xxx_hidden_ShootMessage = b.ShootMessage
 	}
 	x.xxx_hidden_StatusUpdatedAt = b.StatusUpdatedAt
+	x.xxx_hidden_ShootUpdating = b.ShootUpdating
 	return m0
 }
 
@@ -841,17 +858,18 @@ func (b0 ResourceUsageInfo_builder) Build() *ResourceUsageInfo {
 
 // Node pool information
 type NodePool struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id           string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name         string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_MachineType  string                 `protobuf:"bytes,30,opt,name=machine_type,json=machineType"`
-	xxx_hidden_CurrentNodes int32                  `protobuf:"varint,40,opt,name=current_nodes,json=currentNodes"`
-	xxx_hidden_MinNodes     int32                  `protobuf:"varint,50,opt,name=min_nodes,json=minNodes"`
-	xxx_hidden_MaxNodes     int32                  `protobuf:"varint,60,opt,name=max_nodes,json=maxNodes"`
-	xxx_hidden_Status       NodePoolStatus         `protobuf:"varint,70,opt,name=status,enum=organization.v1.NodePoolStatus"`
-	xxx_hidden_Version      string                 `protobuf:"bytes,80,opt,name=version"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id            string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name          string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_MachineType   string                 `protobuf:"bytes,30,opt,name=machine_type,json=machineType"`
+	xxx_hidden_CurrentNodes  int32                  `protobuf:"varint,40,opt,name=current_nodes,json=currentNodes"`
+	xxx_hidden_MinNodes      int32                  `protobuf:"varint,50,opt,name=min_nodes,json=minNodes"`
+	xxx_hidden_MaxNodes      int32                  `protobuf:"varint,60,opt,name=max_nodes,json=maxNodes"`
+	xxx_hidden_Status        NodePoolStatus         `protobuf:"varint,70,opt,name=status,enum=organization.v1.NodePoolStatus"`
+	xxx_hidden_Version       string                 `protobuf:"bytes,80,opt,name=version"`
+	xxx_hidden_StatusMessage string                 `protobuf:"bytes,90,opt,name=status_message,json=statusMessage"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *NodePool) Reset() {
@@ -935,6 +953,13 @@ func (x *NodePool) GetVersion() string {
 	return ""
 }
 
+func (x *NodePool) GetStatusMessage() string {
+	if x != nil {
+		return x.xxx_hidden_StatusMessage
+	}
+	return ""
+}
+
 func (x *NodePool) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -967,17 +992,22 @@ func (x *NodePool) SetVersion(v string) {
 	x.xxx_hidden_Version = v
 }
 
+func (x *NodePool) SetStatusMessage(v string) {
+	x.xxx_hidden_StatusMessage = v
+}
+
 type NodePool_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id           string
-	Name         string
-	MachineType  string
-	CurrentNodes int32
-	MinNodes     int32
-	MaxNodes     int32
-	Status       NodePoolStatus
-	Version      string
+	Id            string
+	Name          string
+	MachineType   string
+	CurrentNodes  int32
+	MinNodes      int32
+	MaxNodes      int32
+	Status        NodePoolStatus
+	Version       string
+	StatusMessage string
 }
 
 func (b0 NodePool_builder) Build() *NodePool {
@@ -992,6 +1022,7 @@ func (b0 NodePool_builder) Build() *NodePool {
 	x.xxx_hidden_MaxNodes = b.MaxNodes
 	x.xxx_hidden_Status = b.Status
 	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_StatusMessage = b.StatusMessage
 	return m0
 }
 
@@ -3296,7 +3327,7 @@ var File_v1_cluster_proto protoreflect.FileDescriptor
 
 const file_v1_cluster_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa6\x02\n" +
+	"\x10v1/cluster.proto\x12\x0forganization.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xcd\x02\n" +
 	"\tSyncState\x12*\n" +
 	"\routbox_status\x18\n" +
 	" \x01(\tB\x05\xaa\x01\x02\b\x01R\foutboxStatus\x12%\n" +
@@ -3304,7 +3335,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\foutbox_error\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\voutboxError\x12(\n" +
 	"\fshoot_status\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\vshootStatus\x12*\n" +
 	"\rshoot_message\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fshootMessage\x12F\n" +
-	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\"\x15\n" +
+	"\x11status_updated_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\x0fstatusUpdatedAt\x12%\n" +
+	"\x0eshoot_updating\x18F \x01(\bR\rshootUpdating\"\x15\n" +
 	"\x13ListClustersRequest\"\xf7\x02\n" +
 	"\x14ListClustersResponse\x12P\n" +
 	"\bclusters\x18\n" +
@@ -3345,7 +3377,7 @@ const file_v1_cluster_proto_rawDesc = "" +
 	" \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
 	"\x06memory\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x06memory\x122\n" +
 	"\x04disk\x18\x1e \x01(\v2\x1e.organization.v1.ResourceUsageR\x04disk\x122\n" +
-	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\x83\x02\n" +
+	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xaa\x02\n" +
 	"\bNodePool\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3355,7 +3387,8 @@ const file_v1_cluster_proto_rawDesc = "" +
 	"\tmin_nodes\x182 \x01(\x05R\bminNodes\x12\x1b\n" +
 	"\tmax_nodes\x18< \x01(\x05R\bmaxNodes\x127\n" +
 	"\x06status\x18F \x01(\x0e2\x1f.organization.v1.NodePoolStatusR\x06status\x12\x18\n" +
-	"\aversion\x18P \x01(\tR\aversion\"\x8f\x01\n" +
+	"\aversion\x18P \x01(\tR\aversion\x12%\n" +
+	"\x0estatus_message\x18Z \x01(\tR\rstatusMessage\"\x8f\x01\n" +
 	"\x14CreateClusterRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +

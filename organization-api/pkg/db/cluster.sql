@@ -13,6 +13,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error,
@@ -40,6 +41,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error
@@ -59,6 +61,7 @@ SELECT
     shoot_status_message,
     shoot_status_updated,
     shoot_updating,
+    shoot_health,
     tenant.clusters.outbox_status,
     tenant.clusters.outbox_retries,
     tenant.clusters.outbox_error

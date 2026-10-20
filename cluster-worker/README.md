@@ -131,7 +131,10 @@ outbox row, `status_progressing` / `status_ready` / `status_error` / `status_del
 status change, `status_progressing` with Gardener's progress message while an operation
 runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
-shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it),
+`nodepool_waiting` / `nodepool_error` (once per transition into that status) and
+`nodepool_ready` when a node pool's machines get stuck or recover (see "Node pool
+status" below), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes
@@ -171,11 +174,11 @@ settling does not stick, and a cluster that breaks later shows it.
   `unhealthy` and `unknown` are unhealthy, and `progressing` (a condition within its
   grace period, or pardoned while an operation runs without errors) keeps the recorded
   health, or counts as unhealthy for a cluster that was never healthy. A Shoot without
-  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy` and
-  `SystemComponentsHealthy`. While the last operation is still the Create, Gardener
-  computes the label from errors only and rewrites it just after the cluster becomes
-  ready, so until the first reconcile a `healthy` label also needs those three
-  conditions. So a routine reconcile that breaks a condition shows as
+  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy`,
+  `SystemComponentsHealthy` and `EveryNodeReady`. While the last operation is still the
+  Create, Gardener computes the label from errors only and rewrites it just after the
+  cluster becomes ready, so until the first reconcile a `healthy` label also needs those
+  four conditions. So a routine reconcile that breaks a condition shows as
   unhealthy only once Gardener stops pardoning it.
 - A new cluster's conditions take a few minutes to pass after the create succeeds,
   and Gardener labels it unhealthy meanwhile. Until it is first healthy, a ready
@@ -187,6 +190,52 @@ settling does not stick, and a cluster that breaks later shows it.
   recorded as `status_warning` (once per distinct message: an error Gardener retries
   again and again, with progress in between, is compared with the last recorded warning)
   and does not change the status. Only `Failed` sets `error`.
+
+### Node pool status
+
+A node pool row is a desired shape; whether Gardener can stand machines under it only
+shows in the Shoot's `EveryNodeReady` condition and `lastErrors`, which name the pool's
+machine deployments. Those names carry the generated worker name
+(`kubename.GenerateWorkerName`, a fixed-length prefix+hash), never the pool name the
+user chose, so the match looks for the worker name. Every status check classifies each
+active pool from the same report the cluster rules read and stores the outcome on
+`tenant.node_pools` (`status`, `status_message`, `status_updated`):
+
+| Status | Meaning |
+|---|---|
+| `progressing` | the cluster's initial create or a change fundament pushed shapes this pool and has not finished: the pool was never classified and an operation runs, or the change still sits in the outbox — its machines are being created |
+| `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
+| `error` | the operation failed for good, naming this pool |
+| `ready` | the shoot settled with every change applied, and nothing names the pool |
+
+An operation that does not name an already classified pool leaves it where it is: a
+routine reconcile says nothing about pools whose machines stand, and relabeling them
+would hide their live metrics and spray ready events when the reconcile ends. A pool
+stored `waiting`/`error` stays stuck while the worker detail exists: `EveryNodeReady`
+names only the first failing machine deployment, so a detail naming another pool —
+even on a shoot that turned ready while unhealthy — does not mean this one recovered.
+A complaint naming a settled pool (`ready`, or NULL from before this feature) only
+turns it `waiting` while the initial create runs or a change of ours is in flight —
+otherwise it is a node problem, which the pool's live metrics status describes. While
+the cluster has a change that has not left the outbox (pending, retrying or failed; the
+state is cluster-wide, not per pool), what Gardener reports may predate it: a pool that
+is new (NULL) or `progressing` stays `progressing` rather than reading ready, and a
+complaint naming it is ignored; a pool stored `ready` keeps its status.
+The in-flight state is read after the pool list (a pool's INSERT commits together with
+its outbox row), so a pool inserted mid-check is never classified from a stale
+nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
+Gardener's machine deployment names, so one pool can never match another's text, nor
+the shoot's technical ID. Gardener's reason text is cleaned before it is stored
+(control characters dropped, capped at 1 KiB): it is node and provider text. A failure
+that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
+untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
+the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
+text as machines churn, so a changed reason refreshes the row silently. A pool
+classified for the first time as `ready` or `progressing` records nothing; its first
+`waiting`/`error` does. Each pool's row and events commit in one transaction.
+organization-api serves the stored status and reason until a pool is `ready`, then its
+live node metrics take over. The watch treats a change in the worker detail as a status
+change, so a new reason reaches the pool row without waiting for the sweep.
 
 ### Status cache
 

@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // ClusterInfo contains the cluster data needed for mock metric generation.
@@ -142,9 +144,12 @@ func mockClusterNodes(cl ClusterInfo) []mockNode {
 		for i := range count {
 			result = append(result, mockNode{
 				clusterName: cl.Name,
-				poolName:    pool.Name,
-				name:        fmt.Sprintf("%s-%d", pool.Name, i),
-				machineID:   mockNodeMachineID(cl.ID, pool.Name, i),
+				// Real nodes carry the generated worker name in their pool
+				// label, never the raw pool name; the mock must match, or the
+				// runtime lookup finds nothing.
+				poolName:  kubename.GenerateWorkerName(pool.Name),
+				name:      fmt.Sprintf("%s-%d", pool.Name, i),
+				machineID: mockNodeMachineID(cl.ID, pool.Name, i),
 			})
 		}
 	}

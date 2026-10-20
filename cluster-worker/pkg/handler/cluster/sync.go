@@ -130,8 +130,9 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 // logged.
 func (h *Handler) markShootUpdating(ctx context.Context, clusterID uuid.UUID) {
 	marked, err := h.queries.ClusterMarkShootUpdating(ctx, db.ClusterMarkShootUpdatingParams{
-		ClusterID: clusterID,
-		Message:   pgtype.Text{String: gardener.MsgShootUpdatePending, Valid: true},
+		ClusterID:       clusterID,
+		Message:         pgtype.Text{String: gardener.MsgShootUpdatePending, Valid: true},
+		AwaitingMessage: pgtype.Text{String: gardener.MsgShootAwaitingHealth, Valid: true},
 	})
 	if err != nil {
 		h.logger.Warn("failed to mark cluster as updating", "cluster_id", clusterID, "error", err)

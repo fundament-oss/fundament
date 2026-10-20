@@ -121,6 +121,7 @@ SELECT
     tenant.clusters.shoot_health,
     tenant.clusters.shoot_updating,
     tenant.clusters.shoot_api_available,
+    tenant.clusters.outbox_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
     tenant.organizations.name AS organization_name,
@@ -153,6 +154,7 @@ type ClusterGetForStatusCheckRow struct {
 	ShootHealth        pgtype.Text
 	ShootUpdating      bool
 	ShootApiAvailable  pgtype.Timestamptz
+	OutboxStatus       pgtype.Text
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
@@ -178,6 +180,7 @@ func (q *Queries) ClusterGetForStatusCheck(ctx context.Context, arg ClusterGetFo
 		&i.ShootHealth,
 		&i.ShootUpdating,
 		&i.ShootApiAvailable,
+		&i.OutboxStatus,
 		&i.OrganizationID,
 		&i.ShootStatusUpdated,
 		&i.OrganizationName,
@@ -257,6 +260,36 @@ func (q *Queries) ClusterGetLastWarningMessage(ctx context.Context, arg ClusterG
 	var message pgtype.Text
 	err := row.Scan(&message)
 	return message, err
+}
+
+const clusterGetPushState = `-- name: ClusterGetPushState :one
+SELECT
+    tenant.clusters.shoot_updating,
+    tenant.clusters.outbox_status
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = $1
+`
+
+type ClusterGetPushStateParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterGetPushStateRow struct {
+	ShootUpdating bool
+	OutboxStatus  pgtype.Text
+}
+
+// What is in flight for the cluster, read AFTER the pool list: a pool's INSERT
+// commits together with its cluster_outbox row, so any pool the list returned
+// has its outbox row visible here. The state read with the cluster row at the
+// start of a check is stale for pools inserted since.
+func (q *Queries) ClusterGetPushState(ctx context.Context, arg ClusterGetPushStateParams) (ClusterGetPushStateRow, error) {
+	row := q.db.QueryRow(ctx, clusterGetPushState, arg.ClusterID)
+	var i ClusterGetPushStateRow
+	err := row.Scan(&i.ShootUpdating, &i.OutboxStatus)
+	return i, err
 }
 
 const clusterHasEverBeenSynced = `-- name: ClusterHasEverBeenSynced :one
@@ -378,23 +411,30 @@ const clusterMarkShootUpdating = `-- name: ClusterMarkShootUpdating :execrows
 UPDATE tenant.clusters
 SET
     shoot_updating = true,
-    shoot_status_message = $1,
+    shoot_status_message = CASE
+        WHEN tenant.clusters.shoot_status_message = $1 THEN tenant.clusters.shoot_status_message
+        ELSE $2
+    END,
     shoot_status_updated = now()
 WHERE
-    id = $2
+    id = $3
     AND shoot_status = 'ready'
 `
 
 type ClusterMarkShootUpdatingParams struct {
-	Message   pgtype.Text
-	ClusterID uuid.UUID
+	AwaitingMessage pgtype.Text
+	Message         pgtype.Text
+	ClusterID       uuid.UUID
 }
 
 // Mark a ready cluster as updating once Gardener accepted a spec change. It
 // stays ready, so what is gated on a ready cluster (kubeconfig, member sync)
-// keeps working while the update rolls out.
+// keeps working while the update rolls out. A cluster still settling after
+// its create keeps the awaiting-health message: organization-api keys the
+// STARTING status on that exact text, and an update mid-settle must not
+// relabel the cluster unhealthy.
 func (q *Queries) ClusterMarkShootUpdating(ctx context.Context, arg ClusterMarkShootUpdatingParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterMarkShootUpdating, arg.Message, arg.ClusterID)
+	result, err := q.db.Exec(ctx, clusterMarkShootUpdating, arg.AwaitingMessage, arg.Message, arg.ClusterID)
 	if err != nil {
 		return 0, err
 	}
@@ -538,4 +578,86 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 		return nil, err
 	}
 	return items, nil
+}
+
+const nodePoolListStatusByClusterID = `-- name: NodePoolListStatusByClusterID :many
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.name,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = $1
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.created,
+    tenant.node_pools.id
+`
+
+type NodePoolListStatusByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+type NodePoolListStatusByClusterIDRow struct {
+	ID            uuid.UUID
+	Name          string
+	Status        pgtype.Text
+	StatusMessage pgtype.Text
+}
+
+// The status path needs only identity and the stored classification; the
+// worker-group build query above, with its catalog joins, stays with sync.
+func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
+	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NodePoolListStatusByClusterIDRow
+	for rows.Next() {
+		var i NodePoolListStatusByClusterIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Status,
+			&i.StatusMessage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :execrows
+UPDATE tenant.node_pools
+SET
+    status = $1,
+    status_message = $2,
+    status_updated = now()
+WHERE
+    id = $3
+    AND deleted IS NULL
+`
+
+type NodePoolUpdateStatusParams struct {
+	Status     pgtype.Text
+	Message    pgtype.Text
+	NodePoolID uuid.UUID
+}
+
+// Record what Gardener reports about one pool's machines. Keyed by id: the
+// row was just read by the same check, and with soft deletes (cluster_id,
+// name) could meanwhile mean a recreated pool.
+func (q *Queries) NodePoolUpdateStatus(ctx context.Context, arg NodePoolUpdateStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolUpdateStatus, arg.Status, arg.Message, arg.NodePoolID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
