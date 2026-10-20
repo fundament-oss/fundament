@@ -59,7 +59,9 @@ sequenceDiagram
 - **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
   container defaults insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
   claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
-  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
+  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`, except
+  a request the Kubernetes or Gardener API rejects as invalid or malformed, or a Shoot spec
+  Gardener's admission refuses, which fails at once: a retry would only send it again. A row
   whose precondition is not met yet (for example, the project namespace does not exist)
   is deferred instead of failed.
 - **Status.** A cluster's status is checked when its Shoot changes (see
@@ -282,8 +284,8 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
 | `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
 | `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
-| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `1m` | retry backoff |
-| `OUTBOX_MAX_RETRIES` | `10` | |
+| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `2m` | retry backoff: 1s after the first failure, doubling up to the cap |
+| `OUTBOX_MAX_RETRIES` | `15` | attempts before a row fails for good; with the backoff above about 16 minutes, enough to ride out a short outage of a Shoot or the garden |
 | `OUTBOX_BACKOFF_DELAY` | `5s` | reconnect delay after losing the database connection |
 | `OUTBOX_PRECONDITION_DELAY`, `OUTBOX_MAX_PRECONDITION_DEFERRALS` | `30s`, `100` | |
 | `STATUS_INTERVAL` | `30m` | how often the status sweep checks every cluster; it also runs at startup, in real mode once the status cache has synced |
