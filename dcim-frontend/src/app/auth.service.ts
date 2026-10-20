@@ -1,5 +1,5 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
-import { Code, ConnectError, createClient } from '@connectrpc/connect';
+import { Injectable, Injector, inject, signal, computed } from '@angular/core';
+import { Client, Code, ConnectError, createClient } from '@connectrpc/connect';
 import { ConfigService } from './config.service';
 import { AuthnService } from '../generated/dcimauthn/v1/dcimauthn_pb';
 import { AUTHN_TRANSPORT } from '../connect/tokens';
@@ -15,7 +15,9 @@ export interface DcimUser {
 export default class AuthService {
   private configService = inject(ConfigService);
 
-  private authnClient = createClient(AuthnService, inject(AUTHN_TRANSPORT));
+  private injector = inject(Injector);
+
+  private client?: Client<typeof AuthnService>;
 
   private currentUser = signal<DcimUser | undefined>(undefined);
 
@@ -27,6 +29,13 @@ export default class AuthService {
 
   private get authnApiUrl(): string {
     return this.configService.getConfig().authnApiUrl;
+  }
+
+  // Lazy: the transport factory reads the runtime config, and this service is
+  // first injected by the app initializer before that config is loaded.
+  private authnClient(): Client<typeof AuthnService> {
+    this.client ??= createClient(AuthnService, this.injector.get(AUTHN_TRANSPORT));
+    return this.client;
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -50,7 +59,7 @@ export default class AuthService {
     if (this.pendingUserInfo) {
       return this.pendingUserInfo;
     }
-    this.pendingUserInfo = this.authnClient
+    this.pendingUserInfo = this.authnClient()
       .getUserInfo({})
       .then((resp) => {
         const user: DcimUser = { id: resp.user?.id ?? '', name: resp.user?.name ?? '' };
