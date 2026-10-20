@@ -195,10 +195,26 @@
                   ></nldd-text-cell>
                 </nldd-list-item>
               }
+              @if (clusterData.syncState?.outboxMessage) {
+                <nldd-list-item>
+                  <nldd-text-cell
+                    text="Waiting for"
+                    width="fit-content"
+                  ></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="right"
+                    [attr.text]="formatEventMessage(clusterData.syncState!.outboxMessage!)"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
                   <!-- Width on the label on purpose: beside a long error the shared min-content rule still lets it collapse to one letter per line. -->
-                  <nldd-text-cell text="Sync error" width="fit-content"></nldd-text-cell>
+                  <nldd-text-cell
+                    text="Sync error"
+                    width="fit-content"
+                  ></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
@@ -408,7 +424,9 @@
                            while it retries or after it failed for good. -->
                       @if (pool.syncError) {
                         <nldd-spacer size="8"></nldd-spacer>
-                        <nldd-text size="sm" color="critical"
+                        <nldd-text
+                          size="sm"
+                          color="critical"
                           >Sync error: {{ formatEventMessage(pool.syncError) }}</nldd-text
                         >
                       }

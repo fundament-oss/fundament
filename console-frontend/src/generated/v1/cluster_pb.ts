@@ -672,7 +672,7 @@ export type ClusterEvent = Message<"organization.v1.ClusterEvent"> & {
   id: string;
 
   /**
-   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, status_api_available, nodepool_waiting, nodepool_error, nodepool_ready, user_sync_succeeded, user_sync_failed
+   * sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, status_api_available, nodepool_waiting, nodepool_error, nodepool_ready, user_sync_succeeded, user_sync_failed, sync_waiting_for_precondition
    *
    * @generated from field: string event_type = 20;
    */
