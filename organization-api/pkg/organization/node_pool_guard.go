@@ -20,6 +20,8 @@ const (
 	msgLastNodePool   = "a cluster needs at least one node pool; add another node pool before removing this one"
 	msgNoActivePool   = "a cluster needs at least one node pool with a maximum above 0"
 	msgFirstPoolEmpty = "a cluster's first node pool needs a maximum above 0"
+	// A cluster being deleted gets no new pools: its Shoot is going away.
+	msgClusterDeleting = "the cluster is being deleted"
 )
 
 // otherActivePools counts the cluster's live pools with a maximum above 0,

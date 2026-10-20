@@ -7,13 +7,10 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
-	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -31,24 +28,38 @@ func (s *Server) CreateNodePool(
 		return nil, err
 	}
 
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Every pool write locks the cluster, so it runs before or after a
+	// SetNodePools of the same cluster, never in between.
+	locked, err := qtx.ClusterLockForNodePools(ctx, db.ClusterLockForNodePoolsParams{ClusterID: clusterID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock cluster: %w", err))
+	}
+
+	if locked.Deleted.Valid {
+		return nil, failedPrecondition(msgClusterDeleting)
 	}
 
 	// Resolve the machine type name against the catalog within the cluster's
 	// region: only offered types are valid (pre-validate with ListRegions).
-	offering, err := s.queries.RegionMachineTypeResolve(ctx, db.RegionMachineTypeResolveParams{
-		RegionName:      cluster.Region,
+	offering, err := qtx.RegionMachineTypeResolve(ctx, db.RegionMachineTypeResolveParams{
+		RegionName:      locked.Region,
 		MachineTypeName: req.GetMachineType(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("machine type %q is not offered in region %q", req.GetMachineType(), cluster.Region))
+				fmt.Errorf("machine type %q is not offered in region %q", req.GetMachineType(), locked.Region))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve machine type: %w", err))
 	}
@@ -62,60 +73,21 @@ func (s *Server) CreateNodePool(
 		AutoscaleMax:        req.GetAutoscaleMax(),
 	}
 
-	tx, err := s.db.Pool.Begin(ctx)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
-	}
-	defer rollback.Rollback(ctx, tx, s.logger)
-
-	qtx := s.queries.WithTx(tx)
-
 	// A live cluster keeps a pool that can run nodes (see node_pool_guard.go):
 	// a pool with a maximum of 0 cannot be its first.
 	if req.GetAutoscaleMax() == 0 {
-		locked, err := qtx.ClusterLockForNodePools(ctx, db.ClusterLockForNodePoolsParams{ClusterID: clusterID})
+		active, err := otherActivePools(ctx, qtx, clusterID, pgtype.UUID{})
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-			}
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock cluster: %w", err))
+			return nil, err
 		}
-		if !locked.Deleted.Valid {
-			active, err := otherActivePools(ctx, qtx, clusterID, pgtype.UUID{})
-			if err != nil {
-				return nil, err
-			}
-			if active == 0 {
-				return nil, failedPrecondition(msgFirstPoolEmpty)
-			}
+		if active == 0 {
+			return nil, failedPrecondition(msgFirstPoolEmpty)
 		}
 	}
 
 	nodePoolID, err := qtx.NodePoolCreate(ctx, params)
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			// The quota trigger: the pool's maximum would take the organization
-			// over its node quota for this machine type in this region. Its text
-			// names the numbers and is written to be shown to the user.
-			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolQuotaExceeded {
-				return nil, connect.NewError(connect.CodeResourceExhausted, errors.New(pgErr.Message))
-			}
-			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolQuotaUnresolvable {
-				return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(pgErr.Message))
-			}
-			// The region-match constraint trigger: the resolved row's region does
-			// not match the cluster's region_id (e.g. a pre-catalog cluster whose
-			// region_id is still NULL).
-			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolRegionMismatch {
-				return nil, connect.NewError(connect.CodeFailedPrecondition,
-					fmt.Errorf("the cluster is not linked to the region catalog; contact an operator"))
-			}
-			if pgErr.Code == pgerrcode.ForeignKeyViolation && pgErr.ConstraintName == dbconst.ConstraintNodePoolsFkRegionMachineType {
-				return nil, connect.NewError(connect.CodeInvalidArgument,
-					fmt.Errorf("machine type %q is not offered in region %q", req.GetMachineType(), cluster.Region))
-			}
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create node pool: %w", err))
+		return nil, nodePoolWriteError(err, req.GetMachineType(), locked.Region, "create")
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -15,7 +15,8 @@ import (
 const clusterLockForNodePools = `-- name: ClusterLockForNodePools :one
 SELECT
     tenant.clusters.id,
-    tenant.clusters.deleted
+    tenant.clusters.deleted,
+    tenant.clusters.region
 FROM tenant.clusters
 WHERE tenant.clusters.id = $1
 FOR NO KEY UPDATE
@@ -28,6 +29,7 @@ type ClusterLockForNodePoolsParams struct {
 type ClusterLockForNodePoolsRow struct {
 	ID      uuid.UUID
 	Deleted pgtype.Timestamptz
+	Region  string
 }
 
 // Locks a cluster for a node pool change, as NodePoolLockCluster does. No row:
@@ -35,7 +37,7 @@ type ClusterLockForNodePoolsRow struct {
 func (q *Queries) ClusterLockForNodePools(ctx context.Context, arg ClusterLockForNodePoolsParams) (ClusterLockForNodePoolsRow, error) {
 	row := q.db.QueryRow(ctx, clusterLockForNodePools, arg.ClusterID)
 	var i ClusterLockForNodePoolsRow
-	err := row.Scan(&i.ID, &i.Deleted)
+	err := row.Scan(&i.ID, &i.Deleted, &i.Region)
 	return i, err
 }
 
