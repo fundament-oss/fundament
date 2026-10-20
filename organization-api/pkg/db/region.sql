@@ -48,3 +48,15 @@ JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region
 JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
 WHERE catalog.regions.name = @region_name
   AND catalog.machine_types.name = @machine_type_name;
+
+-- name: RegionMachineTypesResolve :many
+-- Resolve several machine type names in a region at once, for a set of node
+-- pools; a name without a row is not offered in that region.
+SELECT
+    catalog.machine_types.name,
+    catalog.region_machine_types.id
+FROM catalog.region_machine_types
+JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+WHERE catalog.regions.name = @region_name
+  AND catalog.machine_types.name = ANY(@machine_type_names::text[]);

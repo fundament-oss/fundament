@@ -99,6 +99,11 @@ func syncStateFromRow(
 	if isError {
 		state.SetOutboxError(message)
 	}
+	// A pending row's status_info is not an error but why it waits (a
+	// precondition it is parked or deferred on).
+	if outboxStatus.Valid && outboxStatus.String == "pending" && outboxError.Valid && outboxError.String != "" {
+		state.SetOutboxMessage(outboxError.String)
+	}
 	if shootStatus.Valid {
 		state.SetShootStatus(shootStatus.String)
 	}

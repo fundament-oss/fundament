@@ -99,6 +99,11 @@ func Test_NodePool_Delete_PoolOfADeletedClusterMayGo(t *testing.T) {
 
 	require.NoError(t, q.deleteNodePool(poolID))
 	assert.Zero(t, q.livePools(t))
+
+	// It gets no new pool, though.
+	_, err = q.createNodePool(clusterID, "late", "n1-standard-1", 1)
+	requireRefused(t, err, "the cluster is being deleted")
+	assert.Zero(t, q.livePools(t))
 }
 
 func (q *quotaEnv) createSizedNodePool(clusterID, name string, minNodes, maxNodes int32) (string, error) {

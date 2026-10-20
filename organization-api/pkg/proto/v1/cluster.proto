@@ -16,6 +16,9 @@ message SyncState {
   string outbox_status = 10 [features.field_presence = EXPLICIT];
   int32 outbox_retries = 20;
   string outbox_error = 30 [features.field_presence = EXPLICIT];
+  // Why a queued sync has not run yet, when it waits for something: the
+  // cluster's first node pool, say. Set while outbox_status is pending.
+  string outbox_message = 35 [features.field_presence = EXPLICIT];
   string shoot_status = 40 [features.field_presence = EXPLICIT];
   string shoot_message = 50 [features.field_presence = EXPLICIT];
   // When shoot_status, shoot_message or the health last changed. Status is
@@ -70,6 +73,13 @@ service ClusterService {
 
   // Update a node pool
   rpc UpdateNodePool(UpdateNodePoolRequest) returns (UpdateNodePoolResponse);
+
+  // Set a cluster's complete set of node pools in one step: pools are matched
+  // by name, so a pool keeps its identity across resizes, one whose machine
+  // type changes is replaced, and pools missing from the set are removed. The
+  // change is applied all at once or not at all, so the cluster never passes
+  // through an intermediate set, and quotas are checked against the result.
+  rpc SetNodePools(SetNodePoolsRequest) returns (SetNodePoolsResponse);
 
   // Delete a node pool
   rpc DeleteNodePool(DeleteNodePoolRequest) returns (DeleteNodePoolResponse);
@@ -177,11 +187,58 @@ message CreateClusterRequest {
 
 // Node pool specification
 message NodePoolSpec {
-  string name = 10;
-  string machine_type = 20;
-  int32 autoscale_min = 30;
-  int32 autoscale_max = 40;
+  option (buf.validate.message).cel = {
+    id: "autoscale_max_gte_min"
+    message: "autoscale_max must be >= autoscale_min"
+    expression: "this.autoscale_max >= this.autoscale_min"
+  };
+
+  string name = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  // Machine type name from the catalog; the server resolves it against the
+  // cluster's region and rejects types the region does not offer.
+  string machine_type = 20 [(buf.validate.field).string = {min_len: 1}];
+  int32 autoscale_min = 30 [(buf.validate.field).int32 = {gte: 0}];
+  int32 autoscale_max = 40 [(buf.validate.field).int32 = {gte: 0}];
 }
+
+// Set node pools request: the cluster's complete set of node pools. At least
+// one pool and at most 100, names unique, and at least one with autoscale_max
+// above 0.
+message SetNodePoolsRequest {
+  option (buf.validate.message).cel = {
+    id: "node_pool_names_unique"
+    message: "node pool names must be unique"
+    expression: "this.node_pools.map(p, p.name).unique()"
+  };
+
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  repeated NodePoolSpec node_pools = 20 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
+  // When set, the request is refused unless the cluster's live pools are
+  // exactly these: a form built from an earlier read cannot remove a pool
+  // someone else added since. Leave it unset to make node_pools the complete
+  // set regardless of what the cluster has now.
+  ExpectedNodePools expected_current = 30;
+}
+
+// The ids of the pools a SetNodePools caller read. An empty list means the
+// cluster had no pools.
+message ExpectedNodePools {
+  repeated string node_pool_ids = 10 [(buf.validate.field).repeated = {
+    max_items: 100
+    items: {
+      string: {uuid: true}
+    }
+  }];
+}
+
+// Set node pools response
+message SetNodePoolsResponse {}
 
 // Create cluster response
 message CreateClusterResponse {

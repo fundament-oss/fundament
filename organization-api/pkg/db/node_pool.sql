@@ -82,7 +82,8 @@ FOR NO KEY UPDATE;
 -- the cluster does not exist.
 SELECT
     tenant.clusters.id,
-    tenant.clusters.deleted
+    tenant.clusters.deleted,
+    tenant.clusters.region
 FROM tenant.clusters
 WHERE tenant.clusters.id = @cluster_id
 FOR NO KEY UPDATE;
