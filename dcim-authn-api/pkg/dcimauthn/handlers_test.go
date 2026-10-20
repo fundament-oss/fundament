@@ -55,7 +55,7 @@ func refreshTestServer() *Server {
 		config:        cfg,
 		logger:        logger,
 		queries:       stubStore{},
-		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
+		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
 	}
 }
@@ -66,6 +66,7 @@ func signRefreshToken(t *testing.T, secret []byte, subject string) string {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.DCIMIssuer,
 			Subject:   subject,
+			Audience:  jwt.ClaimStrings{auth.TokenTypeDCIMUser},
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
@@ -123,6 +124,31 @@ func TestHandleRefresh_UnresolvableSubjectIsRefused(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 	assert.Empty(t, rec.Result().Cookies())
+}
+
+// A DCIM-issuer token without the dcim-user audience is refused: the audience
+// is what keeps other token kinds signed with the shared secret out.
+func TestHandleRefresh_MissingAudienceIsRefused(t *testing.T) {
+	s := refreshTestServer()
+
+	claims := auth.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.DCIMIssuer,
+			Subject:   refreshSubject,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.config.JWTSecret)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	s.HandleRefresh(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
 func TestHandleRefresh_InvalidToken(t *testing.T) {

@@ -32,8 +32,10 @@ const (
 type TokenType = string
 
 const (
-	TokenTypeUser   TokenType = "fundament-user"
-	TokenTypePlugin TokenType = "fundament-plugin"
+	TokenTypeUser TokenType = "fundament-user"
+	// TokenTypeDCIMUser marks a staff session token minted by dcim-authn-api.
+	TokenTypeDCIMUser TokenType = "dcim-user"
+	TokenTypePlugin   TokenType = "fundament-plugin"
 	// TokenTypeWorkload marks a WorkloadToken: a workload on one cluster (FUN-22).
 	// Parsed only by ParseWorkloadToken, never by Validator.
 	TokenTypeWorkload TokenType = "fundament-workload" //nolint:gosec // audience label, not a credential
