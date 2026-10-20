@@ -27,49 +27,6 @@ func pool(name, machineType string, autoscaleMin, autoscaleMax int64) ClusterNod
 	}
 }
 
-func TestPlanNodePoolChanges(t *testing.T) {
-	current := []existingNodePool{
-		{ID: "id-keep", Pool: pool("keep", "small", 1, 3)},
-		{ID: "id-resize", Pool: pool("resize", "small", 1, 3)},
-		{ID: "id-retype", Pool: pool("retype", "small", 1, 3)},
-		{ID: "id-gone", Pool: pool("gone", "small", 1, 3)},
-	}
-	planned := []ClusterNodePoolModel{
-		pool("keep", "small", 1, 3),
-		pool("resize", "small", 2, 5),
-		pool("retype", "large", 1, 3),
-		pool("new", "small", 1, 1),
-	}
-
-	changes := planNodePoolChanges(current, planned)
-
-	assert.Equal(t, []ClusterNodePoolModel{pool("retype", "large", 1, 3), pool("new", "small", 1, 1)}, changes.Create)
-	assert.Equal(t, []existingNodePool{{ID: "id-resize", Pool: pool("resize", "small", 2, 5)}}, changes.Update)
-	assert.Equal(t, []existingNodePool{
-		{ID: "id-retype", Pool: pool("retype", "small", 1, 3)},
-		{ID: "id-gone", Pool: pool("gone", "small", 1, 3)},
-	}, changes.Delete)
-}
-
-func TestPlanNodePoolChangesNoChange(t *testing.T) {
-	current := []existingNodePool{{ID: "id-a", Pool: pool("a", "small", 1, 3)}}
-
-	changes := planNodePoolChanges(current, []ClusterNodePoolModel{pool("a", "small", 1, 3)})
-
-	assert.Empty(t, changes.Create)
-	assert.Empty(t, changes.Update)
-	assert.Empty(t, changes.Delete)
-}
-
-func TestPlanNodePoolChangesRemoveAll(t *testing.T) {
-	current := []existingNodePool{{ID: "id-a", Pool: pool("a", "small", 1, 3)}}
-
-	changes := planNodePoolChanges(current, nil)
-
-	assert.Empty(t, changes.Create)
-	assert.Equal(t, current, changes.Delete)
-}
-
 func TestOrderNodePools(t *testing.T) {
 	fromAPI := []existingNodePool{
 		{ID: "1", Pool: pool("zeta", "small", 1, 1)},
@@ -131,37 +88,21 @@ func TestCheckMachineTypes(t *testing.T) {
 	assert.Contains(t, diags.Errors()[0].Detail(), `Region "nowhere" is not in the catalog.`)
 }
 
-// fakePoolService records the node pool calls applyNodePoolChanges makes.
+// fakePoolService records the SetNodePools requests setNodePools makes.
 type fakePoolService struct {
 	fakeRegionsService
-	calls      []string
-	failCreate string
+	requests []*organizationv1.SetNodePoolsRequest
+	refuse   error
+	// refuseTimes limits the refusal to the first n calls; 0 means every call.
+	refuseTimes int
 }
 
-func (f *fakePoolService) ListRegions(ctx context.Context, req *organizationv1.ListRegionsRequest) (*organizationv1.ListRegionsResponse, error) {
-	f.calls = append(f.calls, "ListRegions")
-	return f.fakeRegionsService.ListRegions(ctx, req)
-}
-
-func (f *fakePoolService) CreateNodePool(ctx context.Context, req *organizationv1.CreateNodePoolRequest) (*organizationv1.CreateNodePoolResponse, error) {
-	f.calls = append(f.calls, "Create "+req.GetName())
-	if req.GetName() == f.failCreate {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("refused"))
+func (f *fakePoolService) SetNodePools(_ context.Context, req *organizationv1.SetNodePoolsRequest) (*organizationv1.SetNodePoolsResponse, error) {
+	f.requests = append(f.requests, req)
+	if f.refuse != nil && (f.refuseTimes == 0 || len(f.requests) <= f.refuseTimes) {
+		return nil, f.refuse
 	}
-	if callInfo, ok := connect.CallInfoForHandlerContext(ctx); ok {
-		callInfo.ResponseHeader().Set(idempotencyHeaderStatus, statusCompleted)
-	}
-	return organizationv1.CreateNodePoolResponse_builder{NodePoolId: "id-" + req.GetName()}.Build(), nil
-}
-
-func (f *fakePoolService) UpdateNodePool(_ context.Context, req *organizationv1.UpdateNodePoolRequest) (*organizationv1.UpdateNodePoolResponse, error) {
-	f.calls = append(f.calls, "Update "+req.GetNodePoolId())
-	return organizationv1.UpdateNodePoolResponse_builder{}.Build(), nil
-}
-
-func (f *fakePoolService) DeleteNodePool(_ context.Context, req *organizationv1.DeleteNodePoolRequest) (*organizationv1.DeleteNodePoolResponse, error) {
-	f.calls = append(f.calls, "Delete "+req.GetNodePoolId())
-	return organizationv1.DeleteNodePoolResponse_builder{}.Build(), nil
+	return organizationv1.SetNodePoolsResponse_builder{}.Build(), nil
 }
 
 func newFakePoolClient(t *testing.T, service *fakePoolService) *FundamentClient {
@@ -172,59 +113,40 @@ func newFakePoolClient(t *testing.T, service *fakePoolService) *FundamentClient 
 	return &FundamentClient{ClusterService: organizationv1connect.NewClusterServiceClient(srv.Client(), srv.URL)}
 }
 
-var applyCurrent = []existingNodePool{
-	{ID: "id-keep", Pool: pool("keep", "local-small", 1, 3)},
-	{ID: "id-resize", Pool: pool("resize", "local-small", 1, 3)},
-	{ID: "id-retype", Pool: pool("retype", "local-small", 1, 3)},
-	{ID: "id-gone", Pool: pool("gone", "local-small", 1, 3)},
-}
-
-func TestApplyNodePoolChangesOrder(t *testing.T) {
+// The planned blocks go to the API as one complete set, in their order.
+func TestSetNodePoolsSendsTheWholeSet(t *testing.T) {
 	service := &fakePoolService{}
 	client := newFakePoolClient(t, service)
 
-	diags := applyNodePoolChanges(context.Background(), client, "c1", "local", applyCurrent, []ClusterNodePoolModel{
-		pool("keep", "local-small", 1, 3),
-		pool("resize", "local-small", 2, 5),
-		pool("retype", "local-medium", 1, 3),
-		pool("new", "local-small", 1, 1),
+	diags := setNodePools(context.Background(), client, "c1", []ClusterNodePoolModel{
+		pool("workers", "local-medium", 1, 3),
+		pool("spare", "local-small", 0, 0),
 	})
 
 	require.False(t, diags.HasError(), "%v", diags)
-	assert.Equal(t, []string{
-		"ListRegions",      // machine types checked before anything changes
-		"Delete id-retype", // the name must be free for its replacement
-		"Create retype",
-		"Create new",
-		"Update id-resize",
-		"Delete id-gone", // removed pools go last, so the cluster keeps workers in between
-	}, service.calls)
+	require.Len(t, service.requests, 1)
+	req := service.requests[0]
+	assert.Equal(t, "c1", req.GetClusterId())
+	require.Len(t, req.GetNodePools(), 2)
+	assert.Equal(t, "workers", req.GetNodePools()[0].GetName())
+	assert.Equal(t, "local-medium", req.GetNodePools()[0].GetMachineType())
+	assert.Equal(t, int32(1), req.GetNodePools()[0].GetAutoscaleMin())
+	assert.Equal(t, int32(3), req.GetNodePools()[0].GetAutoscaleMax())
+	assert.Equal(t, "spare", req.GetNodePools()[1].GetName())
+	assert.Equal(t, "local-small", req.GetNodePools()[1].GetMachineType())
+	assert.Equal(t, int32(0), req.GetNodePools()[1].GetAutoscaleMin())
+	assert.Equal(t, int32(0), req.GetNodePools()[1].GetAutoscaleMax())
 }
 
-func TestApplyNodePoolChangesRefusedMachineType(t *testing.T) {
-	service := &fakePoolService{}
+func TestSetNodePoolsReportsARefusal(t *testing.T) {
+	service := &fakePoolService{refuse: connect.NewError(connect.CodeResourceExhausted, errors.New("over the organization's quota of 3"))}
 	client := newFakePoolClient(t, service)
 
-	diags := applyNodePoolChanges(context.Background(), client, "c1", "local", applyCurrent, []ClusterNodePoolModel{
-		pool("keep", "local-small", 1, 3),
-		pool("retype", "local-huge", 1, 3),
-	})
+	diags := setNodePools(context.Background(), client, "c1", []ClusterNodePoolModel{pool("workers", "local-small", 1, 4)})
 
 	require.True(t, diags.HasError())
-	assert.Equal(t, []string{"ListRegions"}, service.calls, "nothing is deleted when a machine type is not offered")
-}
-
-func TestApplyNodePoolChangesStopsAtFirstError(t *testing.T) {
-	service := &fakePoolService{failCreate: "new"}
-	client := newFakePoolClient(t, service)
-
-	diags := applyNodePoolChanges(context.Background(), client, "c1", "local", applyCurrent, []ClusterNodePoolModel{
-		pool("keep", "local-small", 1, 3),
-		pool("new", "local-small", 1, 1),
-	})
-
-	require.True(t, diags.HasError())
-	assert.Equal(t, []string{"ListRegions", "Create new"}, service.calls, "no pool is removed after a failed create")
+	assert.Equal(t, "Unable to Set Node Pools", diags.Errors()[0].Summary())
+	assert.Contains(t, diags.Errors()[0].Detail(), "over the organization's quota of 3")
 }
 
 func TestNodePoolsValidator(t *testing.T) {
@@ -249,4 +171,56 @@ func TestNodePoolsValidator(t *testing.T) {
 	assert.Empty(t, validate(pool("a", "local-small", 1, 3), pool("b", "local-small", 2, 2)))
 	assert.Equal(t, []string{"Duplicate Node Pool Name"}, validate(pool("a", "local-small", 1, 3), pool("a", "local-medium", 1, 1)))
 	assert.Equal(t, []string{"Invalid Node Pool Size"}, validate(pool("a", "local-small", 3, 2)))
+	assert.Empty(t, validate(pool("a", "local-small", 1, 3), pool("spare", "local-small", 0, 0)), "an empty pool next to one that runs nodes")
+	assert.Equal(t, []string{"No Node Pool Can Run Nodes"}, validate(pool("a", "local-small", 0, 0), pool("b", "local-small", 0, 0)))
+
+	resp := &validator.ListResponse{}
+	nodePoolsValidator{}.ValidateList(context.Background(), validator.ListRequest{Path: path.Root("node_pool"), ConfigValue: types.ListNull(poolType)}, resp)
+	require.Len(t, resp.Diagnostics.Errors(), 1)
+	assert.Equal(t, "Missing Node Pool", resp.Diagnostics.Errors()[0].Summary())
+}
+
+// Only pools that are new or change machine type need the region to offer
+// their type: a legacy pool keeps running and must not block an upgrade.
+func TestNewOrRetyped(t *testing.T) {
+	current := []ClusterNodePoolModel{pool("legacy", "n1-retired", 1, 3), pool("keep", "local-small", 1, 3)}
+	planned := []ClusterNodePoolModel{
+		pool("legacy", "n1-retired", 1, 3),
+		pool("keep", "local-medium", 1, 3),
+		pool("new", "local-small", 1, 1),
+	}
+	var names []string
+	for _, p := range newOrRetyped(current, planned) {
+		names = append(names, p.Name.ValueString())
+	}
+	assert.Equal(t, []string{"keep", "new"}, names)
+}
+
+func TestSameNodePools(t *testing.T) {
+	a := []ClusterNodePoolModel{pool("a", "local-small", 1, 3), pool("b", "local-small", 0, 1)}
+	assert.True(t, sameNodePools(a, []ClusterNodePoolModel{pool("b", "local-small", 0, 1), pool("a", "local-small", 1, 3)}), "order does not matter")
+	assert.False(t, sameNodePools(a, []ClusterNodePoolModel{pool("a", "local-small", 1, 4), pool("b", "local-small", 0, 1)}), "a resize")
+	assert.False(t, sameNodePools(a, []ClusterNodePoolModel{pool("a", "local-medium", 1, 3), pool("b", "local-small", 0, 1)}), "a new machine type")
+	assert.False(t, sameNodePools(a, a[:1]), "a removed pool")
+}
+
+// A server that cannot be reached is asked again; a refusal is not.
+func TestSetNodePoolsRetriesWhileTheServerIsUnavailable(t *testing.T) {
+	service := &fakePoolService{refuse: connect.NewError(connect.CodeUnavailable, errors.New("connection reset")), refuseTimes: 2}
+	client := newFakePoolClient(t, service)
+
+	diags := setNodePools(context.Background(), client, "c1", []ClusterNodePoolModel{pool("workers", "local-small", 1, 4)})
+
+	require.False(t, diags.HasError(), "%v", diags)
+	assert.Len(t, service.requests, 3, "two failed tries, then the one that went through")
+}
+
+func TestRetryTransientReturnsARefusalAtOnce(t *testing.T) {
+	calls := 0
+	err := retryTransient(context.Background(), defaultClock, func(context.Context) error {
+		calls++
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("bad"))
+	})
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+	assert.Equal(t, 1, calls)
 }
