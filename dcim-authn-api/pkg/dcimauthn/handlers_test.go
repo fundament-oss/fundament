@@ -2,6 +2,7 @@ package dcimauthn
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -45,6 +46,14 @@ func (stubStore) UserGetByID(_ context.Context, arg db.UserGetByIDParams) (db.Us
 		return db.UserGetByIDRow{}, pgx.ErrNoRows
 	}
 	return db.UserGetByIDRow{ID: arg.ID, Name: directoryName}, nil
+}
+
+// outageStore reads as a directory whose database is down: every lookup fails
+// with something other than "no such row".
+type outageStore struct{ stubStore }
+
+func (outageStore) UserGetByID(context.Context, db.UserGetByIDParams) (db.UserGetByIDRow, error) {
+	return db.UserGetByIDRow{}, errors.New("connection refused")
 }
 
 func refreshTestServer() *Server {
@@ -209,4 +218,35 @@ func TestGetUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
 	_, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+// A directory outage is Unavailable, not Unauthenticated: the session is still
+// valid, and the frontend keeps its auth hint on this code instead of treating
+// the outage as a sign-out.
+func TestGetUserInfo_DirectoryOutageIsUnavailable(t *testing.T) {
+	s := refreshTestServer()
+	s.queries = outageStore{}
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, refreshSubject))
+
+	_, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
+}
+
+// The same split on refresh: a database failure answers 503 — the session is
+// not over, so the cookie must survive and no fresh token may be minted from
+// an unverified subject.
+func TestHandleRefresh_DirectoryOutageIs503(t *testing.T) {
+	s := refreshTestServer()
+	s.queries = outageStore{}
+	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
+
+	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	s.HandleRefresh(rec, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Empty(t, rec.Result().Cookies())
 }
