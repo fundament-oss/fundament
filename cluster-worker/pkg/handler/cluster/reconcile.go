@@ -74,7 +74,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		if _, exists := dbClusterByID[clusterID]; !exists {
 			h.logger.Warn("deleting orphaned shoot in Gardener",
 				"shoot", shoot.Name, "cluster_id", clusterID)
-			if err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
+			if _, err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
 				h.logger.Error("failed to delete orphaned shoot",
 					"shoot", shoot.Name, "error", err)
 			}

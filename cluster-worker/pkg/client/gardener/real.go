@@ -290,18 +290,18 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 }
 
 // DeleteShootByClusterID deletes a Shoot by cluster ID label.
-func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (bool, error) {
 	shoot, err := r.getShootByClusterID(ctx, clusterID)
 	if err != nil {
-		return fmt.Errorf("failed to look up shoot: %w", err)
+		return false, fmt.Errorf("failed to look up shoot: %w", err)
 	}
 
 	if shoot == nil {
 		r.logger.Debug("shoot not found for deletion", "cluster_id", clusterID)
-		return nil
+		return false, nil
 	}
 
-	return r.deleteShoot(ctx, shoot)
+	return true, r.deleteShoot(ctx, shoot)
 }
 
 // ListShoots returns all Shoots managed by this worker (across all namespaces).

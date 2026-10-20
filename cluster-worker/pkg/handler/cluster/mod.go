@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"k8s.io/client-go/util/workqueue"
 
@@ -23,7 +22,9 @@ import (
 type ShootSyncer interface {
 	EnsureProject(ctx context.Context, projectName string, orgID uuid.UUID) (namespace string, err error)
 	ApplyShoot(ctx context.Context, cluster *gardener.ClusterToSync) (specChanged bool, err error)
-	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
+	// DeleteShootByClusterID deletes the cluster's Shoot and reports whether
+	// there was one.
+	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (found bool, err error)
 	ListShoots(ctx context.Context) ([]gardener.ShootInfo, error)
 }
 
@@ -48,10 +49,13 @@ type Config struct {
 //
 // Precondition dependency graph:
 //
-//	EntityNodePool → parent cluster must have been synced to Gardener at least once
-//	    (resolves node_pool_id → cluster_id, checks ClusterHasEverBeenSynced)
+//	EntityCluster (sync, not delete) → a cluster that never reached Gardener
+//	    needs a node pool first; without one its row parks until the node pool
+//	    trigger wakes it (no Shoot is ever created without a worker)
 //	EntityCluster (sync, not delete) → Gardener project namespace must be ready
 //	    (checks EnsureProject returns non-empty namespace)
+//	EntityNodePool → no precondition; a pool of a cluster that never reached
+//	    Gardener leaves the Shoot's creation to the cluster's own row (syncNodePool)
 //
 //	Usersync handler (not declared here, query-level gates):
 //	    EntityOrgUser → fans out only to accessible clusters
@@ -87,32 +91,22 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 		preconditions: make(map[handler.EntityType][]handler.Precondition),
 	}
 
-	h.preconditions[handler.EntityNodePool] = []handler.Precondition{
+	h.preconditions[handler.EntityCluster] = []handler.Precondition{
 		{
-			Description: "parent cluster must have been synced to Gardener at least once",
-			Check: func(ctx context.Context, nodePoolID uuid.UUID) error {
-				clusterID, err := queries.NodePoolGetClusterID(ctx, db.NodePoolGetClusterIDParams{NodePoolID: nodePoolID})
+			Description: "a cluster must have a node pool before it reaches Gardener",
+			Check: func(ctx context.Context, clusterID uuid.UUID) error {
+				waiting, err := h.waitingForFirstNodePool(ctx, h.queries, clusterID)
 				if err != nil {
-					if errors.Is(err, pgx.ErrNoRows) {
-						return nil // node pool not found — syncNodePool will handle gracefully
-					}
-					return fmt.Errorf("resolve node_pool_id → cluster_id: %w", err)
+					return err
 				}
-				synced, err := queries.ClusterHasEverBeenSynced(ctx, db.ClusterHasEverBeenSyncedParams{
-					ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
-				})
-				if err != nil {
-					return fmt.Errorf("check cluster ever synced: %w", err)
-				}
-				if !synced {
-					return handler.NewPreconditionError("parent cluster not synced to Gardener")
+				if waiting {
+					return handler.NewParkError(MsgWaitingForNodePool, func(ctx context.Context, tx pgx.Tx) (bool, error) {
+						return h.waitingForFirstNodePool(ctx, h.queries.WithTx(tx), clusterID)
+					})
 				}
 				return nil
 			},
 		},
-	}
-
-	h.preconditions[handler.EntityCluster] = []handler.Precondition{
 		{
 			Description: "Gardener project namespace must be ready",
 			Check: func(ctx context.Context, clusterID uuid.UUID) error {

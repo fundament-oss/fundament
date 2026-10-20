@@ -24,6 +24,7 @@ func TestCheckStatusTransitionCreatesEvent(t *testing.T) {
 
 	// Insert cluster, sync it to create the shoot, then mark outbox completed.
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-ready")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
@@ -81,6 +82,7 @@ func TestCheckStatusErrorTransition(t *testing.T) {
 
 	// Insert cluster, sync it, mark completed.
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-error")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
@@ -108,6 +110,7 @@ func TestCheckStatusSkipsProjectLookup(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-no-project")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
 	require.NoError(t, err)
@@ -442,6 +445,7 @@ func TestCheckClusterAPIServerAvailableBeforeReady(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "status-api-available")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
 	markOutboxCompleted(t, db, clusterID)
