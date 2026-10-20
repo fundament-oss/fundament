@@ -44,9 +44,9 @@ const (
 type UserServiceClient interface {
 	ListUsers(context.Context, *v1.ListUsersRequest) (*v1.ListUsersResponse, error)
 	// GetCurrentUser resolves the authenticated caller onto their directory entry.
-	// The caller is identified by the JWT subject, which is matched against
-	// dcim.users.external_ref; the returned id is the internal user id that
-	// tasks are assigned to.
+	// The JWT subject is the internal dcim.users.id (dcim-authn-api resolves the
+	// identity-provider reference at login), so this is a lookup by id; a subject
+	// with no live entry answers NotFound.
 	GetCurrentUser(context.Context, *v1.GetCurrentUserRequest) (*v1.GetCurrentUserResponse, error)
 }
 
@@ -104,9 +104,9 @@ func (c *userServiceClient) GetCurrentUser(ctx context.Context, req *v1.GetCurre
 type UserServiceHandler interface {
 	ListUsers(context.Context, *v1.ListUsersRequest) (*v1.ListUsersResponse, error)
 	// GetCurrentUser resolves the authenticated caller onto their directory entry.
-	// The caller is identified by the JWT subject, which is matched against
-	// dcim.users.external_ref; the returned id is the internal user id that
-	// tasks are assigned to.
+	// The JWT subject is the internal dcim.users.id (dcim-authn-api resolves the
+	// identity-provider reference at login), so this is a lookup by id; a subject
+	// with no live entry answers NotFound.
 	GetCurrentUser(context.Context, *v1.GetCurrentUserRequest) (*v1.GetCurrentUserResponse, error)
 }
 

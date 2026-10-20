@@ -5902,7 +5902,22 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 <permission>
 	<object name="dcim.users" type="table"/>
 	<roles names="fun_dcim_authn_api"/>
-	<privileges select="true" insert="true" update="true"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="name" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="external_ref" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true"/>
+</permission>
+<permission>
+	<object name="email" parent="dcim.users" type="column"/>
+	<roles names="fun_dcim_authn_api"/>
+	<privileges insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="appstore" type="schema"/>

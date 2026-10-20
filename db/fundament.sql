@@ -5411,8 +5411,32 @@ GRANT USAGE
 -- ddl-end --
 
 
--- object: grant_raw_737d11721a | type: PERMISSION --
-GRANT SELECT,INSERT,UPDATE
+-- object: grant_r_737d11721a | type: PERMISSION --
+GRANT SELECT
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_aw_6ec0c94e69 | type: PERMISSION --
+GRANT INSERT(name),UPDATE(name)
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_a_d8bdd69736 | type: PERMISSION --
+GRANT INSERT(external_ref)
+   ON TABLE dcim.users
+   TO fun_dcim_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_aw_a274691c4e | type: PERMISSION --
+GRANT INSERT(email),UPDATE(email)
    ON TABLE dcim.users
    TO fun_dcim_authn_api;
 

@@ -126,8 +126,9 @@ dexDcim:
   # DCIM is a separate trust domain from the console/tenant. The same test
   # credentials work here, but each user gets a DCIM-specific userID (019d0000
   # prefix) that is intentionally decoupled from the tenant userID in `dex`
-  # above. dcim-authn-api derives the JWT subject from the dex `sub` and never
-  # correlates it with tenant.users, so these IDs must stay distinct.
+  # above. dcim-authn-api derives dcim.users.external_ref from the dex `sub`
+  # (the JWT subject is the internal dcim.users.id it resolves at login) and
+  # never correlates it with tenant.users, so these IDs must stay distinct.
   staticPasswords:
     # acme-corp users
     - email: alice@acme-corp.com

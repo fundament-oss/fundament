@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/common/auth"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
@@ -164,16 +164,8 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	// pre-rollover token — whose subject is an external reference rather than
 	// dcim.users.id — fails here instead of being re-signed forever, forcing
 	// a fresh login that mints an internal-id token.
-	row, err := s.queries.UserGetByID(r.Context(), db.UserGetByIDParams{
-		ID: uuid.MustParse(claims.Subject),
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
-			return
-		}
-		s.logger.Error("failed to resolve user on refresh", "error", err)
-		s.writeError(w, http.StatusInternalServerError, "internal server error")
+	row, ok := s.resolveSubject(w, r, claims)
+	if !ok {
 		return
 	}
 
@@ -199,7 +191,13 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
-// HandleUserInfo returns the user info from the current JWT.
+// HandleUserInfo returns the user info for the current JWT, resolved against
+// the directory rather than echoed from the claims. The frontend probes this
+// endpoint first and only refreshes (and then re-logs) when it fails, so a
+// session whose subject no longer resolves — a soft-deleted user, or a
+// pre-rollover token carrying an external-ref subject — must fail here or it
+// would never reach the refresh gate and would run for its full lifetime
+// against a directory entry that does not exist.
 func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.validator.Validate(r.Header)
 	if err != nil {
@@ -207,8 +205,33 @@ func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	row, ok := s.resolveSubject(w, r, claims)
+	if !ok {
+		return
+	}
+
 	s.writeJSON(w, http.StatusOK, map[string]string{
-		"id":   claims.Subject,
-		"name": claims.Name,
+		"id":   row.ID.String(),
+		"name": row.Name,
 	})
+}
+
+// resolveSubject looks a validated token's subject up in the directory and
+// writes the response when it cannot: 401 for a subject that no longer
+// resolves (the session must end), 500 for a database failure. The caller
+// proceeds only when ok is true.
+func (s *Server) resolveSubject(w http.ResponseWriter, r *http.Request, claims *auth.Claims) (db.UserGetByIDRow, bool) {
+	row, err := s.queries.UserGetByID(r.Context(), db.UserGetByIDParams{
+		ID: claims.UserID(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
+			return db.UserGetByIDRow{}, false
+		}
+		s.logger.Error("failed to resolve user", "error", err)
+		s.writeError(w, http.StatusInternalServerError, "internal server error")
+		return db.UserGetByIDRow{}, false
+	}
+	return row, true
 }

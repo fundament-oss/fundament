@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/common/auth"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
@@ -66,9 +67,7 @@ func signRefreshToken(t *testing.T, secret []byte, subject string) string {
 		Name: "Alice",
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
-	if err != nil {
-		t.Fatalf("signing token: %v", err)
-	}
+	require.NoError(t, err)
 	return signed
 }
 
@@ -82,12 +81,8 @@ func TestHandleRefresh_ValidToken(t *testing.T) {
 
 	s.HandleRefresh(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	if len(rec.Result().Cookies()) == 0 {
-		t.Fatal("expected a refreshed auth cookie to be set")
-	}
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.NotEmpty(t, rec.Result().Cookies(), "expected a refreshed auth cookie to be set")
 }
 
 // A well-signed token whose subject no longer resolves to a live directory
@@ -117,7 +112,36 @@ func TestHandleRefresh_InvalidToken(t *testing.T) {
 
 	s.HandleRefresh(rec, req)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401 for invalid token", rec.Code)
-	}
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// /userinfo answers from the directory, not the claims: the frontend probes it
+// first and only refreshes when it fails, so this is where a session whose
+// subject no longer resolves (soft-deleted user, pre-rollover external-ref
+// token) is turned away instead of running silently against a missing entry.
+func TestHandleUserInfo_ResolvesDirectoryEntry(t *testing.T) {
+	s := refreshTestServer()
+	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
+
+	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	s.HandleUserInfo(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"id": "`+refreshSubject+`", "name": "Alice"}`, rec.Body.String())
+}
+
+func TestHandleUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
+	s := refreshTestServer()
+	token := signRefreshToken(t, s.config.JWTSecret, uuid.NewString())
+
+	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	s.HandleUserInfo(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

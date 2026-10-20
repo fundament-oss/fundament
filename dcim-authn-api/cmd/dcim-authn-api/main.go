@@ -12,6 +12,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -23,8 +24,8 @@ import (
 )
 
 type config struct {
-	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty"`
-	DatabaseURL        string        `env:"DATABASE_URL,required,notEmpty"`
+	JWTSecret          string `env:"JWT_SECRET,required,notEmpty"`
+	Database           psqldb.Config
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"https://dex-dcim.fundament.localhost:8443"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"`
 	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"dcim"`
@@ -112,7 +113,7 @@ func run() error {
 	// The login flow provisions dcim.users entries just-in-time, so the
 	// service fails at startup rather than on the first login when the
 	// database is misconfigured.
-	database, err := psqldb.New(ctx, logger, psqldb.Config{URL: cfg.DatabaseURL})
+	database, err := psqldb.New(ctx, logger, cfg.Database)
 	if err != nil {
 		return fmt.Errorf("connecting to database: %w", err)
 	}
@@ -136,20 +137,7 @@ func run() error {
 	// readyz reports the database because login and refresh can serve nothing
 	// without it; livez deliberately does not, so a brief outage does not get
 	// the container killed and restarted.
-	mux.HandleFunc(http.MethodGet+" /readyz", func(w http.ResponseWriter, r *http.Request) {
-		pingCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		defer cancel()
-		if err := database.Pool.Ping(pingCtx); err != nil {
-			// The probe is public and a pgx error names the host, port,
-			// database and role, so the detail stays in the log.
-			logger.ErrorContext(pingCtx, "readiness probe failed", "error", err)
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("database unavailable"))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+	mux.HandleFunc(http.MethodGet+" /readyz", readyz(logger, database.Pool))
 	if cfg.PasswordLoginEnabled {
 		mux.HandleFunc(http.MethodPost+" /login/password", server.HandlePasswordLogin)
 	} else {
@@ -180,4 +168,22 @@ func run() error {
 	}
 
 	return nil
+}
+
+// The probe is anonymous and publicly routed, and a pgx error names the host,
+// port, database and role, so the detail goes to the log and never to the body.
+func readyz(logger *slog.Logger, pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(ctx); err != nil {
+			logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database unavailable"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}
 }
