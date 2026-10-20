@@ -34,17 +34,21 @@ func (s *Server) GetNodePool(
 	}
 
 	runtime := runtimeForPool(s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1), nodePool.Name)
+	// The by-ID row has the list row's columns.
+	row := db.NodePoolListByClusterIDRow(nodePool)
 
 	return organizationv1.GetNodePoolResponse_builder{
-		NodePool: nodePoolFromRow(&nodePool, runtime),
+		NodePool: nodePoolFromRow(&row, runtime),
 	}.Build(), nil
 }
 
 // The pool as the database holds it, filled out with what the cluster reports
 // about it. While the worker says a change is still landing (status not
 // ready), that verdict wins over metrics: a pool whose machines never came up
-// has no metrics at all. Once ready, live metrics health takes over.
-func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizationv1.NodePool {
+// has no metrics at all. Once ready, live metrics health takes over. The
+// pool's own latest sync row, fundament applying its last change, is reported
+// next to that, never folded into it.
+func nodePoolFromRow(row *db.NodePoolListByClusterIDRow, runtime nodePoolRuntime) *organizationv1.NodePool {
 	status := runtime.status()
 	message := ""
 	if row.Status.Valid {
@@ -63,7 +67,7 @@ func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizat
 			panic(fmt.Sprintf("unhandled node pool status: %q", row.Status.String))
 		}
 	}
-	return organizationv1.NodePool_builder{
+	pool := organizationv1.NodePool_builder{
 		Id:            row.ID.String(),
 		Name:          row.Name,
 		MachineType:   row.MachineType,
@@ -74,4 +78,12 @@ func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizat
 		StatusMessage: message,
 		Version:       runtime.version,
 	}.Build()
+	if row.SyncStatus.Valid {
+		pool.SetSyncStatus(row.SyncStatus.String)
+	}
+	syncMessage, isError := syncError(row.SyncStatus, row.SyncError)
+	if isError {
+		pool.SetSyncError(syncMessage)
+	}
+	return pool
 }

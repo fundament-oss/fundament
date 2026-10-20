@@ -197,11 +197,11 @@
               }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
-                  <nldd-text-cell text="Sync error"></nldd-text-cell>
+                  <!-- Width on the label on purpose: beside a long error the shared min-content rule still lets it collapse to one letter per line. -->
+                  <nldd-text-cell text="Sync error" width="fit-content"></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
-                    width="fit-content"
                     horizontal-alignment="right"
                     [attr.text]="formatEventMessage(clusterData.syncState.outboxError)"
                   ></nldd-text-cell>
@@ -403,6 +403,14 @@
                       @if (pool.statusMessage) {
                         <nldd-spacer size="8"></nldd-spacer>
                         <nldd-text size="sm">{{ pool.statusMessage }}</nldd-text>
+                      }
+                      <!-- The pool's own sync, fundament applying its last change, set
+                           while it retries or after it failed for good. -->
+                      @if (pool.syncError) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text size="sm" color="critical"
+                          >Sync error: {{ formatEventMessage(pool.syncError) }}</nldd-text
+                        >
                       }
                     </nldd-container>
                   </nldd-card>

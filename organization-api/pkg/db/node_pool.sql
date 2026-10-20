@@ -1,14 +1,46 @@
 
 -- name: NodePoolListByClusterID :many
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id, status, status_message, status_updated
+-- Each pool with its own latest sync row (view node_pool_sync_state).
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created,
+    tenant.node_pools.deleted,
+    tenant.node_pools.region_machine_type_id,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message,
+    tenant.node_pools.status_updated,
+    tenant.node_pool_sync_state.outbox_status AS sync_status,
+    tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
-WHERE cluster_id = $1 AND deleted IS NULL
-ORDER BY created DESC;
+    LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.deleted IS NULL
+ORDER BY tenant.node_pools.created DESC;
 
 -- name: NodePoolGetByID :one
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id, status, status_message, status_updated
+-- The pool with its own latest sync row, as in NodePoolListByClusterID.
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created,
+    tenant.node_pools.deleted,
+    tenant.node_pools.region_machine_type_id,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message,
+    tenant.node_pools.status_updated,
+    tenant.node_pool_sync_state.outbox_status AS sync_status,
+    tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
-WHERE id = $1 AND deleted IS NULL;
+    LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.id = $1 AND tenant.node_pools.deleted IS NULL;
 
 -- name: NodePoolCreate :one
 -- region_machine_type_id is the catalog reference (expand phase: the legacy

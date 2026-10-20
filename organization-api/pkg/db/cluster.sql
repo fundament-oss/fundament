@@ -1,22 +1,33 @@
 -- name: ClusterList :many
 -- List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
 -- Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
+-- The sync state is the cluster's own latest sync row (view cluster_sync_state);
+-- a node pool's sync state is the pool's own (node pool queries), never the
+-- cluster's.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener,
     (SELECT COUNT(*)
      FROM tenant.projects
      WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
@@ -24,49 +35,70 @@ SELECT
      FROM tenant.node_pools
      WHERE node_pools.cluster_id = clusters.id AND node_pools.deleted IS NULL) AS node_pool_count
 FROM tenant.clusters
-WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
-ORDER BY created DESC, id DESC;
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+ORDER BY tenant.clusters.created DESC, tenant.clusters.id DESC;
 
 -- name: ClusterGetByID :one
--- Get cluster by ID, including deleted clusters for direct access.
+-- Get cluster by ID, including deleted clusters for direct access. Sync state
+-- as in ClusterList.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.id = $1;
 
 -- name: ClusterGetByName :one
+-- Sync state as in ClusterList.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    shoot_health,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
-WHERE name = $1 AND deleted IS NULL;
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL;
 
 -- name: ClusterCreate :one
 -- Create a cluster if no active or pending-delete cluster with the same name exists.

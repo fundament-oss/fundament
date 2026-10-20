@@ -91,27 +91,38 @@ WHERE NOT EXISTS (
       AND tenant.cluster_outbox.status IN ('pending', 'retrying')
 );
 
--- name: OutboxInsertReconcile :exec
--- Conditionally insert a reconcile outbox row for a cluster.
--- Skips insert if the cluster already has an active (pending/retrying) row
--- or an exhausted failed row (retries >= max_retries).
+-- name: OutboxInsertReconcile :execrows
+-- Insert a reconcile outbox row for a cluster missing in Gardener, when the
+-- cluster's own latest sync row completed and nothing is queued for it. A
+-- cluster whose latest sync is still running needs no repair, and one whose
+-- latest sync failed for good would fail again: an edit queues a new sync.
+-- Deciding in the insert itself keeps a sync that fails meanwhile from
+-- slipping past. "Latest sync row" is the cluster_sync_state view's row
+-- (TestClusterReconcileAgreesWithClusterSyncState pins the two together).
 INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
 SELECT @cluster_id, 'reconcile', 'reconcile'
 WHERE NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.cluster_id = @cluster_id
-      AND (
-          tenant.cluster_outbox.status IN ('pending', 'retrying')
-          OR (tenant.cluster_outbox.status = 'failed' AND tenant.cluster_outbox.retries >= @max_retries)
-      )
-);
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+)
+AND COALESCE((
+    SELECT tenant.cluster_outbox.status
+    FROM tenant.cluster_outbox
+    WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+      AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+    ORDER BY tenant.cluster_outbox.id DESC
+    LIMIT 1
+) = 'completed', false);
 
 -- name: OutboxInsertReconcileForNamespace :exec
 -- Conditionally insert a reconcile outbox row for a namespace.
--- Skips insert if the namespace already has an active (pending/retrying) row
--- or an exhausted failed row (retries >= max_retries). Mirrors
--- OutboxInsertReconcile for clusters. Used by the cluster-ready fan-out and
--- the periodic reconcile loop; safe to call repeatedly (idempotent).
+-- Skips insert if the namespace already has an active (pending/retrying) row.
+-- With skip_if_failed it also skips a namespace whose latest row failed for
+-- good, as drift repair does a cluster: the periodic reconcile loop sets it, so
+-- a namespace that cannot succeed is not retried every round. The fan-out when
+-- the cluster's API server becomes available does not: whatever the namespace
+-- waited on may be there now. Safe to call repeatedly (idempotent).
 -- The NOT EXISTS guard is evaluated against the caller's snapshot, so two
 -- concurrent callers (ready fan-out + reconcile loop) could both pass it; the
 -- ON CONFLICT clause lets the partial unique index cluster_outbox_uq_ns_reconcile
@@ -121,10 +132,17 @@ SELECT @namespace_id, 'reconcile', 'reconcile'
 WHERE NOT EXISTS (
     SELECT 1 FROM tenant.cluster_outbox
     WHERE tenant.cluster_outbox.namespace_id = @namespace_id
-      AND (
-          tenant.cluster_outbox.status IN ('pending', 'retrying')
-          OR (tenant.cluster_outbox.status = 'failed' AND tenant.cluster_outbox.retries >= @max_retries)
-      )
+      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+)
+AND NOT (
+    @skip_if_failed::boolean
+    AND COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.namespace_id = @namespace_id
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'failed', false)
 )
 ON CONFLICT (namespace_id) WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'))
 DO NOTHING;

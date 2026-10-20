@@ -168,11 +168,10 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterReconcile(ush)
 
 	// Namespace sync handler (v1/Namespace lifecycle on shoots). Shares the same
-	// ShootAccess instance as usersync and the outbox worker's MaxRetries so its
-	// reconcile enqueue uses the same exhaustion threshold. Like usersync, it
+	// ShootAccess instance as usersync. Like usersync, it
 	// also subscribes to the api_available event to fan out a sync for every
 	// active namespace on the cluster.
-	nsh := namespacehandler.New(pool, shootAccess, cfg.Outbox.MaxRetries, logger)
+	nsh := namespacehandler.New(pool, shootAccess, logger)
 	registry.RegisterSync(handler.EntityNamespace, nsh)
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, nsh)
 	registry.RegisterReconcile(nsh)

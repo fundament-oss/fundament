@@ -25,6 +25,8 @@ message SyncState {
   // spec change is accepted, cleared when the reconcile finishes. Lets a
   // client tell an unhealthy cluster mid-rollout from one that settled.
   bool shoot_updating = 70;
+  // outbox_status, outbox_retries and outbox_error describe the cluster's own
+  // latest sync; a node pool's sync is on the NodePool.
 }
 
 // ClusterService manages Kubernetes clusters
@@ -153,6 +155,11 @@ message NodePool {
   NodePoolStatus status = 70;
   string version = 80;
   string status_message = 90; // Gardener's reason while status is WAITING_FOR_MACHINES or FAILED
+  // The pool's own latest sync, fundament applying its last change to
+  // Gardener: pending, retrying, completed or failed. sync_error is set while
+  // that sync retries or after it failed for good.
+  string sync_status = 100 [features.field_presence = EXPLICIT];
+  string sync_error = 110 [features.field_presence = EXPLICIT];
 }
 
 // Create cluster request. Region and kubernetes version are the catalog

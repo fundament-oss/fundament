@@ -12,7 +12,7 @@ import (
 
 func TestNodePoolFromRowStoredStatus(t *testing.T) {
 	t.Parallel()
-	row := db.TenantNodePool{Name: "nomach", MachineType: "local-medium", AutoscaleMin: 1, AutoscaleMax: 1}
+	row := db.NodePoolListByClusterIDRow{Name: "nomach", MachineType: "local-medium", AutoscaleMin: 1, AutoscaleMax: 1}
 
 	row.Status = pgtype.Text{String: "waiting", Valid: true}
 	row.StatusMessage = pgtype.Text{String: "no machines", Valid: true}

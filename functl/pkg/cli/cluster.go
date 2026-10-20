@@ -103,19 +103,28 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 	PrintKeyValue(w, "Region", cluster.GetRegion())
 	PrintKeyValue(w, "Kubernetes Version", cluster.GetKubernetesVersion())
 	PrintKeyValue(w, "Status", formatClusterStatus(cluster.GetStatus()))
+	if sync := cluster.GetSyncState(); sync != nil {
+		if sync.HasOutboxStatus() {
+			PrintKeyValue(w, "Sync Status", sync.GetOutboxStatus())
+		}
+		if sync.HasOutboxError() {
+			PrintKeyValue(w, "Sync Error", sync.GetOutboxError())
+		}
+	}
 	if cluster.GetCreated() != nil {
 		PrintKeyValue(w, "Created", cluster.GetCreated().AsTime().Format(TimeFormat))
 	}
 	if len(nodePools) > 0 {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "NAME\tTYPE\tNODES\tSTATUS\tREASON")
+		fmt.Fprintln(w, "NAME\tTYPE\tNODES\tSTATUS\tREASON\tSYNC ERROR")
 		for _, pool := range nodePools {
-			fmt.Fprintf(w, "%s\t%s\t%d (min %d, max %d)\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%d (min %d, max %d)\t%s\t%s\t%s\n",
 				pool.GetName(),
 				pool.GetMachineType(),
 				pool.GetCurrentNodes(), pool.GetMinNodes(), pool.GetMaxNodes(),
 				formatNodePoolStatus(pool.GetStatus()),
 				pool.GetStatusMessage(),
+				pool.GetSyncError(),
 			)
 		}
 	}
