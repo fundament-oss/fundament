@@ -169,10 +169,6 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 		}
 	}
 
-	// The subject is safe to log: every issuer mints it from an internal id
-	// (tenant.users.id on console tokens, dcim.users.id on DCIM tokens since
-	// dcim-authn-api resolves the identity-provider reference at login), never
-	// an external reference.
 	v.logger.Debug("token validated", "user_id", claims.Subject, "organization_ids", claims.OrganizationIDs)
 	return claims, nil
 }

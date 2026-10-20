@@ -9,9 +9,7 @@
 -- technician page resolves the logged-in user against.
 --
 -- external_ref is how the identity provider names this person; dcim-authn-api
--- upserts on it at login and mints the DCIM JWT with the internal id (the
--- JWT subject is dcim.users.id, never this reference). It derives the ref
--- from dex:
+-- upserts on it at login. It derives the ref from dex:
 --   sub          = base64url(proto{user_id=<dex userID>, conn_id="local"})  (dex)
 --   external_ref = uuid.NewSHA1(6ba7b810-9dad-11d1-80b4-00c04fd430c8, sub)  (dcim-authn-api subjectUUID)
 -- The refs below are those of the dex-dcim dev accounts (charts/fundament/

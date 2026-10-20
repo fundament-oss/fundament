@@ -33,10 +33,9 @@ func (s *AuthnServer) upsertUser(ctx context.Context, queries *db.Queries, claim
 	})
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.ConstraintName == dbconst.ConstraintUsersUqEmail {
-			// Deliberate exception to the no-external-refs-in-logs rule: the
-			// email names the account that owns the address, and the signing-in
-			// identity may have no row yet, so the external reference is the
-			// only thing that always identifies who was refused.
+			// The email names the account that owns the address; the external
+			// reference names who was refused, which may be an identity with
+			// no row yet.
 			s.logger.Warn("sign-in refused: email address already belongs to another account",
 				"email", claims.Email, "external_ref", claims.Sub)
 			return db.UserUpsertRow{}, errEmailInUse

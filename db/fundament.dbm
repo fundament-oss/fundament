@@ -3975,7 +3975,7 @@ END;]]> </definition>
 	</column>
 	<column name="external_ref">
 		<type name="text" length="0"/>
-		<comment> <![CDATA[Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`); dcim-authn-api resolves it to the internal id at login, so the DCIM JWT `sub` is dcim.users.id. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+		<comment> <![CDATA[Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`), the login upsert key. Null for users that exist only in DCIM and cannot sign in.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>

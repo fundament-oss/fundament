@@ -27,10 +27,8 @@ type UserGetByIDRow struct {
 	Name string
 }
 
-// Refresh resolves the token subject back onto the directory: a subject that
-// no longer resolves (a soft-deleted user, or a pre-rollover token whose
-// subject is an external reference rather than dcim.users.id) must not have
-// its session extended.
+// Resolves a token subject back onto the directory: a subject that no longer
+// resolves must not have its session extended or served.
 func (q *Queries) UserGetByID(ctx context.Context, arg UserGetByIDParams) (UserGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, userGetByID, arg.ID)
 	var i UserGetByIDRow
@@ -62,7 +60,7 @@ type UserUpsertRow struct {
 // The staff directory entry for an authenticated IdP identity, provisioned
 // just-in-time at login: the staff IdP (dex-dcim) is the access boundary, so
 // anyone who authenticates there belongs in the roster. The returned id is the
-// DCIM JWT subject; the external reference never leaves this service.
+// DCIM JWT subject.
 //
 // The update is a patch, not a replace: a connector that omits the name or
 // email claim must not erase what the directory already holds, so an absent

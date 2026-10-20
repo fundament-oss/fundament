@@ -20,8 +20,7 @@ import (
 )
 
 // refreshSubject is the directory entry the stub store resolves; any other
-// subject reads as absent, like a pre-rollover external-ref subject or a
-// soft-deleted user.
+// subject reads as absent, like a soft-deleted user's.
 const refreshSubject = "019b4000-1000-7000-8000-000000000001"
 
 // stubStore satisfies Store without a database. Refresh is the only handler
@@ -86,9 +85,8 @@ func TestHandleRefresh_ValidToken(t *testing.T) {
 }
 
 // A well-signed token whose subject no longer resolves to a live directory
-// entry must not be refreshed: this is what retires pre-rollover tokens (whose
-// subject is an external reference, not dcim.users.id) and the sessions of
-// soft-deleted users, forcing a fresh login.
+// entry must not be refreshed: a soft-deleted user's session ends in a forced
+// re-login, not an extension.
 func TestHandleRefresh_UnresolvableSubjectIsRefused(t *testing.T) {
 	s := refreshTestServer()
 	token := signRefreshToken(t, s.config.JWTSecret, uuid.NewString())
@@ -117,8 +115,8 @@ func TestHandleRefresh_InvalidToken(t *testing.T) {
 
 // /userinfo answers from the directory, not the claims: the frontend probes it
 // first and only refreshes when it fails, so this is where a session whose
-// subject no longer resolves (soft-deleted user, pre-rollover external-ref
-// token) is turned away instead of running silently against a missing entry.
+// subject no longer resolves is turned away instead of running silently
+// against a missing entry.
 func TestHandleUserInfo_ResolvesDirectoryEntry(t *testing.T) {
 	s := refreshTestServer()
 	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)

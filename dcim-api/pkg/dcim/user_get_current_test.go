@@ -12,8 +12,6 @@ import (
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 )
 
-// The JWT subject is the internal dcim.users.id (resolved by dcim-authn-api at
-// login), so the entry is found by id.
 func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	t.Parallel()
 

@@ -14,9 +14,7 @@ import (
 )
 
 // lookupCurrentUser resolves the authenticated caller onto their directory
-// entry. The JWT subject is the internal dcim.users.id: dcim-authn-api
-// provisions the entry just-in-time at login and mints the token with the id
-// it resolved, so a lookup by id is all that remains here.
+// entry by the JWT subject, their dcim.users.id.
 //
 // A caller with a valid token but no directory entry is reported as found=false
 // rather than as an error: a user can be soft-deleted while their token is

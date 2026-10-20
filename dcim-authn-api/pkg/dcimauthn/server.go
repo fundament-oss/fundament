@@ -74,9 +74,7 @@ type oidcClaims struct {
 }
 
 // subjectUUID derives the deterministic UUIDv5 stored as
-// dcim.users.external_ref from the OIDC sub claim. It is a database key only:
-// the token subject is the internal dcim.users.id, and neither this value nor
-// the raw sub leaves this service.
+// dcim.users.external_ref from the OIDC sub claim.
 var dcimNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // UUID namespace DNS
 
 func subjectUUID(sub string) uuid.UUID {
@@ -102,9 +100,7 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 // loginJWT mints the initial token for a freshly authenticated user. The
 // directory entry is provisioned just-in-time — the staff IdP is the access
 // boundary, so anyone who authenticates there belongs in the roster — and the
-// token subject is the internal dcim.users.id, the same user id every other
-// service records and resolves. The identity-provider reference stays in this
-// service: it is the upsert key and nothing more.
+// token subject is the dcim.users.id.
 func (s *Server) loginJWT(ctx context.Context, claims *oidcClaims) (string, uuid.UUID, error) {
 	row, err := s.queries.UserUpsert(ctx, db.UserUpsertParams{
 		Name:        claims.Name,

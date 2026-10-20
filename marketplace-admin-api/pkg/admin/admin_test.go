@@ -231,10 +231,6 @@ func TestGetSubmissionUnknownIsNotFound(t *testing.T) {
 func TestApproveSubmissionPublishes(t *testing.T) {
 	env := newTestEnv(t)
 	seeded := seedPendingSubmission(t, env, "cert-manager")
-
-	// The DCIM token subject is the internal dcim.users.id (dcim-authn-api
-	// resolves the identity-provider reference at login), so the decision
-	// records it as-is — the same namespace funops resolves --reviewer into.
 	reviewerID := uuid.New()
 
 	client := newClient(t, env, authFor(t, reviewerID))

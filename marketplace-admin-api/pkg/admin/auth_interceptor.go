@@ -19,10 +19,6 @@ func (s *Server) authInterceptor() connect.Interceptor {
 // DCIM token (dcim.users, the staff store), so a customer's console token is
 // refused by issuer; the admin-host restriction stays as the outer boundary
 // (FUN-20).
-//
-// The token subject is the internal dcim.users.id — dcim-authn-api resolves
-// the identity-provider reference at login — so decisions record the same
-// reviewer id funops and dcim-api use.
 func (s *Server) authenticate(ctx context.Context, _ string, header http.Header) (context.Context, error) {
 	claims, err := s.authValidator.Validate(header)
 	if err != nil {

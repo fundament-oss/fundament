@@ -30,5 +30,5 @@ GRANT INSERT("external_ref") ON "dcim"."users" TO "fun_dcim_authn_api";
 */
 GRANT INSERT("email"), UPDATE("email") ON "dcim"."users" TO "fun_dcim_authn_api";
 
-COMMENT ON COLUMN dcim.users.external_ref IS E'Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`); dcim-authn-api resolves it to the internal id at login, so the DCIM JWT `sub` is dcim.users.id. Null for users that exist only in DCIM and cannot sign in.';
+COMMENT ON COLUMN dcim.users.external_ref IS E'Identity-provider reference this user maps onto (the UUIDv5 dcim-authn-api derives from the IdP `sub`), the login upsert key. Null for users that exist only in DCIM and cannot sign in.';
 

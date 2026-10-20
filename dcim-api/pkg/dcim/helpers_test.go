@@ -37,9 +37,9 @@ type testEnv struct {
 	server    *httptest.Server
 	adminPool *pgxpool.Pool
 	testToken string
-	// subject is the JWT subject testToken is signed with: the internal
-	// dcim.users.id dcim-authn-api resolves at login. Tests that need the
-	// caller to resolve onto a directory entry seed a user with this as id.
+	// subject is the JWT subject testToken is signed with: the caller's
+	// dcim.users.id. Tests that need the caller to resolve onto a directory
+	// entry seed a user with this as id.
 	subject string
 }
 
@@ -301,8 +301,8 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 // createUser seeds a directory entry. There is no CreateUser RPC — entries are
 // provisioned by dcim-authn-api at login, and the DCIM API role only holds
 // SELECT on dcim.users — so this goes in over the admin pool. Pass env.subject
-// as id to make the row the authenticated caller's own entry (the JWT subject
-// is the internal user id), or an empty id for a generated one.
+// as id to make the row the authenticated caller's own entry, or an empty id
+// for a generated one.
 func createUser(t *testing.T, env *testEnv, name, email, id string) string {
 	t.Helper()
 

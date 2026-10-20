@@ -160,10 +160,7 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Refresh only extends a session whose subject still resolves to a live
-	// directory entry. A soft-deleted user cannot keep a session alive, and a
-	// pre-rollover token — whose subject is an external reference rather than
-	// dcim.users.id — fails here instead of being re-signed forever, forcing
-	// a fresh login that mints an internal-id token.
+	// directory entry, so a soft-deleted user cannot keep a session alive.
 	row, ok := s.resolveSubject(w, r, claims)
 	if !ok {
 		return
@@ -194,10 +191,8 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 // HandleUserInfo returns the user info for the current JWT, resolved against
 // the directory rather than echoed from the claims. The frontend probes this
 // endpoint first and only refreshes (and then re-logs) when it fails, so a
-// session whose subject no longer resolves — a soft-deleted user, or a
-// pre-rollover token carrying an external-ref subject — must fail here or it
-// would never reach the refresh gate and would run for its full lifetime
-// against a directory entry that does not exist.
+// session whose subject no longer resolves must fail here or it would run for
+// its full lifetime against a directory entry that does not exist.
 func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.validator.Validate(r.Header)
 	if err != nil {

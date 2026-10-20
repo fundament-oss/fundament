@@ -118,10 +118,9 @@ export const UserService: GenService<{
     output: typeof ListUsersResponseSchema;
   },
   /**
-   * GetCurrentUser resolves the authenticated caller onto their directory entry.
-   * The JWT subject is the internal dcim.users.id (dcim-authn-api resolves the
-   * identity-provider reference at login), so this is a lookup by id; a subject
-   * with no live entry answers NotFound.
+   * GetCurrentUser resolves the authenticated caller onto their directory
+   * entry by the JWT subject, their user id; a subject with no live entry
+   * answers NotFound.
    *
    * @generated from rpc dcim.v1.UserService.GetCurrentUser
    */

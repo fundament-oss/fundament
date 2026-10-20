@@ -65,9 +65,8 @@ export default class UserApiService {
   }
 
   /**
-   * Resolves the logged-in user onto their directory entry. The id on the auth
-   * session is the internal DCIM user id (dcim-authn-api resolves the
-   * identity-provider reference at login), the same id tasks are assigned to.
+   * Resolves the logged-in user onto their directory entry — the same user id
+   * tasks are assigned to.
    */
   getCurrentUser() {
     return this.client.getCurrentUser({});

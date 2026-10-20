@@ -43,10 +43,9 @@ const (
 // UserServiceClient is a client for the dcim.v1.UserService service.
 type UserServiceClient interface {
 	ListUsers(context.Context, *v1.ListUsersRequest) (*v1.ListUsersResponse, error)
-	// GetCurrentUser resolves the authenticated caller onto their directory entry.
-	// The JWT subject is the internal dcim.users.id (dcim-authn-api resolves the
-	// identity-provider reference at login), so this is a lookup by id; a subject
-	// with no live entry answers NotFound.
+	// GetCurrentUser resolves the authenticated caller onto their directory
+	// entry by the JWT subject, their user id; a subject with no live entry
+	// answers NotFound.
 	GetCurrentUser(context.Context, *v1.GetCurrentUserRequest) (*v1.GetCurrentUserResponse, error)
 }
 
@@ -103,10 +102,9 @@ func (c *userServiceClient) GetCurrentUser(ctx context.Context, req *v1.GetCurre
 // UserServiceHandler is an implementation of the dcim.v1.UserService service.
 type UserServiceHandler interface {
 	ListUsers(context.Context, *v1.ListUsersRequest) (*v1.ListUsersResponse, error)
-	// GetCurrentUser resolves the authenticated caller onto their directory entry.
-	// The JWT subject is the internal dcim.users.id (dcim-authn-api resolves the
-	// identity-provider reference at login), so this is a lookup by id; a subject
-	// with no live entry answers NotFound.
+	// GetCurrentUser resolves the authenticated caller onto their directory
+	// entry by the JWT subject, their user id; a subject with no live entry
+	// answers NotFound.
 	GetCurrentUser(context.Context, *v1.GetCurrentUserRequest) (*v1.GetCurrentUserResponse, error)
 }
 
