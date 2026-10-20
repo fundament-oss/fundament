@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
 
+# Only runs of the same PR share a group; master pushes and scheduled runs never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
