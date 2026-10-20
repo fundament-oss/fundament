@@ -75,10 +75,13 @@ node count alongside its bounds. There is no manual "set the node count to N"
 operation; set the minimum instead.
 
 A cluster runs only the node pools you give it. A new cluster starts once its
-first node pool is added; until then it waits, and its events say why
-("No node pool yet"). A cluster's last node pool cannot be removed: to replace
-it, add the new pool first, then remove the old one. At least one pool must
-have a maximum above 0, so a cluster always has somewhere to run its nodes.
+first node pool is added; until then it waits, and its status and events say
+so ("Creating cluster: waiting for a node pool"). A cluster's last node pool
+cannot be removed on its own: replace it in one step instead, which the
+console's node pools sheet and the OpenTofu provider do by saving the new set
+of pools (the old pool goes and the new one comes in the same change, so it
+fits within your quota). At least one pool must have a maximum above 0, so a
+cluster always has somewhere to run its nodes.
 
 ### Applying changes
 

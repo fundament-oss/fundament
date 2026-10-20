@@ -3,7 +3,7 @@
 import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
-import type { ContainerDefaults } from '../../generated/v1/common_pb';
+import { NodePoolStatus, type ContainerDefaults } from '../../generated/v1/common_pb';
 import {
   OrganizationService,
   ListOrganizationsResponseSchema,
@@ -22,6 +22,8 @@ import {
   ClusterDetailsSchema,
   GetClusterDefaultsResponseSchema,
   UpdateClusterDefaultsResponseSchema,
+  NodePoolSchema,
+  SetNodePoolsResponseSchema,
 } from '../../generated/v1/cluster_pb';
 import {
   NamespaceService,
@@ -256,6 +258,35 @@ export default function createDemoTransport(): Transport {
           nodePools: fx.nodePoolsByCluster.get(req.clusterId) ?? [],
         });
       },
+      // Applies the set the way the API does: a pool keeps its id while its
+      // name and machine type stay, everything else is replaced.
+      setNodePools: async (req) => {
+        await delay();
+        const current = fx.nodePoolsByCluster.get(req.clusterId) ?? [];
+        const pools = req.nodePools.map((spec) => {
+          const kept = current.find(
+            (pool) => pool.name === spec.name && pool.machineType === spec.machineType,
+          );
+          return create(NodePoolSchema, {
+            id: kept?.id ?? `np-${req.clusterId}-${spec.name}`,
+            name: spec.name,
+            machineType: spec.machineType,
+            // Live nodes: an existing pool keeps its count within the new bounds.
+            currentNodes: kept
+              ? Math.min(Math.max(kept.currentNodes, spec.autoscaleMin), spec.autoscaleMax)
+              : spec.autoscaleMin,
+            minNodes: spec.autoscaleMin,
+            maxNodes: spec.autoscaleMax,
+            status: kept?.status ?? NodePoolStatus.HEALTHY,
+            statusMessage: kept?.statusMessage,
+            version: kept?.version ?? fx.clusterDetails.get(req.clusterId)?.kubernetesVersion ?? '',
+          });
+        });
+        fx.nodePoolsByCluster.set(req.clusterId, pools);
+        const summary = fx.clusterSummaries.find((c) => c.id === req.clusterId);
+        if (summary) summary.nodePoolCount = pools.length;
+        return create(SetNodePoolsResponseSchema, {});
+      },
       listRegions: async () => {
         await delay();
         return create(ListRegionsResponseSchema, { regions: fx.regions });
@@ -277,7 +308,10 @@ export default function createDemoTransport(): Transport {
         await delay();
         const refused = fx.projects
           .filter((p) => p.clusterId === req.clusterId)
-          .map((p) => ({ p, reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)) }))
+          .map((p) => ({
+            p,
+            reason: defaultsViolation(req.defaults, fx.projectDefaults.get(p.id)),
+          }))
           .find(({ reason }) => reason !== null);
         if (refused) {
           throw new ConnectError(
