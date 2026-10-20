@@ -44,42 +44,63 @@
               }
             </nldd-title>
             <nldd-form-field label="Machine type">
-              <!-- A list, not a menu: you pick a machine by comparing its specs,
-                   and a popup shows them one at a time. Same shape as choosing a
-                   role or a project. -->
-              <nldd-list
-                variant="box-base"
-                accessible-label="Machine type"
-              >
-                @for (mt of machineTypes; track mt.value) {
-                  <!-- The row is the control; the radio only shows which one it
-                       is. A real radio here would be an input inside the row's
-                       button. -->
-                  <nldd-list-item
-                    button
-                    (click)="selectMachineType(poolIndex, mt.value)"
-                  >
-                    <nldd-cell width="fit-content">
-                      <nldd-radio-button
-                        decorative
-                        [attr.checked]="
-                          nodePoolControl.get('machineType')?.value === mt.value ? '' : null
-                        "
-                      ></nldd-radio-button>
-                    </nldd-cell>
-                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <!-- Specs on the same line as the name, not under it: they are
-                         what you compare, so they belong in the reading size. -->
+              @if (isExistingPool(poolIndex)) {
+                <!-- One row, not the list to choose from: an existing pool keeps
+                     its type, and options it cannot take only invite a click that
+                     saving would ignore. -->
+                <nldd-list
+                  variant="box-base"
+                  accessible-label="Machine type"
+                >
+                  <nldd-list-item>
                     <nldd-text-cell
                       width="full"
-                      [attr.text]="mt.label"
-                      [attr.supporting-text]="
-                        hasNoQuota(mt.value) ? 'No quota in this organization' : null
-                      "
+                      [attr.text]="machineTypeLabel(nodePoolControl.get('machineType')?.value)"
                     ></nldd-text-cell>
                   </nldd-list-item>
-                }
-              </nldd-list>
+                </nldd-list>
+                <nldd-form-field-help-text>
+                  A node pool keeps the machine type it was created with. For another one, add a new
+                  node pool and remove this one.
+                </nldd-form-field-help-text>
+              } @else {
+                <!-- A list, not a menu: you pick a machine by comparing its specs,
+                     and a popup shows them one at a time. Same shape as choosing a
+                     role or a project. -->
+                <nldd-list
+                  variant="box-base"
+                  accessible-label="Machine type"
+                >
+                  @for (mt of machineTypes; track mt.value) {
+                    <!-- The row is the control; the radio only shows which one it
+                         is. A real radio here would be an input inside the row's
+                         button. -->
+                    <nldd-list-item
+                      button
+                      (click)="selectMachineType(poolIndex, mt.value)"
+                    >
+                      <nldd-cell width="fit-content">
+                        <nldd-radio-button
+                          decorative
+                          [attr.checked]="
+                            nodePoolControl.get('machineType')?.value === mt.value ? '' : null
+                          "
+                        ></nldd-radio-button>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <!-- Specs on the same line as the name, not under it: they are
+                           what you compare, so they belong in the reading size. -->
+                      <nldd-text-cell
+                        width="full"
+                        [attr.text]="mt.label"
+                        [attr.supporting-text]="
+                          hasNoQuota(mt.value) ? 'No quota in this organization' : null
+                        "
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
+                </nldd-list>
+              }
               <!-- Right away, not on save: with no quota for the type, nothing
                    else filled in below can make the pool fit. -->
               @if (machineTypeQuotaError) {
