@@ -164,7 +164,8 @@ func TestReconcileRefusedPassStillConfirmsDeletingShoots(t *testing.T) {
 	// A shoot whose deletion is already under way.
 	deletingID := insertDeletedCluster(t, db, acmeCorpOrgID, "reconcile-refused-deleting")
 	applyTestShoot(t, mock, deletingID, "reconcile-refused-deleting")
-	require.NoError(t, mock.DeleteShootByClusterID(t.Context(), deletingID))
+	_, err := mock.DeleteShootByClusterID(t.Context(), deletingID)
+	require.NoError(t, err)
 	markOutboxCompleted(t, db, deletingID)
 
 	// One more new deletion than a pass may start.
@@ -175,7 +176,7 @@ func TestReconcileRefusedPassStillConfirmsDeletingShoots(t *testing.T) {
 		applyTestShoot(t, mock, clusterID, name)
 	}
 
-	err := h.Reconcile(t.Context())
+	err = h.Reconcile(t.Context())
 	require.NoError(t, err)
 
 	// Only the deleting shoot is confirmed again, on top of the setup's delete.
@@ -197,7 +198,8 @@ func TestReconcileMassDeletionIgnoresShootsAlreadyDeleting(t *testing.T) {
 		name := fmt.Sprintf("reconcile-deleting-%d", i)
 		clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, name)
 		applyTestShoot(t, mock, clusterID, name)
-		require.NoError(t, mock.DeleteShootByClusterID(t.Context(), clusterID))
+		_, err := mock.DeleteShootByClusterID(t.Context(), clusterID)
+		require.NoError(t, err)
 		markOutboxCompleted(t, db, clusterID)
 		clusterIDs = append(clusterIDs, clusterID)
 	}

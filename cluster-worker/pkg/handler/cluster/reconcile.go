@@ -148,7 +148,7 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 		shoot := shootByClusterID[clusterID]
 		h.logger.Warn("deleting shoot of deleted cluster in Gardener",
 			"shoot", shoot.Name, "cluster_id", clusterID)
-		if err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
+		if _, err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
 			h.logger.Error("failed to delete shoot of deleted cluster",
 				"shoot", shoot.Name, "error", err)
 		}

@@ -1,6 +1,7 @@
 package cluster_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
@@ -188,7 +190,7 @@ func TestSyncWaitingForPreconditionEventAccepted(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "waiting-event")
 
 	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.cluster_events (cluster_id, event_type, message) VALUES ($1, $2, 'No node pool yet')`,
+		`INSERT INTO tenant.cluster_events (cluster_id, event_type, message) VALUES ($1, $2, 'Creating cluster: waiting for a node pool')`,
 		clusterID, string(dbconst.ClusterEventEventType_SyncWaitingForPrecondition))
 	require.NoError(t, err)
 }
@@ -285,29 +287,79 @@ func TestSyncNodePoolResolvesToCluster(t *testing.T) {
 	require.Equal(t, "workers", mock.ApplyCalls[0].NodePools[0].Name)
 }
 
-func TestSyncNodePoolPreconditionError_ClusterNotSynced(t *testing.T) {
+func TestSyncNodePool_ClusterNotSyncedLeavesItToTheClusterRow(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "np-precond")
-	// Do NOT mark cluster as ever-synced
+	// The cluster's own created row is still pending.
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "np-not-synced")
 	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 
 	sc := handler.SyncContext{EntityType: handler.EntityNodePool, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
-	err := h.Sync(t.Context(), nodePoolID, sc)
-	require.Error(t, err)
+	require.NoError(t, h.Sync(t.Context(), nodePoolID, sc))
 
-	var precondErr *handler.PreconditionError
-	require.ErrorAs(t, err, &precondErr)
-	require.Contains(t, precondErr.Reason, "parent cluster not synced")
-
-	// No Gardener calls
-	require.Empty(t, mock.ApplyCalls)
+	assert.Empty(t, mock.ApplyCalls, "the cluster row creates the Shoot, not the pool row")
+	var clusterRows int
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox WHERE cluster_id = $1`, clusterID).Scan(&clusterRows))
+	assert.Equal(t, 1, clusterRows, "a pending cluster row is already queued; no second one")
 }
 
+// A cluster row another worker holds may have read the pools before this one
+// was inserted, so it does not count as a sync still to come.
+func TestSyncNodePool_ClusterRowClaimedElsewhereQueuesANewSync(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "np-cluster-claimed")
+	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+
+	// Another worker's claim: the cluster's created row is locked.
+	claim, err := db.adminPool.Begin(t.Context())
+	require.NoError(t, err)
+	defer func() { _ = claim.Rollback(context.Background()) }()
+	_, err = claim.Exec(t.Context(),
+		`SELECT id FROM tenant.cluster_outbox WHERE cluster_id = $1 FOR NO KEY UPDATE`, clusterID)
+	require.NoError(t, err)
+
+	sc := handler.SyncContext{EntityType: handler.EntityNodePool, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), nodePoolID, sc))
+
+	assert.Empty(t, mock.ApplyCalls)
+	var pending int
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox WHERE cluster_id = $1 AND status = 'pending'`, clusterID).Scan(&pending))
+	assert.Equal(t, 2, pending, "a second sync is queued, since the claimed one may miss the pool")
+}
+
+func TestSyncNodePool_ClusterRowFailedQueuesANewSync(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "np-cluster-failed")
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'failed', failed = now() WHERE cluster_id = $1`, clusterID)
+	require.NoError(t, err)
+	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+
+	sc := handler.SyncContext{EntityType: handler.EntityNodePool, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), nodePoolID, sc))
+
+	assert.Empty(t, mock.ApplyCalls)
+	var pending int
+	require.NoError(t, db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox WHERE cluster_id = $1 AND status = 'pending'`, clusterID).Scan(&pending))
+	assert.Equal(t, 1, pending, "a fresh cluster sync is queued")
+}
 func TestSyncClusterPreconditionError_NamespaceNotReady(t *testing.T) {
 	t.Parallel()
 
@@ -318,6 +370,7 @@ func TestSyncClusterPreconditionError_NamespaceNotReady(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-precond")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
 	err := h.Sync(t.Context(), clusterID, sc)
@@ -353,30 +406,69 @@ func TestSyncNodePoolNotFound(t *testing.T) {
 
 // --- Group 9: Precondition declaration tests ---
 
-func TestPreconditionAllowsNodePoolAfterClusterSynced(t *testing.T) {
+func TestSyncNodePool_AfterClusterSyncedSyncsTheCluster(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "precond-allow")
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "np-after-synced")
 	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
-
-	sc := handler.SyncContext{EntityType: handler.EntityNodePool, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
-
-	// Before cluster is synced: precondition fails
-	err := h.Sync(t.Context(), nodePoolID, sc)
-	require.Error(t, err)
-	var precondErr *handler.PreconditionError
-	require.ErrorAs(t, err, &precondErr)
-
-	// Mark cluster as synced
 	markOutboxCompleted(t, db, clusterID)
 
-	// After cluster is synced: precondition passes, sync succeeds
-	err = h.Sync(t.Context(), nodePoolID, sc)
-	require.NoError(t, err)
+	sc := handler.SyncContext{EntityType: handler.EntityNodePool, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), nodePoolID, sc))
+	require.Len(t, mock.ApplyCalls, 1)
+}
+
+func TestSyncCluster_WithoutNodePoolParks(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "park-no-pool")
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	err := h.Sync(t.Context(), clusterID, sc)
+	var precondErr *handler.PreconditionError
+	require.ErrorAs(t, err, &precondErr)
+	assert.True(t, precondErr.Park)
+	assert.Equal(t, cluster.MsgWaitingForNodePool, precondErr.Reason)
+
+	assert.Empty(t, mock.ApplyCalls, "no Shoot without a worker")
+	assert.Empty(t, mock.EnsureProjectCalls, "no Gardener project either")
+}
+
+func TestSyncCluster_DeletedWithoutNodePoolDoesNotPark(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertDeletedCluster(t, db, acmeCorpOrgID, "park-deleted")
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Deleted, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
+}
+
+func TestSyncCluster_SyncedBeforeDoesNotPark(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	// A cluster that reached Gardener and has no pool (only a legacy cluster
+	// can) is not parked: its Shoot exists.
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "park-synced")
+	markOutboxCompleted(t, db, clusterID)
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Updated, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
 	require.Len(t, mock.ApplyCalls, 1)
 }
 

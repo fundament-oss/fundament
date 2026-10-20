@@ -12,6 +12,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clusterCreateEventUnlessLatest = `-- name: ClusterCreateEventUnlessLatest :execrows
+INSERT INTO tenant.cluster_events (cluster_id, event_type, message)
+SELECT $1, $2, $3
+WHERE (
+    SELECT tenant.cluster_events.event_type = $2::text
+       AND tenant.cluster_events.message IS NOT DISTINCT FROM $3::text
+    FROM tenant.cluster_events
+    WHERE tenant.cluster_events.cluster_id = $1
+    ORDER BY tenant.cluster_events.created DESC, tenant.cluster_events.id DESC
+    LIMIT 1
+) IS DISTINCT FROM true
+`
+
+type ClusterCreateEventUnlessLatestParams struct {
+	ClusterID uuid.UUID
+	EventType string
+	Message   pgtype.Text
+}
+
+// Insert an event unless the cluster's latest one already says the same (type
+// and message): a cluster waiting on a precondition records the wait once,
+// however many of its outbox rows park meanwhile. The caller holds the
+// cluster row (OutboxLockCluster), so two parks cannot both insert.
+func (q *Queries) ClusterCreateEventUnlessLatest(ctx context.Context, arg ClusterCreateEventUnlessLatestParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterCreateEventUnlessLatest, arg.ClusterID, arg.EventType, arg.Message)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clusterCreateStatusEvent = `-- name: ClusterCreateStatusEvent :one
 INSERT INTO
     tenant.cluster_events (cluster_id, event_type, message)
@@ -495,6 +526,38 @@ func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const clusterMarkShootDeleted = `-- name: ClusterMarkShootDeleted :execrows
+UPDATE tenant.clusters
+SET
+    shoot_status = 'deleted',
+    shoot_status_message = $1,
+    shoot_health = NULL,
+    shoot_updating = false,
+    shoot_api_available = NULL,
+    shoot_status_updated = now()
+WHERE
+    id = $2
+    AND deleted IS NOT NULL
+    AND shoot_status IS DISTINCT FROM 'deleted'
+`
+
+type ClusterMarkShootDeletedParams struct {
+	Message   pgtype.Text
+	ClusterID uuid.UUID
+}
+
+// Record that a deleted cluster has no Shoot (it never reached Gardener, or
+// the Shoot is already gone), so it stops counting against the organization's
+// cluster quota at once instead of at the next status sweep. The same end
+// state the sweep writes when it confirms a deletion.
+func (q *Queries) ClusterMarkShootDeleted(ctx context.Context, arg ClusterMarkShootDeletedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterMarkShootDeleted, arg.Message, arg.ClusterID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const clusterMarkShootUpdating = `-- name: ClusterMarkShootUpdating :execrows

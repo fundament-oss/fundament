@@ -342,6 +342,40 @@ ORDER BY
 LIMIT
     1;
 
+-- name: ClusterMarkShootDeleted :execrows
+-- Record that a deleted cluster has no Shoot (it never reached Gardener, or
+-- the Shoot is already gone), so it stops counting against the organization's
+-- cluster quota at once instead of at the next status sweep. The same end
+-- state the sweep writes when it confirms a deletion.
+UPDATE tenant.clusters
+SET
+    shoot_status = 'deleted',
+    shoot_status_message = @message,
+    shoot_health = NULL,
+    shoot_updating = false,
+    shoot_api_available = NULL,
+    shoot_status_updated = now()
+WHERE
+    id = @cluster_id
+    AND deleted IS NOT NULL
+    AND shoot_status IS DISTINCT FROM 'deleted';
+
+-- name: ClusterCreateEventUnlessLatest :execrows
+-- Insert an event unless the cluster's latest one already says the same (type
+-- and message): a cluster waiting on a precondition records the wait once,
+-- however many of its outbox rows park meanwhile. The caller holds the
+-- cluster row (OutboxLockCluster), so two parks cannot both insert.
+INSERT INTO tenant.cluster_events (cluster_id, event_type, message)
+SELECT @cluster_id, @event_type, @message
+WHERE (
+    SELECT tenant.cluster_events.event_type = @event_type::text
+       AND tenant.cluster_events.message IS NOT DISTINCT FROM @message::text
+    FROM tenant.cluster_events
+    WHERE tenant.cluster_events.cluster_id = @cluster_id
+    ORDER BY tenant.cluster_events.created DESC, tenant.cluster_events.id DESC
+    LIMIT 1
+) IS DISTINCT FROM true;
+
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).
 INSERT INTO
