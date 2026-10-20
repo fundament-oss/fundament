@@ -86,6 +86,113 @@ func TestBothClusterIDAndNodePoolIDRejectedByConstraint(t *testing.T) {
 	require.Error(t, err, "both cluster_id and node_pool_id should be rejected by constraint")
 }
 
+// insertClusterOutboxRow adds a cluster outbox row in the given status, due at retryAfter.
+func insertClusterOutboxRow(t *testing.T, db *testDB, clusterID uuid.UUID, status, retryAfter string) uuid.UUID {
+	t.Helper()
+
+	var id uuid.UUID
+	err := db.adminPool.QueryRow(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, retry_after)
+		 VALUES ($1, 'updated', 'trigger', $2, $3::timestamptz)
+		 RETURNING id`, clusterID, status, retryAfter).Scan(&id)
+	require.NoError(t, err)
+	return id
+}
+
+// outboxRowDue reports whether a cluster outbox row is due for processing now.
+func outboxRowDue(t *testing.T, db *testDB, id uuid.UUID) bool {
+	t.Helper()
+
+	var due bool
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT retry_after IS NULL OR retry_after <= now() FROM tenant.cluster_outbox WHERE id = $1`, id).Scan(&due)
+	require.NoError(t, err)
+	return due
+}
+
+func TestNodePoolInsertWakesRunnableClusterRows(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-runnable")
+	markOutboxCompleted(t, db, clusterID)
+
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
+	backingOff := insertClusterOutboxRow(t, db, clusterID, "retrying", "infinity")
+	failed := insertClusterOutboxRow(t, db, clusterID, "failed", "infinity")
+	require.False(t, outboxRowDue(t, db, parked))
+	require.False(t, outboxRowDue(t, db, backingOff))
+
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+
+	assert.True(t, outboxRowDue(t, db, parked), "a parked row is woken")
+	assert.True(t, outboxRowDue(t, db, backingOff), "a row in retry backoff is woken")
+	assert.False(t, outboxRowDue(t, db, failed), "a failed row is left alone")
+}
+
+func TestNodePoolInsertLeavesOtherClustersParked(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-this")
+	otherID := insertCluster(t, db, acmeCorpOrgID, "wake-other")
+	markOutboxCompleted(t, db, otherID)
+	otherParked := insertClusterOutboxRow(t, db, otherID, "pending", "infinity")
+
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+
+	assert.False(t, outboxRowDue(t, db, otherParked))
+}
+
+func TestNodePoolUpdateAndDeleteDoNotWake(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-only-insert")
+	nodePoolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+	markOutboxCompleted(t, db, clusterID)
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET autoscale_max = 6 WHERE id = $1`, nodePoolID)
+	require.NoError(t, err)
+	assert.False(t, outboxRowDue(t, db, parked), "a resize does not wake")
+
+	_, err = db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET deleted = now() WHERE id = $1`, nodePoolID)
+	require.NoError(t, err)
+	assert.False(t, outboxRowDue(t, db, parked), "a soft delete does not wake")
+}
+
+// A row parked until the cluster's first pool would wait forever once the
+// cluster is deleted; the delete wakes it.
+func TestClusterDeleteWakesParkedRows(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "wake-on-delete")
+	markOutboxCompleted(t, db, clusterID)
+	parked := insertClusterOutboxRow(t, db, clusterID, "pending", "infinity")
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET deleted = now() WHERE id = $1`, clusterID)
+	require.NoError(t, err)
+
+	assert.True(t, outboxRowDue(t, db, parked))
+}
+
+func TestSyncWaitingForPreconditionEventAccepted(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "waiting-event")
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_events (cluster_id, event_type, message) VALUES ($1, $2, 'No node pool yet')`,
+		clusterID, string(dbconst.ClusterEventEventType_SyncWaitingForPrecondition))
+	require.NoError(t, err)
+}
+
 // --- Group 4: Query tests ---
 
 func TestNodePoolGetClusterID_SoftDeleted(t *testing.T) {
