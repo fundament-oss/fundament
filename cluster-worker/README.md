@@ -11,7 +11,7 @@ A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labell
 
 | Handler | Runs on | Does |
 |---|---|---|
-| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; deletes orphaned shoots |
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
 | `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
 | `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
 | `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
@@ -242,6 +242,7 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
 | `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
+| `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 
 ## Immediate cluster deletion
