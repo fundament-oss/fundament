@@ -88,11 +88,11 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.catalogOptions = options && options.length > 0 ? options : null;
     if (this.catalogOptions) {
       const opts = this.catalogOptions;
-      // Re-anchor controls whose value is not an offered machine type. A pool
-      // that was created in another region can carry one this region lacks.
+      // Re-anchor new pools whose value is not an offered machine type. A pool
+      // that exists keeps its own, offered here or not: saving cannot change it.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
-        if (!opts.some((o) => o.value === mt?.value)) {
+        if (!this.loadedPools.has(control) && !opts.some((o) => o.value === mt?.value)) {
           mt?.setValue(this.preferredMachineType());
         }
       });
@@ -113,11 +113,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       // not have, so the form does not open on a refusal.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
-        if (
-          mt?.pristine &&
-          !this.originals.has(control.get('name')?.value) &&
-          !quotas.get(mt.value)?.quota
-        ) {
+        if (mt?.pristine && !this.loadedPools.has(control) && !quotas.get(mt.value)?.quota) {
           mt.setValue(this.preferredMachineType(), { emitEvent: false });
         }
       });
@@ -143,7 +139,24 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
    *  quota's "in use". Empty in the create wizard. */
   private originals: ReadonlyMap<string, PoolDraft> = new Map();
 
+  /** The pool groups the form was loaded with, renamed or not. Their machine
+   *  type is fixed: an update changes only the autoscale bounds, so a type
+   *  picked here would be dropped on save without a word. */
+  private loadedPools = new WeakSet<AbstractControl>();
+
+  /** Whether the pool at `index` exists already, so its machine type is fixed. */
+  isExistingPool(index: number): boolean {
+    return this.loadedPools.has(this.nodePools.at(index));
+  }
+
+  /** The catalog label for a machine type, or its bare name when the region
+   *  does not offer it (a pool from before the catalog can carry one). */
+  machineTypeLabel(value: string): string {
+    return this.machineTypes.find((mt) => mt.value === value)?.label ?? value;
+  }
+
   selectMachineType(index: number, value: string): void {
+    if (this.isExistingPool(index)) return;
     const control = this.nodePools.at(index).get('machineType');
     control?.setValue(value);
     control?.markAsDirty();
@@ -266,6 +279,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   getMachineTypeQuotaError(index: number): string {
     const control = this.nodePools.at(index).get('machineType');
     if (!control?.hasError('noQuota')) return '';
+    if (this.isExistingPool(index)) {
+      return `The organization has no quota for ${control.value} nodes, so this pool can keep or lower its maximum but not raise it. Ask a platform operator to set a quota.`;
+    }
     return `The organization has no quota for ${control.value} nodes. Choose another machine type, or ask a platform operator to set a quota.`;
   }
 
@@ -306,7 +322,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
     // Add all initial node pools
     data.forEach((pool) => {
-      this.nodePools.push(this.createNodePoolFormGroup(pool));
+      const group = this.createNodePoolFormGroup(pool);
+      this.loadedPools.add(group);
+      this.nodePools.push(group);
     });
   }
 

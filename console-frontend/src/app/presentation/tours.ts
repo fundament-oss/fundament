@@ -37,8 +37,9 @@ const KEYS_ASIDE = loc(
 /**
  * Walks the cluster form: types a name into step 1, then carries on through
  * step 2 to the summary. Step 2 (node pools) starts out valid — it seeds one
- * pool with a generated name, the first machine type and a 1–3 autoscale range —
- * so submitting its form as-is lands on the summary. The summary is where the
+ * pool with a generated name, the first machine type with quota room and a
+ * 1–3 autoscale range — so submitting its form as-is lands on the summary. The
+ * summary is where the
  * walkthrough stops: the cluster is not actually created.
  * Each page has exactly one `nldd-form`, so the same selector fits both steps.
  */
