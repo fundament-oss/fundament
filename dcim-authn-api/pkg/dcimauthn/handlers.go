@@ -188,29 +188,6 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
-// HandleUserInfo returns the user info for the current JWT, resolved against
-// the directory rather than echoed from the claims. The frontend probes this
-// endpoint first and only refreshes (and then re-logs) when it fails, so a
-// session whose subject no longer resolves must fail here or it would run for
-// its full lifetime against a directory entry that does not exist.
-func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.validator.Validate(r.Header)
-	if err != nil {
-		s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
-		return
-	}
-
-	row, ok := s.resolveSubject(w, r, claims)
-	if !ok {
-		return
-	}
-
-	s.writeJSON(w, http.StatusOK, map[string]string{
-		"id":   row.ID.String(),
-		"name": row.Name,
-	})
-}
-
 // resolveSubject looks a validated token's subject up in the directory and
 // writes the response when it cannot: 401 for a subject that no longer
 // resolves (the session must end), 503 for a database failure — the session

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
+	dcimauthnv1 "github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1"
+	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1/dcimauthnv1connect"
 )
 
 // refreshSubject is the directory entry the stub store resolves; any other
@@ -163,33 +166,47 @@ func TestHandleRefresh_InvalidToken(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
-// /userinfo answers from the directory, not the claims: the frontend probes it
-// first and only refreshes when it fails, so this is where a session whose
-// subject no longer resolves is turned away instead of running silently
-// against a missing entry.
-func TestHandleUserInfo_ResolvesDirectoryEntry(t *testing.T) {
-	s := refreshTestServer()
-	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
+// userInfoClient serves the Connect handler over HTTP: authentication lives in
+// headers, so a direct method call would bypass the thing most worth testing.
+func userInfoClient(t *testing.T, s *Server, token string) dcimauthnv1connect.AuthnServiceClient {
+	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
+	mux := http.NewServeMux()
+	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(s))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
 
-	s.HandleUserInfo(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"id": "`+refreshSubject+`", "name": "`+directoryName+`"}`, rec.Body.String())
+	return dcimauthnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL,
+		connect.WithInterceptors(connect.UnaryInterceptorFunc(
+			func(next connect.UnaryFunc) connect.UnaryFunc {
+				return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+					req.Header().Set("Authorization", "Bearer "+token)
+					return next(ctx, req)
+				}
+			},
+		)))
 }
 
-func TestHandleUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
+// GetUserInfo answers from the directory, not the claims: the frontend probes
+// it first and only refreshes when it fails, so this is where a session whose
+// subject no longer resolves is turned away instead of running silently
+// against a missing entry.
+func TestGetUserInfo_ResolvesDirectoryEntry(t *testing.T) {
 	s := refreshTestServer()
-	token := signRefreshToken(t, s.config.JWTSecret, uuid.NewString())
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, refreshSubject))
 
-	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
+	resp, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.NoError(t, err)
 
-	s.HandleUserInfo(rec, req)
+	assert.Equal(t, refreshSubject, resp.GetUser().GetId())
+	assert.Equal(t, directoryName, resp.GetUser().GetName())
+}
 
-	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+func TestGetUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
+	s := refreshTestServer()
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, uuid.NewString()))
+
+	_, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }

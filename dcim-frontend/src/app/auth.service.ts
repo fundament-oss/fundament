@@ -1,5 +1,8 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import { ConfigService } from './config.service';
+import { AuthnService } from '../generated/dcimauthn/v1/dcimauthn_pb';
+import { AUTHN_TRANSPORT } from '../connect/tokens';
 
 export interface DcimUser {
   id: string;
@@ -11,6 +14,8 @@ export interface DcimUser {
 })
 export default class AuthService {
   private configService = inject(ConfigService);
+
+  private authnClient = createClient(AuthnService, inject(AUTHN_TRANSPORT));
 
   private currentUser = signal<DcimUser | undefined>(undefined);
 
@@ -45,17 +50,20 @@ export default class AuthService {
     if (this.pendingUserInfo) {
       return this.pendingUserInfo;
     }
-    this.pendingUserInfo = fetch(`${this.authnApiUrl}/userinfo`, {
-      credentials: 'include',
-    })
-      .then(async (resp) => {
-        // Only a 401 means the session is over; any other failure (the
-        // service or its database briefly unavailable) must not end it.
-        if (resp.status === 401) throw new Error('unauthenticated');
-        if (!resp.ok) throw new Error('userinfo unavailable');
-        const user = (await resp.json()) as DcimUser;
+    this.pendingUserInfo = this.authnClient
+      .getUserInfo({})
+      .then((resp) => {
+        const user: DcimUser = { id: resp.user?.id ?? '', name: resp.user?.name ?? '' };
         this.currentUser.set(user);
         return user;
+      })
+      .catch((err: unknown) => {
+        // Only Unauthenticated means the session is over; any other failure
+        // (the service or its database briefly unavailable) must not end it.
+        if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+          throw new Error('unauthenticated');
+        }
+        throw new Error('userinfo unavailable');
       })
       .finally(() => {
         this.pendingUserInfo = null;
