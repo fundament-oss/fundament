@@ -102,3 +102,54 @@ describe('shared node pools form under a node quota', () => {
     expect(form.getAutoscaleMaxHint(0)).toBe('');
   });
 });
+
+// Updating a pool changes only its autoscale bounds, so the form does not offer
+// a machine type it could not save: a pick would be dropped without a word.
+describe('shared node pools form with existing pools', () => {
+  const machineTypeOptions = [
+    { value: 'local-small', label: 'local-small (2 lCPU, 4 GiB RAM)' },
+    { value: 'local-medium', label: 'local-medium (4 lCPU, 8 GiB RAM)' },
+  ];
+  const build = () => {
+    const form = TestBed.createComponent(SharedNodePoolsFormComponent).componentInstance;
+    form.initialData = [
+      { name: 'workers', machineType: 'local-medium', autoscaleMin: 1, autoscaleMax: 3 },
+    ];
+    return form;
+  };
+
+  it('keeps the machine type of an existing pool', () => {
+    const form = build();
+    form.machineTypeOptions = machineTypeOptions;
+    form.selectMachineType(0, 'local-small');
+    expect(form.isExistingPool(0)).toBe(true);
+    expect(form.nodePools.at(0).get('machineType')?.value).toBe('local-medium');
+    expect(form.machineTypeLabel('local-medium')).toBe('local-medium (4 lCPU, 8 GiB RAM)');
+  });
+
+  it('keeps a machine type the region does not offer', () => {
+    const form = build();
+    form.machineTypeOptions = [machineTypeOptions[0]];
+    expect(form.nodePools.at(0).get('machineType')?.value).toBe('local-medium');
+    expect(form.machineTypeLabel('local-medium')).toBe('local-medium');
+  });
+
+  it('lets a pool added next to it choose', () => {
+    const form = build();
+    form.machineTypeOptions = machineTypeOptions;
+    form.addNodePool();
+    form.selectMachineType(1, 'local-small');
+    expect(form.isExistingPool(1)).toBe(false);
+    expect(form.nodePools.at(1).get('machineType')?.value).toBe('local-small');
+  });
+
+  it('tells an existing pool without a quota that it can only shrink', () => {
+    const form = build();
+    form.machineTypeOptions = machineTypeOptions;
+    form.nodeQuotas = new Map();
+    expect(form.nodePoolsForm.valid).toBe(true);
+
+    form.nodePools.at(0).get('autoscaleMax')?.setValue(4);
+    expect(form.getMachineTypeQuotaError(0)).toContain('can keep or lower its maximum');
+  });
+});
