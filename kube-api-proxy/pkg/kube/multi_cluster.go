@@ -2,6 +2,9 @@ package kube
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -53,6 +56,20 @@ type ClusterIDContextKey struct{}
 
 // SATokenContextKey is used to pass the per-user SA token from the handler to the proxy's Rewrite.
 type SATokenContextKey struct{}
+
+// tokenRejectedContextKey carries what to do when the cluster rejects the
+// injected SA token (see WithTokenRejected).
+type tokenRejectedContextKey struct{}
+
+// WithTokenRejected makes the proxy call rejected when the cluster answers
+// the request with 401, or presents a certificate the cached credentials do
+// not trust: the injected SA token is not valid there (any more), for
+// instance because the cluster was created again and has a new signing key.
+// The caller drops the token from its cache, so the next request gets a new
+// one.
+func WithTokenRejected(ctx context.Context, rejected func()) context.Context {
+	return context.WithValue(ctx, tokenRejectedContextKey{}, rejected)
+}
 
 func (m *MultiClusterProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	clusterID, ok := r.Context().Value(ClusterIDContextKey{}).(string)
@@ -112,12 +129,46 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 	ttl := time.Until(adminKC.ExpiresAt)
 	refreshAt := time.Now().Add(time.Duration(float64(ttl) * adminKubeconfigRefreshRatio))
 
-	proxy := buildReverseProxy(c.Host(), c.Transport(), m.logger)
-	m.proxies.Store(clusterID, &cachedProxy{
-		proxy:     proxy,
-		expiresAt: refreshAt,
-	})
-	return proxy, nil
+	return m.storeProxy(clusterID, c.Host(), c.Transport(), refreshAt), nil
+}
+
+// storeProxy caches a reverse proxy to the cluster's API server until
+// expiresAt.
+func (m *MultiClusterProxy) storeProxy(clusterID string, target *url.URL, transport http.RoundTripper, expiresAt time.Time) *httputil.ReverseProxy {
+	cp := &cachedProxy{expiresAt: expiresAt}
+	cp.proxy = buildReverseProxy(target, transport, m.logger)
+	// A cluster created again under the same name answers at the same address
+	// with a new certificate authority, and signs SA tokens with a new key:
+	// drop the cached credentials and the request's token, so the next
+	// request fetches new ones instead of failing until they expire.
+	writeError := cp.proxy.ErrorHandler
+	cp.proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
+		if isCertificateError(err) {
+			tokenRejected(req.Context())
+			if m.proxies.CompareAndDelete(clusterID, cp) {
+				m.logger.WarnContext(req.Context(), "cluster's certificate is not trusted, dropping its cached credentials",
+					"cluster", clusterID, "error", err)
+			}
+		}
+		writeError(w, req, err)
+	}
+	m.proxies.Store(clusterID, cp)
+	return cp.proxy
+}
+
+// isCertificateError reports whether err is a failed verification of the
+// cluster's TLS certificate.
+func isCertificateError(err error) bool {
+	var verifyErr *tls.CertificateVerificationError
+	var unknownAuthority x509.UnknownAuthorityError
+	return errors.As(err, &verifyErr) || errors.As(err, &unknownAuthority)
+}
+
+// tokenRejected calls what WithTokenRejected put in ctx, if anything.
+func tokenRejected(ctx context.Context) {
+	if rejected, ok := ctx.Value(tokenRejectedContextKey{}).(func()); ok {
+		rejected()
+	}
 }
 
 func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slog.Logger) *httputil.ReverseProxy {
@@ -137,6 +188,12 @@ func buildReverseProxy(target *url.URL, transport http.RoundTripper, logger *slo
 			// Inject per-user SA token from context; ServeHTTP checked it is set.
 			saToken, _ := req.Context().Value(SATokenContextKey{}).(string)
 			req.Header.Set("Authorization", "Bearer "+saToken)
+		},
+		ModifyResponse: func(resp *http.Response) error {
+			if resp.StatusCode == http.StatusUnauthorized {
+				tokenRejected(resp.Request.Context())
+			}
+			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
 			logger.ErrorContext(req.Context(), "kubernetes proxy error", "error", err)

@@ -11,7 +11,7 @@ A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labell
 
 | Handler | Runs on | Does |
 |---|---|---|
-| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; reports lost shoots; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
 | `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
 | `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
 | `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
@@ -78,9 +78,9 @@ sequenceDiagram
   status, message or health changes, and then writes the status, its events and the
   ready outbox row in one transaction, so `shoot_status_updated` (the console's "Status
   changed") is the time of the last change. See [Ready clusters](#ready-clusters).
-- **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
-  deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
-  resources.
+- **Reconcile loop.** Every 5 minutes it reports clusters whose shoot is missing (see
+  [Lost clusters](#lost-clusters)), deletes shoots whose cluster is gone, and lets the
+  shoot-side handlers re-assert their resources.
 
 ## Cluster status
 
@@ -112,6 +112,11 @@ stateDiagram-v2
         ready --> deleting: cluster deleted
         progressing --> deleting: cluster deleted
         deleting --> deleted: shoot gone
+        progressing --> lost: shoot gone, cluster not deleted
+        ready --> lost: shoot gone, cluster not deleted
+        error --> lost: shoot gone, cluster not deleted
+        deleting --> lost: shoot gone, cluster not deleted
+        lost --> progressing: a change creates the shoot again
     }
 ```
 
@@ -125,13 +130,14 @@ stateDiagram-v2
 | `error` | the last operation failed and Gardener will not retry it by itself |
 | `deleting` | the cluster is deleted, the shoot is going away |
 | `deleted` | the shoot is gone |
+| `lost` | the shoot of an active cluster is gone from Gardener; see [Lost clusters](#lost-clusters) |
 
 Changes are recorded in `tenant.cluster_events`: `sync_succeeded` / `sync_failed` per
 outbox row, `status_progressing` / `status_ready` / `status_error` / `status_deleted` on a
 status change, `status_progressing` with Gardener's progress message while an operation
 runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
-shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+shoot fundament had seen is no longer in Gardener, and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes
@@ -140,6 +146,24 @@ once per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` (1m). A change inside that win
 recorded when the window ends, if the message is still new, so a reconcile stuck on one
 task always records that task. A create of 10 to 15 minutes records about 10 to 15
 progress events.
+
+### Lost clusters
+
+A shoot can disappear from Gardener without fundament deleting it: an operator deletes
+it, or it is lost with its seed. Its workloads and data are gone with it. The next status
+check (a watch event, or the status sweep) records the cluster as `lost`, with a
+`status_lost` event and an `ALERT` error in the log; the API reports it as
+`CLUSTER_STATUS_LOST`, and the console offers no kubeconfig. The reconcile loop logs an
+error for a missing shoot until its cluster is recorded as lost. Only a shoot a status
+check has seen is called lost, since Gardener can report a just-created shoot as not
+found; one that disappears before its first check stays `pending`, and the reconcile loop
+keeps logging it until a change to the cluster creates it again.
+
+Nothing recreates the shoot by itself: a new, empty cluster under the same name would
+hide that the data is gone. Any change to the cluster or its node pools syncs it, and
+that sync creates the shoot again, empty; the cluster then goes through `progressing`
+and `ready` as after a create, and the ready fan-out sets up users, namespaces and
+plugins again.
 
 ### Ready clusters
 
@@ -241,7 +265,6 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
-| `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
 

@@ -44,6 +44,7 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
     tenant.organizations.name AS organization_name,
     COALESCE(tenant.clusters.outbox_status = 'completed', false)::boolean AS has_completed_outbox
 FROM

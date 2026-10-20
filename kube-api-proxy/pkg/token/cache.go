@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,6 +64,7 @@ type Cache struct {
 	requester Requester
 	logger    *slog.Logger
 	tokens    *ttlcache.Cache[cacheKey, *cachedToken]
+	tokensMu  sync.Mutex                       // serializes storing a token with forget's compare-and-delete
 	failures  *ttlcache.Cache[cacheKey, error] // recent failed requests, see failureTTL
 	group     singleflight.Group               // deduplicates concurrent token requests
 }
@@ -93,6 +95,31 @@ func (c *Cache) GetToken(ctx context.Context, userID uuid.UUID, clusterID string
 // on the cluster.
 func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, error) {
 	return c.get(ctx, cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: clusterID})
+}
+
+// ForgetToken drops the user's cached token for the cluster if it is still
+// token, after the cluster rejected it. A token fetched since is kept.
+func (c *Cache) ForgetToken(userID uuid.UUID, clusterID, token string) {
+	c.forget(cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID}, token)
+}
+
+// ForgetProxyToken drops kube-api-proxy's own cached token for the cluster if
+// it is still token, after the cluster rejected it.
+func (c *Cache) ForgetProxyToken(clusterID, token string) {
+	c.forget(cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: clusterID}, token)
+}
+
+func (c *Cache) forget(key cacheKey, token string) {
+	c.tokensMu.Lock()
+	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
+	if item == nil || item.Value().token != token {
+		c.tokensMu.Unlock()
+		return
+	}
+	c.tokens.Delete(key)
+	c.tokensMu.Unlock()
+	c.logger.Info("cluster rejected SA token, dropped it from the cache",
+		"service_account", key.saName, "cluster_id", key.clusterID)
 }
 
 // get uses a cached token if available and not expired, triggering an async
@@ -161,7 +188,9 @@ func (c *Cache) requestToken(ctx context.Context, key cacheKey) (string, error) 
 		ttl:      ttl,
 	}
 	// Store with actual TTL — ttlcache evicts automatically on expiry.
+	c.tokensMu.Lock()
 	c.tokens.Set(key, ct, ttl)
+	c.tokensMu.Unlock()
 
 	c.logger.InfoContext(ctx, "SA token issued",
 		"service_account", key.saName, "cluster_id", key.clusterID,

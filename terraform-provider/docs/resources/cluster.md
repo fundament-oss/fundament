@@ -50,7 +50,7 @@ resource "fundament_cluster" "example" {
 ### Read-Only
 
 - `id` (String) The unique identifier of the cluster.
-- `status` (String) The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.
+- `status` (String) The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), lost (the cluster no longer exists in Gardener; a change to it creates it again, empty), deleting or stopped.
 
 <a id="nestedblock--node_pool"></a>
 ### Nested Schema for `node_pool`

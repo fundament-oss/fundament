@@ -81,10 +81,11 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 
 	if tokenCache != nil && authzClient != nil {
 		s.namespaces = &namespaceLister{
-			logger:     logger,
-			visibility: newVisibilityResolver(authzClient),
-			proxyToken: tokenCache.GetProxyToken,
-			upstream:   kubeHandler,
+			logger:           logger,
+			visibility:       newVisibilityResolver(authzClient),
+			proxyToken:       tokenCache.GetProxyToken,
+			forgetProxyToken: tokenCache.ForgetProxyToken,
+			upstream:         kubeHandler,
 		}
 	}
 

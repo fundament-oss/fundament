@@ -10,26 +10,56 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
-func TestReconcileDriftDetected(t *testing.T) {
+func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
 	mock := newMock(t)
 	h := newTestHandler(t, db, mock)
 
-	// Insert cluster and mark its outbox as completed (simulates a previously synced cluster).
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-drift")
+	// A ready cluster whose shoot was deleted outside fundament: the mock
+	// has no shoots.
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-lost")
 	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "ready")
 
-	// Mock returns no shoots — drift: DB says synced but Gardener has nothing.
 	err := h.Reconcile(t.Context())
 	require.NoError(t, err)
+	h.DrainStatusQueue(t.Context())
 
-	// A reconcile outbox row should have been inserted.
-	assertOutboxReconcileExists(t, db, clusterID)
+	// The shoot is not created again, and the cluster is recorded as lost.
+	assertNoOutboxReconcile(t, db, clusterID)
+	assert.Empty(t, mock.ApplyCalls)
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "lost", *status)
+	assertEventExists(t, db, clusterID, "status_lost")
+}
+
+func TestChangeToLostClusterCreatesShootAgain(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "lost-rebuilt")
+	markOutboxCompleted(t, db, clusterID)
+	setShootStatus(t, db, clusterID, "lost")
+
+	// A pass leaves a lost cluster alone.
+	require.NoError(t, h.Reconcile(t.Context()))
+	assert.False(t, mock.HasShootForCluster(clusterID))
+
+	// A change a user makes syncs the cluster, which creates the shoot.
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Updated, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
+	assert.True(t, mock.HasShootForCluster(clusterID))
 }
 
 func TestReconcileNoDriftForUnsyncedCluster(t *testing.T) {
