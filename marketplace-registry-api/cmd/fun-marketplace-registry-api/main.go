@@ -15,7 +15,6 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbversion"
-	"github.com/fundament-oss/fundament/common/health"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/registry"
 )
@@ -52,14 +51,32 @@ func newHealthMux(logger *slog.Logger, deploymentVersion string, database *psqld
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	var checks []health.Check
-	if database != nil {
-		checks = append(checks, health.Check{Name: "database", Probe: database.Pool.Ping})
-	}
-	if store != nil {
-		checks = append(checks, health.Check{Name: "openfga", Probe: store.Healthy})
-	}
-	mux.HandleFunc("/readyz", health.Readyz(logger, checks...))
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if database != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			if err := database.Pool.Ping(ctx); err != nil {
+				// The probe is public and a pgx error names the host, port,
+				// database and role, so the detail stays in the log.
+				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte("database unavailable"))
+				return
+			}
+		}
+		if store != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			if err := store.Healthy(ctx); err != nil {
+				logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte("openfga unavailable"))
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)

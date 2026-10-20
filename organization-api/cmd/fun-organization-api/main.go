@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -18,7 +18,6 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/circuitbreaker"
 	"github.com/fundament-oss/fundament/common/dbversion"
-	"github.com/fundament-oss/fundament/common/health"
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -204,16 +203,29 @@ func run() error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(cfg.DeploymentVersion))
 	})
-	outerMux.HandleFunc("/readyz", health.Readyz(logger,
-		health.Check{Name: "database", Probe: db.Pool.Ping},
-		health.Check{Name: "openfga", Probe: authzStore.Healthy},
-		health.Check{Name: "authz_outbox", Probe: func(context.Context) error {
-			if breaker.IsOpen() {
-				return errors.New("sync lag exceeds threshold")
-			}
-			return nil
-		}},
-	))
+	outerMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		var errs []string
+		if err := db.Pool.Ping(ctx); err != nil {
+			errs = append(errs, "database: "+err.Error())
+		}
+		if err := authzStore.Healthy(ctx); err != nil {
+			errs = append(errs, "openfga: "+err.Error())
+		}
+		if breaker.IsOpen() {
+			errs = append(errs, "authz_outbox: sync lag exceeds threshold")
+		}
+
+		if len(errs) > 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(strings.Join(errs, "\n")))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 	outerMux.Handle("/", server.Handler())
 
 	httpServer := &http.Server{

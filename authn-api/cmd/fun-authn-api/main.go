@@ -28,7 +28,6 @@ import (
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
-	"github.com/fundament-oss/fundament/common/health"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
 )
@@ -219,10 +218,27 @@ func run() error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/readyz", health.Readyz(logger,
-		health.Check{Name: "database", Probe: db.Pool.Ping},
-		health.Check{Name: "openfga", Probe: authzStore.Healthy},
-	))
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		var errs []string
+
+		if err := db.Pool.Ping(ctx); err != nil {
+			errs = append(errs, "database: "+err.Error())
+		}
+		if err := authzStore.Healthy(ctx); err != nil {
+			errs = append(errs, "openfga: "+err.Error())
+		}
+
+		if len(errs) > 0 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(strings.Join(errs, "\n")))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	// Connect RPC handler for GetUserInfo
 	loggingInterceptor := logging.UnaryServerInterceptor(
