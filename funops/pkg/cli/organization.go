@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -22,9 +24,34 @@ type OrganizationCmd struct {
 	Quota  OrganizationQuotaCmd  `cmd:"" help:"Manage what an organization may build: its cluster and node quotas."`
 }
 
-// OrganizationCreateCmd creates a new organization.
+// OrganizationCreateCmd creates a new organization with its starting node
+// quotas. A cluster runs only once it has a node pool, and a pool needs a node
+// quota, so an organization is never created without one.
 type OrganizationCreateCmd struct {
-	Name string `arg:"" help:"Organization name." required:""`
+	Name      string   `arg:"" help:"Organization name." required:""`
+	NodeQuota []string `name:"node-quota" required:"" placeholder:"REGION/MACHINE-TYPE=MAX" help:"Starting node quota: at most MAX nodes of MACHINE-TYPE in REGION, as the catalog offers them, for example local/local-small=3. Repeat it for more machine types; change it later with 'quota set-nodes'."`
+}
+
+// nodeQuotaSpec is one parsed --node-quota value.
+type nodeQuotaSpec struct {
+	Region      string
+	MachineType string
+	MaxNodes    int32
+}
+
+// parseNodeQuota parses REGION/MACHINE-TYPE=MAX. A starting quota of 0 would
+// allow no pool at all, so MAX must be 1 or more.
+func parseNodeQuota(value string) (nodeQuotaSpec, error) {
+	offering, maxText, ok := strings.Cut(value, "=")
+	region, machineType, ok2 := strings.Cut(offering, "/")
+	if !ok || !ok2 || region == "" || machineType == "" || maxText == "" {
+		return nodeQuotaSpec{}, fmt.Errorf("node quota %q is not REGION/MACHINE-TYPE=MAX", value)
+	}
+	maxNodes, err := strconv.ParseInt(maxText, 10, 32)
+	if err != nil || maxNodes < 1 {
+		return nodeQuotaSpec{}, fmt.Errorf("node quota %q: MAX must be a whole number of nodes, 1 or more", value)
+	}
+	return nodeQuotaSpec{Region: region, MachineType: machineType, MaxNodes: int32(maxNodes)}, nil
 }
 
 // OrganizationListCmd lists all organizations.
@@ -37,9 +64,38 @@ type OrganizationDeleteCmd struct {
 
 // Run executes the organization create command.
 func (c *OrganizationCreateCmd) Run(ctx *Context) error {
+	if len(c.NodeQuota) == 0 {
+		return errors.New("an organization needs a starting node quota: give at least one --node-quota REGION/MACHINE-TYPE=MAX")
+	}
+	quotas := make([]nodeQuotaSpec, 0, len(c.NodeQuota))
+	seen := make(map[string]bool, len(c.NodeQuota))
+	for _, value := range c.NodeQuota {
+		quota, err := parseNodeQuota(value)
+		if err != nil {
+			return err
+		}
+		// A second value for the same offering would silently win.
+		offering := quota.Region + "/" + quota.MachineType
+		if seen[offering] {
+			return fmt.Errorf("node quota for %s is given more than once", offering)
+		}
+		seen[offering] = true
+		quotas = append(quotas, quota)
+	}
+
 	ctx.Logger.Debug("creating organization", "name", c.Name)
 
-	org, err := ctx.Queries.OrganizationCreate(context.Background(), db.OrganizationCreateParams{
+	bgCtx := context.Background()
+
+	tx, err := ctx.DB.Pool.Begin(bgCtx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer rollback.Rollback(bgCtx, tx, ctx.Logger)
+
+	qtx := ctx.Queries.WithTx(tx)
+
+	org, err := qtx.OrganizationCreate(bgCtx, db.OrganizationCreateParams{
 		Name:  c.Name,
 		Alias: c.Name,
 	})
@@ -56,7 +112,32 @@ func (c *OrganizationCreateCmd) Run(ctx *Context) error {
 		return fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	ctx.Logger.Debug("organization created", "id", org.ID.String())
+	// Resolved in the same transaction: a mistyped offering creates nothing.
+	for _, quota := range quotas {
+		offering, err := qtx.RegionMachineTypeResolve(bgCtx, db.RegionMachineTypeResolveParams{
+			RegionName:      quota.Region,
+			MachineTypeName: quota.MachineType,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("machine type %q is not offered in region %q", quota.MachineType, quota.Region)
+			}
+			return fmt.Errorf("failed to resolve machine type: %w", err)
+		}
+		if _, err := qtx.MachineQuotaSet(bgCtx, db.MachineQuotaSetParams{
+			OrganizationID:      org.ID,
+			RegionMachineTypeID: offering,
+			MaxNodes:            quota.MaxNodes,
+		}); err != nil {
+			return fmt.Errorf("failed to set node quota: %w", err)
+		}
+	}
+
+	if err := tx.Commit(bgCtx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	ctx.Logger.Debug("organization created", "id", org.ID.String(), "node_quotas", len(quotas))
 
 	return outputCreatedID(ctx.Output, org.ID)
 }

@@ -27,10 +27,10 @@ A cluster belongs to one organization. An organization can have multiple cluster
 Every organization has quotas, set by the platform operator: how many clusters
 it may have, and how many nodes of each machine type it may have per region,
 counted as the sum of the maximum sizes of its node pools. A new organization
-may have one cluster, and no node pools until the operator sets its node
-quotas. A cluster starts with its first node pool, so a fresh organization asks
-its operator for a node quota before its first cluster can run, and before a
-second cluster. Quotas stop new clusters and new or larger
+may have one cluster, and the node quotas the operator gave it when creating it.
+A cluster starts with its first node pool. A fresh organization asks its
+operator before adding pools of a machine type it has no quota for, pools that
+would go over a quota, or a second cluster. Quotas stop new clusters and new or larger
 node pools; they never touch what already runs, even when lowered below it.
 **Organization → Quotas** shows where you stand; to request an increase,
 contact a Fundament operator. See [Quotas](./clusters.md#quotas).
