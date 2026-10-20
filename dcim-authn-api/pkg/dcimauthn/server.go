@@ -60,7 +60,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		oidcVerifier:  verifier,
 		sessionStore:  sessionStore,
 		queries:       queries,
-		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
+		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
 		returnOrigins: auth.NewReturnOrigins(logger, []string{cfg.FrontendURL}),
 	}
@@ -124,6 +124,7 @@ func (s *Server) mintJWT(subject, name string) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.DCIMIssuer,
 			Subject:   subject,
+			Audience:  jwt.ClaimStrings{auth.TokenTypeDCIMUser},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
 		},

@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/common/auth"
+
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
@@ -130,6 +132,7 @@ func TestHandlePasswordLogin_MintsInternalSubject(t *testing.T) {
 	claims := decodeToken(t, s.config.JWTSecret, cookies[0].Value)
 	assert.Equal(t, store.row.ID.String(), claims.Subject)
 	assert.Equal(t, store.row.Name, claims.Name)
+	assert.Equal(t, jwt.ClaimStrings{auth.TokenTypeDCIMUser}, claims.Audience)
 }
 
 // An ID token without a subject must be refused before it reaches the

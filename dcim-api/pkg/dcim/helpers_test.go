@@ -63,6 +63,7 @@ func signTestToken(t *testing.T, subject string) string {
 	t.Helper()
 	claims := jwt.MapClaims{
 		"iss": auth.DCIMIssuer,
+		"aud": auth.TokenTypeDCIMUser,
 		"sub": subject,
 		"exp": time.Now().Add(time.Hour).Unix(),
 	}
