@@ -13,6 +13,7 @@ import {
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
+import { NodeQuotas, NodeQuotaService } from '../node-quota.service';
 
 import '@nldd/design-system/button';
 import '@nldd/design-system/spacer';
@@ -32,14 +33,26 @@ export default class NewClusterNodesComponent implements OnInit {
 
   private regionCatalog = inject(RegionCatalogService);
 
+  private nodeQuota = inject(NodeQuotaService);
+
   // Machine types offered by the region chosen in step 1.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
+
+  // The organization's node quotas in that region; null until they are in, or
+  // when they cannot be read, and then only the API checks them.
+  nodeQuotas = signal<NodeQuotas | null>(null);
 
   async ngOnInit() {
     const { region: regionName } = this.stateService.getState();
     if (!regionName) {
       return;
     }
+    this.nodeQuota.forRegion(regionName).then(
+      (quotas) => this.nodeQuotas.set(quotas),
+      () => {
+        // Quotas unavailable: the form bounds nothing and the API decides.
+      },
+    );
     try {
       const region = await this.regionCatalog.getRegionByName(regionName);
       if (region) {

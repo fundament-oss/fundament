@@ -15,6 +15,9 @@
     >
       @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
         @let nameControl = nodePoolControl.get('name');
+        @let maxControl = nodePoolControl.get('autoscaleMax');
+        @let machineTypeQuotaError = getMachineTypeQuotaError($index);
+        @let autoscaleMaxHint = getAutoscaleMaxHint($index);
         <!-- Held here, because inside the machine-type loop below $index is that
              loop's index: a click on the second option wrote to the second node
              pool instead of to the pool it sits in. -->
@@ -70,10 +73,24 @@
                     <nldd-text-cell
                       width="full"
                       [attr.text]="mt.label"
+                      [attr.supporting-text]="
+                        hasNoQuota(mt.value) ? 'No quota in this organization' : null
+                      "
                     ></nldd-text-cell>
                   </nldd-list-item>
                 }
               </nldd-list>
+              <!-- Right away, not on save: with no quota for the type, nothing
+                   else filled in below can make the pool fit. -->
+              @if (machineTypeQuotaError) {
+                <nldd-validation-list>
+                  <nldd-validation-item
+                    hint
+                    [id]="'machine-type-quota-error-' + $index"
+                    >{{ machineTypeQuotaError }}</nldd-validation-item
+                  >
+                </nldd-validation-list>
+              }
             </nldd-form-field>
             <nldd-form-field label="Node pool name">
               <nldd-text-field
@@ -99,22 +116,30 @@
                     nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
                 "
                 min="1"
-                max="100"
                 step="1"
               ></nldd-number-field>
             </nldd-form-field>
             <nldd-form-field label="Autoscale maximum">
+              <!-- No max attribute: the quota bounds the sum over pools, not
+                   this field alone, and a pool over a lowered quota may still
+                   keep its maximum. The validator decides. -->
               <nldd-number-field
                 [id]="'autoscaleMax-' + $index"
-                [value]="nodePoolControl.get('autoscaleMax')?.value"
-                (input)="
-                  $any($event).detail &&
-                    nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
-                "
+                [value]="maxControl?.value"
+                [invalid]="!!(maxControl?.invalid && formSubmitted())"
+                [attr.unmet]="'autoscale-max-error-' + $index"
+                (input)="$any($event).detail && maxControl?.setValue($any($event).detail.value)"
                 min="1"
-                max="100"
                 step="1"
               ></nldd-number-field>
+              @if (autoscaleMaxHint) {
+                <nldd-form-field-help-text>{{ autoscaleMaxHint }}</nldd-form-field-help-text>
+              }
+              <nldd-validation-list>
+                <nldd-validation-item [id]="'autoscale-max-error-' + $index">{{
+                  getAutoscaleMaxError($index)
+                }}</nldd-validation-item>
+              </nldd-validation-list>
             </nldd-form-field>
           </nldd-container>
         </nldd-box>
