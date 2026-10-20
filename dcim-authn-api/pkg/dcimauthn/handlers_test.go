@@ -100,7 +100,10 @@ func TestHandleRefresh_ValidToken(t *testing.T) {
 func decodeToken(t *testing.T, secret []byte, token string) *auth.Claims {
 	t.Helper()
 	claims := &auth.Claims{}
-	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (any, error) { return secret, nil })
+	// Pinned to HS256 like the production validator, so this cannot accept a
+	// token the real services would refuse.
+	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (any, error) { return secret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	require.NoError(t, err)
 	return claims
 }
