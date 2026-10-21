@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.4.0-alpine AS build
+FROM oven/bun:1.4.3-alpine AS build
 WORKDIR /app
 
 # Copy package files

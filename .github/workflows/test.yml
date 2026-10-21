@@ -475,7 +475,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
 
       - name: Cache Bun dependencies
         uses: actions/cache@v5
@@ -510,7 +510,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
 
       - name: Cache Bun dependencies
         uses: actions/cache@v5
@@ -546,7 +546,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
 
       - name: Run tests
         working-directory: plugins/storage/ceph-rook/console-test
@@ -561,7 +561,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
 
       - name: Run tests
         working-directory: plugins/cloudnativepg/console-test
@@ -580,7 +580,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.3
 
       # Astro's tooling rejects Bun's Node-compat version; it needs a real Node.
       - name: Setup Node
