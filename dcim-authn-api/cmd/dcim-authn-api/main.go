@@ -21,6 +21,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/dcimauthn"
+	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1/dcimauthnv1connect"
 )
 
 type config struct {
@@ -147,12 +148,15 @@ func run() error {
 	mux.HandleFunc(http.MethodGet+" /callback", server.HandleCallback)
 	mux.HandleFunc(http.MethodPost+" /refresh", server.HandleRefresh)
 	mux.HandleFunc(http.MethodPost+" /logout", server.HandleLogout)
-	mux.HandleFunc(http.MethodGet+" /userinfo", server.HandleUserInfo)
+
+	// GetUserInfo is Connect RPC, like authn-api's; the browser flow above
+	// stays plain HTTP because it is driven by redirects and cookies.
+	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(server))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Connect-Timeout-Ms"},
 		AllowCredentials: true,
 	})
 

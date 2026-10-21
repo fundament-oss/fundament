@@ -2,6 +2,7 @@ package dcimauthn
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +19,8 @@ import (
 
 	"github.com/fundament-oss/fundament/common/auth"
 	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
+	dcimauthnv1 "github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1"
+	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1/dcimauthnv1connect"
 )
 
 // refreshSubject is the directory entry the stub store resolves; any other
@@ -42,6 +46,14 @@ func (stubStore) UserGetByID(_ context.Context, arg db.UserGetByIDParams) (db.Us
 		return db.UserGetByIDRow{}, pgx.ErrNoRows
 	}
 	return db.UserGetByIDRow{ID: arg.ID, Name: directoryName}, nil
+}
+
+// outageStore reads as a directory whose database is down: every lookup fails
+// with something other than "no such row".
+type outageStore struct{ stubStore }
+
+func (outageStore) UserGetByID(context.Context, db.UserGetByIDParams) (db.UserGetByIDRow, error) {
+	return db.UserGetByIDRow{}, errors.New("connection refused")
 }
 
 func refreshTestServer() *Server {
@@ -163,33 +175,78 @@ func TestHandleRefresh_InvalidToken(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
-// /userinfo answers from the directory, not the claims: the frontend probes it
-// first and only refreshes when it fails, so this is where a session whose
-// subject no longer resolves is turned away instead of running silently
-// against a missing entry.
-func TestHandleUserInfo_ResolvesDirectoryEntry(t *testing.T) {
-	s := refreshTestServer()
-	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
+// userInfoClient serves the Connect handler over HTTP: authentication lives in
+// headers, so a direct method call would bypass the thing most worth testing.
+func userInfoClient(t *testing.T, s *Server, token string) dcimauthnv1connect.AuthnServiceClient {
+	t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	rec := httptest.NewRecorder()
+	mux := http.NewServeMux()
+	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(s))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
 
-	s.HandleUserInfo(rec, req)
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"id": "`+refreshSubject+`", "name": "`+directoryName+`"}`, rec.Body.String())
+	return dcimauthnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL,
+		connect.WithInterceptors(connect.UnaryInterceptorFunc(
+			func(next connect.UnaryFunc) connect.UnaryFunc {
+				return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+					req.Header().Set("Authorization", "Bearer "+token)
+					return next(ctx, req)
+				}
+			},
+		)))
 }
 
-func TestHandleUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
+// GetUserInfo answers from the directory, not the claims: the frontend probes
+// it first and only refreshes when it fails, so this is where a session whose
+// subject no longer resolves is turned away instead of running silently
+// against a missing entry.
+func TestGetUserInfo_ResolvesDirectoryEntry(t *testing.T) {
 	s := refreshTestServer()
-	token := signRefreshToken(t, s.config.JWTSecret, uuid.NewString())
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, refreshSubject))
 
-	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
+	resp, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.NoError(t, err)
+
+	assert.Equal(t, refreshSubject, resp.GetUser().GetId())
+	assert.Equal(t, directoryName, resp.GetUser().GetName())
+}
+
+func TestGetUserInfo_UnresolvableSubjectIsRefused(t *testing.T) {
+	s := refreshTestServer()
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, uuid.NewString()))
+
+	_, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+}
+
+// A directory outage is Unavailable, not Unauthenticated: the session is still
+// valid, and the frontend keeps its auth hint on this code instead of treating
+// the outage as a sign-out.
+func TestGetUserInfo_DirectoryOutageIsUnavailable(t *testing.T) {
+	s := refreshTestServer()
+	s.queries = outageStore{}
+	client := userInfoClient(t, s, signRefreshToken(t, s.config.JWTSecret, refreshSubject))
+
+	_, err := client.GetUserInfo(context.Background(), &dcimauthnv1.GetUserInfoRequest{})
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
+}
+
+// The same split on refresh: a database failure answers 503 — the session is
+// not over, so the cookie must survive and no fresh token may be minted from
+// an unverified subject.
+func TestHandleRefresh_DirectoryOutageIs503(t *testing.T) {
+	s := refreshTestServer()
+	s.queries = outageStore{}
+	token := signRefreshToken(t, s.config.JWTSecret, refreshSubject)
+
+	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
-	s.HandleUserInfo(rec, req)
+	s.HandleRefresh(rec, req)
 
-	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Empty(t, rec.Result().Cookies())
 }

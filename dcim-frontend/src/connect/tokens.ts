@@ -32,6 +32,19 @@ export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
   },
 });
 
+// The authn service is a separate host: the session RPCs (GetUserInfo) live
+// there, next to the cookie-setting login endpoints.
+export const AUTHN_TRANSPORT = new InjectionToken<Transport>('dcim-authn-transport', {
+  providedIn: 'root',
+  factory: () => {
+    const config = inject(ConfigService).getConfig();
+    return createConnectTransport({
+      baseUrl: config.authnApiUrl,
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+    });
+  },
+});
+
 function createClientToken<T extends DescService>(service: T) {
   return new InjectionToken<ObservableClient<T>>(`dcim-client-${service.typeName}`, {
     providedIn: 'root',
