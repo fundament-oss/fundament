@@ -460,15 +460,16 @@ export default class App implements OnInit {
     // from it would cancel that arrival and drop the page it named: opening
     // /clusters would land on the organization's empty root instead.
     //
-    // The login page belongs to no organization, and is left alone: a session
-    // that turns up while it is open (one that already existed, or the form's
-    // own) would otherwise move it to /organizations/<name>/login, which matches
-    // no page, and a hand-off back to another surface would land there instead.
+    // The bare pages belong to no organization, and are left alone: a session
+    // that turns up while one is open (one that already existed, or the login
+    // form's own) would otherwise move it to /organizations/<name>/login, which
+    // matches no page, and a hand-off back to another surface would land there
+    // instead.
     const arriving = this.router.getCurrentNavigation();
     const address = arriving
       ? this.router.serializeUrl(arriving.finalUrl ?? arriving.extractedUrl)
       : this.router.url;
-    if (name && !isLoginUrl(address) && organizationOf(address) !== name) {
+    if (name && !isBarePageUrl(address) && organizationOf(address) !== name) {
       this.router.navigateByUrl(inOrganization(name, address), { replaceUrl: true });
     }
   }
