@@ -105,6 +105,10 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
+        <!-- Container defaults -->
+        <app-project-defaults-block
+          [projectId]="project()!.id"
+        ></app-project-defaults-block>
         <!-- Danger Zone -->
         <nldd-box background="critical">
           <nldd-container padding="16">

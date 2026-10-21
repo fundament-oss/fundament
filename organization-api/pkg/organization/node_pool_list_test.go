@@ -13,12 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
 // fakeNodePrometheus answers the three node queries ListNodePools issues, with
-// two nodes in "workers" (one of them not ready) and one in "spot".
+// two nodes in "workers" (one of them not ready) and one in "spot". The pool
+// label carries the generated worker name, as kube-state-metrics reports it —
+// Gardener labels nodes with the worker name, never the raw pool name.
 func fakeNodePrometheus(t *testing.T) *httptest.Server {
 	t.Helper()
 
@@ -28,6 +31,9 @@ func fakeNodePrometheus(t *testing.T) *httptest.Server {
 	sample := func(metric, value string) string {
 		return fmt.Sprintf(`{"metric":%s,"value":[1700000000,%q]}`, metric, value)
 	}
+	poolLabel := func(node, pool string) string {
+		return fmt.Sprintf(`{"node":%q,"label_worker_gardener_cloud_pool":%q}`, node, kubename.GenerateWorkerName(pool))
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/query", func(w http.ResponseWriter, r *http.Request) {
@@ -35,9 +41,9 @@ func fakeNodePrometheus(t *testing.T) *httptest.Server {
 		switch {
 		case strings.Contains(query, "kube_node_labels"):
 			_, _ = fmt.Fprint(w, series(
-				sample(`{"node":"n1","label_worker_gardener_cloud_pool":"workers"}`, "1"),
-				sample(`{"node":"n2","label_worker_gardener_cloud_pool":"workers"}`, "1"),
-				sample(`{"node":"n3","label_worker_gardener_cloud_pool":"spot"}`, "1"),
+				sample(poolLabel("n1", "workers"), "1"),
+				sample(poolLabel("n2", "workers"), "1"),
+				sample(poolLabel("n3", "spot"), "1"),
 			))
 		case strings.Contains(query, "kube_node_status_condition"):
 			_, _ = fmt.Fprint(w, series(
@@ -82,7 +88,7 @@ func nodePoolTestCluster(t *testing.T, env *testEnv, orgID uuid.UUID, token stri
 	clusterID := res.GetClusterId()
 	for _, name := range []string{"workers", "spot"} {
 		_, err = env.adminPool.Exec(t.Context(),
-			"INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max) VALUES ($1, $2, 'm1.small', 1, 3)",
+			"INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max) VALUES ($1, $2, 'n1-standard-1', 1, 3)",
 			clusterID, name,
 		)
 		require.NoError(t, err)

@@ -21,6 +21,12 @@ message SyncState {
   // When shoot_status, shoot_message or the health last changed. Status is
   // checked far more often than that; an unchanged check leaves it as it is.
   google.protobuf.Timestamp status_updated_at = 60;
+  // True while Gardener rolls out a change fundament pushed: set when the
+  // spec change is accepted, cleared when the reconcile finishes. Lets a
+  // client tell an unhealthy cluster mid-rollout from one that settled.
+  bool shoot_updating = 70;
+  // outbox_status, outbox_retries and outbox_error describe the cluster's own
+  // latest sync; a node pool's sync is on the NodePool.
 }
 
 // ClusterService manages Kubernetes clusters
@@ -67,6 +73,12 @@ service ClusterService {
 
   // Delete a node pool
   rpc DeleteNodePool(DeleteNodePoolRequest) returns (DeleteNodePoolResponse);
+
+  // GetClusterDefaults retrieves the cluster's per-container resource defaults
+  rpc GetClusterDefaults(GetClusterDefaultsRequest) returns (GetClusterDefaultsResponse);
+
+  // UpdateClusterDefaults replaces the cluster's per-container resource defaults
+  rpc UpdateClusterDefaults(UpdateClusterDefaultsRequest) returns (UpdateClusterDefaultsResponse);
 }
 
 // List clusters request
@@ -142,6 +154,12 @@ message NodePool {
   int32 max_nodes = 60;
   NodePoolStatus status = 70;
   string version = 80;
+  string status_message = 90; // Gardener's reason while status is WAITING_FOR_MACHINES or FAILED
+  // The pool's own latest sync, fundament applying its last change to
+  // Gardener: pending, retrying, completed or failed. sync_error is set while
+  // that sync retries or after it failed for good.
+  string sync_status = 100 [features.field_presence = EXPLICIT];
+  string sync_error = 110 [features.field_presence = EXPLICIT];
 }
 
 // Create cluster request. Region and kubernetes version are the catalog
@@ -201,7 +219,7 @@ message GetClusterActivityResponse {
 // Cluster event from cluster_events table
 message ClusterEvent {
   string id = 10;
-  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, user_sync_succeeded, user_sync_failed
+  string event_type = 20; // sync_requested, sync_claimed, sync_succeeded, sync_failed, status_progressing, status_ready, status_error, status_deleted, status_healthy, status_unhealthy, status_warning, status_lost, status_api_available, nodepool_waiting, nodepool_error, nodepool_ready, user_sync_succeeded, user_sync_failed
   google.protobuf.Timestamp created_at = 30;
   string sync_action = 40 [features.field_presence = EXPLICIT]; // sync, delete (for sync events)
   string message = 50 [features.field_presence = EXPLICIT];
@@ -310,3 +328,29 @@ message RegionMachineType {
   int32 lcpu = 20;
   int64 memory = 30; // bytes
 }
+
+// GetClusterDefaults request
+message GetClusterDefaultsRequest {
+  // ID of the cluster
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetClusterDefaults response
+message GetClusterDefaultsResponse {
+  // The cluster's own defaults; an absent field means no default is set
+  ContainerDefaults defaults = 10;
+  // The platform's suggested values, offered in the console as a starting
+  // point. They are not applied unless they are saved.
+  ContainerDefaults suggested = 20;
+}
+
+// UpdateClusterDefaults request
+message UpdateClusterDefaultsRequest {
+  // ID of the cluster to update
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Replaces all four values; an absent field clears that default
+  ContainerDefaults defaults = 20;
+}
+
+// UpdateClusterDefaults response
+message UpdateClusterDefaultsResponse {}

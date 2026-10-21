@@ -137,6 +137,9 @@ readinessProbe:
     port: {{ .port }}
   initialDelaySeconds: 5
   periodSeconds: 5
+  # Above the handlers' 5s dependency-ping budget; the kubelet default of 1s
+  # would cancel a slow-but-successful ping and pull the pod from endpoints.
+  timeoutSeconds: 6
 {{- if .root.Values.hotreload.enabled }}
   failureThreshold: 60
 {{- end }}
@@ -151,4 +154,15 @@ Usage: include "fundament.corsOrigins" (dict "root" $ "frontends" (list $.Values
 */}}
 {{- define "fundament.corsOrigins" -}}
 {{- .root.Values.externalUrls.corsAllowedOrigins | default (compact .frontends | join ",") -}}
+{{- end }}
+
+{{/*
+Where a frontend's test-environment banner links to: the same site on the PoC,
+or "" when environmentBanner is off, which hides the banner.
+Usage: include "fundament.pocUrl" (dict "root" $ "site" "console")
+*/}}
+{{- define "fundament.pocUrl" -}}
+{{- if .root.Values.environmentBanner.enabled -}}
+https://{{ .site }}.{{ .root.Values.environmentBanner.pocDomain }}
+{{- end -}}
 {{- end }}

@@ -265,7 +265,7 @@ func TestTrimShootForStatus(t *testing.T) {
 	assert.Equal(t, clusterID.String(), trimmed.Labels[LabelClusterID])
 	assert.NotNil(t, trimmed.DeletionTimestamp)
 	assert.Equal(t, gardencorev1beta1.LastOperationStateSucceeded, trimmed.Status.LastOperation.State)
-	assert.Len(t, trimmed.Status.Conditions, 3)
+	assert.Len(t, trimmed.Status.Conditions, 4)
 }
 
 func TestShootClusterIDValue(t *testing.T) {
@@ -324,6 +324,32 @@ func TestShootStatusChanged(t *testing.T) {
 	}
 }
 
+// A change in the worker detail (the EveryNodeReady reason or lastErrors) is
+// a status change: it is what updates a node pool's stored reason, so the
+// watch must deliver it even when nothing else moved.
+func TestShootStatusChangedOnWorkerDetail(t *testing.T) {
+	t.Parallel()
+
+	clusterID := uuid.New()
+	stuck := func(enrMessage string, lastErrors ...string) *gardencorev1beta1.Shoot {
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationStateProcessing, "waiting for workers"),
+			condition(gardencorev1beta1.ShootAPIServerAvailable, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootControlPlaneHealthy, gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ShootSystemComponentsHealthy, gardencorev1beta1.ConditionTrue),
+			gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionFalse, Message: enrMessage},
+		)
+		for _, desc := range lastErrors {
+			shoot.Status.LastErrors = append(shoot.Status.LastErrors, gardencorev1beta1.LastError{Description: desc})
+		}
+		return shoot
+	}
+
+	assert.False(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment a waits")))
+	assert.True(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment b waits")))
+	assert.True(t, shootStatusChanged(stuck("deployment a waits"), stuck("deployment a waits", "no machine available")))
+}
+
 func TestProcessingDescriptionChangeIsAStatusChange(t *testing.T) {
 	t.Parallel()
 
@@ -331,6 +357,24 @@ func TestProcessingDescriptionChangeIsAStatusChange(t *testing.T) {
 	oldShoot := statusTestShoot(clusterID, lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateProcessing, "Waiting for etcd"))
 	newShoot := statusTestShoot(clusterID, lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateProcessing, "Deploying kube-apiserver"))
 	assert.True(t, shootStatusChanged(oldShoot, newShoot), "the message shows the running task")
+}
+
+// TestAPIServerAvailableIsAStatusChange pins that the watch alone reports the
+// API server of a cluster being created becoming available: the care
+// controller's condition flips while the create's description may stay put.
+func TestAPIServerAvailableIsAStatusChange(t *testing.T) {
+	t.Parallel()
+
+	clusterID := uuid.New()
+	op := lastOp(gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationStateProcessing, "Waiting until shoot worker nodes have been reconciled")
+	oldShoot := statusTestShoot(clusterID, op)
+	newShoot := statusTestShoot(clusterID, op, gardencorev1beta1.Condition{
+		Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue,
+	})
+
+	assert.False(t, shootStatusOf(oldShoot).APIServerAvailable)
+	assert.True(t, shootStatusOf(newShoot).APIServerAvailable)
+	assert.True(t, shootStatusChanged(oldShoot, newShoot))
 }
 
 func TestUnwrapTombstone(t *testing.T) {

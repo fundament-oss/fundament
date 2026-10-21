@@ -58,11 +58,10 @@
         -->
         <nldd-toolbar-item slot="start">
           <!-- The span carries the hover: a disabled button fires no pointer
-               events, so the tooltip would never open on the one state it has
-               something to say about. -->
+               events, so the tooltip would never open on a disabled button. -->
           <nldd-tooltip
-            [attr.text]="canDownloadKubeconfig() ? null : 'Available once the cluster is running'"
-            [attr.timing]="canDownloadKubeconfig() ? 'never' : 'default'"
+            [attr.text]="kubeconfigHint()"
+            [attr.timing]="kubeconfigHint() ? 'default' : 'never'"
           >
             <span class="inline-flex">
               <nldd-button
@@ -91,7 +90,7 @@
         <nldd-banner
           variant="warning"
           [attr.text]="message"
-          supporting-text="Add it again under Node pools."
+          [attr.supporting-text]="nodePoolsNotCreatedDetail()"
         ></nldd-banner>
         <nldd-spacer size="24"></nldd-spacer>
       }
@@ -198,11 +197,11 @@
               }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
-                  <nldd-text-cell text="Sync error"></nldd-text-cell>
+                  <!-- Width on the label on purpose: beside a long error the shared min-content rule still lets it collapse to one letter per line. -->
+                  <nldd-text-cell text="Sync error" width="fit-content"></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
-                    width="fit-content"
                     horizontal-alignment="right"
                     [attr.text]="formatEventMessage(clusterData.syncState.outboxError)"
                   ></nldd-text-cell>
@@ -355,15 +354,7 @@
                         <nldd-badge
                           slot="end"
                           size="sm"
-                          [attr.color]="
-                            pool.status === NodePoolStatus.HEALTHY
-                              ? 'success'
-                              : pool.status === NodePoolStatus.UNHEALTHY
-                                ? 'critical'
-                                : pool.status === NodePoolStatus.DEGRADED
-                                  ? 'warning'
-                                  : 'neutral'
-                          "
+                          [attr.color]="getNodePoolStatusColor(pool.status)"
                           [attr.text]="getNodePoolStatusLabel(pool.status)"
                         ></nldd-badge>
                       </nldd-title>
@@ -409,6 +400,18 @@
                           </nldd-list-item>
                         }
                       </nldd-list>
+                      @if (pool.statusMessage) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text size="sm">{{ pool.statusMessage }}</nldd-text>
+                      }
+                      <!-- The pool's own sync, fundament applying its last change, set
+                           while it retries or after it failed for good. -->
+                      @if (pool.syncError) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text size="sm" color="critical"
+                          >Sync error: {{ formatEventMessage(pool.syncError) }}</nldd-text
+                        >
+                      }
                     </nldd-container>
                   </nldd-card>
                 }
@@ -416,6 +419,10 @@
             }
           </nldd-container>
         </nldd-box>
+        <!-- Container defaults -->
+        <app-cluster-defaults-block
+          [clusterId]="clusterData.basics.id"
+        ></app-cluster-defaults-block>
         <!-- Plugins Block -->
         <nldd-box>
           <nldd-container padding="16">

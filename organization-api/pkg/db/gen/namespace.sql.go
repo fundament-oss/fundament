@@ -96,7 +96,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -109,12 +110,13 @@ type NamespaceGetByIDParams struct {
 }
 
 type NamespaceGetByIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Created     pgtype.Timestamptz
+	Deleted     pgtype.Timestamptz
+	ClusterID   uuid.UUID
+	ProjectName string
 }
 
 func (q *Queries) NamespaceGetByID(ctx context.Context, arg NamespaceGetByIDParams) (NamespaceGetByIDRow, error) {
@@ -127,6 +129,7 @@ func (q *Queries) NamespaceGetByID(ctx context.Context, arg NamespaceGetByIDPara
 		&i.Created,
 		&i.Deleted,
 		&i.ClusterID,
+		&i.ProjectName,
 	)
 	return i, err
 }
@@ -138,7 +141,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -159,12 +163,13 @@ type NamespaceGetByProjectAndNameParams struct {
 }
 
 type NamespaceGetByProjectAndNameRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Created     pgtype.Timestamptz
+	Deleted     pgtype.Timestamptz
+	ClusterID   uuid.UUID
+	ProjectName string
 }
 
 func (q *Queries) NamespaceGetByProjectAndName(ctx context.Context, arg NamespaceGetByProjectAndNameParams) (NamespaceGetByProjectAndNameRow, error) {
@@ -177,6 +182,7 @@ func (q *Queries) NamespaceGetByProjectAndName(ctx context.Context, arg Namespac
 		&i.Created,
 		&i.Deleted,
 		&i.ClusterID,
+		&i.ProjectName,
 	)
 	return i, err
 }
@@ -188,7 +194,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -202,12 +209,13 @@ type NamespaceListByClusterIDParams struct {
 }
 
 type NamespaceListByClusterIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Created     pgtype.Timestamptz
+	Deleted     pgtype.Timestamptz
+	ClusterID   uuid.UUID
+	ProjectName string
 }
 
 func (q *Queries) NamespaceListByClusterID(ctx context.Context, arg NamespaceListByClusterIDParams) ([]NamespaceListByClusterIDRow, error) {
@@ -226,6 +234,7 @@ func (q *Queries) NamespaceListByClusterID(ctx context.Context, arg NamespaceLis
 			&i.Created,
 			&i.Deleted,
 			&i.ClusterID,
+			&i.ProjectName,
 		); err != nil {
 			return nil, err
 		}
@@ -244,7 +253,8 @@ SELECT
   namespaces.name,
   namespaces.created,
   namespaces.deleted,
-  projects.cluster_id
+  projects.cluster_id,
+  projects.name AS project_name
 FROM tenant.namespaces
 JOIN tenant.projects
   ON projects.id = namespaces.project_id
@@ -258,12 +268,13 @@ type NamespaceListByProjectIDParams struct {
 }
 
 type NamespaceListByProjectIDRow struct {
-	ID        uuid.UUID
-	ProjectID uuid.UUID
-	Name      string
-	Created   pgtype.Timestamptz
-	Deleted   pgtype.Timestamptz
-	ClusterID uuid.UUID
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Created     pgtype.Timestamptz
+	Deleted     pgtype.Timestamptz
+	ClusterID   uuid.UUID
+	ProjectName string
 }
 
 func (q *Queries) NamespaceListByProjectID(ctx context.Context, arg NamespaceListByProjectIDParams) ([]NamespaceListByProjectIDRow, error) {
@@ -282,6 +293,7 @@ func (q *Queries) NamespaceListByProjectID(ctx context.Context, arg NamespaceLis
 			&i.Created,
 			&i.Deleted,
 			&i.ClusterID,
+			&i.ProjectName,
 		); err != nil {
 			return nil, err
 		}

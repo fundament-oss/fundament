@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/kubename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -65,10 +66,11 @@ func (s *Server) ListProjectNamespaces(
 
 func namespaceFromRow(row db.NamespaceListByClusterIDRow) *organizationv1.Namespace {
 	return organizationv1.Namespace_builder{
-		Id:        row.ID.String(),
-		Name:      row.Name,
-		ProjectId: row.ProjectID.String(),
-		ClusterId: row.ClusterID.String(),
-		Created:   timestamppb.New(row.Created.Time),
+		Id:              row.ID.String(),
+		Name:            row.Name,
+		ClusterSideName: kubename.GenerateNamespace(row.ProjectName, row.Name),
+		ProjectId:       row.ProjectID.String(),
+		ClusterId:       row.ClusterID.String(),
+		Created:         timestamppb.New(row.Created.Time),
 	}.Build()
 }

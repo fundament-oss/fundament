@@ -57,9 +57,11 @@ sequenceDiagram
 ```
 
 - **Outbox worker.** Database triggers on clusters, node pools, namespaces, members and
-  limits insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
+  container defaults insert `cluster_outbox` rows and notify the `cluster_outbox` channel. The worker
   claims one row at a time with `FOR NO KEY UPDATE SKIP LOCKED`, so several replicas can
-  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`; a row
+  run. A failed sync is retried with exponential backoff up to `OUTBOX_MAX_RETRIES`, except
+  a request the Kubernetes or Gardener API rejects as invalid or malformed, or a Shoot spec
+  Gardener's admission refuses, which fails at once: a retry would only send it again. A row
   whose precondition is not met yet (for example, the project namespace does not exist)
   is deferred instead of failed.
 - **Status.** A cluster's status is checked when its Shoot changes (see
@@ -131,7 +133,10 @@ outbox row, `status_progressing` / `status_ready` / `status_error` / `status_del
 status change, `status_progressing` with Gardener's progress message while an operation
 runs (at most one per `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL`, see below), `status_healthy` / `status_unhealthy` when a ready cluster's health
 changes, `status_warning` for an error Gardener retries by itself, `status_lost` when a
-shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it), and
+shoot fundament had seen is no longer in Gardener (the reconcile loop recreates it),
+`nodepool_waiting` / `nodepool_error` (once per transition into that status) and
+`nodepool_ready` when a node pool's machines get stuck or recover (see "Node pool
+status" below), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes
@@ -171,11 +176,11 @@ settling does not stick, and a cluster that breaks later shows it.
   `unhealthy` and `unknown` are unhealthy, and `progressing` (a condition within its
   grace period, or pardoned while an operation runs without errors) keeps the recorded
   health, or counts as unhealthy for a cluster that was never healthy. A Shoot without
-  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy` and
-  `SystemComponentsHealthy`. While the last operation is still the Create, Gardener
-  computes the label from errors only and rewrites it just after the cluster becomes
-  ready, so until the first reconcile a `healthy` label also needs those three
-  conditions. So a routine reconcile that breaks a condition shows as
+  the label yet falls back to `APIServerAvailable`, `ControlPlaneHealthy`,
+  `SystemComponentsHealthy` and `EveryNodeReady`. While the last operation is still the
+  Create, Gardener computes the label from errors only and rewrites it just after the
+  cluster becomes ready, so until the first reconcile a `healthy` label also needs those
+  four conditions. So a routine reconcile that breaks a condition shows as
   unhealthy only once Gardener stops pardoning it.
 - A new cluster's conditions take a few minutes to pass after the create succeeds,
   and Gardener labels it unhealthy meanwhile. Until it is first healthy, a ready
@@ -187,6 +192,52 @@ settling does not stick, and a cluster that breaks later shows it.
   recorded as `status_warning` (once per distinct message: an error Gardener retries
   again and again, with progress in between, is compared with the last recorded warning)
   and does not change the status. Only `Failed` sets `error`.
+
+### Node pool status
+
+A node pool row is a desired shape; whether Gardener can stand machines under it only
+shows in the Shoot's `EveryNodeReady` condition and `lastErrors`, which name the pool's
+machine deployments. Those names carry the generated worker name
+(`kubename.GenerateWorkerName`, a fixed-length prefix+hash), never the pool name the
+user chose, so the match looks for the worker name. Every status check classifies each
+active pool from the same report the cluster rules read and stores the outcome on
+`tenant.node_pools` (`status`, `status_message`, `status_updated`):
+
+| Status | Meaning |
+|---|---|
+| `progressing` | the cluster's initial create or a change fundament pushed shapes this pool and has not finished: the pool was never classified and an operation runs, or the change still sits in the outbox — its machines are being created |
+| `waiting` | Gardener cannot get machines for the pool; `status_message` carries its reason |
+| `error` | the operation failed for good, naming this pool |
+| `ready` | the shoot settled with every change applied, and nothing names the pool |
+
+An operation that does not name an already classified pool leaves it where it is: a
+routine reconcile says nothing about pools whose machines stand, and relabeling them
+would hide their live metrics and spray ready events when the reconcile ends. A pool
+stored `waiting`/`error` stays stuck while the worker detail exists: `EveryNodeReady`
+names only the first failing machine deployment, so a detail naming another pool —
+even on a shoot that turned ready while unhealthy — does not mean this one recovered.
+A complaint naming a settled pool (`ready`, or NULL from before this feature) only
+turns it `waiting` while the initial create runs or a change of ours is in flight —
+otherwise it is a node problem, which the pool's live metrics status describes. While
+the cluster has a change that has not left the outbox (pending, retrying or failed; the
+state is cluster-wide, not per pool), what Gardener reports may predate it: a pool that
+is new (NULL) or `progressing` stays `progressing` rather than reading ready, and a
+complaint naming it is ignored; a pool stored `ready` keeps its status.
+The in-flight state is read after the pool list (a pool's INSERT commits together with
+its outbox row), so a pool inserted mid-check is never classified from a stale
+nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
+Gardener's machine deployment names, so one pool can never match another's text, nor
+the shoot's technical ID. Gardener's reason text is cleaned before it is stored
+(control characters dropped, capped at 1 KiB): it is node and provider text. A failure
+that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
+untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
+the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
+text as machines churn, so a changed reason refreshes the row silently. A pool
+classified for the first time as `ready` or `progressing` records nothing; its first
+`waiting`/`error` does. Each pool's row and events commit in one transaction.
+organization-api serves the stored status and reason until a pool is `ready`, then its
+live node metrics take over. The watch treats a change in the worker detail as a status
+change, so a new reason reaches the pool row without waiting for the sweep.
 
 ### Status cache
 
@@ -258,15 +309,14 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `GARDENER_NODES_CIDR`, `GARDENER_PODS_CIDR`, `GARDENER_SERVICES_CIDR` | | empty nodes CIDR: the provider allocates (metal); local uses `10.0.0.0/16` |
 | `GARDENER_INFRASTRUCTURE_CONFIG`, `GARDENER_CONTROL_PLANE_CONFIG`, `GARDENER_SHOOT_ANNOTATIONS` | | raw JSON stamped onto every shoot (metal) |
 | `OUTBOX_POLL_INTERVAL` | `5s` | fallback when no notification arrives |
-| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `1m` | retry backoff |
-| `OUTBOX_MAX_RETRIES` | `10` | |
+| `OUTBOX_BASE_BACKOFF`, `OUTBOX_MAX_BACKOFF` | `500ms`, `2m` | retry backoff: 1s after the first failure, doubling up to the cap |
+| `OUTBOX_MAX_RETRIES` | `15` | attempts before a row fails for good; with the backoff above about 16 minutes, enough to ride out a short outage of a Shoot or the garden |
 | `OUTBOX_BACKOFF_DELAY` | `5s` | reconnect delay after losing the database connection |
 | `OUTBOX_PRECONDITION_DELAY`, `OUTBOX_MAX_PRECONDITION_DEFERRALS` | `30s`, `100` | |
 | `STATUS_INTERVAL` | `30m` | how often the status sweep checks every cluster; it also runs at startup, in real mode once the status cache has synced |
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
-| `CLUSTER_MAX_RETRIES` | `10` | retries for the reconcile rows the cluster handler enqueues |
 | `INVENTORY_INTERVAL` | `15m` | how often every ready cluster is counted; see [Fleet inventory](#fleet-inventory) |
 | `INVENTORY_WORKERS` | `4` | clusters counted at once |
 | `INVENTORY_TIMEOUT` | `30s` | bound on one cluster's count, credentials included |
@@ -289,16 +339,37 @@ depends on it. The `local-gardener` Skaffold profile turns it on; see
 [Running with a local Gardener](../docs/developer/fundament/local-gardener.md) for turning
 it off locally.
 
-## Organization limits
+## Container defaults
 
-The per-container resource defaults from the Limits page
-(`organization_limits`/`project_limits` `default_*` columns) are materialized as
-a managed `fundament-defaults` `LimitRange` in each project namespace during
-namespace sync. Per field the lowest of the org and project value wins, so a
-project can only tighten the org default; when no defaults apply the managed
-`LimitRange` is removed. A mixed-NULL combination where a merged request exceeds
-the merged limit fails the namespace sync visibly rather than applying an object
-the kube-apiserver would reject.
+What a container gets when a workload sets no resources of its own lives in
+four columns on both `tenant.clusters` and `tenant.projects`:
+`default_memory_request_mi`, `default_memory_limit_mi`, `default_cpu_request_m`
+and `default_cpu_limit_m`. NULL means no default is set for that field. A
+project inherits the cluster's value where it sets none, and may set a lower
+one but never a higher one.
+
+The database enforces that at write time, so there is nothing to catch here
+after the fact:
+
+- `tenant.projects_tr_verify_defaults` refuses a project value above its
+  cluster's, and an effective request above the effective limit.
+- `tenant.clusters_tr_verify_defaults` refuses lowering a cluster default below
+  an active project's, naming the project to lower first.
+
+Namespace sync materializes the effective values as a managed
+`fundament-defaults` `LimitRange` in each project namespace, and removes it when
+no defaults apply. Per field it takes the lower of the cluster and project
+value: with the triggers in place that is the same as "the project's value,
+else the cluster's", and it keeps rows written before those triggers existed
+within the cluster's defaults. A mixed-NULL combination where the effective
+request exceeds the effective limit fails the namespace sync visibly rather
+than applying an object the kube-apiserver would reject — the backstop for the
+rule the project trigger already enforces.
+
+`clusters_defaults_outbox_trigger` and `projects_defaults_outbox_trigger`
+enqueue the affected namespaces when a default changes.
+`cluster_outbox_cluster_trigger` ignores these columns, so a defaults change
+does not re-apply the Shoot.
 
 ## Plugin machinery
 

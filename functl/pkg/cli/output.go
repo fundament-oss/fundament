@@ -66,6 +66,21 @@ func marshalJSON(v any) ([]byte, error) {
 		return data, nil
 	}
 
+	// A composed output ({"cluster": ..., "node_pools": [...]}) marshals each
+	// value through this same function, so nested messages keep the proto
+	// field names and key guarantees above.
+	if m, ok := v.(map[string]any); ok {
+		out := make(map[string]json.RawMessage, len(m))
+		for key, value := range m {
+			data, err := marshalJSON(value)
+			if err != nil {
+				return nil, err
+			}
+			out[key] = data
+		}
+		v = out
+	}
+
 	rv := reflect.ValueOf(v)
 	if rv.Kind() == reflect.Slice && rv.Type().Elem().Implements(protoMessageType) {
 		items := make([]json.RawMessage, rv.Len())

@@ -74,13 +74,16 @@ func (s *Seed) SoftDelete(table string, id uuid.UUID) {
 	s.exec(`UPDATE tenant.`+table+` SET deleted = now() WHERE id = $1`, id)
 }
 
-// Ready marks a cluster ready and synced, its status changed age ago.
+// Ready marks a cluster ready and synced, its status changed age ago. Synced
+// is the cluster's own latest outbox row, completed (tenant.cluster_sync_state).
 func (s *Seed) Ready(clusterID uuid.UUID, age time.Duration) {
 	s.t.Helper()
 	s.exec(`UPDATE tenant.clusters
-		SET shoot_status = 'ready', shoot_health = 'healthy', outbox_status = 'completed',
+		SET shoot_status = 'ready', shoot_health = 'healthy',
 		    shoot_status_updated = now() - make_interval(secs => $2)
 		WHERE id = $1`, clusterID, age.Seconds())
+	s.exec(`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, processed)
+		VALUES ($1, 'updated', 'manual', 'completed', now())`, clusterID)
 }
 
 // Status sets shoot status columns directly.

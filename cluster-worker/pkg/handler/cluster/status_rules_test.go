@@ -32,8 +32,15 @@ func TestNextShootStatus(t *testing.T) {
 			observed: readyUnhealthy,
 			want: shootStatusUpdate{
 				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
-				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
-				InsertReady: true,
+				Events: []statusEvent{
+					{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth},
+					// Turning ready announces the API server if nothing did before.
+					{Type: dbconst.ClusterEventEventType_StatusApiAvailable, Message: msgAPIServerAvailable},
+				},
+				InsertReady:  true,
+				APIAvailable: true,
+
+				InsertAPIAvailable: true,
 			},
 		},
 		{
@@ -150,8 +157,15 @@ func TestNextShootStatus(t *testing.T) {
 			observed: readyHealthy,
 			want: shootStatusUpdate{
 				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
-				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootReady}},
-				InsertReady: true,
+				Events: []statusEvent{
+					{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootReady},
+					// Turning ready announces the API server if nothing did before.
+					{Type: dbconst.ClusterEventEventType_StatusApiAvailable, Message: msgAPIServerAvailable},
+				},
+				InsertReady:  true,
+				APIAvailable: true,
+
+				InsertAPIAvailable: true,
 			},
 		},
 		{
@@ -173,6 +187,29 @@ func TestNextShootStatus(t *testing.T) {
 			want: shootStatusUpdate{
 				Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy,
 				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootReady}},
+			},
+		},
+		{
+			// organization-api keys STARTING on the awaiting-health message, so a
+			// reconcile mid-settle must not swap it for Gardener's progress text.
+			name:     "routine reconcile during settle keeps the awaiting-health message",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: 10% done", Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy},
+		},
+		{
+			name:     "update during settle keeps the awaiting-health message",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Reconcile: Waiting until worker nodes are ready", Operation: gardener.OperationReconcile},
+			want:     shootStatusUpdate{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+		},
+		{
+			name:     "update finishing mid-settle stays settling",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationReconcile},
+			want: shootStatusUpdate{
+				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
 			},
 		},
 		{
@@ -205,8 +242,15 @@ func TestNextShootStatus(t *testing.T) {
 			observed: &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationCreate, HealthGrace: true},
 			want: shootStatusUpdate{
 				Status: gardener.StatusReady, Message: gardener.MsgShootAwaitingHealth, Health: unhealthy,
-				Events:      []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth}},
-				InsertReady: true,
+				Events: []statusEvent{
+					{Type: dbconst.ClusterEventEventType_StatusReady, Message: gardener.MsgShootAwaitingHealth},
+					// Turning ready announces the API server if nothing did before.
+					{Type: dbconst.ClusterEventEventType_StatusApiAvailable, Message: msgAPIServerAvailable},
+				},
+				InsertReady:  true,
+				APIAvailable: true,
+
+				InsertAPIAvailable: true,
 			},
 		},
 		{
@@ -404,4 +448,87 @@ func TestAddProgressEvent(t *testing.T) {
 			assert.Equal(t, tt.wantEvents, update.Events)
 		})
 	}
+}
+
+func TestNextShootStatus_APIServerAvailable(t *testing.T) {
+	t.Parallel()
+
+	creating := storedShootState{Status: gardener.StatusProgressing, Message: "Create: Deploying Kubernetes API server"}
+	apiUp := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Message: "Create: Waiting until shoot worker nodes have been reconciled",
+		Operation: gardener.OperationCreate, APIServerAvailable: true,
+	}
+	apiEvent := statusEvent{Type: dbconst.ClusterEventEventType_StatusApiAvailable, Message: msgAPIServerAvailable}
+
+	t.Run("announced once while the cluster is being created", func(t *testing.T) {
+		t.Parallel()
+		got := nextShootStatus(creating, apiUp)
+		assert.True(t, got.APIAvailable)
+		assert.True(t, got.InsertAPIAvailable)
+		assert.Contains(t, got.Events, apiEvent)
+		assert.False(t, got.InsertReady, "the cluster is not ready yet")
+
+		seen := creating
+		seen.Message = apiUp.Message
+		seen.APIAvailable = true
+		again := nextShootStatus(seen, apiUp)
+		assert.False(t, again.InsertAPIAvailable)
+		assert.NotContains(t, again.Events, apiEvent)
+		assert.True(t, again.unchanged(seen), "a second observation writes nothing")
+	})
+
+	t.Run("a ready cluster only records the column", func(t *testing.T) {
+		t.Parallel()
+		stored := storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: dbconst.ClusterShootHealth_Healthy}
+		observed := &gardener.ShootStatus{
+			Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationReconcile,
+			Healthy: true, APIServerAvailable: true,
+		}
+		got := nextShootStatus(stored, observed)
+		assert.True(t, got.APIAvailable)
+		assert.False(t, got.InsertAPIAvailable, "access came with the ready fan-out")
+		assert.Empty(t, got.Events)
+		assert.False(t, got.unchanged(stored), "the column still has to be written")
+	})
+
+	t.Run("turning ready announces it when the condition has not yet", func(t *testing.T) {
+		t.Parallel()
+		readyNoCondition := &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootUnhealthy, Operation: gardener.OperationCreate}
+		got := nextShootStatus(creating, readyNoCondition)
+		assert.True(t, got.InsertReady)
+		assert.True(t, got.InsertAPIAvailable, "api_available is the only event that provisions access")
+		assert.True(t, got.APIAvailable)
+	})
+
+	t.Run("recovering to ready after access was set up announces nothing new", func(t *testing.T) {
+		t.Parallel()
+		stored := storedShootState{Status: gardener.StatusError, Message: "quota exceeded", APIAvailable: true}
+		got := nextShootStatus(stored, &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Healthy: true, APIServerAvailable: true})
+		assert.True(t, got.InsertReady)
+		assert.False(t, got.InsertAPIAvailable)
+		assert.NotContains(t, got.Events, apiEvent)
+	})
+
+	t.Run("an API server that flaps keeps the first record", func(t *testing.T) {
+		t.Parallel()
+		seen := creating
+		seen.APIAvailable = true
+		flapped := *apiUp
+		flapped.APIServerAvailable = false
+		got := nextShootStatus(seen, &flapped)
+		assert.False(t, got.APIAvailable)
+		assert.False(t, got.APIGone)
+	})
+
+	t.Run("a lost or deleting Shoot forgets it", func(t *testing.T) {
+		t.Parallel()
+		seen := storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, APIAvailable: true}
+		for _, observed := range []*gardener.ShootStatus{
+			{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			{Status: gardener.StatusDeleting, Message: "Shoot is being deleted"},
+		} {
+			got := nextShootStatus(seen, observed)
+			assert.True(t, got.APIGone, observed.Status)
+		}
+	})
 }

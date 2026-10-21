@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -32,25 +33,57 @@ func (s *Server) GetNodePool(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get node pool: %w", err))
 	}
 
-	runtime := s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1)[nodePool.Name]
+	runtime := runtimeForPool(s.nodePoolRuntimes(ctx, nodePool.ClusterID, 1), nodePool.Name)
+	// The by-ID row has the list row's columns.
+	row := db.NodePoolListByClusterIDRow(nodePool)
 
 	return organizationv1.GetNodePoolResponse_builder{
-		NodePool: nodePoolFromRow(&nodePool, runtime),
+		NodePool: nodePoolFromRow(&row, runtime),
 	}.Build(), nil
 }
 
 // The pool as the database holds it, filled out with what the cluster reports
-// about it. An empty runtime (no metrics backend) leaves the live fields at
-// their zero value, which the console reads as "unknown".
-func nodePoolFromRow(row *db.TenantNodePool, runtime nodePoolRuntime) *organizationv1.NodePool {
-	return organizationv1.NodePool_builder{
-		Id:           row.ID.String(),
-		Name:         row.Name,
-		MachineType:  row.MachineType,
-		CurrentNodes: runtime.nodes,
-		MinNodes:     row.AutoscaleMin,
-		MaxNodes:     row.AutoscaleMax,
-		Status:       runtime.status(),
-		Version:      runtime.version,
+// about it. While the worker says a change is still landing (status not
+// ready), that verdict wins over metrics: a pool whose machines never came up
+// has no metrics at all. Once ready, live metrics health takes over. The
+// pool's own latest sync row, fundament applying its last change, is reported
+// next to that, never folded into it.
+func nodePoolFromRow(row *db.NodePoolListByClusterIDRow, runtime nodePoolRuntime) *organizationv1.NodePool {
+	status := runtime.status()
+	message := ""
+	if row.Status.Valid {
+		switch dbconst.NodePoolStatus(row.Status.String) {
+		case dbconst.NodePoolStatus_Progressing:
+			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_PROVISIONING
+		case dbconst.NodePoolStatus_Waiting:
+			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_WAITING_FOR_MACHINES
+			message = row.StatusMessage.String
+		case dbconst.NodePoolStatus_Error:
+			status = organizationv1.NodePoolStatus_NODE_POOL_STATUS_FAILED
+			message = row.StatusMessage.String
+		case dbconst.NodePoolStatus_Ready:
+			// metrics runtime stands
+		default:
+			panic(fmt.Sprintf("unhandled node pool status: %q", row.Status.String))
+		}
+	}
+	pool := organizationv1.NodePool_builder{
+		Id:            row.ID.String(),
+		Name:          row.Name,
+		MachineType:   row.MachineType,
+		CurrentNodes:  runtime.nodes,
+		MinNodes:      row.AutoscaleMin,
+		MaxNodes:      row.AutoscaleMax,
+		Status:        status,
+		StatusMessage: message,
+		Version:       runtime.version,
 	}.Build()
+	if row.SyncStatus.Valid {
+		pool.SetSyncStatus(row.SyncStatus.String)
+	}
+	syncMessage, isError := syncError(row.SyncStatus, row.SyncError)
+	if isError {
+		pool.SetSyncError(syncMessage)
+	}
+	return pool
 }

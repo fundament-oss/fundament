@@ -5,6 +5,7 @@ package gardener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -25,6 +26,10 @@ const (
 	// written by cluster-worker at shoot creation.
 	LabelOrganizationID = "fundament.io/organization-id"
 )
+
+// ErrShootNotFound means no Shoot carries the cluster's ID yet, e.g. because
+// cluster-worker has not created it.
+var ErrShootNotFound = errors.New("no shoot found")
 
 // AdminKubeconfig holds the result of an AdminKubeconfigRequest.
 type AdminKubeconfig struct {
@@ -74,7 +79,7 @@ func (c *Client) FindShoot(ctx context.Context, clusterID string) (*gardencorev1
 	}
 
 	if len(shootList.Items) == 0 {
-		return nil, fmt.Errorf("no shoot found for cluster %s", clusterID)
+		return nil, fmt.Errorf("%w for cluster %s", ErrShootNotFound, clusterID)
 	}
 	if len(shootList.Items) > 1 {
 		// Admin-credentialed traffic must never route to an arbitrary shoot.

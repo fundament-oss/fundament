@@ -6,6 +6,13 @@ export interface AppConfiguration {
   /** The staff fleet API (fleet.v1, FUN-23). Optional: the Platform section
    *  says it is not available when this is empty. */
   platformApiUrl?: string;
+
+  /**
+   * The same site on the PoC. Set only in a test environment (PR previews, the
+   * sandbox): a banner above the app then says so and links here. Empty means
+   * this is the real thing and there is no banner.
+   */
+  pocUrl?: string;
 }
 
 @Injectable({

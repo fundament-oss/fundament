@@ -19,6 +19,7 @@ type OrganizationCmd struct {
 	List   OrganizationListCmd   `cmd:"" help:"List all organizations."`
 	Delete OrganizationDeleteCmd `cmd:"" help:"Delete an organization, revoking its memberships and API keys."`
 	Member OrganizationMemberCmd `cmd:"" help:"Manage organization members."`
+	Quota  OrganizationQuotaCmd  `cmd:"" help:"Manage what an organization may build: its cluster and node quotas."`
 }
 
 // OrganizationCreateCmd creates a new organization.

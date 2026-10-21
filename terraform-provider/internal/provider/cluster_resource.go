@@ -60,8 +60,12 @@ func (r *ClusterResource) Metadata(ctx context.Context, req resource.MetadataReq
 func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a Kubernetes cluster in Fundament.\n\n" +
-			"A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out " +
+			"A create waits until Gardener has built the cluster and it serves; an update until Gardener has rolled out " +
 			"the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. " +
+			"The wait does not hold out for health: once the change is applied and no rollout is running, a cluster " +
+			"that reports `starting` (health checks settling) or `unhealthy` (a health condition failing, such as a " +
+			"node pool that cannot get machines) ends the wait too — the apply succeeds with a warning and Gardener " +
+			"keeps working on the cluster. " +
 			"An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the " +
 			"cluster does not run within the timeout.\n\n" +
 			"When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. " +
@@ -95,7 +99,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
+				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
 				Computed:    true,
 			},
 		},
@@ -215,6 +219,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		}
 		resp.Diagnostics.AddError("Cluster Did Not Start", detail)
 		return
+	}
+	if warning := clusterNotSettledWarning(cluster); warning != "" {
+		resp.Diagnostics.AddWarning("Cluster Created But Not Settled", fmt.Sprintf("Cluster %q: %s", plan.Name.ValueString(), warning))
 	}
 
 	plan.Status = types.StringValue(clusterStatusToString(cluster.GetStatus()))
@@ -432,6 +439,9 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 		resp.Diagnostics.AddError("Cluster Update Did Not Complete", detail)
 		return
+	}
+	if warning := clusterNotSettledWarning(cluster); warning != "" {
+		resp.Diagnostics.AddWarning("Cluster Updated But Not Settled", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), warning))
 	}
 
 	// Update the plan with the server response

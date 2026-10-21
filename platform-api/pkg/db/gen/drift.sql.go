@@ -30,10 +30,11 @@ SELECT
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE
     tenant.clusters.deleted IS NULL
     AND tenant.organizations.deleted IS NULL
-    AND tenant.clusters.outbox_status = 'completed'
+    AND tenant.cluster_sync_state.outbox_status = 'completed'
     AND NOT EXISTS (
         SELECT 1
         FROM tenant.gardener_shoots

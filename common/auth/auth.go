@@ -32,8 +32,10 @@ const (
 type TokenType = string
 
 const (
-	TokenTypeUser   TokenType = "fundament-user"
-	TokenTypePlugin TokenType = "fundament-plugin"
+	TokenTypeUser TokenType = "fundament-user"
+	// TokenTypeDCIMUser marks a staff session token minted by dcim-authn-api.
+	TokenTypeDCIMUser TokenType = "dcim-user"
+	TokenTypePlugin   TokenType = "fundament-plugin"
 	// TokenTypeWorkload marks a WorkloadToken: a workload on one cluster (FUN-22).
 	// Parsed only by ParseWorkloadToken, never by Validator.
 	TokenTypeWorkload TokenType = "fundament-workload" //nolint:gosec // audience label, not a credential
@@ -155,8 +157,10 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
+	// The failed subject is not echoed into the log: it is unparsed,
+	// attacker-controllable input from an otherwise well-signed token.
 	if _, err := uuid.Parse(claims.Subject); err != nil {
-		v.logger.Debug("invalid user ID in token subject", "subject", claims.Subject)
+		v.logger.Debug("invalid user ID in token subject")
 		return nil, fmt.Errorf("invalid user ID in token subject: %w", err)
 	}
 

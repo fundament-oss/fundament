@@ -69,12 +69,18 @@ func (s *Server) CreateCluster(
 			}
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("a cluster with the name %q already exists", req.GetName()))
 		}
-		// Composite FK: the (region, version) pair vanished from the catalog
-		// between resolve and insert.
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok &&
-			pgErr.Code == pgerrcode.ForeignKeyViolation && pgErr.ConstraintName == dbconst.ConstraintClustersFkRegionVersion {
-			return nil, connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("kubernetes version %q is not offered in region %q", req.GetKubernetesVersion(), req.GetRegion()))
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			// The quota trigger: the organization is at its cluster quota. Its
+			// text names the quota and is written to be shown to the user.
+			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintClusterQuotaExceeded {
+				return nil, connect.NewError(connect.CodeResourceExhausted, errors.New(pgErr.Message))
+			}
+			// Composite FK: the (region, version) pair vanished from the catalog
+			// between resolve and insert.
+			if pgErr.Code == pgerrcode.ForeignKeyViolation && pgErr.ConstraintName == dbconst.ConstraintClustersFkRegionVersion {
+				return nil, connect.NewError(connect.CodeInvalidArgument,
+					fmt.Errorf("kubernetes version %q is not offered in region %q", req.GetKubernetesVersion(), req.GetRegion()))
+			}
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}

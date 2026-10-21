@@ -1,4 +1,5 @@
 mod cert-manager
+mod cloudnativepg
 mod external-dns
 mod openfsc
 mod envoy-gateway 'gateway-api/envoy-gateway'

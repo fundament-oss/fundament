@@ -53,22 +53,27 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		}
 	}
 
-	// Drift detection: synced clusters missing in Gardener
+	// Drift detection: clusters missing in Gardener. The insert decides whether
+	// one is repaired (its latest sync completed and nothing is queued).
 	var driftedCount int
 	for _, cluster := range dbClusters {
-		if cluster.HasCompletedOutbox {
-			if _, exists := shootByClusterID[cluster.ID]; !exists {
-				h.logger.Warn("drift detected: shoot missing in Gardener",
-					"cluster_id", cluster.ID, "name", cluster.Name)
-				if err := h.queries.OutboxInsertReconcile(ctx, db.OutboxInsertReconcileParams{
-					ClusterID:  pgtype.UUID{Bytes: cluster.ID, Valid: true},
-					MaxRetries: h.cfg.MaxRetries,
-				}); err != nil {
-					h.logger.Error("failed to insert reconcile outbox row", "cluster_id", cluster.ID, "error", err)
-				}
-				driftedCount++
-			}
+		_, exists := shootByClusterID[cluster.ID]
+		if exists {
+			continue
 		}
+		queued, err := h.queries.OutboxInsertReconcile(ctx, db.OutboxInsertReconcileParams{
+			ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
+		})
+		if err != nil {
+			h.logger.Error("failed to insert reconcile outbox row", "cluster_id", cluster.ID, "error", err)
+			continue
+		}
+		if queued == 0 {
+			continue
+		}
+		h.logger.Warn("drift detected: shoot missing in Gardener",
+			"cluster_id", cluster.ID, "name", cluster.Name)
+		driftedCount++
 	}
 
 	// Orphan cleanup: shoots in Gardener without a DB cluster

@@ -195,6 +195,10 @@ type MenuEntry struct {
 	// Label overrides the sidebar entry text. When empty the console derives a
 	// label from the CRD name, which mangles the full "<plural>.<group>" form.
 	Label string `yaml:"label"`
+	// SingularLabel names one item where the console speaks of a single
+	// resource, such as the "New database…" button. When empty the console
+	// uses the CRD kind.
+	SingularLabel string `yaml:"singularLabel"`
 }
 
 // ComponentMapping maps a CRD to custom UI component names.

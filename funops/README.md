@@ -13,9 +13,17 @@ funops organization delete <name>
 funops organization member add <organization> <user-id|email> [--permission viewer|admin] [--create-user]
 funops organization member list <organization>
 funops organization member remove <organization> <user-id|email>
+funops organization quota get-clusters <organization>
+funops organization quota set-clusters <organization> <count>
+funops organization quota list-nodes <organization>
+funops organization quota set-nodes <organization> <region> <machine-type> <max-nodes>
 funops user create <email> [--name <name>]
 funops user list [--organization <name>] [--without-organization]
 funops user delete <user-id|email>
+funops plugin list [--status <status|all>]
+funops plugin approve <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] [--feedback <text>]
+funops plugin request-changes <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --feedback <text>
+funops plugin reject <plugin-id|plugin> <version> --reviewer <user-id|email> [--organization <name>] --reason <incomplete_metadata|duplicate|security_concerns|naming_guidelines|out_of_scope|other> [--feedback <text>]
 ```
 
 Signing in never creates an organization. A new user shows up in
@@ -33,11 +41,37 @@ says otherwise; a new membership defaults to viewer. An invitation is not
 membership: `user list` shows it in its own column, and neither
 `--organization` nor `--without-organization` counts it.
 
+`funops organization quota` sets what an organization may build. A new one
+may have one cluster and no node pools of its own (a cluster without pools
+runs on the default worker pool, which is outside the quota), so `set-nodes`
+comes before anyone adds a pool and `set-clusters` before a second cluster.
+The node quota is per region
+and machine type and caps the sum of the maximum sizes of the organization's
+node pools of that type. A quota only stops something new: lowering it below
+what is in use is allowed, leaves the existing clusters and pools alone, and
+`quota get-clusters` and `quota list-nodes` show the excess.
+
+Upgrading an installation to the release that introduces quotas puts every
+existing organization at one cluster and no node quota, while its clusters and
+pools keep running. Review each one right after the migration:
+`quota get-clusters` and `quota list-nodes` show what is in use, the latter
+including machine types that have no quota row yet, and
+`set-clusters` and `set-nodes` give it room before anyone adds a cluster or a
+pool.
+
 `funops organization delete` soft-deletes the organization and revokes its
 memberships and API keys. It refuses while the organization still has clusters,
 including deleted ones whose shoot Gardener has not removed yet, or publishes
 plugins. The name of a deleted organization that ever had a cluster cannot be
 reused, because its Gardener project is named after it and is not removed yet.
+
+The plugin commands are the operator path to the same review decisions the
+marketplace admin console makes ([FUN-20](../docs/funs/FUN-20.adoc)): only a
+pending version with an open submission round can be decided, approval is what
+publishes it, and the decision is recorded on the round under the reviewer
+named by `--reviewer` (a DCIM staff user). A plugin is addressed by the ID
+`funops plugin list` shows, or by name with `--organization` — plugin names
+are unique only within an organization.
 
 Against the local development instance, run it as `just funops <args>` from the
 repo root. For other installations, see the

@@ -4,7 +4,7 @@ page_title: "fundament_cluster Resource - fundament"
 subcategory: ""
 description: |-
   Manages a Kubernetes cluster in Fundament.
-  A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
+  A create waits until Gardener has built the cluster and it serves; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. The wait does not hold out for health: once the change is applied and no rollout is running, a cluster that reports starting (health checks settling) or unhealthy (a health condition failing, such as a node pool that cannot get machines) ends the wait too — the apply succeeds with a warning and Gardener keeps working on the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
   When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run tofu untaint on its address to keep it, and set timeouts { create = ... } to wait longer next time. A cluster whose deletion did not finish stays in the state, and the next refresh shows it as deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Manages a Kubernetes cluster in Fundament.
 
-A create waits until Gardener has built the cluster and its nodes; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
+A create waits until Gardener has built the cluster and it serves; an update until Gardener has rolled out the change, such as a Kubernetes upgrade; a destroy until Gardener has removed the cluster. The wait does not hold out for health: once the change is applied and no rollout is running, a cluster that reports `starting` (health checks settling) or `unhealthy` (a health condition failing, such as a node pool that cannot get machines) ends the wait too — the apply succeeds with a warning and Gardener keeps working on the cluster. An apply fails when Fundament gives up applying a change, for example because Gardener rejects it, or when the cluster does not run within the timeout.
 
 When a create fails after Fundament has accepted the cluster, OpenTofu marks it tainted and the next apply deletes and recreates it. If only the wait failed (a timeout, an interruption, a lost connection), Fundament keeps building it: run `tofu untaint` on its address to keep it, and set `timeouts { create = ... }` to wait longer next time. A cluster whose deletion did not finish stays in the state, and the next refresh shows it as deleting: the next destroy waits for it, and the next apply recreates it once it is gone.
 
@@ -50,7 +50,7 @@ resource "fundament_cluster" "example" {
 ### Read-Only
 
 - `id` (String) The unique identifier of the cluster.
-- `status` (String) The current status of the cluster: provisioning, running, upgrading (Gardener rolls out a change; the cluster stays usable), error (Gardener reports a problem, which it usually retries), deleting or stopped.
+- `status` (String) The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), deleting or stopped.
 
 <a id="nestedblock--node_pool"></a>
 ### Nested Schema for `node_pool`

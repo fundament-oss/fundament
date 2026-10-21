@@ -13,13 +13,20 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
+	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/common/shootidentity"
 )
 
 type fakeClusters []uuid.UUID
 
-func (f fakeClusters) ClusterListReady(context.Context) ([]uuid.UUID, error) { return f, nil }
+func (f fakeClusters) ClusterListAccessible(context.Context) ([]db.ClusterListAccessibleRow, error) {
+	rows := make([]db.ClusterListAccessibleRow, 0, len(f))
+	for _, id := range f {
+		rows = append(rows, db.ClusterListAccessibleRow{ID: id, Ready: true})
+	}
+	return rows, nil
+}
 
 func newTestHandler(t *testing.T, clusters ...uuid.UUID) (*Handler, *shoot.MockShootAccess) {
 	t.Helper()

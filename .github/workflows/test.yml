@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
 
+# Only runs of the same PR share a group; master pushes and scheduled runs never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -322,6 +327,82 @@ jobs:
         working-directory: marketplace-registry-api
         run: go test ./... -count=1
 
+  authn-api:
+    runs-on: ubuntu-24.04
+    # Its own database root: each job starts a postmaster, and two of them
+    # cannot share one PGDATA.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-authn
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-authn-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (authn-api)
+        working-directory: authn-api
+        run: go test ./... -count=1
+
+  dcim-authn-api:
+    runs-on: ubuntu-24.04
+    # Its own database root: each job starts a postmaster, and two of them
+    # cannot share one PGDATA.
+    env:
+      FUNDAMENT_TEST_CACHE_DIR: /tmp/fundament-test-pg-dcim-authn
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}
+          key: embedded-pg-dcim-authn-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (dcim-authn-api)
+        working-directory: dcim-authn-api
+        run: go test ./... -count=1
+
   marketplace-admin-api:
     runs-on: ubuntu-24.04
     # Its own database root: each marketplace job starts a postmaster, and two
@@ -422,7 +503,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|funops|dcim-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api|platform-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authn-api|authz-worker|cluster-worker|common|funops|dcim-api|dcim-authn-api|marketplace-catalog-api|marketplace-registry-api|marketplace-admin-api|platform-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04
@@ -507,6 +588,21 @@ jobs:
 
       - name: Run tests
         working-directory: plugins/storage/ceph-rook/console-test
+        run: bun test
+
+  # Plain ES modules like ceph-rook's console; bun test needs no package.json.
+  cloudnativepg-console:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Run tests
+        working-directory: plugins/cloudnativepg/console-test
         run: bun test
 
   # The docs image build in build.yml is gated behind `should_deploy`, so it is

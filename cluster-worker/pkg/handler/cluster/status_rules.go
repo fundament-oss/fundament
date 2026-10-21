@@ -19,6 +19,9 @@ type storedShootState struct {
 	// LastWarning is the message of the latest status_warning event. It is
 	// only loaded when Gardener reports an error it retries.
 	LastWarning string
+	// APIAvailable is set once the shoot's API server was seen available
+	// (shoot_api_available).
+	APIAvailable bool
 }
 
 // progressRecord is the cluster's latest status_progressing event: when, and
@@ -48,7 +51,19 @@ type shootStatusUpdate struct {
 	// InsertReady is set on a transition into ready: the ready outbox row fans
 	// out to the handlers that provision a freshly ready cluster.
 	InsertReady bool
+	// APIAvailable records that the API server is available; the first time
+	// is kept. APIGone forgets it: the Shoot is gone or being deleted.
+	APIAvailable bool
+	APIGone      bool
+	// InsertAPIAvailable is set when the API server of a cluster that was not
+	// ready is first seen available, at the latest when it turns ready: the
+	// api_available outbox row fans out to the handlers that give users and
+	// the proxy access, so kubectl works while the worker nodes still join.
+	InsertAPIAvailable bool
 }
+
+// msgAPIServerAvailable is the message of the status_api_available event.
+const msgAPIServerAvailable = "Kubernetes API server is available"
 
 // addProgressEvent records Gardener's progress message while an operation
 // runs: while the cluster is progressing, or ready and updating. The
@@ -81,20 +96,57 @@ func addProgressEvent(update *shootStatusUpdate, last progressRecord, now time.T
 // status, message and health as stored, and nothing to record.
 func (u *shootStatusUpdate) unchanged(stored storedShootState) bool {
 	return u.Status == stored.Status && u.Message == stored.Message && u.Health == stored.Health &&
-		len(u.Events) == 0 && !u.InsertReady
+		len(u.Events) == 0 && !u.InsertReady &&
+		!(u.APIAvailable && !stored.APIAvailable) && !u.APIGone
 }
 
 // nextShootStatus decides what a status check writes, given the stored row and
 // what Gardener reports. It is pure so every rule can be tested without a
 // database.
 func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
+	update := nextLifecycleStatus(stored, observed)
+	switch {
+	// A Shoot that turns ready has a working API server, whether or not the
+	// care controller has said so yet: api_available is the one event that
+	// gives users and the proxy their access, so it must not be missed.
+	case observed.APIServerAvailable || update.InsertReady:
+		update.APIAvailable = true
+		// A cluster that was ready before shoot_api_available existed got its
+		// access then; it only has the column filled in.
+		if !stored.APIAvailable && stored.Status != gardener.StatusReady {
+			update.InsertAPIAvailable = true
+			update.Events = append(update.Events, statusEvent{Type: dbconst.ClusterEventEventType_StatusApiAvailable, Message: msgAPIServerAvailable})
+		}
+	case stored.APIAvailable && shootGone(observed):
+		update.APIGone = true
+	}
+	return update
+}
+
+// shootGone reports whether Gardener says the Shoot is gone or going: a
+// recreated Shoot's API server is announced again.
+func shootGone(observed *gardener.ShootStatus) bool {
+	switch observed.Status {
+	case gardener.StatusDeleting, gardener.StatusDeleted:
+		return true
+	case gardener.StatusPending:
+		return observed.Message == gardener.MsgShootNotFound
+	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
+		return false
+	default:
+		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
+	}
+}
+
+// nextLifecycleStatus is nextShootStatus without the API server availability.
+func nextLifecycleStatus(stored storedShootState, observed *gardener.ShootStatus) shootStatusUpdate {
 	// Gardener reconciles running shoots periodically (gardenlet SyncPeriod, 1h
 	// by default). That is not a lifecycle change for a ready cluster, so it
 	// stays ready, but its health follows Gardener's verdict: a reconcile that
 	// breaks the cluster, or never finishes, must not look healthy. Updates
 	// fundament pushes are marked updating by the sync handler instead.
 	if stored.Status == gardener.StatusReady && stored.Updating {
-		if update, ok := readyDuringUpdate(stored.Health, observed); ok {
+		if update, ok := readyDuringUpdate(stored, observed); ok {
 			return update
 		}
 	}
@@ -167,28 +219,42 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 // tracked, but a rolling update takes conditions down on purpose, so its
 // changes record no events. Anything else (a failure, a lost or deleted
 // Shoot) is not handled here and ends the update.
-func readyDuringUpdate(storedHealth dbconst.ClusterShootHealth, observed *gardener.ShootStatus) (shootStatusUpdate, bool) {
+func readyDuringUpdate(stored storedShootState, observed *gardener.ShootStatus) (shootStatusUpdate, bool) {
 	switch observed.Status {
 	case gardener.StatusProgressing:
+		health := healthOf(stored.Health, observed)
 		return shootStatusUpdate{
 			Status:   gardener.StatusReady,
-			Message:  observed.Message,
-			Health:   healthOf(storedHealth, observed),
+			Message:  settleMessage(stored, health, observed.Message),
+			Health:   health,
 			Updating: true,
 		}, true
 	case gardener.StatusReady:
-		health := healthOf(storedHealth, observed)
+		health := healthOf(stored.Health, observed)
+		message := settleMessage(stored, health, readyMessage(health))
 		return shootStatusUpdate{
 			Status:  gardener.StatusReady,
-			Message: readyMessage(health),
+			Message: message,
 			Health:  health,
-			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: readyMessage(health)}},
+			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: message}},
 		}, true
 	case gardener.StatusPending, gardener.StatusError, gardener.StatusDeleting, gardener.StatusDeleted:
 		return shootStatusUpdate{}, false
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
 	}
+}
+
+// settleMessage keeps MsgShootAwaitingHealth on a cluster that has never been
+// healthy while it still is not: organization-api keys the STARTING status on
+// this exact text, so a reconcile or update mid-settle must not relabel a
+// merely settling cluster unhealthy. The first healthy verdict ends the
+// settle; the message then moves on for good.
+func settleMessage(stored storedShootState, health dbconst.ClusterShootHealth, message string) string {
+	if stored.Message == gardener.MsgShootAwaitingHealth && health != dbconst.ClusterShootHealth_Healthy {
+		return gardener.MsgShootAwaitingHealth
+	}
+	return message
 }
 
 // readyDuringReconcile keeps a ready cluster ready while Gardener reconciles
@@ -198,7 +264,7 @@ func readyDuringReconcile(stored storedShootState, observed *gardener.ShootStatu
 	update := shootStatusUpdate{Status: gardener.StatusReady, Message: stored.Message, Health: healthOf(stored.Health, observed)}
 	switch {
 	case update.Health != dbconst.ClusterShootHealth_Healthy:
-		update.Message = observed.Message
+		update.Message = settleMessage(stored, update.Health, observed.Message)
 	case stored.Health != dbconst.ClusterShootHealth_Healthy:
 		update.Message = gardener.MsgShootReady
 	}

@@ -48,6 +48,15 @@
           </p>
         </nldd-rich-text>
         <nldd-spacer size="16"></nldd-spacer>
+        <!-- An invitation grants an existing account standing here; it does
+             not make an account. Said before the form, so nobody fills it in
+             for someone who cannot sign in yet. -->
+        <nldd-banner
+          variant="warning"
+          text="This does not create a new account"
+          supporting-text="Inviting only works for people who already have a Fundament account. New users must be requested from the Fundament operators in the ~users-poc channel on Digilab Mattermost."
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
         <nldd-form
           (submit)="submitInvitation($event)"
           (keydown.enter)="submitInvitation($event)"

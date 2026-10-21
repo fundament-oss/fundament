@@ -12,16 +12,21 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/oauth2"
 
+	"github.com/fundament-oss/fundament/common/psqldb"
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/dcimauthn"
+	"github.com/fundament-oss/fundament/dcim-authn-api/pkg/proto/gen/dcimauthn/v1/dcimauthnv1connect"
 )
 
 type config struct {
-	JWTSecret          string        `env:"JWT_SECRET,required,notEmpty"`
+	JWTSecret          string `env:"JWT_SECRET,required,notEmpty"`
+	Database           psqldb.Config
 	OIDCIssuer         string        `env:"OIDC_ISSUER,required,notEmpty" envDefault:"https://dex-dcim.fundament.localhost:8443"`
 	OIDCDiscoveryURL   string        `env:"OIDC_DISCOVERY_URL"`
 	ClientID           string        `env:"OIDC_CLIENT_ID,required,notEmpty" envDefault:"dcim"`
@@ -106,6 +111,15 @@ func run() error {
 	}
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
+	// The login flow provisions dcim.users entries just-in-time, so the
+	// service fails at startup rather than on the first login when the
+	// database is misconfigured.
+	database, err := psqldb.New(ctx, logger, cfg.Database)
+	if err != nil {
+		return fmt.Errorf("connecting to database: %w", err)
+	}
+	defer database.Close()
+
 	serverCfg := &dcimauthn.Config{
 		TokenExpiry:  cfg.TokenExpiry,
 		JWTSecret:    []byte(cfg.JWTSecret),
@@ -114,17 +128,17 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore)
+	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore, db.New(database.Pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(http.MethodGet+" /livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc(http.MethodGet+" /readyz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+	// readyz reports the database because login and refresh can serve nothing
+	// without it; livez deliberately does not, so a brief outage does not get
+	// the container killed and restarted.
+	mux.HandleFunc(http.MethodGet+" /readyz", readyz(logger, database.Pool))
 	if cfg.PasswordLoginEnabled {
 		mux.HandleFunc(http.MethodPost+" /login/password", server.HandlePasswordLogin)
 	} else {
@@ -134,12 +148,15 @@ func run() error {
 	mux.HandleFunc(http.MethodGet+" /callback", server.HandleCallback)
 	mux.HandleFunc(http.MethodPost+" /refresh", server.HandleRefresh)
 	mux.HandleFunc(http.MethodPost+" /logout", server.HandleLogout)
-	mux.HandleFunc(http.MethodGet+" /userinfo", server.HandleUserInfo)
+
+	// GetUserInfo is Connect RPC, like authn-api's; the browser flow above
+	// stays plain HTTP because it is driven by redirects and cookies.
+	mux.Handle(dcimauthnv1connect.NewAuthnServiceHandler(server))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "Connect-Protocol-Version", "Connect-Timeout-Ms"},
 		AllowCredentials: true,
 	})
 
@@ -155,4 +172,22 @@ func run() error {
 	}
 
 	return nil
+}
+
+// The probe is anonymous and publicly routed, and a pgx error names the host,
+// port, database and role, so the detail goes to the log and never to the body.
+func readyz(logger *slog.Logger, pool *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(ctx); err != nil {
+			logger.ErrorContext(ctx, "readiness probe failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database unavailable"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}
 }

@@ -153,13 +153,14 @@ func authWithConsoleToken(t *testing.T, userID uuid.UUID) connect.ClientOption {
 func mintToken(t *testing.T, userID uuid.UUID) string {
 	t.Helper()
 
-	// Mirrors dcim-authn-api's mintJWT: DCIM tokens carry no audience and no
-	// organization ids.
+	// Mirrors dcim-authn-api's mintJWT: DCIM tokens carry the dcim-user
+	// audience and no organization ids.
 	now := time.Now()
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.DCIMIssuer,
 			Subject:   userID.String(),
+			Audience:  jwt.ClaimStrings{auth.TokenTypeDCIMUser},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},

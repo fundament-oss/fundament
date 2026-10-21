@@ -32,20 +32,24 @@ const (
 type ClusterEventEventType string
 
 const (
-	ClusterEventEventType_SyncRequested     ClusterEventEventType = "sync_requested"
-	ClusterEventEventType_SyncClaimed       ClusterEventEventType = "sync_claimed"
-	ClusterEventEventType_SyncSucceeded     ClusterEventEventType = "sync_succeeded"
-	ClusterEventEventType_SyncFailed        ClusterEventEventType = "sync_failed"
-	ClusterEventEventType_StatusProgressing ClusterEventEventType = "status_progressing"
-	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
-	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
-	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
-	ClusterEventEventType_StatusHealthy     ClusterEventEventType = "status_healthy"
-	ClusterEventEventType_StatusUnhealthy   ClusterEventEventType = "status_unhealthy"
-	ClusterEventEventType_StatusWarning     ClusterEventEventType = "status_warning"
-	ClusterEventEventType_StatusLost        ClusterEventEventType = "status_lost"
-	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
-	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_SyncRequested      ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed        ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded      ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed         ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_StatusProgressing  ClusterEventEventType = "status_progressing"
+	ClusterEventEventType_StatusReady        ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError        ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted      ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusHealthy      ClusterEventEventType = "status_healthy"
+	ClusterEventEventType_StatusUnhealthy    ClusterEventEventType = "status_unhealthy"
+	ClusterEventEventType_StatusWarning      ClusterEventEventType = "status_warning"
+	ClusterEventEventType_StatusLost         ClusterEventEventType = "status_lost"
+	ClusterEventEventType_StatusApiAvailable ClusterEventEventType = "status_api_available"
+	ClusterEventEventType_UserSyncSucceeded  ClusterEventEventType = "user_sync_succeeded"
+	ClusterEventEventType_UserSyncFailed     ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_NodepoolWaiting    ClusterEventEventType = "nodepool_waiting"
+	ClusterEventEventType_NodepoolError      ClusterEventEventType = "nodepool_error"
+	ClusterEventEventType_NodepoolReady      ClusterEventEventType = "nodepool_ready"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
@@ -60,11 +64,12 @@ const (
 type ClusterOutboxEvent string
 
 const (
-	ClusterOutboxEvent_Created   ClusterOutboxEvent = "created"
-	ClusterOutboxEvent_Updated   ClusterOutboxEvent = "updated"
-	ClusterOutboxEvent_Deleted   ClusterOutboxEvent = "deleted"
-	ClusterOutboxEvent_Reconcile ClusterOutboxEvent = "reconcile"
-	ClusterOutboxEvent_Ready     ClusterOutboxEvent = "ready"
+	ClusterOutboxEvent_Created      ClusterOutboxEvent = "created"
+	ClusterOutboxEvent_Updated      ClusterOutboxEvent = "updated"
+	ClusterOutboxEvent_Deleted      ClusterOutboxEvent = "deleted"
+	ClusterOutboxEvent_Reconcile    ClusterOutboxEvent = "reconcile"
+	ClusterOutboxEvent_Ready        ClusterOutboxEvent = "ready"
+	ClusterOutboxEvent_ApiAvailable ClusterOutboxEvent = "api_available"
 )
 
 // ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
@@ -156,6 +161,16 @@ const (
 	LogicalDeviceRole_ConsoleServer LogicalDeviceRole = "console_server"
 	LogicalDeviceRole_CableManager  LogicalDeviceRole = "cable_manager"
 	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
+)
+
+// NodePoolStatus represents valid values for tenant.node_pools.status.
+type NodePoolStatus string
+
+const (
+	NodePoolStatus_Progressing NodePoolStatus = "progressing"
+	NodePoolStatus_Waiting     NodePoolStatus = "waiting"
+	NodePoolStatus_Error       NodePoolStatus = "error"
+	NodePoolStatus_Ready       NodePoolStatus = "ready"
 )
 
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.

@@ -1,2 +1,11 @@
+<!-- Above the app, not in it: this says something about the site you are on
+     rather than about anything inside it. -->
+@if (pocUrl) {
+  <nldd-status-bar
+    variant="warning"
+    text="This is a test environment. Go to the Fundament PoC"
+    [attr.href]="pocUrl"
+  ></nldd-status-bar>
+}
 <router-outlet />
 <app-toast />

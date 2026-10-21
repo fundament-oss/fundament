@@ -11,25 +11,43 @@ WHERE tenant.organizations_users.id = @id;
 
 -- name: ProjectMemberGetForSync :one
 -- Get the user_id and cluster_id for a project_members row.
--- Only returns a result if the cluster is ready (shoot_status = 'ready').
--- Non-ready clusters are skipped — the event=ready trigger will handle them later.
+-- Only returns a result if the cluster's API server is reachable (it was seen
+-- available, or the cluster is ready from before that was recorded).
+-- Other clusters are skipped — the api_available event will handle them later.
 SELECT
     tenant.project_members.user_id,
-    tenant.projects.cluster_id
+    tenant.projects.cluster_id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS cluster_ready
 FROM tenant.project_members
 JOIN tenant.projects ON tenant.projects.id = tenant.project_members.project_id
 JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
 WHERE tenant.project_members.id = @id
-  AND tenant.clusters.shoot_status = 'ready'
+  AND (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
   AND tenant.clusters.deleted IS NULL;
 
--- name: ClusterListReadyForOrg :many
--- List all ready clusters for an organization.
+-- name: ClusterListAccessibleForOrg :many
+-- List an organization's clusters whose API server is reachable.
 -- Used by the UserSyncHandler when an org membership changes.
-SELECT tenant.clusters.id
+SELECT
+    tenant.clusters.id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS ready
 FROM tenant.clusters
 WHERE tenant.clusters.organization_id = @organization_id
-  AND tenant.clusters.shoot_status = 'ready'
+  AND (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
+  AND tenant.clusters.deleted IS NULL;
+
+-- name: ClusterListAccessible :many
+-- List all clusters whose API server is reachable: it was seen available, or
+-- the cluster is ready from before that was recorded. What users and the
+-- proxy need on a cluster (ServiceAccounts, namespaces, RBAC) is provisioned
+-- on these; what needs worker nodes waits for ClusterListReady. ready tells a
+-- cluster still being created apart: its API server may not answer from here
+-- yet, which a reconcile tick skips instead of counting as a failure.
+SELECT
+    tenant.clusters.id,
+    COALESCE(tenant.clusters.shoot_status = 'ready', false)::boolean AS ready
+FROM tenant.clusters
+WHERE (tenant.clusters.shoot_api_available IS NOT NULL OR tenant.clusters.shoot_status = 'ready')
   AND tenant.clusters.deleted IS NULL;
 
 -- name: ClusterListReady :many

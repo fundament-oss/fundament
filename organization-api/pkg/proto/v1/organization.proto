@@ -21,11 +21,9 @@ service OrganizationService {
   // UpdateOrganization updates the user's organization
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
 
-  // GetOrganizationLimits retrieves the resource limits for an organization
-  rpc GetOrganizationLimits(GetOrganizationLimitsRequest) returns (GetOrganizationLimitsResponse);
-
-  // UpdateOrganizationLimits sets the resource limits for an organization
-  rpc UpdateOrganizationLimits(UpdateOrganizationLimitsRequest) returns (UpdateOrganizationLimitsResponse);
+  // GetOrganizationQuotas shows what the current organization may build and
+  // what it has. Quotas are set by a platform operator; here they are read.
+  rpc GetOrganizationQuotas(GetOrganizationQuotasRequest) returns (GetOrganizationQuotasResponse);
 }
 
 // Organization information
@@ -66,6 +64,39 @@ message UpdateOrganizationRequest {
 // UpdateOrganization response
 message UpdateOrganizationResponse {}
 
+// GetOrganizationQuotas request. It has no fields: the organization is the
+// one named by the request's Fun-Organization header.
+message GetOrganizationQuotasRequest {}
+
+// GetOrganizationQuotas response
+message GetOrganizationQuotasResponse {
+  // How many clusters the organization may have, and has
+  ClusterQuota clusters = 10;
+  // Per region and machine type: how many nodes it may have, and has. Only
+  // offerings with a quota or with nodes in use are listed.
+  repeated NodeQuota nodes = 20;
+}
+
+// The cluster quota next to what counts against it
+message ClusterQuota {
+  // Maximum number of clusters
+  int32 quota = 10;
+  // Clusters counted against it: live ones, and deleted ones until torn down
+  int32 in_use = 20;
+}
+
+// A node quota next to what counts against it
+message NodeQuota {
+  // Region name
+  string region = 10;
+  // Machine type name
+  string machine_type = 20;
+  // Maximum nodes of this machine type in this region; 0 means none allowed
+  int32 quota = 30;
+  // The sum of the autoscale maxima of the organization's node pools of it
+  int32 in_use = 40;
+}
+
 // ListOrganizations request
 message ListOrganizationsRequest {}
 
@@ -74,66 +105,3 @@ message ListOrganizationsResponse {
   // List of organizations the user belongs to
   repeated Organization organizations = 10;
 }
-
-// OrganizationLimits holds the Kubernetes namespace LimitRange defaults
-message OrganizationLimits {
-  // 10, 20 and 30 carried the node caps (per cluster, per cluster's node pools
-  // and per node pool). They bound nobody: the organization admin that set them
-  // is the same role that creates and edits node pools.
-  reserved 10, 20, 30;
-  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
-  // Default memory request applied to containers via LimitRange (mebibytes)
-  int32 default_memory_request_mi = 40 [features.field_presence = EXPLICIT];
-  // Default memory limit applied to containers via LimitRange (mebibytes)
-  int32 default_memory_limit_mi = 50 [features.field_presence = EXPLICIT];
-  // Default CPU request applied to containers via LimitRange (millicores)
-  int32 default_cpu_request_m = 60 [features.field_presence = EXPLICIT];
-  // Default CPU limit applied to containers via LimitRange (millicores)
-  int32 default_cpu_limit_m = 70 [features.field_presence = EXPLICIT];
-}
-
-// GetOrganizationLimits request
-message GetOrganizationLimitsRequest {
-  // ID of the organization
-  string id = 10 [(buf.validate.field).string = {uuid: true}];
-}
-
-// GetOrganizationLimits response
-message GetOrganizationLimitsResponse {
-  // The current limits for the organization (absent fields mean no limit is set)
-  OrganizationLimits limits = 10;
-  // The platform default limits, used to pre-fill the form and by "Reset to defaults"
-  OrganizationLimits defaults = 20;
-}
-
-// UpdateOrganizationLimits request
-message UpdateOrganizationLimitsRequest {
-  // ID of the organization to update
-  string id = 10 [(buf.validate.field).string = {uuid: true}];
-  // 20, 30 and 40 carried the node caps, see OrganizationLimits.
-  reserved 20, 30, 40;
-  reserved max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool;
-  // Default memory request applied to containers via LimitRange (mebibytes)
-  int32 default_memory_request_mi = 50 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default memory limit applied to containers via LimitRange (mebibytes)
-  int32 default_memory_limit_mi = 60 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default CPU request applied to containers via LimitRange (millicores)
-  int32 default_cpu_request_m = 70 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-  // Default CPU limit applied to containers via LimitRange (millicores)
-  int32 default_cpu_limit_m = 80 [
-    features.field_presence = EXPLICIT,
-    (buf.validate.field).int32 = {gte: 1}
-  ];
-}
-
-// UpdateOrganizationLimits response
-message UpdateOrganizationLimitsResponse {}

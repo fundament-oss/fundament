@@ -15,7 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
 
-func Test_GetKubeconfig_ClusterNotReady(t *testing.T) {
+func Test_GetKubeconfig_BeforeReady(t *testing.T) {
 	t.Parallel()
 
 	orgID := uuid.New()
@@ -28,15 +28,14 @@ func Test_GetKubeconfig_ClusterNotReady(t *testing.T) {
 			Name:   "test-user",
 			OrgIDs: []uuid.UUID{orgID},
 		}),
+		WithKubeAPIProxy("https://k8s-api.example.com"),
 	)
 
 	token := env.createAuthnToken(t, userID)
-
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	// Create a cluster (shoot fields are not populated yet).
 	createReq := organizationv1.CreateClusterRequest_builder{
-		Name:              "not-ready-cluster",
+		Name:              "new-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
 	}.Build()
@@ -46,23 +45,29 @@ func Test_GetKubeconfig_ClusterNotReady(t *testing.T) {
 
 	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
-
 	clusterID := createRes.GetClusterId()
 
-	// GetKubeconfig should fail because shoot fields are not populated.
-	kcReq := organizationv1.GetKubeconfigRequest_builder{
-		ClusterId: clusterID,
-	}.Build()
+	kcReq := organizationv1.GetKubeconfigRequest_builder{ClusterId: clusterID}.Build()
 	kcCtx, kcCallInfo := connect.NewClientContext(context.Background())
 	kcCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 	kcCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.GetKubeconfig(kcCtx, kcReq)
+	// No shoot status yet: the kubeconfig is available from creation on.
+	res, err := client.GetKubeconfig(kcCtx, kcReq)
+	require.NoError(t, err)
+	assert.Contains(t, res.GetKubeconfigContent(), "server: https://k8s-api.example.com/clusters/"+clusterID)
 
+	// A soft-deleted cluster has no kubeconfig.
+	_, err = env.adminPool.Exec(t.Context(),
+		"UPDATE tenant.clusters SET deleted = now() WHERE id = $1",
+		clusterID,
+	)
+	require.NoError(t, err)
+
+	_, err = client.GetKubeconfig(kcCtx, kcReq)
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
-	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
-	assert.Contains(t, connectErr.Message(), "cluster not ready")
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
 }
 
 func Test_GetKubeconfig_Ready(t *testing.T) {

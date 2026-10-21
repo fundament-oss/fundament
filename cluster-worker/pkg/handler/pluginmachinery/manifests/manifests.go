@@ -66,6 +66,12 @@ const (
 	// --service-account-extend-token-expiration (on by default) turns a request
 	// for exactly 3607 seconds into a year-long token.
 	TokenExpirationSeconds int64 = 3600
+
+	// RunAsUser is the non-root uid the plugin-controller runs as. The image is
+	// built FROM scratch without a USER, and runAsNonRoot alone refuses an
+	// image that runs as root. 65532 is the conventional "nonroot" uid of
+	// distroless.
+	RunAsUser int64 = 65532
 )
 
 // Labels returns the label set applied to every shoot-side plugin machinery
@@ -194,6 +200,18 @@ func Deployment(params *DeploymentParams) *appsv1.Deployment {
 				ObjectMeta: metav1.ObjectMeta{Labels: selectorLabels},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: DeploymentName,
+					// Pod Security Standard "restricted", so the controller also
+					// starts on a shoot whose admission policies enforce it, such as
+					// Kyverno. FSGroup keeps the projected token readable.
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: new(true),
+						RunAsUser:    new(RunAsUser),
+						RunAsGroup:   new(RunAsUser),
+						FSGroup:      new(RunAsUser),
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
 					// The controller's fundament credential (FUN-22): a ServiceAccount
 					// token bound to this pod, audience-restricted to authn-api so it
 					// is useless against the shoot's own API server, rotated by kubelet
@@ -218,6 +236,13 @@ func Deployment(params *DeploymentParams) *appsv1.Deployment {
 							Name:  "plugin-controller",
 							Image: params.Image,
 							Env:   env,
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: new(false),
+								ReadOnlyRootFilesystem:   new(true),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"ALL"},
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      TokenVolumeName,
 								MountPath: TokenMountPath,

@@ -40,6 +40,9 @@ type MockShootAccess struct {
 	Roles map[uuid.UUID]map[string]MockClusterRole
 
 	// Configurable errors for testing
+	// EnsureNamespaceErrorFor fails EnsureNamespace for one cluster only,
+	// e.g. a shoot whose API server does not answer yet.
+	EnsureNamespaceErrorFor       map[uuid.UUID]error
 	EnsureNamespaceError          error
 	EnsureServiceAccountError     error
 	EnsureClusterRoleBindingError error
@@ -77,7 +80,7 @@ type MockClusterRole struct {
 
 // MockLimitRange is the in-memory representation of the managed LimitRange.
 type MockLimitRange struct {
-	Defaults LimitDefaults
+	Defaults ContainerDefaults
 	Labels   map[string]string
 }
 
@@ -102,6 +105,9 @@ func (m *MockShootAccess) EnsureNamespace(_ context.Context, clusterID uuid.UUID
 
 	if m.EnsureNamespaceError != nil {
 		return m.EnsureNamespaceError
+	}
+	if err := m.EnsureNamespaceErrorFor[clusterID]; err != nil {
+		return err
 	}
 
 	if m.Namespaces[clusterID] == nil {
@@ -417,7 +423,7 @@ func (m *MockShootAccess) HasCRB(clusterID, userID uuid.UUID) bool {
 	return ok
 }
 
-func (m *MockShootAccess) EnsureLimitRange(_ context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
+func (m *MockShootAccess) EnsureLimitRange(_ context.Context, clusterID uuid.UUID, namespace string, defaults ContainerDefaults, labels map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

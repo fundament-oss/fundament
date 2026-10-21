@@ -185,6 +185,20 @@ describe('App', () => {
     expect(navigatedTo).toEqual(['/organizations/acme-corp/clusters']);
   });
 
+  it('leaves the login page where it is, hand-off and all', async () => {
+    // A session turning up while the login page is open would otherwise move
+    // it to /organizations/acme-corp/login, which is no page, and the
+    // marketplace's hand-off would never be sent back.
+    const { app, navigatedTo } = await setUpShell(
+      '/login?app=marketplace-registry&path=%2Fmanage',
+      null,
+    );
+
+    await app.handleOrgPickerSelection(ORGANIZATION.id);
+
+    expect(navigatedTo).toEqual([]);
+  });
+
   // Signing in creates no organization. Someone in none gets the picker's
   // message rather than a blank pane, and stays there.
   it('shows the picker to someone in no organization', async () => {

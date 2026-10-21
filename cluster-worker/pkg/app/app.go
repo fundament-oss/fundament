@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,6 +54,10 @@ type Config struct {
 type GardenerConfig struct {
 	Mode       string `env:"MODE"`       // mock or real
 	Kubeconfig string `env:"KUBECONFIG"` // required when Mode == real
+	// SandboxKubeconfig, in mock mode, is a kubeconfig for the local plugin
+	// sandbox: project namespaces are created there instead of in memory, so
+	// plugins can use them. Local development only.
+	SandboxKubeconfig string `env:"SANDBOX_KUBECONFIG"`
 
 	ProviderType           string `env:"PROVIDER_TYPE"`            // e.g. local, metal
 	CloudProfile           string `env:"CLOUD_PROFILE"`            // e.g. local, metal
@@ -152,24 +157,26 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.Gardener.Mode, gardenerClient, logger)
+	shootAccess, err := createShootAccess(cfg.Gardener, gardenerClient, logger)
 	if err != nil {
 		return nil, err
 	}
 	ush := usersync.New(pool, shootAccess, logger)
 	registry.RegisterSync(handler.EntityOrgUser, ush)
 	registry.RegisterSync(handler.EntityProjectMember, ush)
-	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, ush)
+	// Access is provisioned as soon as the API server answers. api_available
+	// is recorded at the latest when the cluster turns ready, so it is the
+	// only event usersync needs.
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, ush)
 	registry.RegisterReconcile(ush)
 
 	// Namespace sync handler (v1/Namespace lifecycle on shoots). Shares the same
-	// ShootAccess instance as usersync and the outbox worker's MaxRetries so its
-	// reconcile enqueue uses the same exhaustion threshold. Like usersync, it
-	// also subscribes to the cluster-ready event to fan out a sync for every
+	// ShootAccess instance as usersync. Like usersync, it
+	// also subscribes to the api_available event to fan out a sync for every
 	// active namespace on the cluster.
-	nsh := namespacehandler.New(pool, shootAccess, cfg.Outbox.MaxRetries, logger)
+	nsh := namespacehandler.New(pool, shootAccess, logger)
 	registry.RegisterSync(handler.EntityNamespace, nsh)
-	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, nsh)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, nsh)
 	registry.RegisterReconcile(nsh)
 
 	// Plugin machinery handler (PluginInstallation CRD + plugin-controller on
@@ -181,10 +188,10 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterReconcile(pmh)
 
 	// kube-api-proxy identity (the SA + impersonation RBAC it uses to serve a
-	// user's namespace listing). Provisioned on cluster-ready, re-asserted on
-	// reconcile.
+	// user's namespace listing). Provisioned once the API server answers,
+	// re-asserted on reconcile.
 	pih := proxyidentity.New(pool, shootAccess, logger)
-	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, pih)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, pih)
 	registry.RegisterReconcile(pih)
 
 	// Both ShootAccess implementations read inventories too.
@@ -362,9 +369,23 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 	}
 }
 
-func createShootAccess(gardenerMode string, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
-	switch gardenerMode {
+func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger *slog.Logger) (shoot.ShootAccess, error) {
+	switch g.Mode {
 	case "mock":
+		if g.SandboxKubeconfig != "" {
+			kubeconfig, err := os.ReadFile(g.SandboxKubeconfig)
+			switch {
+			case err == nil:
+				logger.Info("using mock shoot access with namespaces on the plugin sandbox", "kubeconfig", g.SandboxKubeconfig)
+				return shoot.NewSandboxShootAccess(kubeconfig, logger)
+			case errors.Is(err, os.ErrNotExist):
+				// The Secret is created after the platform comes up (just
+				// plugin-sandbox-kubeconfig); Reloader restarts the pod then.
+				logger.Warn("sandbox kubeconfig not there yet, keeping namespaces in memory", "kubeconfig", g.SandboxKubeconfig)
+			default:
+				return nil, fmt.Errorf("read sandbox kubeconfig: %w", err)
+			}
+		}
 		logger.Info("using mock shoot access (in-memory)")
 		access := shoot.NewMockShootAccess(logger)
 		// The mock inventory runs each pool's autoscaler minimum of nodes, which
@@ -377,7 +398,7 @@ func createShootAccess(gardenerMode string, gardenerClient gardener.Client, logg
 		logger.Info("using real shoot access (AdminKubeconfigRequest)")
 		return shoot.NewRealShootAccess(gardenerClient, logger), nil
 	default:
-		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", gardenerMode)
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", g.Mode)
 	}
 }
 

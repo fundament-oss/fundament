@@ -49,7 +49,7 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	case handler.EntityProjectMember:
 		return h.syncProjectMember(ctx, id)
 	case handler.EntityCluster:
-		return h.syncClusterReady(ctx, id)
+		return h.syncClusterAccessible(ctx, id)
 	default:
 		return fmt.Errorf("unexpected entity type %s for user sync handler", sc.EntityType)
 	}
@@ -66,21 +66,32 @@ func (h *Handler) syncOrgUser(ctx context.Context, orgUserID uuid.UUID) error {
 		return fmt.Errorf("get org user: %w", err)
 	}
 
-	clusters, err := h.queries.ClusterListReadyForOrg(ctx, db.ClusterListReadyForOrgParams{
+	clusters, err := h.queries.ClusterListAccessibleForOrg(ctx, db.ClusterListAccessibleForOrgParams{
 		OrganizationID: ou.OrganizationID,
 	})
 	if err != nil {
-		return fmt.Errorf("list ready clusters for org: %w", err)
+		return fmt.Errorf("list accessible clusters for org: %w", err)
 	}
 
 	if len(clusters) == 0 {
-		h.logger.Debug("no ready clusters for org, skipping", "org_user_id", orgUserID, "org_id", ou.OrganizationID)
+		h.logger.Debug("no accessible clusters for org, skipping", "org_user_id", orgUserID, "org_id", ou.OrganizationID)
 		return nil
 	}
 
 	var errs []error
-	for _, clusterID := range clusters {
+	var unreachable error
+	var synced []uuid.UUID
+	for _, cluster := range clusters {
+		clusterID := cluster.ID
 		if err := h.syncUserToCluster(ctx, ou.UserID, clusterID); err != nil {
+			// A cluster still being created can be announced before its API
+			// server answers from here: retry later, not as a failure.
+			if !cluster.Ready && shoot.IsUnreachable(err) {
+				h.logger.Warn("cluster API server not reachable yet, deferring user sync",
+					"user_id", ou.UserID, "cluster_id", clusterID, "error", err)
+				unreachable = err
+				continue
+			}
 			h.logger.Error("failed to sync user to cluster",
 				"user_id", ou.UserID,
 				"cluster_id", clusterID,
@@ -89,11 +100,20 @@ func (h *Handler) syncOrgUser(ctx context.Context, orgUserID uuid.UUID) error {
 				fmt.Sprintf("Org user sync failed for user %s: %s", ou.UserID, err))
 			errs = append(errs, err)
 		} else {
-			h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncSucceeded,
-				fmt.Sprintf("Org user synced: %s", ou.UserID))
+			synced = append(synced, clusterID)
 		}
 	}
 
+	// Deferred for a cluster that does not answer yet, the row runs again and
+	// syncs these clusters again: record their success on that final run, not
+	// on every deferral.
+	if len(errs) == 0 && unreachable != nil {
+		return handler.NewShootUnreachableError(unreachable)
+	}
+	for _, clusterID := range synced {
+		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncSucceeded,
+			fmt.Sprintf("Org user synced: %s", ou.UserID))
+	}
 	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("sync org user %s: %w", orgUserID, err)
 	}
@@ -112,6 +132,9 @@ func (h *Handler) syncProjectMember(ctx context.Context, projectMemberID uuid.UU
 	}
 
 	if err := h.syncUserToCluster(ctx, pm.UserID, pm.ClusterID); err != nil {
+		if !pm.ClusterReady && shoot.IsUnreachable(err) {
+			return handler.NewShootUnreachableError(err)
+		}
 		h.createUserSyncEvent(ctx, pm.ClusterID, dbconst.ClusterEventEventType_UserSyncFailed,
 			fmt.Sprintf("Project member sync failed for user %s: %s", pm.UserID, err))
 		return err
@@ -121,8 +144,9 @@ func (h *Handler) syncProjectMember(ctx context.Context, projectMemberID uuid.UU
 	return nil
 }
 
-// syncClusterReady handles a cluster becoming ready: provision all users.
-func (h *Handler) syncClusterReady(ctx context.Context, clusterID uuid.UUID) error {
+// syncClusterAccessible handles a cluster's API server becoming available:
+// provision all users.
+func (h *Handler) syncClusterAccessible(ctx context.Context, clusterID uuid.UUID) error {
 	users, err := h.queries.UserListForCluster(ctx, db.UserListForClusterParams{ClusterID: clusterID})
 	if err != nil {
 		return fmt.Errorf("list users for cluster: %w", err)
@@ -131,6 +155,9 @@ func (h *Handler) syncClusterReady(ctx context.Context, clusterID uuid.UUID) err
 	if len(users) == 0 {
 		h.logger.Debug("no users for cluster, ensuring namespace only", "cluster_id", clusterID)
 		if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
+			if shoot.IsUnreachable(err) {
+				return handler.NewShootUnreachableError(err)
+			}
 			return fmt.Errorf("ensure namespace: %w", err)
 		}
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncSucceeded, "No users to provision")
@@ -139,6 +166,9 @@ func (h *Handler) syncClusterReady(ctx context.Context, clusterID uuid.UUID) err
 
 	// Ensure namespace exists before creating SAs.
 	if err := h.shoot.EnsureNamespace(ctx, clusterID, shoot.FundamentNamespace); err != nil {
+		if shoot.IsUnreachable(err) {
+			return handler.NewShootUnreachableError(err)
+		}
 		h.createUserSyncEvent(ctx, clusterID, dbconst.ClusterEventEventType_UserSyncFailed, "ensure namespace: "+err.Error())
 		return fmt.Errorf("ensure namespace: %w", err)
 	}
@@ -283,26 +313,14 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 
 	h.logger.Info("starting user sync reconciliation")
 
-	clusterIDs, err := h.queries.ClusterListReady(ctx)
+	clusters, err := h.queries.ClusterListAccessible(ctx)
 	if err != nil {
-		return fmt.Errorf("list ready clusters: %w", err)
+		return fmt.Errorf("list accessible clusters: %w", err)
 	}
 
-	var errs []error
-	for _, clusterID := range clusterIDs {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // graceful shutdown
-		}
-		if err := h.reconcileCluster(ctx, clusterID); err != nil {
-			h.logger.Error("failed to reconcile cluster",
-				"cluster_id", clusterID,
-				"error", err)
-			errs = append(errs, err)
-		}
-	}
-
-	h.logger.Info("user sync reconciliation complete", "clusters", len(clusterIDs))
-	if err := errors.Join(errs...); err != nil {
+	err = handler.ReconcileAccessible(ctx, h.logger, clusters, h.reconcileCluster)
+	h.logger.Info("user sync reconciliation complete", "clusters", len(clusters))
+	if err != nil {
 		return fmt.Errorf("user sync reconcile: %w", err)
 	}
 	return nil

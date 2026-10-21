@@ -1,21 +1,33 @@
 -- name: ClusterList :many
 -- List active clusters and clusters being deleted (not yet confirmed deleted in Gardener).
 -- Excludes clusters where Gardener has confirmed deletion (shoot_status = 'deleted').
+-- The sync state is the cluster's own latest sync row (view cluster_sync_state);
+-- a node pool's sync state is the pool's own (node pool queries), never the
+-- cluster's.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error,
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener,
     (SELECT COUNT(*)
      FROM tenant.projects
      WHERE projects.cluster_id = clusters.id AND projects.deleted IS NULL) AS project_count,
@@ -23,56 +35,82 @@ SELECT
      FROM tenant.node_pools
      WHERE node_pools.cluster_id = clusters.id AND node_pools.deleted IS NULL) AS node_pool_count
 FROM tenant.clusters
-WHERE (deleted IS NULL OR shoot_status IS DISTINCT FROM 'deleted')
-ORDER BY created DESC, id DESC;
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE (tenant.clusters.deleted IS NULL OR tenant.clusters.shoot_status IS DISTINCT FROM 'deleted')
+ORDER BY tenant.clusters.created DESC, tenant.clusters.id DESC;
 
 -- name: ClusterGetByID :one
--- Get cluster by ID, including deleted clusters for direct access.
+-- Get cluster by ID, including deleted clusters for direct access. Sync state
+-- as in ClusterList.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
 WHERE tenant.clusters.id = $1;
 
 -- name: ClusterGetByName :one
+-- Sync state as in ClusterList.
 SELECT
-    id,
-    organization_id,
-    name,
-    region,
-    kubernetes_version,
-    created,
-    deleted,
-    shoot_status,
-    shoot_status_message,
-    shoot_status_updated,
-    shoot_updating,
-    tenant.clusters.outbox_status,
-    tenant.clusters.outbox_retries,
-    tenant.clusters.outbox_error
+    tenant.clusters.id,
+    tenant.clusters.organization_id,
+    tenant.clusters.name,
+    tenant.clusters.region,
+    tenant.clusters.kubernetes_version,
+    tenant.clusters.created,
+    tenant.clusters.deleted,
+    tenant.clusters.shoot_status,
+    tenant.clusters.shoot_status_message,
+    tenant.clusters.shoot_status_updated,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.shoot_health,
+    tenant.cluster_sync_state.outbox_status,
+    COALESCE(tenant.cluster_sync_state.outbox_retries, 0)::integer AS outbox_retries,
+    tenant.cluster_sync_state.outbox_error,
+    -- reached_gardener: a sync of the cluster ever completed. The same test as
+    -- cluster-worker's ClusterHasEverBeenSynced; change them together.
+    EXISTS (
+        SELECT 1
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.status = 'completed'
+    )::boolean AS reached_gardener
 FROM tenant.clusters
-WHERE name = $1 AND deleted IS NULL;
+    LEFT JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+WHERE tenant.clusters.name = $1 AND tenant.clusters.deleted IS NULL;
 
 -- name: ClusterCreate :one
 -- Create a cluster if no active or pending-delete cluster with the same name exists.
 -- Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 -- Returns NULL if blocked (caller should check for pgx.ErrNoRows).
--- The organization must be live. FOR SHARE waits for a funops organization
--- delete holding FOR UPDATE on the row; under read committed the deleted check
--- is then re-evaluated against the committed row, so the insert finds nothing
--- instead of creating a cluster nobody can manage.
+-- The organization must be live. FOR NO KEY UPDATE waits for a funops
+-- organization delete holding FOR UPDATE on the row; under read committed the
+-- deleted check is then re-evaluated against the committed row, so the insert
+-- finds nothing instead of creating a cluster nobody can manage. It also
+-- serialises cluster creation per organization, which the quota trigger
+-- (clusters_tr_verify_quota) relies on: it takes the same lock, and two
+-- inserts that first held FOR SHARE would deadlock upgrading to it.
 -- region_id/kubernetes_version_id are the catalog references (expand phase: the
 -- legacy text columns are written alongside them).
 INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id, kubernetes_version_id)
@@ -82,7 +120,7 @@ WHERE EXISTS (
     FROM tenant.organizations
     WHERE id = $1
       AND deleted IS NULL
-    FOR SHARE
+    FOR NO KEY UPDATE
 )
 AND NOT EXISTS (
     SELECT 1
@@ -130,3 +168,24 @@ INSERT INTO tenant.cluster_events (
 )
 VALUES ($1, 'sync_requested', $2);
 
+-- name: ClusterDefaultsGet :one
+-- The cluster's per-container resource defaults. A NULL column means no
+-- default is set for that field.
+SELECT
+    default_memory_request_mi,
+    default_memory_limit_mi,
+    default_cpu_request_m,
+    default_cpu_limit_m
+FROM tenant.clusters
+WHERE id = @id
+  AND deleted IS NULL;
+
+-- name: ClusterDefaultsUpdate :execrows
+-- Replaces all four defaults: a NULL argument clears that default. Lowering a
+-- default below an active project's raises cluster_defaults_below_project.
+UPDATE tenant.clusters
+SET default_memory_request_mi = @default_memory_request_mi,
+    default_memory_limit_mi   = @default_memory_limit_mi,
+    default_cpu_request_m     = @default_cpu_request_m,
+    default_cpu_limit_m       = @default_cpu_limit_m
+WHERE id = @id AND deleted IS NULL;

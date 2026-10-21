@@ -62,18 +62,51 @@ func (q *Queries) NodePoolDelete(ctx context.Context, arg NodePoolDeleteParams) 
 }
 
 const nodePoolGetByID = `-- name: NodePoolGetByID :one
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created,
+    tenant.node_pools.deleted,
+    tenant.node_pools.region_machine_type_id,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message,
+    tenant.node_pools.status_updated,
+    tenant.node_pool_sync_state.outbox_status AS sync_status,
+    tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
-WHERE id = $1 AND deleted IS NULL
+    LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.id = $1 AND tenant.node_pools.deleted IS NULL
 `
 
 type NodePoolGetByIDParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams) (TenantNodePool, error) {
+type NodePoolGetByIDRow struct {
+	ID                  uuid.UUID
+	ClusterID           uuid.UUID
+	Name                string
+	MachineType         string
+	AutoscaleMin        int32
+	AutoscaleMax        int32
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	RegionMachineTypeID pgtype.UUID
+	Status              pgtype.Text
+	StatusMessage       pgtype.Text
+	StatusUpdated       pgtype.Timestamptz
+	SyncStatus          pgtype.Text
+	SyncError           pgtype.Text
+}
+
+// The pool with its own latest sync row, as in NodePoolListByClusterID.
+func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams) (NodePoolGetByIDRow, error) {
 	row := q.db.QueryRow(ctx, nodePoolGetByID, arg.ID)
-	var i TenantNodePool
+	var i NodePoolGetByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ClusterID,
@@ -84,30 +117,68 @@ func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams
 		&i.Created,
 		&i.Deleted,
 		&i.RegionMachineTypeID,
+		&i.Status,
+		&i.StatusMessage,
+		&i.StatusUpdated,
+		&i.SyncStatus,
+		&i.SyncError,
 	)
 	return i, err
 }
 
 const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
+SELECT
+    tenant.node_pools.id,
+    tenant.node_pools.cluster_id,
+    tenant.node_pools.name,
+    tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.autoscale_max,
+    tenant.node_pools.created,
+    tenant.node_pools.deleted,
+    tenant.node_pools.region_machine_type_id,
+    tenant.node_pools.status,
+    tenant.node_pools.status_message,
+    tenant.node_pools.status_updated,
+    tenant.node_pool_sync_state.outbox_status AS sync_status,
+    tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
-WHERE cluster_id = $1 AND deleted IS NULL
-ORDER BY created DESC
+    LEFT JOIN tenant.node_pool_sync_state ON tenant.node_pool_sync_state.node_pool_id = tenant.node_pools.id
+WHERE tenant.node_pools.cluster_id = $1 AND tenant.node_pools.deleted IS NULL
+ORDER BY tenant.node_pools.created DESC
 `
 
 type NodePoolListByClusterIDParams struct {
 	ClusterID uuid.UUID
 }
 
-func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]TenantNodePool, error) {
+type NodePoolListByClusterIDRow struct {
+	ID                  uuid.UUID
+	ClusterID           uuid.UUID
+	Name                string
+	MachineType         string
+	AutoscaleMin        int32
+	AutoscaleMax        int32
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	RegionMachineTypeID pgtype.UUID
+	Status              pgtype.Text
+	StatusMessage       pgtype.Text
+	StatusUpdated       pgtype.Timestamptz
+	SyncStatus          pgtype.Text
+	SyncError           pgtype.Text
+}
+
+// Each pool with its own latest sync row (view node_pool_sync_state).
+func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]NodePoolListByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantNodePool
+	var items []NodePoolListByClusterIDRow
 	for rows.Next() {
-		var i TenantNodePool
+		var i NodePoolListByClusterIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClusterID,
@@ -118,6 +189,11 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.Created,
 			&i.Deleted,
 			&i.RegionMachineTypeID,
+			&i.Status,
+			&i.StatusMessage,
+			&i.StatusUpdated,
+			&i.SyncStatus,
+			&i.SyncError,
 		); err != nil {
 			return nil, err
 		}

@@ -110,6 +110,8 @@ export default defineConfig({
       ],
       components: {
         PageTitle: './src/components/overrides/PageTitle.astro',
+        // Adds the test-environment banner above the header.
+        PageFrame: './src/components/overrides/PageFrame.astro',
       },
       plugins: [sidebarMetaPlugin()],
       sidebar: [

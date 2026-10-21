@@ -69,17 +69,18 @@ func TestMockCreateFollowsGardener(t *testing.T) {
 		require.NoError(t, err)
 		return status
 	}
-	progressing := func(task string) *ShootStatus {
-		return &ShootStatus{Status: StatusProgressing, Message: "Create: " + task, Operation: OperationCreate}
+	progressing := func(task string, apiUp bool) *ShootStatus {
+		return &ShootStatus{Status: StatusProgressing, Message: "Create: " + task, Operation: OperationCreate, APIServerAvailable: apiUp}
 	}
 
-	assert.Equal(t, progressing("Reconciliation of Shoot cluster initialized."), at(0))
-	assert.Equal(t, progressing("Waiting until Kubernetes API server rolled out"), at(2*time.Second))
-	assert.Equal(t, progressing("Waiting until gardener-resource-manager reports readiness"), at(4*time.Second))
-	assert.Equal(t, progressing("Waiting until shoot worker nodes have been reconciled"), at(5500*time.Millisecond))
-	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, HealthGrace: true}, at(6*time.Second))
-	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate}, at(7*time.Second))
-	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootReady, Operation: OperationCreate, Healthy: true}, at(9*time.Second))
+	assert.Equal(t, progressing("Reconciliation of Shoot cluster initialized.", false), at(0))
+	assert.Equal(t, progressing("Waiting until Kubernetes API server rolled out", false), at(2*time.Second))
+	// The API server answers before the create is done.
+	assert.Equal(t, progressing("Waiting until gardener-resource-manager reports readiness", true), at(4*time.Second))
+	assert.Equal(t, progressing("Waiting until shoot worker nodes have been reconciled", true), at(5500*time.Millisecond))
+	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, HealthGrace: true, APIServerAvailable: true}, at(6*time.Second))
+	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, APIServerAvailable: true}, at(7*time.Second))
+	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootReady, Operation: OperationCreate, Healthy: true, APIServerAvailable: true}, at(9*time.Second))
 }
 
 // The mock runs the nodes Gardener would: a cluster without node pools gets

@@ -1,0 +1,112 @@
+<!-- Same outer layout as the other organization pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Quotas"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="quotas-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="quotas-title"
+      size="2"
+    >
+      <h1>Quotas</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-rich-text spacing="flat">
+      <p>
+        What your organization may build: how many clusters, and how many nodes of each machine
+        type in each region. A node pool counts with its maximum size, whether or not the
+        autoscaler ever reaches it, across all your clusters. A deleted cluster and its pools
+        count until the platform has torn them down.
+      </p>
+      <p>
+        Quotas are set by the platform operator and only stop something new: a cluster, a node
+        pool, or a pool growing. To request an increase in quotas, contact a Fundament operator.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="24"></nldd-spacer>
+    @if (loadError(); as message) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="message"
+      ></nldd-banner>
+    } @else if (loading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading quotas..."
+      ></nldd-activity-indicator>
+    } @else {
+      @if (anyOver()) {
+        <nldd-banner
+          variant="warning"
+          text="A quota is below what you already run"
+          supporting-text="That is allowed: nothing running is touched. Until there is room again, nothing new of that kind can be added."
+        ></nldd-banner>
+        <nldd-spacer size="24"></nldd-spacer>
+      }
+      <nldd-title size="4">
+        <h2>Clusters</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Cluster quota"
+      >
+        <nldd-list-item>
+          <nldd-text-cell
+            width="full"
+            [attr.text]="clusters().label"
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-text-cell
+            width="fit-content"
+            [attr.text]="quotaText(clusters())"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Nodes</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      @if (noNodeQuota()) {
+        <nldd-rich-text spacing="flat">
+          <p>
+            No node quota allows a pool at the moment, so no node pool of your own can be
+            added. A cluster without node pools still runs on the platform's default worker
+            pool, which is outside this quota. Contact a Fundament operator to have a quota
+            set for the machine types you need.
+          </p>
+        </nldd-rich-text>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+      @if (nodes().length > 0) {
+        <!-- One line per machine type and region, the way funops lists them:
+             the name as the text, the region as its supporting line, and the
+             numbers on the right where they line up. -->
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Node quotas"
+        >
+          @for (node of nodes(); track node.region + '/' + node.label) {
+            <nldd-list-item>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="node.label"
+                [attr.supporting-text]="node.region"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                [attr.text]="quotaText(node)"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    }
+  </nldd-simple-section>
+</nldd-page>

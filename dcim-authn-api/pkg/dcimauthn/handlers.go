@@ -2,9 +2,14 @@ package dcimauthn
 
 import (
 	"encoding/json/v2"
+	"errors"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
+
+	"github.com/fundament-oss/fundament/common/auth"
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
 // maxLoginBodyBytes caps a login request body. The decoder reads the body to
@@ -48,14 +53,14 @@ func (s *Server) HandlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.generateJWT(claims)
+	accessToken, userID, err := s.loginJWT(r.Context(), claims)
 	if err != nil {
 		s.logger.Error("failed to generate JWT", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	s.logger.Info("user logged in via password", "subject", subjectUUID(claims.Sub).String())
+	s.logger.Info("user logged in via password", "user_id", userID.String())
 
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
 	s.writeJSON(w, http.StatusOK, map[string]any{
@@ -132,14 +137,14 @@ func (s *Server) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.generateJWT(claims)
+	accessToken, userID, err := s.loginJWT(r.Context(), claims)
 	if err != nil {
 		s.logger.Error("failed to generate JWT", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	s.logger.Info("user logged in via OIDC", "subject", subjectUUID(claims.Sub).String())
+	s.logger.Info("user logged in via OIDC", "user_id", userID.String())
 
 	redirectURL := s.getRedirectURL(state)
 	http.SetCookie(w, s.buildAuthCookie(accessToken))
@@ -154,8 +159,16 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Re-sign with fresh expiry using the same identity.
-	accessToken, err := s.mintJWT(claims.Subject, claims.Name)
+	// Refresh only extends a session whose subject still resolves to a live
+	// directory entry, so a soft-deleted user cannot keep a session alive.
+	row, ok := s.resolveSubject(w, r, claims)
+	if !ok {
+		return
+	}
+
+	// Re-sign with fresh expiry, taking the name from the directory so a
+	// rename lands on the next refresh.
+	accessToken, err := s.mintJWT(row.ID.String(), row.Name)
 	if err != nil {
 		s.logger.Error("failed to generate JWT on refresh", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")
@@ -175,16 +188,23 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
-// HandleUserInfo returns the user info from the current JWT.
-func (s *Server) HandleUserInfo(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.validator.Validate(r.Header)
-	if err != nil {
-		s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
-		return
-	}
-
-	s.writeJSON(w, http.StatusOK, map[string]string{
-		"id":   claims.Subject,
-		"name": claims.Name,
+// resolveSubject looks a validated token's subject up in the directory and
+// writes the response when it cannot: 401 for a subject that no longer
+// resolves (the session must end), 503 for a database failure — the session
+// is still valid, and the frontend must be able to tell a transient outage
+// apart from being signed out. The caller proceeds only when ok is true.
+func (s *Server) resolveSubject(w http.ResponseWriter, r *http.Request, claims *auth.Claims) (db.UserGetByIDRow, bool) {
+	row, err := s.queries.UserGetByID(r.Context(), db.UserGetByIDParams{
+		ID: claims.UserID(),
 	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.writeError(w, http.StatusUnauthorized, "invalid or expired token")
+			return db.UserGetByIDRow{}, false
+		}
+		s.logger.Error("failed to resolve user", "error", err)
+		s.writeError(w, http.StatusServiceUnavailable, "temporarily unavailable")
+		return db.UserGetByIDRow{}, false
+	}
+	return row, true
 }

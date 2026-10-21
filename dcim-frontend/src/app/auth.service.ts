@@ -1,5 +1,8 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, Injector, inject, signal, computed } from '@angular/core';
+import { Client, Code, ConnectError, createClient } from '@connectrpc/connect';
 import { ConfigService } from './config.service';
+import { AuthnService } from '../generated/dcimauthn/v1/dcimauthn_pb';
+import { AUTHN_TRANSPORT } from '../connect/tokens';
 
 export interface DcimUser {
   id: string;
@@ -12,6 +15,10 @@ export interface DcimUser {
 export default class AuthService {
   private configService = inject(ConfigService);
 
+  private injector = inject(Injector);
+
+  private client?: Client<typeof AuthnService>;
+
   private currentUser = signal<DcimUser | undefined>(undefined);
 
   readonly isAuthenticated = computed(() => this.currentUser() !== undefined);
@@ -22,6 +29,13 @@ export default class AuthService {
 
   private get authnApiUrl(): string {
     return this.configService.getConfig().authnApiUrl;
+  }
+
+  // Lazy: the transport factory reads the runtime config, and this service is
+  // first injected by the app initializer before that config is loaded.
+  private authnClient(): Client<typeof AuthnService> {
+    this.client ??= createClient(AuthnService, this.injector.get(AUTHN_TRANSPORT));
+    return this.client;
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -45,14 +59,20 @@ export default class AuthService {
     if (this.pendingUserInfo) {
       return this.pendingUserInfo;
     }
-    this.pendingUserInfo = fetch(`${this.authnApiUrl}/userinfo`, {
-      credentials: 'include',
-    })
-      .then(async (resp) => {
-        if (!resp.ok) throw new Error('unauthenticated');
-        const user = (await resp.json()) as DcimUser;
+    this.pendingUserInfo = this.authnClient()
+      .getUserInfo({})
+      .then((resp) => {
+        const user: DcimUser = { id: resp.user?.id ?? '', name: resp.user?.name ?? '' };
         this.currentUser.set(user);
         return user;
+      })
+      .catch((err: unknown) => {
+        // Only Unauthenticated means the session is over; any other failure
+        // (the service or its database briefly unavailable) must not end it.
+        if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+          throw new Error('unauthenticated');
+        }
+        throw new Error('userinfo unavailable');
       })
       .finally(() => {
         this.pendingUserInfo = null;
@@ -65,9 +85,13 @@ export default class AuthService {
       this.currentUser.set(undefined);
       return;
     }
-    await this.getUserInfo().catch(() => {
+    await this.getUserInfo().catch((err: unknown) => {
       this.currentUser.set(undefined);
-      localStorage.removeItem('dcim_auth_hint');
+      // Keep the hint on a transient failure: the cookie may still be
+      // valid, and the next navigation retries.
+      if (err instanceof Error && err.message === 'unauthenticated') {
+        localStorage.removeItem('dcim_auth_hint');
+      }
     });
   }
 

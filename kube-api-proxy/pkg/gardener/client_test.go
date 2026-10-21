@@ -2,11 +2,13 @@ package gardener
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	authenticationv1 "k8s.io/api/authentication/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -98,4 +100,33 @@ func TestResolvePluginSA_MissingName(t *testing.T) {
 	_, err := resolvePluginSA(context.Background(), dyn, kube, "any-uid", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "installation_name")
+}
+
+func TestIssueSAToken_ErrorsBeforeAccessIsSetUp(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		err     error
+		pending bool
+	}{
+		{"service account missing", apierrors.NewNotFound(schema.GroupResource{Resource: "serviceaccounts"}, "fundament-x"), true},
+		// Gardener's admin kubeconfig works before the shoot's RBAC for it exists.
+		{"shoot RBAC not in place yet", apierrors.NewForbidden(schema.GroupResource{Resource: "serviceaccounts/token"}, "fundament-x", errors.New("cannot create")), true},
+		{"credentials not accepted yet", apierrors.NewUnauthorized("not yet"), true},
+		{"other API error", apierrors.NewInternalError(errors.New("etcd")), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			kube := k8sfake.NewSimpleClientset()
+			kube.PrependReactor("create", "serviceaccounts", func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, tt.err
+			})
+
+			_, err := issueSAToken(context.Background(), kube, "fundament-x")
+			require.Error(t, err)
+			assert.Equal(t, tt.pending, errors.Is(err, ErrSyncPending))
+		})
+	}
 }

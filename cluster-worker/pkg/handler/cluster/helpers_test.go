@@ -79,7 +79,6 @@ func newTestHandler(t *testing.T, db *testDB, mock *gardener.MockClient) *cluste
 	return newTestHandlerWithConfig(t, db, mock, cluster.Config{
 		StatusWorkers:               2,
 		StatusProgressEventInterval: time.Minute,
-		MaxRetries:                  10,
 	})
 }
 
@@ -97,14 +96,14 @@ func newMock(t *testing.T) *gardener.MockClient {
 }
 
 // insertCluster inserts a cluster into the test DB. The trigger auto-creates an
-// outbox row with status=pending (which propagates to clusters.outbox_status).
+// outbox row with status=pending.
 func insertCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string) uuid.UUID {
 	t.Helper()
 
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
-		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-		 VALUES ($1, $2, 'eu-west-1', '1.31.1')
+		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id)
+		 VALUES ($1, $2, 'eu-west-1', '1.31.1', (SELECT catalog.regions.id FROM catalog.regions WHERE catalog.regions.name = 'eu-west-1'))
 		 RETURNING id`,
 		orgID, name,
 	).Scan(&id)
@@ -119,8 +118,8 @@ func insertDeletedCluster(t *testing.T, db *testDB, orgID uuid.UUID, name string
 
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
-		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted)
-		 VALUES ($1, $2, 'eu-west-1', '1.31.1', now())
+		`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, deleted, region_id)
+		 VALUES ($1, $2, 'eu-west-1', '1.31.1', now(), (SELECT catalog.regions.id FROM catalog.regions WHERE catalog.regions.name = 'eu-west-1'))
 		 RETURNING id`,
 		orgID, name,
 	).Scan(&id)
@@ -156,7 +155,6 @@ func insertNodePoolReturningID(t *testing.T, db *testDB, clusterID uuid.UUID, na
 }
 
 // markOutboxCompleted sets the latest outbox row for a cluster to completed.
-// The trigger propagates this to clusters.outbox_status.
 func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 
@@ -300,6 +298,55 @@ func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	require.Equalf(t, 0, count, "expected no reconcile outbox row for cluster %s", clusterID)
 }
 
+// insertFailedReconcile inserts a reconcile outbox row that failed for good
+// before exhausting its retries, as a non-retryable error does.
+func insertFailedReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, retries, failed, status_info)
+		 VALUES ($1, 'reconcile', 'reconcile', 'failed', 1, now(), 'shoot not found')`,
+		clusterID,
+	)
+	require.NoError(t, err)
+}
+
+// countOutboxReconcile returns the number of reconcile outbox rows for the cluster.
+func countOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) int {
+	t.Helper()
+
+	var count int
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT count(*) FROM tenant.cluster_outbox
+		 WHERE cluster_id = $1 AND event = 'reconcile'`,
+		clusterID,
+	).Scan(&count)
+	require.NoError(t, err)
+
+	return count
+}
+
+// setShootUpdating marks (or clears) a fundament-pushed rollout, as the sync
+// handler does when ApplyShoot changes the Shoot's spec.
+func setShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID, updating bool) {
+	t.Helper()
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.clusters SET shoot_updating = $2 WHERE id = $1`, clusterID, updating)
+	require.NoError(t, err)
+}
+
+// getNodePoolStatus returns the stored status and message (empty for NULL).
+func getNodePoolStatus(t *testing.T, db *testDB, clusterID uuid.UUID, name string) (status, message string) {
+	t.Helper()
+
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT COALESCE(status, ''), COALESCE(status_message, '') FROM tenant.node_pools WHERE cluster_id = $1 AND name = $2`,
+		clusterID, name,
+	).Scan(&status, &message)
+	require.NoError(t, err)
+	return status, message
+}
+
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).
 func getClusterShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID) *string {
 	t.Helper()
@@ -345,4 +392,19 @@ func getShootStatusUpdated(t *testing.T, db *testDB, clusterID uuid.UUID) time.T
 	).Scan(&updated)
 	require.NoError(t, err)
 	return updated
+}
+
+// markClusterSyncsCompleted completes every outbox row of a cluster and of its
+// node pools: nothing of the cluster's is left in flight.
+func markClusterSyncsCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
+	t.Helper()
+
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.cluster_outbox SET status = 'completed', processed = now()
+		 WHERE tenant.cluster_outbox.cluster_id = $1
+		    OR tenant.cluster_outbox.node_pool_id IN (
+		        SELECT tenant.node_pools.id FROM tenant.node_pools WHERE tenant.node_pools.cluster_id = $1)`,
+		clusterID,
+	)
+	require.NoError(t, err)
 }

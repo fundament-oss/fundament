@@ -1,5 +1,12 @@
 <!-- Above the app, not in it: this says something about the page you are on
      rather than about anything inside it. -->
+@if (pocUrl) {
+  <nldd-status-bar
+    variant="warning"
+    text="This is a test environment. Go to the Fundament PoC"
+    [attr.href]="pocUrl"
+  ></nldd-status-bar>
+}
 @if (apiVersionMismatch()) {
   <nldd-banner
     variant="warning"
@@ -476,16 +483,16 @@
                         <nldd-text-cell text="Logs"></nldd-text-cell>
                       </nldd-list-item>
                       <nldd-list-item
-                        [attr.href]="path('/limits')"
-                        [attr.current]="isNavActive('/limits') ? '' : null"
-                        (click)="navigateFromSidebar($event, '/limits')"
+                        [attr.href]="path('/quotas')"
+                        [attr.current]="isNavActive('/quotas') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/quotas')"
                       >
                         <nldd-icon-cell
-                          icon="hand"
+                          icon="score-meter"
                           size="20"
                         ></nldd-icon-cell>
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell text="Limits"></nldd-text-cell>
+                        <nldd-text-cell text="Quotas"></nldd-text-cell>
                       </nldd-list-item>
                     </nldd-list>
                     <!-- The projects themselves, not a link to a list of them: this

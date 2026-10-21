@@ -18,6 +18,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
+import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
 import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -41,13 +42,16 @@ import {
   getStatusBadgeColor,
   getStatusLabel,
   isKubeconfigAvailable,
+  kubeconfigHint,
   isTransitionalStatus,
+  shouldPollStatus,
 } from '../utils/cluster-status';
 import getPluginIconName from '../utils/plugin-icon-name';
 import { PluginIconComponent } from '../icons';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
+import ClusterDefaultsBlockComponent from '../container-defaults/cluster-defaults-block.component';
 import { ConfigService } from '../config.service';
 import focusFirstModalInput from '../modal-focus';
 import {
@@ -118,15 +122,33 @@ interface ResourceMetric {
  *  PluginInstallation resource, so it is never what a user should read. */
 const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
 
-const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
-  const labels: Record<NodePoolStatus, string> = {
-    [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
-    [NodePoolStatus.HEALTHY]: 'Healthy',
-    [NodePoolStatus.DEGRADED]: 'Degraded',
-    [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
-  };
-  return labels[status];
+const NODE_POOL_STATUS_LABELS: Record<NodePoolStatus, string> = {
+  [NodePoolStatus.UNSPECIFIED]: 'Unknown status',
+  [NodePoolStatus.HEALTHY]: 'Healthy',
+  [NodePoolStatus.DEGRADED]: 'Degraded',
+  [NodePoolStatus.UNHEALTHY]: 'Unhealthy',
+  [NodePoolStatus.PROVISIONING]: 'Creating machines',
+  [NodePoolStatus.WAITING_FOR_MACHINES]: 'Waiting for machines',
+  [NodePoolStatus.FAILED]: 'Failed',
 };
+
+const getNodePoolStatusLabel = (status: NodePoolStatus): string =>
+  NODE_POOL_STATUS_LABELS[status];
+
+// Hoisted: the template binds this per pool card, so it runs every change
+// detection cycle on a page that polls.
+const NODE_POOL_STATUS_COLORS: Record<NodePoolStatus, string> = {
+  [NodePoolStatus.UNSPECIFIED]: 'neutral',
+  [NodePoolStatus.HEALTHY]: 'success',
+  [NodePoolStatus.DEGRADED]: 'warning',
+  [NodePoolStatus.UNHEALTHY]: 'critical',
+  [NodePoolStatus.PROVISIONING]: 'mintgroen',
+  [NodePoolStatus.WAITING_FOR_MACHINES]: 'warning',
+  [NodePoolStatus.FAILED]: 'critical',
+};
+
+const getNodePoolStatusColor = (status: NodePoolStatus): string =>
+  NODE_POOL_STATUS_COLORS[status];
 
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
  *  no sync record at all, and not knowing whether a cluster is reconciling is a
@@ -184,8 +206,12 @@ const getEventTypeLabel = (eventType: string): string => {
     status_unhealthy: 'Cluster unhealthy',
     status_warning: 'Cluster warning',
     status_lost: 'Cluster lost',
+    status_api_available: 'API server available',
     user_sync_succeeded: 'Users synced',
     user_sync_failed: 'User sync failed',
+    nodepool_waiting: 'Node pool waiting',
+    nodepool_error: 'Node pool failed',
+    nodepool_ready: 'Node pool ready',
   };
   return labels[eventType] || eventType;
 };
@@ -196,15 +222,19 @@ const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
   'status_unhealthy',
   'status_lost',
   'user_sync_failed',
+  'nodepool_error',
 ]);
+
+/** Gardener is already retrying these by itself, so they stay a notch below
+ *  critical even though something is amiss. */
+const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set(['status_warning', 'nodepool_waiting']);
 
 /** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and
- *  the event label names it too, so color is never the sole signal. A warning is
- *  something Gardener is already retrying by itself, so it is not critical. */
+ *  the event label names it too, so color is never the sole signal. */
 const getEventTypeColor = (eventType: string): string => {
   if (CRITICAL_EVENT_TYPES.has(eventType)) return 'critical';
-  if (eventType === 'status_warning') return 'warning';
+  if (WARNING_EVENT_TYPES.has(eventType)) return 'warning';
   return 'default';
 };
 
@@ -240,6 +270,7 @@ const getEventLine = (event: ClusterEvent): string => {
     SheetSyncDirective,
     PluginIconComponent,
     MockBadgeComponent,
+    ClusterDefaultsBlockComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
@@ -294,9 +325,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private usageRetryTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Expose enums for use in template
-  NodePoolStatus = NodePoolStatus;
-
+  // Expose enum for use in template
   ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
@@ -310,17 +339,25 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   /** Pools the form asked for and did not get. Handed over as navigation state
    *  by the summary, which cannot show it itself: it closes on the way here. */
-  nodePoolsNotCreated = signal<string[]>(
-    (window.history.state as { nodePoolsNotCreated?: string[] } | null)?.nodePoolsNotCreated ?? [],
+  nodePoolsNotCreated = signal<NodePoolNotCreated[]>(
+    (window.history.state as { nodePoolsNotCreated?: NodePoolNotCreated[] } | null)
+      ?.nodePoolsNotCreated ?? [],
   );
 
   /** The cluster is there, so this is not a failure of the page you are on: it
    *  is one thing you asked for that is missing from it. */
   nodePoolsNotCreatedText = computed(() => {
-    const names = this.nodePoolsNotCreated();
-    if (names.length === 0) return null;
-    if (names.length === 1) return `Node pool '${names[0]}' was not created`;
-    return `${names.length} node pools were not created`;
+    const pools = this.nodePoolsNotCreated();
+    if (pools.length === 0) return null;
+    if (pools.length === 1) return `Node pool '${pools[0].name}' was not created`;
+    return `${pools.length} node pools were not created`;
+  });
+
+  /** Why, pool by pool: a pool refused for its quota is not one to add again,
+   *  so each name comes with its own reason rather than a single piece of advice. */
+  nodePoolsNotCreatedDetail = computed(() => {
+    const pools = this.nodePoolsNotCreated();
+    return pools.length > 0 ? describeRefusals(pools) : null;
   });
 
   isLoading = signal<boolean>(true);
@@ -465,14 +502,22 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Polling fires the pool and event refreshes every tick without awaiting
+   *  them, so a slow response can land after a newer one; each request takes a
+   *  number and only the latest may write. */
+  private nodePoolsRequest = 0;
+  private eventsRequest = 0;
+
   /** What the node pool cards show. Its own method because the sheet that edits
    *  the pools stands over this page rather than replacing it, so this page has
    *  to fetch them again on its own. */
   private async loadNodePools(clusterId: string): Promise<void> {
+    const request = ++this.nodePoolsRequest;
     try {
       const response = await firstValueFrom(
         this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
       );
+      if (request !== this.nodePoolsRequest) return;
       this.clusterData.nodePools = response.nodePools;
       this.cdr.markForCheck();
     } catch {
@@ -493,6 +538,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     if (clusterId) this.loadNodePools(clusterId);
   });
 
+  /** Counts status poll ticks, to refresh pools and events at a slower pace
+   *  while the cluster sits still. */
+  private pollTick = 0;
+
   private async pollClusterStatus() {
     const clusterId = this.clusterData.basics.id;
     try {
@@ -504,9 +553,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         return;
       }
 
+      const statusChanged = this.clusterData.status !== response.cluster.status;
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
       this.clusterData.created = response.cluster.created;
+      // Node pool statuses and the activity timeline move with the cluster (a
+      // pool waiting for machines recovers, nodepool_* events arrive), so they
+      // refresh on the same tick while something happens: a status change, or
+      // a status that moves on its own. On a cluster sitting still they only
+      // refresh every 6th tick — listNodePools fans out to Prometheus server
+      // side, and an idle tab must not fire that every 5 seconds.
+      this.pollTick++;
+      if (statusChanged || shouldPollStatus(response.cluster.status) || this.pollTick % 6 === 0) {
+        this.loadNodePools(clusterId).catch(() => {});
+        this.loadClusterEvents(clusterId).catch(() => {});
+      }
       // The usage card loads once on init; when the cluster finishes
       // provisioning while the page is open, fetch it now instead of
       // requiring a page refresh.
@@ -603,6 +664,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     return isKubeconfigAvailable(this.clusterData.status);
   }
 
+  kubeconfigHint(): string | null {
+    return kubeconfigHint(this.clusterData.status);
+  }
+
   async downloadKubeconfig(): Promise<void> {
     if (this.isDownloadingKubeconfig() || !this.canDownloadKubeconfig()) {
       return;
@@ -631,6 +696,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   getNodePoolStatusLabel = getNodePoolStatusLabel;
+
+  getNodePoolStatusColor = getNodePoolStatusColor;
 
   deleteConfirmationInput = signal<string>('');
 
@@ -819,17 +886,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async loadClusterEvents(clusterId: string): Promise<void> {
+    const requestNumber = ++this.eventsRequest;
     try {
       this.isLoadingEvents.set(true);
       const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });
       const response = await firstValueFrom(this.client.getClusterActivity(request));
+      if (requestNumber !== this.eventsRequest) return;
       this.clusterEvents.set(response.events);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load cluster events:', error);
       // No notification for events - it's not critical
     } finally {
-      this.isLoadingEvents.set(false);
+      if (requestNumber === this.eventsRequest) {
+        this.isLoadingEvents.set(false);
+      }
     }
   }
 

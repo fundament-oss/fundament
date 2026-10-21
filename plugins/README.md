@@ -18,6 +18,7 @@ First-party Fundament plugins, built in-tree by the core team. Plugins in their 
 plugins/
 ├── mod.just                  just plugins <recipe>
 ├── sandbox/                  the k3d-fundament-plugin cluster: k3d config, skaffold, chart values
+├── internal/                 Go packages shared between plugins (internal/cnpg: the shared CloudNativePG operator)
 └── <path>/                   one plugin; gateway-api/ and storage/ group related plugins
     ├── main.go, plugin.go    package main in the root Go module
     ├── definition.yaml       PluginDefinition
@@ -33,6 +34,7 @@ plugins/
 | Plugin | `<path>` | Module |
 |---|---|---|
 | [Cert Manager](cert-manager/README.md) | `cert-manager` | `cert-manager` |
+| [CloudNativePG](cloudnativepg/README.md) | `cloudnativepg` | `cloudnativepg` |
 | [External DNS](external-dns/README.md) | `external-dns` | `external-dns` |
 | [Gateway API (Envoy Gateway)](gateway-api/envoy-gateway/README.md) | `gateway-api/envoy-gateway` | `envoy-gateway` |
 | [Gateway API (Istio)](gateway-api/istio/README.md) | `gateway-api/istio` | none |

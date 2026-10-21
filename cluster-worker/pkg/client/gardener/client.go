@@ -6,9 +6,12 @@ package gardener
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/google/uuid"
+
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
 )
 
 // ShootStatusType represents the reconciliation state of a Shoot.
@@ -53,6 +56,22 @@ type ShootStatus struct {
 	// Retrying marks a StatusError that Gardener will retry by itself
 	// (lastOperation state Error or Aborted), as opposed to Failed.
 	Retrying bool
+	// APIServerAvailable is Gardener's APIServerAvailable condition: its care
+	// controller reached the shoot's /healthz. During a create this turns True
+	// well before the Shoot is ready, while the worker nodes still join.
+	APIServerAvailable bool
+	// EveryNodeReadyMessage is the EveryNodeReady condition's message while the
+	// condition is not satisfied; it names the machine deployments that wait.
+	EveryNodeReadyMessage string
+	// LastErrors are the Shoot's .status.lastErrors descriptions.
+	LastErrors []string
+}
+
+// equal compares every field. ShootStatus is not comparable as a value
+// (LastErrors is a slice), and DeepEqual keeps the comparison exhaustive for
+// fields added later — the watch's change filter depends on that.
+func (s *ShootStatus) equal(other *ShootStatus) bool {
+	return reflect.DeepEqual(s, other)
 }
 
 // Status message constants for consistent messaging.
@@ -61,8 +80,9 @@ const (
 	MsgShootReady     = "Shoot is ready"
 	MsgShootUnhealthy = "Shoot reconciled but not all conditions healthy"
 	// MsgShootAwaitingHealth is shown from the end of a create until Gardener
-	// first reports the new cluster healthy.
-	MsgShootAwaitingHealth = "Cluster is ready, waiting for health checks to pass"
+	// first reports the new cluster healthy. Shared: organization-api keys the
+	// STARTING cluster status on this exact text.
+	MsgShootAwaitingHealth = commongardener.MsgShootAwaitingHealth
 	// MsgShootUpdatePending is shown from the moment Gardener accepts a spec
 	// change until the gardenlet starts reconciling it.
 	MsgShootUpdatePending = "Waiting for Gardener to start the update"

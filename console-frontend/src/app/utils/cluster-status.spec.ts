@@ -1,32 +1,82 @@
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { isKubeconfigAvailable, isTransitionalStatus } from './cluster-status';
+import {
+  getStatusBadgeColor,
+  getStatusLabel,
+  isKubeconfigAvailable,
+  kubeconfigHint,
+} from './cluster-status';
 
 describe('isKubeconfigAvailable', () => {
-  it('only offers a kubeconfig once the cluster is running', () => {
-    expect(isKubeconfigAvailable(ClusterStatus.RUNNING)).toBe(true);
-  });
-
-  it('keeps offering it while an update rolls out on the running cluster', () => {
-    expect(isKubeconfigAvailable(ClusterStatus.UPGRADING)).toBe(true);
-  });
-
-  it('withholds the kubeconfig in every other status', () => {
-    const others = [
-      ClusterStatus.UNSPECIFIED,
+  it('offers a kubeconfig from creation on', () => {
+    [
       ClusterStatus.PROVISIONING,
       ClusterStatus.STARTING,
+      ClusterStatus.RUNNING,
+      ClusterStatus.UPGRADING,
+      ClusterStatus.UNHEALTHY,
       ClusterStatus.ERROR,
-      ClusterStatus.STOPPING,
-      ClusterStatus.STOPPED,
-      ClusterStatus.DELETING,
-    ];
-    others.forEach((status) => {
-      expect(isKubeconfigAvailable(status)).toBe(false);
+    ].forEach((status) => {
+      expect(isKubeconfigAvailable(status)).toBe(true);
     });
   });
 
-  it('keeps polling while the cluster is still becoming available', () => {
-    expect(isTransitionalStatus(ClusterStatus.PROVISIONING)).toBe(true);
-    expect(isKubeconfigAvailable(ClusterStatus.PROVISIONING)).toBe(false);
+  it('withholds it from a cluster that is being removed or unknown', () => {
+    [
+      ClusterStatus.UNSPECIFIED,
+      ClusterStatus.STOPPING,
+      ClusterStatus.STOPPED,
+      ClusterStatus.DELETING,
+    ].forEach((status) => {
+      expect(isKubeconfigAvailable(status)).toBe(false);
+    });
+  });
+});
+
+describe('isKubeconfigAvailable with a status this console does not know', () => {
+  it('fails closed', () => {
+    const newer = 99 as ClusterStatus;
+    expect(isKubeconfigAvailable(newer)).toBe(false);
+    expect(kubeconfigHint(newer)).toBe('Available once the cluster status is known');
+  });
+});
+
+describe('kubeconfigHint', () => {
+  it('warns that kubectl waits for the API server while the cluster comes up', () => {
+    expect(kubeconfigHint(ClusterStatus.PROVISIONING)).toContain('API server');
+  });
+
+  it('says nothing for a running cluster', () => {
+    expect(kubeconfigHint(ClusterStatus.RUNNING)).toBeNull();
+    expect(kubeconfigHint(ClusterStatus.UPGRADING)).toBeNull();
+  });
+
+  it('does not claim the API server is down for a cluster in error', () => {
+    expect(isKubeconfigAvailable(ClusterStatus.ERROR)).toBe(true);
+    expect(kubeconfigHint(ClusterStatus.ERROR)).toBeNull();
+  });
+
+  it('explains every unavailable status', () => {
+    [
+      ClusterStatus.UNSPECIFIED,
+      ClusterStatus.STOPPING,
+      ClusterStatus.STOPPED,
+      ClusterStatus.DELETING,
+    ].forEach((status) => {
+      expect(isKubeconfigAvailable(status)).toBe(false);
+      expect(kubeconfigHint(status)).not.toBeNull();
+    });
+  });
+});
+
+describe('getStatusBadgeColor', () => {
+  it('marks an unhealthy cluster critical', () => {
+    expect(getStatusBadgeColor(ClusterStatus.UNHEALTHY)).toBe('critical');
+  });
+});
+
+describe('getStatusLabel', () => {
+  it('labels unhealthy and upgrading clusters', () => {
+    expect(getStatusLabel(ClusterStatus.UNHEALTHY)).toBe('Unhealthy');
+    expect(getStatusLabel(ClusterStatus.UPGRADING)).toBe('Updating');
   });
 });

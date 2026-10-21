@@ -14,7 +14,7 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { SharedPluginsFormComponent } from '../shared-plugins-form/shared-plugins-form.component';
 import { CLUSTER, INSTALL, PLUGIN } from '../../connect/tokens';
-import { fetchClusterDetails, getStatusLabel } from '../utils/cluster-status';
+import { fetchClusterDetails, getStatusLabel, isClusterReachable } from '../utils/cluster-status';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
@@ -86,7 +86,7 @@ export default class ClusterPluginsComponent implements OnInit {
 
   protected clusterStatus = signal<ClusterStatus>(ClusterStatus.UNSPECIFIED);
 
-  protected isClusterRunning = computed(() => this.clusterStatus() === ClusterStatus.RUNNING);
+  protected isClusterRunning = computed(() => isClusterReachable(this.clusterStatus()));
 
   /** The state where this sheet has nothing to offer: the status is in, and it
    *  is not running. Not while loading, when the status is still UNSPECIFIED. */

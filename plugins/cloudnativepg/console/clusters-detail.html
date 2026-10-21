@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Database Detail</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <!-- The iframe sits under no title bar of its own, so the way back to the
+           list is a button here. -->
+      <nldd-button id="back-btn" type="button" variant="secondary" start-icon="arrow-left"
+                   text="All databases"></nldd-button>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="2"><h1 id="heading">Database</h1></nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- A database can be deleted here but not edited. The page is custom for
+           the connection details, and so a delete asks for the name first. -->
+      <div id="content">
+        <nldd-activity-indicator show-text text="Loading…"></nldd-activity-indicator>
+      </div>
+    </div>
+    <script type="module" src="./clusters-detail.js"></script>
+  </body>
+</html>

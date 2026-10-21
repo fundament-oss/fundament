@@ -17,10 +17,6 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// shootStatusReady mirrors cluster-worker's gardener.StatusReady value
-// written to cluster.shoot_status in the DB.
-const shootStatusReady = "ready"
-
 func (s *Server) GetClusterByName(
 	ctx context.Context,
 	req *organizationv1.GetClusterByNameRequest,
@@ -42,22 +38,10 @@ func (s *Server) GetClusterByName(
 		return nil, err
 	}
 
-	row := &db.ClusterGetByIDRow{
-		ID:                 cluster.ID,
-		OrganizationID:     cluster.OrganizationID,
-		Name:               cluster.Name,
-		Region:             cluster.Region,
-		KubernetesVersion:  cluster.KubernetesVersion,
-		Created:            cluster.Created,
-		Deleted:            cluster.Deleted,
-		ShootStatus:        cluster.ShootStatus,
-		ShootStatusMessage: cluster.ShootStatusMessage,
-		ShootStatusUpdated: cluster.ShootStatusUpdated,
-		OutboxStatus:       cluster.OutboxStatus,
-		OutboxRetries:      cluster.OutboxRetries,
-		OutboxError:        cluster.OutboxError,
-	}
-	details := clusterDetailsFromRow(row)
+	// The by-name row has the by-ID row's columns; converting it whole keeps
+	// a column from being left behind.
+	row := db.ClusterGetByIDRow(cluster)
+	details := clusterDetailsFromRow(&row)
 
 	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
@@ -153,8 +137,11 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != shootStatusReady {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
+	// The kubeconfig only names the cluster and the proxy, so it is handed out
+	// from creation on; until the API server is up, kubectl gets the proxy's
+	// explanation instead of an answer.
+	if cluster.Deleted.Valid {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
 
 	if s.config.KubeAPIProxyURL == "" {
@@ -180,7 +167,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		Name:              row.Name,
 		Region:            row.Region,
 		KubernetesVersion: row.KubernetesVersion,
-		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootUpdating),
+		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus, row.ShootStatusMessage, row.ShootHealth, row.ShootUpdating, row.OutboxStatus, row.ReachedGardener),
 		Created:           timestamppb.New(row.Created.Time),
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,
@@ -189,6 +176,7 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 			row.ShootStatus,
 			row.ShootStatusMessage,
 			row.ShootStatusUpdated,
+			row.ShootUpdating,
 		),
 	}
 	return builder.Build()

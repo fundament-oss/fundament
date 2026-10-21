@@ -5,6 +5,7 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../buf/validate/validate_pb";
 import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/common.proto.
  */
 export const file_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSI6Cg1SZXNvdXJjZVVzYWdlEgwKBHVzZWQYCiABKAESDQoFdG90YWwYFCABKAESDAoEdW5pdBgeIAEoCSqXAgoNQ2x1c3RlclN0YXR1cxIeChpDTFVTVEVSX1NUQVRVU19VTlNQRUNJRklFRBAAEh8KG0NMVVNURVJfU1RBVFVTX1BST1ZJU0lPTklORxABEhsKF0NMVVNURVJfU1RBVFVTX1NUQVJUSU5HEAISGgoWQ0xVU1RFUl9TVEFUVVNfUlVOTklORxADEhwKGENMVVNURVJfU1RBVFVTX1VQR1JBRElORxAEEhgKFENMVVNURVJfU1RBVFVTX0VSUk9SEAUSGwoXQ0xVU1RFUl9TVEFUVVNfU1RPUFBJTkcQBhIaChZDTFVTVEVSX1NUQVRVU19TVE9QUEVEEAcSGwoXQ0xVU1RFUl9TVEFUVVNfREVMRVRJTkcQCCqPAQoOTm9kZVBvb2xTdGF0dXMSIAocTk9ERV9QT09MX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGE5PREVfUE9PTF9TVEFUVVNfSEVBTFRIWRABEh0KGU5PREVfUE9PTF9TVEFUVVNfREVHUkFERUQQAhIeChpOT0RFX1BPT0xfU1RBVFVTX1VOSEVBTFRIWRADQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
+  fileDesc("Cg92MS9jb21tb24ucHJvdG8SD29yZ2FuaXphdGlvbi52MSI6Cg1SZXNvdXJjZVVzYWdlEgwKBHVzZWQYCiABKAESDQoFdG90YWwYFCABKAESDAoEdW5pdBgeIAEoCSKJBAoRQ29udGFpbmVyRGVmYXVsdHMSJwoRbWVtb3J5X3JlcXVlc3RfbWkYCiABKAVCDKoBAggBukgEGgIoARIlCg9tZW1vcnlfbGltaXRfbWkYFCABKAVCDKoBAggBukgEGgIoARIjCg1jcHVfcmVxdWVzdF9tGB4gASgFQgyqAQIIAbpIBBoCKAESIQoLY3B1X2xpbWl0X20YKCABKAVCDKoBAggBukgEGgIoATrbArpI1wIatgEKGG1lbW9yeV9saW1pdF9ndGVfcmVxdWVzdBIsbWVtb3J5X2xpbWl0X21pIG11c3QgYmUgPj0gbWVtb3J5X3JlcXVlc3RfbWkabCFoYXModGhpcy5tZW1vcnlfbGltaXRfbWkpIHx8ICFoYXModGhpcy5tZW1vcnlfcmVxdWVzdF9taSkgfHwgdGhpcy5tZW1vcnlfbGltaXRfbWkgPj0gdGhpcy5tZW1vcnlfcmVxdWVzdF9taRqbAQoVY3B1X2xpbWl0X2d0ZV9yZXF1ZXN0EiRjcHVfbGltaXRfbSBtdXN0IGJlID49IGNwdV9yZXF1ZXN0X20aXCFoYXModGhpcy5jcHVfbGltaXRfbSkgfHwgIWhhcyh0aGlzLmNwdV9yZXF1ZXN0X20pIHx8IHRoaXMuY3B1X2xpbWl0X20gPj0gdGhpcy5jcHVfcmVxdWVzdF9tKrUCCg1DbHVzdGVyU3RhdHVzEh4KGkNMVVNURVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHwobQ0xVU1RFUl9TVEFUVVNfUFJPVklTSU9OSU5HEAESGwoXQ0xVU1RFUl9TVEFUVVNfU1RBUlRJTkcQAhIaChZDTFVTVEVSX1NUQVRVU19SVU5OSU5HEAMSHAoYQ0xVU1RFUl9TVEFUVVNfVVBHUkFESU5HEAQSGAoUQ0xVU1RFUl9TVEFUVVNfRVJST1IQBRIbChdDTFVTVEVSX1NUQVRVU19TVE9QUElORxAGEhoKFkNMVVNURVJfU1RBVFVTX1NUT1BQRUQQBxIbChdDTFVTVEVSX1NUQVRVU19ERUxFVElORxAIEhwKGENMVVNURVJfU1RBVFVTX1VOSEVBTFRIWRAJKvoBCg5Ob2RlUG9vbFN0YXR1cxIgChxOT0RFX1BPT0xfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYTk9ERV9QT09MX1NUQVRVU19IRUFMVEhZEAESHQoZTk9ERV9QT09MX1NUQVRVU19ERUdSQURFRBACEh4KGk5PREVfUE9PTF9TVEFUVVNfVU5IRUFMVEhZEAMSIQodTk9ERV9QT09MX1NUQVRVU19QUk9WSVNJT05JTkcQBBIpCiVOT0RFX1BPT0xfU1RBVFVTX1dBSVRJTkdfRk9SX01BQ0hJTkVTEAUSGwoXTk9ERV9QT09MX1NUQVRVU19GQUlMRUQQBkJfWlNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L29yZ2FuaXphdGlvbi1hcGkvcGtnL3Byb3RvL2dlbi92MTtvcmdhbml6YXRpb252MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * Resource usage information
@@ -42,6 +43,49 @@ export type ResourceUsage = Message<"organization.v1.ResourceUsage"> & {
  */
 export const ResourceUsageSchema: GenMessage<ResourceUsage> = /*@__PURE__*/
   messageDesc(file_v1_common, 0);
+
+/**
+ * Per-container resource defaults, applied to namespaces as the
+ * fundament-defaults LimitRange. An absent field means no default is set.
+ *
+ * @generated from message organization.v1.ContainerDefaults
+ */
+export type ContainerDefaults = Message<"organization.v1.ContainerDefaults"> & {
+  /**
+   * Memory request, in mebibytes
+   *
+   * @generated from field: int32 memory_request_mi = 10 [features.field_presence = EXPLICIT];
+   */
+  memoryRequestMi: number;
+
+  /**
+   * Memory limit, in mebibytes
+   *
+   * @generated from field: int32 memory_limit_mi = 20 [features.field_presence = EXPLICIT];
+   */
+  memoryLimitMi: number;
+
+  /**
+   * CPU request, in millicores
+   *
+   * @generated from field: int32 cpu_request_m = 30 [features.field_presence = EXPLICIT];
+   */
+  cpuRequestM: number;
+
+  /**
+   * CPU limit, in millicores
+   *
+   * @generated from field: int32 cpu_limit_m = 40 [features.field_presence = EXPLICIT];
+   */
+  cpuLimitM: number;
+};
+
+/**
+ * Describes the message organization.v1.ContainerDefaults.
+ * Use `create(ContainerDefaultsSchema)` to create a new message.
+ */
+export const ContainerDefaultsSchema: GenMessage<ContainerDefaults> = /*@__PURE__*/
+  messageDesc(file_v1_common, 1);
 
 /**
  * Status enumeration for clusters
@@ -95,6 +139,13 @@ export enum ClusterStatus {
    * @generated from enum value: CLUSTER_STATUS_DELETING = 8;
    */
   DELETING = 8,
+
+  /**
+   * Ready in Gardener, but health conditions failing (e.g. nodes missing)
+   *
+   * @generated from enum value: CLUSTER_STATUS_UNHEALTHY = 9;
+   */
+  UNHEALTHY = 9,
 }
 
 /**
@@ -128,6 +179,27 @@ export enum NodePoolStatus {
    * @generated from enum value: NODE_POOL_STATUS_UNHEALTHY = 3;
    */
   UNHEALTHY = 3,
+
+  /**
+   * Change applied, machines being created
+   *
+   * @generated from enum value: NODE_POOL_STATUS_PROVISIONING = 4;
+   */
+  PROVISIONING = 4,
+
+  /**
+   * Gardener cannot get machines; see status_message
+   *
+   * @generated from enum value: NODE_POOL_STATUS_WAITING_FOR_MACHINES = 5;
+   */
+  WAITING_FOR_MACHINES = 5,
+
+  /**
+   * Gardener gave up; see status_message
+   *
+   * @generated from enum value: NODE_POOL_STATUS_FAILED = 6;
+   */
+  FAILED = 6,
 }
 
 /**

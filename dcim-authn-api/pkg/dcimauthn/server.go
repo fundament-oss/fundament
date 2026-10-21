@@ -1,9 +1,11 @@
 package dcimauthn
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	db "github.com/fundament-oss/fundament/dcim-authn-api/pkg/db/gen"
 )
 
 // Config holds the configuration for the DCIM auth server.
@@ -26,12 +29,20 @@ type Config struct {
 	FrontendURL  string
 }
 
+// Store is the directory access the server needs, satisfied by the generated
+// db.Queries; an interface so handler tests can stub it.
+type Store interface {
+	UserUpsert(ctx context.Context, arg db.UserUpsertParams) (db.UserUpsertRow, error)
+	UserGetByID(ctx context.Context, arg db.UserGetByIDParams) (db.UserGetByIDRow, error)
+}
+
 // Server handles DCIM authentication.
 type Server struct {
 	config        *Config
 	oauth2Config  *oauth2.Config
 	oidcVerifier  *oidc.IDTokenVerifier
 	sessionStore  *SessionStore
+	queries       Store
 	logger        *slog.Logger
 	validator     *auth.Validator
 	cookieBuilder *auth.CookieBuilder
@@ -41,14 +52,15 @@ type Server struct {
 }
 
 // New creates a new DCIM auth Server.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore) *Server {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, queries Store) *Server {
 	return &Server{
 		config:        cfg,
 		logger:        logger,
 		oauth2Config:  oauth2Config,
 		oidcVerifier:  verifier,
 		sessionStore:  sessionStore,
-		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
+		queries:       queries,
+		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, auth.TokenTypeDCIMUser, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
 		returnOrigins: auth.NewReturnOrigins(logger, []string{cfg.FrontendURL}),
 	}
@@ -59,14 +71,6 @@ type oidcClaims struct {
 	Email string `json:"email"`
 	Name  string `json:"name"`
 	Sub   string `json:"sub"`
-}
-
-// subjectUUID derives a deterministic UUIDv5 from the OIDC sub claim.
-// The Validator requires a UUID subject; dex's sub is not a UUID.
-var dcimNamespace = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8") // UUID namespace DNS
-
-func subjectUUID(sub string) uuid.UUID {
-	return uuid.NewSHA1(dcimNamespace, []byte(sub))
 }
 
 func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oidcClaims, error) {
@@ -85,11 +89,32 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 	return &claims, nil
 }
 
-// generateJWT mints the initial token for a freshly authenticated user. The
-// OIDC sub is mapped to a deterministic UUID subject.
-func (s *Server) generateJWT(claims *oidcClaims) (string, error) {
-	userID := subjectUUID(claims.Sub)
-	return s.mintJWT(userID.String(), claims.Name)
+// loginJWT mints the initial token for a freshly authenticated user. The
+// directory entry is provisioned just-in-time — the staff IdP is the access
+// boundary, so anyone who authenticates there belongs in the roster — and the
+// token subject is the dcim.users.id.
+func (s *Server) loginJWT(ctx context.Context, claims *oidcClaims) (string, uuid.UUID, error) {
+	// go-oidc verifies signature, issuer, audience and expiry, but not that
+	// the sub claim is present; an empty sub would merge every such login
+	// onto one external_ref='' directory row.
+	if claims.Sub == "" {
+		return "", uuid.Nil, errors.New("ID token has no subject")
+	}
+
+	row, err := s.queries.UserUpsert(ctx, db.UserUpsertParams{
+		Name:        claims.Name,
+		ExternalRef: claims.Sub,
+		Email:       claims.Email,
+	})
+	if err != nil {
+		return "", uuid.Nil, fmt.Errorf("upserting user: %w", err)
+	}
+
+	token, err := s.mintJWT(row.ID.String(), row.Name)
+	if err != nil {
+		return "", uuid.Nil, err
+	}
+	return token, row.ID, nil
 }
 
 // mintJWT signs a DCIM token for the given (already-resolved) UUID subject.
@@ -99,6 +124,7 @@ func (s *Server) mintJWT(subject, name string) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    auth.DCIMIssuer,
 			Subject:   subject,
+			Audience:  jwt.ClaimStrings{auth.TokenTypeDCIMUser},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
 		},
