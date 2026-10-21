@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/nldd-design-system-version.test.ts"],
+  "exclude": []
+}

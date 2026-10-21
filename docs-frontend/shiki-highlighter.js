@@ -38,4 +38,10 @@ export class ShikiHighlighter extends SyntaxHighlighterBase {
   highlight(_node, source, lang) {
     return this.highlighter.codeToHtml(source, { lang, theme: this.theme });
   }
+
+  // Shiki already returns a complete <pre><code> block, so skip the base
+  // class's wrapper around the highlighted content.
+  format(node) {
+    return node.content();
+  }
 }

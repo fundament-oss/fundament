@@ -44,7 +44,7 @@ golangci-lint = "2.13.2"
 
 # Console Frontend
 node = "24"
-bun = "1.4.0"
+bun = "1.4.3"
 "npm:@bufbuild/protoc-gen-es" = "2.14.0"
 "npm:@usebruno/cli" = "3.0.3"
 
