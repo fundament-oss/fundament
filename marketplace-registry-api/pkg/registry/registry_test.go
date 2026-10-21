@@ -2,6 +2,7 @@ package registry_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -659,6 +660,149 @@ func TestCreatePluginVersionRejectsTheSameVersionUnderADifferentPrefix(t *testin
 	assert.Equal(t, connect.CodeAlreadyExists, connectCode(err))
 }
 
+// devManifest varies by description so each call derives a different hash,
+// matching how a real republish changes the pushed bytes.
+func devManifest(description string) string {
+	return fmt.Sprintf(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: postgres-operator
+  version: 1.0.0-dev
+  description: %s
+spec:
+  image: ghcr.io/example/postgres-operator@sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+`, description)
+}
+
+// Replace re-publishes a draft in the same (plugin_id, version) slot: the old
+// row is gone, not sitting alongside a second one.
+func TestCreatePluginVersionReplaceRepublishesADraft(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	first, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("first push")),
+	}.Build())
+	require.NoError(t, err)
+
+	second, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("second push")),
+		Replace:  true,
+	}.Build())
+	require.NoError(t, err)
+
+	assert.NotEqual(t, first.GetVersion().GetId(), second.GetVersion().GetId())
+	assert.Equal(t, marketplacev1.SubmissionStatus_SUBMISSION_STATUS_DRAFT, second.GetVersion().GetStatus())
+	assert.NotEqual(t, first.GetVersion().GetDefinitionHash(), second.GetVersion().GetDefinitionHash())
+
+	listed, err := client.ListPluginVersions(context.Background(), registryv1.ListPluginVersionsRequest_builder{
+		PluginId: plugin.GetId(),
+	}.Build())
+	require.NoError(t, err)
+
+	devVersions := 0
+	for _, v := range listed.GetVersions() {
+		if v.GetVersion() == "1.0.0-dev" {
+			devVersions++
+		}
+	}
+	assert.Equal(t, 1, devVersions, "the replaced draft must not linger alongside the new one")
+}
+
+// Replace is for the dev loop only: anything the review process has touched
+// is refused, whether it is still pending or was withdrawn.
+func TestCreatePluginVersionReplaceRefusesANonDraft(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	created, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("first push")),
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.SubmitPluginVersion(context.Background(), registryv1.SubmitPluginVersionRequest_builder{
+		PluginVersionId: created.GetVersion().GetId(),
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("second push")),
+		Replace:  true,
+	}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectCode(err))
+	assert.ErrorContains(t, err, "only draft versions can be replaced")
+
+	_, err = client.WithdrawPluginVersion(context.Background(), registryv1.WithdrawPluginVersionRequest_builder{
+		PluginVersionId: created.GetVersion().GetId(),
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("third push")),
+		Replace:  true,
+	}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectCode(err))
+	assert.ErrorContains(t, err, "only draft versions can be replaced")
+}
+
+// Replace on a version that never existed is just a plain create.
+func TestCreatePluginVersionReplaceWithoutExistingVersionCreates(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	resp, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("first push")),
+		Replace:  true,
+	}.Build())
+	require.NoError(t, err)
+
+	assert.Equal(t, marketplacev1.SubmissionStatus_SUBMISSION_STATUS_DRAFT, resp.GetVersion().GetStatus())
+}
+
+// Pins the pre-existing behavior: without Replace, a second push still
+// conflicts rather than silently overwriting.
+func TestCreatePluginVersionWithoutReplaceStillConflicts(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	_, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("first push")),
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("second push")),
+	}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeAlreadyExists, connectCode(err))
+}
+
 func TestSubmitPluginVersionMovesDraftToPending(t *testing.T) {
 	env := newTestEnv(t)
 	_, client := newOrgClient(t, env)
@@ -742,6 +886,43 @@ func TestWithdrawPluginVersionRefusesADraft(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeFailedPrecondition, connectCode(err))
+}
+
+// A version that replaced an earlier draft still carries that history: it
+// must be published as a new version rather than submitted under the old one.
+func TestSubmitPluginVersionRefusesAReplacedVersion(t *testing.T) {
+	env := newTestEnv(t)
+	_, client := newOrgClient(t, env)
+
+	plugin := createPlugin(t, client, "postgres-operator")
+
+	_, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("first push")),
+	}.Build())
+	require.NoError(t, err)
+
+	replaced, err := client.CreatePluginVersion(context.Background(), registryv1.CreatePluginVersionRequest_builder{
+		PluginId: plugin.GetId(),
+		Version:  "1.0.0-dev",
+		Manifest: []byte(devManifest("second push")),
+		Replace:  true,
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = client.SubmitPluginVersion(context.Background(), registryv1.SubmitPluginVersionRequest_builder{
+		PluginVersionId: replaced.GetVersion().GetId(),
+	}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectCode(err))
+	assert.ErrorContains(t, err, "was replaced during development")
+
+	got, err := client.GetPluginVersion(context.Background(), registryv1.GetPluginVersionRequest_builder{
+		PluginVersionId: replaced.GetVersion().GetId(),
+	}.Build())
+	require.NoError(t, err)
+	assert.Equal(t, marketplacev1.SubmissionStatus_SUBMISSION_STATUS_DRAFT, got.GetVersion().GetStatus())
 }
 
 // A soft-deleted listing must not keep serving its version history.

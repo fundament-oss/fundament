@@ -325,6 +325,8 @@ pluginController:
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
   allowUnpinnedHash: false
+  # Dev mode lets a PluginInstallation deploy a CR-supplied image with relaxed probes/filesystem; sandbox-only.
+  allowDevMode: false
   # catalogApiUrl: base URL the plugin-controller uses to fetch definitions.
   # Defaults to the in-cluster http://marketplace-catalog-api:8080 (the Service in
   # marketplace-catalog-api.yaml), which only works when the controller runs next

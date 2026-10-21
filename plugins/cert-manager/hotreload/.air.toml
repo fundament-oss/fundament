@@ -1,0 +1,18 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+# -w skips DWARF generation: halves link time, and nothing debugs this binary.
+cmd = "go build -ldflags=-w -o tmp/plugin ./plugins/cert-manager/"
+entrypoint = "tmp/plugin"
+# html/css/js are go:embed'd console assets; a save must recompile to re-embed.
+include_ext = ["go", "html", "css", "js"]
+include_dir = ["plugins/cert-manager", "plugin-sdk", "common"]
+exclude_dir = ["tmp"]
+delay = 100
+# The plugin exits when platform env/services are unavailable; this brings it back.
+rerun = true
+rerun_delay = 2000
+
+[log]
+time = false

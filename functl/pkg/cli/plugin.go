@@ -273,13 +273,26 @@ type PluginPublishCmd struct {
 	PluginID   string `name:"plugin-id" help:"Listing uuid; when empty, resolved by the manifest's metadata.name via ListPlugins."`
 	Create     bool   `help:"Reserve the listing first when it does not exist, seeded from the manifest's metadata."`
 	Submit     bool   `help:"Open a review round for the pushed version in the same run."`
+	Replace    bool   `help:"Republish an existing draft version in place."`
+	Dev        bool   `help:"Development publish: -dev version suffix, implies --replace."`
 }
 
 // Run executes the plugin publish command.
 func (c *PluginPublishCmd) Run(ctx *Context) error {
+	if c.Dev && c.Submit {
+		return errors.New("--dev and --submit cannot be combined: dev versions are for the sandbox loop, not review")
+	}
+
 	src, err := os.ReadFile(c.Definition) //nolint:gosec // path comes from the operator's own CLI argument
 	if err != nil {
 		return fmt.Errorf("read definition: %w", err)
+	}
+
+	if c.Dev {
+		src, err = injectDevVersion(src)
+		if err != nil {
+			return fmt.Errorf("inject dev version: %w", err)
+		}
 	}
 
 	published, err := injectImage(src, c.Image, "IfNotPresent")
@@ -324,13 +337,14 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		PluginId: pluginID,
 		Version:  def.Metadata.Version,
 		Manifest: published,
+		Replace:  c.Replace || c.Dev,
 	}.Build())
 	if err != nil {
 		var connectErr *connect.Error
 		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeAlreadyExists {
 			// Create-only by design: an approved version's hash is a consent
-			// record and stays immutable (FUN-20).
-			return fmt.Errorf("%w\n(versions are create-only; bump metadata.version — a -dev prerelease suffix works)", err)
+			// record (FUN-20); republish a draft in place with --replace.
+			return fmt.Errorf("%w\n(versions are create-only; bump metadata.version — a -dev prerelease suffix works — or pass --replace to republish a draft)", err)
 		}
 		return fmt.Errorf("publish failed: %w", err)
 	}
@@ -450,6 +464,47 @@ func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	}
 	setMapValue(spec, "image", image)
 	setMapValue(spec, "imagePullPolicy", pullPolicy)
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("marshal manifest: %w", err)
+	}
+	return out, nil
+}
+
+// injectDevVersion appends a -dev suffix to metadata.version, left alone if
+// already present, so a repeated dev publish stays idempotent.
+func injectDevVersion(src []byte) ([]byte, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(src, &doc); err != nil {
+		return nil, fmt.Errorf("parse yaml: %w", err)
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("unexpected manifest structure")
+	}
+	root := doc.Content[0]
+	var metadata *yaml.Node
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if root.Content[i].Value == "metadata" {
+			metadata = root.Content[i+1]
+			break
+		}
+	}
+	if metadata == nil || metadata.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("manifest has no metadata mapping")
+	}
+	var version string
+	for i := 0; i+1 < len(metadata.Content); i += 2 {
+		if metadata.Content[i].Value == "version" {
+			version = metadata.Content[i+1].Value
+			break
+		}
+	}
+	if version == "" {
+		return nil, fmt.Errorf("manifest has no metadata.version")
+	}
+	if !strings.HasSuffix(version, "-dev") {
+		setMapValue(metadata, "version", version+"-dev")
+	}
 	out, err := yaml.Marshal(&doc)
 	if err != nil {
 		return nil, fmt.Errorf("marshal manifest: %w", err)

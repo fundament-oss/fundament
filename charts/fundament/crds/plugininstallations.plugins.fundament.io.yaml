@@ -88,6 +88,17 @@ spec:
                   type: object
                   additionalProperties:
                     type: string
+                dev:
+                  type: object
+                  properties:
+                    image:
+                      type: string
+                  description: >-
+                    Dev-mode image override, deployed verbatim with relaxed
+                    probes/filesystem. Only honored when the controller runs
+                    with PLUGIN_CONTROLLER_ALLOW_DEV_MODE=true and the
+                    plugins.fundament.io/dev-mode annotation is "true"
+                    (sandbox-only).
             status:
               type: object
               properties:

@@ -71,6 +71,39 @@ WHERE id = sqlc.arg('id')::uuid
   AND status = sqlc.arg('expected_status')::text
   AND deleted IS NULL;
 
+-- name: PluginVersionGetActiveByPluginVersion :one
+-- Looked up by the replace path to decide whether republish is allowed: only
+-- a draft may be replaced.
+SELECT
+	plugin_definitions.id,
+	plugin_definitions.status,
+	plugin_definitions.hash
+FROM appstore.plugin_definitions
+JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
+WHERE plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
+  AND plugin_definitions.plugin_version = sqlc.arg('plugin_version')::text
+  AND plugin_definitions.deleted IS NULL
+  AND plugins.deleted IS NULL;
+
+-- name: PluginVersionSoftDeleteActiveByPluginVersion :exec
+-- Draft-only: a draft submitted between the handler's status check and this
+-- transaction must not be soft-deleted out from under the pending review.
+UPDATE appstore.plugin_definitions SET deleted = now()
+WHERE plugin_id = sqlc.arg('plugin_id')::uuid
+  AND plugin_version = sqlc.arg('plugin_version')::text
+  AND status = 'draft'
+  AND deleted IS NULL;
+
+-- name: PluginVersionWasReplaced :one
+-- Guards SubmitPluginVersion: a vacated (plugin_id, plugin_version) slot must
+-- be republished as a new version, even if the live row there is a draft.
+SELECT EXISTS (
+	SELECT 1 FROM appstore.plugin_definitions
+	 WHERE plugin_id = sqlc.arg('plugin_id')::uuid
+	   AND plugin_version = sqlc.arg('plugin_version')::text
+	   AND deleted IS NOT NULL
+);
+
 -- name: PluginVersionsSoftDeleteByPluginID :exec
 -- DeletePlugin cascades: a soft-deleted listing must not strand active versions.
 UPDATE appstore.plugin_definitions SET deleted = now()

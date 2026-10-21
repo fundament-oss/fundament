@@ -55,7 +55,7 @@ storage-disks *args:
 # --- Deployment commands ---
 
 # Deploy plugin-controller with file watching (auto-rebuild on changes)
-dev *flags:
+controller-dev *flags:
     skaffold dev -f sandbox/skaffold.yaml --default-repo=localhost:{{ registry_port }} --cleanup=false {{ flags }}
 
 # Deploy plugin-controller (one-time)
@@ -169,13 +169,135 @@ publish name *flags:
     cd "$(git rev-parse --show-toplevel)"
     tag=$(git describe --always --dirty)
     repo="${PLUGIN_REGISTRY}/{{ name }}-plugin"
-    # --provenance/--sbom=false: skip buildkit attestations so the push is a plain
-    # single-platform manifest, not an OCI index. The attestation index digest
-    # changes every build and leaves the old (now-untagged) index to be GC'd by the
-    # registry, which strands the digest a PluginInstallation pinned. See FUN-19.
-    docker build --provenance=false --sbom=false -t "${repo}:${tag}" -f "plugins/{{ name }}/Dockerfile" .
+    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" _image-push "${repo}" "${tag}" "plugins/{{ name }}/Dockerfile")
+    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}
+
+# Build and push an image from the repo root; prints the pushed manifest digest.
+# --provenance/--sbom=false: skip buildkit attestations so the push is a plain
+# single-platform manifest, not an OCI index. The attestation index digest
+# changes every build and leaves the old (now-untagged) index to be GC'd by the
+# registry, which strands the digest a PluginInstallation pinned. See FUN-19.
+_image-push repo tag dockerfile *build_flags:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(git rev-parse --show-toplevel)"
+    docker build --provenance=false --sbom=false -t "{{ repo }}:{{ tag }}" -f "{{ dockerfile }}" {{ build_flags }} . >&2
     # Parse the manifest digest only from the `digest:` line — other sha256
     # tokens in push output are layer/config digests, not the pushed manifest.
-    digest=$(docker push "${repo}:${tag}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
-    [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
-    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}
+    digest=$(docker push "{{ repo }}:{{ tag }}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
+    [ -n "${digest}" ] || { echo "could not resolve pushed digest" >&2; exit 1; }
+    echo "${digest}"
+
+# Preflight needs `just plugins deploy` and `just functl org set <id>` done already.
+# Iterate on a plugin with hot reload (publish a -dev version, install, skaffold dev)
+dev name org="acme-corp":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(git rev-parse --show-toplevel)"
+
+    # 1. Preflight.
+    if [ ! -f "plugins/{{ name }}/hotreload/.air.toml" ]; then
+        echo "plugins/{{ name }}/hotreload/.air.toml is missing — copy plugins/external-dns/hotreload/.air.toml as a starting point"
+        exit 1
+    fi
+    if [ -z "$(kubectl --context {{ kube_context }} -n fundament get deploy -l app.kubernetes.io/component=plugin-controller -o name 2>/dev/null)" ]; then
+        echo "plugin-controller is not deployed in the sandbox — run 'just plugins deploy' first"
+        exit 1
+    fi
+    # A controller from before dev mode existed ignores spec.dev and deploys the
+    # air image under prod lockdown — fail fast instead of a silent crash loop.
+    if [ -z "$(kubectl --context {{ kube_context }} -n fundament get deploy -l app.kubernetes.io/component=plugin-controller -o jsonpath='{.items[0].spec.template.spec.containers[0].env[?(@.name=="PLUGIN_CONTROLLER_ALLOW_DEV_MODE")].value}' 2>/dev/null)" ]; then
+        echo "the sandbox plugin-controller was deployed without dev mode (PLUGIN_CONTROLLER_ALLOW_DEV_MODE) — run 'just plugins deploy' to redeploy it from this checkout"
+        exit 1
+    fi
+
+    # Helm never upgrades charts/fundament/crds/, so apply the current CRD by hand
+    # (spec.dev is a recent addition).
+    kubectl --context {{ kube_context }} apply -f charts/fundament/crds/plugininstallations.plugins.fundament.io.yaml
+
+    # functl's config file path, resolved by functl itself (functl/pkg/config.ConfigPath)
+    # rather than re-implementing its FUNCTL_CONFIG_DIR/XDG_CONFIG_HOME/~/.config fallback here.
+    functl_config_path=$(go run ./functl/cmd/functl config path) || {
+        echo "could not resolve functl's config path — run 'go run ./functl/cmd/functl config path' to see why"
+        exit 1
+    }
+    functl_org=$(yq '.organization // ""' "${functl_config_path}" 2>/dev/null || echo "")
+    sandbox_org=$(yq '.pluginController.organizationId' plugins/sandbox/values.yaml) || {
+        echo "could not read pluginController.organizationId from plugins/sandbox/values.yaml"
+        exit 1
+    }
+    # yq prints the string "null" with exit 0 when the key is missing: a key
+    # genuinely absent must fail the same way a read error does.
+    if [ -z "${sandbox_org}" ] || [ "${sandbox_org}" = "null" ]; then
+        echo "could not read pluginController.organizationId from plugins/sandbox/values.yaml"
+        exit 1
+    fi
+    if [ "${functl_org}" != "${sandbox_org}" ]; then
+        echo "functl's organization (${functl_org:-<none>}) does not match pluginController.organizationId in plugins/sandbox/values.yaml (${sandbox_org}) — drafts are org-scoped by RLS; run 'just functl org set ${sandbox_org}'"
+        exit 1
+    fi
+
+    # 2. The plugin's name comes from its definition, not its path: nested plugins
+    # (plugins/storage/ceph-rook → ceph-rook) differ.
+    plugin_name=$(yq '.metadata.name' "plugins/{{ name }}/definition.yaml")
+    if [ -z "${plugin_name}" ] || [ "${plugin_name}" = "null" ]; then
+        echo "could not read metadata.name from plugins/{{ name }}/definition.yaml"
+        exit 1
+    fi
+
+    # The namespace passed to skaffold -n below must equal the controller's:
+    # common/kubename hashes installation names once "plugin-" + name exceeds a
+    # 63-char DNS label, and sync would silently track the wrong namespace.
+    installation="{{ org }}--${plugin_name}"
+    if [ "${#installation}" -gt 56 ]; then
+        echo "installation name ${installation} is ${#installation} chars; the dev loop supports at most 56 (the controller hashes longer namespaces) — use a shorter organization or plugin name"
+        exit 1
+    fi
+
+    # The dev version a draft is published under: metadata.version with the 'v'
+    # stripped (the registry stores versions normalized the same way), '-dev'
+    # appended unless already present (matches injectDevVersion's idempotence).
+    raw_version=$(yq '.metadata.version' "plugins/{{ name }}/definition.yaml")
+    raw_version="${raw_version#v}"
+    case "${raw_version}" in
+        *-dev) dev_version="${raw_version}" ;;
+        *) dev_version="${raw_version}-dev" ;;
+    esac
+
+    # 3. Initial publish against the hotreload Dockerfile and dev image repo.
+    repo="localhost:{{ registry_port }}/${plugin_name}-plugin-dev"
+    tag=$(git describe --always --dirty)
+    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" _image-push "${repo}" "${tag}" plugins/hotreload/Dockerfile --build-arg "PLUGIN_PATH={{ name }}")
+    go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" --dev --create
+
+    # 4. Render both templates.
+    root="$(pwd)"
+    render_dir="${root}/plugins/sandbox/dev/.render/{{ name }}"
+    mkdir -p "${render_dir}"
+    sed \
+        -e "s|@NAME@|${plugin_name}|g" \
+        -e "s|@PATH@|{{ name }}|g" \
+        -e "s|@ROOT@|${root}|g" \
+        plugins/sandbox/dev/skaffold.yaml.tmpl > "${render_dir}/skaffold.yaml"
+    sed \
+        -e "s|@NAME@|${plugin_name}|g" \
+        -e "s|@ORG@|{{ org }}|g" \
+        -e "s|@VERSION@|${dev_version}|g" \
+        plugins/sandbox/dev/installation.yaml.tmpl > "${render_dir}/installation.yaml"
+
+    # 5. cd into the render dir: skaffold resolves manifests.rawYaml against its
+    # own working directory, not the -f file's directory. -n tracks the plugin
+    # namespace for sync (the CR itself is cluster-scoped and contributes none);
+    # --status-check=false because skaffold deploys only the CR.
+    cd "${render_dir}"
+    echo "Note: changes to go.mod/go.sum or definition.yaml are NOT hot-reloaded — restart 'just plugins dev {{ name }}' to rebuild and republish."
+    exec skaffold dev -f skaffold.yaml --default-repo=localhost:{{ registry_port }} \
+        -n "plugin-${installation}" --status-check=false --cleanup=false
+
+# Remove a dev-mode PluginInstallation left behind by `dev`
+dev-down name org="acme-corp":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(git rev-parse --show-toplevel)"
+    plugin_name=$(yq '.metadata.name' "plugins/{{ name }}/definition.yaml")
+    kubectl --context {{ kube_context }} delete plugininstallation "{{ org }}--${plugin_name}" --ignore-not-found

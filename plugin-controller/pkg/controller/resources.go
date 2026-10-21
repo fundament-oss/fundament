@@ -212,12 +212,35 @@ func mutatePluginScopeClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *plu
 }
 
 // mutateDeployment applies the desired state to an existing or empty
-// Deployment. Image and pull policy are sourced from the parsed
-// PluginDefinition — never from the CR — so the hash-verified manifest is the
-// sole gate on what image runs.
-func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, def *pluginruntime.PluginDefinition, fundEnvVars []corev1.EnvVar) {
+// Deployment. Image and pull policy come from the parsed PluginDefinition
+// unless devImage is non-empty (caller already ran the dev-mode gate), in
+// which case devImage is deployed byte-for-byte verbatim: skaffold file sync
+// matches pods by string equality against the built artifact tag.
+func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, def *pluginruntime.PluginDefinition, fundEnvVars []corev1.EnvVar, devImage string) {
 	labels := childLabels(cr)
 	replicas := int32(1)
+	dev := devImage != ""
+
+	image := def.Spec.Image
+	pullPolicy := corev1.PullPolicy(def.Spec.ImagePullPolicy)
+	if dev {
+		image = devImage
+		pullPolicy = corev1.PullIfNotPresent
+	}
+
+	// Dev mode relaxes the writable-root and probe-cadence gates so an
+	// in-place rebuild can replace the binary and survive the downtime
+	// (Go equivalent of the chart's hotreload helper, _helpers.tpl:113-143).
+	// 3 is the apiserver default made explicit; 0 would be dropped by
+	// omitempty and silently defaulted server-side.
+	readOnlyRootFS := true
+	livenessPeriod, livenessThreshold := int32(10), int32(3)
+	readinessPeriod, readinessThreshold := int32(10), int32(3)
+	if dev {
+		readOnlyRootFS = false
+		livenessPeriod, livenessThreshold = 5, 60
+		readinessPeriod, readinessThreshold = 5, 60
+	}
 
 	envVars := make([]corev1.EnvVar, 0, 1+len(cr.Spec.Config)+len(fundEnvVars))
 	envVars = append(envVars, corev1.EnvVar{Name: "HOME", Value: tmpMountPath})
@@ -260,11 +283,11 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Containers: []corev1.Container{
 				{
 					Name:            childResourceName,
-					Image:           def.Spec.Image,
-					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
+					Image:           image,
+					ImagePullPolicy: pullPolicy,
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: new(false),
-						ReadOnlyRootFilesystem:   new(true),
+						ReadOnlyRootFilesystem:   &readOnlyRootFS,
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},
@@ -289,7 +312,8 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 							},
 						},
 						InitialDelaySeconds: 5,
-						PeriodSeconds:       10,
+						PeriodSeconds:       livenessPeriod,
+						FailureThreshold:    livenessThreshold,
 					},
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
@@ -299,7 +323,8 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 							},
 						},
 						InitialDelaySeconds: 10,
-						PeriodSeconds:       10,
+						PeriodSeconds:       readinessPeriod,
+						FailureThreshold:    readinessThreshold,
 					},
 				},
 			},

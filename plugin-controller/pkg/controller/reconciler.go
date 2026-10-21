@@ -50,6 +50,10 @@ const (
 	// definition with no schema always validates (pre-schema back-compat).
 	ConditionConfigValid = "ConfigValid"
 
+	// ConditionDevMode reports whether the CR's dev-mode request (the
+	// AnnotationDevMode annotation) is actually in effect.
+	ConditionDevMode = "DevMode"
+
 	// failedRetryInterval is how long a permanently failed installation waits
 	// before it is tried again. The answer rarely changes, but a version that
 	// was just published, or a lookup that raced, must not stay Failed forever.
@@ -229,6 +233,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil //nolint:nilerr // intentional: permanent validation error, don't requeue
 	}
 
+	// Computed up front: reconcileChildren returns early on several failures,
+	// but a dev CR must still get an accurate DevMode condition on those passes.
+	devImg := r.devImage(&cr)
+	setDevModeCondition(&cr, &r.cfg, devImg)
+
 	// Materialise child resources on every reconcile — the controller is
 	// level-triggered, so out-of-band drift (a deleted scope ClusterRole,
 	// RoleBinding or Deployment) is repaired on the next poll rather than
@@ -240,7 +249,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	//
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
 	// those before returning on error so the CR reflects the failure.
-	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+	if err := r.reconcileChildren(ctx, log, &cr, devImg); err != nil {
 		if errors.Is(err, errNamespaceTerminating) {
 			cr.Status.Phase = pluginsv1.PluginPhasePending
 			cr.Status.Ready = false
@@ -444,7 +453,9 @@ func (r *Reconciler) requestPluginUninstall(ctx context.Context, log *slog.Logge
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) error {
+// devImg is the already-gated dev-mode image (see devImage), computed once in
+// Reconcile so the DevMode condition is set on every path, not just the Deployment one.
+func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation, devImg string) error {
 	fundEnvVars := r.fundamentEnvVars()
 	nsName := pluginNamespace(cr.Name)
 
@@ -545,7 +556,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		ObjectMeta: metav1.ObjectMeta{Name: childResourceName, Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, deploy, func() error {
-		mutateDeployment(deploy, cr, def, fundEnvVars)
+		mutateDeployment(deploy, cr, def, fundEnvVars, devImg)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("reconcile Deployment: %w", err)
@@ -584,6 +595,38 @@ func setCondition(cr *pluginsv1.PluginInstallation, condType string, status meta
 // setPluginScopeCondition upserts the PluginScopeReady Condition on the CR.
 func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
 	setCondition(cr, ConditionPluginScopeReady, status, reason, message)
+}
+
+// devImage returns cr.Spec.Dev.Image when the annotation is exactly "true",
+// the controller flag is on, and Spec.Dev is set; "" (production) otherwise.
+func (r *Reconciler) devImage(cr *pluginsv1.PluginInstallation) string {
+	if cr.Annotations[pluginsv1.AnnotationDevMode] != "true" || !r.cfg.AllowDevMode {
+		return ""
+	}
+	if cr.Spec.Dev == nil {
+		return ""
+	}
+	return cr.Spec.Dev.Image
+}
+
+// setDevModeCondition upserts DevMode while the CR asks for dev mode, and
+// clears it once the annotation goes away so no stale DevModeActive lingers.
+func setDevModeCondition(cr *pluginsv1.PluginInstallation, cfg *config.Config, devImg string) {
+	if cr.Annotations[pluginsv1.AnnotationDevMode] != "true" {
+		meta.RemoveStatusCondition(&cr.Status.Conditions, ConditionDevMode)
+		return
+	}
+	switch {
+	case !cfg.AllowDevMode:
+		setCondition(cr, ConditionDevMode, metav1.ConditionFalse, "DevModeDisabled",
+			"spec.dev requested but PLUGIN_CONTROLLER_ALLOW_DEV_MODE is false; deploying the definition's image")
+	case devImg == "":
+		setCondition(cr, ConditionDevMode, metav1.ConditionFalse, "DevImageMissing",
+			"dev-mode annotation set but spec.dev.image is empty; deploying the definition's image")
+	default:
+		setCondition(cr, ConditionDevMode, metav1.ConditionTrue, "DevModeActive",
+			"deploying spec.dev.image verbatim instead of the definition's image")
+	}
 }
 
 // fetchDefinition fetches the PluginDefinition manifest from organization-api,

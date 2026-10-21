@@ -200,6 +200,9 @@ message CreatePluginVersionRequest {
     max_len: 1048576
   }];
   string release_notes = 40 [(buf.validate.field).string = {max_len: 8000}];
+  // Replace re-publishes an existing *draft* version in place (dev loop);
+  // refused for any other status.
+  bool replace = 50;
 }
 
 message CreatePluginVersionResponse {
