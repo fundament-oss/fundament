@@ -163,6 +163,8 @@ paths:
           $ref: "#/components/responses/MethodNotAllowed"
         "500":
           $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /logout:
     post:
@@ -220,6 +222,15 @@ components:
 
     InternalServerError:
       description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ServiceUnavailable:
+      description: |
+        Temporarily unavailable (e.g. the database cannot be reached). The
+        session is still valid; the client must not treat this as a sign-out.
       content:
         application/json:
           schema:

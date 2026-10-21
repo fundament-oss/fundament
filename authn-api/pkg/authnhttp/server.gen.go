@@ -86,6 +86,9 @@ type InternalServerError = ErrorResponse
 // MethodNotAllowed defines model for MethodNotAllowed.
 type MethodNotAllowed = ErrorResponse
 
+// ServiceUnavailable defines model for ServiceUnavailable.
+type ServiceUnavailable = ErrorResponse
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
 
@@ -421,6 +424,8 @@ type InternalServerErrorJSONResponse ErrorResponse
 
 type MethodNotAllowedJSONResponse ErrorResponse
 
+type ServiceUnavailableJSONResponse ErrorResponse
+
 type UnauthorizedJSONResponse ErrorResponse
 
 type HandleCallbackRequestObject struct {
@@ -665,6 +670,15 @@ type HandleRefresh500JSONResponse struct {
 func (response HandleRefresh500JSONResponse) VisitHandleRefreshResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type HandleRefresh503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response HandleRefresh503JSONResponse) VisitHandleRefreshResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 
 	return json.NewEncoder(w).Encode(response)
 }
