@@ -32,15 +32,23 @@ func (s *Seed) exec(query string, args ...any) {
 	require.NoError(s.t, err)
 }
 
+// Organization inserts an organization with room for every cluster and node
+// pool a test seeds: the defaults allow one cluster and no nodes.
 func (s *Seed) Organization(name, alias string) uuid.UUID {
 	s.t.Helper()
-	return s.id(`INSERT INTO tenant.organizations (name, alias) VALUES ($1, $2) RETURNING id`, name, alias)
+	id := s.id(`INSERT INTO tenant.organizations (name, alias, quota_clusters) VALUES ($1, $2, 100) RETURNING id`, name, alias)
+	s.exec(`INSERT INTO tenant.organization_machine_quotas (organization_id, region_machine_type_id, max_nodes)
+		SELECT $1, catalog.region_machine_types.id, 100 FROM catalog.region_machine_types`, id)
+	return id
 }
 
+// Cluster inserts a cluster in the eu-west-1 catalog region, which node pools
+// need to resolve their machine type against a quota.
 func (s *Seed) Cluster(orgID uuid.UUID, name string) uuid.UUID {
 	s.t.Helper()
-	return s.id(`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-		VALUES ($1, $2, 'eu-west-1', '1.31.1') RETURNING id`, orgID, name)
+	return s.id(`INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id)
+		VALUES ($1, $2, 'eu-west-1', '1.31.1', (SELECT catalog.regions.id FROM catalog.regions WHERE catalog.regions.name = 'eu-west-1'))
+		RETURNING id`, orgID, name)
 }
 
 // Project inserts a project with the admin member a deferred trigger requires.

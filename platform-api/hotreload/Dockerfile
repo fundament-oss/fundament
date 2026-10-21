@@ -1,4 +1,4 @@
-FROM golang:1.27.2-alpine
+FROM golang:1.27.3-alpine
 ARG BINARY
 RUN test -n "$BINARY" || (echo "BINARY build argument is required" >&2 && exit 1)
 RUN go install github.com/air-verse/air@v1.65.0

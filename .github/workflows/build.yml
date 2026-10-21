@@ -500,7 +500,7 @@ jobs:
             | Marketplace Admin API | https://marketplace-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Plugin Developer Portal | https://marketplace-registry.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Marketplace Review Backoffice | https://marketplace-admin.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
-            | Platform API | https://platform-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Platform Public API | https://platform-public-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Platform Admin API | https://platform-admin-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Chart:** `${{ needs.publish-chart.outputs.chart_version }}`

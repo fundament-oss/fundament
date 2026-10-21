@@ -37,7 +37,7 @@ externalUrls:
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
-  platformPublicApi: "" # e.g., https://platform-api.example.com (anonymous overview the console's /platform page reads; empty hides the page's numbers)
+  platformPublicApi: "" # e.g., https://platform-public-api.example.com (anonymous overview the console's /platform page reads; empty hides the page's numbers)
   platformAdminApi: "" # e.g., https://platform-admin-api.example.com (staff fleet view in DCIM; restricted host)
   cookieDomain: "" # e.g., example.com
 

@@ -23,7 +23,7 @@ externalUrls:
   marketplaceAdminApi: https://marketplace-admin-api.fundament.localhost:8443
   marketplaceRegistry: https://marketplace-registry.fundament.localhost:8443
   marketplaceAdmin: https://marketplace-admin.fundament.localhost:8443
-  platformPublicApi: https://platform-api.fundament.localhost:8443
+  platformPublicApi: https://platform-public-api.fundament.localhost:8443
   platformAdminApi: https://platform-admin-api.fundament.localhost:8443
   corsAllowedOrigins: "https://console.fundament.localhost:8443,https://marketplace.fundament.localhost:8443,https://marketplace-registry.fundament.localhost:8443,https://marketplace-admin.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
@@ -369,7 +369,7 @@ platformPublicApi:
     enabled: true
     parentRefs: *localGateway
     hostnames:
-      - platform-api.fundament.localhost
+      - platform-public-api.fundament.localhost
 
 # Staff fleet view for DCIM. Authenticated, so it picks up the shared jwtSecret above.
 platformAdminApi:

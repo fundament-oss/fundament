@@ -1,6 +1,6 @@
 # One Go tree, two deployables (FUN-23): BINARY picks the command,
 # platform-public-api or platform-admin-api.
-FROM golang:1.27.2-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 ARG BINARY
 WORKDIR /build
 COPY go.mod go.sum ./

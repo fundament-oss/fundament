@@ -20,7 +20,7 @@ externalUrls:
   marketplaceRegistryApi: https://marketplace-registry-api.fundament.projects.digilab.network
   marketplaceAdmin: https://marketplace-admin.fundament.projects.digilab.network
   marketplaceAdminApi: https://marketplace-admin-api.fundament.projects.digilab.network
-  platformPublicApi: https://platform-api.fundament.projects.digilab.network
+  platformPublicApi: https://platform-public-api.fundament.projects.digilab.network
   platformAdminApi: https://platform-admin-api.fundament.projects.digilab.network
   corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://marketplace.fundament.projects.digilab.network,https://marketplace-registry.fundament.projects.digilab.network,https://marketplace-admin.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
