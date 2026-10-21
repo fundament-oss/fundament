@@ -17,6 +17,9 @@
     "format": "prettier --write ."
   },
   "packageManager": "bun@1.4.3",
+  "overrides": {
+    "@jridgewell/sourcemap-codec": "1.6.0"
+  },
   "prettier": {
     "printWidth": 100,
     "singleQuote": true,

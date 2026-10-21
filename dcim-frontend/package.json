@@ -26,6 +26,9 @@
   },
   "private": true,
   "packageManager": "bun@1.4.3",
+  "overrides": {
+    "@jridgewell/sourcemap-codec": "1.6.0"
+  },
   "dependencies": {
     "@angular/cdk": "22.2.4",
     "@angular/common": "22.2.3",
@@ -38,7 +41,7 @@
     "@connectrpc/connect": "2.2.0",
     "@connectrpc/connect-web": "2.2.0",
     "@dotglitch/ngx-common": "3.0.0-beta.2",
-    "@nldd/design-system": "^0.10.0",
+    "@nldd/design-system": "0.8.91",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "react": "19.3.1",

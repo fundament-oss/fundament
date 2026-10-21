@@ -12,6 +12,7 @@
 // a cross-repo invariant locally; a plugin extracted to its own repo would have to
 // pin the version against a published manifest instead.
 
+/// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
