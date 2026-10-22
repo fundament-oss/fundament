@@ -1189,6 +1189,7 @@ type CreatePluginVersionRequest struct {
 	xxx_hidden_Version      string                 `protobuf:"bytes,20,opt,name=version"`
 	xxx_hidden_Manifest     []byte                 `protobuf:"bytes,30,opt,name=manifest"`
 	xxx_hidden_ReleaseNotes string                 `protobuf:"bytes,40,opt,name=release_notes,json=releaseNotes"`
+	xxx_hidden_Replace      bool                   `protobuf:"varint,50,opt,name=replace"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1246,6 +1247,13 @@ func (x *CreatePluginVersionRequest) GetReleaseNotes() string {
 	return ""
 }
 
+func (x *CreatePluginVersionRequest) GetReplace() bool {
+	if x != nil {
+		return x.xxx_hidden_Replace
+	}
+	return false
+}
+
 func (x *CreatePluginVersionRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
@@ -1265,6 +1273,10 @@ func (x *CreatePluginVersionRequest) SetReleaseNotes(v string) {
 	x.xxx_hidden_ReleaseNotes = v
 }
 
+func (x *CreatePluginVersionRequest) SetReplace(v bool) {
+	x.xxx_hidden_Replace = v
+}
+
 type CreatePluginVersionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1276,6 +1288,9 @@ type CreatePluginVersionRequest_builder struct {
 	// real definition and bounds the request.
 	Manifest     []byte
 	ReleaseNotes string
+	// Replace re-publishes an existing *draft* version in place (dev loop);
+	// refused for any other status.
+	Replace bool
 }
 
 func (b0 CreatePluginVersionRequest_builder) Build() *CreatePluginVersionRequest {
@@ -1286,6 +1301,7 @@ func (b0 CreatePluginVersionRequest_builder) Build() *CreatePluginVersionRequest
 	x.xxx_hidden_Version = b.Version
 	x.xxx_hidden_Manifest = b.Manifest
 	x.xxx_hidden_ReleaseNotes = b.ReleaseNotes
+	x.xxx_hidden_Replace = b.Replace
 	return m0
 }
 
@@ -1788,14 +1804,15 @@ const file_registry_v1_publication_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fpluginVersionId\"P\n" +
 	"\x18GetPluginVersionResponse\x124\n" +
 	"\aversion\x18\n" +
-	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"\x8b\x03\n" +
+	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"\xa5\x03\n" +
 	"\x1aCreatePluginVersionRequest\x12%\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bpluginId\x12\xed\x01\n" +
 	"\aversion\x18\x14 \x01(\tB\xd2\x01\xbaH\xce\x01\xba\x01\xc6\x01\n" +
 	"\x06semver\x12|must be a semantic version, optionally prefixed with v; build metadata is not accepted because it is not valid in an OCI tag\x1a>this.matches('^v?[0-9]+\\\\.[0-9]+\\\\.[0-9]+(-[0-9A-Za-z.-]+)?$')r\x02\x18@R\aversion\x12'\n" +
 	"\bmanifest\x18\x1e \x01(\fB\v\xbaH\bz\x06\x10\x01\x18\x80\x80@R\bmanifest\x12-\n" +
-	"\rrelease_notes\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\freleaseNotes\"S\n" +
+	"\rrelease_notes\x18( \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\freleaseNotes\x12\x18\n" +
+	"\areplace\x182 \x01(\bR\areplace\"S\n" +
 	"\x1bCreatePluginVersionResponse\x124\n" +
 	"\aversion\x18\n" +
 	" \x01(\v2\x1a.registry.v1.PluginVersionR\aversion\"R\n" +

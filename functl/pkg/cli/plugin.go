@@ -273,13 +273,26 @@ type PluginPublishCmd struct {
 	PluginID   string `name:"plugin-id" help:"Listing uuid; when empty, resolved by the manifest's metadata.name via ListPlugins."`
 	Create     bool   `help:"Reserve the listing first when it does not exist, seeded from the manifest's metadata."`
 	Submit     bool   `help:"Open a review round for the pushed version in the same run."`
+	Replace    bool   `help:"Republish an existing draft version in place. A replaced version can never be submitted for review."`
+	Dev        bool   `help:"Development publish: -dev version suffix, implies --replace."`
 }
 
 // Run executes the plugin publish command.
 func (c *PluginPublishCmd) Run(ctx *Context) error {
+	if c.Dev && c.Submit {
+		return errors.New("--dev and --submit cannot be combined: dev versions are for the sandbox loop, not review")
+	}
+
 	src, err := os.ReadFile(c.Definition) //nolint:gosec // path comes from the operator's own CLI argument
 	if err != nil {
 		return fmt.Errorf("read definition: %w", err)
+	}
+
+	if c.Dev {
+		src, err = injectDevVersion(src)
+		if err != nil {
+			return fmt.Errorf("inject dev version: %w", err)
+		}
 	}
 
 	published, err := injectImage(src, c.Image, "IfNotPresent")
@@ -324,12 +337,13 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		PluginId: pluginID,
 		Version:  def.Metadata.Version,
 		Manifest: published,
+		Replace:  c.Replace || c.Dev,
 	}.Build())
 	if err != nil {
 		var connectErr *connect.Error
 		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeAlreadyExists {
 			// Create-only by design: an approved version's hash is a consent
-			// record and stays immutable (FUN-20).
+			// record (FUN-20). Not --replace: a replaced version is never submittable.
 			return fmt.Errorf("%w\n(versions are create-only; bump metadata.version — a -dev prerelease suffix works)", err)
 		}
 		return fmt.Errorf("publish failed: %w", err)
@@ -410,16 +424,40 @@ func createPlugin(ctx context.Context, pubClient registryv1connect.PublicationSe
 	return resp.GetPlugin().GetId(), nil
 }
 
+// mapValue returns the value node for key in a YAML mapping, or nil.
+func mapValue(m *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// topLevelMapping parses src into doc and returns the mapping under the
+// document's top-level key; edits to it show up when doc is marshalled.
+func topLevelMapping(src []byte, doc *yaml.Node, key string) (*yaml.Node, error) {
+	if err := yaml.Unmarshal(src, doc); err != nil {
+		return nil, fmt.Errorf("parse yaml: %w", err)
+	}
+	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("unexpected manifest structure")
+	}
+	m := mapValue(doc.Content[0], key)
+	if m == nil || m.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("manifest has no %s mapping", key)
+	}
+	return m, nil
+}
+
 // setMapValue sets key=value on a YAML mapping node, replacing an existing key
 // or appending a new scalar pair.
 func setMapValue(m *yaml.Node, key, value string) {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			m.Content[i+1].Kind = yaml.ScalarNode
-			m.Content[i+1].Tag = "!!str"
-			m.Content[i+1].Value = value
-			return
-		}
+	if v := mapValue(m, key); v != nil {
+		v.Kind = yaml.ScalarNode
+		v.Tag = "!!str"
+		v.Value = value
+		return
 	}
 	m.Content = append(m.Content,
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
@@ -431,25 +469,37 @@ func setMapValue(m *yaml.Node, key, value string) {
 // preserving the rest of the document, and returns the published bytes.
 func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	var doc yaml.Node
-	if err := yaml.Unmarshal(src, &doc); err != nil {
-		return nil, fmt.Errorf("parse yaml: %w", err)
-	}
-	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("unexpected manifest structure")
-	}
-	root := doc.Content[0]
-	var spec *yaml.Node
-	for i := 0; i+1 < len(root.Content); i += 2 {
-		if root.Content[i].Value == "spec" {
-			spec = root.Content[i+1]
-			break
-		}
-	}
-	if spec == nil || spec.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("manifest has no spec mapping")
+	spec, err := topLevelMapping(src, &doc, "spec")
+	if err != nil {
+		return nil, err
 	}
 	setMapValue(spec, "image", image)
 	setMapValue(spec, "imagePullPolicy", pullPolicy)
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("marshal manifest: %w", err)
+	}
+	return out, nil
+}
+
+// injectDevVersion appends a -dev suffix to metadata.version, left alone if
+// already present, so a repeated dev publish stays idempotent.
+func injectDevVersion(src []byte) ([]byte, error) {
+	var doc yaml.Node
+	metadata, err := topLevelMapping(src, &doc, "metadata")
+	if err != nil {
+		return nil, err
+	}
+	var version string
+	if v := mapValue(metadata, "version"); v != nil {
+		version = v.Value
+	}
+	if version == "" {
+		return nil, fmt.Errorf("manifest has no metadata.version")
+	}
+	if !strings.HasSuffix(version, "-dev") {
+		setMapValue(metadata, "version", version+"-dev")
+	}
 	out, err := yaml.Marshal(&doc)
 	if err != nil {
 		return nil, fmt.Errorf("marshal manifest: %w", err)

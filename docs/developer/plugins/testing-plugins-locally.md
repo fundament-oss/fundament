@@ -72,6 +72,30 @@ functl auth login <API_KEY>
 functl org set <organization-id>
 ```
 
+## Fast iteration: hot reload
+
+Iterating on a plugin's own Go code? `just plugins dev <name>` replaces steps 4–6 below: every saved `.go` file rebuilds and reinstalls the plugin automatically, instead of a one-shot publish/install/verify.
+
+```shell
+just plugins dev external-dns
+```
+
+- The argument is the plugin's path under `plugins/` (nested works too: `just plugins dev storage/ceph-rook`); everything cluster-facing is named after the definition's `metadata.name` instead, so that example installs `acme-corp--ceph-rook`.
+- Preflight (each failing check prints what to run): `plugin-controller` must be deployed (step 1); functl's configured organization must match `pluginController.organizationId` in `plugins/sandbox/values.yaml` — the session from step 3 must be logged into that same organization.
+- Publishes a throwaway draft version: `metadata.version` from `plugins/<name>/definition.yaml`, leading `v` stripped (the registry stores versions normalized without it), `-dev` appended (`functl plugin publish --dev --create`).
+- Installs a `PluginInstallation` named `<organization>--<name>` (second argument, default `acme-corp`) with the `plugins.fundament.io/dev-mode: "true"` annotation and `spec.dev.image` set: the controller deploys that image verbatim, with relaxed probes and filesystem, instead of resolving it from the published definition.
+- Builds the plugin from `plugins/hotreload/Dockerfile` (`air` with the shared `plugins/hotreload/.air.toml.tmpl`, rendered for the plugin's path) and runs `skaffold dev`: every saved file syncs into the running pod and recompiles in place.
+- Console assets reload too: `console/` HTML/CSS/JS is `go:embed`-ed into the binary, and air watches those extensions, so a saved asset edit re-embeds and restarts in the same loop.
+- Exception: plugins whose console is a Vite build (`openfsc`, `gateway-api/envoy-gateway`) — their `console/` is build output excluded from the dev image, so this loop cannot serve or reload their UI. Iterate on those UIs with the plugin's own `console-ui` tooling instead.
+- Changes to `go.mod`/`go.sum` or `definition.yaml` are **not** hot-reloaded mid-session — restart `just plugins dev <name>` to rebuild and republish.
+- After bumping `metadata.version`, run `just plugins dev-down <name>` first: the CR's `definitionRef.pluginVersion` is immutable, so applying over an existing CR with a different version fails on CEL immutability.
+
+```shell
+just plugins dev-down external-dns
+```
+
+removes the `PluginInstallation`; the controller cleans up its namespace and children.
+
 ## 4. Publish
 
 **Plugin in this repository**:

@@ -179,6 +179,12 @@ spec:
             - name: PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH
               value: "true"
             {{- end }}
+            {{- if $.Values.pluginController.allowDevMode }}
+            # Dev mode lets a PluginInstallation deploy a CR-supplied image with
+            # relaxed probes/filesystem. Never set in production.
+            - name: PLUGIN_CONTROLLER_ALLOW_DEV_MODE
+              value: "true"
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
           volumeMounts:
