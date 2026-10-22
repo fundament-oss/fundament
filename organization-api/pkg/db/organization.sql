@@ -73,3 +73,15 @@ SELECT EXISTS (
     WHERE id = $1
       AND deleted IS NULL
 );
+
+-- name: OrganizationLockForMemberRemoval :exec
+-- Serializes member removals in the current organization. Removing a member
+-- removes their project memberships (trigger remove_project_memberships), and
+-- the protect_last_admin trigger locks each project after its member row, in
+-- the order the rows are scanned: two removals that each hold one project and
+-- wait for the other would deadlock. Taken before the membership row, so it
+-- keeps the order of a funops organization delete, which locks this row first.
+SELECT id
+FROM tenant.organizations
+WHERE id = authn.current_organization_id()
+FOR NO KEY UPDATE;
