@@ -99,34 +99,6 @@ func (q *Queries) ProjectMemberDelete(ctx context.Context, arg ProjectMemberDele
 	return result.RowsAffected(), nil
 }
 
-const projectMemberDeleteByUserID = `-- name: ProjectMemberDeleteByUserID :exec
-UPDATE tenant.project_members
-SET deleted = now()
-WHERE tenant.project_members.user_id = $1
-  AND tenant.project_members.deleted IS NULL
-  AND tenant.project_members.project_id IN (
-    SELECT tenant.projects.id
-    FROM tenant.projects
-    JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
-    WHERE tenant.clusters.organization_id = authn.current_organization_id()
-      AND tenant.projects.deleted IS NULL
-  )
-`
-
-type ProjectMemberDeleteByUserIDParams struct {
-	UserID uuid.UUID
-}
-
-// Removes a user from every project of the current organization, for when the
-// user leaves it. A project membership left behind would come back into
-// effect with a new invitation, which should grant only what it says.
-// Deleted projects are skipped: their memberships grant nothing, and the
-// last-admin trigger would refuse removing their only admin.
-func (q *Queries) ProjectMemberDeleteByUserID(ctx context.Context, arg ProjectMemberDeleteByUserIDParams) error {
-	_, err := q.db.Exec(ctx, projectMemberDeleteByUserID, arg.UserID)
-	return err
-}
-
 const projectMemberGetByID = `-- name: ProjectMemberGetByID :one
 SELECT
     project_members.id,

@@ -41,8 +41,10 @@ ORDER BY organizations_users.created DESC;
 -- name: MembershipDelete :execrows
 -- Revokes and soft-deletes a membership or pending invitation, the way the
 -- organization-api does it; the update trigger puts the row on the authz
--- outbox so the user's tuples are removed from OpenFGA. A declined invitation
--- is nothing to remove, so it does not count.
+-- outbox so the user's tuples are removed from OpenFGA, and the trigger
+-- remove_project_memberships removes the user from the organization's
+-- projects (refused while they are the only admin of one). A declined
+-- invitation is nothing to remove, so it does not count.
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
 WHERE organization_id = @organization_id
@@ -52,7 +54,8 @@ WHERE organization_id = @organization_id
 
 -- name: MembershipRevokeAllForUser :execrows
 -- Revokes every live membership and invitation of a user, for when the user
--- row itself is deleted.
+-- row itself is deleted. As with MembershipDelete, the user leaves the
+-- organizations' projects too.
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
 WHERE user_id = @user_id

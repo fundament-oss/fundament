@@ -6,7 +6,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
@@ -195,6 +197,9 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 		UserID:         user.ID,
 	})
 	if err != nil {
+		if isLastProjectAdmin(err) {
+			return fmt.Errorf("user %q is the only admin of a project in organization %q; make someone else admin of it first", c.User, c.Organization)
+		}
 		return fmt.Errorf("failed to remove organization member: %w", err)
 	}
 	if rowsAffected == 0 {
@@ -204,6 +209,14 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 	ctx.Logger.Info("removed organization member", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email)
 
 	return nil
+}
+
+// isLastProjectAdmin reports whether err is the database refusing to revoke a
+// membership because it would remove the only admin of a project: revoking a
+// membership removes the user from the organization's projects too.
+func isLastProjectAdmin(err error) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintProjectContainsOneAdmin
 }
 
 // parsePermission maps the flag value onto the database constant.

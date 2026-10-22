@@ -150,23 +150,21 @@ func TestResolveUserAccessAdminDemotedButProjectMember(t *testing.T) {
 	userID := insertUser(t, db, "Demoted User")
 	projectAdminID := insertUser(t, db, "Project Admin D")
 
-	// User was admin but got soft-deleted, still a project member.
+	// User was admin, still a project member.
 	insertOrgUser(t, db, acmeCorpOrgID, userID, "admin", "accepted")
-	// Soft-delete the admin membership.
-	_, err := db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.organizations_users SET deleted = now()
-		 WHERE organization_id = $1 AND user_id = $2 AND deleted IS NULL`,
-		acmeCorpOrgID, userID,
-	)
-	require.NoError(t, err)
-
-	// Re-add as viewer.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-
 	insertProjectWithMembers(t, db, clusterID,
 		projectMember{UserID: projectAdminID, Role: "admin"},
 		projectMember{UserID: userID, Role: "viewer"},
 	)
+
+	// Demote to viewer, as the organization-api does: in place. Removing the
+	// membership would take the project memberships with it.
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.organizations_users SET permission = 'viewer'
+		 WHERE organization_id = $1 AND user_id = $2 AND deleted IS NULL`,
+		acmeCorpOrgID, userID,
+	)
+	require.NoError(t, err)
 
 	access, err := queries.ResolveUserAccess(t.Context(), dbgen.ResolveUserAccessParams{
 		UserID:    userID,

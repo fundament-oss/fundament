@@ -130,7 +130,9 @@ func TestProjectRBAC_ReconcileRepairsDrift(t *testing.T) {
 
 // A project membership left behind by a removal from the organization neither
 // keeps its RoleBinding nor its ServiceAccount: the user sync for the removal
-// and the reconcile loop both treat it as no access.
+// and the reconcile loop both treat it as no access. The database removes the
+// project memberships with the organization membership, so the leftover is put
+// back by hand, as one left from before it did.
 func TestProjectRBAC_RemovedOrgMemberLosesAccess(t *testing.T) {
 	t.Parallel()
 	f := newProjectRBACFixture(t, "prbac-org-removed")
@@ -148,6 +150,10 @@ func TestProjectRBAC_RemovedOrgMemberLosesAccess(t *testing.T) {
 
 	_, err := f.db.adminPool.Exec(ctx,
 		`UPDATE tenant.organizations_users SET deleted = now(), status = 'revoked' WHERE id = $1`, orgUserID)
+	require.NoError(t, err)
+	_, err = f.db.adminPool.Exec(ctx,
+		`INSERT INTO tenant.project_members (project_id, user_id, role) VALUES ($1, $2, 'viewer')`,
+		f.projectID, f.projViewer)
 	require.NoError(t, err)
 
 	require.NoError(t, h.Sync(ctx, orgUserID, handler.SyncContext{

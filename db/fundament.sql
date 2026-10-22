@@ -741,6 +741,49 @@ $function$;
 ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.organizations_users_tr_remove_project_memberships | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organizations_users_tr_remove_project_memberships() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organizations_users_tr_remove_project_memberships ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- A user who leaves the organization leaves its projects too: a project
+    -- membership left behind keeps its RBAC on the clusters and comes back into
+    -- effect when the user is invited again. Every writer that revokes a
+    -- membership is covered, the organization-api and funops alike. The
+    -- protect_last_admin trigger refuses this while the user is the only admin
+    -- of a project.
+    -- Deleted projects are skipped: their memberships grant nothing, and
+    -- protect_last_admin would refuse removing their only admin.
+    -- The query takes a fresh snapshot, so it also sees a project membership
+    -- added by a transaction this row update waited for.
+    IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        UPDATE tenant.project_members
+        SET deleted = now()
+        WHERE tenant.project_members.user_id = NEW.user_id
+            AND tenant.project_members.deleted IS NULL
+            AND tenant.project_members.project_id IN (
+                SELECT tenant.projects.id
+                FROM tenant.projects
+                JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+                WHERE tenant.clusters.organization_id = NEW.organization_id
+                    AND tenant.projects.deleted IS NULL
+            );
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organizations_users_tr_remove_project_memberships() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.cluster_outbox_project_member_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_outbox_project_member_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_project_member_trigger ()
@@ -2949,6 +2992,15 @@ CREATE OR REPLACE TRIGGER cluster_outbox_organization_user
 	ON tenant.organizations_users
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_organization_user_trigger();
+-- ddl-end --
+
+-- object: remove_project_memberships | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS remove_project_memberships ON tenant.organizations_users CASCADE;
+CREATE OR REPLACE TRIGGER remove_project_memberships
+	AFTER UPDATE
+	ON tenant.organizations_users
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.organizations_users_tr_remove_project_memberships();
 -- ddl-end --
 
 -- object: cluster_outbox_project_member | type: TRIGGER --

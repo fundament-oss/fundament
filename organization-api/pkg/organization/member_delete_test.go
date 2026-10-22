@@ -253,6 +253,82 @@ func Test_MemberDelete_RemovesProjectMemberships(t *testing.T) {
 	assert.NotContains(t, projectUserIDs(teamA), targetUserID.String())
 	assert.NotContains(t, projectUserIDs(teamB), targetUserID.String())
 	assert.Contains(t, projectUserIDs(teamA), callerUserID.String(), "other members are untouched")
+
+	_, err = memberClient.DeleteMember(ctx, deleteReq)
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeNotFound, connectErr.Code(), "a removed membership is not found")
+}
+
+// The database removes the project memberships, so revoking a membership
+// without the API, as funops does, removes them too.
+func Test_MemberRevokedInDatabase_RemovesProjectMemberships(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	callerUserID := uuid.New()
+	targetUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     callerUserID,
+			Name:   "caller-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+		WithUser(&UserArgs{
+			ID:     targetUserID,
+			Name:   "target-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	token := env.createAuthnToken(t, callerUserID)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+
+	clusterRes, err := clusterClient.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	projectRes, err := projectClient.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(),
+		Name:      "test-project",
+	}.Build())
+	require.NoError(t, err)
+
+	_, err = projectClient.AddProjectMember(ctx, organizationv1.AddProjectMemberRequest_builder{
+		ProjectId: projectRes.GetProjectId(),
+		UserId:    targetUserID.String(),
+		Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
+	}.Build())
+	require.NoError(t, err)
+
+	// The update funops' MembershipDelete makes.
+	_, err = env.adminPool.Exec(t.Context(), `
+		UPDATE tenant.organizations_users
+		SET deleted = now(), status = 'revoked'
+		WHERE organization_id = $1 AND user_id = $2 AND deleted IS NULL`,
+		orgID, targetUserID,
+	)
+	require.NoError(t, err)
+
+	res, err := projectClient.ListProjectMembers(ctx, organizationv1.ListProjectMembersRequest_builder{
+		ProjectId: projectRes.GetProjectId(),
+	}.Build())
+	require.NoError(t, err)
+	userIDs := make([]string, 0, len(res.GetMembers()))
+	for _, m := range res.GetMembers() {
+		userIDs = append(userIDs, m.GetUserId())
+	}
+	assert.NotContains(t, userIDs, targetUserID.String())
+	assert.Contains(t, userIDs, callerUserID.String())
 }
 
 func projectMemberID(

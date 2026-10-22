@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const memberDelete = `-- name: MemberDelete :exec
+const memberDelete = `-- name: MemberDelete :execrows
 UPDATE tenant.organizations_users
 SET deleted = NOW(), status = 'revoked'
 WHERE id = $1
@@ -24,9 +24,14 @@ type MemberDeleteParams struct {
 	ID uuid.UUID
 }
 
-func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) error {
-	_, err := q.db.Exec(ctx, memberDelete, arg.ID)
-	return err
+// Revokes the membership. The trigger remove_project_memberships removes the
+// user from the organization's projects with it.
+func (q *Queries) MemberDelete(ctx context.Context, arg MemberDeleteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, memberDelete, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const memberGetByID = `-- name: MemberGetByID :one
@@ -218,9 +223,10 @@ type MemberLockAcceptedByUserIDParams struct {
 }
 
 // Locks the user's accepted membership of the current organization against
-// removal until the transaction ends. DeleteMember revokes the membership
-// before it removes the project memberships, so a project member added under
-// this lock is either refused here or removed by that cleanup.
+// removal until the transaction ends. Revoking the membership removes the
+// user's project memberships (trigger remove_project_memberships), so a
+// project member added under this lock is either refused here or removed by
+// that cleanup.
 func (q *Queries) MemberLockAcceptedByUserID(ctx context.Context, arg MemberLockAcceptedByUserIDParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, memberLockAcceptedByUserID, arg.UserID)
 	var id uuid.UUID

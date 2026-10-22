@@ -217,6 +217,9 @@ func (c *UserDeleteCmd) Run(ctx *Context) error {
 
 	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
+		if isLastProjectAdmin(err) {
+			return fmt.Errorf("user %q is the only admin of a project; make someone else admin of it first", c.User)
+		}
 		return fmt.Errorf("failed to revoke memberships: %w", err)
 	}
 

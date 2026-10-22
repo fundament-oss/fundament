@@ -134,9 +134,9 @@ func TestSyncProjectMemberAdded(t *testing.T) {
 	require.False(t, mock.HasCRB(clusterID, userID), "CRB should NOT exist for project member")
 }
 
-// --- 10.8: Admin removed, still project member → CRB deleted, SA kept ---
+// --- 10.8: Admin demoted, still project member → CRB deleted, SA kept ---
 
-func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
+func TestSyncAdminDemotedStillProjectMember(t *testing.T) {
 	t.Parallel()
 
 	db := createTestDB(t)
@@ -169,20 +169,17 @@ func TestSyncAdminRemovedStillProjectMember(t *testing.T) {
 	require.True(t, mock.HasSA(clusterID, userID))
 	require.True(t, mock.HasCRB(clusterID, userID))
 
-	// Soft-delete admin membership.
+	// Demote to viewer, as the organization-api does: in place. Removing the
+	// membership would take the project memberships with it.
 	_, err = db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.organizations_users SET deleted = now()
-		 WHERE organization_id = $1 AND user_id = $2 AND permission = 'admin' AND deleted IS NULL`,
+		`UPDATE tenant.organizations_users SET permission = 'viewer'
+		 WHERE organization_id = $1 AND user_id = $2 AND deleted IS NULL`,
 		acmeCorpOrgID, userID,
 	)
 	require.NoError(t, err)
 
-	// Re-add as viewer.
-	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
-	newOrgUserID := getOrgUserID(t, db, acmeCorpOrgID, userID)
-
 	// Sync the updated org user row.
-	err = h.Sync(t.Context(), newOrgUserID, handler.SyncContext{
+	err = h.Sync(t.Context(), orgUserID, handler.SyncContext{
 		EntityType: handler.EntityOrgUser,
 		Event:      dbconst.ClusterOutboxEvent_Updated,
 		Source:     dbconst.ClusterOutboxSource_Trigger,
