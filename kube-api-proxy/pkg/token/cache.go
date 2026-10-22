@@ -43,6 +43,12 @@ func (ct *cachedToken) shouldRefresh() bool {
 	return time.Now().After(refreshAt)
 }
 
+// expired returns true once the token is past its own expiry. ttlcache alone
+// does not guarantee this: it never expires an entry stored with a TTL <= 0.
+func (ct *cachedToken) expired() bool {
+	return !time.Now().Before(ct.issuedAt.Add(ct.ttl))
+}
+
 // newFailureCache keeps failures for ttl from when they happened: a hit must
 // not extend it (ttlcache does by default), or steady traffic against a
 // failing cluster would keep the failure forever.
@@ -75,6 +81,8 @@ func NewCache(requester Requester, logger *slog.Logger) *Cache {
 		tokens: ttlcache.New(
 			// No default TTL — each entry gets its own TTL from the API server response.
 			ttlcache.WithTTL[cacheKey, *cachedToken](ttlcache.NoTTL),
+			// Expire at the token's own expiry, not extended by reads.
+			ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken](),
 		),
 		failures: newFailureCache(failureTTL),
 	}
@@ -98,7 +106,8 @@ func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, er
 // get uses a cached token if available and not expired, triggering an async
 // refresh if the token has passed 80% of its TTL.
 func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
-	if item := c.tokens.Get(key); item != nil {
+	item := c.tokens.Get(key)
+	if item != nil && !item.Value().expired() {
 		ct := item.Value()
 		// Proactive async refresh — don't block the request. A refresh that
 		// failed recently is not retried before failureTTL, the same as a fetch.
