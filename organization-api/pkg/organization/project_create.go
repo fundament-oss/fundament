@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -73,6 +74,11 @@ func (s *Server) CreateProject(
 		Role:      dbconst.ProjectMemberRole_Admin,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// The caller is no longer an accepted member of the organization
+			// (removed while their token was still valid).
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(errProjectMemberNotInOrganization))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to add project creator as admin: %w", err))
 	}
 

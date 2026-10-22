@@ -6,6 +6,8 @@ import {
   type CreateAPIKeyResponse,
 } from '../support/api/apikey-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
+import { ProjectService } from '../support/api/project-service.ts';
+import { ClusterService } from '../support/api/cluster-service.ts';
 
 // API token format constants (must match Go apitoken package)
 export const API_TOKEN_PREFIX = 'fun_';
@@ -104,6 +106,16 @@ Given(
     this.organizationId = extractOrganizationId(this.authToken);
     this.currentUserEmail = email;
     this.apiKeyService = new APIKeyService(
+      this.organizationApiUrl!,
+      this.authToken,
+      this.organizationId,
+    );
+    this.projectService = new ProjectService(
+      this.organizationApiUrl!,
+      this.authToken,
+      this.organizationId,
+    );
+    this.clusterService = new ClusterService(
       this.organizationApiUrl!,
       this.authToken,
       this.organizationId,

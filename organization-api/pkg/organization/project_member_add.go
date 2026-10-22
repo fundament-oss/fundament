@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -15,6 +16,10 @@ import (
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
+
+// errProjectMemberNotInOrganization is the console's wording; functl and the
+// Terraform provider pass it on as is.
+const errProjectMemberNotInOrganization = "the person must first be added to the organization by an organization admin before they can become a project member"
 
 func (s *Server) AddProjectMember(
 	ctx context.Context,
@@ -38,6 +43,14 @@ func (s *Server) AddProjectMember(
 		Role:      role,
 	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// No row means either the user is not an accepted member of the
+			// organization, or the project is gone (FUN-12: say which).
+			if _, err := s.queries.ProjectGetByID(ctx, db.ProjectGetByIDParams{ID: projectID}); errors.Is(err, pgx.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("project not found"))
+			}
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(errProjectMemberNotInOrganization))
+		}
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == dbconst.ConstraintProjectMembersUqProjectUser {
 				return nil, connect.NewError(connect.CodeAlreadyExists,
