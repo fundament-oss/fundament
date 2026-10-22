@@ -10,6 +10,7 @@ import { Browser, chromium } from 'playwright';
 import { ICustomWorld } from './world.ts';
 import { APIKeyService } from './api/apikey-service.ts';
 import { TokenService } from './api/token-service.ts';
+import { ProjectService } from './api/project-service.ts';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -93,6 +94,10 @@ Before({ tags: '@api' }, async function (this: ICustomWorld) {
   this.createdApiKeys = new Map();
   this.createdApiKeysByUser = new Map();
   this.savedApiKeyId = undefined;
+  this.projectService = undefined;
+  this.clusterService = undefined;
+  this.currentProjectId = undefined;
+  this.createdProjects = [];
   this.organizationId = undefined;
   this.currentUserEmail = undefined;
   this.lastApiResponse = undefined;
@@ -100,6 +105,24 @@ Before({ tags: '@api' }, async function (this: ICustomWorld) {
 });
 
 After({ tags: '@api' }, async function (this: ICustomWorld) {
+  // Cleanup: delete the projects the scenario created, as their creators.
+  for (const project of this.createdProjects) {
+    try {
+      const { token, organizationId } = await authenticateForCleanup(
+        this.authnApiUrl!,
+        project.ownerEmail,
+      );
+      const service = new ProjectService(
+        this.organizationApiUrl!,
+        token,
+        organizationId,
+      );
+      await service.deleteProject(project.id);
+    } catch {
+      // Ignore cleanup errors - project may already be deleted by test
+    }
+  }
+
   // Cleanup: Delete all created API keys for each user
   for (const [userEmail, apiKeys] of this.createdApiKeysByUser) {
     if (apiKeys.size > 0) {

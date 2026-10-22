@@ -127,3 +127,30 @@ func TestProjectRBAC_ReconcileRepairsDrift(t *testing.T) {
 	assert.Equal(t, "admin", f.binding(f.projAdmin).RoleRef.Name, "wrong role corrected")
 	assert.Nil(t, f.binding(stranger), "orphan removed")
 }
+
+// Project members outside the organization get no RoleBinding: neither a
+// user of another organization nor a member whose organization membership
+// was revoked after they joined the project.
+func TestProjectRBAC_OnlyAcceptedOrganizationMembersAreBound(t *testing.T) {
+	t.Parallel()
+	f := newProjectRBACFixture(t, "prbac-outsider")
+	h := newUserSyncHandler(t, f.db, f.mock)
+	ctx := t.Context()
+
+	otherOrgID := insertOrg(t, f.db, "prbac-outsider-org")
+	outsider := insertUser(t, f.db, "prbac-outsider")
+	insertOrgUser(t, f.db, otherOrgID, outsider, "admin", "accepted")
+	_, err := f.db.adminPool.Exec(ctx,
+		`INSERT INTO tenant.project_members (project_id, user_id, role) VALUES ($1, $2, 'viewer')`,
+		f.projectID, outsider)
+	require.NoError(t, err)
+	require.NoError(t, h.Sync(ctx, getProjectMemberID(t, f.db, outsider), f.userSyncCtx))
+	assert.Nil(t, f.binding(outsider), "member of another organization is not bound")
+
+	_, err = f.db.adminPool.Exec(ctx,
+		`UPDATE tenant.organizations_users SET deleted = now(), status = 'revoked' WHERE user_id = $1`, f.projViewer)
+	require.NoError(t, err)
+	require.NoError(t, h.Reconcile(ctx))
+	assert.Nil(t, f.binding(f.projViewer), "revoked organization member loses the binding")
+	assert.NotNil(t, f.binding(f.projAdmin), "other members are untouched")
+}

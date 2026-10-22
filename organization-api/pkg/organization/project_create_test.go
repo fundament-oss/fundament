@@ -172,3 +172,53 @@ func Test_Project_Create_NameLength(t *testing.T) {
 	}.Build())
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
+
+// A caller removed from the organization while their token is still valid
+// cannot create a project (the creator must be an accepted member).
+func Test_ProjectCreate_RemovedMember(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	callerUserID := uuid.New()
+	adminUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: adminUserID, Name: "admin-user", OrgIDs: []uuid.UUID{orgID}}),
+		WithUser(&UserArgs{ID: callerUserID, Name: "removed-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+
+	adminToken := env.createAuthnToken(t, adminUserID)
+	adminCtx, adminCallInfo := connect.NewClientContext(context.Background())
+	adminCallInfo.RequestHeader().Set("Authorization", "Bearer "+adminToken)
+	adminCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	createClusterRes, err := clusterClient.CreateCluster(adminCtx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	token := env.createAuthnToken(t, callerUserID)
+	_, err = env.adminPool.Exec(t.Context(),
+		"UPDATE tenant.organizations_users SET deleted = now(), status = 'revoked' WHERE organization_id = $1 AND user_id = $2",
+		orgID, callerUserID,
+	)
+	require.NoError(t, err)
+
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+	_, err = client.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: createClusterRes.GetClusterId(),
+		Name:      "test-project",
+	}.Build())
+
+	var connectErr *connect.Error
+	require.ErrorAs(t, err, &connectErr)
+	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+}

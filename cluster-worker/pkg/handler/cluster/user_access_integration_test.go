@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	dbgen "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -50,6 +51,8 @@ func TestResolveUserAccessIgnoresDeletedProjectMembershipHistory(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "access-project-history")
 	projectAdminID := insertUser(t, db, "Project Admin")
 	userID := insertUser(t, db, "Project History User")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "viewer", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, userID, "viewer", "accepted")
 
 	projectID := insertProjectWithMembers(t, db, clusterID,
 		projectMember{
@@ -326,4 +329,52 @@ func insertProjectWithMembers(t *testing.T, db *testDB, clusterID uuid.UUID, mem
 	tx = nil
 
 	return projectID
+}
+
+// A project member who is not an accepted member of the cluster's organization
+// (never invited, or invited and later revoked) gets no cluster access.
+func TestResolveUserAccessOutsiderProjectMember(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	queries := dbgen.New(db.adminPool)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "access-outsider")
+	otherOrgID := insertOrg(t, db, "access-outsider-org")
+	outsiderID := insertUser(t, db, "Outsider")
+	revokedID := insertUser(t, db, "Revoked Member")
+	projectAdminID := insertUser(t, db, "Project Admin O")
+
+	insertOrgUser(t, db, otherOrgID, outsiderID, "admin", "accepted")
+	insertOrgUser(t, db, acmeCorpOrgID, revokedID, "viewer", "revoked")
+	insertOrgUser(t, db, acmeCorpOrgID, projectAdminID, "viewer", "accepted")
+	insertProjectWithMembers(t, db, clusterID,
+		projectMember{UserID: projectAdminID, Role: "admin"},
+		projectMember{UserID: outsiderID, Role: "viewer"},
+		projectMember{UserID: revokedID, Role: "viewer"},
+	)
+
+	for name, userID := range map[string]uuid.UUID{
+		"member of another organization": outsiderID,
+		"revoked organization member":    revokedID,
+	} {
+		t.Run(name, func(t *testing.T) {
+			access, err := queries.ResolveUserAccess(t.Context(), dbgen.ResolveUserAccessParams{
+				UserID:    userID,
+				ClusterID: clusterID,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, "none", access)
+		})
+	}
+
+	users, err := queries.UserListForCluster(t.Context(), dbgen.UserListForClusterParams{ClusterID: clusterID})
+	require.NoError(t, err)
+	listed := make([]uuid.UUID, 0, len(users))
+	for _, u := range users {
+		listed = append(listed, u.UserID)
+	}
+	assert.Contains(t, listed, projectAdminID)
+	assert.NotContains(t, listed, outsiderID, "member of another organization is not provisioned")
+	assert.NotContains(t, listed, revokedID, "revoked organization member is not provisioned")
 }

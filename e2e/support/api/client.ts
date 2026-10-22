@@ -110,6 +110,7 @@ export class ConnectRpcError extends Error {
       [Code.InvalidArgument]: 'invalid_argument',
       [Code.PermissionDenied]: 'permission_denied',
       [Code.Internal]: 'internal',
+      [Code.FailedPrecondition]: 'failed_precondition',
     };
     const code = codeMap[err.code] || 'unknown';
     return new ConnectRpcError(code, err.message);

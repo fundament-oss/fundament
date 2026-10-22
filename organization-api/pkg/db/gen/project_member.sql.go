@@ -13,9 +13,83 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const projectListWhereUserIsLastAdmin = `-- name: ProjectListWhereUserIsLastAdmin :many
+SELECT tenant.projects.id, tenant.projects.name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id
+    AND tenant.project_members.user_id = $1
+    AND tenant.project_members.role = 'admin'
+    AND tenant.project_members.deleted IS NULL
+WHERE tenant.clusters.organization_id = authn.current_organization_id()
+    AND tenant.projects.deleted IS NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM tenant.project_members
+        WHERE tenant.project_members.project_id = tenant.projects.id
+            AND tenant.project_members.user_id <> $1
+            AND tenant.project_members.role = 'admin'
+            AND tenant.project_members.deleted IS NULL
+    )
+ORDER BY tenant.projects.name
+`
+
+type ProjectListWhereUserIsLastAdminParams struct {
+	UserID uuid.UUID
+}
+
+type ProjectListWhereUserIsLastAdminRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// Projects of the current organization where the user is the only active
+// admin, so removing the user would leave the project without one.
+func (q *Queries) ProjectListWhereUserIsLastAdmin(ctx context.Context, arg ProjectListWhereUserIsLastAdminParams) ([]ProjectListWhereUserIsLastAdminRow, error) {
+	rows, err := q.db.Query(ctx, projectListWhereUserIsLastAdmin, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectListWhereUserIsLastAdminRow
+	for rows.Next() {
+		var i ProjectListWhereUserIsLastAdminRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const projectMemberCreate = `-- name: ProjectMemberCreate :one
 INSERT INTO tenant.project_members (project_id, user_id, role)
-VALUES ($1, $2, $3)
+SELECT $1, $2, $3
+WHERE EXISTS (
+    SELECT 1
+    FROM tenant.organizations_users
+    WHERE tenant.organizations_users.user_id = $2
+        AND tenant.organizations_users.status IN ('pending', 'accepted')
+        AND tenant.organizations_users.deleted IS NULL
+        AND EXISTS (
+            SELECT 1
+            FROM tenant.users
+            WHERE tenant.users.id = $2
+                AND tenant.users.deleted IS NULL
+        )
+        AND tenant.organizations_users.organization_id = (
+            SELECT tenant.clusters.organization_id
+            FROM tenant.projects
+            JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+            WHERE tenant.projects.id = $1
+                AND tenant.projects.deleted IS NULL
+        )
+    FOR SHARE
+)
 RETURNING id
 `
 
@@ -25,6 +99,12 @@ type ProjectMemberCreateParams struct {
 	Role      dbconst.ProjectMemberRole
 }
 
+// Only members of the project's organization (invited or accepted, as the
+// console offers them) can join a project; for anyone else no row is
+// inserted and the query returns no rows. cluster-worker provisions the
+// member on clusters once the invitation is accepted. The membership row is
+// share-locked so a concurrent removal of the member (MemberDelete) is
+// waited for and seen, instead of racing this insert.
 func (q *Queries) ProjectMemberCreate(ctx context.Context, arg ProjectMemberCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, projectMemberCreate, arg.ProjectID, arg.UserID, arg.Role)
 	var id uuid.UUID
@@ -45,6 +125,34 @@ type ProjectMemberDeleteParams struct {
 
 func (q *Queries) ProjectMemberDelete(ctx context.Context, arg ProjectMemberDeleteParams) (int64, error) {
 	result, err := q.db.Exec(ctx, projectMemberDelete, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const projectMemberDeleteByUserInOrganization = `-- name: ProjectMemberDeleteByUserInOrganization :execrows
+UPDATE tenant.project_members
+SET deleted = now()
+WHERE user_id = $1
+  AND deleted IS NULL
+  AND project_id IN (
+      SELECT tenant.projects.id
+      FROM tenant.projects
+      JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+      WHERE tenant.clusters.organization_id = authn.current_organization_id()
+          AND tenant.projects.deleted IS NULL
+  )
+`
+
+type ProjectMemberDeleteByUserInOrganizationParams struct {
+	UserID uuid.UUID
+}
+
+// Soft-deletes a user's memberships in every project of the current
+// organization (used when the user is removed from the organization).
+func (q *Queries) ProjectMemberDeleteByUserInOrganization(ctx context.Context, arg ProjectMemberDeleteByUserInOrganizationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, projectMemberDeleteByUserInOrganization, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
