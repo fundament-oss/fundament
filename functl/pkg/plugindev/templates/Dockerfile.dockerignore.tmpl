@@ -1,0 +1,14 @@
+{{- if eq .Layout.ModulePath .FundamentModule -}}
+# Only what the plugin build needs from the monorepo.
+*
+!go.mod
+!go.sum
+!plugin-sdk/
+!common/
+!plugins/
+**/node_modules
+{{- else -}}
+.git
+**/node_modules
+tmp/
+{{- end}}

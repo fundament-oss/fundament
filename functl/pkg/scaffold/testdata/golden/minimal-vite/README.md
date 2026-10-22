@@ -13,7 +13,7 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin named
 | `plugin.go`          | The plugin itself                                                |
 | `main.go`            | Hands the plugin to the SDK runtime                              |
 | `Justfile`           | Build, test, lint and image recipes                              |
-| `mise.toml`          | Pinned tool versions (Go, just, bun)                            |
+| `mise.toml`          | Pinned tool versions (Go, just, skaffold, bun)                   |
 | `LICENSE`            | MIT                                                     |
 | `console.go`         | Embeds the console UI assets                                     |
 | `console/`           | Vite build output (generated)                       |
@@ -48,6 +48,19 @@ updates without rebuilding.
 
 ```shell
 just docker
+```
+
+## Hot reload
+
+`functl plugin dev` runs the plugin in the Fundament plugin sandbox and rebuilds
+it on every save. Prerequisites: the sandbox cluster, `docker` and
+`skaffold`, `bun`, and a `functl auth login` session. Set up the sandbox as described in
+<https://github.com/fundament-oss/fundament/blob/master/docs/developer/plugins/testing-plugins-locally.md>.
+
+```shell
+functl plugin dev                  # deletes the dev installation on Ctrl-C
+functl plugin dev --no-cleanup     # keeps it after exit
+functl plugin dev-down             # removes a leftover dev installation
 ```
 
 ## Fill in

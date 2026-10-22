@@ -1,0 +1,36 @@
+FROM golang:1.27.3-alpine
+
+ARG PLUGIN_PACKAGE
+
+# Plugin binaries shell out to helm at runtime; match the prod image.
+RUN apk add --no-cache helm
+RUN go install github.com/air-verse/air@v1.65.0
+
+# skaffold sync extracts tar into /src as uid 65532; the pod runs as that uid too.
+RUN mkdir /src && chown 65532:65532 /src
+WORKDIR /src
+{{- if .Layout.SDKReplace}}
+
+# Resolve the fundament module from the local checkout; go.mod stays untouched,
+# so a synced go.mod can't break the replace.
+COPY --from=fundament-sdk --chown=65532:65532 . /sdk
+RUN mkdir /work && printf 'go %s\n\nuse /src\n\nreplace github.com/fundament-oss/fundament => /sdk\n' "$(go env GOVERSION | sed s/^go//)" > /work/go.work
+ENV GOWORK=/work/go.work
+{{- end}}
+
+COPY --chown=65532:65532 go.mod go.sum* ./
+RUN go mod download
+COPY --chown=65532:65532 . .
+
+USER 65532
+RUN <<'AIR'
+cat > .air.toml <<TOML
+{{template "air.toml.tmpl" .}}
+TOML
+AIR
+
+ENV GOCACHE=/src/.gocache
+# Bake $GOCACHE so air's first in-container build is a cache hit.
+RUN go build -o /dev/null ${PLUGIN_PACKAGE}
+
+CMD ["air", "-c", ".air.toml"]

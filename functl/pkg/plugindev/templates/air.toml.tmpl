@@ -3,12 +3,12 @@ tmp_dir = "tmp"
 
 [build]
 # -w skips DWARF generation: halves link time, and nothing debugs this binary.
-cmd = "go build -ldflags=-w -o tmp/plugin ./plugins/@PATH@/"
+cmd = "go build -ldflags=-w -o tmp/plugin ${PLUGIN_PACKAGE}"
 entrypoint = "tmp/plugin"
 # html/css/js are go:embed'd console assets; a save must recompile to re-embed.
 include_ext = ["go", "html", "css", "js"]
-include_dir = ["plugins/@PATH@", "plugin-sdk", "common"]
-exclude_dir = ["tmp"]
+include_dir = [{{range $i, $d := airDirs .Layout}}{{if $i}}, {{end}}"{{$d}}"{{end}}]
+exclude_dir = ["tmp", ".gocache"]
 delay = 100
 # The plugin exits when platform env/services are unavailable; this brings it back.
 rerun = true
