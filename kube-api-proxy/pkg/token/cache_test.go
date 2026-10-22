@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/common/shootidentity"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 )
 
@@ -175,6 +176,8 @@ func TestCache_EntryExpiresAtTokenTTLDespiteReads(t *testing.T) {
 	}
 
 	time.Sleep(time.Until(start.Add(300 * time.Millisecond)))
+	key := cacheKey{saName: shootidentity.ProxyServiceAccount, clusterID: "c1"}
+	assert.Nil(t, c.tokens.Get(key), "expired entry must leave the cache")
 	_, err = c.GetProxyToken(ctx, "c1")
 	assert.Error(t, err, "expired token must not be served")
 }
