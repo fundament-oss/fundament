@@ -159,6 +159,7 @@ WHERE tenant.organizations.id IN (
     SELECT tenant.organizations_users.organization_id
     FROM tenant.organizations_users
     WHERE tenant.organizations_users.user_id = $1
+      AND tenant.organizations_users.status IN ('pending', 'accepted')
       AND tenant.organizations_users.deleted IS NULL
       AND ($2::uuid IS NULL
            OR tenant.organizations_users.organization_id = $2::uuid)
@@ -172,9 +173,10 @@ type MembershipLockOrganizationsForRemovalParams struct {
 	OrganizationID pgtype.UUID
 }
 
-// Locks the organizations the user is a live member of, or only the given
-// one, the way DeleteMember in organization-api locks its organization, so
-// removals in one organization take turns: the protect_last_admin trigger
+// Locks the organizations whose membership or invitation of the user the
+// removal revokes, or only the given one, the way DeleteMember in
+// organization-api locks its organization, so removals in one organization
+// take turns: the protect_last_admin trigger
 // locks each project in the order the user's project memberships are
 // scanned, and two removals that each hold one project and wait for the other
 // would deadlock. Taken before the membership rows, and in id order across
