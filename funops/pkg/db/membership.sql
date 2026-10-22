@@ -38,6 +38,29 @@ WHERE organizations_users.organization_id = @organization_id
   AND users.deleted IS NULL
 ORDER BY organizations_users.created DESC;
 
+-- name: MembershipLockOrganizationsForRemoval :exec
+-- Locks the organizations whose membership or invitation of the user the
+-- removal revokes, or only the given one, the way DeleteMember in
+-- organization-api locks its organization, so removals in one organization
+-- take turns: the protect_last_admin trigger
+-- locks each project in the order the user's project memberships are
+-- scanned, and two removals that each hold one project and wait for the other
+-- would deadlock. Taken before the membership rows, and in id order across
+-- organizations, so two removals never wait for each other's organization.
+SELECT tenant.organizations.id
+FROM tenant.organizations
+WHERE tenant.organizations.id IN (
+    SELECT tenant.organizations_users.organization_id
+    FROM tenant.organizations_users
+    WHERE tenant.organizations_users.user_id = @user_id
+      AND tenant.organizations_users.status IN ('pending', 'accepted')
+      AND tenant.organizations_users.deleted IS NULL
+      AND (sqlc.narg('organization_id')::uuid IS NULL
+           OR tenant.organizations_users.organization_id = sqlc.narg('organization_id')::uuid)
+)
+ORDER BY tenant.organizations.id
+FOR NO KEY UPDATE;
+
 -- name: MembershipDelete :execrows
 -- Revokes and soft-deletes a membership or pending invitation, the way the
 -- organization-api does it; the update trigger puts the row on the authz

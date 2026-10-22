@@ -1145,6 +1145,14 @@ BEGIN
     IF OLD.role = 'admin' AND OLD.deleted IS NULL THEN
         -- Check if this is a soft delete (setting deleted) or role demotion
         IF (NEW.deleted IS NOT NULL) OR (NEW.role != 'admin') THEN
+            -- Lock the project so concurrent removals or demotions of its admins
+            -- take turns: each counts the admins only after the previous one has
+            -- committed, and the last one is refused instead of both passing.
+            PERFORM 1
+            FROM tenant.projects
+            WHERE id = OLD.project_id
+            FOR NO KEY UPDATE;
+
             SELECT COUNT(*) INTO admin_count
             FROM tenant.project_members
             WHERE project_id = OLD.project_id

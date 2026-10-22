@@ -152,6 +152,40 @@ func (q *Queries) MembershipList(ctx context.Context, arg MembershipListParams) 
 	return items, nil
 }
 
+const membershipLockOrganizationsForRemoval = `-- name: MembershipLockOrganizationsForRemoval :exec
+SELECT tenant.organizations.id
+FROM tenant.organizations
+WHERE tenant.organizations.id IN (
+    SELECT tenant.organizations_users.organization_id
+    FROM tenant.organizations_users
+    WHERE tenant.organizations_users.user_id = $1
+      AND tenant.organizations_users.status IN ('pending', 'accepted')
+      AND tenant.organizations_users.deleted IS NULL
+      AND ($2::uuid IS NULL
+           OR tenant.organizations_users.organization_id = $2::uuid)
+)
+ORDER BY tenant.organizations.id
+FOR NO KEY UPDATE
+`
+
+type MembershipLockOrganizationsForRemovalParams struct {
+	UserID         uuid.UUID
+	OrganizationID pgtype.UUID
+}
+
+// Locks the organizations whose membership or invitation of the user the
+// removal revokes, or only the given one, the way DeleteMember in
+// organization-api locks its organization, so removals in one organization
+// take turns: the protect_last_admin trigger
+// locks each project in the order the user's project memberships are
+// scanned, and two removals that each hold one project and wait for the other
+// would deadlock. Taken before the membership rows, and in id order across
+// organizations, so two removals never wait for each other's organization.
+func (q *Queries) MembershipLockOrganizationsForRemoval(ctx context.Context, arg MembershipLockOrganizationsForRemovalParams) error {
+	_, err := q.db.Exec(ctx, membershipLockOrganizationsForRemoval, arg.UserID, arg.OrganizationID)
+	return err
+}
+
 const membershipRevokeAllForOrganization = `-- name: MembershipRevokeAllForOrganization :execrows
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
