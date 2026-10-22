@@ -216,6 +216,12 @@ func (c *UserDeleteCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("deleting user registration", "user_id", user.ID.String(), "email", user.Email)
 
+	if err := qtx.MembershipLockOrganizationsForRemoval(bgCtx, db.MembershipLockOrganizationsForRemovalParams{
+		UserID: user.ID,
+	}); err != nil {
+		return fmt.Errorf("failed to lock organizations: %w", err)
+	}
+
 	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
 		if isLastProjectAdmin(err) {

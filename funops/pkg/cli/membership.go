@@ -194,12 +194,30 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("removing organization member", "organization", c.Organization, "user_id", user.ID.String())
 
-	rowsAffected, err := ctx.Queries.MembershipDelete(bgCtx, db.MembershipDeleteParams{
+	tx, err := ctx.DB.Pool.Begin(bgCtx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer rollback.Rollback(bgCtx, tx, ctx.Logger)
+
+	qtx := ctx.Queries.WithTx(tx)
+
+	if err := qtx.MembershipLockOrganizationsForRemoval(bgCtx, db.MembershipLockOrganizationsForRemovalParams{
+		UserID:         user.ID,
+		OrganizationID: pgtype.UUID{Bytes: orgID, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("failed to lock organization: %w", err)
+	}
+
+	rowsAffected, err := qtx.MembershipDelete(bgCtx, db.MembershipDeleteParams{
 		OrganizationID: orgID,
 		UserID:         user.ID,
 	})
 	if err != nil {
 		if isLastProjectAdmin(err) {
+			// Release the aborted transaction's connection first, as in
+			// UserDeleteCmd.
+			rollback.Rollback(bgCtx, tx, ctx.Logger)
 			return lastAdminProjectsError(bgCtx, ctx, user.ID, pgtype.UUID{Bytes: orgID, Valid: true},
 				fmt.Sprintf("user %q is the only admin of projects in organization %q; make someone else admin of them first", c.User, c.Organization))
 		}
@@ -207,6 +225,10 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 	}
 	if rowsAffected == 0 {
 		return fmt.Errorf("user %q is not a member of organization %q", c.User, c.Organization)
+	}
+
+	if err := tx.Commit(bgCtx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	ctx.Logger.Info("removed organization member", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email)

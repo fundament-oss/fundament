@@ -68,6 +68,10 @@ func (s *Server) DeleteMember(
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintProjectContainsOneAdmin {
+				// Release the aborted transaction's connection first: the
+				// lookup reads from the pool, and would hold two connections
+				// for one request.
+				rollback.Rollback(ctx, tx, s.logger)
 				return nil, connect.NewError(connect.CodeFailedPrecondition, s.lastAdminProjectsError(ctx, member.UserID))
 			}
 		}
