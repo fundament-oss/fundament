@@ -219,6 +219,10 @@ func (c *UserDeleteCmd) Run(ctx *Context) error {
 	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
 		if isLastProjectAdmin(err) {
+			// Release the aborted transaction's connection first: the lookup
+			// reads from the pool and would wait on it forever if that is the
+			// pool's only connection.
+			rollback.Rollback(bgCtx, tx, ctx.Logger)
 			return lastAdminProjectsError(bgCtx, ctx, user.ID, pgtype.UUID{},
 				fmt.Sprintf("user %q is the only admin of projects; make someone else admin of them first", c.User))
 		}

@@ -22,6 +22,11 @@ import (
 const (
 	testUserEmail    = "alice@acme-corp.com"
 	testUserPassword = "password"
+
+	// testMemberEmail is a seeded, accepted member of the test user's
+	// organization. Only accepted members can join a project, so tests that add
+	// project members use this user rather than inviting a new address.
+	testMemberEmail = "bart@acme-corp.com"
 )
 
 func TestMain(m *testing.M) {

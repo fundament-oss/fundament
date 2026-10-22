@@ -96,15 +96,12 @@ resource "fundament_project" "test" {
   cluster_id = fundament_cluster.test.id
 }
 
-resource "fundament_organization_member" "test" {
-  email      = "tf-acc-pm-%[2]s@test.example.com"
-  permission = "viewer"
-}
+data "fundament_organization_members" "all" {}
 
 resource "fundament_project_member" "test" {
   project_id = fundament_project.test.id
-  user_id    = fundament_organization_member.test.user_id
+  user_id    = one([for m in data.fundament_organization_members.all.members : m.user_id if m.email == %[5]q])
   permission = %[1]q
 }
-`, permission, suffix, endpoint, organizationID)
+`, permission, suffix, endpoint, organizationID, testMemberEmail)
 }
