@@ -93,10 +93,7 @@ func (q *Queries) PluginVersionCreate(ctx context.Context, arg PluginVersionCrea
 }
 
 const pluginVersionGetActiveByPluginVersion = `-- name: PluginVersionGetActiveByPluginVersion :one
-SELECT
-	plugin_definitions.id,
-	plugin_definitions.status,
-	plugin_definitions.hash
+SELECT plugin_definitions.status
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
 WHERE plugin_definitions.plugin_id = $1::uuid
@@ -110,19 +107,13 @@ type PluginVersionGetActiveByPluginVersionParams struct {
 	PluginVersion string
 }
 
-type PluginVersionGetActiveByPluginVersionRow struct {
-	ID     uuid.UUID
-	Status dbconst.PluginDefinitionStatus
-	Hash   string
-}
-
 // Looked up by the replace path to decide whether republish is allowed: only
 // a draft may be replaced.
-func (q *Queries) PluginVersionGetActiveByPluginVersion(ctx context.Context, arg PluginVersionGetActiveByPluginVersionParams) (PluginVersionGetActiveByPluginVersionRow, error) {
+func (q *Queries) PluginVersionGetActiveByPluginVersion(ctx context.Context, arg PluginVersionGetActiveByPluginVersionParams) (dbconst.PluginDefinitionStatus, error) {
 	row := q.db.QueryRow(ctx, pluginVersionGetActiveByPluginVersion, arg.PluginID, arg.PluginVersion)
-	var i PluginVersionGetActiveByPluginVersionRow
-	err := row.Scan(&i.ID, &i.Status, &i.Hash)
-	return i, err
+	var status dbconst.PluginDefinitionStatus
+	err := row.Scan(&status)
+	return status, err
 }
 
 const pluginVersionGetByID = `-- name: PluginVersionGetByID :one
@@ -278,7 +269,7 @@ func (q *Queries) PluginVersionSetStatus(ctx context.Context, arg PluginVersionS
 	return result.RowsAffected(), nil
 }
 
-const pluginVersionSoftDeleteActiveByPluginVersion = `-- name: PluginVersionSoftDeleteActiveByPluginVersion :exec
+const pluginVersionSoftDeleteActiveByPluginVersion = `-- name: PluginVersionSoftDeleteActiveByPluginVersion :execrows
 UPDATE appstore.plugin_definitions SET deleted = now()
 WHERE plugin_id = $1::uuid
   AND plugin_version = $2::text
@@ -292,10 +283,14 @@ type PluginVersionSoftDeleteActiveByPluginVersionParams struct {
 }
 
 // Draft-only: a draft submitted between the handler's status check and this
-// transaction must not be soft-deleted out from under the pending review.
-func (q *Queries) PluginVersionSoftDeleteActiveByPluginVersion(ctx context.Context, arg PluginVersionSoftDeleteActiveByPluginVersionParams) error {
-	_, err := q.db.Exec(ctx, pluginVersionSoftDeleteActiveByPluginVersion, arg.PluginID, arg.PluginVersion)
-	return err
+// transaction must not be soft-deleted out from under the pending review;
+// zero rows tells the handler it is no longer a draft.
+func (q *Queries) PluginVersionSoftDeleteActiveByPluginVersion(ctx context.Context, arg PluginVersionSoftDeleteActiveByPluginVersionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pluginVersionSoftDeleteActiveByPluginVersion, arg.PluginID, arg.PluginVersion)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const pluginVersionWasReplaced = `-- name: PluginVersionWasReplaced :one

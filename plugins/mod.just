@@ -169,7 +169,7 @@ publish name *flags:
     cd "$(git rev-parse --show-toplevel)"
     tag=$(git describe --always --dirty)
     repo="${PLUGIN_REGISTRY}/{{ name }}-plugin"
-    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" _image-push "${repo}" "${tag}" "plugins/{{ name }}/Dockerfile")
+    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" plugins::_image-push "${repo}" "${tag}" "plugins/{{ name }}/Dockerfile")
     go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" {{ flags }}
 
 # Build and push an image from the repo root; prints the pushed manifest digest.
@@ -196,10 +196,6 @@ dev name org="acme-corp":
     cd "$(git rev-parse --show-toplevel)"
 
     # 1. Preflight.
-    if [ ! -f "plugins/{{ name }}/hotreload/.air.toml" ]; then
-        echo "plugins/{{ name }}/hotreload/.air.toml is missing — copy plugins/external-dns/hotreload/.air.toml as a starting point"
-        exit 1
-    fi
     if [ -z "$(kubectl --context {{ kube_context }} -n fundament get deploy -l app.kubernetes.io/component=plugin-controller -o name 2>/dev/null)" ]; then
         echo "plugin-controller is not deployed in the sandbox — run 'just plugins deploy' first"
         exit 1
@@ -267,7 +263,7 @@ dev name org="acme-corp":
     # 3. Initial publish against the hotreload Dockerfile and dev image repo.
     repo="localhost:{{ registry_port }}/${plugin_name}-plugin-dev"
     tag=$(git describe --always --dirty)
-    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" _image-push "${repo}" "${tag}" plugins/hotreload/Dockerfile --build-arg "PLUGIN_PATH={{ name }}")
+    digest=$("{{ just_executable() }}" --justfile "{{ justfile() }}" plugins::_image-push "${repo}" "${tag}" plugins/hotreload/Dockerfile --build-arg "PLUGIN_PATH={{ name }}")
     go run ./functl/cmd/functl plugin publish "plugins/{{ name }}/definition.yaml" --image "${repo}@${digest}" --dev --create
 
     # 4. Render both templates.

@@ -74,10 +74,7 @@ WHERE id = sqlc.arg('id')::uuid
 -- name: PluginVersionGetActiveByPluginVersion :one
 -- Looked up by the replace path to decide whether republish is allowed: only
 -- a draft may be replaced.
-SELECT
-	plugin_definitions.id,
-	plugin_definitions.status,
-	plugin_definitions.hash
+SELECT plugin_definitions.status
 FROM appstore.plugin_definitions
 JOIN appstore.plugins ON plugins.id = plugin_definitions.plugin_id
 WHERE plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
@@ -85,9 +82,10 @@ WHERE plugin_definitions.plugin_id = sqlc.arg('plugin_id')::uuid
   AND plugin_definitions.deleted IS NULL
   AND plugins.deleted IS NULL;
 
--- name: PluginVersionSoftDeleteActiveByPluginVersion :exec
+-- name: PluginVersionSoftDeleteActiveByPluginVersion :execrows
 -- Draft-only: a draft submitted between the handler's status check and this
--- transaction must not be soft-deleted out from under the pending review.
+-- transaction must not be soft-deleted out from under the pending review;
+-- zero rows tells the handler it is no longer a draft.
 UPDATE appstore.plugin_definitions SET deleted = now()
 WHERE plugin_id = sqlc.arg('plugin_id')::uuid
   AND plugin_version = sqlc.arg('plugin_version')::text

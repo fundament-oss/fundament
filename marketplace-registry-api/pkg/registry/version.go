@@ -114,7 +114,7 @@ func (s *Server) CreatePluginVersion(
 
 	replaceTarget := false
 	if req.GetReplace() {
-		active, err := s.queries.PluginVersionGetActiveByPluginVersion(ctx, db.PluginVersionGetActiveByPluginVersionParams{
+		activeStatus, err := s.queries.PluginVersionGetActiveByPluginVersion(ctx, db.PluginVersionGetActiveByPluginVersionParams{
 			PluginID: pluginID, PluginVersion: version,
 		})
 		switch {
@@ -122,7 +122,7 @@ func (s *Server) CreatePluginVersion(
 			// Nothing to replace: falls through to the plain create below.
 		case err != nil:
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("looking up active plugin version: %w", err))
-		case active.Status != dbconst.PluginDefinitionStatus_Draft:
+		case activeStatus != dbconst.PluginDefinitionStatus_Draft:
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.New("only draft versions can be replaced"))
 		default:
@@ -176,10 +176,16 @@ func (s *Server) replaceDraftVersion(
 	defer rollback.Rollback(ctx, tx, s.logger)
 	qtx := s.queries.WithTx(tx)
 
-	if err := qtx.PluginVersionSoftDeleteActiveByPluginVersion(ctx, db.PluginVersionSoftDeleteActiveByPluginVersionParams{
+	deleted, err := qtx.PluginVersionSoftDeleteActiveByPluginVersion(ctx, db.PluginVersionSoftDeleteActiveByPluginVersionParams{
 		PluginID: pluginID, PluginVersion: version,
-	}); err != nil {
+	})
+	if err != nil {
 		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("soft-deleting replaced plugin version: %w", err))
+	}
+	// The draft was submitted since the handler's status check.
+	if deleted == 0 {
+		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("only draft versions can be replaced"))
 	}
 
 	created, err := qtx.PluginVersionCreate(ctx, createParams)
