@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -540,9 +541,15 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 				"id": state.ID.ValueString(),
 			})
 		case connect.CodeFailedPrecondition:
+			// The API names the projects that keep the cluster, so they are
+			// passed on: they may live outside this configuration.
+			reason := err.Error()
+			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+				reason = connectErr.Message()
+			}
 			resp.Diagnostics.AddError(
 				"Cluster Cannot Be Deleted",
-				fmt.Sprintf("Cluster %q cannot be deleted because it has dependent resources (e.g., namespaces). Delete those resources first.", state.ID.ValueString()),
+				fmt.Sprintf("Cluster %q cannot be deleted: %s.", state.Name.ValueString(), reason),
 			)
 			return
 		default:

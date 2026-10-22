@@ -777,9 +777,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch (error) {
       if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
         // A project was added after the page loaded: show what blocks the
-        // deletion now, the same way the button does.
+        // deletion now, the same way the button does. That includes a reload
+        // that failed, which would otherwise leave the old, empty list.
         await this.loadProjects(this.clusterData.basics.id);
-        if (this.projects().length > 0) {
+        if (this.deleteBlockedReason()) {
           this.showDeleteModal.set(false);
           this.showDeleteBlockedModal.set(true);
         } else {
