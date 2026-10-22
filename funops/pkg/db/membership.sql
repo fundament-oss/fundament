@@ -41,8 +41,10 @@ ORDER BY organizations_users.created DESC;
 -- name: MembershipDelete :execrows
 -- Revokes and soft-deletes a membership or pending invitation, the way the
 -- organization-api does it; the update trigger puts the row on the authz
--- outbox so the user's tuples are removed from OpenFGA. A declined invitation
--- is nothing to remove, so it does not count.
+-- outbox so the user's tuples are removed from OpenFGA, and the trigger
+-- remove_project_memberships removes the user from the organization's
+-- projects (refused while they are the only admin of one). A declined
+-- invitation is nothing to remove, so it does not count.
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
 WHERE organization_id = @organization_id
@@ -52,7 +54,8 @@ WHERE organization_id = @organization_id
 
 -- name: MembershipRevokeAllForUser :execrows
 -- Revokes every live membership and invitation of a user, for when the user
--- row itself is deleted.
+-- row itself is deleted. As with MembershipDelete, the user leaves the
+-- organizations' projects too.
 UPDATE tenant.organizations_users
 SET deleted = now(), status = 'revoked'
 WHERE user_id = @user_id
@@ -68,3 +71,32 @@ SET deleted = now(), status = 'revoked'
 WHERE organization_id = @organization_id
   AND status IN ('pending', 'accepted')
   AND deleted IS NULL;
+
+-- name: ProjectListWhereUserIsLastAdmin :many
+-- Projects whose only admin is the given user, in one organization or, without
+-- one, in all of them: what keeps MembershipDelete or MembershipRevokeAllForUser
+-- from removing the user. Project names are unique only within a cluster.
+SELECT
+  tenant.organizations.name AS organization_name,
+  tenant.clusters.name AS cluster_name,
+  tenant.projects.name AS project_name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
+WHERE (sqlc.narg('organization_id')::uuid IS NULL OR tenant.clusters.organization_id = sqlc.narg('organization_id')::uuid)
+  AND tenant.projects.deleted IS NULL
+  AND tenant.project_members.user_id = @user_id
+  AND tenant.project_members.role = 'admin'
+  AND tenant.project_members.deleted IS NULL
+  -- Inside this subquery tenant.project_members names the subquery's own rows,
+  -- the other members of the project, not the outer user's membership.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tenant.project_members
+    WHERE tenant.project_members.project_id = tenant.projects.id
+      AND tenant.project_members.role = 'admin'
+      AND tenant.project_members.deleted IS NULL
+      AND tenant.project_members.user_id != @user_id
+  )
+ORDER BY tenant.organizations.name, tenant.clusters.name, tenant.projects.name;

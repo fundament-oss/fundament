@@ -196,7 +196,10 @@ export default class AddProjectMemberSheetComponent {
 
     const inProject = new Set((project?.members ?? []).map((member) => member.userId));
     const available = (organizationMembers ?? [])
-      .filter((member) => member.externalRef && !inProject.has(member.userId))
+      .filter(
+        (member) =>
+          member.externalRef && member.status === 'accepted' && !inProject.has(member.userId),
+      )
       .map((member) => ({ id: member.userId, name: member.name }));
     this.availableUsers.set(available);
     this.projectNamespaces.set((namespaces?.namespaces ?? []).map((namespace) => namespace.name));

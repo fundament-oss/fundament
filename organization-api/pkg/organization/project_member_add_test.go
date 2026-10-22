@@ -112,3 +112,82 @@ func Test_ProjectMember_Add(t *testing.T) {
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
 }
+
+// Only accepted organization members can be added to a project: a membership
+// for anyone else grants nothing, and would come back into effect when they
+// join the organization later.
+func Test_ProjectMember_Add_RequiresAcceptedOrgMember(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	callerUserID := uuid.New()
+	inviteeUserID := uuid.New()
+	outsiderUserID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     callerUserID,
+			Name:   "caller-user",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+		WithUser(&UserArgs{
+			ID:    inviteeUserID,
+			Name:  "invitee",
+			Email: "invitee@example.com",
+		}),
+		WithUser(&UserArgs{
+			ID:   outsiderUserID,
+			Name: "outsider",
+		}),
+	)
+
+	token := env.createAuthnToken(t, callerUserID)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+	inviteClient := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
+
+	_, err := inviteClient.InviteMember(ctx, organizationv1.InviteMemberRequest_builder{
+		Email:      "invitee@example.com",
+		Permission: "viewer",
+	}.Build())
+	require.NoError(t, err)
+
+	clusterRes, err := clusterClient.CreateCluster(ctx, organizationv1.CreateClusterRequest_builder{
+		Name:              "test-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	require.NoError(t, err)
+
+	projectRes, err := projectClient.CreateProject(ctx, organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(),
+		Name:      "test-project",
+	}.Build())
+	require.NoError(t, err)
+
+	tests := map[string]uuid.UUID{
+		"pending invitee":         inviteeUserID,
+		"not in the organization": outsiderUserID,
+	}
+
+	for name, userID := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := projectClient.AddProjectMember(ctx, organizationv1.AddProjectMemberRequest_builder{
+				ProjectId: projectRes.GetProjectId(),
+				UserId:    userID.String(),
+				Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
+			}.Build())
+
+			var connectErr *connect.Error
+			require.ErrorAs(t, err, &connectErr)
+			assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
+		})
+	}
+}

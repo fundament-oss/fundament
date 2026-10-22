@@ -885,6 +885,49 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="organizations_users_tr_remove_project_memberships"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- A user who leaves the organization leaves its projects too: a project
+    -- membership left behind keeps its RBAC on the clusters and comes back into
+    -- effect when the user is invited again. Every writer that revokes a
+    -- membership is covered, the organization-api and funops alike. The
+    -- protect_last_admin trigger refuses this while the user is the only admin
+    -- of a project.
+    -- Deleted projects are skipped: their memberships grant nothing, and
+    -- protect_last_admin would refuse removing their only admin.
+    -- The query takes a fresh snapshot, so it also sees a project membership
+    -- added by a transaction this row update waited for.
+    IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        UPDATE tenant.project_members
+        SET deleted = now()
+        WHERE tenant.project_members.user_id = NEW.user_id
+            AND tenant.project_members.deleted IS NULL
+            AND tenant.project_members.project_id IN (
+                SELECT tenant.projects.id
+                FROM tenant.projects
+                JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+                WHERE tenant.clusters.organization_id = NEW.organization_id
+                    AND tenant.projects.deleted IS NULL
+            );
+    END IF;
+    RETURN NEW;
+END;]]> </definition>
+</function>
+
 <function name="cluster_outbox_project_member_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -3101,6 +3144,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.organizations_users">
 		<function signature="tenant.cluster_outbox_organization_user_trigger()"/>
+</trigger>
+
+<trigger name="remove_project_memberships" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="false" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.organizations_users">
+		<function signature="tenant.organizations_users_tr_remove_project_memberships()"/>
 </trigger>
 
 <trigger name="cluster_outbox_project_member" firing-type="AFTER" per-line="true" constraint="false"

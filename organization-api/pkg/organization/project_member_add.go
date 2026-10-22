@@ -8,10 +8,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -32,7 +34,27 @@ func (s *Server) AddProjectMember(
 		return nil, err
 	}
 
-	memberID, err := s.queries.ProjectMemberCreate(ctx, db.ProjectMemberCreateParams{
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Only accepted organization members can join a project: a membership for
+	// a pending invitee or a removed member grants nothing on the clusters, and
+	// would come back into effect when they join the organization later. The
+	// lock keeps a concurrent DeleteMember from missing the new membership.
+	if _, err := qtx.MemberLockAcceptedByUserID(ctx, db.MemberLockAcceptedByUserIDParams{UserID: userID}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				fmt.Errorf("user is not an accepted member of the organization"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock organization member: %w", err))
+	}
+
+	memberID, err := qtx.ProjectMemberCreate(ctx, db.ProjectMemberCreateParams{
 		ProjectID: projectID,
 		UserID:    userID,
 		Role:      role,
@@ -46,6 +68,10 @@ func (s *Server) AddProjectMember(
 		}
 
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to add project member: %w", err))
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to commit transaction: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "project member added",

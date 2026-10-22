@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
@@ -44,6 +45,18 @@ func (s *Server) CreateProject(
 	defer rollback.Rollback(ctx, tx, s.logger)
 
 	qtx := s.queries.WithTx(tx)
+
+	// The creator becomes the project's admin, so they must still be an
+	// accepted organization member: the permission check above reads OpenFGA,
+	// whose tuples follow a removal only after a while. The lock keeps a
+	// concurrent DeleteMember from missing the new membership.
+	if _, err := qtx.MemberLockAcceptedByUserID(ctx, db.MemberLockAcceptedByUserIDParams{UserID: userID}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodePermissionDenied,
+				fmt.Errorf("user is not an accepted member of the organization"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lock organization member: %w", err))
+	}
 
 	alias := req.GetName()
 	if req.HasAlias() {

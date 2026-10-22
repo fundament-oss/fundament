@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
@@ -195,6 +199,10 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 		UserID:         user.ID,
 	})
 	if err != nil {
+		if isLastProjectAdmin(err) {
+			return lastAdminProjectsError(bgCtx, ctx, user.ID, pgtype.UUID{Bytes: orgID, Valid: true},
+				fmt.Sprintf("user %q is the only admin of projects in organization %q; make someone else admin of them first", c.User, c.Organization))
+		}
 		return fmt.Errorf("failed to remove organization member: %w", err)
 	}
 	if rowsAffected == 0 {
@@ -204,6 +212,43 @@ func (c *OrganizationMemberRemoveCmd) Run(ctx *Context) error {
 	ctx.Logger.Info("removed organization member", "organization", c.Organization, "user_id", user.ID.String(), "email", user.Email)
 
 	return nil
+}
+
+// isLastProjectAdmin reports whether err is the database refusing to revoke a
+// membership because it would remove the only admin of a project: revoking a
+// membership removes the user from the organization's projects too.
+func isLastProjectAdmin(err error) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintProjectContainsOneAdmin
+}
+
+// lastAdminProjectsError names the projects whose only admin is the user, in
+// the given organization or, when it is null, in all of them, so the operator
+// knows where to make someone else admin first. It reads outside any
+// transaction, since the refusal aborted the one it happened in.
+func lastAdminProjectsError(bgCtx context.Context, ctx *Context, userID uuid.UUID, organizationID pgtype.UUID, msg string) error {
+	projects, err := ctx.Queries.ProjectListWhereUserIsLastAdmin(bgCtx, db.ProjectListWhereUserIsLastAdminParams{
+		OrganizationID: organizationID,
+		UserID:         userID,
+	})
+	if err != nil {
+		ctx.Logger.Warn("list projects blocking member removal", "user_id", userID.String(), "error", err)
+		return errors.New(msg)
+	}
+	if len(projects) == 0 {
+		return errors.New(msg)
+	}
+
+	names := make([]string, 0, len(projects))
+	for _, project := range projects {
+		name := fmt.Sprintf("%q on cluster %q", project.ProjectName, project.ClusterName)
+		if !organizationID.Valid {
+			name += fmt.Sprintf(" in organization %q", project.OrganizationName)
+		}
+		names = append(names, name)
+	}
+
+	return fmt.Errorf("%s: %s", msg, strings.Join(names, ", "))
 }
 
 // parsePermission maps the flag value onto the database constant.
