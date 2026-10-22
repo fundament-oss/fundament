@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -46,7 +47,7 @@ type ProviderConfig struct {
 
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
-	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
+	DefaultMachineType  string // e.g., "local": the machine type every pool gets on the local provider
 
 	// ImmediateClusterDeletion makes a shoot deletion skip Gardener's cleanup
 	// waits: blocking finalizers are stripped on the first pass and pods are
@@ -290,18 +291,18 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 }
 
 // DeleteShootByClusterID deletes a Shoot by cluster ID label.
-func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (bool, error) {
 	shoot, err := r.getShootByClusterID(ctx, clusterID)
 	if err != nil {
-		return fmt.Errorf("failed to look up shoot: %w", err)
+		return false, fmt.Errorf("failed to look up shoot: %w", err)
 	}
 
 	if shoot == nil {
 		r.logger.Debug("shoot not found for deletion", "cluster_id", clusterID)
-		return nil
+		return false, nil
 	}
 
-	return r.deleteShoot(ctx, shoot)
+	return true, r.deleteShoot(ctx, shoot)
 }
 
 // ListShoots returns all Shoots managed by this worker (across all namespaces).
@@ -750,9 +751,13 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
 func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.Shoot, error) {
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return nil, err
+	}
 	provider := gardencorev1beta1.Provider{
 		Type:    r.provider.Type,
-		Workers: r.buildWorkers(cluster),
+		Workers: workers,
 	}
 	// Provider-specific extension configs, stamped verbatim. Required by metal
 	// (partition/project/firewall + control plane); the local provider sets neither.
@@ -843,43 +848,17 @@ func (r *RealClient) buildNetworking() *gardencorev1beta1.Networking {
 	return n
 }
 
-// Default worker group autoscaler bounds used when a cluster has no node pools.
-const (
-	defaultWorkerMinimum int32 = 1
-	defaultWorkerMaximum int32 = 3
-)
+// ErrNoNodePools is returned for a cluster without node pools: a Shoot is never
+// created or updated without a worker, and fundament lists every pool it runs.
+var ErrNoNodePools = errors.New("cluster has no node pools")
 
 // buildWorkers converts node pools to Gardener worker groups.
-// If the cluster has no node pools, a default worker group is created.
 // All workers share the same machine image from ProviderConfig.
 // TODO: support per-pool machine image once tenant.node_pools gains an image column.
 // TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
-func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
+func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.Worker, error) {
 	if len(cluster.NodePools) == 0 {
-		// Declare separately to avoid taking the address of a local variable that
-		// would be shared if this were a loop (consistent with the loop below).
-		maxSurge := intstr.FromInt32(1)
-		maxUnavailable := intstr.FromInt32(0)
-		imageVersion := r.provider.MachineImageVersion
-		workers := []gardencorev1beta1.Worker{
-			{
-				Name: "default",
-				Machine: gardencorev1beta1.Machine{
-					Type: r.provider.DefaultMachineType,
-					Image: &gardencorev1beta1.ShootMachineImage{
-						Name:    r.provider.MachineImageName,
-						Version: &imageVersion,
-					},
-				},
-				// TODO: make these configurable via env vars once different environments need
-				// different defaults (e.g., GARDENER_DEFAULT_MIN_WORKERS / GARDENER_DEFAULT_MAX_WORKERS).
-				Minimum:        defaultWorkerMinimum,
-				Maximum:        defaultWorkerMaximum,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
-			},
-		}
-		return workers
+		return nil, ErrNoNodePools
 	}
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
@@ -919,12 +898,15 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			workers[i].Zones = []string{np.Zone}
 		}
 	}
-	return workers
+	return workers, nil
 }
 
 // updateShootSpec updates an existing Shoot's spec and labels.
 func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) error {
-	workers := r.buildWorkers(cluster)
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return err
+	}
 
 	if shoot.Labels == nil {
 		shoot.Labels = make(map[string]string)

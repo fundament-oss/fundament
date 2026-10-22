@@ -2,13 +2,29 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
+
+// ErrNonRetryable marks an error a retry cannot fix: the outbox worker fails
+// the row at once instead of retrying it. Wrap with NonRetryable.
+var ErrNonRetryable = errors.New("non-retryable")
+
+type nonRetryable struct{ err error }
+
+// NonRetryable marks err as one a retry cannot fix (see ErrNonRetryable),
+// keeping its message as it is.
+func NonRetryable(err error) error { return nonRetryable{err: err} }
+
+func (e nonRetryable) Error() string { return e.err.Error() }
+
+func (e nonRetryable) Unwrap() []error { return []error{e.err, ErrNonRetryable} }
 
 // PreconditionError signals that a structural precondition is not met.
 // The outbox worker defers the row without incrementing retries.
@@ -18,6 +34,17 @@ type PreconditionError struct {
 	// used for a row's first deferral only: a precondition that usually clears
 	// within seconds is rechecked quickly once, then falls back to the default.
 	FirstRetryAfter time.Duration
+	// Park, when set, parks the row instead of rechecking it on a timer: it
+	// waits until a database trigger wakes it, for a precondition only an event
+	// can clear. A cluster row that parks records a sync_waiting_for_precondition
+	// event with Reason as its message.
+	Park bool
+	// Recheck re-evaluates a Park precondition inside the park transaction,
+	// with the row's cluster locked, and reports whether the row still has to
+	// wait. The triggers that wake parked rows hold the same lock, so a change
+	// they announce is either seen here or finds the row parked. A row whose
+	// precondition cleared meanwhile is left runnable.
+	Recheck func(ctx context.Context, tx pgx.Tx) (bool, error)
 }
 
 func (e *PreconditionError) Error() string {
@@ -26,6 +53,13 @@ func (e *PreconditionError) Error() string {
 
 func NewPreconditionError(reason string) *PreconditionError {
 	return &PreconditionError{Reason: reason}
+}
+
+// NewParkError is a PreconditionError that parks the row until it is woken,
+// unless recheck, run under the cluster lock just before the park, finds the
+// precondition met after all.
+func NewParkError(reason string, recheck func(ctx context.Context, tx pgx.Tx) (bool, error)) *PreconditionError {
+	return &PreconditionError{Reason: reason, Park: true, Recheck: recheck}
 }
 
 // NewPreconditionErrorWithFirstRetry is NewPreconditionError with a shorter

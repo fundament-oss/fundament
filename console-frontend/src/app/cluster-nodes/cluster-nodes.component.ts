@@ -9,8 +9,8 @@ import {
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
@@ -20,9 +20,9 @@ import { CLUSTER } from '../../connect/tokens';
 import SheetSyncDirective from '../sheet-sync.directive';
 import {
   ListNodePoolsRequestSchema,
-  CreateNodePoolRequestSchema,
-  UpdateNodePoolRequestSchema,
-  DeleteNodePoolRequestSchema,
+  ExpectedNodePoolsSchema,
+  NodePoolSpecSchema,
+  SetNodePoolsRequestSchema,
   GetClusterRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
@@ -31,6 +31,8 @@ import { fetchClusterName } from '../utils/cluster-status';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
+import { readableRefusal } from '../utils/node-pool-refusal';
+import { nodePoolsMatch } from '../utils/node-pools-match';
 
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/banner';
@@ -92,8 +94,6 @@ export default class ClusterNodesComponent implements OnInit {
   private clusterId = '';
 
   private existingNodePools: NodePool[] = [];
-
-  private idempotency = createIdempotencyRef();
 
   errorMessage = signal<string | null>(null);
 
@@ -190,57 +190,49 @@ export default class ClusterNodesComponent implements OnInit {
         const existingPool = existingPoolsMap.get(newPool.name);
         return (
           !!existingPool &&
-          (existingPool.minNodes !== newPool.autoscaleMin ||
+          (existingPool.machineType !== newPool.machineType ||
+            existingPool.minNodes !== newPool.autoscaleMin ||
             existingPool.maxNodes !== newPool.autoscaleMax)
         );
       });
 
-      // Delete pools that no longer exist
-      await Promise.all(
-        deleted.map((existingPool) => {
-          const deleteRequest = create(DeleteNodePoolRequestSchema, {
-            nodePoolId: existingPool.id,
-          });
-          return firstValueFrom(this.client.deleteNodePool(deleteRequest));
-        }),
+      // One call for the whole set: the API applies it at once or not at all,
+      // so the cluster never passes through zero pools, and a pool replaced at
+      // full quota fits because the old one goes in the same step. The pools
+      // this sheet was opened with go along: if someone else changed them
+      // since, the API refuses instead of removing their pool.
+      const request = firstValueFrom(
+        this.client.setNodePools(
+          create(SetNodePoolsRequestSchema, {
+            clusterId: this.clusterId,
+            expectedCurrent: create(ExpectedNodePoolsSchema, {
+              nodePoolIds: this.existingNodePools.map((pool) => pool.id),
+            }),
+            nodePools: newPools.map((pool) =>
+              create(NodePoolSpecSchema, {
+                name: pool.name,
+                machineType: pool.machineType,
+                autoscaleMin: pool.autoscaleMin,
+                autoscaleMax: pool.autoscaleMax,
+              }),
+            ),
+          }),
+        ),
       );
-
-      // Create or update pools
-      const idempotencySignal = this.idempotency.reset();
-
-      await Promise.all(
-        newPools.map((newPool) => {
-          const existingPool = existingPoolsMap.get(newPool.name);
-
-          if (existingPool) {
-            // Update if values changed
-            if (
-              existingPool.minNodes !== newPool.autoscaleMin ||
-              existingPool.maxNodes !== newPool.autoscaleMax
-            ) {
-              const updateRequest = create(UpdateNodePoolRequestSchema, {
-                nodePoolId: existingPool.id,
-                autoscaleMin: newPool.autoscaleMin,
-                autoscaleMax: newPool.autoscaleMax,
-              });
-              return firstValueFrom(this.client.updateNodePool(updateRequest));
-            }
-          } else {
-            // Create new pool
-            const createRequest = create(CreateNodePoolRequestSchema, {
-              clusterId: this.clusterId,
-              name: newPool.name,
-              machineType: newPool.machineType,
-              autoscaleMin: newPool.autoscaleMin,
-              autoscaleMax: newPool.autoscaleMax,
-            });
-            return withIdempotency((opts) => this.client.createNodePool(createRequest, opts), {
-              signal: idempotencySignal,
-            });
-          }
-          return undefined;
-        }),
-      );
+      try {
+        await request;
+      } catch (error) {
+        // A save whose response was lost has still been applied: the error is
+        // then a transport failure, or, on a second try, the stale-set refusal
+        // (Aborted), since the pools changed to this save's. A refusal in the
+        // API's own words is final. If the cluster already has exactly what
+        // was asked, it is done.
+        const maybeApplied =
+          !readableRefusal(error) || (error instanceof ConnectError && error.code === Code.Aborted);
+        if (!maybeApplied || !(await this.alreadyApplied(newPools))) {
+          throw error;
+        }
+      }
 
       // The page behind this sheet is where the pools are listed, and it was
       // never unmounted, so it hears from here that its cards are out of date.
@@ -250,14 +242,23 @@ export default class ClusterNodesComponent implements OnInit {
       // Navigate back to cluster overview on success
       this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? `Failed to update cluster nodes: ${error.message}`
-          : 'Failed to update cluster nodes';
-      this.errorMessage.set(message);
+      // Only a refusal meant for the reader is shown; anything else carries
+      // backend detail.
+      const reason = readableRefusal(error);
+      this.errorMessage.set(
+        reason ? `Failed to update cluster nodes: ${reason}` : 'Failed to update cluster nodes',
+      );
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  /** Whether the cluster's live pools are exactly the requested ones. */
+  private async alreadyApplied(desired: NodePoolData[]): Promise<boolean> {
+    const response = await firstValueFrom(
+      this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId: this.clusterId })),
+    );
+    return nodePoolsMatch(response.nodePools, desired);
   }
 
   onCancel() {

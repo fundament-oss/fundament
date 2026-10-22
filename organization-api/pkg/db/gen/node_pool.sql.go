@@ -12,6 +12,80 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clusterLockForNodePools = `-- name: ClusterLockForNodePools :one
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.deleted,
+    tenant.clusters.region
+FROM tenant.clusters
+WHERE tenant.clusters.id = $1
+FOR NO KEY UPDATE
+`
+
+type ClusterLockForNodePoolsParams struct {
+	ClusterID uuid.UUID
+}
+
+type ClusterLockForNodePoolsRow struct {
+	ID      uuid.UUID
+	Deleted pgtype.Timestamptz
+	Region  string
+}
+
+// Locks a cluster for a node pool change, as NodePoolLockCluster does. No row:
+// the cluster does not exist.
+func (q *Queries) ClusterLockForNodePools(ctx context.Context, arg ClusterLockForNodePoolsParams) (ClusterLockForNodePoolsRow, error) {
+	row := q.db.QueryRow(ctx, clusterLockForNodePools, arg.ClusterID)
+	var i ClusterLockForNodePoolsRow
+	err := row.Scan(&i.ID, &i.Deleted, &i.Region)
+	return i, err
+}
+
+const nodePoolCountActiveByClusterID = `-- name: NodePoolCountActiveByClusterID :one
+SELECT count(*)
+FROM tenant.node_pools
+WHERE tenant.node_pools.cluster_id = $1
+  AND tenant.node_pools.deleted IS NULL
+  AND tenant.node_pools.autoscale_max > 0
+  AND tenant.node_pools.id IS DISTINCT FROM $2::uuid
+`
+
+type NodePoolCountActiveByClusterIDParams struct {
+	ClusterID        uuid.UUID
+	ExceptNodePoolID pgtype.UUID
+}
+
+// Live pools of a cluster that can run nodes (a maximum above 0), other than
+// the given one. A Shoot needs at least one such worker pool: Gardener refuses
+// one whose every pool has a maximum of 0.
+func (q *Queries) NodePoolCountActiveByClusterID(ctx context.Context, arg NodePoolCountActiveByClusterIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, nodePoolCountActiveByClusterID, arg.ClusterID, arg.ExceptNodePoolID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const nodePoolCountByClusterID = `-- name: NodePoolCountByClusterID :one
+SELECT count(*)
+FROM tenant.node_pools
+WHERE tenant.node_pools.cluster_id = $1
+  AND tenant.node_pools.deleted IS NULL
+  AND tenant.node_pools.id IS DISTINCT FROM $2::uuid
+`
+
+type NodePoolCountByClusterIDParams struct {
+	ClusterID        uuid.UUID
+	ExceptNodePoolID pgtype.UUID
+}
+
+// Live pools of a cluster, other than the given one, whatever their maximum.
+func (q *Queries) NodePoolCountByClusterID(ctx context.Context, arg NodePoolCountByClusterIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, nodePoolCountByClusterID, arg.ClusterID, arg.ExceptNodePoolID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const nodePoolCreate = `-- name: NodePoolCreate :one
 INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max, region_machine_type_id)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -203,6 +277,40 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 		return nil, err
 	}
 	return items, nil
+}
+
+const nodePoolLockCluster = `-- name: NodePoolLockCluster :one
+SELECT
+    tenant.clusters.id,
+    tenant.clusters.deleted
+FROM tenant.clusters
+WHERE tenant.clusters.id = (
+    SELECT tenant.node_pools.cluster_id
+    FROM tenant.node_pools
+    WHERE tenant.node_pools.id = $1
+      AND tenant.node_pools.deleted IS NULL
+)
+FOR NO KEY UPDATE
+`
+
+type NodePoolLockClusterParams struct {
+	NodePoolID uuid.UUID
+}
+
+type NodePoolLockClusterRow struct {
+	ID      uuid.UUID
+	Deleted pgtype.Timestamptz
+}
+
+// Locks the cluster of a live node pool, so two deletes of a cluster's pools
+// run one after the other and the second counts what the first left. FOR NO
+// KEY UPDATE conflicts with itself, not with the key-share lock a new pool's
+// foreign key takes. No row: the pool is gone.
+func (q *Queries) NodePoolLockCluster(ctx context.Context, arg NodePoolLockClusterParams) (NodePoolLockClusterRow, error) {
+	row := q.db.QueryRow(ctx, nodePoolLockCluster, arg.NodePoolID)
+	var i NodePoolLockClusterRow
+	err := row.Scan(&i.ID, &i.Deleted)
+	return i, err
 }
 
 const nodePoolUpdate = `-- name: NodePoolUpdate :execrows
