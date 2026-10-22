@@ -7,6 +7,7 @@ import { inventoryMatcher } from './inventory/inventory-views';
 import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
 import { dataCentersMatcher } from './datacenters/datacenter-views';
 import { racksMatcher } from './racks/rack-views';
+import { platformMatcher } from './platform/platform-views';
 
 const routes: Routes = [
   {
@@ -94,6 +95,14 @@ const routes: Routes = [
         matcher: roundsMatcher,
         title: 'Rounds',
         loadComponent: () => import('./rounds/rounds').then((m) => m.default),
+      },
+      {
+        // Every organization's clusters as staff see them (FUN-23). One route
+        // config for the overview, one organization, one cluster and the drift
+        // list: see platform-views.ts.
+        matcher: platformMatcher,
+        title: 'Platform',
+        loadComponent: () => import('./platform/platform').then((m) => m.default),
       },
     ],
   },

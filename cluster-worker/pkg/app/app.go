@@ -23,6 +23,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/pluginmachinery"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/proxyidentity"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/inventory"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/status"
@@ -41,6 +42,7 @@ type Config struct {
 	Reconcile reconcile.Config       `envPrefix:"RECONCILE_"`
 	Cluster   clusterhandler.Config  `envPrefix:"CLUSTER_"`
 	Plugin    pluginmachinery.Config `envPrefix:"PLUGIN_"`
+	Inventory inventory.Config       `envPrefix:"INVENTORY_"`
 }
 
 // GardenerConfig configures the Gardener client and the provider defaults the
@@ -125,6 +127,7 @@ type App struct {
 	statusWorker    *status.Worker
 	statusChecks    *clusterhandler.Handler // runs the queued status checks
 	reconcileWorker *reconcile.Worker
+	inventoryWorker *inventory.Worker
 	statusCache     statusCacheRunner    // nil when the client has no status cache
 	statusNotifier  statusNotifierRunner // nil when the client reports changes through a watch
 	healthServer    *http.Server
@@ -191,12 +194,23 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, pih)
 	registry.RegisterReconcile(pih)
 
+	// Both ShootAccess implementations read inventories too.
+	inventoryReader, ok := shootAccess.(shoot.InventoryReader)
+	if !ok {
+		return nil, fmt.Errorf("shoot access %T cannot read inventories", shootAccess)
+	}
+
 	// Workers
 	outboxWorker := outbox.New(pool, registry, logger, cfg.Outbox)
 	statusWorker := status.New(registry, logger, cfg.Status)
 	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
+	if err := cfg.Inventory.Validate(); err != nil {
+		return nil, err
+	}
+	inventoryWorker := inventory.New(pool, inventoryReader, logger, cfg.Inventory)
 
-	// Health server
+	// Health server. The inventory worker is left out on purpose: snapshots are
+	// a staff convenience and must never take the worker out of rotation.
 	healthServer := startHealthServer(cfg.HealthPort, logger, outboxWorker, statusWorker, reconcileWorker)
 
 	statusCache, _ := gardenerClient.(statusCacheRunner)
@@ -209,6 +223,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 		statusWorker:    statusWorker,
 		statusChecks:    ch,
 		reconcileWorker: reconcileWorker,
+		inventoryWorker: inventoryWorker,
 		statusCache:     statusCache,
 		statusNotifier:  statusNotifier,
 		healthServer:    healthServer,
@@ -223,6 +238,7 @@ func (a *App) Run(ctx context.Context) error {
 		"poll_interval", a.cfg.Outbox.PollInterval,
 		"reconcile_interval", a.cfg.Reconcile.Interval,
 		"status_interval", a.cfg.Status.Interval,
+		"inventory_interval", a.cfg.Inventory.Interval,
 		"max_retries", a.cfg.Outbox.MaxRetries,
 		"gardener_mode", a.cfg.Gardener.Mode)
 
@@ -239,6 +255,7 @@ func (a *App) Run(ctx context.Context) error {
 	})
 	g.Go(func() error { return a.statusChecks.RunStatusWorkers(ctx) })
 	g.Go(func() error { return a.reconcileWorker.Run(ctx) })
+	g.Go(func() error { return a.inventoryWorker.Run(ctx) })
 	if a.statusCache != nil {
 		// Status reads fall back to direct Gardener requests until it has synced.
 		g.Go(func() error { return a.statusCache.RunStatusCache(ctx) })
@@ -370,7 +387,13 @@ func createShootAccess(g GardenerConfig, gardenerClient gardener.Client, logger 
 			}
 		}
 		logger.Info("using mock shoot access (in-memory)")
-		return shoot.NewMockShootAccess(logger), nil
+		access := shoot.NewMockShootAccess(logger)
+		// The mock inventory runs each pool's autoscaler minimum of nodes, which
+		// only the mock Gardener client knows.
+		if mockGardener, ok := gardenerClient.(*gardener.MockClient); ok {
+			access.WorkerPools = mockGardener.WorkerPools
+		}
+		return access, nil
 	case "real":
 		logger.Info("using real shoot access (AdminKubeconfigRequest)")
 		return shoot.NewRealShootAccess(gardenerClient, logger), nil

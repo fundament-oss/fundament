@@ -47,6 +47,9 @@ const SECTIONS = [
   { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },
   { text: 'Rounds', icon: 'tools', path: '/rounds' },
+  // Not part of the data center: the clusters customers run on it (FUN-23).
+  // Last, so the sections about the building stay together.
+  { text: 'Platform', icon: 'kubernetes', path: '/platform' },
 ];
 
 /**

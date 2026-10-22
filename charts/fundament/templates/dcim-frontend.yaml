@@ -11,6 +11,7 @@ data:
     {
       "apiUrl": "{{ $.Values.externalUrls.dcimApi }}",
       "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}",
+      "platformApiUrl": "{{ $.Values.externalUrls.platformAdminApi }}",
       "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "dcim") }}"
     }
 
@@ -36,7 +37,7 @@ spec:
           image: {{ $.Values.images.dcimFrontend }}
           env:
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }}"
+              value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }} {{ $.Values.externalUrls.platformAdminApi }}"
           ports:
             - name: http
               containerPort: 80

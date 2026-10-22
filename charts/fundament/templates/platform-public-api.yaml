@@ -1,0 +1,68 @@
+{{- if $.Values.platformPublicApi.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-public-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "platform-public-api" "component" "backend") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: {{ $.Values.platformPublicApi.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "platform-public-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "platform-public-api" "component" "backend") | nindent 8 }}
+    spec:
+      containers:
+        - name: platform-public-api
+          image: {{ $.Values.images.platformPublicApi }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # Anonymous (FUN-23): the role may only execute
+            # tenant.platform_overview(), so it needs no JWT secret.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-fun-platform-public-api
+                  key: uri
+            - name: CACHE_TTL
+              value: {{ $.Values.platformPublicApi.cacheTTL | quote }}
+            - name: CORS_ALLOWED_ORIGINS
+              value: {{ $.Values.externalUrls.corsAllowedOrigins | default $.Values.externalUrls.console }}
+            - name: LOG_LEVEL
+              value: {{ .Values.platformPublicApi.logLevel }}
+            {{- if $.Values.deploymentVersion }}
+            # Served on /version so CI can tell which release is answering.
+            - name: DEPLOYMENT_VERSION
+              value: {{ $.Values.deploymentVersion | quote }}
+            {{- end }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-public-api
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "platform-public-api" "component" "backend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+      {{- with $.Values.grpcAppProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "platform-public-api") | nindent 4 }}
+
+{{- end }}

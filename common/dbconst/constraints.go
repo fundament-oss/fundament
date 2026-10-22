@@ -47,6 +47,14 @@ const (
 	ConstraintClusterOutboxFkProjectMember = "cluster_outbox_fk_project_member"
 	// ConstraintClusterOutboxUqNsReconcile is defined on tenant.cluster_outbox.
 	ConstraintClusterOutboxUqNsReconcile = "cluster_outbox_uq_ns_reconcile"
+	// ConstraintClusterSnapshotsCkCounts is defined on tenant.cluster_snapshots.
+	ConstraintClusterSnapshotsCkCounts = "cluster_snapshots_ck_counts"
+	// ConstraintClusterSnapshotsCkLastError is defined on tenant.cluster_snapshots.
+	ConstraintClusterSnapshotsCkLastError = "cluster_snapshots_ck_last_error"
+	// ConstraintClusterSnapshotsFkCluster is defined on tenant.cluster_snapshots.
+	ConstraintClusterSnapshotsFkCluster = "cluster_snapshots_fk_cluster"
+	// ConstraintClusterSnapshotsUqCluster is defined on tenant.cluster_snapshots.
+	ConstraintClusterSnapshotsUqCluster = "cluster_snapshots_uq_cluster"
 	// ConstraintClustersCkDefaultCpuLimitGteRequest is defined on tenant.clusters.
 	ConstraintClustersCkDefaultCpuLimitGteRequest = "clusters_ck_default_cpu_limit_gte_request"
 	// ConstraintClustersCkDefaultCpuLimitM is defined on tenant.clusters.
@@ -155,6 +163,8 @@ const (
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsUqManufacturerModel = "device_catalogs_uq_manufacturer_model"
+	// ConstraintGardenerShootsUqShootUid is defined on tenant.gardener_shoots.
+	ConstraintGardenerShootsUqShootUid = "gardener_shoots_uq_shoot_uid"
 	// ConstraintIdempotencyKeysCkSingleFk is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysCkSingleFk = "idempotency_keys_ck_single_fk"
 	// ConstraintIdempotencyKeysFkApiKey is defined on tenant.idempotency_keys.
@@ -191,12 +201,24 @@ const (
 	ConstraintLogicalDevicesUqDesignLabel = "logical_devices_uq_design_label"
 	// ConstraintMachineTypesUqName is defined on catalog.machine_types.
 	ConstraintMachineTypesUqName = "machine_types_uq_name"
+	// ConstraintNamespaceSnapshotsCkPods is defined on tenant.namespace_snapshots.
+	ConstraintNamespaceSnapshotsCkPods = "namespace_snapshots_ck_pods"
+	// ConstraintNamespaceSnapshotsFkNamespace is defined on tenant.namespace_snapshots.
+	ConstraintNamespaceSnapshotsFkNamespace = "namespace_snapshots_fk_namespace"
+	// ConstraintNamespaceSnapshotsUqNamespace is defined on tenant.namespace_snapshots.
+	ConstraintNamespaceSnapshotsUqNamespace = "namespace_snapshots_uq_namespace"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
 	ConstraintNamespacesFkProject = "namespaces_fk_project"
 	// ConstraintNamespacesUqName is defined on tenant.namespaces.
 	ConstraintNamespacesUqName = "namespaces_uq_name"
+	// ConstraintNodePoolSnapshotsCkCounts is defined on tenant.node_pool_snapshots.
+	ConstraintNodePoolSnapshotsCkCounts = "node_pool_snapshots_ck_counts"
+	// ConstraintNodePoolSnapshotsFkNodePool is defined on tenant.node_pool_snapshots.
+	ConstraintNodePoolSnapshotsFkNodePool = "node_pool_snapshots_fk_node_pool"
+	// ConstraintNodePoolSnapshotsUqNodePool is defined on tenant.node_pool_snapshots.
+	ConstraintNodePoolSnapshotsUqNodePool = "node_pool_snapshots_uq_node_pool"
 	// ConstraintNodePoolsCkStatus is defined on tenant.node_pools.
 	ConstraintNodePoolsCkStatus = "node_pools_ck_status"
 	// ConstraintNodePoolsFkCluster is defined on tenant.node_pools.

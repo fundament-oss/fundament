@@ -1,0 +1,606 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="title()"
+    back-text="Platform"
+    collapse-anchor="platform-title"
+    (back)="goToOverview()"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    @if (!configured) {
+      <!-- An environment without platform-api deployed: say so rather than show
+           a page of failed reads. -->
+      <nldd-inline-dialog
+        text="Not available"
+        supporting-text="This environment has no platform API configured."
+      ></nldd-inline-dialog>
+    } @else {
+      <nldd-title id="platform-title" size="2">
+        <h1>{{ title() }}</h1>
+        <!-- The page reads the fleet again every minute; this is for when a
+             minute is too long. -->
+        <nldd-button
+          slot="end"
+          type="button"
+          text="Refresh"
+          variant="secondary"
+          (click)="refresh()"
+        ></nldd-button>
+      </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
+
+      @if (api.fleetError(); as error) {
+        <nldd-banner
+          variant="critical"
+          text="Fleet not loaded"
+          [attr.supporting-text]="error"
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      @switch (view().kind) {
+        @case ('overview') {
+          <ng-container *ngTemplateOutlet="overview"></ng-container>
+        }
+        @case ('organization') {
+          <ng-container *ngTemplateOutlet="organization"></ng-container>
+        }
+        @case ('cluster') {
+          <ng-container *ngTemplateOutlet="cluster"></ng-container>
+        }
+        @case ('drift') {
+          <ng-container *ngTemplateOutlet="drift"></ng-container>
+        }
+      }
+    }
+  </nldd-simple-section>
+</nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     OVERVIEW
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #overview>
+  @if (api.summary(); as summary) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-collection layout="grid" item-width="180px" gap="16">
+        @for (tile of tiles(); track tile.label) {
+          <nldd-card background="base">
+            <nldd-container padding="16">
+              <nldd-title size="5">
+                <h2>{{ tile.label }}</h2>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-title size="3">
+                <p>{{ tile.value }}</p>
+              </nldd-title>
+            </nldd-container>
+          </nldd-card>
+        }
+        <!-- Pods against what the nodes can hold: a bar says how full the
+             fleet is faster than two numbers do. -->
+        <nldd-card background="base">
+          <nldd-container padding="16">
+            <nldd-progress-bar
+              text="Pods"
+              [attr.value]="summary.pods"
+              [attr.max]="summary.podAllocatable || 1"
+              [attr.value-text]="summary.pods + ' / ' + summary.podAllocatable"
+            ></nldd-progress-bar>
+          </nldd-container>
+        </nldd-card>
+      </nldd-collection>
+      <nldd-rich-text spacing="flat">
+        <p>{{ inventoryRefreshed() }}</p>
+      </nldd-rich-text>
+
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Organizations</h2>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-table
+            accessible-label="Organizations"
+            columns="minmax(180px, 1fr) 80px 100px 110px 80px 110px"
+            md-columns="minmax(160px, 1fr) 80px 100px 110px"
+            sm-columns="minmax(140px, 1fr) 80px 100px"
+          >
+            <nldd-table-row slot="header">
+              <nldd-text-cell text="Organization"></nldd-text-cell>
+              <nldd-text-cell text="Clusters"></nldd-text-cell>
+              <nldd-text-cell text="Unhealthy"></nldd-text-cell>
+              <nldd-text-cell text="Nodes" hide-below="md"></nldd-text-cell>
+              <nldd-text-cell text="Pods" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="Namespaces" hide-below="lg"></nldd-text-cell>
+            </nldd-table-row>
+            @for (organization of api.organizations(); track organization.id) {
+              <nldd-table-row>
+                <nldd-text-cell [attr.supporting-text]="organization.name">
+                  <nldd-link
+                    [attr.href]="organizationPath(organization.id)"
+                    [attr.text]="organization.alias"
+                    (click)="go($event, organizationPath(organization.id))"
+                  ></nldd-link>
+                </nldd-text-cell>
+                <nldd-text-cell [attr.text]="organization.clusters"></nldd-text-cell>
+                <nldd-text-cell
+                  [attr.text]="organization.clustersUnhealthy"
+                  [attr.color]="organization.clustersUnhealthy > 0 ? 'critical' : null"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  hide-below="md"
+                  [attr.text]="organization.nodesReady + ' / ' + organization.nodes"
+                ></nldd-text-cell>
+                <nldd-text-cell hide-below="lg" [attr.text]="organization.pods"></nldd-text-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="organization.namespaces"
+                ></nldd-text-cell>
+              </nldd-table-row>
+            }
+            <nldd-inline-dialog slot="empty" text="No organizations"></nldd-inline-dialog>
+          </nldd-table>
+        </nldd-container>
+      </nldd-box>
+    </nldd-container>
+  } @else if (!api.fleetError()) {
+    <nldd-activity-indicator show-text text="Loading the fleet..."></nldd-activity-indicator>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ONE ORGANIZATION
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #organization>
+  @if (api.detailError(); as error) {
+    <nldd-banner
+      variant="critical"
+      text="Organization not loaded"
+      [attr.supporting-text]="error"
+    ></nldd-banner>
+  } @else if (api.organization(); as organization) {
+    <nldd-container layout="stack" gap="24" sm-gap="16">
+      <nldd-rich-text spacing="flat">
+        <p>{{ organization.name }}, created {{ date(organization.created) }}</p>
+      </nldd-rich-text>
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Clusters</h2>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <nldd-table
+            accessible-label="Clusters"
+            columns="minmax(160px, 1fr) 130px 100px 110px 160px 180px 160px 110px 130px"
+            md-columns="minmax(140px, 1fr) 130px 160px 130px"
+            sm-columns="minmax(120px, 1fr) 130px"
+          >
+            <nldd-table-row slot="header">
+              <nldd-text-cell text="Name"></nldd-text-cell>
+              <nldd-text-cell text="Status"></nldd-text-cell>
+              <nldd-text-cell text="Kubernetes" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="Region" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="Nodes" hide-below="md"></nldd-text-cell>
+              <nldd-text-cell text="Pods" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="CPU and memory" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="Created" hide-below="lg"></nldd-text-cell>
+              <nldd-text-cell text="Observed" hide-below="md"></nldd-text-cell>
+            </nldd-table-row>
+            @for (cluster of api.clusters(); track cluster.id) {
+              <nldd-table-row>
+                <nldd-text-cell>
+                  <nldd-link
+                    [attr.href]="clusterPath(cluster.id)"
+                    [attr.text]="cluster.name"
+                    (click)="go($event, clusterPath(cluster.id))"
+                  ></nldd-link>
+                </nldd-text-cell>
+                <nldd-cell>
+                  <nldd-tag
+                    size="sm"
+                    [attr.color]="clusterTag(cluster).color"
+                    [attr.text]="clusterTag(cluster).text"
+                  ></nldd-tag>
+                </nldd-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="cluster.kubernetesVersion"
+                ></nldd-text-cell>
+                <nldd-text-cell hide-below="lg" [attr.text]="cluster.region"></nldd-text-cell>
+                <nldd-text-cell hide-below="md" [attr.text]="nodesText(cluster)"></nldd-text-cell>
+                <nldd-cell hide-below="lg">
+                  @if (cluster.snapshot?.observed) {
+                    <nldd-progress-bar
+                      size="sm"
+                      [attr.accessible-label]="'Pods on ' + cluster.name"
+                      [attr.value]="cluster.snapshot!.pods"
+                      [attr.max]="cluster.snapshot!.podAllocatable || 1"
+                      [attr.value-text]="
+                        cluster.snapshot!.pods + ' / ' + cluster.snapshot!.podAllocatable
+                      "
+                    ></nldd-progress-bar>
+                  }
+                </nldd-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="capacityText(cluster.snapshot)"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  hide-below="lg"
+                  [attr.text]="date(cluster.created)"
+                ></nldd-text-cell>
+                <nldd-cell hide-below="md">
+                  <ng-container
+                    *ngTemplateOutlet="observedCell; context: { $implicit: cluster }"
+                  ></ng-container>
+                </nldd-cell>
+              </nldd-table-row>
+            }
+            <nldd-inline-dialog slot="empty" text="No clusters"></nldd-inline-dialog>
+          </nldd-table>
+        </nldd-container>
+      </nldd-box>
+    </nldd-container>
+  } @else if (api.detailLoading()) {
+    <nldd-activity-indicator show-text text="Loading the organization..."></nldd-activity-indicator>
+  }
+</ng-template>
+
+<!-- When a cluster was last observed, flagged once that is past stale_after;
+     the last collection error, if any, is in the tooltip. -->
+<ng-template #observedCell let-cluster>
+  @let seen = observed(cluster.snapshot?.observed);
+  @if (cluster.snapshot?.lastError) {
+    <nldd-tooltip [attr.text]="'Last error: ' + cluster.snapshot.lastError">
+      <nldd-tag size="sm" color="warning" [attr.text]="seen.text"></nldd-tag>
+    </nldd-tooltip>
+  } @else if (cluster.stale) {
+    <nldd-tag size="sm" color="warning" [attr.text]="seen.text"></nldd-tag>
+  } @else {
+    <nldd-text color="secondary">{{ cluster.snapshot?.observed ? seen.text : '' }}</nldd-text>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ONE CLUSTER
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #cluster>
+  @if (api.detailError(); as error) {
+    <nldd-banner
+      variant="critical"
+      text="Cluster not loaded"
+      [attr.supporting-text]="error"
+    ></nldd-banner>
+  } @else if (api.cluster(); as detail) {
+    @if (detail.cluster; as cluster) {
+      <nldd-container layout="stack" gap="24" sm-gap="16">
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="4">
+              <h2>Facts</h2>
+            </nldd-title>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-table accessible-label="Facts" columns="minmax(140px, 220px) minmax(160px, 1fr)">
+              <nldd-table-row>
+                <nldd-text-cell text="Organization"></nldd-text-cell>
+                <nldd-text-cell>
+                  <nldd-link
+                    [attr.href]="organizationPath(cluster.organizationId)"
+                    [attr.text]="cluster.organizationName"
+                    (click)="go($event, organizationPath(cluster.organizationId))"
+                  ></nldd-link>
+                </nldd-text-cell>
+              </nldd-table-row>
+              <nldd-table-row>
+                <nldd-text-cell text="Status"></nldd-text-cell>
+                <nldd-cell>
+                  <nldd-tag
+                    size="sm"
+                    [attr.color]="clusterTag(cluster).color"
+                    [attr.text]="clusterTag(cluster).text"
+                  ></nldd-tag>
+                </nldd-cell>
+              </nldd-table-row>
+              @if (cluster.statusMessage) {
+                <nldd-table-row>
+                  <nldd-text-cell text="Status message"></nldd-text-cell>
+                  <nldd-text-cell [attr.text]="cluster.statusMessage"></nldd-text-cell>
+                </nldd-table-row>
+              }
+              <nldd-table-row>
+                <nldd-text-cell text="Kubernetes"></nldd-text-cell>
+                <nldd-text-cell [attr.text]="cluster.kubernetesVersion"></nldd-text-cell>
+              </nldd-table-row>
+              <nldd-table-row>
+                <nldd-text-cell text="Region"></nldd-text-cell>
+                <nldd-text-cell [attr.text]="cluster.region"></nldd-text-cell>
+              </nldd-table-row>
+              <nldd-table-row>
+                <nldd-text-cell text="Created"></nldd-text-cell>
+                <nldd-text-cell [attr.text]="date(cluster.created)"></nldd-text-cell>
+              </nldd-table-row>
+              <nldd-table-row>
+                <nldd-text-cell text="Nodes"></nldd-text-cell>
+                <nldd-text-cell [attr.text]="nodesText(cluster)"></nldd-text-cell>
+              </nldd-table-row>
+              @if (cluster.snapshot?.observed) {
+                <nldd-table-row>
+                  <nldd-text-cell text="Pods"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="cluster.snapshot!.pods + ' / ' + cluster.snapshot!.podAllocatable"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+                <nldd-table-row>
+                  <nldd-text-cell text="CPU and memory"></nldd-text-cell>
+                  <nldd-text-cell [attr.text]="capacityText(cluster.snapshot)"></nldd-text-cell>
+                </nldd-table-row>
+              }
+              <nldd-table-row>
+                <nldd-text-cell text="Observed"></nldd-text-cell>
+                <nldd-cell>
+                  <ng-container
+                    *ngTemplateOutlet="observedCell; context: { $implicit: cluster }"
+                  ></ng-container>
+                </nldd-cell>
+              </nldd-table-row>
+              @if (cluster.snapshot?.lastError) {
+                <nldd-table-row>
+                  <nldd-text-cell text="Last error"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="cluster.snapshot!.lastError"
+                    [attr.supporting-text]="ago(cluster.snapshot!.lastErrorAt)"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+              }
+              <nldd-table-row>
+                <nldd-text-cell text="Gardener shoot"></nldd-text-cell>
+                @if (detail.shoot; as shoot) {
+                  <nldd-text-cell
+                    [attr.text]="shoot.namespace + '/' + shoot.name"
+                    [attr.supporting-text]="
+                      'Kubernetes ' + shoot.kubernetesVersion + ', seen ' + ago(shoot.lastSeen)
+                    "
+                  ></nldd-text-cell>
+                } @else {
+                  <nldd-text-cell text="Not seen" color="secondary"></nldd-text-cell>
+                }
+              </nldd-table-row>
+            </nldd-table>
+          </nldd-container>
+        </nldd-box>
+
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="4">
+              <h2>Node pools</h2>
+            </nldd-title>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-table
+              accessible-label="Node pools"
+              columns="minmax(140px, 1fr) 150px 60px 60px 70px 70px 140px"
+              md-columns="minmax(120px, 1fr) 60px 60px 70px 140px"
+              sm-columns="minmax(120px, 1fr) 70px 140px"
+            >
+              <nldd-table-row slot="header">
+                <nldd-text-cell text="Name"></nldd-text-cell>
+                <nldd-text-cell text="Machine type" hide-below="lg"></nldd-text-cell>
+                <nldd-text-cell text="Min" hide-below="md"></nldd-text-cell>
+                <nldd-text-cell text="Max" hide-below="md"></nldd-text-cell>
+                <nldd-text-cell text="Nodes"></nldd-text-cell>
+                <nldd-text-cell text="Ready" hide-below="lg"></nldd-text-cell>
+                <nldd-text-cell text=""></nldd-text-cell>
+              </nldd-table-row>
+              @for (pool of detail.nodePools; track pool.id) {
+                @let flag = poolFlag(pool);
+                <nldd-table-row>
+                  <nldd-text-cell [attr.text]="pool.name"></nldd-text-cell>
+                  <nldd-text-cell hide-below="lg" [attr.text]="pool.machineType"></nldd-text-cell>
+                  <nldd-text-cell hide-below="md" [attr.text]="pool.autoscaleMin"></nldd-text-cell>
+                  <nldd-text-cell hide-below="md" [attr.text]="pool.autoscaleMax"></nldd-text-cell>
+                  <nldd-text-cell [attr.text]="pool.observed ? pool.nodes : ''"></nldd-text-cell>
+                  <nldd-text-cell
+                    hide-below="lg"
+                    [attr.text]="pool.observed ? pool.nodesReady : ''"
+                  ></nldd-text-cell>
+                  <nldd-cell>
+                    @if (flag) {
+                      <nldd-tag
+                        size="sm"
+                        [attr.color]="flag.color"
+                        [attr.text]="flag.text"
+                      ></nldd-tag>
+                    }
+                  </nldd-cell>
+                </nldd-table-row>
+              }
+              <nldd-inline-dialog slot="empty" text="No node pools"></nldd-inline-dialog>
+            </nldd-table>
+          </nldd-container>
+        </nldd-box>
+
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="4">
+              <h2>Namespaces</h2>
+            </nldd-title>
+            <nldd-spacer size="12"></nldd-spacer>
+            <nldd-table
+              accessible-label="Namespaces"
+              columns="minmax(140px, 1fr) minmax(140px, 1fr) 70px 120px"
+              sm-columns="minmax(120px, 1fr) 70px 120px"
+            >
+              <nldd-table-row slot="header">
+                <nldd-text-cell text="Project" hide-below="md"></nldd-text-cell>
+                <nldd-text-cell text="Namespace"></nldd-text-cell>
+                <nldd-text-cell text="Pods"></nldd-text-cell>
+                <nldd-text-cell text="Observed"></nldd-text-cell>
+              </nldd-table-row>
+              @for (project of namespaceGroups(); track project.id) {
+                @for (namespace of project.namespaces; track namespace.id; let first = $first) {
+                  @let seen = observed(namespace.observed);
+                  <nldd-table-row>
+                    <nldd-text-cell
+                      hide-below="md"
+                      [attr.text]="first ? project.alias : ''"
+                      [attr.supporting-text]="first ? project.name : ''"
+                    ></nldd-text-cell>
+                    <nldd-text-cell [attr.text]="namespace.name"></nldd-text-cell>
+                    <nldd-text-cell
+                      [attr.text]="namespace.observed ? namespace.pods : ''"
+                    ></nldd-text-cell>
+                    <nldd-cell>
+                      @if (seen.stale) {
+                        <nldd-tag size="sm" color="warning" [attr.text]="seen.text"></nldd-tag>
+                      } @else {
+                        <nldd-text color="secondary">{{ seen.text }}</nldd-text>
+                      }
+                    </nldd-cell>
+                  </nldd-table-row>
+                }
+              }
+              <nldd-inline-dialog slot="empty" text="No namespaces"></nldd-inline-dialog>
+            </nldd-table>
+          </nldd-container>
+        </nldd-box>
+      </nldd-container>
+    }
+  } @else if (api.detailLoading()) {
+    <nldd-activity-indicator show-text text="Loading the cluster..."></nldd-activity-indicator>
+  }
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DRIFT
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #drift>
+  <nldd-rich-text spacing="flat">
+    <p>Where the database, the snapshots and Gardener disagree. {{ inventoryRefreshed() }}.</p>
+  </nldd-rich-text>
+  <nldd-spacer size="16"></nldd-spacer>
+  <nldd-box>
+    <nldd-container padding="16">
+      <nldd-table
+        accessible-label="Drift findings"
+        columns="200px minmax(140px, 1fr) minmax(160px, 1fr) 100px minmax(200px, 2fr)"
+        md-columns="190px minmax(160px, 1fr) 100px"
+        sm-columns="190px minmax(140px, 1fr)"
+      >
+        <nldd-table-row slot="header">
+          <nldd-text-cell text="Kind"></nldd-text-cell>
+          <nldd-text-cell text="Organization" hide-below="lg"></nldd-text-cell>
+          <nldd-text-cell text="Cluster or shoot"></nldd-text-cell>
+          <nldd-text-cell text="Since" hide-below="md"></nldd-text-cell>
+          <nldd-text-cell text="Detail" hide-below="lg"></nldd-text-cell>
+        </nldd-table-row>
+        @for (finding of api.findings(); track $index) {
+          @let path = findingPath(finding);
+          <nldd-table-row>
+            <nldd-cell>
+              <nldd-tag
+                size="sm"
+                [attr.color]="driftKindTag(finding.kind).color"
+                [attr.text]="driftKindTag(finding.kind).text"
+              ></nldd-tag>
+            </nldd-cell>
+            <nldd-text-cell hide-below="lg" [attr.text]="finding.organizationName"></nldd-text-cell>
+            <nldd-text-cell
+              [attr.supporting-text]="
+                finding.shootName ? finding.shootNamespace + '/' + finding.shootName : ''
+              "
+            >
+              @if (path) {
+                <nldd-link
+                  [attr.href]="path"
+                  [attr.text]="finding.clusterName || finding.clusterId"
+                  (click)="go($event, path)"
+                ></nldd-link>
+              } @else {
+                {{ finding.clusterName || finding.clusterId }}
+              }
+            </nldd-text-cell>
+            <nldd-text-cell hide-below="md" [attr.text]="ago(finding.since)"></nldd-text-cell>
+            <nldd-text-cell hide-below="lg" [attr.text]="finding.detail"></nldd-text-cell>
+          </nldd-table-row>
+        }
+        <nldd-inline-dialog
+          slot="empty"
+          text="No drift"
+          supporting-text="The database, the snapshots and Gardener agree."
+        ></nldd-inline-dialog>
+      </nldd-table>
+    </nldd-container>
+  </nldd-box>
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECOND SIDEBAR
+     ══════════════════════════════════════════════════════════════ -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Platform</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Platform">
+        <nldd-list-item
+          [attr.href]="overviewPath"
+          [attr.current]="isCurrent(overviewPath) ? '' : null"
+          (click)="go($event, overviewPath)"
+        >
+          <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Overview"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="driftPath"
+          [attr.current]="isCurrent(driftPath) ? '' : null"
+          (click)="go($event, driftPath)"
+        >
+          <nldd-icon-cell icon="git-compare" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Drift"></nldd-text-cell>
+          @if (api.findings().length > 0) {
+            <nldd-cell width="fit-content">
+              <nldd-badge
+                color="critical"
+                [attr.text]="api.findings().length"
+                [attr.accessible-label]="api.findings().length + ' drift findings'"
+              ></nldd-badge>
+            </nldd-cell>
+          }
+        </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Organizations</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Organizations">
+        @for (organization of api.organizations(); track organization.id) {
+          <nldd-list-item
+            [attr.href]="organizationPath(organization.id)"
+            [attr.current]="isOrganizationCurrent(organization.id) ? '' : null"
+            (click)="go($event, organizationPath(organization.id))"
+          >
+            <nldd-text-cell
+              [attr.text]="organization.alias"
+              [attr.supporting-text]="organization.name"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="organization.clusters"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>

@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
-import App from './app';
+import App, { isBarePageUrl } from './app';
+import routes from './app.routes';
 import AuthnApiService from './authn-api.service';
 import {
   OrganizationService,
@@ -262,5 +263,38 @@ describe('App', () => {
     expect(calls).toEqual(['refreshToken', 'loadOrganizationData']);
     expect(refreshToken).toHaveBeenCalledTimes(1);
     expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
+  });
+});
+
+describe('isBarePageUrl', () => {
+  it('treats the login page and the platform overview as bare', () => {
+    expect(isBarePageUrl('/login')).toBe(true);
+    expect(isBarePageUrl('/platform')).toBe(true);
+  });
+
+  it('ignores the query and the fragment', () => {
+    // Another surface hands a visitor over as /login?app=…&path=…
+    expect(isBarePageUrl('/login?app=marketplace&path=/plugins')).toBe(true);
+    expect(isBarePageUrl('/platform#organizations')).toBe(true);
+  });
+
+  it('keeps every page inside an organization in the shell', () => {
+    expect(isBarePageUrl('/')).toBe(false);
+    expect(isBarePageUrl('/organizations/acme-corp/clusters')).toBe(false);
+    // An organization may be called "platform"; its pages are not the overview.
+    expect(isBarePageUrl('/organizations/platform')).toBe(false);
+    expect(isBarePageUrl('/platform/extra')).toBe(false);
+  });
+});
+
+describe('platform route', () => {
+  it('is open to anyone and matched before the guarded addresses', () => {
+    const index = routes.findIndex((route) => route.path === 'platform');
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(routes[index].canActivate).toBeUndefined();
+    expect(index).toBeLessThan(routes.findIndex((route) => route.path === '**'));
+    expect(index).toBeLessThan(
+      routes.findIndex((route) => route.path === 'organizations/:organizationName'),
+    );
   });
 });

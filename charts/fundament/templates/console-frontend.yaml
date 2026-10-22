@@ -17,6 +17,7 @@ data:
       "consoleDemoUrl": "{{ $.Values.externalUrls.consoleDemo }}",
       "marketplaceUrl": "{{ $.Values.externalUrls.marketplace }}",
       "developerUrl": "{{ $.Values.externalUrls.marketplaceRegistry }}",
+      "platformApiUrl": "{{ $.Values.externalUrls.platformPublicApi }}",
       "pocUrl": "{{ include "fundament.pocUrl" (dict "root" $ "site" "console") }}",
       {{- /* organization-api serves generated data for "" as well as "mock" */}}
       "mockMetrics": {{ has ($.Values.organizationApi.prometheusURL | default "") (list "" "mock") }},
@@ -46,7 +47,7 @@ spec:
           env:
             # connect-src in nginx.conf: origins the console calls with fetch/XHR.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplaceCatalogApi }}"
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.marketplaceCatalogApi }} {{ $.Values.externalUrls.platformPublicApi }}"
             # frame-src in nginx.conf. Plugin console UIs are iframed from the
             # dedicated plugin-proxy origin (FUN-17); the console never fetches
             # from it, so it stays out of connect-src.

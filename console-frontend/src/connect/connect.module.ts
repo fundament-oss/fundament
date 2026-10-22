@@ -17,6 +17,9 @@ export const MARKETPLACE_TRANSPORT = createTransportToken('marketplace');
 // install.v1 shares the marketplace host but is credentialed (cookie plus
 // Fun-Organization), so it gets its own transport (FUN-22).
 export const INSTALL_TRANSPORT = createTransportToken('install');
+// The public platform overview (FUN-23): anonymous, like the catalog, and
+// called over GET so the response can be cached.
+export const PLATFORM_TRANSPORT = createTransportToken('platform');
 
 export function createClientToken<T extends DescService>(
   service: T,

@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -29,6 +30,12 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	if err != nil {
 		h.logger.Error("failed to list shoots from Gardener", "error", err)
 		return fmt.Errorf("list shoots: %w", err)
+	}
+
+	// The inventory is a record for the staff fleet view (FUN-23); failing to
+	// write it must not stop drift repair or orphan cleanup.
+	if err := h.recordGardenerInventory(ctx, shoots); err != nil {
+		h.logger.Error("failed to record Gardener inventory", "error", err)
 	}
 
 	dbClusterByID := make(map[uuid.UUID]db.ClusterListActiveRow)
@@ -86,5 +93,65 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		"shoots", len(shoots),
 		"drift_detected", driftedCount)
 
+	return nil
+}
+
+// recordGardenerInventory upserts the shoots one successful ListShoots
+// returned and soft-deletes those it no longer returned, in one transaction.
+// It is only called after the list succeeded: a failed list says nothing about
+// which shoots are gone.
+func (h *Handler) recordGardenerInventory(ctx context.Context, shoots []gardener.ShootInfo) error {
+	seen := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+
+	// Non-nil slices: pgx sends a nil slice as NULL, and ANY(NULL) would mark
+	// nothing gone when Gardener lists no shoots at all.
+	n := len(shoots)
+	params := db.GardenerShootUpsertParams{
+		Seen:               seen,
+		ShootUids:          make([]string, 0, n),
+		ShootNames:         make([]string, 0, n),
+		ShootNamespaces:    make([]string, 0, n),
+		ClusterIds:         make([]uuid.UUID, 0, n),
+		KubernetesVersions: make([]string, 0, n),
+		Regions:            make([]string, 0, n),
+		ShootCreated:       make([]pgtype.Timestamptz, 0, n),
+	}
+	for _, s := range shoots {
+		params.ShootUids = append(params.ShootUids, s.UID)
+		params.ShootNames = append(params.ShootNames, s.Name)
+		params.ShootNamespaces = append(params.ShootNamespaces, s.Namespace)
+		params.ClusterIds = append(params.ClusterIds, s.ClusterID)
+		params.KubernetesVersions = append(params.KubernetesVersions, s.KubernetesVersion)
+		params.Regions = append(params.Regions, s.Region)
+		params.ShootCreated = append(params.ShootCreated, pgtype.Timestamptz{Time: s.Created, Valid: true})
+	}
+
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := h.queries.WithTx(tx)
+
+	if len(shoots) > 0 {
+		if err := q.GardenerShootUpsert(ctx, params); err != nil {
+			return fmt.Errorf("upsert shoots: %w", err)
+		}
+	}
+	// An empty list is a real answer too: every shoot recorded so far is gone.
+	gone, err := q.GardenerShootMarkGone(ctx, db.GardenerShootMarkGoneParams{
+		Seen:      seen,
+		ShootUids: params.ShootUids,
+	})
+	if err != nil {
+		return fmt.Errorf("mark gone shoots: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	if gone > 0 {
+		h.logger.Info("shoots gone from Gardener", "count", gone)
+	}
 	return nil
 }
