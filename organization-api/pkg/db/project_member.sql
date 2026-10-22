@@ -71,3 +71,41 @@ UPDATE tenant.project_members
 SET deleted = now()
 WHERE id = $1
 AND deleted IS NULL;
+
+-- name: ProjectMemberDeleteByUserInOrganization :execrows
+-- Soft-deletes a user's memberships in every project of the current
+-- organization (used when the user is removed from the organization).
+UPDATE tenant.project_members
+SET deleted = now()
+WHERE user_id = @user_id
+  AND deleted IS NULL
+  AND project_id IN (
+      SELECT tenant.projects.id
+      FROM tenant.projects
+      JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+      WHERE tenant.clusters.organization_id = authn.current_organization_id()
+          AND tenant.projects.deleted IS NULL
+  );
+
+-- name: ProjectListWhereUserIsLastAdmin :many
+-- Projects of the current organization where the user is the only active
+-- admin, so removing the user would leave the project without one.
+SELECT tenant.projects.id, tenant.projects.name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.project_members
+    ON tenant.project_members.project_id = tenant.projects.id
+    AND tenant.project_members.user_id = @user_id
+    AND tenant.project_members.role = 'admin'
+    AND tenant.project_members.deleted IS NULL
+WHERE tenant.clusters.organization_id = authn.current_organization_id()
+    AND tenant.projects.deleted IS NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM tenant.project_members
+        WHERE tenant.project_members.project_id = tenant.projects.id
+            AND tenant.project_members.user_id <> @user_id
+            AND tenant.project_members.role = 'admin'
+            AND tenant.project_members.deleted IS NULL
+    )
+ORDER BY tenant.projects.name;
