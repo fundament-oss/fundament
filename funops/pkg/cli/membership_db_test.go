@@ -152,3 +152,14 @@ func TestUserDelete_RefusesAnAccountSomebodySignedInTo(t *testing.T) {
 	require.EqualError(t, err, `user "alice@acme-corp.com" has signed in and is not a registration; only registrations nobody has signed in with can be deleted`)
 	assert.Equal(t, 1, liveUsersAt(t, ctx, "alice@acme-corp.com"))
 }
+
+func TestOrganizationMemberRemove_RefusesTheOnlyAdminOfAProject(t *testing.T) {
+	ctx := newTestContext(t)
+
+	// Bart is seeded as the only admin of acme-project.
+	cmd := &OrganizationMemberRemoveCmd{Organization: "acme-corp", User: "bart@acme-corp.com"}
+	require.EqualError(t, cmd.Run(ctx), `user "bart@acme-corp.com" is the only admin of projects in organization "acme-corp"; `+
+		`make someone else admin of them first: "acme-project" on cluster "acme-cluster"`)
+
+	assert.NotNil(t, membershipOf(t, ctx, "acme-corp", testUserBart), "still a member on refusal")
+}

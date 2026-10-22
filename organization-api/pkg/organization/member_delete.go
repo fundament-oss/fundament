@@ -81,8 +81,8 @@ func (s *Server) lastAdminProjectsError(ctx context.Context, userID uuid.UUID) e
 	}
 
 	names := make([]string, 0, len(projects))
-	for _, name := range projects {
-		names = append(names, fmt.Sprintf("%q", name))
+	for _, project := range projects {
+		names = append(names, fmt.Sprintf("%q on cluster %q", project.ProjectName, project.ClusterName))
 	}
 
 	return fmt.Errorf("%s: %s", msg, strings.Join(names, ", "))

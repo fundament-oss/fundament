@@ -197,3 +197,64 @@ func (q *Queries) MembershipRevokeAllForUser(ctx context.Context, arg Membership
 	}
 	return result.RowsAffected(), nil
 }
+
+const projectListWhereUserIsLastAdmin = `-- name: ProjectListWhereUserIsLastAdmin :many
+SELECT
+  tenant.organizations.name AS organization_name,
+  tenant.clusters.name AS cluster_name,
+  tenant.projects.name AS project_name
+FROM tenant.projects
+JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
+WHERE ($1::uuid IS NULL OR tenant.clusters.organization_id = $1::uuid)
+  AND tenant.projects.deleted IS NULL
+  AND tenant.project_members.user_id = $2
+  AND tenant.project_members.role = 'admin'
+  AND tenant.project_members.deleted IS NULL
+  -- Inside this subquery tenant.project_members names the subquery's own rows,
+  -- the other members of the project, not the outer user's membership.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tenant.project_members
+    WHERE tenant.project_members.project_id = tenant.projects.id
+      AND tenant.project_members.role = 'admin'
+      AND tenant.project_members.deleted IS NULL
+      AND tenant.project_members.user_id != $2
+  )
+ORDER BY tenant.organizations.name, tenant.clusters.name, tenant.projects.name
+`
+
+type ProjectListWhereUserIsLastAdminParams struct {
+	OrganizationID pgtype.UUID
+	UserID         uuid.UUID
+}
+
+type ProjectListWhereUserIsLastAdminRow struct {
+	OrganizationName string
+	ClusterName      string
+	ProjectName      string
+}
+
+// Projects whose only admin is the given user, in one organization or, without
+// one, in all of them: what keeps MembershipDelete or MembershipRevokeAllForUser
+// from removing the user. Project names are unique only within a cluster.
+func (q *Queries) ProjectListWhereUserIsLastAdmin(ctx context.Context, arg ProjectListWhereUserIsLastAdminParams) ([]ProjectListWhereUserIsLastAdminRow, error) {
+	rows, err := q.db.Query(ctx, projectListWhereUserIsLastAdmin, arg.OrganizationID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectListWhereUserIsLastAdminRow
+	for rows.Next() {
+		var i ProjectListWhereUserIsLastAdminRow
+		if err := rows.Scan(&i.OrganizationName, &i.ClusterName, &i.ProjectName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

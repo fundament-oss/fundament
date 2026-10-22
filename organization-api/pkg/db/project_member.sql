@@ -46,8 +46,11 @@ WHERE id = $1
 AND deleted IS NULL;
 
 -- name: ProjectListWhereUserIsLastAdmin :many
--- Projects of the current organization whose only admin is the given user.
-SELECT tenant.projects.name
+-- Projects of the current organization whose only admin is the given user,
+-- with their cluster: project names are unique only within a cluster.
+SELECT
+  tenant.projects.name AS project_name,
+  tenant.clusters.name AS cluster_name
 FROM tenant.projects
 JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
 JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
@@ -66,4 +69,4 @@ WHERE tenant.clusters.organization_id = authn.current_organization_id()
       AND tenant.project_members.deleted IS NULL
       AND tenant.project_members.user_id != @user_id
   )
-ORDER BY tenant.projects.name;
+ORDER BY tenant.clusters.name, tenant.projects.name;

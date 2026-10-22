@@ -233,7 +233,7 @@ func Test_MemberDelete_RemovesProjectMemberships(t *testing.T) {
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeFailedPrecondition, connectErr.Code())
-	assert.Contains(t, connectErr.Message(), `"team-b"`)
+	assert.Contains(t, connectErr.Message(), `"team-b" on cluster "test-cluster"`)
 	assert.NotContains(t, connectErr.Message(), `"team-a"`)
 	assert.NotContains(t, connectErr.Message(), `"team-c"`)
 	assert.Contains(t, projectUserIDs(teamA), targetUserID.String(), "nothing removed on refusal")

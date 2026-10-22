@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
@@ -218,7 +219,8 @@ func (c *UserDeleteCmd) Run(ctx *Context) error {
 	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
 		if isLastProjectAdmin(err) {
-			return fmt.Errorf("user %q is the only admin of a project; make someone else admin of it first", c.User)
+			return lastAdminProjectsError(bgCtx, ctx, user.ID, pgtype.UUID{},
+				fmt.Sprintf("user %q is the only admin of projects; make someone else admin of them first", c.User))
 		}
 		return fmt.Errorf("failed to revoke memberships: %w", err)
 	}

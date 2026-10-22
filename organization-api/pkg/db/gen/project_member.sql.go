@@ -14,7 +14,9 @@ import (
 )
 
 const projectListWhereUserIsLastAdmin = `-- name: ProjectListWhereUserIsLastAdmin :many
-SELECT tenant.projects.name
+SELECT
+  tenant.projects.name AS project_name,
+  tenant.clusters.name AS cluster_name
 FROM tenant.projects
 JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
 JOIN tenant.project_members ON tenant.project_members.project_id = tenant.projects.id
@@ -33,27 +35,33 @@ WHERE tenant.clusters.organization_id = authn.current_organization_id()
       AND tenant.project_members.deleted IS NULL
       AND tenant.project_members.user_id != $1
   )
-ORDER BY tenant.projects.name
+ORDER BY tenant.clusters.name, tenant.projects.name
 `
 
 type ProjectListWhereUserIsLastAdminParams struct {
 	UserID uuid.UUID
 }
 
-// Projects of the current organization whose only admin is the given user.
-func (q *Queries) ProjectListWhereUserIsLastAdmin(ctx context.Context, arg ProjectListWhereUserIsLastAdminParams) ([]string, error) {
+type ProjectListWhereUserIsLastAdminRow struct {
+	ProjectName string
+	ClusterName string
+}
+
+// Projects of the current organization whose only admin is the given user,
+// with their cluster: project names are unique only within a cluster.
+func (q *Queries) ProjectListWhereUserIsLastAdmin(ctx context.Context, arg ProjectListWhereUserIsLastAdminParams) ([]ProjectListWhereUserIsLastAdminRow, error) {
 	rows, err := q.db.Query(ctx, projectListWhereUserIsLastAdmin, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []ProjectListWhereUserIsLastAdminRow
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
+		var i ProjectListWhereUserIsLastAdminRow
+		if err := rows.Scan(&i.ProjectName, &i.ClusterName); err != nil {
 			return nil, err
 		}
-		items = append(items, name)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
