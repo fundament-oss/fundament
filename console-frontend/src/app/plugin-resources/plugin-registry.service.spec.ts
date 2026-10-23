@@ -264,6 +264,31 @@ describe('PluginRegistryService', () => {
     expect(registry.allPlugins()).toHaveLength(1);
   });
 
+  // A resource page can start the load before the app shell resets and
+  // reloads the registry for the same cluster.
+  it('resolves an overtaken load only once the reload that replaced it is in', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    const first = registry.loadPlugins('cl-1');
+    registry.reset();
+    registry.loadPlugins('cl-1').catch(() => {});
+    await first;
+
+    expect(registry.getPlugin('acme--cert-manager')).toBeDefined();
+  });
+
+  it("drops the previous cluster's menu when switching clusters", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+
+    items = [];
+    const next = registry.loadPlugins('cl-2');
+    expect(registry.allPlugins()).toEqual([]);
+    await next;
+  });
+
   it('stops reading when the project is left', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Deploying')];

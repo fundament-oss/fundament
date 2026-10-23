@@ -257,8 +257,9 @@ export default class App implements OnInit {
     });
   }
 
+  // No reset first: loadPlugins starts over on a cluster switch itself, and a
+  // reset here would cut off a load a resource page already started.
   private async loadPluginsForCluster(clusterId: string): Promise<void> {
-    this.pluginRegistry.reset();
     this.clusterContext.onClusterChange(clusterId);
     await this.pluginRegistry.loadPlugins(clusterId);
   }

@@ -187,19 +187,28 @@ export default class PluginRegistryService {
         if (this.definitionRetryAt !== null) this.definitionRetryAt = 0;
         this.startRun(clusterId, this.generation);
       }
-      return this.latestLoad;
+      return this.followReload(clusterId, this.latestLoad);
     }
 
     this.stopPolling();
     this.generation += 1;
     this.runningKeys = null;
+    this.plugins.set([]);
     this.crdKinds.set(new Map());
     this.failures = 0;
     this.definitionFailures = 0;
     this.definitionRetryAt = null;
     this.lastSyncFailed = false;
     this.activeClusterId = clusterId;
-    return this.startRun(clusterId, this.generation);
+    return this.followReload(clusterId, this.startRun(clusterId, this.generation));
+  }
+
+  /** Waits on load and, when a reset and reload for the same cluster overtook
+   *  it, on that reload too: the overtaken load ends without a menu. */
+  private async followReload(clusterId: string, load: Promise<void>): Promise<void> {
+    await load;
+    const latest = this.latestLoad;
+    if (latest && latest !== load && this.activeClusterId === clusterId) await latest;
   }
 
   private startRun(clusterId: string, generation: number): Promise<void> {
