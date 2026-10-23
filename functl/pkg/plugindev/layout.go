@@ -139,6 +139,8 @@ func (l *Layout) ResolveSourceDirs() error {
 		"-f", `{{with .Module}}{{if eq .Path "`+FundamentModule+`"}}{{$.Dir}}{{end}}{{end}}`,
 		l.Package)
 	cmd.Dir = l.ModuleRoot
+	// Match the image's build, not the host's.
+	cmd.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0")
 	out, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {

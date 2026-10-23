@@ -41,19 +41,25 @@ func TestPluginDevRejectsEmptyNameOrVersion(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "metadata.version")
 
-	err = (&PluginDevDownCmd{Dir: dir}).Run(ctx)
+}
+
+func TestDetectNamedVersionOptionalForDevDown(t *testing.T) {
+	dir := devFixture(t, "metadata:\n  name: demo\n")
+	_, err := detectNamed(dir, true)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "metadata.version")
+	l, err := detectNamed(dir, false)
+	require.NoError(t, err)
+	assert.Equal(t, "demo", l.Name)
 }
 
 func TestDetectNamedRejectsInvalidName(t *testing.T) {
-	_, err := detectNamed(devFixture(t, "metadata:\n  name: ../Evil\n  version: v1.0.0\n"))
+	_, err := detectNamed(devFixture(t, "metadata:\n  name: ../Evil\n  version: v1.0.0\n"), true)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "DNS label")
 }
 
 func TestDetectNamedRejectsSeparator(t *testing.T) {
-	_, err := detectNamed(devFixture(t, "metadata:\n  name: my--plugin\n  version: v1.0.0\n"))
+	_, err := detectNamed(devFixture(t, "metadata:\n  name: my--plugin\n  version: v1.0.0\n"), true)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `"--"`)
 }

@@ -33,8 +33,9 @@ type PluginDevDownCmd struct {
 	Dir string `arg:"" optional:"" default:"." help:"Plugin directory (holds definition.yaml)."`
 }
 
-// detectNamed runs Detect and rejects a definition without name or version.
-func detectNamed(dir string) (plugindev.Layout, error) {
+// detectNamed runs Detect and rejects a definition without a usable name, or
+// without a version when needVersion is set.
+func detectNamed(dir string, needVersion bool) (plugindev.Layout, error) {
 	l, err := plugindev.Detect(dir)
 	if err != nil {
 		return l, err
@@ -48,7 +49,7 @@ func detectNamed(dir string) (plugindev.Layout, error) {
 	if strings.Contains(l.Name, "--") {
 		return l, fmt.Errorf("definition.yaml metadata.name %q must not contain \"--\": it separates organization and plugin in installation names", l.Name)
 	}
-	if l.Version == "" {
+	if needVersion && l.Version == "" {
 		return l, errors.New("definition.yaml has no metadata.version")
 	}
 	return l, nil
@@ -82,7 +83,7 @@ type devSession struct {
 
 // Run executes the plugin dev command.
 func (c *PluginDevCmd) Run(ctx *Context) error {
-	l, err := detectNamed(c.Dir)
+	l, err := detectNamed(c.Dir, true)
 	if err != nil {
 		return err
 	}
@@ -108,6 +109,9 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Println("Note: changes to definition.yaml or the config values are NOT hot-reloaded — restart functl plugin dev.")
+	if l.ModulePath == plugindev.FundamentModule {
+		fmt.Printf("Note: only %s sync into the pod; importing from another top-level dir needs a restart.\n", strings.Join(l.SourceDirs, ", "))
+	}
 	if l.SDKReplace != "" {
 		fmt.Printf("Note: edits to %s are NOT hot-reloaded — restart functl plugin dev.\n", l.SDKReplace)
 	}
@@ -191,7 +195,7 @@ func (c *PluginDevCmd) start(runCtx context.Context, ctx *Context, l plugindev.L
 
 // Run executes the plugin dev-down command.
 func (c *PluginDevDownCmd) Run(ctx *Context) error {
-	l, err := detectNamed(c.Dir)
+	l, err := detectNamed(c.Dir, false)
 	if err != nil {
 		return err
 	}

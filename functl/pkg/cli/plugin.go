@@ -508,8 +508,6 @@ func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	return out, nil
 }
 
-// injectDevVersion appends a -dev suffix to metadata.version, left alone if
-// already present, so a repeated dev publish stays idempotent.
 // devVersion appends the -dev suffix once.
 func devVersion(version string) string {
 	if strings.HasSuffix(version, "-dev") {
@@ -518,6 +516,8 @@ func devVersion(version string) string {
 	return version + "-dev"
 }
 
+// injectDevVersion appends a -dev suffix to metadata.version, left alone if
+// already present, so a repeated dev publish stays idempotent.
 func injectDevVersion(src []byte) ([]byte, error) {
 	var doc yaml.Node
 	metadata, err := topLevelMapping(src, &doc, "metadata")

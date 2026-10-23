@@ -88,6 +88,7 @@ functl plugin dev               # from a standalone plugin project
 - Vite console (`console-ui/`): functl runs the initial `bun install && bun run build`, then `vite build --watch`. Save, wait for the rebuild, refresh the browser.
 - A local SDK `replace` in `go.mod` is built into the image; SDK edits are not hot-reloaded, restart `functl plugin dev`.
 - Changes to `definition.yaml` are **not** hot-reloaded either: restart.
+- In this repo only the top-level dirs the plugin imports from at startup (plus `go.mod`/`go.sum`) sync into the pod; functl prints them. A new import from another top-level dir needs a restart.
 - `spec.config` comes from `--set KEY=VALUE` (repeatable) and/or `--config <file>` (a YAML map of `KEY: value`); `--set` wins. Values are checked against the definition's `configSchema` before the build, and every missing required key is listed. Changing them needs a restart.
 
   ```shell

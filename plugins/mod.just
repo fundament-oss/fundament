@@ -191,15 +191,17 @@ _image-push repo tag dockerfile *build_flags:
 
 # Hot-reload a plugin in the sandbox; see docs/developer/plugins/testing-plugins-locally.md.
 # Needs `just plugins deploy` and a functl login. Extra flags pass through (e.g. --no-cleanup).
+[positional-arguments]
 dev name *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "$(git rev-parse --show-toplevel)"
-    exec go run ./functl/cmd/functl plugin dev "plugins/{{ name }}" {{ flags }}
+    exec go run ./functl/cmd/functl plugin dev "plugins/$1" "${@:2}"
 
 # Remove a dev-mode PluginInstallation left behind by `dev`
+[positional-arguments]
 dev-down name:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "$(git rev-parse --show-toplevel)"
-    exec go run ./functl/cmd/functl plugin dev-down "plugins/{{ name }}"
+    exec go run ./functl/cmd/functl plugin dev-down "plugins/$1"
