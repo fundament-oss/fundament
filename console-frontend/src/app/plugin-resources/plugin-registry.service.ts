@@ -178,37 +178,24 @@ export default class PluginRegistryService {
 
   private pluginClient = inject(PLUGIN);
 
-  loadPlugins(clusterId: string): Promise<void> {
+  /** Loads the cluster's plugins, or waits on the load under way for it.
+   *  `fresh` reads again now instead of at the next poll, for a project just
+   *  opened; a read already under way is fresh enough and is joined. */
+  loadPlugins(clusterId: string, { fresh = false } = {}): Promise<void> {
     if (clusterId === this.activeClusterId && this.latestLoad) {
       // A retry already waiting on the backoff timer runs now instead; one
       // that is under way is what the caller waits on.
-      if (this.lastSyncFailed && this.pollTimer) {
+      if ((fresh || this.lastSyncFailed) && this.pollTimer) {
         this.stopPolling();
         if (this.definitionRetryAt !== null) this.definitionRetryAt = 0;
         this.startRun(clusterId, this.generation);
       }
-      return this.followReload(clusterId, this.latestLoad);
+      return this.latestLoad;
     }
 
-    this.stopPolling();
-    this.generation += 1;
-    this.runningKeys = null;
-    this.plugins.set([]);
-    this.crdKinds.set(new Map());
-    this.failures = 0;
-    this.definitionFailures = 0;
-    this.definitionRetryAt = null;
-    this.lastSyncFailed = false;
+    this.clearState();
     this.activeClusterId = clusterId;
-    return this.followReload(clusterId, this.startRun(clusterId, this.generation));
-  }
-
-  /** Waits on load and, when a reset and reload for the same cluster overtook
-   *  it, on that reload too: the overtaken load ends without a menu. */
-  private async followReload(clusterId: string, load: Promise<void>): Promise<void> {
-    await load;
-    const latest = this.latestLoad;
-    if (latest && latest !== load && this.activeClusterId === clusterId) await latest;
+    return this.startRun(clusterId, this.generation);
   }
 
   private startRun(clusterId: string, generation: number): Promise<void> {
@@ -484,10 +471,16 @@ export default class PluginRegistryService {
   }
 
   reset(): void {
-    this.stopPolling();
-    this.generation += 1;
+    this.clearState();
     this.activeClusterId = null;
     this.latestLoad = null;
+  }
+
+  /** Drops everything read for the active cluster and stops its poll, so a
+   *  read still under way finds its result stale. */
+  private clearState(): void {
+    this.stopPolling();
+    this.generation += 1;
     this.lastSyncFailed = false;
     this.failures = 0;
     this.definitionFailures = 0;

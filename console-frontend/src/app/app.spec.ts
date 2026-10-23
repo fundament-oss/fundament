@@ -22,6 +22,7 @@ import {
 import { ConfigService, type AppConfiguration } from './config.service';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
+import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import {
   AUTHN_TRANSPORT,
   ORGANIZATION_TRANSPORT,
@@ -262,5 +263,59 @@ describe('App', () => {
     expect(calls).toEqual(['refreshToken', 'loadOrganizationData']);
     expect(refreshToken).toHaveBeenCalledTimes(1);
     expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
+  });
+
+  // On a refresh a resource page starts the registry load on its own, while the
+  // shell is still waiting on the project's cluster. The shell must not cut that
+  // load off: the page would end up with no plugin and say it is not available.
+  describe('plugin registry', () => {
+    async function setUpProject() {
+      const project = signal<{ cluster: { id: string } } | undefined>(undefined);
+      const registry = { loadPlugins: vi.fn(async () => {}), reset: vi.fn() };
+      // Only the shell's effects are under test, not its markup.
+      TestBed.overrideTemplate(App, '');
+      await configure([
+        { provide: PluginRegistryService, useValue: registry },
+        {
+          provide: OrganizationDataService,
+          useValue: {
+            userOrganizations: signal([]),
+            organizations: signal([]),
+            clusterSummaries: signal([]),
+            clustersLoaded: signal(false),
+            getOrganizationById: () => undefined,
+            getProjectById: () => project(),
+            getClusterById: () => undefined,
+          },
+        },
+      ]);
+      const app = TestBed.createComponent(App).componentInstance;
+      app.currentUrl.set('/projects/p-1/plugin-resources/acme--openftv/openftvmanagers');
+      TestBed.tick();
+      return { app, project, registry };
+    }
+
+    it('leaves the registry alone while the project is open but its cluster is unknown', async () => {
+      const { project, registry } = await setUpProject();
+
+      project.set({ cluster: { id: 'cl-1' } });
+      TestBed.tick();
+      project.set(undefined);
+      TestBed.tick();
+
+      expect(registry.reset).not.toHaveBeenCalled();
+      expect(registry.loadPlugins).toHaveBeenCalledWith('cl-1', { fresh: true });
+    });
+
+    it('resets the registry once the project is left', async () => {
+      const { app, project, registry } = await setUpProject();
+      project.set({ cluster: { id: 'cl-1' } });
+      TestBed.tick();
+
+      app.currentUrl.set('/clusters');
+      TestBed.tick();
+
+      expect(registry.reset).toHaveBeenCalledTimes(1);
+    });
   });
 });
