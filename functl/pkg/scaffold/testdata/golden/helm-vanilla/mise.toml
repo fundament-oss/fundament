@@ -3,3 +3,4 @@
 [tools]
 go = "1.27.3"
 just = "1.42.4"
+skaffold = "2.17.0"

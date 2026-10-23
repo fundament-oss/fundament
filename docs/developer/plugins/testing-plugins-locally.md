@@ -74,27 +74,35 @@ functl org set <organization-id>
 
 ## Fast iteration: hot reload
 
-Iterating on a plugin's own Go code? `just plugins dev <name>` replaces steps 4–6 below: every saved `.go` file rebuilds and reinstalls the plugin automatically, instead of a one-shot publish/install/verify.
+Iterating on a plugin's own code? `functl plugin dev [dir]` replaces steps 4–6 below: every saved Go or console source file rebuilds and reinstalls the plugin automatically, instead of a one-shot publish/install/verify. `dir` defaults to the current directory and works for standalone plugin projects too.
 
 ```shell
-just plugins dev external-dns
+just plugins dev external-dns   # wraps: functl plugin dev plugins/external-dns
+functl plugin dev               # from a standalone plugin project
 ```
 
-- The argument is the plugin's path under `plugins/` (nested works too: `just plugins dev storage/ceph-rook`); everything cluster-facing is named after the definition's `metadata.name` instead, so that example installs `acme-corp--ceph-rook`.
-- Preflight (each failing check prints what to run): `plugin-controller` must be deployed (step 1); functl's configured organization must match `pluginController.organizationId` in `plugins/sandbox/values.yaml` — the session from step 3 must be logged into that same organization.
-- Publishes a throwaway draft version: `metadata.version` from `plugins/<name>/definition.yaml`, leading `v` stripped (the registry stores versions normalized without it), `-dev` appended (`functl plugin publish --dev --create`).
-- Installs a `PluginInstallation` named `<organization>--<name>` (second argument, default `acme-corp`) with the `plugins.fundament.io/dev-mode: "true"` annotation and `spec.dev.image` set: the controller deploys that image verbatim, with relaxed probes and filesystem, instead of resolving it from the published definition.
-- Builds the plugin from `plugins/hotreload/Dockerfile` (`air` with the shared `plugins/hotreload/.air.toml.tmpl`, rendered for the plugin's path) and runs `skaffold dev`: every saved file syncs into the running pod and recompiles in place.
-- Console assets reload too: `console/` HTML/CSS/JS is `go:embed`-ed into the binary, and air watches those extensions, so a saved asset edit re-embeds and restarts in the same loop.
-- Exception: plugins whose console is a Vite build (`openfsc`, `gateway-api/envoy-gateway`) — their `console/` is build output excluded from the dev image, so this loop cannot serve or reload their UI. Iterate on those UIs with the plugin's own `console-ui` tooling instead.
-- Changes to `go.mod`/`go.sum` or `definition.yaml` are **not** hot-reloaded mid-session — restart `just plugins dev <name>` to rebuild and republish.
-- After bumping `metadata.version`, run `just plugins dev-down <name>` first: the CR's `definitionRef.pluginVersion` is immutable, so applying over an existing CR with a different version fails on CEL immutability.
+- `just plugins dev <path>` takes the plugin's path under `plugins/` (nested works: `storage/ceph-rook`) and passes extra flags through. Everything cluster-facing is named after the definition's `metadata.name`: the installation is `<organization>--<name>`.
+- Startup checks (each failure prints what to fix and links here): `docker` and `skaffold` installed (plus `bun` for Vite plugins), Docker running, kube context `k3d-fundament-plugin` reachable, `plugin-controller` deployed with dev mode and unpinned hashes enabled and the current CRDs (`just plugins deploy`), and functl's organization matching the controller's `FUNDAMENT_ORGANIZATION_ID`.
+- Publishes a throwaway `-dev` draft version (`metadata.version` plus `-dev`), installs a `PluginInstallation` with `spec.dev.image` set, and runs `skaffold dev` with `air` in the pod: every saved `.go` file, `go.mod` or `go.sum` syncs in and recompiles in place. A newly added module is downloaded in the pod on that build.
+- functl writes none of its files into the plugin repo; they live in `os.UserCacheDir()/functl/plugin-dev/<installation>/`. For Vite plugins, Vite still writes the built `console/` into the repo, as `bun run build` does.
+- Vite console (`console-ui/`): functl runs the initial `bun install && bun run build`, then `vite build --watch`. Save, wait for the rebuild, refresh the browser.
+- A local SDK `replace` in `go.mod` is built into the image; SDK edits are not hot-reloaded, restart `functl plugin dev`.
+- Changes to `definition.yaml` are **not** hot-reloaded either: restart.
+- In this repo only the top-level dirs the plugin imports from at startup (plus `go.mod`/`go.sum`) sync into the pod; functl prints them. A new import from another top-level dir needs a restart.
+- `spec.config` comes from `--set KEY=VALUE` (repeatable) and/or `--config <file>` (a YAML map of `KEY: value`); `--set` wins. Values are checked against the definition's `configSchema` before the build, and every missing required key is listed. Changing them needs a restart.
+
+  ```shell
+  just plugins dev storage/ceph-rook --set MON_COUNT=1 --set MGR_COUNT=1 --set ALLOW_MULTIPLE_PER_NODE=true
+  ```
+- `metadata.name` must not contain `--`; it separates organization and plugin in the installation name.
+- After bumping `metadata.version`, run `functl plugin dev-down` first: `definitionRef.pluginVersion` is immutable, so applying over an existing installation with a different version fails.
+- Ctrl-C deletes the `PluginInstallation` by default. `--no-cleanup` keeps it; `dev-down` removes it later.
+- `dev-down` waits (up to 2 minutes) until the controller has finished tearing the installation down, and prints that there is nothing to remove if it is already gone. `functl plugin dev` does the same if a previous installation is still terminating.
 
 ```shell
-just plugins dev-down external-dns
+functl plugin dev --no-cleanup
+just plugins dev-down external-dns   # or: functl plugin dev-down [dir]
 ```
-
-removes the `PluginInstallation`; the controller cleans up its namespace and children.
 
 ## 4. Publish
 

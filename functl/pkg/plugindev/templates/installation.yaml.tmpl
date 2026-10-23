@@ -1,16 +1,22 @@
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: @ORG@--@NAME@
+  name: {{.InstallationName}}
   annotations:
     plugins.fundament.io/dev-mode: "true"
 spec:
   definitionRef:
-    organizationName: @ORG@
-    pluginName: @NAME@
-    pluginVersion: "@VERSION@"
+    organizationName: {{.OrgName}}
+    pluginName: {{.Layout.Name}}
+    pluginVersion: {{printf "%q" .Version}}
     definitionHash: ""
+{{- with .Config}}
+  config:
+{{- range $k, $v := .}}
+    {{printf "%q" $k}}: {{printf "%q" $v}}
+{{- end}}
+{{- end}}
   dev:
     # Bare name: skaffold's resourceSelector rewrites this to the
     # fully-qualified tag@digest it built. A digest here would block injection.
-    image: @NAME@-plugin-dev
+    image: {{.ImageName}}
