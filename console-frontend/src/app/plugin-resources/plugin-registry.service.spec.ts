@@ -264,6 +264,72 @@ describe('PluginRegistryService', () => {
     expect(registry.allPlugins()).toHaveLength(1);
   });
 
+  it('reads again at once when a fresh read is asked for', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    await registry.loadPlugins('cl-1');
+
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1', { fresh: true });
+
+    expect(listReads()).toBe(2);
+    expect(registry.allPlugins()).toHaveLength(1);
+  });
+
+  // A resource page and the app shell both load on a refresh: the second
+  // caller must join the first, not cut it off.
+  it('joins a read under way when a fresh read is asked for', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    const first = registry.loadPlugins('cl-1');
+    const second = registry.loadPlugins('cl-1', { fresh: true });
+    await Promise.all([first, second]);
+
+    expect(listReads()).toBe(1);
+    expect(registry.getPlugin('acme--cert-manager')).toBeDefined();
+  });
+
+  it("does not hand back a cluster's CRD schema after switching away and back", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+    const schema = {
+      spec: {
+        group: 'cert-manager.io',
+        scope: 'Namespaced',
+        names: { kind: 'Certificate', plural: 'certificates', singular: 'certificate' },
+        versions: [{ name: 'v1', storage: true, schema: { openAPIV3Schema: {} } }],
+      },
+    };
+    vi.mocked(fetch).mockImplementationOnce(
+      async () => new Response(JSON.stringify(schema), { status: 200 }),
+    );
+    await registry.loadCrdsForPlugin('acme--cert-manager', 'cl-1', 'https://proxy.test');
+    expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeDefined();
+
+    await registry.loadPlugins('cl-2');
+    await registry.loadPlugins('cl-1');
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      isCrdRead(url)
+        ? new Response('', { status: 403 })
+        : new Response(JSON.stringify({ items }), { status: 200 }),
+    );
+    await registry.loadCrdsForPlugin('acme--cert-manager', 'cl-1', 'https://proxy.test');
+
+    expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeUndefined();
+  });
+
+  it("drops the previous cluster's menu when switching clusters", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+
+    items = [];
+    const next = registry.loadPlugins('cl-2');
+    expect(registry.allPlugins()).toEqual([]);
+    await next;
+  });
+
   it('stops reading when the project is left', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     items = [installation('Deploying')];
