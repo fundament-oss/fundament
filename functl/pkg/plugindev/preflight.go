@@ -20,9 +20,11 @@ func (e *CheckError) Error() string {
 	var b strings.Builder
 	b.WriteString(e.Problem)
 	if e.Fix != "" {
-		b.WriteString("\n" + e.Fix)
+		b.WriteString("\n")
+		b.WriteString(e.Fix)
 	}
-	b.WriteString("\nSee " + e.DocsURL)
+	b.WriteString("\nSee ")
+	b.WriteString(e.DocsURL)
 	return b.String()
 }
 

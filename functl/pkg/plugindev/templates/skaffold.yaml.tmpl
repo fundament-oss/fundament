@@ -21,8 +21,12 @@ build:
         dockerfile: {{printf "%q" .Dockerfile}}
         buildArgs:
           PLUGIN_PACKAGE: {{printf "%q" .Layout.Package}}
-{{- if .Layout.SDKReplace}}
+        # No attestations: push a plain single-platform manifest, not an OCI
+        # index, which skaffold's cache lookup can't resolve (FUN-19).
         cliFlags:
+          - "--provenance=false"
+          - "--sbom=false"
+{{- if .Layout.SDKReplace}}
           - "--build-context"
           - {{printf "%q" (print "fundament-sdk=" .Layout.SDKReplace)}}
 {{- end}}

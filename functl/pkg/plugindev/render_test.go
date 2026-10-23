@@ -37,6 +37,8 @@ func TestRenderStandalone(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, skaffold, `dockerfile: "`+filepath.ToSlash(rel)+`"`)
 	assert.NotContains(t, skaffold, "--build-context")
+	assert.Contains(t, skaffold, `"--provenance=false"`)
+	assert.Contains(t, skaffold, `"--sbom=false"`)
 
 	ignore := readFile(t, out, "Dockerfile.dockerignore")
 	assert.Contains(t, ignore, "node_modules")
