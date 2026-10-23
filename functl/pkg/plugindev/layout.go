@@ -30,7 +30,8 @@ type Layout struct {
 	Name       string
 	Version    string
 	// SourceDirs are the module dirs a FundamentModule plugin build needs,
-	// relative to ModuleRoot; set by ResolveSourceDirs.
+	// relative to ModuleRoot; set by ResolveSourceDirs. They bound the build
+	// context, and with it what syncs into the pod.
 	SourceDirs []string
 }
 

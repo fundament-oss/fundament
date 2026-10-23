@@ -48,8 +48,9 @@ func okCluster() *fakeCluster {
 	return &fakeCluster{
 		crdDev: true,
 		env: map[string]string{
-			"PLUGIN_CONTROLLER_ALLOW_DEV_MODE": "true",
-			"FUNDAMENT_ORGANIZATION_ID":        "org-1",
+			"PLUGIN_CONTROLLER_ALLOW_DEV_MODE":      "true",
+			"PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH": "true",
+			"FUNDAMENT_ORGANIZATION_ID":             "org-1",
 		},
 	}
 }
@@ -206,4 +207,18 @@ func TestCheckCleanedUp(t *testing.T) {
 	err := CheckCleanedUp(context.Background(), c, "p")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "functl plugin dev-down")
+}
+
+func TestCheckClusterUnpinnedHashOff(t *testing.T) {
+	c := okCluster()
+	delete(c.env, "PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH")
+	err := CheckCluster(context.Background(), c, Sandbox, "org-1")
+	requireCheckError(t, err, "just plugins deploy")
+	assert.Contains(t, err.Error(), "unpinned")
+}
+
+func TestCheckVersionBumpIgnoresLeadingV(t *testing.T) {
+	c := okCluster()
+	c.found, c.version = true, "1.0.0-dev"
+	require.NoError(t, CheckVersionBump(context.Background(), c, "p", "v1.0.0-dev"))
 }

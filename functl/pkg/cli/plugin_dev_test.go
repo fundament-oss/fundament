@@ -51,3 +51,14 @@ func TestDetectNamedRejectsInvalidName(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "DNS label")
 }
+
+func TestDetectNamedRejectsSeparator(t *testing.T) {
+	_, err := detectNamed(devFixture(t, "metadata:\n  name: my--plugin\n  version: v1.0.0\n"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `"--"`)
+}
+
+func TestDevVersion(t *testing.T) {
+	assert.Equal(t, "v1.0.0-dev", devVersion("v1.0.0"))
+	assert.Equal(t, "v1.0.0-dev", devVersion("v1.0.0-dev"))
+}

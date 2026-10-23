@@ -105,6 +105,10 @@ func CheckCluster(ctx context.Context, c Cluster, t Target, functlOrgID string) 
 	if env["PLUGIN_CONTROLLER_ALLOW_DEV_MODE"] != "true" {
 		return fail("the plugin controller does not allow dev mode", deployFix)
 	}
+	// Dev installations carry no definitionHash.
+	if env["PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH"] != "true" {
+		return fail("the plugin controller does not allow unpinned definition hashes", deployFix)
+	}
 
 	if got := env["FUNDAMENT_ORGANIZATION_ID"]; got != functlOrgID {
 		return fail(
@@ -121,6 +125,8 @@ func CheckVersionBump(ctx context.Context, c Cluster, installation, version stri
 	if err != nil {
 		return fmt.Errorf("read installation %q: %w", installation, err)
 	}
+	// Installed versions come from the registry, which drops a leading "v".
+	version = strings.TrimPrefix(version, "v")
 	current := state.Version
 	if !found || current == version {
 		return nil

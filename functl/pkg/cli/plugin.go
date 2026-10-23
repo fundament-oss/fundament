@@ -510,6 +510,14 @@ func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 
 // injectDevVersion appends a -dev suffix to metadata.version, left alone if
 // already present, so a repeated dev publish stays idempotent.
+// devVersion appends the -dev suffix once.
+func devVersion(version string) string {
+	if strings.HasSuffix(version, "-dev") {
+		return version
+	}
+	return version + "-dev"
+}
+
 func injectDevVersion(src []byte) ([]byte, error) {
 	var doc yaml.Node
 	metadata, err := topLevelMapping(src, &doc, "metadata")
@@ -523,9 +531,7 @@ func injectDevVersion(src []byte) ([]byte, error) {
 	if version == "" {
 		return nil, fmt.Errorf("manifest has no metadata.version")
 	}
-	if !strings.HasSuffix(version, "-dev") {
-		setMapValue(metadata, "version", version+"-dev")
-	}
+	setMapValue(metadata, "version", devVersion(version))
 	out, err := yaml.Marshal(&doc)
 	if err != nil {
 		return nil, fmt.Errorf("marshal manifest: %w", err)

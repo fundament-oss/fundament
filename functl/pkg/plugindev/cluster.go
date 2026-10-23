@@ -83,17 +83,20 @@ func (k *kubeCluster) CRDHasDevField(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("read CRD versions: %w", err)
 	}
+	return servedVersionHasDev(versions), nil
+}
+
+// servedVersionHasDev reports whether the served installationGVR version of a CRD has spec.dev.
+func servedVersionHasDev(versions []any) bool {
 	for _, v := range versions {
 		vm, ok := v.(map[string]any)
-		if !ok {
+		if !ok || vm["name"] != installationGVR.Version || vm["served"] != true {
 			continue
 		}
 		_, found, err := unstructured.NestedMap(vm, "schema", "openAPIV3Schema", "properties", "spec", "properties", "dev")
-		if err == nil && found {
-			return true, nil
-		}
+		return err == nil && found
 	}
-	return false, nil
+	return false
 }
 
 func (k *kubeCluster) ControllerEnv(ctx context.Context) (map[string]string, error) {

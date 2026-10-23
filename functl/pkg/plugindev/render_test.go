@@ -46,6 +46,7 @@ func TestRenderStandalone(t *testing.T) {
 
 	dockerfile := readFile(t, out, "Dockerfile")
 	assert.Contains(t, dockerfile, `include_dir = ["."]`)
+	assert.Contains(t, dockerfile, `include_file = ["go.mod", "go.sum"]`)
 	assert.NotContains(t, dockerfile, "GOWORK")
 }
 
@@ -85,7 +86,7 @@ func TestRenderInRepo(t *testing.T) {
 	assert.Contains(t, ignore, "!go.sum")
 	assert.NotContains(t, ignore, "!plugins/\n")
 
-	assert.Contains(t, readFile(t, out, "Dockerfile"), `include_dir = ["openfsc-operator", "plugin-sdk", "plugins/openfsc"]`)
+	assert.Contains(t, readFile(t, out, "Dockerfile"), `include_dir = ["."]`)
 }
 
 func TestRenderInRepoNeedsSourceDirs(t *testing.T) {
@@ -113,6 +114,18 @@ func TestRenderInstallation(t *testing.T) {
 	assert.Equal(t, "acme-corp", inst.Spec.DefinitionRef.OrganizationName)
 	require.NotNil(t, inst.Spec.Dev)
 	assert.Equal(t, "demo-plugin-dev", inst.Spec.Dev.Image)
+	assert.Empty(t, inst.Spec.Config)
+}
+
+func TestRenderInstallationConfig(t *testing.T) {
+	out := t.TempDir()
+	config := map[string]string{"MON_COUNT": "1", "NOTE": "a: \"quoted\" value\nline two"}
+	p := RenderParams{Layout: Layout{Name: "demo"}, Target: Sandbox, OrgName: "acme-corp", Config: config}
+	require.NoError(t, RenderInstallation(out, p, "1.2.0-dev"))
+
+	var inst pluginsv1.PluginInstallation
+	require.NoError(t, yaml.Unmarshal([]byte(readFile(t, out, "installation.yaml")), &inst))
+	assert.Equal(t, config, inst.Spec.Config)
 }
 
 func TestNames(t *testing.T) {

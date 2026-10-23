@@ -20,6 +20,8 @@ type RenderParams struct {
 	Layout  Layout
 	Target  Target
 	OrgName string
+	// Config is the installation's spec.config.
+	Config map[string]string
 }
 
 // InstallationName is the PluginInstallation name for an org's plugin.
@@ -46,16 +48,8 @@ type templateData struct {
 	Version string
 }
 
-// airDirs are the dirs air watches; sibling packages only matter in the monorepo.
-func airDirs(l Layout) []string {
-	if l.ModulePath == FundamentModule {
-		return l.SourceDirs
-	}
-	return []string{"."}
-}
-
 func parseTemplates() (*template.Template, error) {
-	tmpl, err := template.New("").Funcs(template.FuncMap{"airDirs": airDirs}).ParseFS(templatesFS, "templates/*.tmpl")
+	tmpl, err := template.New("").ParseFS(templatesFS, "templates/*.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("parse templates: %w", err)
 	}
