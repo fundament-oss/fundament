@@ -16,6 +16,7 @@ import (
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 
+	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/scaffold"
 	registryv1 "github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1"
 	"github.com/fundament-oss/fundament/marketplace-registry-api/pkg/proto/gen/registry/v1/registryv1connect"
@@ -290,27 +291,24 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 		return fmt.Errorf("read definition: %w", err)
 	}
 
-	version, err := publishVersion(context.Background(), ctx, src, c.Image, publishOptions{
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
+	if err != nil {
+		return err
+	}
+	pubClient, err := publicationClient(ctx, apiClient)
+	if err != nil {
+		return err
+	}
+
+	version, err := publishVersion(context.Background(), pubClient, src, c.Image, publishOptions{
 		PluginID: c.PluginID, Create: c.Create, Replace: c.Replace, Dev: c.Dev,
 	})
 	if err != nil {
 		return err
 	}
 
-	name, err := manifestName(src)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("published plugin=%s version=%s hash=%s id=%s version_id=%s status=%s\n",
-		name, version.GetVersion(), version.GetDefinitionHash(),
-		version.GetPluginId(), version.GetId(), version.GetStatus())
-
 	if c.Submit {
-		apiClient, err := NewClientFromConfigWithOrg(ctx)
-		if err != nil {
-			return err
-		}
-		submitted, err := apiClient.Publications(ctx.Config.RegistryURL).SubmitPluginVersion(context.Background(), registryv1.SubmitPluginVersionRequest_builder{
+		submitted, err := pubClient.SubmitPluginVersion(context.Background(), registryv1.SubmitPluginVersionRequest_builder{
 			PluginVersionId: version.GetId(),
 		}.Build())
 		if err != nil {
@@ -323,6 +321,14 @@ func (c *PluginPublishCmd) Run(ctx *Context) error {
 	return nil
 }
 
+// publicationClient returns the registry's publication client for apiClient.
+func publicationClient(ctx *Context, apiClient *client.Client) (registryv1connect.PublicationServiceClient, error) {
+	if ctx.Config.RegistryURL == "" {
+		return nil, errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL")
+	}
+	return apiClient.Publications(ctx.Config.RegistryURL), nil
+}
+
 // publishOptions selects how publishVersion resolves the listing and writes the version.
 type publishOptions struct {
 	PluginID             string
@@ -331,7 +337,7 @@ type publishOptions struct {
 
 // publishVersion injects the image into the source manifest, validates it and
 // pushes it as a plugin version. Dev adds the -dev suffix and implies Replace.
-func publishVersion(callCtx context.Context, ctx *Context, src []byte, image string, opts publishOptions) (*registryv1.PluginVersion, error) {
+func publishVersion(ctx context.Context, pubClient registryv1connect.PublicationServiceClient, src []byte, image string, opts publishOptions) (*registryv1.PluginVersion, error) {
 	var err error
 	if opts.Dev {
 		src, err = injectDevVersion(src)
@@ -352,22 +358,11 @@ func publishVersion(callCtx context.Context, ctx *Context, src []byte, image str
 		return nil, fmt.Errorf("invalid published manifest: %w", err)
 	}
 
-	registryURL := ctx.Config.RegistryURL
-	if registryURL == "" {
-		return nil, errors.New("no registry endpoint: set registry_url in the functl config or FUNCTL_REGISTRY_URL")
-	}
-
-	apiClient, err := NewClientFromConfigWithOrg(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pubClient := apiClient.Publications(registryURL)
-
 	pluginID := opts.PluginID
 	if pluginID == "" {
-		pluginID, err = resolvePluginID(callCtx, pubClient, def.Metadata.Name)
+		pluginID, err = resolvePluginID(ctx, pubClient, def.Metadata.Name)
 		if errors.Is(err, errListingNotFound) && opts.Create {
-			pluginID, err = createPlugin(callCtx, pubClient, def)
+			pluginID, err = createPlugin(ctx, pubClient, def)
 			if err == nil {
 				fmt.Printf("created listing plugin=%s id=%s\n", def.Metadata.Name, pluginID)
 			}
@@ -377,7 +372,7 @@ func publishVersion(callCtx context.Context, ctx *Context, src []byte, image str
 		}
 	}
 
-	resp, err := pubClient.CreatePluginVersion(callCtx, registryv1.CreatePluginVersionRequest_builder{
+	resp, err := pubClient.CreatePluginVersion(ctx, registryv1.CreatePluginVersionRequest_builder{
 		PluginId: pluginID,
 		Version:  def.Metadata.Version,
 		Manifest: published,
@@ -392,20 +387,11 @@ func publishVersion(callCtx context.Context, ctx *Context, src []byte, image str
 		}
 		return nil, fmt.Errorf("publish failed: %w", err)
 	}
-	return resp.GetVersion(), nil
-}
-
-// manifestName returns metadata.name of a manifest.
-func manifestName(src []byte) (string, error) {
-	var doc yaml.Node
-	metadata, err := topLevelMapping(src, &doc, "metadata")
-	if err != nil {
-		return "", err
-	}
-	if v := mapValue(metadata, "name"); v != nil {
-		return v.Value, nil
-	}
-	return "", errors.New("manifest has no metadata.name")
+	version := resp.GetVersion()
+	fmt.Printf("published plugin=%s version=%s hash=%s id=%s version_id=%s status=%s\n",
+		def.Metadata.Name, version.GetVersion(), version.GetDefinitionHash(),
+		version.GetPluginId(), version.GetId(), version.GetStatus())
+	return version, nil
 }
 
 // resolvePluginID looks up the listing id by name. ListPlugins is already

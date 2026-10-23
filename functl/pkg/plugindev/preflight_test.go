@@ -194,3 +194,16 @@ func TestDevDownTimeout(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "timed out")
 }
+
+func TestCheckCleanedUp(t *testing.T) {
+	c := okCluster()
+	require.NoError(t, CheckCleanedUp(context.Background(), c, "p"))
+
+	c.found, c.terminating = true, true
+	require.NoError(t, CheckCleanedUp(context.Background(), c, "p"))
+
+	c.terminating = false
+	err := CheckCleanedUp(context.Background(), c, "p")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "functl plugin dev-down")
+}

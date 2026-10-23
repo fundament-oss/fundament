@@ -194,3 +194,15 @@ func DevDown(ctx context.Context, c Cluster, name string, out io.Writer, interva
 	fmt.Fprintf(out, "PluginInstallation %s is gone\n", name)
 	return nil
 }
+
+// CheckCleanedUp reports an installation that skaffold's cleanup left in place.
+func CheckCleanedUp(ctx context.Context, c Cluster, name string) error {
+	state, found, err := c.Installation(ctx, name)
+	if err != nil {
+		return fmt.Errorf("verify cleanup of %q: %w", name, err)
+	}
+	if found && !state.Terminating {
+		return fmt.Errorf("PluginInstallation %s was not removed on exit; run `functl plugin dev-down`", name)
+	}
+	return nil
+}

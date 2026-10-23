@@ -4,7 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"golang.org/x/mod/modfile"
 	"gopkg.in/yaml.v3"
@@ -25,6 +29,9 @@ type Layout struct {
 	SDKReplace string
 	Name       string
 	Version    string
+	// SourceDirs are the module dirs a FundamentModule plugin build needs,
+	// relative to ModuleRoot; set by ResolveSourceDirs.
+	SourceDirs []string
 }
 
 // Detect inspects dir, which must hold definition.yaml and sit in a Go module.
@@ -119,4 +126,58 @@ func sdkReplace(mf *modfile.File, moduleRoot string) string {
 		return filepath.Join(moduleRoot, r.New.Path)
 	}
 	return ""
+}
+
+// ResolveSourceDirs sets SourceDirs from the plugin's in-module package deps.
+// It is a no-op outside the fundament monorepo.
+func (l *Layout) ResolveSourceDirs() error {
+	if l.ModulePath != FundamentModule {
+		return nil
+	}
+	cmd := exec.Command("go", "list", "-deps",
+		"-f", `{{with .Module}}{{if eq .Path "`+FundamentModule+`"}}{{$.Dir}}{{end}}{{end}}`,
+		l.Package)
+	cmd.Dir = l.ModuleRoot
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
+			return fmt.Errorf("go list %s: %w\n%s", l.Package, err, exitErr.Stderr)
+		}
+		return fmt.Errorf("go list %s: %w", l.Package, err)
+	}
+	var pkgDirs []string
+	for line := range strings.Lines(string(out)) {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		rel, err := filepath.Rel(l.ModuleRoot, line)
+		if err != nil {
+			return fmt.Errorf("relate %s to module root: %w", line, err)
+		}
+		pkgDirs = append(pkgDirs, filepath.ToSlash(rel))
+	}
+	l.SourceDirs = sourceDirs(strings.TrimPrefix(l.Package, "./"), pkgDirs)
+	return nil
+}
+
+// sourceDirs reduces package dirs to the plugin dir plus the top-level dir of
+// every dep outside it, dropping dirs nested in another.
+func sourceDirs(pluginDir string, pkgDirs []string) []string {
+	dirs := []string{pluginDir}
+	for _, d := range pkgDirs {
+		if !within(d, pluginDir) {
+			dirs = append(dirs, strings.SplitN(d, "/", 2)[0])
+		}
+	}
+	slices.Sort(dirs)
+	dirs = slices.Compact(dirs)
+	return slices.DeleteFunc(dirs, func(d string) bool {
+		return slices.ContainsFunc(dirs, func(o string) bool { return o != d && within(d, o) })
+	})
+}
+
+// within reports whether dir is parent or lies under it.
+func within(dir, parent string) bool {
+	return dir == parent || strings.HasPrefix(dir, path.Clean(parent)+"/")
 }

@@ -3,6 +3,7 @@ package plugindev
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,9 @@ import (
 func renderTo(t *testing.T, l Layout) string {
 	t.Helper()
 	out := t.TempDir()
-	require.NoError(t, Render(out, RenderParams{Layout: l, Target: Sandbox, OrgName: "acme-corp", Version: "1.2.0-dev"}))
+	p := RenderParams{Layout: l, Target: Sandbox, OrgName: "acme-corp"}
+	require.NoError(t, Render(out, p))
+	require.NoError(t, RenderInstallation(out, p, "1.2.0-dev"))
 	return out
 }
 
@@ -27,22 +30,18 @@ func readFile(t *testing.T, dir, name string) string {
 }
 
 func TestRenderStandalone(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: "/work/demo", ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
+	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
 
 	skaffold := readFile(t, out, "skaffold.yaml")
-	assert.Contains(t, skaffold, `context: "/work/demo"`)
 	assert.Contains(t, skaffold, `PLUGIN_PACKAGE: "."`)
 	assert.Contains(t, skaffold, "kubeContext: k3d-fundament-plugin")
-	rel, err := filepath.Rel("/work/demo", filepath.Join(out, "Dockerfile"))
-	require.NoError(t, err)
-	assert.Contains(t, skaffold, `dockerfile: "`+filepath.ToSlash(rel)+`"`)
 	assert.NotContains(t, skaffold, "--build-context")
 	assert.Contains(t, skaffold, `"--provenance=false"`)
 	assert.Contains(t, skaffold, `"--sbom=false"`)
 
 	ignore := readFile(t, out, "Dockerfile.dockerignore")
 	assert.Contains(t, ignore, "node_modules")
-	assert.NotContains(t, ignore, "console")
+	assert.Contains(t, ignore, "!console\n!console/**")
 	assert.NotContains(t, ignore, "go.mod")
 
 	dockerfile := readFile(t, out, "Dockerfile")
@@ -50,21 +49,52 @@ func TestRenderStandalone(t *testing.T) {
 	assert.NotContains(t, dockerfile, "GOWORK")
 }
 
-func TestRenderInRepo(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: "/repo", ModulePath: FundamentModule, Package: "./plugins/external-dns", Name: "external-dns"})
+func TestRenderDockerfilePath(t *testing.T) {
+	root := t.TempDir()
+	out := renderTo(t, Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo"})
+
+	skaffold := readFile(t, out, "skaffold.yaml")
+	assert.Contains(t, skaffold, `context: "`+root+`"`)
+	rel, err := filepath.Rel(root, filepath.Join(out, "Dockerfile"))
+	require.NoError(t, err)
+	assert.Contains(t, skaffold, `dockerfile: "`+filepath.ToSlash(rel)+`"`)
+}
+
+func TestRenderStandaloneKeepsProjectIgnore(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".dockerignore"), ".env\nconsole/\n")
+	out := renderTo(t, Layout{ModuleRoot: root, ModulePath: "example.com/demo", Package: ".", Name: "demo", Vite: true})
 
 	ignore := readFile(t, out, "Dockerfile.dockerignore")
+	assert.Contains(t, ignore, ".env\nconsole/\n")
+	// The re-include must come after the project's console/ rule to win.
+	assert.Greater(t, strings.Index(ignore, "!console"), strings.Index(ignore, "console/"))
+}
+
+func TestRenderInRepo(t *testing.T) {
+	out := renderTo(t, Layout{
+		ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/openfsc", Name: "openfsc",
+		SourceDirs: []string{"openfsc-operator", "plugin-sdk", "plugins/openfsc"},
+	})
+
+	ignore := readFile(t, out, "Dockerfile.dockerignore")
+	assert.Contains(t, ignore, "!openfsc-operator/")
 	assert.Contains(t, ignore, "!plugin-sdk/")
-	assert.Contains(t, ignore, "!plugins/")
+	assert.Contains(t, ignore, "!plugins/openfsc/")
 	assert.Contains(t, ignore, "!go.mod")
 	assert.Contains(t, ignore, "!go.sum")
-	assert.NotContains(t, ignore, "console")
+	assert.NotContains(t, ignore, "!plugins/\n")
 
-	assert.Contains(t, readFile(t, out, "Dockerfile"), `include_dir = ["plugins/external-dns", "plugin-sdk", "common"]`)
+	assert.Contains(t, readFile(t, out, "Dockerfile"), `include_dir = ["openfsc-operator", "plugin-sdk", "plugins/openfsc"]`)
+}
+
+func TestRenderInRepoNeedsSourceDirs(t *testing.T) {
+	err := Render(t.TempDir(), RenderParams{Layout: Layout{ModuleRoot: t.TempDir(), ModulePath: FundamentModule, Package: "./plugins/x", Name: "x"}})
+	require.Error(t, err)
 }
 
 func TestRenderSDKReplace(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: "/work/demo", ModulePath: "example.com/demo", Package: ".", Name: "demo", SDKReplace: "/src/fundament"})
+	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo", SDKReplace: "/src/fundament"})
 
 	assert.Contains(t, readFile(t, out, "skaffold.yaml"), "fundament-sdk=/src/fundament")
 	dockerfile := readFile(t, out, "Dockerfile")
@@ -73,7 +103,7 @@ func TestRenderSDKReplace(t *testing.T) {
 }
 
 func TestRenderInstallation(t *testing.T) {
-	out := renderTo(t, Layout{ModuleRoot: "/work/demo", ModulePath: "example.com/demo", Package: ".", Name: "demo"})
+	out := renderTo(t, Layout{ModuleRoot: t.TempDir(), ModulePath: "example.com/demo", Package: ".", Name: "demo"})
 
 	var inst pluginsv1.PluginInstallation
 	require.NoError(t, yaml.Unmarshal([]byte(readFile(t, out, "installation.yaml")), &inst))

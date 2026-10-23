@@ -2,8 +2,11 @@ package plugindev
 
 import (
 	"embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -17,8 +20,6 @@ type RenderParams struct {
 	Layout  Layout
 	Target  Target
 	OrgName string
-	// Version is the normalized dev version the registry returned.
-	Version string
 }
 
 // InstallationName is the PluginInstallation name for an org's plugin.
@@ -37,22 +38,39 @@ type templateData struct {
 	InstallationName string
 	ImageName        string
 	Dockerfile       string
+	// ProjectIgnore is the module's own .dockerignore, kept for standalone builds.
+	ProjectIgnore string
+	// ConsoleDir is the plugin's console/ relative to ModuleRoot.
+	ConsoleDir string
+	// Version is the normalized dev version the registry returned.
+	Version string
 }
 
 // airDirs are the dirs air watches; sibling packages only matter in the monorepo.
 func airDirs(l Layout) []string {
 	if l.ModulePath == FundamentModule {
-		return []string{strings.TrimPrefix(l.Package, "./"), "plugin-sdk", "common"}
+		return l.SourceDirs
 	}
 	return []string{"."}
 }
 
-// Render writes Dockerfile, Dockerfile.dockerignore, skaffold.yaml and
-// installation.yaml into outDir. Air's config is rendered inside the image.
-func Render(outDir string, p RenderParams) error {
+func parseTemplates() (*template.Template, error) {
 	tmpl, err := template.New("").Funcs(template.FuncMap{"airDirs": airDirs}).ParseFS(templatesFS, "templates/*.tmpl")
 	if err != nil {
-		return fmt.Errorf("parse templates: %w", err)
+		return nil, fmt.Errorf("parse templates: %w", err)
+	}
+	return tmpl, nil
+}
+
+// Render writes Dockerfile, Dockerfile.dockerignore and skaffold.yaml into
+// outDir. Air's config is rendered inside the image.
+func Render(outDir string, p RenderParams) error {
+	if p.Layout.ModulePath == FundamentModule && len(p.Layout.SourceDirs) == 0 {
+		return errors.New("render: SourceDirs not resolved")
+	}
+	tmpl, err := parseTemplates()
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fmt.Errorf("create %s: %w", outDir, err)
@@ -67,20 +85,44 @@ func Render(outDir string, p RenderParams) error {
 		return fmt.Errorf("relate Dockerfile to module root: %w", err)
 	}
 
+	consoleDir := path.Join(strings.TrimPrefix(p.Layout.Package, "./"), "console")
+	projectIgnore, err := os.ReadFile(filepath.Join(p.Layout.ModuleRoot, ".dockerignore"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("read .dockerignore: %w", err)
+	}
+
 	data := templateData{
 		RenderParams:     p,
 		FundamentModule:  FundamentModule,
 		InstallationName: InstallationName(p.OrgName, p.Layout.Name),
 		ImageName:        ImageName(p.Layout.Name),
 		Dockerfile:       filepath.ToSlash(dockerfile),
+		ProjectIgnore:    strings.TrimSpace(string(projectIgnore)),
+		ConsoleDir:       consoleDir,
 	}
-
-	files := map[string]string{
+	return execute(tmpl, outDir, data, map[string]string{
 		"Dockerfile.tmpl":              "Dockerfile",
 		"Dockerfile.dockerignore.tmpl": "Dockerfile.dockerignore",
 		"skaffold.yaml.tmpl":           "skaffold.yaml",
-		"installation.yaml.tmpl":       "installation.yaml",
+	})
+}
+
+// RenderInstallation writes installation.yaml for the published dev version.
+func RenderInstallation(outDir string, p RenderParams, version string) error {
+	tmpl, err := parseTemplates()
+	if err != nil {
+		return err
 	}
+	data := templateData{
+		RenderParams:     p,
+		InstallationName: InstallationName(p.OrgName, p.Layout.Name),
+		ImageName:        ImageName(p.Layout.Name),
+		Version:          version,
+	}
+	return execute(tmpl, outDir, data, map[string]string{"installation.yaml.tmpl": "installation.yaml"})
+}
+
+func execute(tmpl *template.Template, outDir string, data templateData, files map[string]string) error {
 	for tmplName, outName := range files {
 		var sb strings.Builder
 		if err := tmpl.ExecuteTemplate(&sb, tmplName, data); err != nil {

@@ -10,11 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
-	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/fundament-oss/fundament/common/kubename"
+	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/plugindev"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -48,21 +49,21 @@ func detectNamed(dir string) (plugindev.Layout, error) {
 	return l, nil
 }
 
-// orgName returns the active organization's id and machine name.
-func orgName(ctx *Context) (id, name string, err error) {
-	apiClient, err := NewClientFromConfigWithOrg(ctx)
+// orgClient returns an API client for the active organization, with its id and machine name.
+func orgClient(ctx context.Context, cliCtx *Context) (apiClient *client.Client, id, name string, err error) {
+	id, err = activeOrg(cliCtx)
 	if err != nil {
-		return "", "", err
+		return nil, "", "", err
 	}
-	id = ctx.Org
-	if id == "" {
-		id = ctx.Config.Organization
-	}
-	resp, err := apiClient.Organizations().GetOrganization(context.Background(), organizationv1.GetOrganizationRequest_builder{Id: id}.Build())
+	apiClient, err = NewClientFromConfig(WithOrg(id))
 	if err != nil {
-		return "", "", fmt.Errorf("get organization: %w", err)
+		return nil, "", "", err
 	}
-	return id, resp.GetOrganization().GetName(), nil
+	resp, err := apiClient.Organizations().GetOrganization(ctx, organizationv1.GetOrganizationRequest_builder{Id: id}.Build())
+	if err != nil {
+		return nil, "", "", fmt.Errorf("get organization: %w", err)
+	}
+	return apiClient, id, resp.GetOrganization().GetName(), nil
 }
 
 // Run executes the plugin dev command.
@@ -71,7 +72,14 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	orgID, org, err := orgName(ctx)
+	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer stop()
+
+	apiClient, orgID, org, err := orgClient(runCtx, ctx)
+	if err != nil {
+		return err
+	}
+	pubClient, err := publicationClient(ctx, apiClient)
 	if err != nil {
 		return err
 	}
@@ -80,9 +88,6 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	if err := plugindev.CheckTools(l, exec.LookPath, plugindev.DockerInfo); err != nil {
 		return err
 	}
-
-	runCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	defer stop()
 
 	cluster, err := plugindev.NewCluster(target)
 	if err != nil {
@@ -95,27 +100,12 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	installation := plugindev.InstallationName(org, l.Name)
 	namespace := kubename.PluginNamespace(installation)
 
-	src, err := os.ReadFile(filepath.Join(l.PluginDir, "definition.yaml"))
-	if err != nil {
-		return fmt.Errorf("read definition: %w", err)
-	}
-	devSrc, err := injectDevVersion(src)
-	if err != nil {
-		return fmt.Errorf("inject dev version: %w", err)
-	}
-	version, err := manifestVersion(devSrc)
-	if err != nil {
-		return err
-	}
-	// The registry strips the leading "v" from versions.
-	version = strings.TrimPrefix(version, "v")
 	if err := plugindev.WaitIfTerminating(runCtx, cluster, installation, os.Stdout, plugindev.TeardownPollInterval, plugindev.TeardownTimeout); err != nil {
 		return err
 	}
-	if err := plugindev.CheckVersionBump(runCtx, cluster, installation, version); err != nil {
+	if err := l.ResolveSourceDirs(); err != nil {
 		return err
 	}
-
 	if err := plugindev.BuildConsole(runCtx, l); err != nil {
 		return err
 	}
@@ -128,7 +118,7 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	if err := os.MkdirAll(renderDir, 0o755); err != nil { //nolint:gosec // cache dir, not secret
 		return fmt.Errorf("create %s: %w", renderDir, err)
 	}
-	params := plugindev.RenderParams{Layout: l, Target: target, OrgName: org, Version: version}
+	params := plugindev.RenderParams{Layout: l, Target: target, OrgName: org}
 	if err := plugindev.Render(renderDir, params); err != nil {
 		return err
 	}
@@ -138,18 +128,22 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	published, err := publishVersion(runCtx, ctx, src, image, publishOptions{Create: true, Dev: true})
+	src, err := os.ReadFile(filepath.Join(l.PluginDir, "definition.yaml"))
+	if err != nil {
+		return fmt.Errorf("read definition: %w", err)
+	}
+	published, err := publishVersion(runCtx, pubClient, src, image, publishOptions{Create: true, Dev: true})
 	if err != nil {
 		return err
 	}
 	if runCtx.Err() != nil {
 		return nil
 	}
-	if got := published.GetVersion(); got != version {
-		params.Version = got
-		if err := plugindev.Render(renderDir, params); err != nil {
-			return err
-		}
+	if err := plugindev.CheckVersionBump(runCtx, cluster, installation, published.GetVersion()); err != nil {
+		return err
+	}
+	if err := plugindev.RenderInstallation(renderDir, params, published.GetVersion()); err != nil {
+		return err
 	}
 
 	fmt.Println("Note: changes to go.mod/go.sum or definition.yaml are NOT hot-reloaded — restart functl plugin dev.")
@@ -157,7 +151,13 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 		fmt.Printf("Note: edits to %s are NOT hot-reloaded — restart functl plugin dev.\n", l.SDKReplace)
 	}
 
-	return plugindev.Dev(runCtx, renderDir, l, target, namespace, c.Cleanup)
+	devErr := plugindev.Dev(runCtx, renderDir, l, target, namespace, c.Cleanup)
+	if !c.Cleanup {
+		return devErr
+	}
+	checkCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return errors.Join(devErr, plugindev.CheckCleanedUp(checkCtx, cluster, installation))
 }
 
 // Run executes the plugin dev-down command.
@@ -166,7 +166,7 @@ func (c *PluginDevDownCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	_, org, err := orgName(ctx)
+	_, _, org, err := orgClient(context.Background(), ctx)
 	if err != nil {
 		return err
 	}
@@ -176,17 +176,4 @@ func (c *PluginDevDownCmd) Run(ctx *Context) error {
 	}
 	installation := plugindev.InstallationName(org, l.Name)
 	return plugindev.DevDown(context.Background(), cluster, installation, os.Stdout, plugindev.TeardownPollInterval, plugindev.TeardownTimeout)
-}
-
-// manifestVersion returns metadata.version of a manifest.
-func manifestVersion(src []byte) (string, error) {
-	var doc yaml.Node
-	metadata, err := topLevelMapping(src, &doc, "metadata")
-	if err != nil {
-		return "", err
-	}
-	if v := mapValue(metadata, "version"); v != nil && v.Value != "" {
-		return v.Value, nil
-	}
-	return "", errors.New("manifest has no metadata.version")
 }

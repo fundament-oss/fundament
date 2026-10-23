@@ -3,12 +3,21 @@
 *
 !go.mod
 !go.sum
-!plugin-sdk/
-!common/
-!plugins/
+{{- range .Layout.SourceDirs}}
+!{{.}}/
+{{- end}}
 **/node_modules
 {{- else -}}
+{{with .ProjectIgnore}}{{.}}
+
+{{end -}}
+# functl plugin dev
 .git
 **/node_modules
 tmp/
+{{- if .Layout.Vite}}
+# Vite output is synced into the pod, so undo any ignore of it.
+!{{.ConsoleDir}}
+!{{.ConsoleDir}}/**
+{{- end}}
 {{- end}}

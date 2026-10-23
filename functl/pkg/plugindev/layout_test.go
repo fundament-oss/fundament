@@ -117,3 +117,34 @@ func TestDetectMissingDefinitionBeforeGoMod(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "definition.yaml")
 }
+
+func TestSourceDirs(t *testing.T) {
+	got := sourceDirs("plugins/openfsc", []string{
+		"plugins/openfsc", "plugins/openfsc/internal/ui",
+		"plugin-sdk/pluginruntime", "plugin-sdk/pluginruntime/console",
+		"openfsc-operator/api/v1",
+	})
+	assert.Equal(t, []string{"openfsc-operator", "plugin-sdk", "plugins/openfsc"}, got)
+
+	// A dep elsewhere under plugins/ widens to plugins/, which covers the plugin dir.
+	assert.Equal(t, []string{"plugin-sdk", "plugins"},
+		sourceDirs("plugins/a", []string{"plugins/a", "plugins/shared", "plugin-sdk"}))
+}
+
+func TestResolveSourceDirsRepo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("runs go list on the repository")
+	}
+	l, err := Detect(filepath.Join("..", "..", "..", "plugins", "openfsc"))
+	require.NoError(t, err)
+	require.NoError(t, l.ResolveSourceDirs())
+	assert.Contains(t, l.SourceDirs, "openfsc-operator")
+	assert.Contains(t, l.SourceDirs, "plugin-sdk")
+	assert.Contains(t, l.SourceDirs, "plugins/openfsc")
+}
+
+func TestResolveSourceDirsStandaloneNoop(t *testing.T) {
+	l := Layout{ModulePath: "example.com/demo"}
+	require.NoError(t, l.ResolveSourceDirs())
+	assert.Empty(t, l.SourceDirs)
+}

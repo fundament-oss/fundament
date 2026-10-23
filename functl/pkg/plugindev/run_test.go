@@ -74,3 +74,13 @@ func TestSuperviseCleanExitIsAnError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "exited unexpectedly")
 }
+
+func TestLineWriterFlushesLongPartialLine(t *testing.T) {
+	var out strings.Builder
+	var mu sync.Mutex
+	w := &lineWriter{prefix: []byte("> "), out: &out, mu: &mu}
+
+	_, _ = w.Write([]byte(strings.Repeat("x", maxPartialLine)))
+	assert.Equal(t, "> "+strings.Repeat("x", maxPartialLine)+"\n", out.String())
+	assert.Empty(t, w.buf)
+}

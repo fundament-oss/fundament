@@ -209,14 +209,18 @@ type lineWriter struct {
 	buf    []byte
 }
 
+// maxPartialLine caps how much of an unterminated line is held back.
+const maxPartialLine = 64 << 10
+
 func (w *lineWriter) Write(p []byte) (int, error) {
 	w.buf = append(w.buf, p...)
-	i := bytes.LastIndexByte(w.buf, '\n')
-	if i < 0 {
-		return len(p), nil
+	if i := bytes.LastIndexByte(w.buf, '\n'); i >= 0 {
+		w.emit(w.buf[:i+1])
+		w.buf = append(w.buf[:0], w.buf[i+1:]...)
 	}
-	w.emit(w.buf[:i+1])
-	w.buf = append(w.buf[:0], w.buf[i+1:]...)
+	if len(w.buf) >= maxPartialLine {
+		w.flush()
+	}
 	return len(p), nil
 }
 
