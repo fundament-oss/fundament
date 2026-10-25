@@ -1,5 +1,5 @@
 # Provisioning for a one-time-use Hetzner Cloud fundament/Gardener box.
-# Run from deploy-remote/ (`just up`) or from the repo root (`just deploy-remote up`).
+# Run from test-env/ (`just up`) or from the repo root (`just test-env up`).
 # All Hetzner lifecycle lives in ./hetzner.sh; these are thin wrappers.
 # NO local nix needed — only ssh + curl + docker.
 
