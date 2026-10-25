@@ -1,6 +1,5 @@
 mod terraform-provider
 mod e2e
-mod cluster-worker
 mod test-env
 mod plugins
 

@@ -101,6 +101,12 @@ The shell starts in the VM's checkout, with the repository's tools. Its kube con
 
 `just test-env shoots`, `just test-env logs`, `just test-env gardener-status` and `just test-env shoot-context <cluster-id>` work in the VM only, as do the other `gardener-*` recipes.
 
+The environment deletes clusters immediately (`clusterWorker.gardenerImmediateClusterDeletion`): Gardener does not wait for what runs in a cluster to clean up. To see how a deletion behaves without it, turn it off in the VM; the next `redeploy` turns it on again:
+
+```shell
+kubectl --context k3d-fundament -n fundament set env deploy/cluster-worker GARDENER_IMMEDIATE_CLUSTER_DELETION=false
+```
+
 ## Plugins on a cluster
 
 Every cluster gets the plugin-controller, as in an installation. `up` publishes cert-manager. To install another first-party plugin, publish and approve it in the VM:
@@ -120,6 +126,16 @@ just test-env down
 ```
 
 This removes the VM and its disks, and the VM's CA if `just test-env trust` added it to your machine. A stopped VM is not started again: its container disk is wiped on every boot.
+
+## Remove a Gardener from your machine
+
+A local Gardener that runs directly on your machine (the kind cluster `gardener-operator-local`) is removed with:
+
+```shell
+just test-env gardener-delete
+```
+
+This deletes the kind cluster, the registry and DNS containers Gardener runs next to it, the Gardener clone and the two kubeconfig contexts. The `/etc/hosts` entries, the DNS settings and the addresses on `lo` stay.
 
 ## Other providers
 
