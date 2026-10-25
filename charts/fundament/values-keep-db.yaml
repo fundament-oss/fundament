@@ -1,0 +1,4 @@
+# Layered after values-local.yaml by the skaffold profile keep-db: the
+# db-migrations Job applies pending migrations without resetting the databases.
+development:
+  resetDatabasesInNamespace: ""

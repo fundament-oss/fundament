@@ -27,8 +27,8 @@
         };
 
         # Root holds OS + nix store + the cloned fundament/gardener repos + mise
-        # toolchain. 30G leaves the rest of the 160G (CX43) for the Docker scratch,
-        # so scratch clears Gardener-local's 120Gi Docker disk requirement.
+        # toolchain. 30G leaves the rest of the 160G (CX43) for the docker partition,
+        # so the docker partition clears Gardener-local's 120Gi Docker disk requirement.
         root = {
           size = "30G";
           content = {
@@ -38,10 +38,10 @@
           };
         };
 
-        # Ephemeral container-state scratch: stable partlabel "scratch",
-        # reformatted on boot by ephemeral-scratch.nix.
-        scratch = {
-          label = "scratch";
+        # Throwaway container state: stable partlabel "docker", formatted on
+        # every boot by modules/docker-disk.nix.
+        docker = {
+          label = "docker";
           size = "100%";
           content = {
             type = "filesystem";
