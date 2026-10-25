@@ -4,22 +4,17 @@
 { pkgs, lib, ... }:
 {
   imports = [
-    ../../modules/baseline.nix
-    ../../modules/ephemeral-scratch.nix # reboot-to-clean; drop for a pure throwaway
+    ../../modules/base.nix
     ./disko.nix
   ];
 
   networking.hostName = "fundament-test";
-
-  # Cloud networking: DHCP, no Wi-Fi.
-  networking.useDHCP = lib.mkDefault true;
 
   # Minimal hardware for a Hetzner Cloud VM (virtio + common controllers).
   boot.initrd.availableKernelModules = [
     "virtio_pci" "virtio_scsi" "virtio_blk" "virtio_net" "ahci" "nvme" "sd_mod" "xhci_pci"
   ];
   boot.kernelModules = [ ];
-  nixpkgs.hostPlatform = "x86_64-linux";
 
   # Hetzner Cloud x86_64 boots **legacy BIOS** (verified on a live box). Install
   # GRUB to the disk MBR via the EF02 bios_grub partition (see disko.nix), and also
