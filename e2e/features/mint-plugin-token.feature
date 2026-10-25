@@ -3,27 +3,26 @@ Feature: Mint Plugin Token
   I want to mint a short-lived PluginToken bound to a plugin installation
   So that the plugin can act on my behalf against kube-api-proxy and plugin-proxy
 
-  # The mock plugin-proxy (PLUGIN_PROXY_MODE=mock) serves a single
-  # PluginInstallation whose UID is fixed; the cluster id is the one acme-corp
-  # owns in the test-data seed. See db/testdata/001_0101-content.sql and
-  # plugin-proxy/pkg/service/mock.go (MockClusterID, MockInstallationUID).
+  # "The e2e installation" is the mock plugin-proxy's fixed installation on the
+  # seeded acme-cluster, or, against a real Gardener, a plugin installed on the
+  # baseline cluster (support/fixtures.ts).
 
   Background:
     Given I am authenticated as "alice@acme-corp.com"
 
   @api @mint @smoke
-  Scenario: Mint a plugin token for the seeded installation
-    When I mint a plugin token for the seeded cluster and installation
+  Scenario: Mint a plugin token for an installation
+    When I mint a plugin token for the e2e installation
     Then I should receive a valid JWT for plugin use
     And the JWT should expire in 900 seconds
     And the token type should be "Bearer"
     And the plugin token audience should be "fundament-plugin"
     And the plugin token subject should be the authenticated user
     And the plugin token should bind the cluster and installation
-    And the plugin token should carry the plugin name "test-plugin"
+    And the plugin token should carry the installation's plugin name
     # Distinct from the plugin name on purpose: plugin-proxy derives the
     # plugin's namespace from the installation name.
-    And the plugin token should carry the installation name "system--test-plugin"
+    And the plugin token should carry the installation's name
 
   @api @mint @negative
   Scenario: Mint without authentication fails
@@ -47,6 +46,6 @@ Feature: Mint Plugin Token
 
   @api @mint
   Scenario: Minted plugin token is rejected as a user token (escalation wall)
-    When I mint a plugin token for the seeded cluster and installation
+    When I mint a plugin token for the e2e installation
     And I use the minted plugin token to call GetUserInfo
     Then I should receive an unauthenticated error

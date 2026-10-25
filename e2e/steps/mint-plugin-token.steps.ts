@@ -3,12 +3,19 @@ import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { type MintPluginTokenResponse } from '../support/api/token-service.ts';
+import {
+  type InstallationFixture,
+  fixtureInstallation,
+  INSTALL_TIMEOUT_MS,
+} from '../support/fixtures.ts';
 
-// Mock fixtures the plugin-proxy serves in PLUGIN_PROXY_MODE=mock. Must stay
-// in sync with plugin-proxy/pkg/service/mock.go (MockClusterID,
-// MockInstallationUID) and db/testdata/001_0101-content.sql (acme-cluster).
+// Well-formed ids for the scenarios that fail before any lookup.
 const SEEDED_CLUSTER_ID = '019b4000-2000-7000-8000-000000000001';
 const MOCK_INSTALLATION_ID = '00000000-0000-0000-0000-000000000001';
+
+function installation(world: ICustomWorld): InstallationFixture {
+  return world.testData.installation as InstallationFixture;
+}
 
 // Track state for mint plugin token tests (matches token-exchange.steps.ts pattern).
 let mintResponse: MintPluginTokenResponse | undefined;
@@ -49,13 +56,16 @@ function extractUserId(token: string): string {
 // --- When steps ---
 
 When(
-  'I mint a plugin token for the seeded cluster and installation',
+  'I mint a plugin token for the e2e installation',
+  { timeout: INSTALL_TIMEOUT_MS + 60_000 },
   async function (this: ICustomWorld) {
+    const fixture = await fixtureInstallation(this);
+    this.testData.installation = fixture;
     try {
       mintResponse = await this.tokenService!.mintPluginToken(
         this.authToken!,
-        SEEDED_CLUSTER_ID,
-        MOCK_INSTALLATION_ID,
+        fixture.clusterId,
+        fixture.installationId,
       );
       this.lastApiResponse = mintResponse;
       this.lastApiError = undefined;
@@ -235,24 +245,24 @@ Then(
   'the plugin token should bind the cluster and installation',
   async function (this: ICustomWorld) {
     const claims = decodePluginClaims(mintResponse!.accessToken);
-    expect(claims.cluster_id).toBe(SEEDED_CLUSTER_ID);
-    expect(claims.installation_id).toBe(MOCK_INSTALLATION_ID);
+    expect(claims.cluster_id).toBe(installation(this).clusterId);
+    expect(claims.installation_id).toBe(installation(this).installationId);
   },
 );
 
 Then(
-  'the plugin token should carry the plugin name {string}',
-  async function (this: ICustomWorld, want: string) {
+  "the plugin token should carry the installation's plugin name",
+  async function (this: ICustomWorld) {
     const claims = decodePluginClaims(mintResponse!.accessToken);
-    expect(claims.plugin_name).toBe(want);
+    expect(claims.plugin_name).toBe(installation(this).pluginName);
   },
 );
 
 Then(
-  'the plugin token should carry the installation name {string}',
-  async function (this: ICustomWorld, want: string) {
+  "the plugin token should carry the installation's name",
+  async function (this: ICustomWorld) {
     const claims = decodePluginClaims(mintResponse!.accessToken);
-    expect(claims.installation_name).toBe(want);
+    expect(claims.installation_name).toBe(installation(this).installationName);
   },
 );
 

@@ -20,6 +20,10 @@ setDefaultTimeout(30000);
 
 let browser: Browser;
 
+// Playwright traces record cookies and page contents, so they are opt-in:
+// E2E_TRACE=on (the test-env VM sets it).
+const tracing = process.env.E2E_TRACE === 'on';
+
 BeforeAll(async function () {
   const isHeaded = process.env.HEADED === 'true';
   const launchOptions: Parameters<typeof chromium.launch>[0] = {
@@ -52,26 +56,51 @@ Before(async function (this: ICustomWorld) {
     baseURL: process.env.BASE_URL || 'https://console.fundament.localhost:8443',
     viewport: { width: 1280, height: 720 },
   });
+  if (tracing) {
+    await this.context.tracing.start({ screenshots: true, snapshots: true });
+  }
   this.page = await this.context.newPage();
 });
 
-After(async function (this: ICustomWorld, { result }) {
-  // Capture screenshot on failure
-  if (result?.status === Status.FAILED && this.page) {
+After(async function (this: ICustomWorld, { result, pickle }) {
+  const failed = result?.status === Status.FAILED;
+  if (failed && this.page) {
     const screenshot = await this.page.screenshot();
     this.attach(screenshot, 'image/png');
   }
 
-  await this.page?.close();
-  await this.context?.close();
+  try {
+    // A Playwright trace per failed scenario: `bunx playwright show-trace <zip>`.
+    if (tracing && this.context) {
+      if (failed) {
+        const slug = pickle.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+        const path = `reports/traces/${slug}-${pickle.id.slice(0, 8)}.zip`;
+        await this.context.tracing.stop({ path });
+        this.attach(`trace: e2e/${path}`, 'text/plain');
+      } else {
+        await this.context.tracing.stop();
+      }
+    }
+  } finally {
+    await this.page?.close();
+    await this.context?.close();
+  }
 });
 
-// @mock-verifier scenarios mint HMAC stand-ins for projected tokens, which only
-// an authn-api in SHOOT_VERIFIER_MODE=mock accepts (PR previews). Against any
-// other deployment they would fail for the wrong reason, so they skip unless
-// the environment says it runs the mock verifier.
-Before({ tags: '@mock-verifier' }, function () {
-  if (process.env.E2E_MOCK_SHOOT_VERIFIER !== 'true') {
+// @real-gardener scenarios create shoots, node pools and plugin installations,
+// which only a real Gardener does (E2E_GARDENER=real, the test-env VM). The
+// default profile leaves them out; under the full profile they skip elsewhere,
+// so they show in the report rather than vanish.
+Before({ tags: '@real-gardener' }, function () {
+  return process.env.E2E_GARDENER === 'real' ? undefined : 'skipped';
+});
+
+// @shoot-token scenarios need ServiceAccount tokens authn-api accepts: real
+// ones from a shoot (E2E_GARDENER=real), or HMAC stand-ins for an authn-api in
+// SHOOT_VERIFIER_MODE=mock (PR previews). Against any other deployment they
+// would fail for the wrong reason, so they skip.
+Before({ tags: '@shoot-token' }, function () {
+  if (process.env.E2E_GARDENER !== 'real' && process.env.E2E_MOCK_SHOOT_VERIFIER !== 'true') {
     return 'skipped';
   }
   return undefined;

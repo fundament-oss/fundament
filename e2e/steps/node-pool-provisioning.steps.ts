@@ -5,35 +5,37 @@
  * PR previews): it cordons/uncordons an actual kind node so the shoot's
  * machine-controller-manager genuinely cannot place machines, then watches
  * ClusterService report that through the API. The default cucumber profile
- * excludes @real-gardener (see cucumber.json); run it explicitly with
- * `just e2e test-real-gardener` against `just cluster-worker gardener-start`
- * plus `just cluster-worker dev`.
+ * excludes @real-gardener (see cucumber.json); it runs in the test-env VM with
+ * `just test-env test`.
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { Given, When, Then, Before, After } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { ICustomWorld } from '../support/world.ts';
+import { clusterName } from '../support/fixtures.ts';
+import { withShootAdmin } from '../support/shoot.ts';
 import { ClusterService, type NodePool } from '../support/api/cluster-service.ts';
 import { ClusterStatus, NodePoolStatus } from '../support/generated/v1/common_pb.ts';
-import { authenticateWithPassword, extractOrganizationId,
+import {
+  authenticateWithPassword,
+  extractOrganizationId,
   waitForAuthzReady,
   AUTHZ_READY_TIMEOUT_MS,
-} from './common.steps.ts';
+} from '../support/auth.ts';
+import { pollUntil } from '../support/poll.ts';
 
 // The scenario always targets this cluster/pool; the pool name is also
 // hardcoded (not read from world state) so the After hook can sweep it even
 // if a prior failed run never got far enough to record it.
-const clusterName = process.env.E2E_CLUSTER_NAME ?? 'tf-a';
 const clusterOwnerEmail = process.env.E2E_CLUSTER_OWNER_EMAIL ?? 'alice@acme-corp.com';
 const machineType = process.env.E2E_NODE_POOL_MACHINE_TYPE ?? 'local-small';
 const NODE_POOL_NAME = 'nomach';
 
 const seedContext = process.env.E2E_SEED_CONTEXT ?? 'kind-gardener-operator-local';
 const seedNode = process.env.E2E_SEED_NODE ?? 'gardener-operator-local-control-plane';
-
-const POLL_INTERVAL_MS = 15_000;
 
 // scenarioStartedAt bounds the activity-log assertions: on a reused cluster
 // the log keeps nodepool_* events from earlier runs, and finding one of those
@@ -60,30 +62,6 @@ function cordonSeed(on: boolean) {
     { stdio: 'inherit' },
   );
   seedCordoned = on;
-}
-
-/**
- * Poll `check` every POLL_INTERVAL_MS until it returns a value, or throw once
- * `deadlineMs` has elapsed. `check` returns `undefined` to keep polling.
- */
-async function pollUntil<T>(
-  deadlineMs: number,
-  description: string,
-  check: () => Promise<T | undefined>,
-): Promise<T> {
-  const deadline = Date.now() + deadlineMs;
-  for (;;) {
-    const result = await check();
-    if (result !== undefined) {
-      return result;
-    }
-    if (Date.now() >= deadline) {
-      throw new Error(
-        `Timed out after ${Math.round(deadlineMs / 1000)}s waiting for: ${description}`,
-      );
-    }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-  }
 }
 
 function findNodePool(pools: NodePool[], name: string): NodePool | undefined {
@@ -199,6 +177,17 @@ When(
       autoscaleMin,
       autoscaleMax,
     });
+  },
+);
+
+When(
+  'I delete the node pool {string}',
+  { timeout: 30_000 },
+  async function (this: ICustomWorld, name: string) {
+    const pools = await this.clusterService!.listNodePools(this.realGardenerCluster!.id);
+    const pool = findNodePool(pools, name);
+    expect(pool, `node pool "${name}"`).toBeDefined();
+    await this.clusterService!.deleteNodePool(pool!.id);
   },
 );
 
@@ -326,5 +315,57 @@ Then(
       },
     );
     expect(cluster.status).toBe(wanted);
+  },
+);
+
+// The shoot's worker for a pool: 4 characters of the name, padded with its
+// hash, then 4 more of the hash (kubename.GenerateWorkerName).
+function workerName(pool: string): string {
+  let sanitized = pool.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (/^[0-9]/.test(sanitized)) {
+    sanitized = `x${sanitized}`;
+  }
+  const hash = createHash('sha256').update(pool).digest('hex');
+  return (sanitized.slice(0, 4) + hash).slice(0, 4) + hash.slice(4, 8);
+}
+
+// Nodes of a pool, by Gardener's pool label.
+async function nodesInPool(world: ICustomWorld, name: string): Promise<string[]> {
+  return withShootAdmin(world.realGardenerCluster!.id, async (kubectl) => {
+    const nodes = kubectl(['get', 'nodes', '-l', `worker.gardener.cloud/pool=${workerName(name)}`, '-o', 'name']);
+    return nodes.split('\n').filter(Boolean);
+  });
+}
+
+Then(
+  'the cluster has {int} node(s) in the node pool {string}',
+  { timeout: 6 * 60_000 },
+  async function (this: ICustomWorld, count: number, name: string) {
+    // A healthy pool's node may still be registering with the API server.
+    const nodes = await pollUntil(5 * 60_000, `${count} node(s) in pool "${name}"`, async () => {
+      const found = await nodesInPool(this, name);
+      return found.length === count ? found : undefined;
+    });
+    expect(nodes).toHaveLength(count);
+  },
+);
+
+Then(
+  'within {int} minutes the cluster has no node in the node pool {string}',
+  { timeout: -1 },
+  async function (this: ICustomWorld, minutes: number, name: string) {
+    await pollUntil(minutes * 60_000, `no node in pool "${name}"`, async () =>
+      (await nodesInPool(this, name)).length === 0 ? true : undefined,
+    );
+  },
+);
+
+Then(
+  'within {int} minutes the node pool {string} is no longer listed',
+  { timeout: -1 },
+  async function (this: ICustomWorld, minutes: number, name: string) {
+    await pollUntil(minutes * 60_000, `node pool "${name}" to be gone`, async () =>
+      findNodePool(await this.clusterService!.listNodePools(this.realGardenerCluster!.id), name) ? undefined : true,
+    );
   },
 );
