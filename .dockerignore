@@ -19,9 +19,9 @@ test-env/bundles/
 # test-env provider credentials.
 test-env/host/providers/*.env
 
-# Local Gardener (gardener-up) lives under .dev/ and leaves root-owned files
-# (e.g. backupbuckets) that fail the build-context scan of images built from
-# the repo root, such as plugin-proxy.
+# .dev/ holds root-owned files of a local Gardener on some machines (e.g.
+# backupbuckets), which fail the build-context scan of images built from the
+# repo root, such as plugin-proxy.
 .dev/
 
 .git

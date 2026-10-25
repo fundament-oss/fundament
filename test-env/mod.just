@@ -210,15 +210,22 @@ gardener-start: _require-vm
     (cd "{{justfile_directory()}}" && GARDENER_DIR="$GARDENER_DIR" just test-env gardener-secret)
     echo "Gardener started! (operator path)"
 
-# Delete local Gardener completely: kind cluster, registry/DNS containers and clone
-gardener-delete: _require-vm
+# Delete local Gardener completely: kind cluster, registry/DNS containers, clone and contexts (also on a host that runs one)
+gardener-delete:
     #!/usr/bin/env bash
     set -e
     if kind get clusters 2>/dev/null | grep -q "{{KIND_CLUSTER}}"; then
         echo "Deleting {{KIND_CLUSTER}} cluster..."
         kind delete cluster --name "{{KIND_CLUSTER}}"
     fi
-    (cd "{{justfile_directory()}}" && GARDENER_DIR="{{GARDENER_DIR}}" just test-env _gardener-infra-down)
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    dirs=("${GARDENER_DIR/#\~/$HOME}")
+    # Older versions cloned Gardener into .dev/gardener.
+    OLD_DIR="{{justfile_directory()}}/.dev/gardener"
+    [ -d "$OLD_DIR" ] && dirs+=("$OLD_DIR")
+    for dir in "${dirs[@]}"; do
+        (cd "{{justfile_directory()}}" && GARDENER_DIR="$dir" just test-env _gardener-infra-down)
+    done
     TARGET_KC="${KUBECONFIG:-}"
     TARGET_KC="${TARGET_KC%%:*}"
     TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
@@ -227,14 +234,13 @@ gardener-delete: _require-vm
         kubectl config --kubeconfig "$TARGET_KC" delete-cluster "$name" >/dev/null 2>&1 || true
         kubectl config --kubeconfig "$TARGET_KC" delete-user "$name" >/dev/null 2>&1 || true
     done
-    GARDENER_DIR="{{GARDENER_DIR}}"
-    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
-    if [ -d "$GARDENER_DIR" ]; then
+    for dir in "${dirs[@]}"; do
+        [ -d "$dir" ] || continue
         # Gardener's containers write the registry cache and backup buckets as root;
         # a container removes them without sudo.
-        docker run --rm -v "$(dirname "$GARDENER_DIR"):/parent" alpine rm -rf "/parent/$(basename "$GARDENER_DIR")"
-        echo "Removed $GARDENER_DIR"
-    fi
+        docker run --rm -v "$(dirname "$dir"):/parent" alpine rm -rf "/parent/$(basename "$dir")"
+        echo "Removed $dir"
+    done
 
 # Remove the registry and DNS containers kind-up starts with Docker Compose. They
 # outlive the kind cluster, so this also runs when the cluster is already gone.
