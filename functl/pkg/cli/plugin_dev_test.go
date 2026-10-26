@@ -19,7 +19,7 @@ func devFixture(t *testing.T, definition string) string {
 	return dir
 }
 
-const devDefinition = "metadata:\n  name: demo\n  version: v1.0.0\n"
+const devDefinition = "apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n  name: demo\n  version: v1.0.0\n"
 
 func TestPluginDevNoActiveOrg(t *testing.T) {
 	cmd := PluginDevCmd{Dir: devFixture(t, devDefinition)}
@@ -67,4 +67,12 @@ func TestDetectNamedRejectsSeparator(t *testing.T) {
 func TestDevVersion(t *testing.T) {
 	assert.Equal(t, "v1.0.0-dev", devVersion("v1.0.0"))
 	assert.Equal(t, "v1.0.0-dev", devVersion("v1.0.0-dev"))
+}
+
+func TestPluginDevRejectsMalformedSchema(t *testing.T) {
+	def := devDefinition + "spec:\n  configSchema:\n    - name: FOO\n      type: float\n"
+	cmd := PluginDevCmd{Dir: devFixture(t, def), Set: map[string]string{"FOO": "1"}}
+	err := cmd.Run(&Context{Config: &config.Config{}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid type "float"`)
 }

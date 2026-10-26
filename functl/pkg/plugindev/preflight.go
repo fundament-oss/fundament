@@ -40,7 +40,7 @@ type Cluster interface {
 // InstallationState is what the dev loop needs to know about a PluginInstallation.
 type InstallationState struct {
 	Version string
-	// Dev is true for installations carrying the dev-mode annotation, i.e. made by functl plugin dev.
+	// Dev is true for installations in dev mode (annotation plus spec.dev), i.e. made by functl plugin dev.
 	Dev bool
 	// Terminating is true while the controller finalizer still holds a deleted installation.
 	Terminating bool

@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/functl/pkg/client"
 	"github.com/fundament-oss/fundament/functl/pkg/plugindev"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 // PluginDevCmd runs a plugin with hot reload in the local sandbox cluster.
@@ -87,14 +88,19 @@ func (c *PluginDevCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	config, err := plugindev.ResolveConfig(l.ConfigSchema, c.Config, c.Set)
+	// Strict parse first: config validation assumes a well-formed configSchema.
+	def, err := pluginruntime.ParseSourceDefinition(l.Definition)
+	if err != nil {
+		return fmt.Errorf("definition.yaml: %w", err)
+	}
+	config, err := plugindev.ResolveConfig(def.Spec.ConfigSchema, c.Config, c.Set)
 	if err != nil {
 		return err
 	}
 
 	// The first signal stops the loop gracefully; a second kills the children
 	// (in their own process groups, so the terminal never signals them) and exits.
-	sigs := make(chan os.Signal, 1)
+	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer signal.Stop(sigs)
 	runCtx, interrupt := context.WithCancel(context.Background())

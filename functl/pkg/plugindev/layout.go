@@ -32,8 +32,7 @@ type Layout struct {
 	Name       string
 	Version    string
 	// Definition is the raw definition.yaml, read once so every step sees the same bytes.
-	Definition   []byte
-	ConfigSchema []pluginruntime.ConfigSchemaEntry
+	Definition []byte
 	// SourceDirs are the module dirs a FundamentModule plugin build needs,
 	// relative to ModuleRoot; set by ResolveSourceDirs. They bound the build
 	// context, and with it what syncs into the pod.
@@ -83,15 +82,14 @@ func Detect(dir string) (Layout, error) {
 	}
 
 	l := Layout{
-		PluginDir:    pluginDir,
-		ModuleRoot:   moduleRoot,
-		ModulePath:   mf.Module.Mod.Path,
-		Package:      pkg,
-		SDKReplace:   sdkReplace(mf, moduleRoot),
-		Name:         def.Metadata.Name,
-		Version:      def.Metadata.Version,
-		Definition:   src,
-		ConfigSchema: def.Spec.ConfigSchema,
+		PluginDir:  pluginDir,
+		ModuleRoot: moduleRoot,
+		ModulePath: mf.Module.Mod.Path,
+		Package:    pkg,
+		SDKReplace: sdkReplace(mf, moduleRoot),
+		Name:       def.Metadata.Name,
+		Version:    def.Metadata.Version,
+		Definition: src,
 	}
 	if _, err := os.Stat(filepath.Join(pluginDir, "console-ui", "package.json")); err == nil {
 		l.Vite = true

@@ -135,7 +135,7 @@ func (k *kubeCluster) Installation(ctx context.Context, name string) (Installati
 	}
 	return InstallationState{
 		Version:     inst.Spec.DefinitionRef.PluginVersion,
-		Dev:         inst.Annotations[pluginsv1.AnnotationDevMode] == "true",
+		Dev:         inst.Annotations[pluginsv1.AnnotationDevMode] == "true" && inst.Spec.Dev != nil,
 		Terminating: inst.DeletionTimestamp != nil,
 	}, true, nil
 }
