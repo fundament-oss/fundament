@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +28,7 @@ import (
 
 // errNonRetryable marks errors that will never self-resolve (invalid row, missing handler).
 // The outbox worker fails these immediately instead of burning through retries.
-var errNonRetryable = errors.New("non-retryable")
+var errNonRetryable = handler.ErrNonRetryable
 
 // failsNow reports whether a row fails at once instead of being retried: a
 // non-retryable error, or a request the Kubernetes or Gardener API rejected as
@@ -427,6 +429,10 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetAndLockRow, tx pgx.Tx, entityType handler.EntityType, precondErr *handler.PreconditionError) (bool, error) {
 	_ = tx.Rollback(ctx) // release lock before deferring via pool
 
+	if precondErr.Park {
+		return true, w.park(ctx, row, entityType, precondErr)
+	}
+
 	// deferrals is checked before the UPDATE increments it, so +1 to reflect the new count.
 	deferrals := row.Deferrals + 1
 
@@ -458,6 +464,108 @@ func (w *Worker) handlePreconditionError(ctx context.Context, row *db.OutboxGetA
 		"reason", precondErr.Reason)
 
 	return true, nil
+}
+
+// park parks a row until a trigger wakes it. A parked row is not deferred on a
+// timer, so the deferral cap does not apply. The row's cluster is locked first
+// and the precondition rechecked under that lock: the triggers that wake parked
+// rows hold the same lock, so a pool or deletion committed meanwhile is seen
+// here and leaves the row runnable, and one committed later finds the row
+// parked. A cluster row that parks records why, as one cluster event, unless
+// the cluster's latest event already says so.
+func (w *Worker) park(ctx context.Context, row *db.OutboxGetAndLockRow, entityType handler.EntityType, precondErr *handler.PreconditionError) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin park transaction: %w", err)
+	}
+	defer rollback.Rollback(ctx, tx, w.logger)
+	qtx := w.queries.WithTx(tx)
+
+	if row.ClusterID.Valid {
+		// A pool change holds the cluster row for milliseconds; one that holds
+		// it longer (a very large set) must not stall the worker. Past the
+		// timeout the row is deferred briefly instead, and parks on a later try.
+		if _, err := tx.Exec(ctx, "SET LOCAL lock_timeout = '"+parkLockTimeout.String()+"'"); err != nil {
+			return fmt.Errorf("set park lock timeout: %w", err)
+		}
+		_, err := qtx.OutboxLockCluster(ctx, db.OutboxLockClusterParams{ClusterID: uuid.UUID(row.ClusterID.Bytes)})
+		if err != nil {
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.LockNotAvailable {
+				_ = tx.Rollback(ctx)
+				return w.deferPark(ctx, row, entityType, precondErr)
+			}
+			return fmt.Errorf("lock cluster for park: %w", err)
+		}
+	}
+	if precondErr.Recheck != nil {
+		waiting, err := precondErr.Recheck(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("recheck precondition before park: %w", err)
+		}
+		if !waiting {
+			w.logger.Debug("precondition met before the park, leaving the row runnable",
+				"outbox_id", row.ID,
+				"entity_type", entityType)
+			return nil
+		}
+	}
+
+	parked, err := qtx.OutboxPark(ctx, db.OutboxParkParams{
+		ID:         row.ID,
+		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("park outbox row: %w", err)
+	}
+	if parked == 0 {
+		w.logger.Debug("outbox row completed by another worker, not parked",
+			"outbox_id", row.ID,
+			"entity_type", entityType)
+		return nil
+	}
+
+	if row.ClusterID.Valid {
+		if _, err := qtx.ClusterCreateEventUnlessLatest(ctx, db.ClusterCreateEventUnlessLatestParams{
+			ClusterID: uuid.UUID(row.ClusterID.Bytes),
+			EventType: string(dbconst.ClusterEventEventType_SyncWaitingForPrecondition),
+			Message:   pgtype.Text{String: precondErr.Reason, Valid: true},
+		}); err != nil {
+			return fmt.Errorf("record waiting event: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit park: %w", err)
+	}
+
+	w.logger.Info("parked outbox row until it is woken",
+		"outbox_id", row.ID,
+		"entity_type", entityType,
+		"reason", precondErr.Reason)
+	return nil
+}
+
+// parkLockTimeout bounds how long a park waits for the cluster row; past it,
+// the row is deferred for parkRetryDelay and tries again.
+const (
+	parkLockTimeout = 2 * time.Second
+	parkRetryDelay  = 2 * time.Second
+)
+
+// deferPark defers a row whose park could not take the cluster lock in time.
+func (w *Worker) deferPark(ctx context.Context, row *db.OutboxGetAndLockRow, entityType handler.EntityType, precondErr *handler.PreconditionError) error {
+	if _, err := w.queries.OutboxDeferWithoutRetry(ctx, db.OutboxDeferWithoutRetryParams{
+		ID:         row.ID,
+		Delay:      durationToInterval(parkRetryDelay),
+		StatusInfo: pgtype.Text{String: precondErr.Reason, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("defer outbox row after park lock timeout: %w", err)
+	}
+	w.logger.Info("cluster row held by another transaction, deferring the park",
+		"outbox_id", row.ID,
+		"entity_type", entityType,
+		"retry_in", parkRetryDelay)
+	return nil
 }
 
 // deferralDelay is the default precondition delay, or the precondition's own

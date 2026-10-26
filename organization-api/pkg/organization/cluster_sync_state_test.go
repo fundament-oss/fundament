@@ -70,12 +70,21 @@ func Test_Cluster_SyncState_IsTheClustersOwnRow(t *testing.T) {
 	assert.False(t, state.HasOutboxError(), "a pending row's status_info is not an error")
 	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, getCluster().GetStatus())
 
+	// The cluster's own row waits on a precondition: the reason shows as a
+	// message, not an error.
+	setClusterRow("pending", "Creating cluster: waiting for a node pool")
+	state = syncState()
+	assert.Equal(t, "Creating cluster: waiting for a node pool", state.GetOutboxMessage())
+	assert.False(t, state.HasOutboxError())
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, getCluster().GetStatus())
+
 	// The cluster's own sync fails for good: that is what shows, with its own
 	// error, and a cluster Gardener never got is in error.
 	setClusterRow("failed", `Unsupported value: "1.31.0"`)
 	state = syncState()
 	assert.Equal(t, "failed", state.GetOutboxStatus())
 	assert.Equal(t, `Unsupported value: "1.31.0"`, state.GetOutboxError())
+	assert.False(t, state.HasOutboxMessage(), "a failed row's status_info is the error, not a wait")
 	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, getCluster().GetStatus())
 
 	// A node pool whose own sync failed leaves the cluster's state alone.

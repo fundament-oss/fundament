@@ -175,3 +175,46 @@ func (q *Queries) RegionMachineTypeResolve(ctx context.Context, arg RegionMachin
 	err := row.Scan(&id)
 	return id, err
 }
+
+const regionMachineTypesResolve = `-- name: RegionMachineTypesResolve :many
+SELECT
+    catalog.machine_types.name,
+    catalog.region_machine_types.id
+FROM catalog.region_machine_types
+JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+WHERE catalog.regions.name = $1
+  AND catalog.machine_types.name = ANY($2::text[])
+`
+
+type RegionMachineTypesResolveParams struct {
+	RegionName       string
+	MachineTypeNames []string
+}
+
+type RegionMachineTypesResolveRow struct {
+	Name string
+	ID   uuid.UUID
+}
+
+// Resolve several machine type names in a region at once, for a set of node
+// pools; a name without a row is not offered in that region.
+func (q *Queries) RegionMachineTypesResolve(ctx context.Context, arg RegionMachineTypesResolveParams) ([]RegionMachineTypesResolveRow, error) {
+	rows, err := q.db.Query(ctx, regionMachineTypesResolve, arg.RegionName, arg.MachineTypeNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RegionMachineTypesResolveRow
+	for rows.Next() {
+		var i RegionMachineTypesResolveRow
+		if err := rows.Scan(&i.Name, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -258,14 +258,14 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 }
 
 // DeleteShootByClusterID records the call and marks the shoot for deletion by cluster ID.
-func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.DeleteByClusterID = append(m.DeleteByClusterID, clusterID)
 
 	if m.DeleteError != nil {
-		return m.DeleteError
+		return false, m.DeleteError
 	}
 
 	// Find shoot by cluster ID
@@ -274,12 +274,12 @@ func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.
 		if shoot.Info.ClusterID == clusterID {
 			shoot.DeletedAt = &now
 			m.logger.Info("MOCK: marked shoot for deletion by cluster ID", "shoot", name, "cluster_id", clusterID)
-			return nil
+			return true, nil
 		}
 	}
 
 	m.logger.Debug("MOCK: shoot not found for deletion by cluster ID", "cluster_id", clusterID)
-	return nil
+	return false, nil
 }
 
 // ListShoots returns all shoots stored in memory (excludes fully deleted ones).
@@ -565,6 +565,19 @@ func (m *MockClient) StatusCallsFor(clusterID uuid.UUID) int {
 		}
 	}
 	return count
+}
+
+// ApplyCallsFor returns the ApplyShoot calls made for the cluster.
+func (m *MockClient) ApplyCallsFor(clusterID uuid.UUID) []ClusterToSync {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var calls []ClusterToSync
+	for i := range m.ApplyCalls {
+		if m.ApplyCalls[i].ID == clusterID {
+			calls = append(calls, m.ApplyCalls[i])
+		}
+	}
+	return calls
 }
 
 // HasShootForCluster checks if a shoot exists for the given cluster ID (excludes deleted shoots).

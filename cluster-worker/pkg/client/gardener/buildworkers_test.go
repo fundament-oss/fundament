@@ -8,20 +8,18 @@ import (
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
-// A cluster without node pools still gets one worker group, bounded 1 to 3,
-// on the provider's default machine type.
-func TestBuildWorkers_NoPoolsGetsTheDefaultWorker(t *testing.T) {
+// A cluster without node pools gets no worker group: no Shoot runs a worker
+// that fundament does not list.
+func TestBuildWorkers_NoPoolsIsAnError(t *testing.T) {
 	r := testClient(NewProviderConfig())
 
-	workers := r.buildWorkers(testCluster())
+	cluster := testCluster()
+	cluster.NodePools = nil
 
-	require.Len(t, workers, 1)
-	require.Equal(t, "default", workers[0].Name)
-	require.Equal(t, r.provider.DefaultMachineType, workers[0].Machine.Type)
-	require.Equal(t, defaultWorkerMinimum, workers[0].Minimum)
-	require.Equal(t, defaultWorkerMaximum, workers[0].Maximum)
-	require.Equal(t, int32(1), workers[0].MaxSurge.IntVal)
-	require.Equal(t, int32(0), workers[0].MaxUnavailable.IntVal)
+	workers, err := r.buildWorkers(cluster)
+
+	require.ErrorIs(t, err, ErrNoNodePools)
+	require.Empty(t, workers)
 }
 
 // Explicit pools pass through as they are: there is no organization cap to
@@ -37,7 +35,8 @@ func TestBuildWorkers_PoolsPassThroughUnchanged(t *testing.T) {
 		{Name: "large", MachineType: "local-medium", AutoscaleMin: 5, AutoscaleMax: 250},
 	}
 
-	workers := r.buildWorkers(cluster)
+	workers, err := r.buildWorkers(cluster)
+	require.NoError(t, err)
 
 	require.Len(t, workers, 2)
 	require.Equal(t, kubename.GenerateWorkerName("small"), workers[0].Name)

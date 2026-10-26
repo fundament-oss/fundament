@@ -83,6 +83,11 @@ func Test_NodePool_Create_NoQuotaRefusesAZeroMaximumToo(t *testing.T) {
 	q := newQuotaEnv(t)
 	clusterID, err := q.createCluster("c")
 	require.NoError(t, err)
+	// The cluster first gets a pool that can run nodes, of another machine
+	// type: a 0-maximum pool cannot be a cluster's first.
+	q.setNodeQuota(t, offeringN1Standard2, 1)
+	_, err = q.createNodePool(clusterID, "workers", "n1-standard-2", 1)
+	require.NoError(t, err)
 
 	_, err = q.client.CreateNodePool(q.ctx, organizationv1.CreateNodePoolRequest_builder{
 		ClusterId:    clusterID,
@@ -92,7 +97,7 @@ func Test_NodePool_Create_NoQuotaRefusesAZeroMaximumToo(t *testing.T) {
 		AutoscaleMax: 0,
 	}.Build())
 	requireResourceExhausted(t, err, "the organization has no quota for machine type n1-standard-1 in region eu-west-1")
-	assert.Zero(t, q.livePools(t))
+	assert.Equal(t, 1, q.livePools(t))
 }
 
 func Test_NodePool_Create_SumOfMaximaStaysWithinQuota(t *testing.T) {
@@ -149,7 +154,11 @@ func Test_NodePool_Delete_FreesQuota(t *testing.T) {
 	clusterID, err := q.createCluster("c")
 	require.NoError(t, err)
 	q.setNodeQuota(t, offeringN1Standard1, 3)
+	q.setNodeQuota(t, offeringN1Standard2, 1)
 
+	// The cluster keeps a pool of another machine type: its last pool cannot go.
+	_, err = q.createNodePool(clusterID, "keep", "n1-standard-2", 1)
+	require.NoError(t, err)
 	poolID, err := q.createNodePool(clusterID, "a", "n1-standard-1", 3)
 	require.NoError(t, err)
 	_, err = q.createNodePool(clusterID, "b", "n1-standard-1", 1)
