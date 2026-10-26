@@ -114,7 +114,7 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 		deleted[c.ID] = true
 		// The delete sync is still working on this cluster; it deletes the
 		// shoot itself, or settles as failed and leaves it to a later pass.
-		if deleteSyncRunning(c.OutboxStatus) {
+		if c.SyncRunning {
 			continue
 		}
 		if shootByClusterID[c.ID].Deleting {
@@ -139,7 +139,8 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 	if len(toStart) > h.cfg.MaxReconcileDeletions {
 		h.logger.Error("refusing to delete shoots: too many in one pass, check the database",
 			"shoots_to_delete", len(toStart),
-			"max", h.cfg.MaxReconcileDeletions)
+			"max", h.cfg.MaxReconcileDeletions,
+			"cluster_ids", toStart)
 		toStart = nil
 	}
 
@@ -154,20 +155,4 @@ func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUI
 	}
 
 	return unknownCount, nil
-}
-
-// deleteSyncRunning reports whether the cluster's latest outbox row is still
-// being processed.
-func deleteSyncRunning(outboxStatus pgtype.Text) bool {
-	if !outboxStatus.Valid {
-		return false
-	}
-	switch outboxStatus.String {
-	case "pending", "retrying":
-		return true
-	case "completed", "failed":
-		return false
-	default:
-		panic(fmt.Sprintf("unknown outbox status %q", outboxStatus.String))
-	}
 }

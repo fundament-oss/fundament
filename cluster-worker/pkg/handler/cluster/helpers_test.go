@@ -175,8 +175,7 @@ func markOutboxCompleted(t *testing.T, db *testDB, clusterID uuid.UUID) {
 }
 
 // markOutboxFailed sets the latest outbox row for a cluster to failed, as when
-// its sync ran out of retries. The trigger propagates this to
-// clusters.outbox_status.
+// its sync ran out of retries.
 func markOutboxFailed(t *testing.T, db *testDB, clusterID uuid.UUID) {
 	t.Helper()
 
