@@ -291,62 +291,6 @@ func assertNoEvent(t *testing.T, db *testDB, clusterID uuid.UUID, eventType stri
 	require.Equalf(t, 0, count, "expected no %q event for cluster %s", eventType, clusterID)
 }
 
-// assertOutboxReconcileExists asserts a reconcile outbox row exists for the cluster.
-func assertOutboxReconcileExists(t *testing.T, db *testDB, clusterID uuid.UUID) {
-	t.Helper()
-
-	var count int
-	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
-	require.NoError(t, err)
-	require.Greaterf(t, count, 0, "expected a reconcile outbox row for cluster %s", clusterID)
-}
-
-// assertNoOutboxReconcile asserts no reconcile outbox row exists for the cluster.
-func assertNoOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
-	t.Helper()
-
-	var count int
-	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
-	require.NoError(t, err)
-	require.Equalf(t, 0, count, "expected no reconcile outbox row for cluster %s", clusterID)
-}
-
-// insertFailedReconcile inserts a reconcile outbox row that failed for good
-// before exhausting its retries, as a non-retryable error does.
-func insertFailedReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) {
-	t.Helper()
-
-	_, err := db.adminPool.Exec(t.Context(),
-		`INSERT INTO tenant.cluster_outbox (cluster_id, event, source, status, retries, failed, status_info)
-		 VALUES ($1, 'reconcile', 'reconcile', 'failed', 1, now(), 'shoot not found')`,
-		clusterID,
-	)
-	require.NoError(t, err)
-}
-
-// countOutboxReconcile returns the number of reconcile outbox rows for the cluster.
-func countOutboxReconcile(t *testing.T, db *testDB, clusterID uuid.UUID) int {
-	t.Helper()
-
-	var count int
-	err := db.adminPool.QueryRow(t.Context(),
-		`SELECT count(*) FROM tenant.cluster_outbox
-		 WHERE cluster_id = $1 AND event = 'reconcile'`,
-		clusterID,
-	).Scan(&count)
-	require.NoError(t, err)
-
-	return count
-}
-
 // setShootUpdating marks (or clears) a fundament-pushed rollout, as the sync
 // handler does when ApplyShoot changes the Shoot's spec.
 func setShootUpdating(t *testing.T, db *testDB, clusterID uuid.UUID, updating bool) {

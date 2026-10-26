@@ -72,6 +72,7 @@ export function getStatusBadgeColor(status: ClusterStatus): string {
     [ClusterStatus.UNSPECIFIED]: 'neutral',
     [ClusterStatus.DELETING]: 'robijnrood',
     [ClusterStatus.UNHEALTHY]: 'critical',
+    [ClusterStatus.LOST]: 'critical',
   };
   return colors[status];
 }
@@ -88,6 +89,7 @@ export function getStatusLabel(status: ClusterStatus): string {
     [ClusterStatus.UNSPECIFIED]: 'Unknown status',
     [ClusterStatus.DELETING]: 'Deleting',
     [ClusterStatus.UNHEALTHY]: 'Unhealthy',
+    [ClusterStatus.LOST]: 'Lost',
   };
   return labels[status];
 }
@@ -126,8 +128,8 @@ export function isClusterReachable(status: ClusterStatus): boolean {
  *
  * The kubeconfig only names the cluster and the kube-api-proxy, so
  * organization-api hands it out from creation on and only refuses a deleted
- * cluster. A cluster on its way out, or one whose status this console does not
- * know (an unspecified or newer value), gets no download.
+ * cluster. A cluster on its way out, a lost one, or one whose status this
+ * console does not know (an unspecified or newer value), gets no download.
  */
 export function isKubeconfigAvailable(status: ClusterStatus): boolean {
   return KUBECONFIG_STATUSES.has(status);
@@ -154,6 +156,7 @@ export function kubeconfigHint(status: ClusterStatus): string | null {
     [ClusterStatus.STOPPING]: removed,
     [ClusterStatus.STOPPED]: removed,
     [ClusterStatus.DELETING]: removed,
+    [ClusterStatus.LOST]: 'Not available while the cluster no longer exists',
     [ClusterStatus.UNSPECIFIED]: 'Available once the cluster status is known',
   };
   // A status newer than this console has no entry.

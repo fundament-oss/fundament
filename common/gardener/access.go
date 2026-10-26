@@ -2,6 +2,9 @@ package gardener
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -14,6 +17,7 @@ import (
 	"golang.org/x/sync/singleflight"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/transport"
 )
 
 // accessRefreshRatio is the fraction of the admin kubeconfig's TTL after which
@@ -55,11 +59,15 @@ type ShootAccess struct {
 // hard expiry (so stale entries for deleted/rotated clusters are evicted
 // automatically), refreshed proactively in the background before expiry, and
 // concurrent fetches for the same cluster are deduplicated via singleflight.
+// An entry is dropped as soon as a request through it fails to verify the
+// cluster's certificate: a cluster created again under the same name answers
+// at the same address with a new certificate authority.
 type AdminKubeconfigCache struct {
 	client shootAccessSource
 	logger *slog.Logger
 
 	entries      *ttlcache.Cache[string, *ShootAccess]
+	entriesMu    sync.Mutex         // serializes storing an entry with drop's compare-and-delete
 	group        singleflight.Group // deduplicates concurrent fetches per cluster
 	refreshing   sync.Map           // clusterID -> struct{}; at most one background refresh per cluster
 	fetchTimeout time.Duration
@@ -168,7 +176,10 @@ func (a *AdminKubeconfigCache) fetch(ctx context.Context, clusterID string) (*Sh
 		return nil, fmt.Errorf("admin kubeconfig for shoot %s: %w", shoot.Name, err)
 	}
 
-	access, err := accessFromKubeconfig(adminKC.Kubeconfig)
+	var access *ShootAccess
+	access, err = accessFromKubeconfig(adminKC.Kubeconfig, func(rt http.RoundTripper) http.RoundTripper {
+		return &dropOnCertificateError{next: rt, drop: func() { a.drop(clusterID, access) }}
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -182,16 +193,57 @@ func (a *AdminKubeconfigCache) fetch(ctx context.Context, clusterID string) (*Sh
 	}
 	access.refreshAt = time.Now().Add(time.Duration(float64(ttl) * accessRefreshRatio))
 
+	a.entriesMu.Lock()
 	a.entries.Set(clusterID, access, ttl) // evicted at hard expiry
+	a.entriesMu.Unlock()
 	a.logger.DebugContext(ctx, "shoot access cached",
 		"cluster_id", clusterID, "refresh_at", access.refreshAt)
 	return access, nil
 }
 
+// drop removes the cluster's entry if it is still access, so the next request
+// fetches new credentials. An entry fetched since is kept.
+func (a *AdminKubeconfigCache) drop(clusterID string, access *ShootAccess) {
+	a.entriesMu.Lock()
+	item := a.entries.Get(clusterID)
+	if item == nil || item.Value() != access {
+		a.entriesMu.Unlock()
+		return
+	}
+	a.entries.Delete(clusterID)
+	a.entriesMu.Unlock()
+	a.logger.Warn("cluster's certificate is not trusted, dropped its cached shoot access", "cluster_id", clusterID)
+}
+
+// dropOnCertificateError calls drop when a request fails to verify the
+// cluster's TLS certificate.
+type dropOnCertificateError struct {
+	next http.RoundTripper
+	drop func()
+}
+
+func (t *dropOnCertificateError) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.next.RoundTrip(req)
+	if err != nil && isCertificateError(err) {
+		t.drop()
+	}
+	return resp, err //nolint:wrapcheck // a RoundTripper passes its transport's error through
+}
+
+// isCertificateError reports whether err is a failed verification of the
+// cluster's TLS certificate.
+func isCertificateError(err error) bool {
+	var verifyErr *tls.CertificateVerificationError
+	var unknownAuthority x509.UnknownAuthorityError
+	return errors.As(err, &verifyErr) || errors.As(err, &unknownAuthority)
+}
+
 // accessFromKubeconfig parses an admin kubeconfig into a ShootAccess.
 // Auth is handled by the transport created via rest.TransportFor, which
-// supports bearer tokens and client certificates from the kubeconfig.
-func accessFromKubeconfig(kubeconfig []byte) (*ShootAccess, error) {
+// supports bearer tokens and client certificates from the kubeconfig. wrap
+// wraps both that transport and the transport of every client built from
+// RESTConfig.
+func accessFromKubeconfig(kubeconfig []byte, wrap transport.WrapperFunc) (*ShootAccess, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("parse kubeconfig: %w", err)
@@ -201,6 +253,7 @@ func accessFromKubeconfig(kubeconfig []byte) (*ShootAccess, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build rest config: %w", err)
 	}
+	cfg.Wrap(wrap)
 
 	transport, err := rest.TransportFor(cfg)
 	if err != nil {

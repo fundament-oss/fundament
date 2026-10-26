@@ -261,3 +261,18 @@ model described in
 [ADR 0006](/adr/0006-cluster-lifecycle-management). In line with the platform's
 soft-delete policy, deleting a cluster in the console removes it from your view
 rather than erasing its record.
+
+### Lost clusters
+
+A cluster can disappear from the underlying infrastructure without anyone
+deleting it in the platform, for instance after an operator error or the loss of
+the machines that ran its control plane. Its workloads and data are gone with
+it. If the platform had already seen the cluster in the infrastructure, it then
+shows the cluster as **Lost**, records a "Cluster lost" event, and offers no
+kubeconfig. A cluster that disappears before the platform first saw it stays
+**Provisioning**, without an event to show for it.
+
+A lost cluster is not rebuilt by itself. Any change to the cluster, such as
+resizing a node pool, creates it again under the same name. The new cluster is
+empty: restore its workloads and data from your own sources. If you no longer
+need the cluster, delete it instead.

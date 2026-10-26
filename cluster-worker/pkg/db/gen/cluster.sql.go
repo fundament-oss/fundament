@@ -383,7 +383,16 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.organizations.name AS organization_name
+    tenant.clusters.shoot_status,
+    tenant.organizations.name AS organization_name,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS latest_sync_completed
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -394,14 +403,19 @@ ORDER BY
 `
 
 type ClusterListActiveRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	OrganizationName string
+	ID                  uuid.UUID
+	Name                string
+	Deleted             pgtype.Timestamptz
+	ShootStatus         pgtype.Text
+	OrganizationName    string
+	LatestSyncCompleted bool
 }
 
-// Used by periodic reconciliation to compare with Gardener state. Whether a
-// cluster missing in Gardener is repaired is OutboxInsertReconcile's decision.
+// Used by periodic reconciliation to compare with Gardener state.
+// latest_sync_completed: the cluster's own latest sync row completed, so a
+// missing Shoot is not one a queued or failing sync has yet to create. "Latest
+// sync row" is the cluster_sync_state view's row
+// (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
 func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
 	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
@@ -415,7 +429,9 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
+			&i.ShootStatus,
 			&i.OrganizationName,
+			&i.LatestSyncCompleted,
 		); err != nil {
 			return nil, err
 		}
@@ -645,6 +661,29 @@ func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdat
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const nodePoolClearStatusByClusterID = `-- name: NodePoolClearStatusByClusterID :exec
+UPDATE tenant.node_pools
+SET
+    status = NULL,
+    status_message = NULL,
+    status_updated = now()
+WHERE
+    cluster_id = $1
+    AND deleted IS NULL
+`
+
+type NodePoolClearStatusByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+// Forget what was recorded about a lost cluster's pools: their machines went
+// with the Shoot. When a change creates it again they read as new, so as
+// progressing while the create runs, instead of their old status and reason.
+func (q *Queries) NodePoolClearStatusByClusterID(ctx context.Context, arg NodePoolClearStatusByClusterIDParams) error {
+	_, err := q.db.Exec(ctx, nodePoolClearStatusByClusterID, arg.ClusterID)
+	return err
 }
 
 const nodePoolGetClusterID = `-- name: NodePoolGetClusterID :one

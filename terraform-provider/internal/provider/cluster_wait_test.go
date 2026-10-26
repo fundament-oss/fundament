@@ -29,6 +29,7 @@ func TestClusterRunning(t *testing.T) {
 		status       organizationv1.ClusterStatus
 		outboxStatus string
 		updating     bool
+		changed      bool
 		done         bool
 		errContains  string
 	}{
@@ -47,11 +48,14 @@ func TestClusterRunning(t *testing.T) {
 		{name: "error that Gardener may retry", status: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, outboxStatus: "completed"},
 		{name: "sync given up", status: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, outboxStatus: "failed", errContains: "shoot rejected"},
 		{name: "being deleted", status: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, outboxStatus: "completed", errContains: "deleting"},
+		{name: "lost, change not yet applied", status: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST, outboxStatus: "pending", changed: true},
+		{name: "lost, node pool change not yet applied", status: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST, outboxStatus: "completed", changed: true},
+		{name: "lost with no change", status: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST, outboxStatus: "completed", errContains: "cluster is lost"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			done, err := clusterRunning(clusterDetails(tt.status, tt.outboxStatus, tt.updating))
+			done, err := clusterRunning(clusterDetails(tt.status, tt.outboxStatus, tt.updating), tt.changed)
 			if tt.errContains != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -100,6 +104,6 @@ func TestWaitError(t *testing.T) {
 	assert.Equal(t, gaveUp, waitError(context.Background(), gaveUp, "to run", "last status: provisioning"))
 	assert.False(t, waitInconclusive(gaveUp))
 
-	_, deleting := clusterRunning(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "completed", false))
+	_, deleting := clusterRunning(clusterDetails(organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, "completed", false), true)
 	assert.False(t, waitInconclusive(deleting))
 }

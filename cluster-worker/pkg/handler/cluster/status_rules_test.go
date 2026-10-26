@@ -288,8 +288,8 @@ func TestNextShootStatus(t *testing.T) {
 			stored:   storedShootState{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Health: healthy},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 			want: shootStatusUpdate{
-				Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
-				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootNotFound}},
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
 			},
 		},
 		{
@@ -297,8 +297,8 @@ func TestNextShootStatus(t *testing.T) {
 			stored:   storedShootState{Status: gardener.StatusProgressing, Message: "Create: Waiting for etcd"},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 			want: shootStatusUpdate{
-				Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
-				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootNotFound}},
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
 			},
 		},
 		{
@@ -306,15 +306,33 @@ func TestNextShootStatus(t *testing.T) {
 			stored:   storedShootState{Status: gardener.StatusError, Message: "quota exceeded"},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
 			want: shootStatusUpdate{
-				Status: gardener.StatusPending, Message: gardener.MsgShootNotFound,
-				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootNotFound}},
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
 			},
 		},
 		{
-			name:     "lost shoot still missing records no second event",
-			stored:   storedShootState{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			name:     "lost shoot still missing stays lost without a second event",
+			stored:   storedShootState{Status: gardener.StatusLost, Message: gardener.MsgShootLost},
 			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
-			want:     shootStatusUpdate{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want:     shootStatusUpdate{Status: gardener.StatusLost, Message: gardener.MsgShootLost},
+		},
+		{
+			name:     "updating cluster whose shoot disappears records the loss",
+			stored:   storedShootState{Status: gardener.StatusReady, Message: "Reconcile: Syncing", Health: healthy, Updating: true},
+			observed: &gardener.ShootStatus{Status: gardener.StatusPending, Message: gardener.MsgShootNotFound},
+			want: shootStatusUpdate{
+				Status: gardener.StatusLost, Message: gardener.MsgShootLost,
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
+			},
+		},
+		{
+			name:     "lost cluster whose shoot a change created again is being created",
+			stored:   storedShootState{Status: gardener.StatusLost, Message: gardener.MsgShootLost},
+			observed: &gardener.ShootStatus{Status: gardener.StatusProgressing, Message: "Create: Waiting", Operation: gardener.OperationCreate},
+			want: shootStatusUpdate{
+				Status: gardener.StatusProgressing, Message: "Create: Waiting",
+				Events: []statusEvent{{Type: dbconst.ClusterEventEventType_StatusProgressing, Message: "Create: Waiting"}},
+			},
 		},
 		{
 			name:     "retried error during a create is a warning",
@@ -530,5 +548,17 @@ func TestNextShootStatus_APIServerAvailable(t *testing.T) {
 			got := nextShootStatus(seen, observed)
 			assert.True(t, got.APIGone, observed.Status)
 		}
+	})
+
+	t.Run("a lost cluster created again announces its API server and readiness again", func(t *testing.T) {
+		t.Parallel()
+		lost := storedShootState{Status: gardener.StatusLost, Message: gardener.MsgShootLost}
+		got := nextShootStatus(lost, apiUp)
+		assert.True(t, got.InsertAPIAvailable)
+		assert.Contains(t, got.Events, apiEvent)
+
+		ready := nextShootStatus(lost, &gardener.ShootStatus{Status: gardener.StatusReady, Message: gardener.MsgShootReady, Operation: gardener.OperationCreate, Healthy: true, APIServerAvailable: true})
+		assert.True(t, ready.InsertReady)
+		assert.True(t, ready.InsertAPIAvailable)
 	})
 }

@@ -30,6 +30,12 @@ func clusterOutboxRow(t *testing.T, db *testDB, clusterID uuid.UUID) uuid.UUID {
 	return id
 }
 
+// ignoreSync completes the status rows a sync emits, which other handlers
+// take in the running worker.
+type ignoreSync struct{}
+
+func (ignoreSync) Sync(context.Context, uuid.UUID, handler.SyncContext) error { return nil }
+
 // newParkWorker runs the outbox worker for a test, with the cluster handler
 // registered for cluster and node pool rows.
 func newParkWorker(t *testing.T, db *testDB, h *cluster.Handler) {
@@ -38,6 +44,8 @@ func newParkWorker(t *testing.T, db *testDB, h *cluster.Handler) {
 	registry := handler.NewRegistry()
 	registry.RegisterSync(handler.EntityCluster, h)
 	registry.RegisterSync(handler.EntityNodePool, h)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, ignoreSync{})
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_ApiAvailable, ignoreSync{})
 	worker := outbox.New(db.workerPool, registry, slog.New(slog.NewTextHandler(io.Discard, nil)), outbox.Config{
 		PollInterval:             100 * time.Millisecond,
 		BaseBackoff:              100 * time.Millisecond,

@@ -162,43 +162,6 @@ func (q *Queries) OutboxInsertReady(ctx context.Context, arg OutboxInsertReadyPa
 	return err
 }
 
-const outboxInsertReconcile = `-- name: OutboxInsertReconcile :execrows
-INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
-SELECT $1, 'reconcile', 'reconcile'
-WHERE NOT EXISTS (
-    SELECT 1 FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.cluster_id = $1
-      AND tenant.cluster_outbox.status IN ('pending', 'retrying')
-)
-AND COALESCE((
-    SELECT tenant.cluster_outbox.status
-    FROM tenant.cluster_outbox
-    WHERE tenant.cluster_outbox.cluster_id = $1
-      AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
-    ORDER BY tenant.cluster_outbox.id DESC
-    LIMIT 1
-) = 'completed', false)
-`
-
-type OutboxInsertReconcileParams struct {
-	ClusterID pgtype.UUID
-}
-
-// Insert a reconcile outbox row for a cluster missing in Gardener, when the
-// cluster's own latest sync row completed and nothing is queued for it. A
-// cluster whose latest sync is still running needs no repair, and one whose
-// latest sync failed for good would fail again: an edit queues a new sync.
-// Deciding in the insert itself keeps a sync that fails meanwhile from
-// slipping past. "Latest sync row" is the cluster_sync_state view's row
-// (TestClusterReconcileAgreesWithClusterSyncState pins the two together).
-func (q *Queries) OutboxInsertReconcile(ctx context.Context, arg OutboxInsertReconcileParams) (int64, error) {
-	result, err := q.db.Exec(ctx, outboxInsertReconcile, arg.ClusterID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const outboxInsertReconcileForNamespace = `-- name: OutboxInsertReconcileForNamespace :exec
 INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
 SELECT $1, 'reconcile', 'reconcile'
@@ -229,7 +192,7 @@ type OutboxInsertReconcileForNamespaceParams struct {
 // Conditionally insert a reconcile outbox row for a namespace.
 // Skips insert if the namespace already has an active (pending/retrying) row.
 // With skip_if_failed it also skips a namespace whose latest row failed for
-// good, as drift repair does a cluster: the periodic reconcile loop sets it, so
+// good: the periodic reconcile loop sets it, so
 // a namespace that cannot succeed is not retried every round. The fan-out when
 // the cluster's API server becomes available does not: whatever the namespace
 // waited on may be there now. Safe to call repeatedly (idempotent).

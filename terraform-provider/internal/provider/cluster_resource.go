@@ -100,7 +100,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
+				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), lost (the cluster no longer exists in Gardener; a change to it creates it again, empty), deleting or stopped.",
 				Computed:    true,
 			},
 		},
@@ -208,7 +208,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString())
+	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString(), true)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", plan.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -425,7 +425,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	if !sameNodePools(currentPools, plan.NodePools) {
+	poolsChanged := !sameNodePools(currentPools, plan.NodePools)
+	if poolsChanged {
 		resp.Diagnostics.Append(setNodePools(ctx, r.client, state.ID.ValueString(), plan.NodePools)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -439,7 +440,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString())
+	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || poolsChanged
+	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString(), changed)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
 		if waitInconclusive(err) {
