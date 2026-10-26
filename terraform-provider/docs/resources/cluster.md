@@ -44,7 +44,7 @@ resource "fundament_cluster" "example" {
 
 ### Optional
 
-- `node_pool` (Block List) A node pool of the cluster. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. Without any node_pool block, Gardener runs a default worker pool that fundament does not list. (see [below for nested schema](#nestedblock--node_pool))
+- `node_pool` (Block List) A node pool of the cluster, at least one: a cluster runs only on its node pools and starts once it has one. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. (see [below for nested schema](#nestedblock--node_pool))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

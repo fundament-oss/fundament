@@ -34,9 +34,51 @@ func (h *Handler) Sync(ctx context.Context, id uuid.UUID, sc handler.SyncContext
 	}
 }
 
+// MsgWaitingForNodePool is the reason a new cluster's row parks, and the
+// message of the sync_waiting_for_precondition event it records.
+const MsgWaitingForNodePool = "Creating cluster: waiting for a node pool"
+
+// waitingForFirstNodePool reports whether a cluster has to wait for a node
+// pool before it reaches Gardener: it is live, has never been synced, and has
+// no live pool. A Shoot is never created without a worker.
+// The pools are read first: a cluster with one, the common case, costs one query.
+// q is the handler's queries, or the park transaction's for the recheck.
+func (h *Handler) waitingForFirstNodePool(ctx context.Context, q *db.Queries, clusterID uuid.UUID) (bool, error) {
+	pools, err := q.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: clusterID})
+	if err != nil {
+		return false, fmt.Errorf("load node pools: %w", err)
+	}
+	if len(pools) > 0 {
+		return false, nil
+	}
+
+	cluster, err := q.ClusterGetForSync(ctx, db.ClusterGetForSyncParams{ClusterID: clusterID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil // cluster not found — syncCluster will handle gracefully
+		}
+		return false, fmt.Errorf("get cluster for node pool check: %w", err)
+	}
+	if cluster.Deleted.Valid {
+		return false, nil
+	}
+
+	synced, err := q.ClusterHasEverBeenSynced(ctx, db.ClusterHasEverBeenSyncedParams{
+		ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
+	})
+	if err != nil {
+		return false, fmt.Errorf("check cluster ever synced: %w", err)
+	}
+	return !synced, nil
+}
+
 // syncNodePool resolves a node pool ID to its parent cluster and syncs the cluster.
 // Returns nil if the node pool no longer exists (deleted between outbox insert and processing).
-// Preconditions (cluster ever synced) are already checked by checkPreconditions in Sync().
+//
+// A cluster that never reached Gardener is created by its own outbox row, which
+// the node pool trigger woke when the pool was inserted, and which reads every
+// pool when it runs. Its pools' rows only make sure such a row is queued (an
+// earlier one may have failed for good), so no Shoot is created twice.
 func (h *Handler) syncNodePool(ctx context.Context, nodePoolID uuid.UUID, sc handler.SyncContext) error {
 	clusterID, err := h.queries.NodePoolGetClusterID(ctx, db.NodePoolGetClusterIDParams{NodePoolID: nodePoolID})
 	if err != nil {
@@ -47,7 +89,57 @@ func (h *Handler) syncNodePool(ctx context.Context, nodePoolID uuid.UUID, sc han
 		return fmt.Errorf("get cluster_id for node pool %s: %w", nodePoolID, err)
 	}
 
+	synced, err := h.queries.ClusterHasEverBeenSynced(ctx, db.ClusterHasEverBeenSyncedParams{
+		ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("check cluster ever synced: %w", err)
+	}
+	if !synced {
+		queued, err := h.ensureClusterSyncQueued(ctx, clusterID)
+		if err != nil {
+			return fmt.Errorf("queue cluster sync for node pool %s: %w", nodePoolID, err)
+		}
+		h.logger.Info("cluster not in Gardener yet, leaving the node pool to the cluster's own sync",
+			"node_pool_id", nodePoolID, "cluster_id", clusterID, "queued_new_sync", queued)
+		return nil
+	}
+
 	return h.syncCluster(ctx, clusterID, sc)
+}
+
+// ensureClusterSyncQueued makes sure a sync of the cluster is still to come,
+// one that will read the pool being handled: a runnable row no worker holds
+// will, so nothing is queued then. A row another worker is processing may
+// have read the pools before this one was inserted, so it does not count, and
+// a new sync is queued (ApplyShoot creates or updates, so a second one is
+// harmless). It reports whether a row was queued.
+func (h *Handler) ensureClusterSyncQueued(ctx context.Context, clusterID uuid.UUID) (bool, error) {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
+	qtx := h.queries.WithTx(tx)
+
+	unclaimed, err := qtx.OutboxListUnclaimedClusterSyncs(ctx, db.OutboxListUnclaimedClusterSyncsParams{
+		ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
+	})
+	if err != nil {
+		return false, fmt.Errorf("list unclaimed cluster syncs: %w", err)
+	}
+	if len(unclaimed) > 0 {
+		return false, nil
+	}
+	if err := qtx.OutboxInsertClusterSync(ctx, db.OutboxInsertClusterSyncParams{
+		ClusterID: pgtype.UUID{Bytes: clusterID, Valid: true},
+	}); err != nil {
+		return false, fmt.Errorf("insert cluster sync: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit: %w", err)
+	}
+	return true, nil
 }
 
 // syncCluster processes a single cluster outbox row by syncing the cluster to Gardener.
@@ -83,11 +175,21 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 
 	// 3. Delete path (D3): skip EnsureProject, search by label across all namespaces
 	if syncAction == dbconst.ClusterEventSyncAction_Delete {
-		if err := h.gardener.DeleteShootByClusterID(ctx, cluster.ID); err != nil {
+		found, err := h.gardener.DeleteShootByClusterID(ctx, cluster.ID)
+		if err != nil {
 			return h.syncError(ctx, cluster.ID, syncAction, "delete shoot", err)
 		}
 		h.createSyncSucceededEvent(ctx, cluster.ID, syncAction, syncMessage(sc.Event, sc.EntityType))
-		h.logger.Info("synced cluster deletion to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
+		if !found {
+			// Nothing to wait for: a cluster deleted before it reached Gardener
+			// (while it waited for its first pool, say) would otherwise count
+			// against the organization's cluster quota until the next status
+			// sweep confirms there is no Shoot.
+			if err := h.markShootDeleted(ctx, cluster.ID); err != nil {
+				return h.syncError(ctx, cluster.ID, syncAction, "mark deleted", err)
+			}
+		}
+		h.logger.Info("synced cluster deletion to gardener", "cluster_id", cluster.ID, "name", cluster.Name, "shoot_found", found)
 		return nil
 	}
 
@@ -101,6 +203,15 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	nodePoolRows, err := h.queries.NodePoolListByClusterID(ctx, db.NodePoolListByClusterIDParams{ClusterID: cluster.ID})
 	if err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", err)
+	}
+	// A cluster not in Gardener yet waits for its first pool (a precondition), and
+	// the API never removes a cluster's last pool, so this is a cluster that kept
+	// a Shoot after losing every pool some other way. Its Shoot keeps the workers
+	// it has.
+	if len(nodePoolRows) == 0 {
+		// Fails at once: a retry cannot add the pool, and a cluster from before
+		// pools were required gets one from its owner, not from time.
+		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", handler.NonRetryable(gardener.ErrNoNodePools))
 	}
 
 	// 6. Build ClusterToSync and apply
@@ -128,6 +239,41 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	}
 	h.logger.Info("synced cluster to gardener", "cluster_id", cluster.ID, "name", cluster.Name)
 	return nil
+}
+
+// msgNoShootToDelete is the status message of a deleted cluster that had no
+// Shoot to delete.
+const msgNoShootToDelete = "Deleted before it reached Gardener; no Shoot to remove"
+
+// markShootDeleted records, in one transaction, that a deleted cluster's Shoot
+// is gone: the status and its status_deleted event, as the status sweep does
+// when it confirms a deletion.
+func (h *Handler) markShootDeleted(ctx context.Context, clusterID uuid.UUID) error {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
+	qtx := h.queries.WithTx(tx)
+
+	marked, err := qtx.ClusterMarkShootDeleted(ctx, db.ClusterMarkShootDeletedParams{
+		ClusterID: clusterID,
+		Message:   pgtype.Text{String: msgNoShootToDelete, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("mark shoot deleted: %w", err)
+	}
+	if marked == 0 {
+		return nil
+	}
+	if _, err := qtx.ClusterCreateStatusEvent(ctx, db.ClusterCreateStatusEventParams{
+		ClusterID: clusterID,
+		EventType: string(dbconst.ClusterEventEventType_StatusDeleted),
+		Message:   pgtype.Text{String: msgNoShootToDelete, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("create status_deleted event: %w", err)
+	}
+	return tx.Commit(ctx)
 }
 
 // markShootUpdating marks a ready cluster as updating once Gardener accepted

@@ -38,7 +38,9 @@ func TestMockNotifyStatusChanges(t *testing.T) {
 	assert.Equal(t, []uuid.UUID{cluster.ID}, reported, "the change to ready is reported")
 
 	reported = nil
-	require.NoError(t, m.DeleteShootByClusterID(t.Context(), cluster.ID))
+	found, err := m.DeleteShootByClusterID(t.Context(), cluster.ID)
+	require.NoError(t, err)
+	require.True(t, found)
 	now = now.Add(m.DeleteDelay)
 	status, err := m.GetShootStatus(t.Context(), cluster)
 	require.NoError(t, err)

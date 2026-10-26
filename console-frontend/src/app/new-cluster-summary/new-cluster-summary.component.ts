@@ -10,7 +10,10 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { NodePoolNotCreated, refusalReason } from '../utils/node-pool-refusal';
+import { firstValueFrom } from 'rxjs';
+import { Code, ConnectError } from '@connectrpc/connect';
+import { NodePoolNotCreated, readableRefusal, refusalReason } from '../utils/node-pool-refusal';
+import { DesiredNodePool, nodePoolsMatch } from '../utils/node-pools-match';
 import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
@@ -18,7 +21,10 @@ import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency
 import { CLUSTER } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
-  CreateNodePoolRequestSchema,
+  ExpectedNodePoolsSchema,
+  ListNodePoolsRequestSchema,
+  NodePoolSpecSchema,
+  SetNodePoolsRequestSchema,
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import focusFirstModalInput from '../modal-focus';
@@ -145,7 +151,7 @@ export default class NewClusterSummaryComponent {
       name: formState.clusterName,
       status: ClusterStatus.PROVISIONING,
     });
-    const notCreated = await this.createNodePools(clusterId, formState.nodePools ?? []);
+    const notCreated = await this.setNodePools(clusterId, formState.nodePools ?? []);
     await reloaded;
 
     this.stateService.reset();
@@ -161,34 +167,54 @@ export default class NewClusterSummaryComponent {
     });
   }
 
-  /** Returns the pools that did not make it, each with the API's reason. */
-  private async createNodePools(
+  /** Sets the new cluster's pools in one call: they are created together or
+   *  not at all, so a refusal applies to every pool, with the API's reason.
+   *  Returns the pools that did not make it. */
+  private async setNodePools(
     clusterId: string,
-    pools: { name: string; machineType: string; autoscaleMin: number; autoscaleMax: number }[],
+    pools: DesiredNodePool[],
   ): Promise<NodePoolNotCreated[]> {
     if (pools.length === 0) return [];
 
-    const abortSignal = this.idempotency.reset();
-    const uitkomsten = await Promise.allSettled(
-      pools.map((pool) => {
-        const request = create(CreateNodePoolRequestSchema, {
-          clusterId,
+    const request = create(SetNodePoolsRequestSchema, {
+      clusterId,
+      // The cluster was just created: if it has pools already (a submit
+      // that went through twice), the API refuses instead of replacing them.
+      expectedCurrent: create(ExpectedNodePoolsSchema, { nodePoolIds: [] }),
+      nodePools: pools.map((pool) =>
+        create(NodePoolSpecSchema, {
           name: pool.name,
           machineType: pool.machineType,
           autoscaleMin: pool.autoscaleMin,
           autoscaleMax: pool.autoscaleMax,
-        });
-        return withIdempotency((opts) => this.client.createNodePool(request, opts), {
-          signal: abortSignal,
-        });
-      }),
-    );
-
-    return pools.flatMap((pool, i) => {
-      const uitkomst = uitkomsten[i];
-      if (uitkomst.status !== 'rejected') return [];
-      return [{ name: pool.name, reason: refusalReason(uitkomst.reason) }];
+        }),
+      ),
     });
+    try {
+      await firstValueFrom(this.client.setNodePools(request));
+      return [];
+    } catch (error) {
+      // A call whose response was lost may still have been applied: then the
+      // pools are there. A refusal in the API's own words is final, except a
+      // stale-set refusal (Aborted), which is what a repeated call gets.
+      const maybeApplied =
+        !readableRefusal(error) || (error instanceof ConnectError && error.code === Code.Aborted);
+      if (maybeApplied && (await this.poolsAreThere(clusterId, pools))) return [];
+      const reason = refusalReason(error);
+      return pools.map((pool) => ({ name: pool.name, reason }));
+    }
+  }
+
+  /** Whether the cluster already has exactly these pools; a failed read says no. */
+  private async poolsAreThere(clusterId: string, pools: DesiredNodePool[]): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
+      );
+      return nodePoolsMatch(response.nodePools, pools);
+    } catch {
+      return false;
+    }
   }
 
   modalDialogRef = viewChild<ElementRef<HTMLElement>>('modalDialog');

@@ -95,6 +95,7 @@ func TestSyncApplyShootError(t *testing.T) {
 	h := newTestHandler(t, db, mock)
 
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-error")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	mock.SetApplyError(gardener.ErrMockApplyFailed)
 
 	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}

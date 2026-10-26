@@ -133,8 +133,7 @@ const NODE_POOL_STATUS_LABELS: Record<NodePoolStatus, string> = {
   [NodePoolStatus.FAILED]: 'Failed',
 };
 
-const getNodePoolStatusLabel = (status: NodePoolStatus): string =>
-  NODE_POOL_STATUS_LABELS[status];
+const getNodePoolStatusLabel = (status: NodePoolStatus): string => NODE_POOL_STATUS_LABELS[status];
 
 // Hoisted: the template binds this per pool card, so it runs every change
 // detection cycle on a page that polls.
@@ -148,8 +147,7 @@ const NODE_POOL_STATUS_COLORS: Record<NodePoolStatus, string> = {
   [NodePoolStatus.FAILED]: 'critical',
 };
 
-const getNodePoolStatusColor = (status: NodePoolStatus): string =>
-  NODE_POOL_STATUS_COLORS[status];
+const getNodePoolStatusColor = (status: NodePoolStatus): string => NODE_POOL_STATUS_COLORS[status];
 
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
  *  no sync record at all, and not knowing whether a cluster is reconciling is a
@@ -190,6 +188,7 @@ const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (syncState.outboxError) return 'Error';
   if (syncState.outboxStatus === 'completed') return 'Synced';
   if (syncState.outboxStatus === 'failed') return 'Failed';
+  if (syncState.outboxMessage) return 'Waiting';
   if (syncState.outboxStatus) return 'Syncing';
   return 'Pending';
 };
@@ -214,6 +213,7 @@ const getEventTypeLabel = (eventType: string): string => {
     nodepool_waiting: 'Node pool waiting',
     nodepool_error: 'Node pool failed',
     nodepool_ready: 'Node pool ready',
+    sync_waiting_for_precondition: 'Waiting',
   };
   return labels[eventType] || eventType;
 };
@@ -227,9 +227,14 @@ const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
   'nodepool_error',
 ]);
 
-/** Gardener is already retrying these by itself, so they stay a notch below
- *  critical even though something is amiss. */
-const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set(['status_warning', 'nodepool_waiting']);
+/** Something is amiss but in progress: Gardener is retrying it by itself, or
+ *  the cluster waits for a precondition (such as its first node pool) and
+ *  resumes on its own once that is met. A notch below critical. */
+const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'status_warning',
+  'nodepool_waiting',
+  'sync_waiting_for_precondition',
+]);
 
 /** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and

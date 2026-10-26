@@ -87,7 +87,7 @@ describe('QuotasComponent', () => {
     );
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('no node pool of your own can be added');
+    expect(text).toContain('no node pool can be added');
     expect(cellTexts(fixture)).toContain('2 in use, none allowed|');
   });
 
@@ -97,10 +97,10 @@ describe('QuotasComponent', () => {
     );
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    // Both halves of the guidance: no pool of their own, but a cluster still
-    // runs on the platform's pool, which this quota does not cover.
-    expect(text).toContain('no node pool of your own can be added');
-    expect(text).toContain("still runs on the platform's default worker pool, which is outside this quota");
+    // Both halves of the guidance: no pool can be added, and a cluster does not
+    // start without one.
+    expect(text).toContain('no node pool can be added');
+    expect(text).toContain('a cluster starts only with its first node pool');
     expect(text).toContain('contact a Fundament operator');
     expect((fixture.nativeElement as HTMLElement).querySelector('nldd-banner[variant="warning"]')).toBeNull();
   });

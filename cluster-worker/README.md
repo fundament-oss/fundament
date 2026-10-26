@@ -63,7 +63,17 @@ sequenceDiagram
   a request the Kubernetes or Gardener API rejects as invalid or malformed, or a Shoot spec
   Gardener's admission refuses, which fails at once: a retry would only send it again. A row
   whose precondition is not met yet (for example, the project namespace does not exist)
-  is deferred instead of failed.
+  is deferred instead of failed. A cluster that has not reached Gardener and has no node
+  pool is parked instead (`retry_after` = infinity, nothing polls it) and records a
+  `sync_waiting_for_precondition` event: no Shoot is created without a worker. Inserting
+  the cluster's first pool wakes it in the same transaction (the node pool trigger sets
+  `retry_after` = now() on the cluster's parked rows), and the cluster's own row then
+  creates the Shoot with its pools; a pool's row leaves that to the cluster's row. The
+  trigger holds the cluster row while it wakes, and the worker locks that row and
+  rechecks the pools before it parks, so a pool is either seen by the recheck or finds
+  the row parked; a claimed row is never parked, so the trigger never waits for a sync
+  in progress. Deleting the cluster wakes a parked row too, so it runs the delete path
+  and completes instead of staying pending.
 - **Status.** A cluster's status is checked when its Shoot changes (see
   [Status cache](#status-cache); in mock mode the mock reports its own changes once a
   second, and a mock create runs through a real one's steps in about 9 seconds:
@@ -102,6 +112,8 @@ stateDiagram-v2
         Claimed --> Completed: handler succeeded
         Claimed --> Retrying: handler failed
         Claimed --> Pending: precondition not met yet (deferred)
+        Claimed --> Parked: new cluster without a node pool
+        Parked --> Pending: first node pool inserted, or cluster deleted (trigger)
         Claimed --> Pending: worker died, transaction rolled back
         Retrying --> Claimed: backoff elapsed
         Retrying --> Failed: retries exhausted
@@ -145,7 +157,8 @@ changes, `status_warning` for an error Gardener retries by itself, `status_lost`
 shoot fundament had seen is no longer in Gardener,
 `nodepool_waiting` / `nodepool_error` (once per transition into that status) and
 `nodepool_ready` when a node pool's machines get stuck or recover (see "Node pool
-status" below), and
+status" below), `sync_waiting_for_precondition` once when a new cluster's row parks
+until its first node pool (the message names what it waits for), and
 `user_sync_succeeded` / `user_sync_failed` from usersync.
 
 While Gardener runs an operation, its message names the tasks it is running and changes

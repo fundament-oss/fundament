@@ -64,6 +64,48 @@ SET retry_after = now() + @delay::interval,
 WHERE id = @id
 RETURNING deferrals;
 
+-- name: OutboxLockCluster :one
+-- Locks a cluster row for a park. The node pool trigger and a cluster's
+-- deletion hold the same lock while they wake parked rows, so a park that
+-- rechecks its precondition under it sees every pool and deletion committed
+-- before, and one committed after finds the row parked and wakes it. The
+-- caller sets a lock_timeout: a pool change holds the row for milliseconds,
+-- and a park must not wait on one that holds it longer.
+SELECT tenant.clusters.id
+FROM tenant.clusters
+WHERE tenant.clusters.id = @cluster_id
+FOR NO KEY UPDATE;
+
+-- name: OutboxPark :execrows
+-- Parks a row until something wakes it (retry_after = infinity), for a
+-- precondition only an event can clear, such as a cluster's first node pool.
+-- Only a still runnable row parks: another worker may have claimed and
+-- completed it in between. A park is not a timed deferral, so it leaves
+-- deferrals (and the cap on them) alone.
+UPDATE tenant.cluster_outbox
+SET retry_after = 'infinity',
+    status_info = @status_info
+WHERE id = @id
+  AND status IN ('pending', 'retrying');
+
+-- name: OutboxListUnclaimedClusterSyncs :many
+-- The cluster's runnable sync rows that no worker holds right now. A row a
+-- worker is processing is skipped: it may have read the pools before the one
+-- being handled was inserted, so it does not count as a sync still to come.
+-- Run in a transaction; the rows stay locked until it ends.
+SELECT tenant.cluster_outbox.id
+FROM tenant.cluster_outbox
+WHERE tenant.cluster_outbox.cluster_id = @cluster_id
+  AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+FOR NO KEY UPDATE SKIP LOCKED;
+
+-- name: OutboxInsertClusterSync :exec
+-- Queues a sync for a cluster: a node pool of a cluster that never reached
+-- Gardener leaves the Shoot's creation to the cluster's own row, and this is
+-- how the pool's row makes sure such a row is still to come.
+INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+VALUES (@cluster_id, 'updated', 'trigger');
+
 -- name: OutboxInsertReady :exec
 -- Insert a 'ready' event outbox row for a cluster.
 -- Used by the status worker when a shoot transitions to ready.

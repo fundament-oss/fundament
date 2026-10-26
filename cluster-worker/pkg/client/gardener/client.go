@@ -112,8 +112,9 @@ type Client interface {
 	// existing Shoot's spec changed, so Gardener will reconcile it.
 	ApplyShoot(ctx context.Context, cluster *ClusterToSync) (specChanged bool, err error)
 
-	// DeleteShootByClusterID deletes a Shoot by cluster ID label.
-	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error
+	// DeleteShootByClusterID deletes a Shoot by cluster ID label, and reports
+	// whether there was one.
+	DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (found bool, err error)
 
 	// ListShoots returns all Shoots managed by this worker
 	ListShoots(ctx context.Context) ([]ShootInfo, error)

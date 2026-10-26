@@ -194,11 +194,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// cluster-worker may already have given the Shoot a default worker pool;
-	// created right away, the pools replace it before Gardener builds workers.
-	// A new cluster has no pools, so there is nothing to list; ListNodePools
-	// could also be refused until the new cluster's permissions are synced.
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), nil, plan.NodePools)...)
+	// The cluster waits for its first pool before it gets a Shoot, so its pools
+	// follow right away, all in one call.
+	resp.Diagnostics.Append(setNodePools(ctx, r.client, plan.ID.ValueString(), plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -401,15 +399,21 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		"kubernetes_version_new": plan.KubernetesVersion.ValueString(),
 	})
 
+	// The live pools, not the refreshed state: a pool changed elsewhere since
+	// the refresh still counts.
 	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
 		return
 	}
+	currentPools := make([]ClusterNodePoolModel, 0, len(current))
+	for _, pool := range current {
+		currentPools = append(currentPools, pool.Pool)
+	}
+
 	// Check the machine types before anything changes, so a type the region
 	// does not offer fails before an upgrade has gone out.
-	poolChanges := planNodePoolChanges(current, plan.NodePools)
-	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), poolChanges.Create)...)
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), newOrRetyped(currentPools, plan.NodePools))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -421,9 +425,12 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), current, plan.NodePools)...)
-	if resp.Diagnostics.HasError() {
-		return
+	poolsChanged := !sameNodePools(currentPools, plan.NodePools)
+	if poolsChanged {
+		resp.Diagnostics.Append(setNodePools(ctx, r.client, state.ID.ValueString(), plan.NodePools)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultClusterUpdateTimeout)
@@ -433,7 +440,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
-	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || !poolChanges.empty()
+	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || poolsChanged
 	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString(), changed)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)

@@ -107,6 +107,9 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		if sync.HasOutboxStatus() {
 			PrintKeyValue(w, "Sync Status", sync.GetOutboxStatus())
 		}
+		if sync.HasOutboxMessage() {
+			PrintKeyValue(w, "Sync Message", sync.GetOutboxMessage())
+		}
 		if sync.HasOutboxError() {
 			PrintKeyValue(w, "Sync Error", sync.GetOutboxError())
 		}
