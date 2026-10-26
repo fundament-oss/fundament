@@ -13,11 +13,12 @@ import (
 // clusterStatusFromDB derives cluster status from the deleted flag, Gardener's
 // shoot status and the cluster's own sync. A cluster whose sync failed for good
 // is in error when Gardener does not have its Shoot: it never reached Gardener
-// (no status yet, no sync ever completed) or Gardener lost it (pending). Before
-// the first status is recorded a cluster that did reach Gardener is still
-// provisioning, whatever later sync failed. A sync that fails for a cluster
-// that already runs leaves the status alone; the failure shows in the sync
-// state.
+// (no status yet, no sync ever completed) or its Shoot disappeared before a
+// status check saw it (pending). Before the first status is recorded a cluster
+// that did reach Gardener is still provisioning, whatever later sync failed. A
+// sync that fails for a cluster that already runs leaves the status alone; the
+// failure shows in the sync state. A cluster whose Shoot disappeared after a
+// status check saw it is lost, until a change creates the Shoot again.
 // A freshly created cluster whose health checks have not passed yet is
 // starting, not unhealthy — the worker marks that window with the
 // awaiting-health message. After that, a ready cluster whose health

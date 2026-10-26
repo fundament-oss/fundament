@@ -40,7 +40,7 @@ RETURNING
 
 -- name: ClusterListActive :many
 -- Used by periodic reconciliation to compare with Gardener state.
--- has_completed_outbox: the cluster's own latest sync row completed, so a
+-- latest_sync_completed: the cluster's own latest sync row completed, so a
 -- missing Shoot is not one a queued or failing sync has yet to create. "Latest
 -- sync row" is the cluster_sync_state view's row
 -- (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
@@ -57,7 +57,7 @@ SELECT
           AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
         ORDER BY tenant.cluster_outbox.id DESC
         LIMIT 1
-    ) = 'completed', false)::boolean AS has_completed_outbox
+    ) = 'completed', false)::boolean AS latest_sync_completed
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -180,6 +180,19 @@ SET
     status_updated = now()
 WHERE
     id = @node_pool_id
+    AND deleted IS NULL;
+
+-- name: NodePoolClearStatusByClusterID :exec
+-- Forget what was recorded about a lost cluster's pools: their machines went
+-- with the Shoot. When a change creates it again they read as new, so as
+-- progressing while the create runs, instead of their old status and reason.
+UPDATE tenant.node_pools
+SET
+    status = NULL,
+    status_message = NULL,
+    status_updated = now()
+WHERE
+    cluster_id = @cluster_id
     AND deleted IS NULL;
 
 -- name: NodePoolGetClusterID :one

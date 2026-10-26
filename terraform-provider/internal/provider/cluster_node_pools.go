@@ -124,6 +124,10 @@ type nodePoolChanges struct {
 	Delete []existingNodePool
 }
 
+func (c nodePoolChanges) empty() bool {
+	return len(c.Create) == 0 && len(c.Update) == 0 && len(c.Delete) == 0
+}
+
 type existingNodePool struct {
 	ID   string
 	Pool ClusterNodePoolModel

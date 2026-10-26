@@ -210,7 +210,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString())
+	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString(), true)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", plan.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -408,7 +408,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	// Check the machine types before anything changes, so a type the region
 	// does not offer fails before an upgrade has gone out.
-	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), planNodePoolChanges(current, plan.NodePools).Create)...)
+	poolChanges := planNodePoolChanges(current, plan.NodePools)
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), poolChanges.Create)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -432,7 +433,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString())
+	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || !poolChanges.empty()
+	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString(), changed)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
 		if waitInconclusive(err) {

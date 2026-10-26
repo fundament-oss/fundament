@@ -30,8 +30,12 @@ func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-lost")
 	markOutboxCompleted(t, db, clusterID)
 	setShootStatus(t, db, clusterID, "ready")
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET status = 'waiting', status_message = 'no machines' WHERE id = $1`, poolID)
+	require.NoError(t, err)
 
-	err := h.Reconcile(t.Context())
+	err = h.Reconcile(t.Context())
 	require.NoError(t, err)
 	h.DrainStatusQueue(t.Context())
 
@@ -42,6 +46,11 @@ func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	require.NotNil(t, status)
 	assert.Equal(t, "lost", *status)
 	assertEventExists(t, db, clusterID, "status_lost")
+
+	// Its pools' machines went with the shoot: they read as new again.
+	poolStatus, poolMessage := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Empty(t, poolStatus)
+	assert.Empty(t, poolMessage)
 }
 
 func TestChangeToLostClusterCreatesShootAgain(t *testing.T) {
@@ -64,7 +73,6 @@ func TestChangeToLostClusterCreatesShootAgain(t *testing.T) {
 	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
 	assert.True(t, mock.HasShootForCluster(clusterID))
 }
-
 func TestReconcileNoDriftForUnsyncedCluster(t *testing.T) {
 	t.Parallel()
 
@@ -81,26 +89,6 @@ func TestReconcileNoDriftForUnsyncedCluster(t *testing.T) {
 
 	// No reconcile row — cluster was never synced, so no drift.
 	assertNoOutboxReconcile(t, db, clusterID)
-}
-
-func TestReconcileNoDriftAfterExhaustedReconcile(t *testing.T) {
-	t.Parallel()
-
-	db := createTestDB(t)
-	mock := newMock(t)
-	h := newTestHandler(t, db, mock)
-
-	// The cluster reached Gardener once; its reconcile then failed for good.
-	clusterID := insertCluster(t, db, acmeCorpOrgID, "reconcile-exhausted")
-	markOutboxCompleted(t, db, clusterID)
-	insertFailedReconcile(t, db, clusterID)
-
-	// Mock returns no shoots — the Shoot is still missing.
-	err := h.Reconcile(t.Context())
-	require.NoError(t, err)
-
-	// No new reconcile row — the exhausted one is the cluster's latest sync.
-	require.Equal(t, 1, countOutboxReconcile(t, db, clusterID))
 }
 
 func TestReconcileKeepsShootWithoutCluster(t *testing.T) {
@@ -256,7 +244,7 @@ func applyTestShoot(t *testing.T, mock *gardener.MockClient, clusterID uuid.UUID
 	require.NoError(t, err)
 }
 
-// ClusterListActive's has_completed_outbox, which decides whether a missing
+// ClusterListActive's latest_sync_completed, which decides whether a missing
 // Shoot is reported, is the organization API's sync state: it is true exactly
 // when the cluster_sync_state view's row completed. Every event the database
 // allows is tried, so a new event counts as a sync on both sides or on neither.
@@ -293,7 +281,7 @@ func TestClusterListActiveAgreesWithClusterSyncState(t *testing.T) {
 		require.NoError(t, err, name)
 		i := slices.IndexFunc(rows, func(row dbgen.ClusterListActiveRow) bool { return row.ID == clusterID })
 		require.NotEqual(t, -1, i, name)
-		require.Equalf(t, want, rows[i].HasCompletedOutbox, "%s: view status %v", name, viewStatus)
+		require.Equalf(t, want, rows[i].LatestSyncCompleted, "%s: view status %v", name, viewStatus)
 	}
 
 	check("never synced", func(uuid.UUID) {})

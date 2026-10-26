@@ -258,6 +258,12 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 		}
 	}
 
+	if update.Status == gardener.StatusLost {
+		if err := qtx.NodePoolClearStatusByClusterID(ctx, db.NodePoolClearStatusByClusterIDParams{ClusterID: cluster.ID}); err != nil {
+			return false, fmt.Errorf("clear node pool status: %w", err)
+		}
+	}
+
 	// On transition to ready, insert a ready outbox row. Handlers that
 	// react to cluster-ready (usersync, namespace-sync) subscribe to this
 	// event via the registry — the status handler stays agnostic of them.

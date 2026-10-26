@@ -264,8 +264,9 @@ the machines that ran its control plane. Its workloads and data are gone with
 it. If the platform had already seen the cluster in the infrastructure, it then
 shows the cluster as **Lost**, records a "Cluster lost" event, and offers no
 kubeconfig. A cluster that disappears before the platform first saw it stays
-**Pending**.
+**Provisioning**, without an event to show for it.
 
 A lost cluster is not rebuilt by itself. Any change to the cluster, such as
 resizing a node pool, creates it again under the same name. The new cluster is
-empty: restore its workloads and data from your own sources.
+empty: restore its workloads and data from your own sources. If you no longer
+need the cluster, delete it instead.

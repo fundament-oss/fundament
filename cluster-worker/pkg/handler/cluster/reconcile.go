@@ -59,7 +59,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	// again.
 	var missingCount int
 	for _, cluster := range dbClusters {
-		if !cluster.HasCompletedOutbox {
+		if !cluster.LatestSyncCompleted {
 			continue
 		}
 		if _, exists := shootByClusterID[cluster.ID]; exists {

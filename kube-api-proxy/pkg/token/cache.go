@@ -119,7 +119,7 @@ func (c *Cache) ForgetProxyToken(clusterID, token string) {
 
 func (c *Cache) forget(key cacheKey, token string) {
 	c.tokensMu.Lock()
-	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
+	item := c.tokens.Get(key)
 	if item == nil || item.Value().token != token {
 		c.tokensMu.Unlock()
 		return
@@ -133,7 +133,7 @@ func (c *Cache) forget(key cacheKey, token string) {
 // get uses a cached token if available and not expired, triggering an async
 // refresh if the token has passed 80% of its TTL.
 func (c *Cache) get(ctx context.Context, key cacheKey) (string, error) {
-	item := c.tokens.Get(key, ttlcache.WithDisableTouchOnHit[cacheKey, *cachedToken]())
+	item := c.tokens.Get(key)
 	if item != nil && !item.Value().expired() {
 		ct := item.Value()
 		// Proactive async refresh — don't block the request. A refresh that

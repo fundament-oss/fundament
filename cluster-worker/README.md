@@ -161,7 +161,9 @@ A shoot can disappear from Gardener without fundament deleting it: an operator d
 it, or it is lost with its seed. Its workloads and data are gone with it. The next status
 check (a watch event, or the status sweep) records the cluster as `lost`, with a
 `status_lost` event and an `ALERT` error in the log; the API reports it as
-`CLUSTER_STATUS_LOST`, and the console offers no kubeconfig. The reconcile loop logs an
+`CLUSTER_STATUS_LOST`, and the console offers no kubeconfig. The same transaction clears
+the recorded status of its node pools, whose machines went with the shoot, so they read
+as new when the shoot is created again. The reconcile loop logs an
 error for a missing shoot until its cluster is recorded as lost. Only a shoot a status
 check has seen is called lost, since Gardener can report a just-created shoot as not
 found; one that disappears before its first check stays `pending`, and the reconcile loop
@@ -172,6 +174,19 @@ hide that the data is gone. Any change to the cluster or its node pools syncs it
 that sync creates the shoot again, empty; the cluster then goes through `progressing`
 and `ready` as after a create, and the ready fan-out sets up users, namespaces and
 plugins again.
+
+To act on a lost cluster:
+
+1. Find out why the shoot is gone (deleted by hand in the garden, or lost with its seed)
+   before anything creates it again, and tell the tenant that its workloads and data are
+   gone.
+2. The tenant then chooses: delete the cluster, which works because the delete sync finds
+   no shoot and completes, or change a node pool, which creates an empty shoot again. A
+   Kubernetes version "upgrade" to the version the cluster already has writes nothing, so
+   it does not count as a change.
+3. A cluster whose shoot disappeared before its first status check stays provisioning
+   (`pending`), and the reconcile loop logs `shoot missing in Gardener, not recreating it`
+   for it on every pass. The same two choices apply.
 
 ### Ready clusters
 

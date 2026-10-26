@@ -30,11 +30,15 @@ const (
 // — holding every apply hostage to a degraded node would never return.
 // Callers warn when the wait ends on one of those.
 //
+// changed says whether the caller sent cluster-worker a change. Only a change
+// creates a lost cluster again, so without one a lost cluster ends the wait at
+// once instead of at the deadline.
+//
 // A failed sync is fatal: cluster-worker has stopped retrying it. An error
 // status is not: Gardener retries most errors, so it only ends the wait when
 // the deadline passes, with Gardener's message in the error. It returns the
 // cluster as last read, so callers need not read it again.
-func waitForClusterRunning(ctx context.Context, client *FundamentClient, clusterID string) (*organizationv1.ClusterDetails, error) {
+func waitForClusterRunning(ctx context.Context, client *FundamentClient, clusterID string, changed bool) (*organizationv1.ClusterDetails, error) {
 	var last *organizationv1.ClusterDetails
 
 	err := pollWithBackoff(ctx, clusterPollInterval, clusterWaitMaxConsecutiveErrors, func(ctx context.Context) (bool, bool, error) {
@@ -46,7 +50,7 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 		}
 
 		last = resp.GetCluster()
-		done, err := clusterRunning(last)
+		done, err := clusterRunning(last, changed)
 		return done, err != nil, err
 	})
 
@@ -88,7 +92,8 @@ func (e *endedWaitError) Error() string { return e.msg }
 func (e *endedWaitError) Unwrap() error { return e.err }
 
 // stuckError is a wait that ended because the cluster cannot get where it
-// should: Fundament gave up its sync, or the cluster is being deleted.
+// should: Fundament gave up its sync, the cluster is being deleted, or it is
+// lost with no change to create it again.
 type stuckError struct{ msg string }
 
 func (e *stuckError) Error() string { return e.msg }
@@ -116,8 +121,8 @@ func clusterNotSettledWarning(cluster *organizationv1.ClusterDetails) string {
 }
 
 // clusterRunning reports whether the cluster runs with all changes applied, or
-// an error once it cannot get there.
-func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
+// an error once it cannot get there. changed is as for waitForClusterRunning.
+func clusterRunning(cluster *organizationv1.ClusterDetails, changed bool) (bool, error) {
 	sync := cluster.GetSyncState()
 	if err := syncGivenUp(sync, "applying the cluster"); err != nil {
 		return false, err
@@ -143,9 +148,18 @@ func clusterRunning(cluster *organizationv1.ClusterDetails) (bool, error) {
 		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING,
 		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 		return false, &stuckError{msg: fmt.Sprintf("cluster is %s and will not run", clusterStatusToString(cluster.GetStatus()))}
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_LOST:
+		// The caller's change creates the cluster again; the status check
+		// moves it out of lost once Gardener has the new Shoot. Without a
+		// change, as when only a plugin is installed, nothing will. The
+		// cluster's sync state cannot tell: a node pool change syncs the
+		// cluster through the node pool's own outbox row.
+		if changed {
+			return false, nil
+		}
+		return false, &stuckError{msg: "cluster is lost: it no longer exists in Gardener, and only a change to the cluster or its node pools creates it again, empty"}
 	default:
 		// Provisioning, upgrading, error, unspecified: keep polling.
-		// So is lost: the change being applied creates the cluster again.
 		return false, nil
 	}
 }
