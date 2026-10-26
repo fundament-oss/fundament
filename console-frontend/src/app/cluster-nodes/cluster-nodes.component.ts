@@ -27,6 +27,7 @@ import {
   NodePool,
 } from '../../generated/v1/cluster_pb';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
+import { NodeQuotas, NodeQuotaService } from '../node-quota.service';
 import { fetchClusterName } from '../utils/cluster-status';
 import PageNavService from '../page-nav.service';
 import { NotificationService } from '../notification.service';
@@ -89,6 +90,8 @@ export default class ClusterNodesComponent implements OnInit {
 
   private regionCatalog = inject(RegionCatalogService);
 
+  private nodeQuota = inject(NodeQuotaService);
+
   private clusterId = '';
 
   private existingNodePools: NodePool[] = [];
@@ -108,6 +111,10 @@ export default class ClusterNodesComponent implements OnInit {
   // Region-scoped machine types when the cluster's region is in the catalog;
   // null keeps the form on its built-in fallback machine-type list.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
+
+  // The organization's node quotas in the cluster's region; null until they
+  // are in, or when they cannot be read, and then only the API checks them.
+  nodeQuotas = signal<NodeQuotas | null>(null);
 
   constructor() {
     this.titleService.setTitle('Node pools');
@@ -133,10 +140,19 @@ export default class ClusterNodesComponent implements OnInit {
       if (!regionName) {
         return;
       }
-      const region = await this.regionCatalog.getRegionByName(regionName);
-      if (region) {
-        this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
-      }
+      await Promise.all([
+        this.regionCatalog.getRegionByName(regionName).then((region) => {
+          if (region) {
+            this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+          }
+        }),
+        this.nodeQuota.forRegion(regionName).then(
+          (quotas) => this.nodeQuotas.set(quotas),
+          () => {
+            // Quotas unavailable: the form bounds nothing and the API decides.
+          },
+        ),
+      ]);
     } catch {
       // Catalog unavailable: the form falls back to its built-in list.
     }
@@ -186,14 +202,15 @@ export default class ClusterNodesComponent implements OnInit {
         (existingPool) => !newPoolsMap.has(existingPool.name),
       );
       const created = newPools.filter((newPool) => !existingPoolsMap.has(newPool.name));
-      const updated = newPools.filter((newPool) => {
+      const updates = newPools.flatMap((newPool) => {
         const existingPool = existingPoolsMap.get(newPool.name);
-        return (
-          !!existingPool &&
+        return existingPool &&
           (existingPool.minNodes !== newPool.autoscaleMin ||
             existingPool.maxNodes !== newPool.autoscaleMax)
-        );
+          ? [{ newPool, existingPool }]
+          : [];
       });
+      const updated = updates.map(({ newPool }) => newPool);
 
       // Delete pools that no longer exist
       await Promise.all(
@@ -205,42 +222,46 @@ export default class ClusterNodesComponent implements OnInit {
         }),
       );
 
-      // Create or update pools
-      const idempotencySignal = this.idempotency.reset();
-
-      await Promise.all(
-        newPools.map((newPool) => {
-          const existingPool = existingPoolsMap.get(newPool.name);
-
-          if (existingPool) {
-            // Update if values changed
-            if (
-              existingPool.minNodes !== newPool.autoscaleMin ||
-              existingPool.maxNodes !== newPool.autoscaleMax
-            ) {
-              const updateRequest = create(UpdateNodePoolRequestSchema, {
-                nodePoolId: existingPool.id,
-                autoscaleMin: newPool.autoscaleMin,
-                autoscaleMax: newPool.autoscaleMax,
-              });
-              return firstValueFrom(this.client.updateNodePool(updateRequest));
-            }
-          } else {
-            // Create new pool
-            const createRequest = create(CreateNodePoolRequestSchema, {
-              clusterId: this.clusterId,
-              name: newPool.name,
-              machineType: newPool.machineType,
+      const updatePool = ({ newPool, existingPool }: (typeof updates)[number]) =>
+        firstValueFrom(
+          this.client.updateNodePool(
+            create(UpdateNodePoolRequestSchema, {
+              nodePoolId: existingPool.id,
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
-            });
-            return withIdempotency((opts) => this.client.createNodePool(createRequest, opts), {
-              signal: idempotencySignal,
-            });
-          }
-          return undefined;
-        }),
+            }),
+          ),
+        );
+
+      // Lowered maxima before raised ones and new pools: the node quota is
+      // checked on every raise and create against the sum at that moment, so
+      // the room a lowered pool frees has to be there by then. A form the
+      // quota allows as a whole would otherwise be refused in part.
+      await Promise.all(
+        updates
+          .filter(({ newPool, existingPool }) => newPool.autoscaleMax <= existingPool.maxNodes)
+          .map(updatePool),
       );
+
+      const idempotencySignal = this.idempotency.reset();
+
+      await Promise.all([
+        ...updates
+          .filter(({ newPool, existingPool }) => newPool.autoscaleMax > existingPool.maxNodes)
+          .map(updatePool),
+        ...created.map((newPool) => {
+          const createRequest = create(CreateNodePoolRequestSchema, {
+            clusterId: this.clusterId,
+            name: newPool.name,
+            machineType: newPool.machineType,
+            autoscaleMin: newPool.autoscaleMin,
+            autoscaleMax: newPool.autoscaleMax,
+          });
+          return withIdempotency((opts) => this.client.createNodePool(createRequest, opts), {
+            signal: idempotencySignal,
+          });
+        }),
+      ]);
 
       // The page behind this sheet is where the pools are listed, and it was
       // never unmounted, so it hears from here that its cards are out of date.
