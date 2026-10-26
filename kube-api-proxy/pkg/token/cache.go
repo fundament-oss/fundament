@@ -96,7 +96,7 @@ func NewCache(requester Requester, logger *slog.Logger) *Cache {
 
 // GetToken returns a valid token for the user's ServiceAccount on the cluster.
 func (c *Cache) GetToken(ctx context.Context, userID uuid.UUID, clusterID string) (string, error) {
-	return c.get(ctx, cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID})
+	return c.get(ctx, userKey(userID, clusterID))
 }
 
 // GetProxyToken returns a valid token for kube-api-proxy's own ServiceAccount
@@ -108,7 +108,12 @@ func (c *Cache) GetProxyToken(ctx context.Context, clusterID string) (string, er
 // ForgetToken drops the user's cached token for the cluster if it is still
 // token, after the cluster rejected it. A token fetched since is kept.
 func (c *Cache) ForgetToken(userID uuid.UUID, clusterID, token string) {
-	c.forget(cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID}, token)
+	c.forget(userKey(userID, clusterID), token)
+}
+
+// userKey is the cache key of the user's ServiceAccount token on the cluster.
+func userKey(userID uuid.UUID, clusterID string) cacheKey {
+	return cacheKey{saName: "fundament-" + userID.String(), clusterID: clusterID}
 }
 
 // ForgetProxyToken drops kube-api-proxy's own cached token for the cluster if

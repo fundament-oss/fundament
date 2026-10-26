@@ -188,6 +188,11 @@ func TestSyncUpdateLeavesClusterBeingCreated(t *testing.T) {
 
 	clusterID := syncedReadyCluster(t, db, h, "sync-creating")
 	setShootState(t, db, clusterID, "progressing", "Create: Waiting for etcd", "", time.Minute)
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Message: "Create: Waiting for etcd", Operation: gardener.OperationCreate,
+	})
+	require.NoError(t, checkStatus(t, h))
+	progressBefore := countEvents(t, db, clusterID, "status_progressing")
 
 	insertNodePool(t, db, clusterID, "gpu", "n1-highmem-8", 0, 2)
 	require.NoError(t, h.Sync(t.Context(), clusterID, clusterUpdated))
@@ -196,5 +201,44 @@ func TestSyncUpdateLeavesClusterBeingCreated(t *testing.T) {
 	assert.Equal(t, "Create: Waiting for etcd", message)
 	assert.Empty(t, health)
 	assert.False(t, getShootUpdating(t, db, clusterID))
-	assert.Equal(t, 0, countEvents(t, db, clusterID, "status_progressing"))
+	assert.Equal(t, progressBefore, countEvents(t, db, clusterID, "status_progressing"))
+}
+
+// A change to a ready cluster whose shoot went missing before any status
+// check saw it gone records the cluster as lost before the sync creates the
+// shoot again, so the new, empty shoot does not read as an update.
+func TestSyncRecordsMissingShootAsLostBeforeRecreatingIt(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	// Recorded as ready, but the mock has no shoot for it.
+	clusterID := readyCluster(t, db, "sync-lost")
+	setShootState(t, db, clusterID, "ready", gardener.MsgShootReady, "healthy", time.Minute)
+	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 3)
+	_, err := db.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET status = 'ready', status_message = '' WHERE id = $1`, poolID)
+	require.NoError(t, err)
+
+	require.NoError(t, h.Sync(t.Context(), clusterID, clusterUpdated))
+
+	assert.True(t, mock.HasShootForCluster(clusterID))
+	status := getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "lost", *status)
+	assert.False(t, getShootUpdating(t, db, clusterID))
+	assertEventExists(t, db, clusterID, "status_lost")
+	poolStatus, _ := getNodePoolStatus(t, db, clusterID, "workers")
+	assert.Empty(t, poolStatus)
+
+	// The new shoot goes through ready as after a create, with the ready
+	// fan-out.
+	readyRowsBefore := countReadyOutboxRows(t, db, clusterID)
+	require.NoError(t, checkStatus(t, h))
+	status = getClusterShootStatus(t, db, clusterID)
+	require.NotNil(t, status)
+	assert.Equal(t, "ready", *status)
+	assert.Equal(t, readyRowsBefore+1, countReadyOutboxRows(t, db, clusterID))
 }

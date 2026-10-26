@@ -109,6 +109,13 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	clusterToSync.Deleted = deleted
 	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)
 
+	// A Shoot that went missing since the last status check is recreated
+	// below: check first, so it is recorded as lost. Otherwise the new, empty
+	// Shoot would read as an update of the cluster that was there.
+	if _, err := h.checkCluster(ctx, cluster.ID); err != nil && !errors.Is(err, ErrClusterNotSynced) {
+		return h.syncError(ctx, cluster.ID, syncAction, "check shoot status", err)
+	}
+
 	specChanged, err := h.gardener.ApplyShoot(ctx, clusterToSync)
 	if err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "apply shoot", err)

@@ -66,8 +66,17 @@ type tokenRejectedContextKey struct{}
 // not trust: the injected SA token is not valid there (any more), for
 // instance because the cluster was created again and has a new signing key.
 // The caller drops the token from its cache, so the next request gets a new
-// one.
+// one. A rejected already in ctx is called as well: a request that swaps in
+// another token (the namespace listing sends the proxy's own) still carries
+// the user's, which a cluster with a new certificate does not trust either.
 func WithTokenRejected(ctx context.Context, rejected func()) context.Context {
+	if outer, ok := ctx.Value(tokenRejectedContextKey{}).(func()); ok {
+		inner := rejected
+		rejected = func() {
+			inner()
+			outer()
+		}
+	}
 	return context.WithValue(ctx, tokenRejectedContextKey{}, rejected)
 }
 

@@ -93,3 +93,15 @@ func TestReverseProxy_UnauthorizedReportsRejectedToken(t *testing.T) {
 	proxy.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/namespaces", http.NoBody))
 	assert.Equal(t, 1, rejected, "a denied request does not reject the token")
 }
+
+// TestWithTokenRejected_KeepsOuterCallback pins that a request that swaps in
+// another token still drops the one it was given first.
+func TestWithTokenRejected_KeepsOuterCallback(t *testing.T) {
+	t.Parallel()
+	var dropped []string
+	ctx := WithTokenRejected(t.Context(), func() { dropped = append(dropped, "user") })
+	ctx = WithTokenRejected(ctx, func() { dropped = append(dropped, "proxy") })
+
+	tokenRejected(ctx)
+	assert.Equal(t, []string{"proxy", "user"}, dropped)
+}

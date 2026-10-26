@@ -40,7 +40,6 @@ func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	h.DrainStatusQueue(t.Context())
 
 	// The shoot is not created again, and the cluster is recorded as lost.
-	assertNoOutboxReconcile(t, db, clusterID)
 	assert.Empty(t, mock.ApplyCalls)
 	status := getClusterShootStatus(t, db, clusterID)
 	require.NotNil(t, status)
@@ -87,8 +86,9 @@ func TestReconcileNoDriftForUnsyncedCluster(t *testing.T) {
 	err := h.Reconcile(t.Context())
 	require.NoError(t, err)
 
-	// No reconcile row — cluster was never synced, so no drift.
-	assertNoOutboxReconcile(t, db, clusterID)
+	// The cluster was never synced, so its missing shoot is not reported.
+	assert.Zero(t, h.StatusQueueLen())
+	assert.Nil(t, getClusterShootStatus(t, db, clusterID))
 }
 
 func TestReconcileKeepsShootWithoutCluster(t *testing.T) {

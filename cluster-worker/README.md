@@ -173,7 +173,9 @@ Nothing recreates the shoot by itself: a new, empty cluster under the same name 
 hide that the data is gone. Any change to the cluster or its node pools syncs it, and
 that sync creates the shoot again, empty; the cluster then goes through `progressing`
 and `ready` as after a create, and the ready fan-out sets up users, namespaces and
-plugins again.
+plugins again. A sync runs a status check before it applies the cluster, so a shoot that
+went missing since the last check is recorded as lost first instead of reading as an
+update of the cluster that was there.
 
 To act on a lost cluster:
 
