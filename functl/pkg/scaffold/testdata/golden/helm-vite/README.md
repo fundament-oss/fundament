@@ -13,7 +13,7 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin named
 | `plugin.go`          | The plugin itself                                                |
 | `main.go`            | Hands the plugin to the SDK runtime                              |
 | `Justfile`           | Build, test, lint and image recipes                              |
-| `mise.toml`          | Pinned tool versions (Go, just, bun)                            |
+| `mise.toml`          | Pinned tool versions (Go, just, skaffold, kubectl, bun)                   |
 | `LICENSE`            | MIT                                                     |
 | `console.go`         | Embeds the console UI assets                                     |
 | `console/`           | Vite build output (generated)                       |
@@ -22,8 +22,8 @@ A [Fundament](https://github.com/fundament-oss/fundament) plugin named
 ## Develop
 
 Tool versions are pinned in `mise.toml`. With [mise](https://mise.jdx.dev)
-installed, `mise install` gets Go, [just](https://just.systems) and
-[bun](https://bun.sh) at the versions this project expects. Recipes live in the
+installed, `mise install` gets Go, [just](https://just.systems), [skaffold](https://skaffold.dev),
+[kubectl](https://kubernetes.io/docs/tasks/tools/) and [bun](https://bun.sh) at the versions this project expects. Recipes live in the
 `Justfile`; run `just --list` to see them all.
 
 ```shell
@@ -48,6 +48,29 @@ updates without rebuilding.
 
 ```shell
 just docker
+```
+
+## Hot reload
+
+`functl plugin dev` runs the plugin in the Fundament plugin sandbox and rebuilds
+it when you save Go or `console-ui/` source, `go.mod` or `go.sum`. Changes to
+`definition.yaml` need a restart of `functl plugin dev`. Prerequisites: the sandbox cluster, `docker`,
+`skaffold`, `kubectl`, `bun`, and a `functl auth login` session. Set up the sandbox as described in
+<https://github.com/fundament-oss/fundament/blob/master/docs/developer/plugins/testing-plugins-locally.md>.
+
+```shell
+functl plugin dev                  # deletes the dev installation on Ctrl-C
+functl plugin dev --no-cleanup     # keeps it after exit
+functl plugin dev-down             # removes a leftover dev installation
+```
+
+Config values for `spec.config` (the keys in `definition.yaml`'s `configSchema`)
+come from `--set KEY=VALUE` (repeatable) or a `--config` YAML file; `--set` wins.
+functl checks them against the schema before building, including required keys.
+
+```shell
+functl plugin dev --set MY_KEY=value         # MY_KEY declared in configSchema
+functl plugin dev --config dev-config.yaml   # MY_KEY: value
 ```
 
 ## Fill in
