@@ -54,6 +54,30 @@ WHERE
 ORDER BY
     tenant.clusters.id;
 
+-- name: ClusterListDeletedByIDs :many
+-- Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
+-- Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+-- and only once the delete sync has settled.
+-- sync_running: the cluster's own latest sync row (as in ClusterGetPushState)
+-- is still queued.
+SELECT
+    tenant.clusters.id,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS sync_running
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = ANY(@cluster_ids::uuid[])
+    AND tenant.clusters.deleted IS NOT NULL
+ORDER BY
+    tenant.clusters.id;
+
 -- name: NodePoolListByClusterID :many
 -- Fetch active (non-deleted) node pools for a cluster.
 -- Used by the cluster handler to build Gardener worker groups.

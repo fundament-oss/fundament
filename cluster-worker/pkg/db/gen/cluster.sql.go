@@ -396,6 +396,60 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 	return items, nil
 }
 
+const clusterListDeletedByIDs = `-- name: ClusterListDeletedByIDs :many
+SELECT
+    tenant.clusters.id,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS sync_running
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = ANY($1::uuid[])
+    AND tenant.clusters.deleted IS NOT NULL
+ORDER BY
+    tenant.clusters.id
+`
+
+type ClusterListDeletedByIDsParams struct {
+	ClusterIds []uuid.UUID
+}
+
+type ClusterListDeletedByIDsRow struct {
+	ID          uuid.UUID
+	SyncRunning bool
+}
+
+// Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
+// Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+// and only once the delete sync has settled.
+// sync_running: the cluster's own latest sync row (as in ClusterGetPushState)
+// is still queued.
+func (q *Queries) ClusterListDeletedByIDs(ctx context.Context, arg ClusterListDeletedByIDsParams) ([]ClusterListDeletedByIDsRow, error) {
+	rows, err := q.db.Query(ctx, clusterListDeletedByIDs, arg.ClusterIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClusterListDeletedByIDsRow
+	for rows.Next() {
+		var i ClusterListDeletedByIDsRow
+		if err := rows.Scan(&i.ID, &i.SyncRunning); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const clusterListForStatusSweep = `-- name: ClusterListForStatusSweep :many
 SELECT
     tenant.clusters.id

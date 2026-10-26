@@ -333,6 +333,7 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 			Namespace: shoot.Namespace,
 			ClusterID: clusterID,
 			Labels:    shoot.Labels,
+			Deleting:  shoot.DeletionTimestamp != nil,
 		})
 	}
 

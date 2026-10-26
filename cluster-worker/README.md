@@ -11,7 +11,7 @@ A *shoot* is a cluster Gardener manages. Every fundament cluster has one, labell
 
 | Handler | Runs on | Does |
 |---|---|---|
-| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; deletes orphaned shoots |
+| `cluster` | cluster and node pool changes; status loop; reconcile | creates, updates and deletes the Shoot; tracks `shoot_status`; finishes deleting shoots of deleted clusters, reports shoots without a cluster |
 | `usersync` | organization member and project member changes; cluster ready; reconcile | per-user ServiceAccounts and RBAC on the shoot |
 | `namespace` | namespace changes; cluster ready; reconcile | Namespaces and the `fundament-defaults` LimitRange on the shoot |
 | `pluginmachinery` | cluster ready; reconcile | the plugin CRD and plugin-controller on the shoot, see [Plugin machinery](#plugin-machinery) |
@@ -81,8 +81,11 @@ sequenceDiagram
   ready outbox row in one transaction, so `shoot_status_updated` (the console's "Status
   changed") is the time of the last change. See [Ready clusters](#ready-clusters).
 - **Reconcile loop.** Every 5 minutes it re-enqueues clusters whose shoot is missing,
-  deletes shoots whose cluster is gone, and lets the shoot-side handlers re-assert their
-  resources.
+  finishes deleting the shoots of deleted clusters, and lets the shoot-side handlers
+  re-assert their resources. A shoot is deleted only once its cluster's delete sync has
+  settled: a delete the Gardener API rejects fails at once instead of retrying, so the
+  reconcile loop takes that shoot over on its next pass. A shoot without a cluster row is
+  only reported; see [Shoots the reconcile loop leaves alone](#shoots-the-reconcile-loop-leaves-alone).
 
 ## Cluster status
 
@@ -292,7 +295,48 @@ Environment variables, with defaults. Helm sets them from `clusterWorker.*` in
 | `RECONCILE_INTERVAL` | `5m` | |
 | `CLUSTER_STATUS_WORKERS` | `2` | status checks that run at once |
 | `CLUSTER_STATUS_PROGRESS_EVENT_INTERVAL` | `1m` | shortest time between two recorded progress messages of one cluster |
+| `CLUSTER_MAX_RECONCILE_DELETIONS` | `3` | most shoots of deleted clusters one reconcile pass starts to delete; above it the pass deletes none and logs an error, `0` turns these deletions off. Helm: `clusterWorker.maxReconcileDeletions`; see [Too many deletions in one pass](#too-many-deletions-in-one-pass) |
 | `PLUGIN_*` | | see [Plugin machinery](#plugin-machinery) |
+
+## Shoots the reconcile loop leaves alone
+
+### Shoot without a cluster
+
+A shoot whose `fundament.io/cluster-id` label names no row in `tenant.clusters` is never
+deleted: an empty, restored or wrong database looks exactly like a shoot of another
+installation sharing this Gardener. Every pass logs `shoot has no cluster in the database,
+not deleting it` with the shoot's name, namespace and cluster ID. To act on it:
+
+1. Find the shoot and its cluster ID:
+   `kubectl get shoots -A -l fundament.io/cluster-id=<cluster-id>`.
+2. Look the ID up: `SELECT id, name, deleted FROM tenant.clusters WHERE id = '<cluster-id>';`.
+3. If there is no row because the database was reset or restored, restore the database, or
+   [delete the shoot by hand](#deleting-a-shoot-by-hand) if the cluster is not coming back.
+4. If the shoot belongs to another installation sharing this Gardener, leave it alone.
+
+### Too many deletions in one pass
+
+When more shoots of deleted clusters await a deletion than `CLUSTER_MAX_RECONCILE_DELETIONS`,
+a pass deletes none of them and logs `refusing to delete shoots: too many in one pass,
+check the database` with their cluster IDs. A sudden batch of soft-deleted clusters points
+at a database problem rather than users deleting clusters. It also happens after the garden
+was unavailable for a while: delete syncs that failed in that time pile up, and every pass
+refuses them all, so the backlog does not drain by itself.
+
+1. Check that the clusters in the log are really deleted:
+   `SELECT id, name, deleted FROM tenant.clusters WHERE id = ANY('{<cluster-id>,...}');`.
+2. If they are, [delete their shoots by hand](#deleting-a-shoot-by-hand), or raise
+   `clusterWorker.maxReconcileDeletions` above the count for one pass and set it back.
+3. If they are not, fix the database first; the shoots stay until then.
+
+### Deleting a shoot by hand
+
+In the garden, with the shoot's namespace and name from the log:
+
+```sh
+kubectl -n <namespace> annotate shoot <name> confirmation.gardener.cloud/deletion=true
+kubectl -n <namespace> delete shoot <name>
+```
 
 ## Immediate cluster deletion
 
