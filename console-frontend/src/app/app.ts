@@ -244,23 +244,27 @@ export default class App implements OnInit {
 
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
-    // so the cluster resolves later and has to bring the plugins with it.
+    // so the cluster resolves later and has to bring the plugins with it. While
+    // the projects are still loading the registry is kept, so a load a resource
+    // page started is not cut off; once they are in, a project not among them
+    // (/projects/new, or one deleted while open) has no cluster to follow.
     effect(() => {
       const projectId = this.activeProjectId();
       const clusterId = this.activeProjectClusterId();
+      const projectsLoaded = this.organizationDataService.projectsLoaded();
 
-      if (projectId && clusterId) {
-        untracked(() => this.loadPluginsForCluster(clusterId));
-      } else {
+      if (!projectId || (!clusterId && projectsLoaded)) {
         untracked(() => this.pluginRegistry.reset());
+      } else if (clusterId) {
+        untracked(() => this.loadPluginsForCluster(clusterId).catch(() => {}));
       }
     });
   }
 
+  // Fresh: a project just opened shows plugins installed since the last poll.
   private async loadPluginsForCluster(clusterId: string): Promise<void> {
-    this.pluginRegistry.reset();
     this.clusterContext.onClusterChange(clusterId);
-    await this.pluginRegistry.loadPlugins(clusterId);
+    await this.pluginRegistry.loadPlugins(clusterId, { fresh: true });
   }
 
   async ngOnInit() {
