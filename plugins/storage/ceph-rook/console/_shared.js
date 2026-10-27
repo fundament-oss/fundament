@@ -176,6 +176,16 @@ export function navigateToDetail(name, namespace) {
   );
 }
 
+// Asks the host for the kind's create route; only a list view has one.
+export function navigateToCreate() {
+  window.parent.postMessage({ type: 'plugin:create' }, window.fundament?.parentOrigin ?? '*');
+}
+
+// Asks the host for the parent list, e.g. from a create view's Cancel.
+export function navigateBack() {
+  window.parent.postMessage({ type: 'plugin:navigate-back' }, window.fundament?.parentOrigin ?? '*');
+}
+
 // Makes each data-name row a keyboard-reachable link. Anchors must be in the DOM.
 export function wireRowLinks(root) {
   root.querySelectorAll('a.row-link').forEach((link) => {

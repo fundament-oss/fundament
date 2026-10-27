@@ -132,7 +132,7 @@ spec:
         resources: ["*"]
         verbs: ["*"]
   menu:
-    project:
+    organization:
       - crd: diskpools.ceph.fundament.io
         list: true
         detail: true
@@ -153,12 +153,24 @@ spec:
         list: true
         detail: true
         icon: ssd-hard-drive
+    # Claims are Namespaced, so project members see their project's buckets
+    # here; the ObjectStorage detail page keeps the cluster-wide overview.
+    project:
+      - crd: objectbucketclaims.objectbucket.io
+        list: true
+        detail: true
+        icon: boxes-3
+        label: Buckets
+        singularLabel: Bucket
   crds:
     - disks.ceph.fundament.io
     - diskpools.ceph.fundament.io
     - blockstorages.ceph.fundament.io
     - filestorages.ceph.fundament.io
     - objectstorages.ceph.fundament.io
+    # Installed by the Rook chart this plugin deploys. Listed because the
+    # console resolves a menu entry's kind, and its custom pages, from here.
+    - objectbucketclaims.objectbucket.io
   customComponents:
     DiskPool:
       list: diskpools-list.html
@@ -175,6 +187,10 @@ spec:
     ObjectStorage:
       list: objectstorages-list.html
       detail: objectstorages-detail.html
+    ObjectBucketClaim:
+      list: buckets-list.html
+      detail: buckets-detail.html
+      create: buckets-create.html
   uiHints:
     diskpools.ceph.fundament.io:
       statusMapping:
@@ -232,10 +248,11 @@ spec:
       version: v1alpha1
       resource: objectstorages
       verbs: [list, get, create, patch]
-    # The Buckets section on the ObjectStorage detail page. Claims list
-    # cluster-wide (they live wherever workloads do). No delete, same stance
-    # as above; no secrets: credentials must never reach the iframe, only
-    # the ConfigMap's connection info is readable.
+    # The Buckets section on the ObjectStorage detail page and the project
+    # Buckets pages. The section lists claims cluster-wide (they live wherever
+    # workloads do). No delete, same stance as above; no secrets: credentials
+    # must never reach the iframe, only the ConfigMap's connection info is
+    # readable.
     - group: objectbucket.io
       version: v1alpha1
       resource: objectbucketclaims
@@ -244,6 +261,11 @@ spec:
       version: v1
       resource: configmaps
       verbs: [get]
+    # The project bucket create page offers the ObjectStorages' StorageClasses.
+    - group: storage.k8s.io
+      version: v1
+      resource: storageclasses
+      verbs: [list]
     # list as well as get: the detail pages read status.ceph.capacity to
     # show free space, and the console does not know the cluster namespace.
     - group: ceph.rook.io

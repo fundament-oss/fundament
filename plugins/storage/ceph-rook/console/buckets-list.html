@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Buckets</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Buckets</h1>
+      <div class="plugin-actions">
+        <button type="button" class="plugin-button" id="create-btn">
+          Create bucket
+        </button>
+      </div>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Namespace</th>
+            <th>Phase</th>
+            <th>Bucket</th>
+            <th>Storage class</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <script type="module" src="./buckets-list.js"></script>
+  </body>
+</html>
