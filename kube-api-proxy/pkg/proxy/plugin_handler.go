@@ -27,6 +27,9 @@ type pluginGateway struct {
 	pluginSA    pluginsa.Resolver
 	canView     ClusterViewChecker
 	kubeHandler http.Handler
+	// projectNamespaces resolves project lists; nil in mock mode, where the
+	// list passes through unfiltered.
+	projectNamespaces func(ctx context.Context, userID, clusterID, projectID uuid.UUID) ([]string, error)
 
 	// lastForwarded is a test hook; nil in production.
 	lastForwarded func() *http.Request
@@ -78,6 +81,33 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 		http.Error(w, "permission denied", http.StatusForbidden)
 		return
 	}
+
+	// A project list runs gates 3-6 once per project namespace.
+	projectID, isProjectList, err := parseProjectList(r)
+	if err != nil {
+		g.audit(claims, nil, "", "error:bad-project-list")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !isProjectList || g.projectNamespaces == nil {
+		g.forward(w, r, claims, userID, clusterUUID)
+		return
+	}
+	namespaces, err := g.projectNamespaces(r.Context(), userID, clusterUUID, projectID)
+	if err != nil {
+		g.logger.Error("project namespaces lookup failed", "err", err)
+		g.audit(claims, nil, "", "error:project-namespaces")
+		writeProjectNamespacesError(w, err)
+		return
+	}
+	serveProjectList(w, r, namespaces, func(w http.ResponseWriter, r *http.Request) {
+		g.forward(w, r, claims, userID, clusterUUID)
+	})
+}
+
+// forward runs gates 3-6 and forwards on success.
+func (g *pluginGateway) forward(w http.ResponseWriter, r *http.Request, claims *auth.PluginClaims, userID, clusterUUID uuid.UUID) {
+	pathClusterID := clusterUUID.String()
 
 	// 3. Parse the kube request.
 	attrs, err := kubereq.Parse(r)

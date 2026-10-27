@@ -93,10 +93,13 @@ function depthForPath(url: string): number {
   return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
-/** One step up from a page: the project it belongs to, or the organization when
- *  it belongs to none. Relative to the organization, which is what goTo takes. */
-function parentOf(url: string): string {
+/** One step up from a page: the project or cluster it belongs to, or the
+ *  organization when it belongs to none. Relative to the organization, which is
+ *  what goTo takes. */
+export function parentOf(url: string): string {
   const path = withinOrganization(url.split(/[?#]/)[0]);
+  const cluster = /^\/clusters\/([^/]+)\/plugin-resources\//.exec(path);
+  if (cluster) return `/clusters/${cluster[1]}`;
   const project = /^\/projects\/([^/]+)\//.exec(path);
   return project ? `/projects/${project[1]}` : '/';
 }
@@ -258,17 +261,22 @@ export default class App implements OnInit {
 
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
-    // so the cluster resolves later and has to bring the plugins with it. Only
-    // what the shell loaded is torn down: a project or organization other than
-    // the one it loaded for resets, but on a refresh it has loaded nothing, so
-    // a load a resource page started meanwhile is not cut off.
+    // so the cluster resolves later and has to bring the plugins with it. Outside
+    // a project, the cluster page in view decides. Only what the shell loaded is
+    // torn down: a page other than the one it loaded for resets, but on a refresh
+    // it has loaded nothing, so a load a resource page started meanwhile is not
+    // cut off.
     effect(() => {
       const orgId = this.selectedOrgId();
       const projectId = this.activeProjectId();
-      const clusterId = this.activeProjectClusterId();
+      const pageClusterId = this.activeClusterId();
+      const clusterId = this.activeProjectClusterId() ?? pageClusterId;
 
       untracked(() => {
-        const key = projectId ? `${orgId}/${projectId}` : null;
+        let key: string | null = null;
+        if (projectId) key = `${orgId}/${projectId}`;
+        else if (pageClusterId) key = `${orgId}/clusters/${pageClusterId}`;
+
         if (key && clusterId) {
           const opened = key !== this.pluginsLoadedFor;
           this.pluginsLoadedFor = key;
@@ -281,11 +289,11 @@ export default class App implements OnInit {
     });
   }
 
-  // The organization and project the shell last loaded plugins for.
+  // The organization and project or cluster page the shell last loaded plugins for.
   private pluginsLoadedFor: string | null = null;
 
-  // Fresh only for a project just opened, so it shows plugins installed since
-  // the last poll; a rerun for the same project leaves the poll's pace alone.
+  // Fresh only for a page just opened, so it shows plugins installed since the
+  // last poll; a rerun for the same page leaves the poll's pace alone.
   private async loadPluginsForCluster(clusterId: string, fresh: boolean): Promise<void> {
     this.clusterContext.onClusterChange(clusterId);
     await this.pluginRegistry.loadPlugins(clusterId, { fresh });
@@ -811,6 +819,13 @@ export default class App implements OnInit {
   activeProjectId = computed(
     () => withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1] ?? null,
   );
+
+  /** The cluster page the URL is in, or null. `clusters/new` is the create
+   *  sheet over the list, not a cluster. */
+  activeClusterId = computed(() => {
+    const id = withinOrganization(this.currentUrl()).match(/^\/clusters\/([^/?#]+)/)?.[1];
+    return id && id !== 'new' ? id : null;
+  });
 
   /** The cluster the active project runs on, or null until the organization's
    *  projects have loaded. */

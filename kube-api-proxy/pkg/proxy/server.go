@@ -107,6 +107,9 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client, store *aut
 		canView:     authzClient.CanViewCluster,
 		kubeHandler: kubeHandler,
 	}
+	if s.namespaces != nil {
+		s.pluginGateway.projectNamespaces = s.namespaces.projectNamespaces
+	}
 
 	mux := http.NewServeMux()
 	// Catch-all pattern for cluster-scoped requests.
