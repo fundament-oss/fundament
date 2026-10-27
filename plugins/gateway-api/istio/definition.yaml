@@ -134,11 +134,6 @@ spec:
         list: true
         detail: true
         icon: lock
-    organization:
-      - crd: gateways.gateway.networking.k8s.io
-        list: true
-        detail: true
-        icon: server
   uiHints:
     gateways.gateway.networking.k8s.io:
       statusMapping:

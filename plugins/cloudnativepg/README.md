@@ -76,9 +76,7 @@ plugin-controller skips the plugin's uninstall when its pod is unreachable, so t
 
 ## Known limitations
 
-- Only organization admins can list StorageClasses. A project admin gets a text field instead of a list: empty means the cluster default, or they type a StorageClass name an organization admin gave them.
 - A database whose volume cannot be provisioned (a mistyped StorageClass, a size the provisioner refuses) stays "Setting up primary". The detail page shows CNPG's phase reason and the Ready condition's message, but the PVC's own events are not visible to project members.
-- The generated list lists databases across all namespaces, which only organization admins may do, so it fails to load for a project admin who is not also an organization admin. Every namespaced plugin kind shares this platform limitation.
 
 ## Flow
 

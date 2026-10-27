@@ -1,9 +1,11 @@
-// Buckets section for the ObjectStorage detail page: the ObjectBucketClaims
-// provisioned against one store's StorageClass. A claim's detail and the
-// create form open in a console sheet (see sheet.js). Claims live
-// wherever workloads do, so the list queries cluster-wide; per-project-
-// namespace scoping would hide them. Mounted via the OBJECTSTORAGE
-// detailSection hook, after the SDK loaded.
+// Buckets: ObjectBucketClaims against an ObjectStorage's StorageClass. The
+// Buckets section on the ObjectStorage detail page and the project's Buckets
+// page (buckets-list.js) both open a claim's detail and the create form in a
+// console sheet (see sheet.js).
+//
+// The section lists cluster-wide: claims live wherever workloads do, so
+// per-project-namespace scoping would hide them. Mounted via the
+// OBJECTSTORAGE detailSection hook, after the SDK loaded.
 
 import {
   emptyStateHtml,
@@ -25,10 +27,16 @@ import {
   errorBannerHtml,
 } from './_shared.js';
 
-const OBC = { group: 'objectbucket.io', version: 'v1alpha1', resource: 'objectbucketclaims' };
+export const OBC = { group: 'objectbucket.io', version: 'v1alpha1', resource: 'objectbucketclaims' };
 // The kind the bucket pages are declared under in customComponents.
-const OBC_KIND = 'ObjectBucketClaim';
+export const OBC_KIND = 'ObjectBucketClaim';
 const CONFIGMAPS = { group: '', version: 'v1', resource: 'configmaps' };
+const STORAGECLASSES = { group: 'storage.k8s.io', version: 'v1', resource: 'storageclasses' };
+
+// An ObjectStorage's StorageClass is cephobj-<name> (objectStoreDerivedNamePrefix
+// in claims.go); the CRD caps ObjectStorage names at 30.
+export const OBJECT_STORAGE_CLASS_PREFIX = 'cephobj-';
+export const OBJECT_STORAGE_NAME_MAX = 30;
 
 // requestedBucket is the claim's own naming request; a Bound claim's real
 // name lives in its ConfigMap, which only the per-claim view fetches.
@@ -49,6 +57,87 @@ export function bucketNameError(name) {
     return 'Bucket names use lowercase letters, digits and dashes, starting and ending with a letter or digit.';
   }
   return null;
+}
+
+// The bucket StorageClasses this plugin provisions: an ObjectStorage is their
+// controller (applyOwnedStorageClass). The cephobj- name prefix is no marker:
+// anyone may create a class called that.
+export function objectStorageClasses(items) {
+  return (items ?? [])
+    .flatMap((sc) => {
+      const owner = (sc.metadata?.ownerReferences ?? []).find((ref) =>
+        ref.controller && ref.kind === 'ObjectStorage' && ref.apiVersion?.startsWith('ceph.fundament.io/'));
+      return owner && sc.metadata?.name ? [{ name: sc.metadata.name, store: owner.name }] : [];
+    })
+    .sort((a, b) => a.store.localeCompare(b.store));
+}
+
+// Validates a typed object storage class name; returns an error or null.
+export function objectStorageClassError(value) {
+  const store = value.startsWith(OBJECT_STORAGE_CLASS_PREFIX)
+    ? value.slice(OBJECT_STORAGE_CLASS_PREFIX.length)
+    : null;
+  if (!store || resourceNameError(store, OBJECT_STORAGE_NAME_MAX)) {
+    return `Use ${OBJECT_STORAGE_CLASS_PREFIX}<store name>, where the store name has lowercase letters, digits and dashes, at most ${OBJECT_STORAGE_NAME_MAX} characters.`;
+  }
+  return null;
+}
+
+// classes is objectStorageClasses' result, or null when the list was
+// forbidden; only a list that came back empty means there is no store.
+export function hasNoObjectStorage(classes) {
+  return Array.isArray(classes) && classes.length === 0;
+}
+
+// The create form's store picker. Unknown classes take the name as text; a
+// single store is preselected, several start on a placeholder.
+export function storeFieldHtml(classes) {
+  const field = (control, hint) =>
+    formFieldHtml('Object storage', control, { errorId: 'bucket-storage-class-error', hint });
+  if (classes === null) {
+    return field(
+      `<nldd-text-field id="bucket-storage-class" name="storageClass" placeholder="${OBJECT_STORAGE_CLASS_PREFIX}my-store"
+                        required maxlength="253" no-spellcheck></nldd-text-field>`,
+      `The object storage's StorageClass, named ${OBJECT_STORAGE_CLASS_PREFIX}<store name>. The object storages could not be listed; an organization admin sees the store names on the cluster's Object Storage page.`,
+    );
+  }
+  const placeholder = classes.length > 1
+    ? '<option value="" selected disabled>Choose an object storage</option>'
+    : '';
+  const options = classes
+    .map((sc) => `<option value="${escapeHtml(sc.name)}"${classes.length === 1 ? ' selected' : ''}>${escapeHtml(sc.store)}</option>`)
+    .join('');
+  return field(
+    `<nldd-dropdown required><select id="bucket-storage-class" name="storageClass">${placeholder}${options}</select></nldd-dropdown>`,
+    'The object store the bucket lives on.',
+  );
+}
+
+// The claims as a list. The rows carry the cluster-side namespace for the
+// link; displayNames only changes the namespace shown, since the cluster name
+// (tnt-<project>--<name>) is not what anyone calls it.
+export function claimListHtml(claims, { displayNames = {}, storageClass = false } = {}) {
+  return resourceListHtml(
+    claims.map((c) => {
+      const namespace = c.metadata?.namespace ?? '';
+      const facts = [`Namespace ${displayNames[namespace] ?? namespace}`, `bucket ${requestedBucket(c.spec)}`];
+      if (storageClass) facts.push(`class ${c.spec?.storageClassName ?? '—'}`);
+      return {
+        name: c.metadata?.name ?? '',
+        namespace,
+        supportingText: facts.join(' · '),
+        badge: phaseBadgeHtml(c.status?.phase),
+      };
+    }),
+    'Buckets',
+  );
+}
+
+// Opens a claim's detail in a sheet when one of the rows is clicked.
+export function wireClaimLinks(root) {
+  wireListRows(root, (name, namespace) => {
+    fundament.openSheet({ kind: OBC_KIND, view: 'detail', resource: { name, namespace } });
+  });
 }
 
 export function mountBucketsSection(container, item, ctx, cfg) {
@@ -119,21 +208,8 @@ export function mountBucketsSection(container, item, ctx, cfg) {
       });
       return;
     }
-    // The namespace's console name where the project gave one: the cluster
-    // name (tnt-<project>--<name>) is not what anyone calls it.
-    const displayName = (ns) => ctx.namespaceDisplayNames?.[ns] ?? ns;
-    body.innerHTML = resourceListHtml(
-      claims.map((c) => ({
-        name: c.metadata?.name ?? '',
-        namespace: c.metadata?.namespace ?? '',
-        supportingText: `Namespace ${displayName(c.metadata?.namespace ?? '')} · bucket ${requestedBucket(c.spec)}`,
-        badge: phaseBadgeHtml(c.status?.phase),
-      })),
-      'Buckets',
-    ) + failureNote;
-    wireListRows(body, (name, namespace) => {
-      fundament.openSheet({ kind: OBC_KIND, view: 'detail', resource: { name, namespace } });
-    });
+    body.innerHTML = claimListHtml(claims, { displayNames: ctx.namespaceDisplayNames }) + failureNote;
+    wireClaimLinks(body);
   }
 }
 
@@ -157,7 +233,7 @@ export async function bucketDetailPage(ctx) {
     const spec = claim.spec ?? {};
     const pairs = [
       ['Phase', claim.status?.phase ?? 'Unknown'],
-      ['Namespace', namespace],
+      ['Namespace', ctx.namespaceDisplayNames?.[namespace] ?? namespace],
       [spec.bucketName ? 'Requested bucket name' : 'Bucket name prefix',
         spec.bucketName ?? spec.generateBucketName ?? '—'],
     ];
@@ -210,22 +286,56 @@ export async function bucketDetailPage(ctx) {
   }
 }
 
-// The create form, which the Buckets section opens in a console sheet. The
-// section hands over the store's StorageClass; the namespaces are the
-// project's, the same ones the detail page under the sheet was given.
-export function bucketCreatePage(ctx) {
-  const sheetBody = document.getElementById('content');
-  const storageClassName = ctx.params?.storageClassName;
-  const namespaces = ctx.namespaces ?? [];
-  if (!storageClassName) {
-    sheetBody.innerHTML = errorBox('no object storage given', 'Cannot create a bucket');
-    return;
+// Project members may list StorageClasses. Should the list still be
+// forbidden, null means unknown and the form takes the class by name.
+async function loadObjectStorageClasses() {
+  try {
+    const { items } = await fundament.k8s.list(STORAGECLASSES);
+    return objectStorageClasses(items);
+  } catch (err) {
+    if (err?.code === 'forbidden') return null;
+    throw err;
   }
+}
+
+// The create form, in a console sheet. The Buckets section hands over its
+// store's StorageClass; from the project's Buckets page the user picks the
+// store. The namespaces are the project's.
+export async function bucketCreatePage(ctx) {
+  const sheetBody = document.getElementById('content');
+  const fixedClass = ctx.params?.storageClassName;
+  const namespaces = ctx.namespaces ?? [];
+  const displayNames = ctx.namespaceDisplayNames ?? {};
+
+  let storeField = '';
+  let intro = `The bucket is provisioned on this storage (class
+        <code>${escapeHtml(fixedClass ?? '')}</code>).`;
+  if (!fixedClass) {
+    sheetBody.innerHTML = loadingHtml();
+    let classes;
+    try {
+      classes = await loadObjectStorageClasses();
+    } catch (err) {
+      sheetBody.innerHTML = errorBox(err, 'Cannot create a bucket');
+      return;
+    }
+    if (hasNoObjectStorage(classes)) {
+      sheetBody.innerHTML = emptyStateHtml({
+        icon: 'cylinder-split-slash',
+        text: 'No object storage on this cluster',
+        supportingText: 'An organization admin creates it on the cluster page.',
+      });
+      return;
+    }
+    storeField = storeFieldHtml(classes);
+    intro = 'The bucket is provisioned on the object storage you pick.';
+  }
+
   // A project carries its namespaces; without any (dev sandbox), the
   // namespace is free text instead of a dropdown.
   const namespaceControl = namespaces.length > 0
     ? `<nldd-dropdown><select id="bucket-namespace" name="namespace">
-        ${namespaces.map((ns) => `<option value="${escapeHtml(ns)}">${escapeHtml(ns)}</option>`).join('')}
+        ${namespaces.map((ns) => `<option value="${escapeHtml(ns)}">${escapeHtml(displayNames[ns] ?? ns)}</option>`).join('')}
       </select></nldd-dropdown>`
     : `<nldd-text-field id="bucket-namespace" name="namespace" placeholder="default"
                         no-spellcheck></nldd-text-field>`;
@@ -233,10 +343,8 @@ export function bucketCreatePage(ctx) {
   sheetBody.innerHTML = `
     <nldd-rich-text>
       <p>
-        The bucket is provisioned on this storage (class
-        <code>${escapeHtml(storageClassName)}</code>). The endpoint lands in a
-        ConfigMap and the credentials in a Secret, both named after the claim,
-        in the claim's namespace.
+        ${intro} The endpoint lands in a ConfigMap and the credentials in a
+        Secret, both named after the claim, in the claim's namespace.
       </p>
     </nldd-rich-text>
     <nldd-spacer size="12"></nldd-spacer>
@@ -246,6 +354,8 @@ export function bucketCreatePage(ctx) {
         ${errorBannerHtml('bucket-error')}
 
         ${formFieldHtml('Namespace', namespaceControl, { errorId: 'bucket-namespace-error' })}
+
+        ${storeField}
 
         ${formFieldHtml(
           'Name',
@@ -298,6 +408,13 @@ export function bucketCreatePage(ctx) {
 
   const form = sheetBody.querySelector('form');
   const nameInput = form.querySelector('[name="name"]');
+  const storeInput = form.querySelector('[name="storageClass"]');
+  const storeChecks = !storeInput ? [] : [[
+    storeInput,
+    storeInput.tagName === 'SELECT'
+      ? (value) => (value ? null : 'Please choose an object storage.')
+      : objectStorageClassError,
+  ]];
   const modeSelect = form.querySelector('[name="namingMode"]');
   // style.display, not the hidden attribute: a component's own display
   // rule overrides hidden's UA display:none.
@@ -322,6 +439,7 @@ export function bucketCreatePage(ctx) {
     failPrefix: 'Failed to create bucket',
     checks: [
       [form.querySelector('[name="namespace"]'), (value) => (value ? null : 'Please choose a namespace.')],
+      ...storeChecks,
       [nameInput, (value) => resourceNameError(value, 63)],
       [
         form.querySelector('[name="bucketName"]'),
@@ -339,7 +457,7 @@ export function bucketCreatePage(ctx) {
     action: async () => {
       const name = nameInput.value.trim();
       const namespace = form.querySelector('[name="namespace"]').value.trim();
-      const spec = { storageClassName };
+      const spec = { storageClassName: fixedClass ?? storeInput.value.trim() };
 
       if (modeSelect.value === 'exact') {
         // No uniqueness pre-check: it would be client-side and racy. The

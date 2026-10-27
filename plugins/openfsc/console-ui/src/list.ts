@@ -30,11 +30,12 @@ loadNlddDesignSystem().catch((err) => {
 
 try {
   await loadSdk();
-  await window.fundament.init;
+  const ctx = await window.fundament.init;
   const { items } = await window.fundament.k8s.list<FSCInstallation>({
     group: 'openfsc.fundament.io',
     version: 'v1',
     resource: 'fscinstallations',
+    projectId: ctx.projectId,
   });
   if (!items || items.length === 0) {
     tbody.innerHTML = emptyRow(6, 'No FSC installations found.');
