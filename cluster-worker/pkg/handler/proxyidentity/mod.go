@@ -2,7 +2,9 @@
 // ready shoot. kube-api-proxy serves a user's namespace listing as that user's
 // ServiceAccount plus one extra group, so its ServiceAccount may impersonate
 // ServiceAccounts in fundament-system and exactly that group; the group grants
-// get/list/watch on namespaces and nothing else.
+// get/list/watch on namespaces and nothing else. It also lets every
+// ServiceAccount in fundament-system, the per-user ones included, read
+// StorageClasses.
 package proxyidentity
 
 import (
@@ -122,6 +124,14 @@ func (h *Handler) Provision(ctx context.Context, clusterID uuid.UUID) error {
 				rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: shootidentity.NamespaceListerClusterRole},
 				[]rbacv1.Subject{{Kind: rbacv1.GroupKind, APIGroup: rbacv1.GroupName, Name: shootidentity.NamespaceListerGroup}}, labels)
 		}},
+		{"storageclass-reader cluster role", func() error {
+			return h.shoot.EnsureClusterRole(ctx, clusterID, shootidentity.StorageClassReaderClusterRole, StorageClassReaderRules(), labels)
+		}},
+		{"storageclass-reader binding", func() error {
+			return h.shoot.EnsureClusterRoleBindingSubjects(ctx, clusterID, shootidentity.StorageClassReaderClusterRole,
+				rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: shootidentity.StorageClassReaderClusterRole},
+				[]rbacv1.Subject{{Kind: rbacv1.GroupKind, APIGroup: rbacv1.GroupName, Name: shootidentity.ServiceAccountsGroup}}, labels)
+		}},
 	}
 	for _, s := range steps {
 		err := s.run()
@@ -152,4 +162,10 @@ func ImpersonateGroupRules() []rbacv1.PolicyRule {
 // NamespaceListerRules is everything the namespace-lister group may do.
 func NamespaceListerRules() []rbacv1.PolicyRule {
 	return []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"namespaces"}, Verbs: []string{"get", "list", "watch"}}}
+}
+
+// StorageClassReaderRules is everything the fundament-system ServiceAccounts
+// gain cluster-wide: reading StorageClasses, which hold no secrets.
+func StorageClassReaderRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{{APIGroups: []string{"storage.k8s.io"}, Resources: []string{"storageclasses"}, Verbs: []string{"get", "list", "watch"}}}
 }

@@ -4,6 +4,7 @@
 // request, so the objects come from the fixtures instead.
 import { Injectable } from '@angular/core';
 import type PluginResourceStoreService from '../plugin-resources/plugin-resource-store.service';
+import type { ListScope } from '../plugin-resources/plugin-resource-store.service';
 import type { KubeResource, ParsedCrd } from '../plugin-resources/types';
 import * as fx from './fixtures';
 
@@ -34,8 +35,11 @@ export default class FakePluginResourceStoreService implements Pick<
     _clusterId: string,
     _kubeApiProxyUrl: string,
     pluginName: string,
+    scope?: ListScope,
   ): Promise<KubeResource[]> {
-    return resourcesFor(pluginName, crd.kind);
+    const all = resourcesFor(pluginName, crd.kind);
+    const ns = scope?.namespace;
+    return ns ? all.filter((r) => r.metadata.namespace === ns) : all;
   }
 
   // eslint-disable-next-line class-methods-use-this

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import PluginNavService from './plugin-nav.service';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginDefinition } from './types';
@@ -11,13 +11,14 @@ function definition(
   label: string,
   crd = 'certificates.cert-manager.io',
   menuLabel?: string,
+  section: 'organization' | 'project' = 'project',
 ): PluginDefinition {
   return {
     name,
     label,
     version: 'v1',
     description: '',
-    menu: { project: [{ crd, label: menuLabel }] },
+    menu: { [section]: [{ crd, label: menuLabel }] },
     crds: [crd],
     allowedResources: [],
     installationId: `${organizationName}-${name}-uid`,
@@ -27,7 +28,11 @@ function definition(
   };
 }
 
-function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {}): PluginNavService {
+function navFor(
+  plugins: PluginDefinition[],
+  kinds: Record<string, string> = {},
+  scopes: Record<string, 'Namespaced' | 'Cluster'> = {},
+): PluginNavService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
@@ -36,6 +41,7 @@ function navFor(plugins: PluginDefinition[], kinds: Record<string, string> = {})
         useValue: {
           allPlugins: signal(plugins),
           crdKind: (crdRef: string) => kinds[crdRef],
+          crdScope: (crdRef: string) => scopes[crdRef],
         },
       },
     ],
@@ -110,5 +116,79 @@ describe('PluginNavService', () => {
       'Cert Manager (acme-corp)',
       'Grafana',
     ]);
+  });
+
+  it('clusterNav lists menu.organization entries', () => {
+    const nav = navFor([
+      definition('system', 'external-dns', 'External DNS', CRD, undefined, 'organization'),
+    ]);
+
+    expect(nav.clusterNav().map((g) => g.installationName)).toEqual(['system--external-dns']);
+    expect(nav.clusterNav()[0].items.map((i) => i.crdPlural)).toEqual([CRD]);
+    expect(nav.projectNav()).toEqual([]);
+  });
+
+  it('drops a Namespaced CRD under organization', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const nav = navFor(
+      [definition('system', 'external-dns', 'External DNS', CRD, undefined, 'organization')],
+      {},
+      { [CRD]: 'Namespaced' },
+    );
+
+    expect(nav.clusterNav()).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      `[PluginNav] ${CRD} is Namespaced-scoped; not shown under menu.organization`,
+    );
+    warn.mockRestore();
+  });
+
+  it('warns once about a mismatched entry across recomputes', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const plugins = signal([
+      definition('system', 'external-dns', 'External DNS', CRD, undefined, 'organization'),
+    ]);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: PluginRegistryService,
+          useValue: {
+            allPlugins: plugins,
+            crdKind: () => undefined,
+            crdScope: () => 'Namespaced',
+          },
+        },
+      ],
+    });
+    const nav = TestBed.inject(PluginNavService);
+
+    expect(nav.clusterNav()).toEqual([]);
+    plugins.set([...plugins()]);
+    expect(nav.clusterNav()).toEqual([]);
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('drops a Cluster CRD under project', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const nav = navFor(
+      [definition('system', 'external-dns', 'External DNS', CRD)],
+      {},
+      { [CRD]: 'Cluster' },
+    );
+
+    expect(nav.projectNav()).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      `[PluginNav] ${CRD} is Cluster-scoped; not shown under menu.project`,
+    );
+    warn.mockRestore();
+  });
+
+  it('keeps an entry whose scope is not known yet', () => {
+    const nav = navFor([definition('system', 'external-dns', 'External DNS', CRD)]);
+
+    expect(nav.projectNav()[0].items).toHaveLength(1);
   });
 });
