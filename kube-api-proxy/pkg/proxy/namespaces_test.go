@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -239,4 +240,69 @@ func TestNamespaceLister_Errors(t *testing.T) {
 		serve(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/namespaces", http.NoBody), user, cluster)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Zero(t, up.calls)
+}
+
+// namespaceListUpstream answers a namespace listing with fixed names.
+type namespaceListUpstream struct {
+	names []string
+	req   *http.Request
+}
+
+func (u *namespaceListUpstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	u.req = r
+	items := make([]map[string]any, 0, len(u.names))
+	for _, n := range u.names {
+		items = append(items, map[string]any{"metadata": map[string]any{"name": n}})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"kind": "NamespaceList", "items": items})
+}
+
+func TestProjectNamespaces(t *testing.T) {
+	t.Parallel()
+	user, cluster, pid := uuid.New(), uuid.New(), uuid.New()
+	up := &namespaceListUpstream{names: []string{"team-b", "team-a"}}
+	l := newTestLister(&fakeVisibilityAuthz{projects: []string{pid.String()}}, nil, up)
+
+	got, err := l.projectNamespaces(context.Background(), user, cluster, pid)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"team-a", "team-b"}, got)
+
+	require.NotNil(t, up.req)
+	assert.Equal(t, http.MethodGet, up.req.Method)
+	assert.Equal(t, "/api/v1/namespaces", up.req.URL.Path)
+	sel := up.req.URL.Query().Get("labelSelector")
+	assert.Contains(t, sel, "fundament.io/project-id="+pid.String())
+	assert.Contains(t, sel, "fundament.io/project-id in ("+pid.String()+")")
+	ctx := up.req.Context()
+	assert.Equal(t, "proxy-sa-token", SATokenFrom(ctx))
+	imp, ok := kube.ImpersonationFrom(ctx)
+	require.True(t, ok)
+	assert.Equal(t, "system:serviceaccount:fundament-system:fundament-"+user.String(), imp.User)
+	assert.Equal(t, []string{"fundament:namespace-listers"}, imp.Groups)
+	assert.Equal(t, cluster.String(), ctx.Value(kube.ClusterIDContextKey{}))
+}
+
+func TestProjectNamespaces_InvisibleProject(t *testing.T) {
+	t.Parallel()
+	up := &namespaceListUpstream{}
+	l := newTestLister(&fakeVisibilityAuthz{projects: []string{}}, nil, up)
+
+	got, err := l.projectNamespaces(context.Background(), uuid.New(), uuid.New(), uuid.New())
+	require.NoError(t, err)
+	assert.Empty(t, got)
+	assert.Contains(t, up.req.URL.Query().Get("labelSelector"), noVisibleProjects)
+}
+
+func TestProjectNamespaces_Errors(t *testing.T) {
+	t.Parallel()
+	_, err := newTestLister(&fakeVisibilityAuthz{}, gardener.ErrSyncPending, &namespaceListUpstream{}).
+		projectNamespaces(context.Background(), uuid.New(), uuid.New(), uuid.New())
+	require.ErrorIs(t, err, errProxyCredentials)
+	require.ErrorIs(t, err, gardener.ErrSyncPending)
+
+	denied := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "nope", http.StatusForbidden) })
+	_, err = newTestLister(&fakeVisibilityAuthz{}, nil, denied).
+		projectNamespaces(context.Background(), uuid.New(), uuid.New(), uuid.New())
+	require.Error(t, err)
 }

@@ -18,7 +18,10 @@
         [installationId]="installationId()"
         [crdKind]="crdDef()!.kind"
         view="list"
-        [clusterId]="clusterContext.selectedClusterId()!"
+        [clusterId]="clusterId()!"
+        [projectId]="projectId()"
+        [namespaces]="namespaceNames()"
+        [namespaceDisplayNames]="namespaceDisplayNames()"
       />
     </nldd-simple-section>
   </nldd-page>
@@ -47,23 +50,50 @@
       >
         <h1>{{ kindLabel() }}</h1>
       </nldd-title>
-      @if (canCreate()) {
+      @if (canCreate() || showNamespacePicker()) {
         <nldd-spacer size="12"></nldd-spacer>
         <nldd-toolbar [attr.label]="kindLabel() + ' actions'">
-          <nldd-toolbar-item slot="start">
-            <nldd-button
-              [routerLink]="createLink"
-              [attr.text]="'New ' + singularKindLabelMidSentence() + '…'"
-              start-icon="plus-small"
-              variant="primary"
-            ></nldd-button>
-            <nldd-menu-item
-              slot="overflow"
-              icon="plus-small"
-              [attr.text]="'New ' + singularKindLabelMidSentence() + '…'"
-              [routerLink]="createLink"
-            ></nldd-menu-item>
-          </nldd-toolbar-item>
+          @if (canCreate()) {
+            <nldd-toolbar-item slot="start">
+              <nldd-button
+                [routerLink]="createLink"
+                [attr.text]="'New ' + singularKindLabelMidSentence() + '…'"
+                start-icon="plus-small"
+                variant="primary"
+              ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="plus-small"
+                [attr.text]="'New ' + singularKindLabelMidSentence() + '…'"
+                [routerLink]="createLink"
+              ></nldd-menu-item>
+            </nldd-toolbar-item>
+          }
+          @if (showNamespacePicker()) {
+            <nldd-toolbar-item slot="end">
+              <nldd-dropdown size="sm">
+                <select
+                  aria-label="Namespace"
+                  (change)="onNamespaceChange($event)"
+                >
+                  <option
+                    value=""
+                    [selected]="selectedNamespace() === ''"
+                  >
+                    All namespaces
+                  </option>
+                  @for (name of namespaceNames(); track name) {
+                    <option
+                      [value]="name"
+                      [selected]="name === selectedNamespace()"
+                    >
+                      {{ namespaceDisplayNames()[name] ?? name }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
+            </nldd-toolbar-item>
+          }
         </nldd-toolbar>
       }
       <nldd-spacer size="16"></nldd-spacer>

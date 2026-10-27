@@ -40,7 +40,8 @@
         [installationId]="installationId()"
         [crdKind]="crdDef()!.kind"
         view="create"
-        [clusterId]="clusterContext.selectedClusterId()!"
+        [clusterId]="clusterId()!"
+        [projectId]="projectId()"
         [namespaces]="namespaces()"
         [namespaceDisplayNames]="namespaceDisplayNames()"
       />

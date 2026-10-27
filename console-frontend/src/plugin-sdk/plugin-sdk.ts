@@ -59,6 +59,8 @@ interface InitContext {
   // fundament.fetch() automatically attaches the bearer PluginToken.
   kubeApiProxyUrl: string;
   clusterId: string;
+  // Set on a project page; pass it to k8s.list to limit a cluster-wide list to the project.
+  projectId?: string;
 }
 
 interface K8sListArgs {
@@ -66,6 +68,8 @@ interface K8sListArgs {
   version: string;
   resource: string;
   namespace?: string;
+  // Only k8s.list reads this, and only without a namespace.
+  projectId?: string;
 }
 
 interface K8sGetArgs extends K8sListArgs {
@@ -135,6 +139,7 @@ type HostMessage =
       namespaceDisplayNames?: Record<string, string>;
       kubeApiProxyUrl: string;
       clusterId: string;
+      projectId?: string;
       token: string;
       tokenExpiresAt: number;
     }
@@ -222,6 +227,7 @@ function handleHostMessage(data: HostMessage): void {
         namespaceDisplayNames: data.namespaceDisplayNames,
         kubeApiProxyUrl: data.kubeApiProxyUrl,
         clusterId: data.clusterId,
+        projectId: data.projectId,
       });
     }
     applyTheme(data.theme);
@@ -384,6 +390,13 @@ function buildKubeUrl(ctx: InitContext, args: K8sListArgs & { name?: string }): 
   return `${base}${cluster}${groupPart}${scope}/${args.resource}${nameSuffix}`;
 }
 
+// A cluster-wide list limited to the project, via kube-api-proxy's fundamentProjectId.
+function buildListUrl(ctx: InitContext, args: K8sListArgs): string {
+  const url = buildKubeUrl(ctx, args);
+  if (!args.projectId || args.namespace) return url;
+  return `${url}?fundamentProjectId=${encodeURIComponent(args.projectId)}`;
+}
+
 // Kubernetes reports write rejections (409 conflict, 422 validation/CEL) in the
 // Status body's `message` — surface it so the plugin form can show the real reason.
 async function readK8sError(response: Response): Promise<string> {
@@ -405,7 +418,7 @@ async function k8sRequest<T>(
   contentType = 'application/json',
 ): Promise<T> {
   const ctx = await initPromise;
-  const url = buildKubeUrl(ctx, args);
+  const url = method === 'GET' && !args.name ? buildListUrl(ctx, args) : buildKubeUrl(ctx, args);
   let res: Response;
   try {
     res = await fetchImpl(url, {

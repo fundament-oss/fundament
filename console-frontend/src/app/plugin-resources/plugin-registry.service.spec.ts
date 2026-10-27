@@ -28,7 +28,7 @@ function installation(
 }
 
 /** What the apiserver returns for the menu's CRD, cut down to what is read. */
-const CRD = { spec: { names: { kind: 'Certificate' } } };
+const CRD = { spec: { names: { kind: 'Certificate' }, scope: 'Namespaced' } };
 
 function isCrdRead(url: unknown): boolean {
   return String(url).includes('customresourcedefinitions');
@@ -141,6 +141,41 @@ describe('PluginRegistryService', () => {
     // "certificates.cert-manager.io" alone can only give "Certificates"; the
     // kind is what a label like "DNS Endpoints" needs.
     expect(registry.crdKind('certificates.cert-manager.io')).toBe('Certificate');
+  });
+
+  it("reads the scope of a menu entry's CRD from the same read", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(registry.crdScope('certificates.cert-manager.io')).toBe('Namespaced');
+    expect(registry.crdScope('unknown.example.io')).toBeUndefined();
+  });
+
+  it('maps menu.organization and reads the CRDs it points at', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    getPluginDefinition.mockImplementation(() =>
+      of({
+        definition: {
+          metadata: { name: 'cert-manager', displayName: 'Cert Manager', version: 'v1.0.0' },
+          menu: { organization: [{ crd: 'issuers.cert-manager.io', label: '', icon: '' }] },
+          crds: ['issuers.cert-manager.io'],
+          customComponents: {},
+          allowedResources: [],
+        },
+      }),
+    );
+
+    await registry.loadPlugins('cl-1');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(registry.allPlugins()[0].menu.organization?.map((e) => e.crd)).toEqual([
+      'issuers.cert-manager.io',
+    ]);
+    expect(registry.crdKind('issuers.cert-manager.io')).toBe('Certificate');
   });
 
   it('leaves the kind unknown when the CRD cannot be read', async () => {

@@ -220,6 +220,36 @@ const routes: Routes = [
           },
         ],
       },
+      // Plugin resource routes (cluster-level): a page of their own, not a sheet
+      // over the cluster page. The data tells the components `:id` is a cluster.
+      {
+        path: 'clusters/:id/plugin-resources/:pluginName',
+        data: { pluginScope: 'cluster' },
+        children: [
+          {
+            path: ':resourceKind',
+            loadComponent: () =>
+              import('./plugin-resources/resource-list/resource-list.component').then(
+                (m) => m.default,
+              ),
+          },
+          {
+            // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/resource-create/resource-create.component').then(
+                (m) => m.default,
+              ),
+          },
+          {
+            path: ':resourceKind/:resourceId',
+            loadComponent: () =>
+              import('./plugin-resources/resource-detail/resource-detail.component').then(
+                (m) => m.default,
+              ),
+          },
+        ],
+      },
       {
         path: 'projects/:id/namespaces',
         loadComponent: () => import('./namespaces/namespaces.component').then((m) => m.default),
@@ -319,34 +349,6 @@ const routes: Routes = [
       {
         path: 'projects/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-      },
-      // Plugin resource routes (organization-level)
-      {
-        path: 'plugin-resources/:pluginName',
-        children: [
-          {
-            path: ':resourceKind',
-            loadComponent: () =>
-              import('./plugin-resources/resource-list/resource-list.component').then(
-                (m) => m.default,
-              ),
-          },
-          {
-            // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
-            path: ':resourceKind/create',
-            loadComponent: () =>
-              import('./plugin-resources/resource-create/resource-create.component').then(
-                (m) => m.default,
-              ),
-          },
-          {
-            path: ':resourceKind/:resourceId',
-            loadComponent: () =>
-              import('./plugin-resources/resource-detail/resource-detail.component').then(
-                (m) => m.default,
-              ),
-          },
-        ],
       },
       // Plugin resource routes (project-level)
       {

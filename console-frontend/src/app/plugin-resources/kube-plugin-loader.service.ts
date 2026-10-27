@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { ConfigService } from '../config.service';
 import PluginRegistryService from './plugin-registry.service';
-import PluginResourceStoreService from './plugin-resource-store.service';
+import PluginResourceStoreService, { type ListScope } from './plugin-resource-store.service';
 import type { ParsedCrd, KubeResource } from './types';
 
 @Injectable({ providedIn: 'root' })
@@ -30,6 +30,7 @@ export default class KubePluginLoaderService {
     pluginName: string,
     resourceKind: string,
     clusterId: string,
+    scope?: ListScope,
   ): Promise<{ crd: ParsedCrd | undefined; resources: KubeResource[] }> {
     const crd = await this.loadCrd(pluginName, resourceKind, clusterId);
     if (!crd) return { crd: undefined, resources: [] };
@@ -39,6 +40,7 @@ export default class KubePluginLoaderService {
       clusterId,
       this.configService.getConfig().kubeApiProxyUrl,
       pluginName,
+      scope,
     );
     return { crd, resources };
   }
@@ -49,6 +51,7 @@ export default class KubePluginLoaderService {
     clusterId: string,
     name: string,
     namespace: string | undefined,
+    scope?: { projectId: string },
   ): Promise<{ crd: ParsedCrd | undefined; resource: KubeResource | undefined }> {
     const crd = await this.loadCrd(pluginName, resourceKind, clusterId);
     if (!crd) return { crd: undefined, resource: undefined };
@@ -60,6 +63,7 @@ export default class KubePluginLoaderService {
       pluginName,
       name,
       namespace,
+      scope,
     );
     return { crd, resource };
   }
@@ -71,12 +75,14 @@ export default class KubePluginLoaderService {
     pluginName: string,
     crd: ParsedCrd,
     clusterId: string,
+    scope?: ListScope,
   ): Promise<KubeResource[]> {
     return this.pluginStore.loadResources(
       crd,
       clusterId,
       this.configService.getConfig().kubeApiProxyUrl,
       pluginName,
+      scope,
     );
   }
 

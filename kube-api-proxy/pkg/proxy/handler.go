@@ -101,6 +101,25 @@ func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, 
 		})
 	}
 
+	// --- Project list (console) ---
+
+	projectID, isProjectList, err := parseProjectList(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if isProjectList && s.namespaces != nil {
+		namespaces, err := s.namespaces.projectNamespaces(ctx, claims.UserID(), clusterID, projectID)
+		if err != nil {
+			s.logger.ErrorContext(ctx, "project namespaces lookup failed", "error", err)
+			writeProjectNamespacesError(w, err)
+			return
+		}
+		ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
+		serveProjectList(w, r.WithContext(ctx), namespaces, s.kubeHandler.ServeHTTP)
+		return
+	}
+
 	// --- Namespace listing (GUI tools) ---
 
 	if s.namespaces != nil && servesNamespaceList(r) {

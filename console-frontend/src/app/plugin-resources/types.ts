@@ -35,6 +35,7 @@ export interface AllowedResource {
 }
 
 export interface PluginMenu {
+  organization?: PluginMenuItem[];
   project?: PluginMenuItem[];
 }
 
