@@ -23,8 +23,8 @@ function isDefaultClass(sc) {
   );
 }
 
-// StorageClasses are cluster-scoped, and only organization admins may list
-// them; for a project admin the call is forbidden. null means "unknown", and
+// StorageClasses are cluster-scoped; organization admins and project members
+// may list them. Should the call still be forbidden, null means "unknown", and
 // the form then offers only the cluster default. Any other failure throws:
 // treating a timeout as "forbidden" would let an organization admin skip the
 // choice on a cluster without a default class.
@@ -107,7 +107,7 @@ function versionFieldHtml() {
 }
 
 // Three cases:
-// - classes unknown (a project admin): a text field, empty for the default.
+// - classes unknown (the list was forbidden): a text field, empty for the default.
 // - no default class: a required choice, since "Cluster default" would leave
 //   the PVC Pending.
 // - a default class: a dropdown that starts on it.
@@ -119,7 +119,7 @@ function storageClassFieldHtml(classes) {
     return field(
       `<nldd-text-field id="db-storage-class" name="storageClass" placeholder="Cluster default"
                         maxlength="253" no-spellcheck></nldd-text-field>`,
-      'Leave empty for the cluster default. Only an organization admin can list the StorageClasses; ask one for a name if the cluster has no default.',
+      'Leave empty for the cluster default. The StorageClasses could not be listed; ask an organization admin for a name if the cluster has no default.',
     );
   }
 
