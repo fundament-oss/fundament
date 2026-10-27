@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
@@ -38,6 +39,7 @@ type Config struct {
 	KubeAPIProxyURL         string // Browser-facing kube-api-proxy URL (embedded in kubeconfigs handed to users)
 	KubeAPIProxyInternalURL string // kube-api-proxy URL for org-api's own server-side calls; falls back to KubeAPIProxyURL
 	GardenerClient          gardener.Client
+	APIKeyMaxExpiresIn      time.Duration // longest API key lifetime; 0 = no maximum, and keys may never expire
 }
 
 type Server struct {
@@ -72,6 +74,11 @@ func WithCircuitBreaker(b *circuitbreaker.Breaker) Option {
 }
 
 func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *authz.Client, idempotencyStore *idempotency.Store, opts ...Option) (*Server, error) {
+	// Refused rather than read as "no maximum", which is what 0 means.
+	if cfg.APIKeyMaxExpiresIn < 0 {
+		return nil, fmt.Errorf("API key maximum lifetime must not be negative, got %s", cfg.APIKeyMaxExpiresIn)
+	}
+
 	clk := cfg.Clock
 	if clk == nil {
 		clk = clock.New()

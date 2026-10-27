@@ -157,3 +157,59 @@ func Test_APIKey_Create_DuplicateName(t *testing.T) {
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
 }
+
+func Test_APIKey_Create_ExpiresIn_Validation(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		maxExpiresIn time.Duration
+		expiresIn    string
+		wantMessage  string // empty: the key is created
+	}{
+		"unparseable":        {expiresIn: "forever", wantMessage: "must be a duration such as 300s, 5m or 1h"},
+		"negative":           {expiresIn: "-1h", wantMessage: "must be a duration such as 300s, 5m or 1h"},
+		"zero":               {expiresIn: "0s", wantMessage: "must be positive"},
+		"overflow":           {expiresIn: "99999999999h", wantMessage: "must be a duration such as 300s, 5m or 1h"},
+		"long_without_max":   {expiresIn: "876000h"},
+		"explicit_plus":      {expiresIn: "+1h"},
+		"trailing_dot":       {expiresIn: "1.s"},
+		"leading_dot":        {expiresIn: ".5h"},
+		"at_maximum":         {maxExpiresIn: 720 * time.Hour, expiresIn: "720h"},
+		"above_maximum":      {maxExpiresIn: 720 * time.Hour, expiresIn: "721h", wantMessage: "must be at most 720h0m0s"},
+		"never_with_maximum": {maxExpiresIn: 720 * time.Hour, expiresIn: "", wantMessage: "must be set, at most 720h0m0s"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			orgID := uuid.New()
+			userID := uuid.New()
+			env := newTestAPI(t,
+				WithOrganization(orgID, "test-org"),
+				WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+				WithAPIKeyMaxExpiresIn(tc.maxExpiresIn),
+			)
+
+			client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
+			ctx, callInfo := connect.NewClientContext(context.Background())
+			callInfo.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, userID))
+			callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+			_, err := client.CreateAPIKey(ctx, organizationv1.CreateAPIKeyRequest_builder{
+				Name:      "key-" + name,
+				ExpiresIn: tc.expiresIn,
+			}.Build())
+
+			if tc.wantMessage == "" {
+				require.NoError(t, err)
+				return
+			}
+
+			var connectErr *connect.Error
+			require.ErrorAs(t, err, &connectErr)
+			assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
+			assert.Contains(t, connectErr.Message(), tc.wantMessage)
+		})
+	}
+}

@@ -28,6 +28,15 @@
           <h1>New API key</h1>
         </nldd-title>
         <nldd-spacer size="16"></nldd-spacer>
+        @if (error(); as message) {
+          <nldd-banner
+            variant="critical"
+            text="Something went wrong"
+            [attr.supporting-text]="message"
+          >
+          </nldd-banner>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
         <nldd-form
           (submit)="createApiKey($event)"
           (keydown.enter)="createApiKey($event)"
@@ -56,9 +65,18 @@
             <nldd-text-field
               id="expiresIn"
               [value]="newKeyExpiresIn()"
-              (input)="newKeyExpiresIn.set($any($event.target).value)"
+              (input)="
+                newKeyExpiresIn.set($any($event.target).value); newKeyExpiresInError.set(null)
+              "
               (keyup.escape)="cancelCreating()"
+              [invalid]="!!newKeyExpiresInError()"
+              unmet="api-key-expires-in-error"
             ></nldd-text-field>
+            <nldd-validation-list>
+              <nldd-validation-item id="api-key-expires-in-error">{{
+                newKeyExpiresInError()
+              }}</nldd-validation-item>
+            </nldd-validation-list>
             <nldd-form-field-help-text>
               A duration, for example 300s, 5m or 1h. Leave it empty and the key never expires.
             </nldd-form-field-help-text>

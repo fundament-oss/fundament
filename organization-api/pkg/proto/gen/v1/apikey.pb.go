@@ -268,7 +268,9 @@ func (x *CreateAPIKeyRequest) SetExpiresIn(v string) {
 type CreateAPIKeyRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Name      string
+	Name string
+	// Time until expiry, empty = never. The server also refuses zero and
+	// anything above the operator's maximum.
 	ExpiresIn string
 }
 
@@ -815,13 +817,14 @@ const file_v1_apikey_proto_rawDesc = "" +
 	"\aexpires\x18( \x01(\v2\x1a.google.protobuf.TimestampR\aexpires\x127\n" +
 	"\tlast_used\x182 \x01(\v2\x1a.google.protobuf.TimestampR\blastUsed\x124\n" +
 	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x124\n" +
-	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"T\n" +
+	"\arevoked\x18F \x01(\v2\x1a.google.protobuf.TimestampR\arevoked\"\xf4\x01\n" +
 	"\x13CreateAPIKeyRequest\x12\x1e\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\x1d\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x04name\x12\xbc\x01\n" +
 	"\n" +
-	"expires_in\x18\x14 \x01(\tR\texpiresIn\"_\n" +
+	"expires_in\x18\x14 \x01(\tB\x9c\x01\xbaH\x98\x01\xba\x01\x94\x01\n" +
+	"\bduration\x12)must be a duration such as 300s, 5m or 1h\x1a]this == '' || this.matches('^[+]?(([0-9]+([.][0-9]*)?|[.][0-9]+)(ns|us|µs|μs|ms|s|m|h))+$')R\texpiresIn\"_\n" +
 	"\x14CreateAPIKeyResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x14\n" +

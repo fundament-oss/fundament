@@ -203,6 +203,28 @@ When('I delete the API key', async function (this: ICustomWorld) {
   }
 });
 
+When(
+  'I try to create an API key named {string} with expiry {string}',
+  async function (this: ICustomWorld, name: string, expiresIn: string) {
+    try {
+      const response = await this.apiKeyService!.createAPIKey({
+        name,
+        expiresIn,
+      });
+      // Tracked so the cleanup removes a key that should have been refused.
+      this.createdApiKeys.set(name, response);
+      if (this.currentUserEmail) {
+        this.createdApiKeysByUser
+          .get(this.currentUserEmail)
+          ?.set(name, response);
+      }
+      this.lastApiError = undefined;
+    } catch (error) {
+      this.lastApiError = error as Error;
+    }
+  },
+);
+
 // --- Common Then Steps ---
 
 Then('I should not receive an error', async function (this: ICustomWorld) {

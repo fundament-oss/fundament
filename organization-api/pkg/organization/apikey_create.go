@@ -41,14 +41,13 @@ func (s *Server) CreateAPIKey(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate token: %w", err))
 	}
 
+	expiresIn, err := parseAPIKeyExpiresIn(req.GetExpiresIn(), s.config.APIKeyMaxExpiresIn)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
 	expires := pgtype.Timestamptz{Valid: false}
-
-	if req.GetExpiresIn() != "" {
-		expiresIn, err := time.ParseDuration(req.GetExpiresIn())
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse expires_in: %w", err))
-		}
-
+	if expiresIn > 0 {
 		expires = pgtype.Timestamptz{
 			Time:  s.clock.Now().Add(expiresIn),
 			Valid: true,
@@ -89,4 +88,26 @@ func (s *Server) CreateAPIKey(
 		Token:       token,
 		TokenPrefix: prefix,
 	}.Build(), nil
+}
+
+// parseAPIKeyExpiresIn returns the requested lifetime, or 0 for a key that never expires.
+func parseAPIKeyExpiresIn(value string, maximum time.Duration) (time.Duration, error) {
+	if value == "" {
+		if maximum > 0 {
+			return 0, fmt.Errorf("expires_in: must be set, at most %s", maximum)
+		}
+		return 0, nil
+	}
+
+	expiresIn, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("expires_in: must be a duration such as 300s, 5m or 1h")
+	}
+	if expiresIn <= 0 {
+		return 0, fmt.Errorf("expires_in: must be positive")
+	}
+	if maximum > 0 && expiresIn > maximum {
+		return 0, fmt.Errorf("expires_in: must be at most %s", maximum)
+	}
+	return expiresIn, nil
 }
