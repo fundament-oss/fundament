@@ -28,7 +28,7 @@ import {
   formActionsHtml,
   errorBannerHtml,
 } from './_shared.js';
-import { mountBucketsSection } from './bucket-pages.js';
+import { mountBucketsSection, OBJECT_STORAGE_CLASS_PREFIX, OBJECT_STORAGE_NAME_MAX } from './bucket-pages.js';
 
 const GROUP_VERSION = { group: 'ceph.fundament.io', version: 'v1alpha1' };
 
@@ -98,7 +98,7 @@ export const OBJECTSTORAGE = {
   label: 'Object Storage',
   emptyMessage: 'No object storage.',
   noneSelected: 'No object storage selected.',
-  storageClassPrefix: 'cephobj-',
+  storageClassPrefix: OBJECT_STORAGE_CLASS_PREFIX,
   detailHint: `Create buckets below; each bucket's endpoint and credentials are
     stored in its namespace, named after the bucket.`,
   createIntro: `Object storage provides S3-compatible buckets over the shared Ceph cluster's
@@ -109,7 +109,7 @@ export const OBJECTSTORAGE = {
   // The CRD caps ObjectStorage names at 30: Rook rejects CephObjectStore
   // names over 38 and the derived name is cephobj-<name>. Enforced here too
   // so the form rejects it first.
-  nameMaxLength: 30,
+  nameMaxLength: OBJECT_STORAGE_NAME_MAX,
   // The detail page embeds the Buckets section: the ObjectBucketClaims
   // provisioned against this store's StorageClass.
   detailSection: mountBucketsSection,

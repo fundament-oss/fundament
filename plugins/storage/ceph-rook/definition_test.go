@@ -49,6 +49,8 @@ func TestDefinition(t *testing.T) {
 			"objectbucketclaims": {"list", "get", "create"},
 			"configmaps":         {"get"},
 			"cephclusters":       {"get", "list"},
+			// The project create page picks an object store by its StorageClass.
+			"storageclasses": {"list"},
 		} {
 			var found *pluginruntime.AllowedResource
 			for i := range def.Spec.AllowedResources {
@@ -149,6 +151,9 @@ func TestConsoleOffersNoDiskPoolDelete(t *testing.T) {
 		"console/objectstorages-detail.js",
 		"console/objectstorages-list.js",
 		"console/bucket-pages.js",
+		"console/buckets-list.js",
+		"console/buckets-detail.js",
+		"console/buckets-create.js",
 	} {
 		src, err := os.ReadFile(path)
 		require.NoError(t, err)
@@ -170,4 +175,42 @@ func TestPluginServesConsoleAssets(t *testing.T) {
 	f, err := provider.ConsoleAssets().Open("/diskpools-list.html")
 	require.NoError(t, err)
 	require.NoError(t, f.Close())
+}
+
+// The ceph CRDs are Cluster-scoped, so they belong under menu.organization;
+// Rook's ObjectBucketClaims are Namespaced, so Buckets sit under menu.project.
+func TestDefinition_MenuScope(t *testing.T) {
+	t.Parallel()
+
+	src, err := os.ReadFile("definition.yaml")
+	require.NoError(t, err)
+
+	def, err := pluginruntime.ParseSourceDefinition(src)
+	require.NoError(t, err)
+
+	require.Len(t, def.Spec.Menu.Project, 1)
+	assert.Equal(t, "objectbucketclaims.objectbucket.io", def.Spec.Menu.Project[0].CRD)
+	// The console resolves a menu entry's kind, and with it the custom pages,
+	// only from the CRDs spec.crds names.
+	assert.Contains(t, def.Spec.CRDs, "objectbucketclaims.objectbucket.io")
+
+	mapping, ok := def.Spec.CustomComponents["ObjectBucketClaim"]
+	require.True(t, ok, "ObjectBucketClaim must declare custom components")
+	assert.Equal(t, pluginruntime.ComponentMapping{
+		List:   "buckets-list.html",
+		Detail: "buckets-detail.html",
+		Create: "buckets-create.html",
+	}, mapping)
+
+	var crds []string
+	for _, entry := range def.Spec.Menu.Organization {
+		crds = append(crds, entry.CRD)
+	}
+	assert.Equal(t, []string{
+		"diskpools.ceph.fundament.io",
+		"blockstorages.ceph.fundament.io",
+		"filestorages.ceph.fundament.io",
+		"objectstorages.ceph.fundament.io",
+		"disks.ceph.fundament.io",
+	}, crds)
 }
