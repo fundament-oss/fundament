@@ -1,0 +1,166 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 23
+:state: prediscussion
+
+= FUN-23 Plugin Uninstall Policy
+
+== Introduction
+
+Uninstalling a plugin deletes its `PluginInstallation` CR (link:/funs/fun-11[FUN-11]). The console does this with a plain `DELETE` through kube-api-proxy. plugin-controller's finalizer then asks the plugin to uninstall itself (`PluginMetadataService/RequestUninstall`), deletes the plugin-scope RBAC and the plugin namespace, and releases the finalizer.
+
+Nothing in that flow looks at what the user built with the plugin. A cluster with three CloudNativePG `Cluster` objects can have its cnpg plugin uninstalled; the operator goes away and the databases are left without a controller, or, if the chart takes the CRDs with it, deleted outright. The opposite failure exists too: an operator whose instances carry finalizers, removed before those instances, leaves every instance stuck in `Terminating` with nothing left to clear it.
+
+There is also no way to tell the user why an uninstall cannot proceed. When `RequestUninstall` fails, the controller retries every ten seconds with `status.message` still reading "uninstalling plugin". And because the `DELETE` has already set `deletionTimestamp`, the user cannot take it back: the installation sits in `Terminating` until the cause goes away.
+
+This FUN lets the plugin author declare, per CRD, what happens to the user's instances on uninstall, and makes plugin-controller enforce it and report it, so that the console can say "Remove PostgreSQL cluster `prod/db` before uninstalling CloudNativePG" before the user confirms, rather than after.
+
+== Requirements
+
+* The plugin author decides which of the plugin's resources block an uninstall, which are removed automatically, and which are left alone.
+* A plugin author writes no code for this. The common case is a declaration in `definition.yaml`.
+* The user sees what blocks an uninstall, by name, *before* deleting the installation.
+* An uninstall that would destroy user data never happens unless the author explicitly declared it.
+* A plugin whose pod is crashing or unreachable can still be uninstalled, and its blockers are still reported.
+
+== The policy in the definition
+
+The definition gains an `uninstall` block. Each entry names one of the CRDs listed in `spec.crds` and a policy:
+
+[source,yaml]
+----
+spec:
+  crds:
+    - clusters.postgresql.cnpg.io
+    - poolers.postgresql.cnpg.io
+    - scheduledbackups.postgresql.cnpg.io
+  uninstall:
+    resources:
+      - crd: clusters.postgresql.cnpg.io
+        policy: Block
+        message: Delete your PostgreSQL clusters before uninstalling.
+      - crd: poolers.postgresql.cnpg.io
+        policy: Delete
+      - crd: scheduledbackups.postgresql.cnpg.io
+        policy: Orphan
+----
+
+`Block`:: While any instance exists, the uninstall does not start. plugin-controller reports the instances and tears nothing down. `message` is optional author text shown alongside the list.
+`Delete`:: plugin-controller deletes every instance and waits until they are gone before uninstalling the plugin. The plugin's operator is still running at that point, so the instances' own finalizers can complete.
+`Orphan`:: Instances are left in place. This suits CRDs the chart keeps (`helm.sh/resource-policy: keep`) and objects that are harmless without their operator.
+
+A CRD in `spec.crds` without an entry defaults to `Block`. A plugin that declares nothing therefore gets the safe behaviour: nothing the user created is ever deleted unless the author wrote `Delete` for it.
+
+Definition validation (`ParseSourceDefinition` and `ParseDefinition`) rejects:
+
+* a `crd` that is not listed in `spec.crds`, or that appears twice;
+* a `policy` outside `Block`, `Delete`, `Orphan`;
+* a `Block` or `Delete` entry whose resource is not covered by `permissions.rbac` with `list` (and, for `Delete`, `delete`). See <<Whose credentials>>.
+
+Because the policy is part of the hash-pinned definition (link:/funs/fun-19[FUN-19]), it is covered by the same consent as the rest of the manifest: the user installing a plugin can see that uninstalling it will delete their Poolers. An upgrade that changes the policy takes effect when the installation is re-pinned to the new definition, never earlier.
+
+=== Objects the plugin owns
+
+Some plugins create instances of their own CRDs during `Install`, such as a default `ClusterIssuer`. Counting those as blockers would make the plugin impossible to uninstall. Instances are therefore ignored when they:
+
+* live in the plugin's own namespace, which is deleted with the plugin anyway; or
+* carry the label `plugins.fundament.io/owned-by: <installation name>`.
+
+The SDK sets that label on everything it creates through its host helpers. A plugin that creates objects some other way, for example from a Helm chart, sets the label itself.
+
+== Enforcement in plugin-controller
+
+=== Whose credentials
+
+plugin-controller's own ClusterRole covers only the child resources it materialises; it cannot list a plugin's CRDs, and granting it cluster-wide access to every CRD any plugin may declare is exactly the kind of standing privilege link:/funs/fun-17[FUN-17] avoids.
+
+The plugin's ServiceAccount already holds the right access: `permissions.rbac` in the definition is materialised into its ClusterRole, and the validation above guarantees it includes `list` (and `delete` where needed) on every policed CRD. plugin-controller therefore evaluates the policy *as the plugin*: it requests a short-lived token for the plugin's ServiceAccount (`serviceaccounts/token` `create`, scoped to the plugin namespaces it manages) and builds a client from it.
+
+This keeps the check in the controller rather than in the plugin process, which matters for the last requirement: a plugin pod that is crash-looping, or built on an SDK version that predates this FUN, cannot answer an RPC, but its ServiceAccount and RBAC still exist, so the policy is still evaluated.
+
+=== Continuous reporting
+
+On every reconcile of a non-terminating installation, the controller evaluates the `Block` policies and writes the result to the CR:
+
+[source,yaml]
+----
+status:
+  conditions:
+    - type: UninstallBlocked
+      status: "True"
+      reason: InstancesExist
+      message: "Delete your PostgreSQL clusters before uninstalling."
+  uninstallBlockers:
+    total: 3
+    items:            # at most 10
+      - group: postgresql.cnpg.io
+        kind: Cluster
+        namespace: prod
+        name: db
+----
+
+Each CRD is listed with a small `limit`, so the cost per reconcile is one bounded list call per policed CRD. A failed list sets `UninstallBlocked=Unknown` with the error as the condition's message; it never reports "no blockers".
+
+This status is the pre-check. The console reads the installation it is about to delete, and when `UninstallBlocked` is `True` it shows the message and the listed objects, each linked to its page in the plugin's menu, instead of offering the delete. The status can be up to one reconcile interval stale, which is acceptable for a warning. The finalizer below is what actually enforces the policy.
+
+=== The finalizer
+
+`handleDeletion` becomes:
+
+. Evaluate `Block` policies. If any instance exists, set `phase: Terminating`, `UninstallBlocked=True` and the blockers, and requeue. Nothing is torn down and the plugin keeps running, so removing the blocker is enough for the uninstall to continue on the next pass.
+. Delete every instance of each `Delete` CRD. While any still exists, report it under `status.uninstallBlockers` with reason `DeletingInstances` and requeue. An instance whose finalizer never clears is visible here by name.
+. Call `RequestUninstall` as today.
+. Delete the plugin-scope RBAC and the plugin namespace, and remove the finalizer.
+
+Re-checking `Block` in the finalizer closes the gap between the console's read and the user's `DELETE`: an instance created in that window still blocks.
+
+A user who wants to abandon an uninstall that is blocked has no way back short of recreating the installation, because Kubernetes cannot clear `deletionTimestamp`. The pre-check exists so that this case is rare. See <<Alternatives considered>> for the webhook that would remove it entirely.
+
+== Plugin-specific rules
+
+Some conditions are not "instances of a CRD exist". The ceph-rook storage plugin, for example, must not remove an `ObjectStorage` while buckets still use its StorageClass. A plugin can add such rules in code by implementing an optional SDK interface:
+
+[source,go]
+----
+type UninstallBlocker interface {
+	UninstallBlockers(ctx context.Context, host Host) ([]Blocker, error)
+}
+----
+
+The SDK serves it through a new `PluginMetadataService/GetUninstallBlockers` RPC. plugin-controller appends the returned blockers to the declarative ones. `Unimplemented` means the plugin has no extra rules. `Unavailable` (the pod is down) is reported as `UninstallBlocked=Unknown` while the installation is running. In the finalizer it is treated as "no extra blockers", matching how an unreachable plugin is treated during `RequestUninstall` today. A plugin that needs its code-level rule to hold even when it is down has to express that rule as a `Block` policy.
+
+== Alternatives considered
+
+=== Validating admission webhook on DELETE
+
+A webhook on `DELETE plugininstallations` could reject the request outright with the blocker message. The installation would never enter `Terminating`, and `kubectl delete --dry-run=server` would report the blockers, because server-side dry-run runs admission. It is the strongest option, and it is deferred, not rejected. plugin-controller serves no webhooks today, so this would add serving certificates, a `ValidatingWebhookConfiguration` per shoot, and a `failurePolicy` decision: `Fail` makes the installation impossible to delete while plugin-controller is down, and `Ignore` makes the check advisory again. The design above is a prerequisite for a webhook anyway, since the webhook would evaluate the same policy, so it can be added later without changing the definition format.
+
+=== Only the plugin decides, in code
+
+Extending `RequestUninstall` with a `FailedPrecondition` "blocked" result, and leaving every rule to plugin code, puts the same listing logic in every plugin. It also fails the crash-loop requirement: a plugin that cannot answer cannot report what blocks it. It survives as the escape hatch in <<Plugin-specific rules>>.
+
+=== Block on every instance of every CRD, with no policy
+
+Treating all of `spec.crds` as blocking needs no new definition fields. But it takes the decision away from the plugin author, who is the only one who knows that a Pooler is safe to delete and a database is not. With the policy, that default is still what a plugin gets when it declares nothing.
+
+=== plugin-controller lists with its own credentials
+
+This needs cluster-wide `list` and `delete` on every CRD any plugin may declare, granted to plugin-controller in advance. Acting as the plugin's ServiceAccount bounds the check to what the user already consented to in the definition.
+
+== Consequences
+
+* `PluginSpec` gains `Uninstall`, with validation in `pluginruntime/definition.go`. Existing definitions stay valid; their CRDs default to `Block`. That is a behaviour change: a plugin whose users have instances can no longer be uninstalled until those instances are removed or the author declares `Delete` or `Orphan`.
+* The `PluginInstallation` CRD gains `status.uninstallBlockers` and the `UninstallBlocked` condition.
+* plugin-controller's ClusterRole gains `create` on `serviceaccounts/token`.
+* The SDK gains the `owned-by` label on objects created through its host helpers, the optional `UninstallBlocker` interface, and the `GetUninstallBlockers` RPC.
+* The console's uninstall dialog reads `UninstallBlocked` before offering the delete, and shows blockers on an installation that is `Terminating`.
+* Existing plugins should declare their policies: cnpg `Block` on `clusters`, cert-manager `Block` on `certificates` and `issuers`, `Orphan` or `Delete` where appropriate.
+
+== References
+
+* link:/funs/fun-11[FUN-11 Plugins and the Marketplace]: the installation lifecycle and finalizer this extends.
+* link:/funs/fun-17[FUN-17 Plugin Authorization]: the plugin ServiceAccount and its definition-derived RBAC.
+* link:/funs/fun-19[FUN-19 Plugin Definition Storage]: the hash-pinned definition the policy lives in.
+* `plugins/storage/ceph-rook/consumer_controller.go`: `finalizeDeletion`, the existing deletion-blocked pattern this generalises.
