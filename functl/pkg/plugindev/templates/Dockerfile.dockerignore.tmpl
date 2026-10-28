@@ -1,0 +1,23 @@
+{{- if eq .Layout.ModulePath .FundamentModule -}}
+# Only what the plugin build needs from the monorepo.
+*
+!go.mod
+!go.sum
+{{- range .Layout.SourceDirs}}
+!{{.}}/
+{{- end}}
+**/node_modules
+{{- else -}}
+{{with .ProjectIgnore}}{{.}}
+
+{{end -}}
+# functl plugin dev
+.git
+**/node_modules
+tmp/
+{{- if .Layout.Vite}}
+# Vite output is synced into the pod, so undo any ignore of it.
+!{{.ConsoleDir}}
+!{{.ConsoleDir}}/**
+{{- end}}
+{{- end}}

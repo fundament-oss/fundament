@@ -94,12 +94,21 @@ func NewClientFromConfig(opts ...ClientOpt) (*client.Client, error) {
 //
 // Returns ErrNoActiveOrganization if neither is set.
 func NewClientFromConfigWithOrg(ctx *Context) (*client.Client, error) {
+	orgID, err := activeOrg(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return NewClientFromConfig(WithOrg(orgID))
+}
+
+// activeOrg resolves the organization ID as NewClientFromConfigWithOrg does.
+func activeOrg(ctx *Context) (string, error) {
 	orgID := ctx.Org
 	if orgID == "" && ctx.Config != nil {
 		orgID = ctx.Config.Organization
 	}
 	if orgID == "" {
-		return nil, ErrNoActiveOrganization
+		return "", ErrNoActiveOrganization
 	}
-	return NewClientFromConfig(WithOrg(orgID))
+	return orgID, nil
 }
