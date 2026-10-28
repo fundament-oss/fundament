@@ -23,7 +23,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ClusterStatus follows the console's reading of tenant.clusters.shoot_status.
+// ClusterStatus is the status the console shows for the same cluster: both
+// derive it with common/clusterstatus. Values mirror organization.v1.
 type ClusterStatus int32
 
 const (
@@ -31,10 +32,15 @@ const (
 	ClusterStatus_CLUSTER_STATUS_PROVISIONING ClusterStatus = 10
 	ClusterStatus_CLUSTER_STATUS_RUNNING      ClusterStatus = 20
 	// Running while an update fundament pushed rolls out.
-	ClusterStatus_CLUSTER_STATUS_UPDATING ClusterStatus = 30
-	ClusterStatus_CLUSTER_STATUS_ERROR    ClusterStatus = 40
-	ClusterStatus_CLUSTER_STATUS_DELETING ClusterStatus = 50
-	ClusterStatus_CLUSTER_STATUS_STOPPED  ClusterStatus = 60
+	ClusterStatus_CLUSTER_STATUS_UPGRADING ClusterStatus = 30
+	ClusterStatus_CLUSTER_STATUS_ERROR     ClusterStatus = 40
+	ClusterStatus_CLUSTER_STATUS_DELETING  ClusterStatus = 50
+	ClusterStatus_CLUSTER_STATUS_STOPPED   ClusterStatus = 60
+	// Ready, while the first health checks have not passed yet.
+	ClusterStatus_CLUSTER_STATUS_STARTING  ClusterStatus = 70
+	ClusterStatus_CLUSTER_STATUS_UNHEALTHY ClusterStatus = 80
+	// The shoot disappeared from Gardener after it was seen.
+	ClusterStatus_CLUSTER_STATUS_LOST ClusterStatus = 90
 )
 
 // Enum value maps for ClusterStatus.
@@ -43,19 +49,25 @@ var (
 		0:  "CLUSTER_STATUS_UNSPECIFIED",
 		10: "CLUSTER_STATUS_PROVISIONING",
 		20: "CLUSTER_STATUS_RUNNING",
-		30: "CLUSTER_STATUS_UPDATING",
+		30: "CLUSTER_STATUS_UPGRADING",
 		40: "CLUSTER_STATUS_ERROR",
 		50: "CLUSTER_STATUS_DELETING",
 		60: "CLUSTER_STATUS_STOPPED",
+		70: "CLUSTER_STATUS_STARTING",
+		80: "CLUSTER_STATUS_UNHEALTHY",
+		90: "CLUSTER_STATUS_LOST",
 	}
 	ClusterStatus_value = map[string]int32{
 		"CLUSTER_STATUS_UNSPECIFIED":  0,
 		"CLUSTER_STATUS_PROVISIONING": 10,
 		"CLUSTER_STATUS_RUNNING":      20,
-		"CLUSTER_STATUS_UPDATING":     30,
+		"CLUSTER_STATUS_UPGRADING":    30,
 		"CLUSTER_STATUS_ERROR":        40,
 		"CLUSTER_STATUS_DELETING":     50,
 		"CLUSTER_STATUS_STOPPED":      60,
+		"CLUSTER_STATUS_STARTING":     70,
+		"CLUSTER_STATUS_UNHEALTHY":    80,
+		"CLUSTER_STATUS_LOST":         90,
 	}
 )
 
@@ -81,59 +93,14 @@ func (x ClusterStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// ClusterHealth is Gardener's health verdict, known only for ready clusters.
-type ClusterHealth int32
-
-const (
-	ClusterHealth_CLUSTER_HEALTH_UNSPECIFIED ClusterHealth = 0
-	ClusterHealth_CLUSTER_HEALTH_HEALTHY     ClusterHealth = 10
-	ClusterHealth_CLUSTER_HEALTH_UNHEALTHY   ClusterHealth = 20
-)
-
-// Enum value maps for ClusterHealth.
-var (
-	ClusterHealth_name = map[int32]string{
-		0:  "CLUSTER_HEALTH_UNSPECIFIED",
-		10: "CLUSTER_HEALTH_HEALTHY",
-		20: "CLUSTER_HEALTH_UNHEALTHY",
-	}
-	ClusterHealth_value = map[string]int32{
-		"CLUSTER_HEALTH_UNSPECIFIED": 0,
-		"CLUSTER_HEALTH_HEALTHY":     10,
-		"CLUSTER_HEALTH_UNHEALTHY":   20,
-	}
-)
-
-func (x ClusterHealth) Enum() *ClusterHealth {
-	p := new(ClusterHealth)
-	*p = x
-	return p
-}
-
-func (x ClusterHealth) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ClusterHealth) Descriptor() protoreflect.EnumDescriptor {
-	return file_fleet_v1_fleet_proto_enumTypes[1].Descriptor()
-}
-
-func (ClusterHealth) Type() protoreflect.EnumType {
-	return &file_fleet_v1_fleet_proto_enumTypes[1]
-}
-
-func (x ClusterHealth) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
 type ClusterFilter int32
 
 const (
 	ClusterFilter_CLUSTER_FILTER_UNSPECIFIED ClusterFilter = 0
 	ClusterFilter_CLUSTER_FILTER_ALL         ClusterFilter = 10
-	// Unhealthy, or in error.
+	// Unhealthy, in error, or lost.
 	ClusterFilter_CLUSTER_FILTER_UNHEALTHY ClusterFilter = 20
-	// Ready, with no snapshot or one older than stale_after.
+	// Ready, with no snapshot or a stale one (ClusterSummary.stale).
 	ClusterFilter_CLUSTER_FILTER_STALE ClusterFilter = 30
 )
 
@@ -164,17 +131,19 @@ func (x ClusterFilter) String() string {
 }
 
 func (ClusterFilter) Descriptor() protoreflect.EnumDescriptor {
-	return file_fleet_v1_fleet_proto_enumTypes[2].Descriptor()
+	return file_fleet_v1_fleet_proto_enumTypes[1].Descriptor()
 }
 
 func (ClusterFilter) Type() protoreflect.EnumType {
-	return &file_fleet_v1_fleet_proto_enumTypes[2]
+	return &file_fleet_v1_fleet_proto_enumTypes[1]
 }
 
 func (x ClusterFilter) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// DriftKind is a disagreement between the database and Gardener that
+// cluster-worker's reconcile loop observed and recorded.
 type DriftKind int32
 
 const (
@@ -184,14 +153,14 @@ const (
 	// Gardener still has the shoot of a deleted cluster. Usually short-lived:
 	// the reconcile loop deletes orphaned shoots.
 	DriftKind_DRIFT_KIND_SHOOT_OF_DELETED_CLUSTER DriftKind = 20
-	// A synced cluster has no shoot. Only reported while the Gardener inventory
-	// is fresh, so a stopped worker does not make every cluster look missing.
+	// A cluster whose latest sync completed has no shoot.
 	DriftKind_DRIFT_KIND_CLUSTER_WITHOUT_SHOOT DriftKind = 30
-	// A ready cluster has no snapshot, or one older than stale_after.
-	DriftKind_DRIFT_KIND_SNAPSHOT_STALE DriftKind = 40
-	// The database and the shoot disagree on the Kubernetes version while the
-	// cluster is not updating.
+	// A ready cluster that is not updating runs another Kubernetes minor
+	// version than the database holds. Patch versions are not compared:
+	// Gardener's maintenance moves them on its own.
 	DriftKind_DRIFT_KIND_KUBERNETES_VERSION_MISMATCH DriftKind = 50
+	// Gardener has a shoot whose fundament.io/cluster-id label is no id.
+	DriftKind_DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID DriftKind = 60
 )
 
 // Enum value maps for DriftKind.
@@ -201,16 +170,16 @@ var (
 		10: "DRIFT_KIND_SHOOT_WITHOUT_CLUSTER",
 		20: "DRIFT_KIND_SHOOT_OF_DELETED_CLUSTER",
 		30: "DRIFT_KIND_CLUSTER_WITHOUT_SHOOT",
-		40: "DRIFT_KIND_SNAPSHOT_STALE",
 		50: "DRIFT_KIND_KUBERNETES_VERSION_MISMATCH",
+		60: "DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID",
 	}
 	DriftKind_value = map[string]int32{
 		"DRIFT_KIND_UNSPECIFIED":                 0,
 		"DRIFT_KIND_SHOOT_WITHOUT_CLUSTER":       10,
 		"DRIFT_KIND_SHOOT_OF_DELETED_CLUSTER":    20,
 		"DRIFT_KIND_CLUSTER_WITHOUT_SHOOT":       30,
-		"DRIFT_KIND_SNAPSHOT_STALE":              40,
 		"DRIFT_KIND_KUBERNETES_VERSION_MISMATCH": 50,
+		"DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID":    60,
 	}
 )
 
@@ -225,40 +194,125 @@ func (x DriftKind) String() string {
 }
 
 func (DriftKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_fleet_v1_fleet_proto_enumTypes[3].Descriptor()
+	return file_fleet_v1_fleet_proto_enumTypes[2].Descriptor()
 }
 
 func (DriftKind) Type() protoreflect.EnumType {
-	return &file_fleet_v1_fleet_proto_enumTypes[3]
+	return &file_fleet_v1_fleet_proto_enumTypes[2]
 }
 
 func (x DriftKind) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// WorkerHeartbeat is when one of cluster-worker's periodic loops last
+// completed a pass, and how often it runs.
+type WorkerHeartbeat struct {
+	state                      protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_LastPass        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_pass,json=lastPass"`
+	xxx_hidden_IntervalSeconds int32                  `protobuf:"varint,20,opt,name=interval_seconds,json=intervalSeconds"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *WorkerHeartbeat) Reset() {
+	*x = WorkerHeartbeat{}
+	mi := &file_fleet_v1_fleet_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkerHeartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkerHeartbeat) ProtoMessage() {}
+
+func (x *WorkerHeartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_fleet_v1_fleet_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *WorkerHeartbeat) GetLastPass() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_LastPass
+	}
+	return nil
+}
+
+func (x *WorkerHeartbeat) GetIntervalSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_IntervalSeconds
+	}
+	return 0
+}
+
+func (x *WorkerHeartbeat) SetLastPass(v *timestamppb.Timestamp) {
+	x.xxx_hidden_LastPass = v
+}
+
+func (x *WorkerHeartbeat) SetIntervalSeconds(v int32) {
+	x.xxx_hidden_IntervalSeconds = v
+}
+
+func (x *WorkerHeartbeat) HasLastPass() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_LastPass != nil
+}
+
+func (x *WorkerHeartbeat) ClearLastPass() {
+	x.xxx_hidden_LastPass = nil
+}
+
+type WorkerHeartbeat_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	LastPass        *timestamppb.Timestamp
+	IntervalSeconds int32
+}
+
+func (b0 WorkerHeartbeat_builder) Build() *WorkerHeartbeat {
+	m0 := &WorkerHeartbeat{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_LastPass = b.LastPass
+	x.xxx_hidden_IntervalSeconds = b.IntervalSeconds
+	return m0
+}
+
 type FleetSummary struct {
-	state                                 protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Organizations              int32                  `protobuf:"varint,10,opt,name=organizations"`
-	xxx_hidden_Clusters                   int32                  `protobuf:"varint,20,opt,name=clusters"`
-	xxx_hidden_ClustersUnhealthy          int32                  `protobuf:"varint,30,opt,name=clusters_unhealthy,json=clustersUnhealthy"`
-	xxx_hidden_ClustersUpdating           int32                  `protobuf:"varint,40,opt,name=clusters_updating,json=clustersUpdating"`
-	xxx_hidden_Nodes                      int32                  `protobuf:"varint,50,opt,name=nodes"`
-	xxx_hidden_NodesReady                 int32                  `protobuf:"varint,60,opt,name=nodes_ready,json=nodesReady"`
-	xxx_hidden_Pods                       int32                  `protobuf:"varint,70,opt,name=pods"`
-	xxx_hidden_PodAllocatable             int32                  `protobuf:"varint,80,opt,name=pod_allocatable,json=podAllocatable"`
-	xxx_hidden_CpuAllocatableM            int64                  `protobuf:"varint,90,opt,name=cpu_allocatable_m,json=cpuAllocatableM"`
-	xxx_hidden_MemoryAllocatableMi        int64                  `protobuf:"varint,100,opt,name=memory_allocatable_mi,json=memoryAllocatableMi"`
-	xxx_hidden_DriftFindings              int32                  `protobuf:"varint,110,opt,name=drift_findings,json=driftFindings"`
-	xxx_hidden_StaleSnapshots             int32                  `protobuf:"varint,120,opt,name=stale_snapshots,json=staleSnapshots"`
-	xxx_hidden_GardenerInventoryRefreshed *timestamppb.Timestamp `protobuf:"bytes,130,opt,name=gardener_inventory_refreshed,json=gardenerInventoryRefreshed"`
-	xxx_hidden_StaleAfterSeconds          int32                  `protobuf:"varint,140,opt,name=stale_after_seconds,json=staleAfterSeconds"`
-	unknownFields                         protoimpl.UnknownFields
-	sizeCache                             protoimpl.SizeCache
+	state                                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Organizations             int32                  `protobuf:"varint,10,opt,name=organizations"`
+	xxx_hidden_Clusters                  int32                  `protobuf:"varint,20,opt,name=clusters"`
+	xxx_hidden_ClustersUnhealthy         int32                  `protobuf:"varint,30,opt,name=clusters_unhealthy,json=clustersUnhealthy"`
+	xxx_hidden_ClustersUpdating          int32                  `protobuf:"varint,40,opt,name=clusters_updating,json=clustersUpdating"`
+	xxx_hidden_Nodes                     int32                  `protobuf:"varint,50,opt,name=nodes"`
+	xxx_hidden_NodesReady                int32                  `protobuf:"varint,60,opt,name=nodes_ready,json=nodesReady"`
+	xxx_hidden_Pods                      int32                  `protobuf:"varint,70,opt,name=pods"`
+	xxx_hidden_PodAllocatable            int32                  `protobuf:"varint,80,opt,name=pod_allocatable,json=podAllocatable"`
+	xxx_hidden_CpuAllocatableM           int64                  `protobuf:"varint,90,opt,name=cpu_allocatable_m,json=cpuAllocatableM"`
+	xxx_hidden_MemoryAllocatableMi       int64                  `protobuf:"varint,100,opt,name=memory_allocatable_mi,json=memoryAllocatableMi"`
+	xxx_hidden_DriftFindings             int32                  `protobuf:"varint,110,opt,name=drift_findings,json=driftFindings"`
+	xxx_hidden_StaleSnapshots            int32                  `protobuf:"varint,120,opt,name=stale_snapshots,json=staleSnapshots"`
+	xxx_hidden_Reconcile                 *WorkerHeartbeat       `protobuf:"bytes,150,opt,name=reconcile"`
+	xxx_hidden_Inventory                 *WorkerHeartbeat       `protobuf:"bytes,160,opt,name=inventory"`
+	xxx_hidden_SnapshotStaleAfterSeconds int32                  `protobuf:"varint,170,opt,name=snapshot_stale_after_seconds,json=snapshotStaleAfterSeconds"`
+	unknownFields                        protoimpl.UnknownFields
+	sizeCache                            protoimpl.SizeCache
 }
 
 func (x *FleetSummary) Reset() {
 	*x = FleetSummary{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[0]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +324,7 @@ func (x *FleetSummary) String() string {
 func (*FleetSummary) ProtoMessage() {}
 
 func (x *FleetSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[0]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,16 +419,23 @@ func (x *FleetSummary) GetStaleSnapshots() int32 {
 	return 0
 }
 
-func (x *FleetSummary) GetGardenerInventoryRefreshed() *timestamppb.Timestamp {
+func (x *FleetSummary) GetReconcile() *WorkerHeartbeat {
 	if x != nil {
-		return x.xxx_hidden_GardenerInventoryRefreshed
+		return x.xxx_hidden_Reconcile
 	}
 	return nil
 }
 
-func (x *FleetSummary) GetStaleAfterSeconds() int32 {
+func (x *FleetSummary) GetInventory() *WorkerHeartbeat {
 	if x != nil {
-		return x.xxx_hidden_StaleAfterSeconds
+		return x.xxx_hidden_Inventory
+	}
+	return nil
+}
+
+func (x *FleetSummary) GetSnapshotStaleAfterSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_SnapshotStaleAfterSeconds
 	}
 	return 0
 }
@@ -427,23 +488,38 @@ func (x *FleetSummary) SetStaleSnapshots(v int32) {
 	x.xxx_hidden_StaleSnapshots = v
 }
 
-func (x *FleetSummary) SetGardenerInventoryRefreshed(v *timestamppb.Timestamp) {
-	x.xxx_hidden_GardenerInventoryRefreshed = v
+func (x *FleetSummary) SetReconcile(v *WorkerHeartbeat) {
+	x.xxx_hidden_Reconcile = v
 }
 
-func (x *FleetSummary) SetStaleAfterSeconds(v int32) {
-	x.xxx_hidden_StaleAfterSeconds = v
+func (x *FleetSummary) SetInventory(v *WorkerHeartbeat) {
+	x.xxx_hidden_Inventory = v
 }
 
-func (x *FleetSummary) HasGardenerInventoryRefreshed() bool {
+func (x *FleetSummary) SetSnapshotStaleAfterSeconds(v int32) {
+	x.xxx_hidden_SnapshotStaleAfterSeconds = v
+}
+
+func (x *FleetSummary) HasReconcile() bool {
 	if x == nil {
 		return false
 	}
-	return x.xxx_hidden_GardenerInventoryRefreshed != nil
+	return x.xxx_hidden_Reconcile != nil
 }
 
-func (x *FleetSummary) ClearGardenerInventoryRefreshed() {
-	x.xxx_hidden_GardenerInventoryRefreshed = nil
+func (x *FleetSummary) HasInventory() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Inventory != nil
+}
+
+func (x *FleetSummary) ClearReconcile() {
+	x.xxx_hidden_Reconcile = nil
+}
+
+func (x *FleetSummary) ClearInventory() {
+	x.xxx_hidden_Inventory = nil
 }
 
 type FleetSummary_builder struct {
@@ -459,13 +535,19 @@ type FleetSummary_builder struct {
 	PodAllocatable      int32
 	CpuAllocatableM     int64
 	MemoryAllocatableMi int64
-	DriftFindings       int32
-	StaleSnapshots      int32
-	// The last time cluster-worker saw a shoot in Gardener; absent when it has
-	// recorded none.
-	GardenerInventoryRefreshed *timestamppb.Timestamp
-	// How old a snapshot may get before it counts as stale.
-	StaleAfterSeconds int32
+	// Open drift findings.
+	DriftFindings int32
+	// Clusters with ClusterSummary.stale set.
+	StaleSnapshots int32
+	// The reconcile loop, which records the drift findings; absent before its
+	// first pass. Findings are only as current as its last pass.
+	Reconcile *WorkerHeartbeat
+	// The inventory loop, which collects the snapshots; absent before its first
+	// pass, or when collection is off.
+	Inventory *WorkerHeartbeat
+	// How old a snapshot may get before it counts as stale: three inventory
+	// intervals. Zero while the inventory loop has not run.
+	SnapshotStaleAfterSeconds int32
 }
 
 func (b0 FleetSummary_builder) Build() *FleetSummary {
@@ -484,8 +566,9 @@ func (b0 FleetSummary_builder) Build() *FleetSummary {
 	x.xxx_hidden_MemoryAllocatableMi = b.MemoryAllocatableMi
 	x.xxx_hidden_DriftFindings = b.DriftFindings
 	x.xxx_hidden_StaleSnapshots = b.StaleSnapshots
-	x.xxx_hidden_GardenerInventoryRefreshed = b.GardenerInventoryRefreshed
-	x.xxx_hidden_StaleAfterSeconds = b.StaleAfterSeconds
+	x.xxx_hidden_Reconcile = b.Reconcile
+	x.xxx_hidden_Inventory = b.Inventory
+	x.xxx_hidden_SnapshotStaleAfterSeconds = b.SnapshotStaleAfterSeconds
 	return m0
 }
 
@@ -507,7 +590,7 @@ type OrganizationSummary struct {
 
 func (x *OrganizationSummary) Reset() {
 	*x = OrganizationSummary{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[1]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +602,7 @@ func (x *OrganizationSummary) String() string {
 func (*OrganizationSummary) ProtoMessage() {}
 
 func (x *OrganizationSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[1]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +787,7 @@ type ClusterSnapshot struct {
 
 func (x *ClusterSnapshot) Reset() {
 	*x = ClusterSnapshot{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[2]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -716,7 +799,7 @@ func (x *ClusterSnapshot) String() string {
 func (*ClusterSnapshot) ProtoMessage() {}
 
 func (x *ClusterSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[2]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -907,7 +990,6 @@ type ClusterSummary struct {
 	xxx_hidden_Region            string                 `protobuf:"bytes,50,opt,name=region"`
 	xxx_hidden_KubernetesVersion string                 `protobuf:"bytes,60,opt,name=kubernetes_version,json=kubernetesVersion"`
 	xxx_hidden_Status            ClusterStatus          `protobuf:"varint,70,opt,name=status,enum=fleet.v1.ClusterStatus"`
-	xxx_hidden_Health            ClusterHealth          `protobuf:"varint,80,opt,name=health,enum=fleet.v1.ClusterHealth"`
 	xxx_hidden_StatusMessage     string                 `protobuf:"bytes,90,opt,name=status_message,json=statusMessage"`
 	xxx_hidden_Created           *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=created"`
 	xxx_hidden_NodePools         int32                  `protobuf:"varint,110,opt,name=node_pools,json=nodePools"`
@@ -921,7 +1003,7 @@ type ClusterSummary struct {
 
 func (x *ClusterSummary) Reset() {
 	*x = ClusterSummary{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[3]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -933,7 +1015,7 @@ func (x *ClusterSummary) String() string {
 func (*ClusterSummary) ProtoMessage() {}
 
 func (x *ClusterSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[3]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -991,13 +1073,6 @@ func (x *ClusterSummary) GetStatus() ClusterStatus {
 		return x.xxx_hidden_Status
 	}
 	return ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
-}
-
-func (x *ClusterSummary) GetHealth() ClusterHealth {
-	if x != nil {
-		return x.xxx_hidden_Health
-	}
-	return ClusterHealth_CLUSTER_HEALTH_UNSPECIFIED
 }
 
 func (x *ClusterSummary) GetStatusMessage() string {
@@ -1077,10 +1152,6 @@ func (x *ClusterSummary) SetStatus(v ClusterStatus) {
 	x.xxx_hidden_Status = v
 }
 
-func (x *ClusterSummary) SetHealth(v ClusterHealth) {
-	x.xxx_hidden_Health = v
-}
-
 func (x *ClusterSummary) SetStatusMessage(v string) {
 	x.xxx_hidden_StatusMessage = v
 }
@@ -1141,7 +1212,6 @@ type ClusterSummary_builder struct {
 	Region            string
 	KubernetesVersion string
 	Status            ClusterStatus
-	Health            ClusterHealth
 	StatusMessage     string
 	Created           *timestamppb.Timestamp
 	NodePools         int32
@@ -1150,7 +1220,9 @@ type ClusterSummary_builder struct {
 	NodesMax int32
 	// Absent until cluster-worker first tried to collect this cluster.
 	Snapshot *ClusterSnapshot
-	// Ready with no snapshot, or one older than stale_after.
+	// Ready with no snapshot, or one older than three inventory intervals. A
+	// cluster that turned ready less than that ago is given time for its first
+	// collection.
 	Stale bool
 }
 
@@ -1165,7 +1237,6 @@ func (b0 ClusterSummary_builder) Build() *ClusterSummary {
 	x.xxx_hidden_Region = b.Region
 	x.xxx_hidden_KubernetesVersion = b.KubernetesVersion
 	x.xxx_hidden_Status = b.Status
-	x.xxx_hidden_Health = b.Health
 	x.xxx_hidden_StatusMessage = b.StatusMessage
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_NodePools = b.NodePools
@@ -1192,7 +1263,7 @@ type NodePool struct {
 
 func (x *NodePool) Reset() {
 	*x = NodePool{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[4]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1275,7 @@ func (x *NodePool) String() string {
 func (*NodePool) ProtoMessage() {}
 
 func (x *NodePool) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[4]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1354,7 +1425,7 @@ type Namespace struct {
 
 func (x *Namespace) Reset() {
 	*x = Namespace{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[5]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1366,7 +1437,7 @@ func (x *Namespace) String() string {
 func (*Namespace) ProtoMessage() {}
 
 func (x *Namespace) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[5]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1464,7 +1535,7 @@ type Project struct {
 
 func (x *Project) Reset() {
 	*x = Project{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[6]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1476,7 +1547,7 @@ func (x *Project) String() string {
 func (*Project) ProtoMessage() {}
 
 func (x *Project) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[6]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1568,7 +1639,7 @@ type GardenerShoot struct {
 
 func (x *GardenerShoot) Reset() {
 	*x = GardenerShoot{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[7]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1580,7 +1651,7 @@ func (x *GardenerShoot) String() string {
 func (*GardenerShoot) ProtoMessage() {}
 
 func (x *GardenerShoot) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[7]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1705,14 +1776,16 @@ func (b0 GardenerShoot_builder) Build() *GardenerShoot {
 
 type DriftFinding struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id               string                 `protobuf:"bytes,120,opt,name=id"`
 	xxx_hidden_Kind             DriftKind              `protobuf:"varint,10,opt,name=kind,enum=fleet.v1.DriftKind"`
 	xxx_hidden_OrganizationId   *string                `protobuf:"bytes,20,opt,name=organization_id,json=organizationId"`
 	xxx_hidden_OrganizationName *string                `protobuf:"bytes,30,opt,name=organization_name,json=organizationName"`
-	xxx_hidden_ClusterId        string                 `protobuf:"bytes,40,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_ClusterId        *string                `protobuf:"bytes,40,opt,name=cluster_id,json=clusterId"`
 	xxx_hidden_ClusterName      *string                `protobuf:"bytes,50,opt,name=cluster_name,json=clusterName"`
 	xxx_hidden_ShootName        *string                `protobuf:"bytes,60,opt,name=shoot_name,json=shootName"`
 	xxx_hidden_ShootNamespace   *string                `protobuf:"bytes,70,opt,name=shoot_namespace,json=shootNamespace"`
-	xxx_hidden_Since            *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=since"`
+	xxx_hidden_FirstDetected    *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=first_detected,json=firstDetected"`
+	xxx_hidden_LastDetected     *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=last_detected,json=lastDetected"`
 	xxx_hidden_Detail           string                 `protobuf:"bytes,90,opt,name=detail"`
 	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
 	XXX_presence                [1]uint32
@@ -1722,7 +1795,7 @@ type DriftFinding struct {
 
 func (x *DriftFinding) Reset() {
 	*x = DriftFinding{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[8]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1734,7 +1807,7 @@ func (x *DriftFinding) String() string {
 func (*DriftFinding) ProtoMessage() {}
 
 func (x *DriftFinding) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[8]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1743,6 +1816,13 @@ func (x *DriftFinding) ProtoReflect() protoreflect.Message {
 		return ms
 	}
 	return mi.MessageOf(x)
+}
+
+func (x *DriftFinding) GetId() string {
+	if x != nil {
+		return x.xxx_hidden_Id
+	}
+	return ""
 }
 
 func (x *DriftFinding) GetKind() DriftKind {
@@ -1774,7 +1854,10 @@ func (x *DriftFinding) GetOrganizationName() string {
 
 func (x *DriftFinding) GetClusterId() string {
 	if x != nil {
-		return x.xxx_hidden_ClusterId
+		if x.xxx_hidden_ClusterId != nil {
+			return *x.xxx_hidden_ClusterId
+		}
+		return ""
 	}
 	return ""
 }
@@ -1809,9 +1892,16 @@ func (x *DriftFinding) GetShootNamespace() string {
 	return ""
 }
 
-func (x *DriftFinding) GetSince() *timestamppb.Timestamp {
+func (x *DriftFinding) GetFirstDetected() *timestamppb.Timestamp {
 	if x != nil {
-		return x.xxx_hidden_Since
+		return x.xxx_hidden_FirstDetected
+	}
+	return nil
+}
+
+func (x *DriftFinding) GetLastDetected() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_LastDetected
 	}
 	return nil
 }
@@ -1823,41 +1913,50 @@ func (x *DriftFinding) GetDetail() string {
 	return ""
 }
 
+func (x *DriftFinding) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
 func (x *DriftFinding) SetKind(v DriftKind) {
 	x.xxx_hidden_Kind = v
 }
 
 func (x *DriftFinding) SetOrganizationId(v string) {
 	x.xxx_hidden_OrganizationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 11)
 }
 
 func (x *DriftFinding) SetOrganizationName(v string) {
 	x.xxx_hidden_OrganizationName = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 11)
 }
 
 func (x *DriftFinding) SetClusterId(v string) {
-	x.xxx_hidden_ClusterId = v
+	x.xxx_hidden_ClusterId = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 11)
 }
 
 func (x *DriftFinding) SetClusterName(v string) {
 	x.xxx_hidden_ClusterName = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 11)
 }
 
 func (x *DriftFinding) SetShootName(v string) {
 	x.xxx_hidden_ShootName = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 11)
 }
 
 func (x *DriftFinding) SetShootNamespace(v string) {
 	x.xxx_hidden_ShootNamespace = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 11)
 }
 
-func (x *DriftFinding) SetSince(v *timestamppb.Timestamp) {
-	x.xxx_hidden_Since = v
+func (x *DriftFinding) SetFirstDetected(v *timestamppb.Timestamp) {
+	x.xxx_hidden_FirstDetected = v
+}
+
+func (x *DriftFinding) SetLastDetected(v *timestamppb.Timestamp) {
+	x.xxx_hidden_LastDetected = v
 }
 
 func (x *DriftFinding) SetDetail(v string) {
@@ -1868,116 +1967,148 @@ func (x *DriftFinding) HasOrganizationId() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
 func (x *DriftFinding) HasOrganizationName() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
 }
 
-func (x *DriftFinding) HasClusterName() bool {
+func (x *DriftFinding) HasClusterId() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
 }
 
-func (x *DriftFinding) HasShootName() bool {
+func (x *DriftFinding) HasClusterName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
 }
 
-func (x *DriftFinding) HasShootNamespace() bool {
+func (x *DriftFinding) HasShootName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
 }
 
-func (x *DriftFinding) HasSince() bool {
+func (x *DriftFinding) HasShootNamespace() bool {
 	if x == nil {
 		return false
 	}
-	return x.xxx_hidden_Since != nil
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
+func (x *DriftFinding) HasFirstDetected() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_FirstDetected != nil
+}
+
+func (x *DriftFinding) HasLastDetected() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_LastDetected != nil
 }
 
 func (x *DriftFinding) ClearOrganizationId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_OrganizationId = nil
 }
 
 func (x *DriftFinding) ClearOrganizationName() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
 	x.xxx_hidden_OrganizationName = nil
 }
 
-func (x *DriftFinding) ClearClusterName() {
+func (x *DriftFinding) ClearClusterId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_ClusterId = nil
+}
+
+func (x *DriftFinding) ClearClusterName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
 	x.xxx_hidden_ClusterName = nil
 }
 
 func (x *DriftFinding) ClearShootName() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
 	x.xxx_hidden_ShootName = nil
 }
 
 func (x *DriftFinding) ClearShootNamespace() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
 	x.xxx_hidden_ShootNamespace = nil
 }
 
-func (x *DriftFinding) ClearSince() {
-	x.xxx_hidden_Since = nil
+func (x *DriftFinding) ClearFirstDetected() {
+	x.xxx_hidden_FirstDetected = nil
+}
+
+func (x *DriftFinding) ClearLastDetected() {
+	x.xxx_hidden_LastDetected = nil
 }
 
 type DriftFinding_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	Id   string
 	Kind DriftKind
 	// Absent when the cluster id matches no cluster.
 	OrganizationId   *string
 	OrganizationName *string
-	ClusterId        string
-	ClusterName      *string
-	ShootName        *string
-	ShootNamespace   *string
-	// When the disagreement started, as far as the database can tell.
-	Since  *timestamppb.Timestamp
-	Detail string
+	// Absent when the shoot's label is no cluster id.
+	ClusterId      *string
+	ClusterName    *string
+	ShootName      *string
+	ShootNamespace *string
+	// The first reconcile pass that saw the disagreement.
+	FirstDetected *timestamppb.Timestamp
+	// The latest pass that saw it.
+	LastDetected *timestamppb.Timestamp
+	Detail       string
 }
 
 func (b0 DriftFinding_builder) Build() *DriftFinding {
 	m0 := &DriftFinding{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Kind = b.Kind
 	if b.OrganizationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 11)
 		x.xxx_hidden_OrganizationId = b.OrganizationId
 	}
 	if b.OrganizationName != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 11)
 		x.xxx_hidden_OrganizationName = b.OrganizationName
 	}
-	x.xxx_hidden_ClusterId = b.ClusterId
+	if b.ClusterId != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 11)
+		x.xxx_hidden_ClusterId = b.ClusterId
+	}
 	if b.ClusterName != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 11)
 		x.xxx_hidden_ClusterName = b.ClusterName
 	}
 	if b.ShootName != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 11)
 		x.xxx_hidden_ShootName = b.ShootName
 	}
 	if b.ShootNamespace != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 11)
 		x.xxx_hidden_ShootNamespace = b.ShootNamespace
 	}
-	x.xxx_hidden_Since = b.Since
+	x.xxx_hidden_FirstDetected = b.FirstDetected
+	x.xxx_hidden_LastDetected = b.LastDetected
 	x.xxx_hidden_Detail = b.Detail
 	return m0
 }
@@ -1990,7 +2121,7 @@ type GetFleetSummaryRequest struct {
 
 func (x *GetFleetSummaryRequest) Reset() {
 	*x = GetFleetSummaryRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[9]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2002,7 +2133,7 @@ func (x *GetFleetSummaryRequest) String() string {
 func (*GetFleetSummaryRequest) ProtoMessage() {}
 
 func (x *GetFleetSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[9]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2034,7 +2165,7 @@ type GetFleetSummaryResponse struct {
 
 func (x *GetFleetSummaryResponse) Reset() {
 	*x = GetFleetSummaryResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[10]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2046,7 +2177,7 @@ func (x *GetFleetSummaryResponse) String() string {
 func (*GetFleetSummaryResponse) ProtoMessage() {}
 
 func (x *GetFleetSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[10]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2094,14 +2225,16 @@ func (b0 GetFleetSummaryResponse_builder) Build() *GetFleetSummaryResponse {
 }
 
 type ListOrganizationsRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PageSize  int32                  `protobuf:"varint,10,opt,name=page_size,json=pageSize"`
+	xxx_hidden_PageToken string                 `protobuf:"bytes,20,opt,name=page_token,json=pageToken"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListOrganizationsRequest) Reset() {
 	*x = ListOrganizationsRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[11]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2113,7 +2246,7 @@ func (x *ListOrganizationsRequest) String() string {
 func (*ListOrganizationsRequest) ProtoMessage() {}
 
 func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[11]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2124,28 +2257,57 @@ func (x *ListOrganizationsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *ListOrganizationsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_PageSize
+	}
+	return 0
+}
+
+func (x *ListOrganizationsRequest) GetPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_PageToken
+	}
+	return ""
+}
+
+func (x *ListOrganizationsRequest) SetPageSize(v int32) {
+	x.xxx_hidden_PageSize = v
+}
+
+func (x *ListOrganizationsRequest) SetPageToken(v string) {
+	x.xxx_hidden_PageToken = v
+}
+
 type ListOrganizationsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Above 500 is read as 500; zero is 100.
+	PageSize int32
+	// A next_page_token from an earlier response, or empty for the first page.
+	PageToken string
 }
 
 func (b0 ListOrganizationsRequest_builder) Build() *ListOrganizationsRequest {
 	m0 := &ListOrganizationsRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_PageSize = b.PageSize
+	x.xxx_hidden_PageToken = b.PageToken
 	return m0
 }
 
 type ListOrganizationsResponse struct {
 	state                    protoimpl.MessageState  `protogen:"opaque.v1"`
 	xxx_hidden_Organizations *[]*OrganizationSummary `protobuf:"bytes,10,rep,name=organizations"`
+	xxx_hidden_NextPageToken string                  `protobuf:"bytes,20,opt,name=next_page_token,json=nextPageToken"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListOrganizationsResponse) Reset() {
 	*x = ListOrganizationsResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[12]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2157,7 +2319,7 @@ func (x *ListOrganizationsResponse) String() string {
 func (*ListOrganizationsResponse) ProtoMessage() {}
 
 func (x *ListOrganizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[12]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2177,14 +2339,27 @@ func (x *ListOrganizationsResponse) GetOrganizations() []*OrganizationSummary {
 	return nil
 }
 
+func (x *ListOrganizationsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_NextPageToken
+	}
+	return ""
+}
+
 func (x *ListOrganizationsResponse) SetOrganizations(v []*OrganizationSummary) {
 	x.xxx_hidden_Organizations = &v
+}
+
+func (x *ListOrganizationsResponse) SetNextPageToken(v string) {
+	x.xxx_hidden_NextPageToken = v
 }
 
 type ListOrganizationsResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Organizations []*OrganizationSummary
+	// Empty on the last page.
+	NextPageToken string
 }
 
 func (b0 ListOrganizationsResponse_builder) Build() *ListOrganizationsResponse {
@@ -2192,6 +2367,7 @@ func (b0 ListOrganizationsResponse_builder) Build() *ListOrganizationsResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Organizations = &b.Organizations
+	x.xxx_hidden_NextPageToken = b.NextPageToken
 	return m0
 }
 
@@ -2204,7 +2380,7 @@ type GetOrganizationRequest struct {
 
 func (x *GetOrganizationRequest) Reset() {
 	*x = GetOrganizationRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[13]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2216,7 +2392,7 @@ func (x *GetOrganizationRequest) String() string {
 func (*GetOrganizationRequest) ProtoMessage() {}
 
 func (x *GetOrganizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[13]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2261,7 +2437,7 @@ type GetOrganizationResponse struct {
 
 func (x *GetOrganizationResponse) Reset() {
 	*x = GetOrganizationResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[14]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2273,7 +2449,7 @@ func (x *GetOrganizationResponse) String() string {
 func (*GetOrganizationResponse) ProtoMessage() {}
 
 func (x *GetOrganizationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[14]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2324,6 +2500,8 @@ type ListClustersRequest struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_OrganizationId *string                `protobuf:"bytes,10,opt,name=organization_id,json=organizationId"`
 	xxx_hidden_Filter         ClusterFilter          `protobuf:"varint,20,opt,name=filter,enum=fleet.v1.ClusterFilter"`
+	xxx_hidden_PageSize       int32                  `protobuf:"varint,30,opt,name=page_size,json=pageSize"`
+	xxx_hidden_PageToken      string                 `protobuf:"bytes,40,opt,name=page_token,json=pageToken"`
 	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
 	XXX_presence              [1]uint32
 	unknownFields             protoimpl.UnknownFields
@@ -2332,7 +2510,7 @@ type ListClustersRequest struct {
 
 func (x *ListClustersRequest) Reset() {
 	*x = ListClustersRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[15]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2344,7 +2522,7 @@ func (x *ListClustersRequest) String() string {
 func (*ListClustersRequest) ProtoMessage() {}
 
 func (x *ListClustersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[15]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2372,13 +2550,35 @@ func (x *ListClustersRequest) GetFilter() ClusterFilter {
 	return ClusterFilter_CLUSTER_FILTER_UNSPECIFIED
 }
 
+func (x *ListClustersRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_PageSize
+	}
+	return 0
+}
+
+func (x *ListClustersRequest) GetPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_PageToken
+	}
+	return ""
+}
+
 func (x *ListClustersRequest) SetOrganizationId(v string) {
 	x.xxx_hidden_OrganizationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
 }
 
 func (x *ListClustersRequest) SetFilter(v ClusterFilter) {
 	x.xxx_hidden_Filter = v
+}
+
+func (x *ListClustersRequest) SetPageSize(v int32) {
+	x.xxx_hidden_PageSize = v
+}
+
+func (x *ListClustersRequest) SetPageToken(v string) {
+	x.xxx_hidden_PageToken = v
 }
 
 func (x *ListClustersRequest) HasOrganizationId() bool {
@@ -2398,6 +2598,11 @@ type ListClustersRequest_builder struct {
 
 	OrganizationId *string
 	Filter         ClusterFilter
+	// Above 500 is read as 500; zero is 100.
+	PageSize int32
+	// A next_page_token from an earlier response with the same organization_id
+	// and filter, or empty for the first page.
+	PageToken string
 }
 
 func (b0 ListClustersRequest_builder) Build() *ListClustersRequest {
@@ -2405,23 +2610,26 @@ func (b0 ListClustersRequest_builder) Build() *ListClustersRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.OrganizationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
 		x.xxx_hidden_OrganizationId = b.OrganizationId
 	}
 	x.xxx_hidden_Filter = b.Filter
+	x.xxx_hidden_PageSize = b.PageSize
+	x.xxx_hidden_PageToken = b.PageToken
 	return m0
 }
 
 type ListClustersResponse struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Clusters *[]*ClusterSummary     `protobuf:"bytes,10,rep,name=clusters"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Clusters      *[]*ClusterSummary     `protobuf:"bytes,10,rep,name=clusters"`
+	xxx_hidden_NextPageToken string                 `protobuf:"bytes,20,opt,name=next_page_token,json=nextPageToken"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListClustersResponse) Reset() {
 	*x = ListClustersResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[16]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2433,7 +2641,7 @@ func (x *ListClustersResponse) String() string {
 func (*ListClustersResponse) ProtoMessage() {}
 
 func (x *ListClustersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[16]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2453,14 +2661,27 @@ func (x *ListClustersResponse) GetClusters() []*ClusterSummary {
 	return nil
 }
 
+func (x *ListClustersResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_NextPageToken
+	}
+	return ""
+}
+
 func (x *ListClustersResponse) SetClusters(v []*ClusterSummary) {
 	x.xxx_hidden_Clusters = &v
+}
+
+func (x *ListClustersResponse) SetNextPageToken(v string) {
+	x.xxx_hidden_NextPageToken = v
 }
 
 type ListClustersResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Clusters []*ClusterSummary
+	// Empty on the last page.
+	NextPageToken string
 }
 
 func (b0 ListClustersResponse_builder) Build() *ListClustersResponse {
@@ -2468,6 +2689,7 @@ func (b0 ListClustersResponse_builder) Build() *ListClustersResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Clusters = &b.Clusters
+	x.xxx_hidden_NextPageToken = b.NextPageToken
 	return m0
 }
 
@@ -2480,7 +2702,7 @@ type GetClusterRequest struct {
 
 func (x *GetClusterRequest) Reset() {
 	*x = GetClusterRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[17]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2492,7 +2714,7 @@ func (x *GetClusterRequest) String() string {
 func (*GetClusterRequest) ProtoMessage() {}
 
 func (x *GetClusterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[17]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2540,7 +2762,7 @@ type GetClusterResponse struct {
 
 func (x *GetClusterResponse) Reset() {
 	*x = GetClusterResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[18]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2552,7 +2774,7 @@ func (x *GetClusterResponse) String() string {
 func (*GetClusterResponse) ProtoMessage() {}
 
 func (x *GetClusterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[18]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2655,14 +2877,16 @@ func (b0 GetClusterResponse_builder) Build() *GetClusterResponse {
 }
 
 type ListDriftFindingsRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PageSize  int32                  `protobuf:"varint,10,opt,name=page_size,json=pageSize"`
+	xxx_hidden_PageToken string                 `protobuf:"bytes,20,opt,name=page_token,json=pageToken"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *ListDriftFindingsRequest) Reset() {
 	*x = ListDriftFindingsRequest{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[19]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2674,7 +2898,7 @@ func (x *ListDriftFindingsRequest) String() string {
 func (*ListDriftFindingsRequest) ProtoMessage() {}
 
 func (x *ListDriftFindingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[19]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2685,28 +2909,57 @@ func (x *ListDriftFindingsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *ListDriftFindingsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_PageSize
+	}
+	return 0
+}
+
+func (x *ListDriftFindingsRequest) GetPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_PageToken
+	}
+	return ""
+}
+
+func (x *ListDriftFindingsRequest) SetPageSize(v int32) {
+	x.xxx_hidden_PageSize = v
+}
+
+func (x *ListDriftFindingsRequest) SetPageToken(v string) {
+	x.xxx_hidden_PageToken = v
+}
+
 type ListDriftFindingsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Above 500 is read as 500; zero is 100.
+	PageSize int32
+	// A next_page_token from an earlier response, or empty for the first page.
+	PageToken string
 }
 
 func (b0 ListDriftFindingsRequest_builder) Build() *ListDriftFindingsRequest {
 	m0 := &ListDriftFindingsRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_PageSize = b.PageSize
+	x.xxx_hidden_PageToken = b.PageToken
 	return m0
 }
 
 type ListDriftFindingsResponse struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Findings *[]*DriftFinding       `protobuf:"bytes,10,rep,name=findings"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Findings      *[]*DriftFinding       `protobuf:"bytes,10,rep,name=findings"`
+	xxx_hidden_NextPageToken string                 `protobuf:"bytes,20,opt,name=next_page_token,json=nextPageToken"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListDriftFindingsResponse) Reset() {
 	*x = ListDriftFindingsResponse{}
-	mi := &file_fleet_v1_fleet_proto_msgTypes[20]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2718,7 +2971,7 @@ func (x *ListDriftFindingsResponse) String() string {
 func (*ListDriftFindingsResponse) ProtoMessage() {}
 
 func (x *ListDriftFindingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_fleet_v1_fleet_proto_msgTypes[20]
+	mi := &file_fleet_v1_fleet_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2738,14 +2991,27 @@ func (x *ListDriftFindingsResponse) GetFindings() []*DriftFinding {
 	return nil
 }
 
+func (x *ListDriftFindingsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.xxx_hidden_NextPageToken
+	}
+	return ""
+}
+
 func (x *ListDriftFindingsResponse) SetFindings(v []*DriftFinding) {
 	x.xxx_hidden_Findings = &v
+}
+
+func (x *ListDriftFindingsResponse) SetNextPageToken(v string) {
+	x.xxx_hidden_NextPageToken = v
 }
 
 type ListDriftFindingsResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Findings []*DriftFinding
+	// Empty on the last page.
+	NextPageToken string
 }
 
 func (b0 ListDriftFindingsResponse_builder) Build() *ListDriftFindingsResponse {
@@ -2753,6 +3019,7 @@ func (b0 ListDriftFindingsResponse_builder) Build() *ListDriftFindingsResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Findings = &b.Findings
+	x.xxx_hidden_NextPageToken = b.NextPageToken
 	return m0
 }
 
@@ -2760,7 +3027,11 @@ var File_fleet_v1_fleet_proto protoreflect.FileDescriptor
 
 const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\n" +
-	"\x14fleet/v1/fleet.proto\x12\bfleet.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe7\x04\n" +
+	"\x14fleet/v1/fleet.proto\x12\bfleet.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"u\n" +
+	"\x0fWorkerHeartbeat\x127\n" +
+	"\tlast_pass\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\blastPass\x12)\n" +
+	"\x10interval_seconds\x18\x14 \x01(\x05R\x0fintervalSeconds\"\xc9\x05\n" +
 	"\fFleetSummary\x12$\n" +
 	"\rorganizations\x18\n" +
 	" \x01(\x05R\rorganizations\x12\x1a\n" +
@@ -2775,9 +3046,10 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\x11cpu_allocatable_m\x18Z \x01(\x03R\x0fcpuAllocatableM\x122\n" +
 	"\x15memory_allocatable_mi\x18d \x01(\x03R\x13memoryAllocatableMi\x12%\n" +
 	"\x0edrift_findings\x18n \x01(\x05R\rdriftFindings\x12'\n" +
-	"\x0fstale_snapshots\x18x \x01(\x05R\x0estaleSnapshots\x12d\n" +
-	"\x1cgardener_inventory_refreshed\x18\x82\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x1agardenerInventoryRefreshed\x12/\n" +
-	"\x13stale_after_seconds\x18\x8c\x01 \x01(\x05R\x11staleAfterSeconds\"\xbb\x02\n" +
+	"\x0fstale_snapshots\x18x \x01(\x05R\x0estaleSnapshots\x128\n" +
+	"\treconcile\x18\x96\x01 \x01(\v2\x19.fleet.v1.WorkerHeartbeatR\treconcile\x128\n" +
+	"\tinventory\x18\xa0\x01 \x01(\v2\x19.fleet.v1.WorkerHeartbeatR\tinventory\x12@\n" +
+	"\x1csnapshot_stale_after_seconds\x18\xaa\x01 \x01(\x05R\x19snapshotStaleAfterSecondsJ\x06\b\x82\x01\x10\x83\x01J\x06\b\x8c\x01\x10\x8d\x01R\x1cgardener_inventory_refreshedR\x13stale_after_seconds\"\xbb\x02\n" +
 	"\x13OrganizationSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2805,7 +3077,7 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\x15memory_allocatable_mi\x18F \x01(\x03R\x13memoryAllocatableMi\x12$\n" +
 	"\n" +
 	"last_error\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\tlastError\x12E\n" +
-	"\rlast_error_at\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\vlastErrorAt\"\xb9\x04\n" +
+	"\rlast_error_at\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\vlastErrorAt\"\x96\x04\n" +
 	"\x0eClusterSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12'\n" +
@@ -2814,8 +3086,7 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\x04name\x18( \x01(\tR\x04name\x12\x16\n" +
 	"\x06region\x182 \x01(\tR\x06region\x12-\n" +
 	"\x12kubernetes_version\x18< \x01(\tR\x11kubernetesVersion\x12/\n" +
-	"\x06status\x18F \x01(\x0e2\x17.fleet.v1.ClusterStatusR\x06status\x12/\n" +
-	"\x06health\x18P \x01(\x0e2\x17.fleet.v1.ClusterHealthR\x06health\x12%\n" +
+	"\x06status\x18F \x01(\x0e2\x17.fleet.v1.ClusterStatusR\x06status\x12%\n" +
 	"\x0estatus_message\x18Z \x01(\tR\rstatusMessage\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12\x1d\n" +
 	"\n" +
@@ -2823,7 +3094,7 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\tnodes_min\x18x \x01(\x05R\bnodesMin\x12\x1c\n" +
 	"\tnodes_max\x18\x82\x01 \x01(\x05R\bnodesMax\x126\n" +
 	"\bsnapshot\x18\x8c\x01 \x01(\v2\x19.fleet.v1.ClusterSnapshotR\bsnapshot\x12\x15\n" +
-	"\x05stale\x18\x96\x01 \x01(\bR\x05stale\"\x91\x02\n" +
+	"\x05stale\x18\x96\x01 \x01(\bR\x05staleJ\x04\bP\x10QR\x06health\"\x91\x02\n" +
 	"\bNodePool\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2856,41 +3127,52 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\x12kubernetes_version\x18\x1e \x01(\tR\x11kubernetesVersion\x12\x16\n" +
 	"\x06region\x18( \x01(\tR\x06region\x124\n" +
 	"\acreated\x182 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x127\n" +
-	"\tlast_seen\x18< \x01(\v2\x1a.google.protobuf.TimestampR\blastSeen\"\x8b\x03\n" +
-	"\fDriftFinding\x12'\n" +
+	"\tlast_seen\x18< \x01(\v2\x1a.google.protobuf.TimestampR\blastSeen\"\xfa\x03\n" +
+	"\fDriftFinding\x12\x0e\n" +
+	"\x02id\x18x \x01(\tR\x02id\x12'\n" +
 	"\x04kind\x18\n" +
 	" \x01(\x0e2\x13.fleet.v1.DriftKindR\x04kind\x12.\n" +
 	"\x0forganization_id\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x0eorganizationId\x122\n" +
-	"\x11organization_name\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x10organizationName\x12\x1d\n" +
+	"\x11organization_name\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x10organizationName\x12$\n" +
 	"\n" +
-	"cluster_id\x18( \x01(\tR\tclusterId\x12(\n" +
+	"cluster_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\tclusterId\x12(\n" +
 	"\fcluster_name\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\vclusterName\x12$\n" +
 	"\n" +
 	"shoot_name\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\tshootName\x12.\n" +
-	"\x0fshoot_namespace\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0eshootNamespace\x127\n" +
-	"\x05since\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05since\x12\x16\n" +
-	"\x06detail\x18Z \x01(\tR\x06detail\"\x18\n" +
+	"\x0fshoot_namespace\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0eshootNamespace\x12A\n" +
+	"\x0efirst_detected\x18d \x01(\v2\x1a.google.protobuf.TimestampR\rfirstDetected\x12?\n" +
+	"\rlast_detected\x18n \x01(\v2\x1a.google.protobuf.TimestampR\flastDetected\x12\x16\n" +
+	"\x06detail\x18Z \x01(\tR\x06detailJ\x04\bP\x10QR\x05since\"\x18\n" +
 	"\x16GetFleetSummaryRequest\"K\n" +
 	"\x17GetFleetSummaryResponse\x120\n" +
 	"\asummary\x18\n" +
-	" \x01(\v2\x16.fleet.v1.FleetSummaryR\asummary\"\x1a\n" +
-	"\x18ListOrganizationsRequest\"`\n" +
+	" \x01(\v2\x16.fleet.v1.FleetSummaryR\asummary\"_\n" +
+	"\x18ListOrganizationsRequest\x12$\n" +
+	"\tpage_size\x18\n" +
+	" \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x14 \x01(\tR\tpageToken\"\x88\x01\n" +
 	"\x19ListOrganizationsResponse\x12C\n" +
 	"\rorganizations\x18\n" +
-	" \x03(\v2\x1d.fleet.v1.OrganizationSummaryR\rorganizations\"K\n" +
+	" \x03(\v2\x1d.fleet.v1.OrganizationSummaryR\rorganizations\x12&\n" +
+	"\x0fnext_page_token\x18\x14 \x01(\tR\rnextPageToken\"K\n" +
 	"\x16GetOrganizationRequest\x121\n" +
 	"\x0forganization_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganizationId\"\\\n" +
 	"\x17GetOrganizationResponse\x12A\n" +
 	"\forganization\x18\n" +
-	" \x01(\v2\x1d.fleet.v1.OrganizationSummaryR\forganization\"\x88\x01\n" +
+	" \x01(\v2\x1d.fleet.v1.OrganizationSummaryR\forganization\"\xcd\x01\n" +
 	"\x13ListClustersRequest\x126\n" +
 	"\x0forganization_id\x18\n" +
 	" \x01(\tB\r\xbaH\x05r\x03\xb0\x01\x01\xaa\x01\x02\b\x01R\x0eorganizationId\x129\n" +
-	"\x06filter\x18\x14 \x01(\x0e2\x17.fleet.v1.ClusterFilterB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06filter\"L\n" +
+	"\x06filter\x18\x14 \x01(\x0e2\x17.fleet.v1.ClusterFilterB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06filter\x12$\n" +
+	"\tpage_size\x18\x1e \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18( \x01(\tR\tpageToken\"t\n" +
 	"\x14ListClustersResponse\x124\n" +
 	"\bclusters\x18\n" +
-	" \x03(\v2\x18.fleet.v1.ClusterSummaryR\bclusters\"<\n" +
+	" \x03(\v2\x18.fleet.v1.ClusterSummaryR\bclusters\x12&\n" +
+	"\x0fnext_page_token\x18\x14 \x01(\tR\rnextPageToken\"<\n" +
 	"\x11GetClusterRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -2901,39 +3183,42 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"\x05shoot\x18\x1e \x01(\v2\x17.fleet.v1.GardenerShootR\x05shoot\x121\n" +
 	"\n" +
 	"node_pools\x18( \x03(\v2\x12.fleet.v1.NodePoolR\tnodePools\x12-\n" +
-	"\bprojects\x182 \x03(\v2\x11.fleet.v1.ProjectR\bprojects\"\x1a\n" +
-	"\x18ListDriftFindingsRequest\"O\n" +
+	"\bprojects\x182 \x03(\v2\x11.fleet.v1.ProjectR\bprojects\"_\n" +
+	"\x18ListDriftFindingsRequest\x12$\n" +
+	"\tpage_size\x18\n" +
+	" \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x14 \x01(\tR\tpageToken\"w\n" +
 	"\x19ListDriftFindingsResponse\x122\n" +
 	"\bfindings\x18\n" +
-	" \x03(\v2\x16.fleet.v1.DriftFindingR\bfindings*\xdc\x01\n" +
+	" \x03(\v2\x16.fleet.v1.DriftFindingR\bfindings\x12&\n" +
+	"\x0fnext_page_token\x18\x14 \x01(\tR\rnextPageToken*\xb1\x02\n" +
 	"\rClusterStatus\x12\x1e\n" +
 	"\x1aCLUSTER_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bCLUSTER_STATUS_PROVISIONING\x10\n" +
 	"\x12\x1a\n" +
-	"\x16CLUSTER_STATUS_RUNNING\x10\x14\x12\x1b\n" +
-	"\x17CLUSTER_STATUS_UPDATING\x10\x1e\x12\x18\n" +
+	"\x16CLUSTER_STATUS_RUNNING\x10\x14\x12\x1c\n" +
+	"\x18CLUSTER_STATUS_UPGRADING\x10\x1e\x12\x18\n" +
 	"\x14CLUSTER_STATUS_ERROR\x10(\x12\x1b\n" +
 	"\x17CLUSTER_STATUS_DELETING\x102\x12\x1a\n" +
-	"\x16CLUSTER_STATUS_STOPPED\x10<*i\n" +
-	"\rClusterHealth\x12\x1e\n" +
-	"\x1aCLUSTER_HEALTH_UNSPECIFIED\x10\x00\x12\x1a\n" +
-	"\x16CLUSTER_HEALTH_HEALTHY\x10\n" +
-	"\x12\x1c\n" +
-	"\x18CLUSTER_HEALTH_UNHEALTHY\x10\x14*\x7f\n" +
+	"\x16CLUSTER_STATUS_STOPPED\x10<\x12\x1b\n" +
+	"\x17CLUSTER_STATUS_STARTING\x10F\x12\x1c\n" +
+	"\x18CLUSTER_STATUS_UNHEALTHY\x10P\x12\x17\n" +
+	"\x13CLUSTER_STATUS_LOST\x10Z*\x7f\n" +
 	"\rClusterFilter\x12\x1e\n" +
 	"\x1aCLUSTER_FILTER_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12CLUSTER_FILTER_ALL\x10\n" +
 	"\x12\x1c\n" +
 	"\x18CLUSTER_FILTER_UNHEALTHY\x10\x14\x12\x18\n" +
-	"\x14CLUSTER_FILTER_STALE\x10\x1e*\xe7\x01\n" +
+	"\x14CLUSTER_FILTER_STALE\x10\x1e*\x92\x02\n" +
 	"\tDriftKind\x12\x1a\n" +
 	"\x16DRIFT_KIND_UNSPECIFIED\x10\x00\x12$\n" +
 	" DRIFT_KIND_SHOOT_WITHOUT_CLUSTER\x10\n" +
 	"\x12'\n" +
 	"#DRIFT_KIND_SHOOT_OF_DELETED_CLUSTER\x10\x14\x12$\n" +
-	" DRIFT_KIND_CLUSTER_WITHOUT_SHOOT\x10\x1e\x12\x1d\n" +
-	"\x19DRIFT_KIND_SNAPSHOT_STALE\x10(\x12*\n" +
-	"&DRIFT_KIND_KUBERNETES_VERSION_MISMATCH\x1022\xb0\x04\n" +
+	" DRIFT_KIND_CLUSTER_WITHOUT_SHOOT\x10\x1e\x12*\n" +
+	"&DRIFT_KIND_KUBERNETES_VERSION_MISMATCH\x102\x12'\n" +
+	"#DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID\x10<\"\x04\b(\x10(*\x19DRIFT_KIND_SNAPSHOT_STALE2\xb0\x04\n" +
 	"\fFleetService\x12[\n" +
 	"\x0fGetFleetSummary\x12 .fleet.v1.GetFleetSummaryRequest\x1a!.fleet.v1.GetFleetSummaryResponse\"\x03\x90\x02\x01\x12a\n" +
 	"\x11ListOrganizations\x12\".fleet.v1.ListOrganizationsRequest\x1a#.fleet.v1.ListOrganizationsResponse\"\x03\x90\x02\x01\x12[\n" +
@@ -2943,13 +3228,13 @@ const file_fleet_v1_fleet_proto_rawDesc = "" +
 	"GetCluster\x12\x1b.fleet.v1.GetClusterRequest\x1a\x1c.fleet.v1.GetClusterResponse\"\x03\x90\x02\x01\x12a\n" +
 	"\x11ListDriftFindings\x12\".fleet.v1.ListDriftFindingsRequest\x1a#.fleet.v1.ListDriftFindingsResponse\"\x03\x90\x02\x01BZZNgithub.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1;fleetv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_fleet_v1_fleet_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_fleet_v1_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_fleet_v1_fleet_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_fleet_v1_fleet_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_fleet_v1_fleet_proto_goTypes = []any{
 	(ClusterStatus)(0),                // 0: fleet.v1.ClusterStatus
-	(ClusterHealth)(0),                // 1: fleet.v1.ClusterHealth
-	(ClusterFilter)(0),                // 2: fleet.v1.ClusterFilter
-	(DriftKind)(0),                    // 3: fleet.v1.DriftKind
+	(ClusterFilter)(0),                // 1: fleet.v1.ClusterFilter
+	(DriftKind)(0),                    // 2: fleet.v1.DriftKind
+	(*WorkerHeartbeat)(nil),           // 3: fleet.v1.WorkerHeartbeat
 	(*FleetSummary)(nil),              // 4: fleet.v1.FleetSummary
 	(*OrganizationSummary)(nil),       // 5: fleet.v1.OrganizationSummary
 	(*ClusterSnapshot)(nil),           // 6: fleet.v1.ClusterSnapshot
@@ -2974,48 +3259,50 @@ var file_fleet_v1_fleet_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),     // 25: google.protobuf.Timestamp
 }
 var file_fleet_v1_fleet_proto_depIdxs = []int32{
-	25, // 0: fleet.v1.FleetSummary.gardener_inventory_refreshed:type_name -> google.protobuf.Timestamp
-	25, // 1: fleet.v1.OrganizationSummary.created:type_name -> google.protobuf.Timestamp
-	25, // 2: fleet.v1.ClusterSnapshot.observed:type_name -> google.protobuf.Timestamp
-	25, // 3: fleet.v1.ClusterSnapshot.last_error_at:type_name -> google.protobuf.Timestamp
-	0,  // 4: fleet.v1.ClusterSummary.status:type_name -> fleet.v1.ClusterStatus
-	1,  // 5: fleet.v1.ClusterSummary.health:type_name -> fleet.v1.ClusterHealth
-	25, // 6: fleet.v1.ClusterSummary.created:type_name -> google.protobuf.Timestamp
-	6,  // 7: fleet.v1.ClusterSummary.snapshot:type_name -> fleet.v1.ClusterSnapshot
-	25, // 8: fleet.v1.NodePool.observed:type_name -> google.protobuf.Timestamp
-	25, // 9: fleet.v1.Namespace.observed:type_name -> google.protobuf.Timestamp
-	9,  // 10: fleet.v1.Project.namespaces:type_name -> fleet.v1.Namespace
-	25, // 11: fleet.v1.GardenerShoot.created:type_name -> google.protobuf.Timestamp
-	25, // 12: fleet.v1.GardenerShoot.last_seen:type_name -> google.protobuf.Timestamp
-	3,  // 13: fleet.v1.DriftFinding.kind:type_name -> fleet.v1.DriftKind
-	25, // 14: fleet.v1.DriftFinding.since:type_name -> google.protobuf.Timestamp
-	4,  // 15: fleet.v1.GetFleetSummaryResponse.summary:type_name -> fleet.v1.FleetSummary
-	5,  // 16: fleet.v1.ListOrganizationsResponse.organizations:type_name -> fleet.v1.OrganizationSummary
-	5,  // 17: fleet.v1.GetOrganizationResponse.organization:type_name -> fleet.v1.OrganizationSummary
-	2,  // 18: fleet.v1.ListClustersRequest.filter:type_name -> fleet.v1.ClusterFilter
-	7,  // 19: fleet.v1.ListClustersResponse.clusters:type_name -> fleet.v1.ClusterSummary
-	7,  // 20: fleet.v1.GetClusterResponse.cluster:type_name -> fleet.v1.ClusterSummary
-	11, // 21: fleet.v1.GetClusterResponse.shoot:type_name -> fleet.v1.GardenerShoot
-	8,  // 22: fleet.v1.GetClusterResponse.node_pools:type_name -> fleet.v1.NodePool
-	10, // 23: fleet.v1.GetClusterResponse.projects:type_name -> fleet.v1.Project
-	12, // 24: fleet.v1.ListDriftFindingsResponse.findings:type_name -> fleet.v1.DriftFinding
-	13, // 25: fleet.v1.FleetService.GetFleetSummary:input_type -> fleet.v1.GetFleetSummaryRequest
-	15, // 26: fleet.v1.FleetService.ListOrganizations:input_type -> fleet.v1.ListOrganizationsRequest
-	17, // 27: fleet.v1.FleetService.GetOrganization:input_type -> fleet.v1.GetOrganizationRequest
-	19, // 28: fleet.v1.FleetService.ListClusters:input_type -> fleet.v1.ListClustersRequest
-	21, // 29: fleet.v1.FleetService.GetCluster:input_type -> fleet.v1.GetClusterRequest
-	23, // 30: fleet.v1.FleetService.ListDriftFindings:input_type -> fleet.v1.ListDriftFindingsRequest
-	14, // 31: fleet.v1.FleetService.GetFleetSummary:output_type -> fleet.v1.GetFleetSummaryResponse
-	16, // 32: fleet.v1.FleetService.ListOrganizations:output_type -> fleet.v1.ListOrganizationsResponse
-	18, // 33: fleet.v1.FleetService.GetOrganization:output_type -> fleet.v1.GetOrganizationResponse
-	20, // 34: fleet.v1.FleetService.ListClusters:output_type -> fleet.v1.ListClustersResponse
-	22, // 35: fleet.v1.FleetService.GetCluster:output_type -> fleet.v1.GetClusterResponse
-	24, // 36: fleet.v1.FleetService.ListDriftFindings:output_type -> fleet.v1.ListDriftFindingsResponse
-	31, // [31:37] is the sub-list for method output_type
-	25, // [25:31] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	25, // 0: fleet.v1.WorkerHeartbeat.last_pass:type_name -> google.protobuf.Timestamp
+	3,  // 1: fleet.v1.FleetSummary.reconcile:type_name -> fleet.v1.WorkerHeartbeat
+	3,  // 2: fleet.v1.FleetSummary.inventory:type_name -> fleet.v1.WorkerHeartbeat
+	25, // 3: fleet.v1.OrganizationSummary.created:type_name -> google.protobuf.Timestamp
+	25, // 4: fleet.v1.ClusterSnapshot.observed:type_name -> google.protobuf.Timestamp
+	25, // 5: fleet.v1.ClusterSnapshot.last_error_at:type_name -> google.protobuf.Timestamp
+	0,  // 6: fleet.v1.ClusterSummary.status:type_name -> fleet.v1.ClusterStatus
+	25, // 7: fleet.v1.ClusterSummary.created:type_name -> google.protobuf.Timestamp
+	6,  // 8: fleet.v1.ClusterSummary.snapshot:type_name -> fleet.v1.ClusterSnapshot
+	25, // 9: fleet.v1.NodePool.observed:type_name -> google.protobuf.Timestamp
+	25, // 10: fleet.v1.Namespace.observed:type_name -> google.protobuf.Timestamp
+	9,  // 11: fleet.v1.Project.namespaces:type_name -> fleet.v1.Namespace
+	25, // 12: fleet.v1.GardenerShoot.created:type_name -> google.protobuf.Timestamp
+	25, // 13: fleet.v1.GardenerShoot.last_seen:type_name -> google.protobuf.Timestamp
+	2,  // 14: fleet.v1.DriftFinding.kind:type_name -> fleet.v1.DriftKind
+	25, // 15: fleet.v1.DriftFinding.first_detected:type_name -> google.protobuf.Timestamp
+	25, // 16: fleet.v1.DriftFinding.last_detected:type_name -> google.protobuf.Timestamp
+	4,  // 17: fleet.v1.GetFleetSummaryResponse.summary:type_name -> fleet.v1.FleetSummary
+	5,  // 18: fleet.v1.ListOrganizationsResponse.organizations:type_name -> fleet.v1.OrganizationSummary
+	5,  // 19: fleet.v1.GetOrganizationResponse.organization:type_name -> fleet.v1.OrganizationSummary
+	1,  // 20: fleet.v1.ListClustersRequest.filter:type_name -> fleet.v1.ClusterFilter
+	7,  // 21: fleet.v1.ListClustersResponse.clusters:type_name -> fleet.v1.ClusterSummary
+	7,  // 22: fleet.v1.GetClusterResponse.cluster:type_name -> fleet.v1.ClusterSummary
+	11, // 23: fleet.v1.GetClusterResponse.shoot:type_name -> fleet.v1.GardenerShoot
+	8,  // 24: fleet.v1.GetClusterResponse.node_pools:type_name -> fleet.v1.NodePool
+	10, // 25: fleet.v1.GetClusterResponse.projects:type_name -> fleet.v1.Project
+	12, // 26: fleet.v1.ListDriftFindingsResponse.findings:type_name -> fleet.v1.DriftFinding
+	13, // 27: fleet.v1.FleetService.GetFleetSummary:input_type -> fleet.v1.GetFleetSummaryRequest
+	15, // 28: fleet.v1.FleetService.ListOrganizations:input_type -> fleet.v1.ListOrganizationsRequest
+	17, // 29: fleet.v1.FleetService.GetOrganization:input_type -> fleet.v1.GetOrganizationRequest
+	19, // 30: fleet.v1.FleetService.ListClusters:input_type -> fleet.v1.ListClustersRequest
+	21, // 31: fleet.v1.FleetService.GetCluster:input_type -> fleet.v1.GetClusterRequest
+	23, // 32: fleet.v1.FleetService.ListDriftFindings:input_type -> fleet.v1.ListDriftFindingsRequest
+	14, // 33: fleet.v1.FleetService.GetFleetSummary:output_type -> fleet.v1.GetFleetSummaryResponse
+	16, // 34: fleet.v1.FleetService.ListOrganizations:output_type -> fleet.v1.ListOrganizationsResponse
+	18, // 35: fleet.v1.FleetService.GetOrganization:output_type -> fleet.v1.GetOrganizationResponse
+	20, // 36: fleet.v1.FleetService.ListClusters:output_type -> fleet.v1.ListClustersResponse
+	22, // 37: fleet.v1.FleetService.GetCluster:output_type -> fleet.v1.GetClusterResponse
+	24, // 38: fleet.v1.FleetService.ListDriftFindings:output_type -> fleet.v1.ListDriftFindingsResponse
+	33, // [33:39] is the sub-list for method output_type
+	27, // [27:33] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_fleet_v1_fleet_proto_init() }
@@ -3028,8 +3315,8 @@ func file_fleet_v1_fleet_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fleet_v1_fleet_proto_rawDesc), len(file_fleet_v1_fleet_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   21,
+			NumEnums:      3,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

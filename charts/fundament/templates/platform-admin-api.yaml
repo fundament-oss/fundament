@@ -33,8 +33,6 @@ spec:
             # The fleet view is for staff: it validates the DCIM token
             # (FUN-23), like the marketplace review backoffice.
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
-            - name: STALE_AFTER
-              value: {{ $.Values.platformAdminApi.staleAfter | quote }}
             - name: LOG_LEVEL
               value: {{ .Values.platformAdminApi.logLevel }}
             {{- if $.Values.deploymentVersion }}

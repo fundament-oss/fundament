@@ -1,5 +1,5 @@
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { ClusterHealth, ClusterStatus, DriftKind } from '../../generated/fleet/v1/fleet_pb';
+import { ClusterStatus, DriftKind } from '../../generated/fleet/v1/fleet_pb';
 import {
   clusterTag,
   driftKindTag,
@@ -14,20 +14,16 @@ const now = new Date('2026-10-14T14:00:00Z');
 const ago = (ms: number) => new Date(now.getTime() - ms);
 
 describe('clusterTag', () => {
-  it('reads health only for a running cluster', () => {
-    expect(clusterTag({ status: ClusterStatus.RUNNING, health: ClusterHealth.HEALTHY })).toEqual({
-      text: 'Healthy',
+  it('names every status the way the console does', () => {
+    expect(clusterTag({ status: ClusterStatus.RUNNING })).toEqual({
+      text: 'Running',
       color: 'success',
     });
-    expect(
-      clusterTag({ status: ClusterStatus.RUNNING, health: ClusterHealth.UNHEALTHY }).color,
-    ).toBe('critical');
-    expect(clusterTag({ status: ClusterStatus.UPDATING, health: ClusterHealth.HEALTHY }).text).toBe(
-      'Updating',
-    );
-    expect(
-      clusterTag({ status: ClusterStatus.ERROR, health: ClusterHealth.UNSPECIFIED }).color,
-    ).toBe('critical');
+    expect(clusterTag({ status: ClusterStatus.UNHEALTHY }).color).toBe('critical');
+    expect(clusterTag({ status: ClusterStatus.STARTING }).color).toBe('neutral');
+    expect(clusterTag({ status: ClusterStatus.UPGRADING }).text).toBe('Upgrading');
+    expect(clusterTag({ status: ClusterStatus.ERROR }).color).toBe('critical');
+    expect(clusterTag({ status: ClusterStatus.LOST }).color).toBe('critical');
   });
 });
 
@@ -37,8 +33,8 @@ describe('driftKindTag', () => {
       DriftKind.SHOOT_WITHOUT_CLUSTER,
       DriftKind.SHOOT_OF_DELETED_CLUSTER,
       DriftKind.CLUSTER_WITHOUT_SHOOT,
-      DriftKind.SNAPSHOT_STALE,
       DriftKind.KUBERNETES_VERSION_MISMATCH,
+      DriftKind.SHOOT_INVALID_CLUSTER_ID,
     ].forEach((kind) => expect(driftKindTag(kind).text).not.toBe('Unknown'));
   });
 });
@@ -84,6 +80,13 @@ describe('poolFlag', () => {
       'At maximum',
     );
     expect(poolFlag({ nodes: 3, autoscaleMin: 1, autoscaleMax: 5, observed: seen })).toBeNull();
+  });
+
+  it('leaves a fixed-size pool at its size alone', () => {
+    expect(poolFlag({ nodes: 3, autoscaleMin: 3, autoscaleMax: 3, observed: seen })).toBeNull();
+    expect(poolFlag({ nodes: 2, autoscaleMin: 3, autoscaleMax: 3, observed: seen })?.text).toBe(
+      'Below minimum',
+    );
   });
 
   it('says nothing about a pool that was never observed', () => {

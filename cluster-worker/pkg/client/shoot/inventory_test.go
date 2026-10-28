@@ -196,31 +196,3 @@ func TestReadInventory_ListError(t *testing.T) {
 	_, err := r.ReadInventory(t.Context(), uuid.New())
 	require.ErrorContains(t, err, "list nodes: connection refused")
 }
-
-func TestMockReadInventory(t *testing.T) {
-	t.Parallel()
-
-	clusterID := uuid.New()
-	nsID := uuid.New()
-	m := NewMockShootAccess(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
-	m.WorkerPools = func(id uuid.UUID) map[string]int32 {
-		require.Equal(t, clusterID, id)
-		return map[string]int32{"default": 2, "batch": 1}
-	}
-	require.NoError(t, m.CreateNamespace(t.Context(), clusterID, "team-a", map[string]string{LabelNamespaceID: nsID.String()}))
-	require.NoError(t, m.CreateNamespace(t.Context(), clusterID, "unmanaged", nil))
-
-	first, err := m.ReadInventory(t.Context(), clusterID)
-	require.NoError(t, err)
-	second, err := m.ReadInventory(t.Context(), clusterID)
-	require.NoError(t, err)
-
-	assert.Equal(t, first, second, "the mock reports the same numbers every collection")
-	assert.Equal(t, int32(3), first.Nodes)
-	assert.Equal(t, int32(3), first.NodesReady)
-	assert.Equal(t, PoolInventory{Nodes: 2, NodesReady: 2}, first.Pools["default"])
-	assert.Equal(t, int32(3*mockNodePods), first.PodAllocatable)
-	assert.Contains(t, first.NamespacePods, nsID)
-	assert.Len(t, first.NamespacePods, 1)
-	assert.Equal(t, 3*mockSystemPodsNode+first.NamespacePods[nsID], first.Pods)
-}

@@ -9,31 +9,69 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/fundament-oss/fundament/common/clusterstatus"
 	db "github.com/fundament-oss/fundament/platform-api/pkg/db/gen"
 	fleetv1 "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1"
 )
 
+// clusterKey is where a page of clusters ends.
+type clusterKey struct {
+	Alias string    `json:"a"`
+	Name  string    `json:"n"`
+	ID    uuid.UUID `json:"i"`
+}
+
+// ListClusters reads clusters in batches of the page size and keeps those
+// that match the filter, until the page is full or the clusters run out. The
+// filter is applied here because the UNHEALTHY rule is common/clusterstatus,
+// which has no SQL twin.
 func (s *Server) ListClusters(ctx context.Context, req *fleetv1.ListClustersRequest) (*fleetv1.ListClustersResponse, error) {
-	params := db.ClusterListParams{StaleBefore: pgtype.Timestamptz{Time: s.staleBefore(), Valid: true}}
+	hb, err := s.heartbeats(ctx)
+	if err != nil {
+		return nil, err
+	}
+	size := pageSize(req.GetPageSize())
+	params := db.ClusterListParams{StaleBefore: s.staleBefore(hb), PageLimit: size}
 	if req.HasOrganizationId() {
 		params.OrganizationID = pgtype.UUID{Bytes: uuid.MustParse(req.GetOrganizationId()), Valid: true}
 	}
-
-	rows, err := s.queries.ClusterList(ctx, params)
+	var after clusterKey
+	ok, err := decodePageToken(req.GetPageToken(), &after)
 	if err != nil {
-		return nil, fmt.Errorf("list clusters: %w", err)
+		return nil, err
 	}
 
-	clusters := make([]*fleetv1.ClusterSummary, 0, len(rows))
-	for i := range rows {
-		if matchesFilter(&rows[i], req.GetFilter()) {
-			clusters = append(clusters, clusterSummaryFrom(&rows[i]))
+	resp := fleetv1.ListClustersResponse_builder{}
+	for {
+		if ok {
+			params.AfterAlias = pgtype.Text{String: after.Alias, Valid: true}
+			params.AfterName = pgtype.Text{String: after.Name, Valid: true}
+			params.AfterID = pgtype.UUID{Bytes: after.ID, Valid: true}
+		}
+		rows, err := s.queries.ClusterList(ctx, params)
+		if err != nil {
+			return nil, fmt.Errorf("list clusters: %w", err)
+		}
+		for i := range rows {
+			row := &rows[i]
+			after, ok = clusterKey{Alias: row.OrganizationAlias, Name: row.Name, ID: row.ID}, true
+			if !matchesFilter(row, req.GetFilter()) {
+				continue
+			}
+			resp.Clusters = append(resp.Clusters, clusterSummaryFrom(row))
+			if len(resp.Clusters) == int(size) {
+				// More may follow unless this was the last row there is.
+				if i < len(rows)-1 || len(rows) == int(size) {
+					resp.NextPageToken = encodePageToken(after)
+				}
+				return resp.Build(), nil
+			}
+		}
+		if len(rows) < int(size) {
+			return resp.Build(), nil
 		}
 	}
-
-	return fleetv1.ListClustersResponse_builder{Clusters: clusters}.Build(), nil
 }
 
 func matchesFilter(row *db.ClusterListRow, filter fleetv1.ClusterFilter) bool {
@@ -52,9 +90,14 @@ func matchesFilter(row *db.ClusterListRow, filter fleetv1.ClusterFilter) bool {
 func (s *Server) GetCluster(ctx context.Context, req *fleetv1.GetClusterRequest) (*fleetv1.GetClusterResponse, error) {
 	clusterID := uuid.MustParse(req.GetClusterId())
 
+	hb, err := s.heartbeats(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := s.queries.ClusterList(ctx, db.ClusterListParams{
-		StaleBefore: pgtype.Timestamptz{Time: s.staleBefore(), Valid: true},
+		StaleBefore: s.staleBefore(hb),
 		ClusterID:   pgtype.UUID{Bytes: clusterID, Valid: true},
+		PageLimit:   1,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get cluster: %w", err)
@@ -135,40 +178,58 @@ func (s *Server) GetCluster(ctx context.Context, req *fleetv1.GetClusterRequest)
 }
 
 func (s *Server) GetFleetSummary(ctx context.Context, _ *fleetv1.GetFleetSummaryRequest) (*fleetv1.GetFleetSummaryResponse, error) {
-	totals, err := s.queries.FleetTotals(ctx)
+	hb, err := s.heartbeats(ctx)
+	if err != nil {
+		return nil, err
+	}
+	totals, err := s.queries.FleetTotals(ctx, db.FleetTotalsParams{StaleBefore: s.staleBefore(hb)})
 	if err != nil {
 		return nil, fmt.Errorf("fleet totals: %w", err)
 	}
 
-	findings, err := s.driftFindings(ctx)
+	// Statuses are derived per cluster, as the console derives them.
+	inputs, err := s.queries.ClusterStatusInputList(ctx, db.ClusterStatusInputListParams{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list cluster status: %w", err)
 	}
-	var stale int32
-	for _, f := range findings {
-		if f.GetKind() == fleetv1.DriftKind_DRIFT_KIND_SNAPSHOT_STALE {
-			stale++
+	var unhealthyCount, upgrading int32
+	for i := range inputs {
+		status := clusterstatusOf(&inputs[i])
+		if status.NeedsAttention() {
+			unhealthyCount++
+		}
+		if status == clusterstatus.Upgrading {
+			upgrading++
 		}
 	}
 
 	summary := fleetv1.FleetSummary_builder{
-		Organizations:       totals.Organizations,
-		Clusters:            totals.Clusters,
-		ClustersUnhealthy:   totals.ClustersUnhealthy,
-		ClustersUpdating:    totals.ClustersUpdating,
-		Nodes:               totals.Nodes,
-		NodesReady:          totals.NodesReady,
-		Pods:                totals.Pods,
-		PodAllocatable:      totals.PodAllocatable,
-		CpuAllocatableM:     totals.CpuAllocatableM,
-		MemoryAllocatableMi: totals.MemoryAllocatableMi,
-		DriftFindings:       int32(len(findings)), //nolint:gosec // one finding per cluster or shoot
-		StaleSnapshots:      stale,
-		StaleAfterSeconds:   int32(s.staleAfter.Seconds()),
-	}
-	if totals.GardenerInventoryRefreshed.Valid {
-		summary.GardenerInventoryRefreshed = timestamppb.New(totals.GardenerInventoryRefreshed.Time)
+		Organizations:             totals.Organizations,
+		Clusters:                  totals.Clusters,
+		ClustersUnhealthy:         unhealthyCount,
+		ClustersUpdating:          upgrading,
+		Nodes:                     totals.Nodes,
+		NodesReady:                totals.NodesReady,
+		Pods:                      totals.Pods,
+		PodAllocatable:            totals.PodAllocatable,
+		CpuAllocatableM:           totals.CpuAllocatableM,
+		MemoryAllocatableMi:       totals.MemoryAllocatableMi,
+		DriftFindings:             totals.DriftFindings,
+		StaleSnapshots:            totals.StaleSnapshots,
+		Reconcile:                 heartbeatToProto(hb.reconcile),
+		Inventory:                 heartbeatToProto(hb.inventory),
+		SnapshotStaleAfterSeconds: int32(hb.staleAfter().Seconds()),
 	}
 
 	return fleetv1.GetFleetSummaryResponse_builder{Summary: summary.Build()}.Build(), nil
+}
+
+func heartbeatToProto(row *db.WorkerHeartbeatListRow) *fleetv1.WorkerHeartbeat {
+	if row == nil {
+		return nil
+	}
+	return fleetv1.WorkerHeartbeat_builder{
+		LastPass:        timestampOrNil(row.LastPass),
+		IntervalSeconds: row.IntervalSeconds,
+	}.Build()
 }

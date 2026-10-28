@@ -14,7 +14,32 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file fleet/v1/fleet.proto.
  */
 export const file_fleet_v1_fleet: GenFile = /*@__PURE__*/
-  fileDesc("ChRmbGVldC92MS9mbGVldC5wcm90bxIIZmxlZXQudjEijAMKDEZsZWV0U3VtbWFyeRIVCg1vcmdhbml6YXRpb25zGAogASgFEhAKCGNsdXN0ZXJzGBQgASgFEhoKEmNsdXN0ZXJzX3VuaGVhbHRoeRgeIAEoBRIZChFjbHVzdGVyc191cGRhdGluZxgoIAEoBRINCgVub2RlcxgyIAEoBRITCgtub2Rlc19yZWFkeRg8IAEoBRIMCgRwb2RzGEYgASgFEhcKD3BvZF9hbGxvY2F0YWJsZRhQIAEoBRIZChFjcHVfYWxsb2NhdGFibGVfbRhaIAEoAxIdChVtZW1vcnlfYWxsb2NhdGFibGVfbWkYZCABKAMSFgoOZHJpZnRfZmluZGluZ3MYbiABKAUSFwoPc3RhbGVfc25hcHNob3RzGHggASgFEkgKHGdhcmRlbmVyX2ludmVudG9yeV9yZWZyZXNoZWQYggEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESHAoTc3RhbGVfYWZ0ZXJfc2Vjb25kcxiMASABKAUi3wEKE09yZ2FuaXphdGlvblN1bW1hcnkSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghjbHVzdGVycxg8IAEoBRIaChJjbHVzdGVyc191bmhlYWx0aHkYRiABKAUSDQoFbm9kZXMYUCABKAUSEwoLbm9kZXNfcmVhZHkYWiABKAUSDAoEcG9kcxhkIAEoBRISCgpuYW1lc3BhY2VzGG4gASgFIqACCg9DbHVzdGVyU25hcHNob3QSMwoIb2JzZXJ2ZWQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARINCgVub2RlcxgUIAEoBRITCgtub2Rlc19yZWFkeRgeIAEoBRIMCgRwb2RzGCggASgFEhcKD3BvZF9hbGxvY2F0YWJsZRgyIAEoBRIZChFjcHVfYWxsb2NhdGFibGVfbRg8IAEoAxIdChVtZW1vcnlfYWxsb2NhdGFibGVfbWkYRiABKAMSGQoKbGFzdF9lcnJvchhQIAEoCUIFqgECCAESOAoNbGFzdF9lcnJvcl9hdBhaIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIpoDCg5DbHVzdGVyU3VtbWFyeRIKCgJpZBgKIAEoCRIXCg9vcmdhbml6YXRpb25faWQYFCABKAkSGQoRb3JnYW5pemF0aW9uX25hbWUYHiABKAkSDAoEbmFtZRgoIAEoCRIOCgZyZWdpb24YMiABKAkSGgoSa3ViZXJuZXRlc192ZXJzaW9uGDwgASgJEicKBnN0YXR1cxhGIAEoDjIXLmZsZWV0LnYxLkNsdXN0ZXJTdGF0dXMSJwoGaGVhbHRoGFAgASgOMhcuZmxlZXQudjEuQ2x1c3RlckhlYWx0aBIWCg5zdGF0dXNfbWVzc2FnZRhaIAEoCRIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpub2RlX3Bvb2xzGG4gASgFEhEKCW5vZGVzX21pbhh4IAEoBRISCglub2Rlc19tYXgYggEgASgFEiwKCHNuYXBzaG90GIwBIAEoCzIZLmZsZWV0LnYxLkNsdXN0ZXJTbmFwc2hvdBIOCgVzdGFsZRiWASABKAgiwQEKCE5vZGVQb29sEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMbWFjaGluZV90eXBlGB4gASgJEhUKDWF1dG9zY2FsZV9taW4YKCABKAUSFQoNYXV0b3NjYWxlX21heBgyIAEoBRINCgVub2Rlcxg8IAEoBRITCgtub2Rlc19yZWFkeRhGIAEoBRIzCghvYnNlcnZlZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBImgKCU5hbWVzcGFjZRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEgwKBHBvZHMYHiABKAUSMwoIb2JzZXJ2ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASJbCgdQcm9qZWN0EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSDQoFYWxpYXMYHiABKAkSJwoKbmFtZXNwYWNlcxgoIAMoCzITLmZsZWV0LnYxLk5hbWVzcGFjZSK4AQoNR2FyZGVuZXJTaG9vdBIMCgRuYW1lGAogASgJEhEKCW5hbWVzcGFjZRgUIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YHiABKAkSDgoGcmVnaW9uGCggASgJEisKB2NyZWF0ZWQYMiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3Rfc2Vlbhg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAioQIKDERyaWZ0RmluZGluZxIhCgRraW5kGAogASgOMhMuZmxlZXQudjEuRHJpZnRLaW5kEh4KD29yZ2FuaXphdGlvbl9pZBgUIAEoCUIFqgECCAESIAoRb3JnYW5pemF0aW9uX25hbWUYHiABKAlCBaoBAggBEhIKCmNsdXN0ZXJfaWQYKCABKAkSGwoMY2x1c3Rlcl9uYW1lGDIgASgJQgWqAQIIARIZCgpzaG9vdF9uYW1lGDwgASgJQgWqAQIIARIeCg9zaG9vdF9uYW1lc3BhY2UYRiABKAlCBaoBAggBEjAKBXNpbmNlGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESDgoGZGV0YWlsGFogASgJIhgKFkdldEZsZWV0U3VtbWFyeVJlcXVlc3QiQgoXR2V0RmxlZXRTdW1tYXJ5UmVzcG9uc2USJwoHc3VtbWFyeRgKIAEoCzIWLmZsZWV0LnYxLkZsZWV0U3VtbWFyeSIaChhMaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QiUQoZTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRI0Cg1vcmdhbml6YXRpb25zGAogAygLMh0uZmxlZXQudjEuT3JnYW5pemF0aW9uU3VtbWFyeSI7ChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0EiEKD29yZ2FuaXphdGlvbl9pZBgKIAEoCUIIukgFcgOwAQEiTgoXR2V0T3JnYW5pemF0aW9uUmVzcG9uc2USMwoMb3JnYW5pemF0aW9uGAogASgLMh0uZmxlZXQudjEuT3JnYW5pemF0aW9uU3VtbWFyeSJwChNMaXN0Q2x1c3RlcnNSZXF1ZXN0EiYKD29yZ2FuaXphdGlvbl9pZBgKIAEoCUINqgECCAG6SAVyA7ABARIxCgZmaWx0ZXIYFCABKA4yFy5mbGVldC52MS5DbHVzdGVyRmlsdGVyQgi6SAWCAQIQASJCChRMaXN0Q2x1c3RlcnNSZXNwb25zZRIqCghjbHVzdGVycxgKIAMoCzIYLmZsZWV0LnYxLkNsdXN0ZXJTdW1tYXJ5IjEKEUdldENsdXN0ZXJSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIrQBChJHZXRDbHVzdGVyUmVzcG9uc2USKQoHY2x1c3RlchgKIAEoCzIYLmZsZWV0LnYxLkNsdXN0ZXJTdW1tYXJ5EiYKBXNob290GB4gASgLMhcuZmxlZXQudjEuR2FyZGVuZXJTaG9vdBImCgpub2RlX3Bvb2xzGCggAygLMhIuZmxlZXQudjEuTm9kZVBvb2wSIwoIcHJvamVjdHMYMiADKAsyES5mbGVldC52MS5Qcm9qZWN0IhoKGExpc3REcmlmdEZpbmRpbmdzUmVxdWVzdCJFChlMaXN0RHJpZnRGaW5kaW5nc1Jlc3BvbnNlEigKCGZpbmRpbmdzGAogAygLMhYuZmxlZXQudjEuRHJpZnRGaW5kaW5nKtwBCg1DbHVzdGVyU3RhdHVzEh4KGkNMVVNURVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHwobQ0xVU1RFUl9TVEFUVVNfUFJPVklTSU9OSU5HEAoSGgoWQ0xVU1RFUl9TVEFUVVNfUlVOTklORxAUEhsKF0NMVVNURVJfU1RBVFVTX1VQREFUSU5HEB4SGAoUQ0xVU1RFUl9TVEFUVVNfRVJST1IQKBIbChdDTFVTVEVSX1NUQVRVU19ERUxFVElORxAyEhoKFkNMVVNURVJfU1RBVFVTX1NUT1BQRUQQPCppCg1DbHVzdGVySGVhbHRoEh4KGkNMVVNURVJfSEVBTFRIX1VOU1BFQ0lGSUVEEAASGgoWQ0xVU1RFUl9IRUFMVEhfSEVBTFRIWRAKEhwKGENMVVNURVJfSEVBTFRIX1VOSEVBTFRIWRAUKn8KDUNsdXN0ZXJGaWx0ZXISHgoaQ0xVU1RFUl9GSUxURVJfVU5TUEVDSUZJRUQQABIWChJDTFVTVEVSX0ZJTFRFUl9BTEwQChIcChhDTFVTVEVSX0ZJTFRFUl9VTkhFQUxUSFkQFBIYChRDTFVTVEVSX0ZJTFRFUl9TVEFMRRAeKucBCglEcmlmdEtpbmQSGgoWRFJJRlRfS0lORF9VTlNQRUNJRklFRBAAEiQKIERSSUZUX0tJTkRfU0hPT1RfV0lUSE9VVF9DTFVTVEVSEAoSJwojRFJJRlRfS0lORF9TSE9PVF9PRl9ERUxFVEVEX0NMVVNURVIQFBIkCiBEUklGVF9LSU5EX0NMVVNURVJfV0lUSE9VVF9TSE9PVBAeEh0KGURSSUZUX0tJTkRfU05BUFNIT1RfU1RBTEUQKBIqCiZEUklGVF9LSU5EX0tVQkVSTkVURVNfVkVSU0lPTl9NSVNNQVRDSBAyMrAECgxGbGVldFNlcnZpY2USWwoPR2V0RmxlZXRTdW1tYXJ5EiAuZmxlZXQudjEuR2V0RmxlZXRTdW1tYXJ5UmVxdWVzdBohLmZsZWV0LnYxLkdldEZsZWV0U3VtbWFyeVJlc3BvbnNlIgOQAgESYQoRTGlzdE9yZ2FuaXphdGlvbnMSIi5mbGVldC52MS5MaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QaIy5mbGVldC52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlIgOQAgESWwoPR2V0T3JnYW5pemF0aW9uEiAuZmxlZXQudjEuR2V0T3JnYW5pemF0aW9uUmVxdWVzdBohLmZsZWV0LnYxLkdldE9yZ2FuaXphdGlvblJlc3BvbnNlIgOQAgESUgoMTGlzdENsdXN0ZXJzEh0uZmxlZXQudjEuTGlzdENsdXN0ZXJzUmVxdWVzdBoeLmZsZWV0LnYxLkxpc3RDbHVzdGVyc1Jlc3BvbnNlIgOQAgESTAoKR2V0Q2x1c3RlchIbLmZsZWV0LnYxLkdldENsdXN0ZXJSZXF1ZXN0GhwuZmxlZXQudjEuR2V0Q2x1c3RlclJlc3BvbnNlIgOQAgESYQoRTGlzdERyaWZ0RmluZGluZ3MSIi5mbGVldC52MS5MaXN0RHJpZnRGaW5kaW5nc1JlcXVlc3QaIy5mbGVldC52MS5MaXN0RHJpZnRGaW5kaW5nc1Jlc3BvbnNlIgOQAgFCWlpOZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9wbGF0Zm9ybS1hcGkvcGtnL3Byb3RvL2dlbi9mbGVldC92MTtmbGVldHYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChRmbGVldC92MS9mbGVldC5wcm90bxIIZmxlZXQudjEiWgoPV29ya2VySGVhcnRiZWF0Ei0KCWxhc3RfcGFzcxgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGAoQaW50ZXJ2YWxfc2Vjb25kcxgUIAEoBSLsAwoMRmxlZXRTdW1tYXJ5EhUKDW9yZ2FuaXphdGlvbnMYCiABKAUSEAoIY2x1c3RlcnMYFCABKAUSGgoSY2x1c3RlcnNfdW5oZWFsdGh5GB4gASgFEhkKEWNsdXN0ZXJzX3VwZGF0aW5nGCggASgFEg0KBW5vZGVzGDIgASgFEhMKC25vZGVzX3JlYWR5GDwgASgFEgwKBHBvZHMYRiABKAUSFwoPcG9kX2FsbG9jYXRhYmxlGFAgASgFEhkKEWNwdV9hbGxvY2F0YWJsZV9tGFogASgDEh0KFW1lbW9yeV9hbGxvY2F0YWJsZV9taRhkIAEoAxIWCg5kcmlmdF9maW5kaW5ncxhuIAEoBRIXCg9zdGFsZV9zbmFwc2hvdHMYeCABKAUSLQoJcmVjb25jaWxlGJYBIAEoCzIZLmZsZWV0LnYxLldvcmtlckhlYXJ0YmVhdBItCglpbnZlbnRvcnkYoAEgASgLMhkuZmxlZXQudjEuV29ya2VySGVhcnRiZWF0EiUKHHNuYXBzaG90X3N0YWxlX2FmdGVyX3NlY29uZHMYqgEgASgFSgYIggEQgwFKBgiMARCNAVIcZ2FyZGVuZXJfaW52ZW50b3J5X3JlZnJlc2hlZFITc3RhbGVfYWZ0ZXJfc2Vjb25kcyLfAQoTT3JnYW5pemF0aW9uU3VtbWFyeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEg0KBWFsaWFzGB4gASgJEisKB2NyZWF0ZWQYKCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCGNsdXN0ZXJzGDwgASgFEhoKEmNsdXN0ZXJzX3VuaGVhbHRoeRhGIAEoBRINCgVub2RlcxhQIAEoBRITCgtub2Rlc19yZWFkeRhaIAEoBRIMCgRwb2RzGGQgASgFEhIKCm5hbWVzcGFjZXMYbiABKAUioAIKD0NsdXN0ZXJTbmFwc2hvdBIzCghvYnNlcnZlZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEg0KBW5vZGVzGBQgASgFEhMKC25vZGVzX3JlYWR5GB4gASgFEgwKBHBvZHMYKCABKAUSFwoPcG9kX2FsbG9jYXRhYmxlGDIgASgFEhkKEWNwdV9hbGxvY2F0YWJsZV9tGDwgASgDEh0KFW1lbW9yeV9hbGxvY2F0YWJsZV9taRhGIAEoAxIZCgpsYXN0X2Vycm9yGFAgASgJQgWqAQIIARI4Cg1sYXN0X2Vycm9yX2F0GFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEi/wIKDkNsdXN0ZXJTdW1tYXJ5EgoKAmlkGAogASgJEhcKD29yZ2FuaXphdGlvbl9pZBgUIAEoCRIZChFvcmdhbml6YXRpb25fbmFtZRgeIAEoCRIMCgRuYW1lGCggASgJEg4KBnJlZ2lvbhgyIAEoCRIaChJrdWJlcm5ldGVzX3ZlcnNpb24YPCABKAkSJwoGc3RhdHVzGEYgASgOMhcuZmxlZXQudjEuQ2x1c3RlclN0YXR1cxIWCg5zdGF0dXNfbWVzc2FnZRhaIAEoCRIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpub2RlX3Bvb2xzGG4gASgFEhEKCW5vZGVzX21pbhh4IAEoBRISCglub2Rlc19tYXgYggEgASgFEiwKCHNuYXBzaG90GIwBIAEoCzIZLmZsZWV0LnYxLkNsdXN0ZXJTbmFwc2hvdBIOCgVzdGFsZRiWASABKAhKBAhQEFFSBmhlYWx0aCLBAQoITm9kZVBvb2wSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgxtYWNoaW5lX3R5cGUYHiABKAkSFQoNYXV0b3NjYWxlX21pbhgoIAEoBRIVCg1hdXRvc2NhbGVfbWF4GDIgASgFEg0KBW5vZGVzGDwgASgFEhMKC25vZGVzX3JlYWR5GEYgASgFEjMKCG9ic2VydmVkGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiaAoJTmFtZXNwYWNlEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSDAoEcG9kcxgeIAEoBRIzCghvYnNlcnZlZBgoIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIlsKB1Byb2plY3QSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRINCgVhbGlhcxgeIAEoCRInCgpuYW1lc3BhY2VzGCggAygLMhMuZmxlZXQudjEuTmFtZXNwYWNlIrgBCg1HYXJkZW5lclNob290EgwKBG5hbWUYCiABKAkSEQoJbmFtZXNwYWNlGBQgASgJEhoKEmt1YmVybmV0ZXNfdmVyc2lvbhgeIAEoCRIOCgZyZWdpb24YKCABKAkSKwoHY3JlYXRlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCL2AgoMRHJpZnRGaW5kaW5nEgoKAmlkGHggASgJEiEKBGtpbmQYCiABKA4yEy5mbGVldC52MS5EcmlmdEtpbmQSHgoPb3JnYW5pemF0aW9uX2lkGBQgASgJQgWqAQIIARIgChFvcmdhbml6YXRpb25fbmFtZRgeIAEoCUIFqgECCAESGQoKY2x1c3Rlcl9pZBgoIAEoCUIFqgECCAESGwoMY2x1c3Rlcl9uYW1lGDIgASgJQgWqAQIIARIZCgpzaG9vdF9uYW1lGDwgASgJQgWqAQIIARIeCg9zaG9vdF9uYW1lc3BhY2UYRiABKAlCBaoBAggBEjIKDmZpcnN0X2RldGVjdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCg1sYXN0X2RldGVjdGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIOCgZkZXRhaWwYWiABKAlKBAhQEFFSBXNpbmNlIhgKFkdldEZsZWV0U3VtbWFyeVJlcXVlc3QiQgoXR2V0RmxlZXRTdW1tYXJ5UmVzcG9uc2USJwoHc3VtbWFyeRgKIAEoCzIWLmZsZWV0LnYxLkZsZWV0U3VtbWFyeSJKChhMaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QSGgoJcGFnZV9zaXplGAogASgFQge6SAQaAigAEhIKCnBhZ2VfdG9rZW4YFCABKAkiagoZTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRI0Cg1vcmdhbml6YXRpb25zGAogAygLMh0uZmxlZXQudjEuT3JnYW5pemF0aW9uU3VtbWFyeRIXCg9uZXh0X3BhZ2VfdG9rZW4YFCABKAkiOwoWR2V0T3JnYW5pemF0aW9uUmVxdWVzdBIhCg9vcmdhbml6YXRpb25faWQYCiABKAlCCLpIBXIDsAEBIk4KF0dldE9yZ2FuaXphdGlvblJlc3BvbnNlEjMKDG9yZ2FuaXphdGlvbhgKIAEoCzIdLmZsZWV0LnYxLk9yZ2FuaXphdGlvblN1bW1hcnkioAEKE0xpc3RDbHVzdGVyc1JlcXVlc3QSJgoPb3JnYW5pemF0aW9uX2lkGAogASgJQg2qAQIIAbpIBXIDsAEBEjEKBmZpbHRlchgUIAEoDjIXLmZsZWV0LnYxLkNsdXN0ZXJGaWx0ZXJCCLpIBYIBAhABEhoKCXBhZ2Vfc2l6ZRgeIAEoBUIHukgEGgIoABISCgpwYWdlX3Rva2VuGCggASgJIlsKFExpc3RDbHVzdGVyc1Jlc3BvbnNlEioKCGNsdXN0ZXJzGAogAygLMhguZmxlZXQudjEuQ2x1c3RlclN1bW1hcnkSFwoPbmV4dF9wYWdlX3Rva2VuGBQgASgJIjEKEUdldENsdXN0ZXJSZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBIrQBChJHZXRDbHVzdGVyUmVzcG9uc2USKQoHY2x1c3RlchgKIAEoCzIYLmZsZWV0LnYxLkNsdXN0ZXJTdW1tYXJ5EiYKBXNob290GB4gASgLMhcuZmxlZXQudjEuR2FyZGVuZXJTaG9vdBImCgpub2RlX3Bvb2xzGCggAygLMhIuZmxlZXQudjEuTm9kZVBvb2wSIwoIcHJvamVjdHMYMiADKAsyES5mbGVldC52MS5Qcm9qZWN0IkoKGExpc3REcmlmdEZpbmRpbmdzUmVxdWVzdBIaCglwYWdlX3NpemUYCiABKAVCB7pIBBoCKAASEgoKcGFnZV90b2tlbhgUIAEoCSJeChlMaXN0RHJpZnRGaW5kaW5nc1Jlc3BvbnNlEigKCGZpbmRpbmdzGAogAygLMhYuZmxlZXQudjEuRHJpZnRGaW5kaW5nEhcKD25leHRfcGFnZV90b2tlbhgUIAEoCSqxAgoNQ2x1c3RlclN0YXR1cxIeChpDTFVTVEVSX1NUQVRVU19VTlNQRUNJRklFRBAAEh8KG0NMVVNURVJfU1RBVFVTX1BST1ZJU0lPTklORxAKEhoKFkNMVVNURVJfU1RBVFVTX1JVTk5JTkcQFBIcChhDTFVTVEVSX1NUQVRVU19VUEdSQURJTkcQHhIYChRDTFVTVEVSX1NUQVRVU19FUlJPUhAoEhsKF0NMVVNURVJfU1RBVFVTX0RFTEVUSU5HEDISGgoWQ0xVU1RFUl9TVEFUVVNfU1RPUFBFRBA8EhsKF0NMVVNURVJfU1RBVFVTX1NUQVJUSU5HEEYSHAoYQ0xVU1RFUl9TVEFUVVNfVU5IRUFMVEhZEFASFwoTQ0xVU1RFUl9TVEFUVVNfTE9TVBBaKn8KDUNsdXN0ZXJGaWx0ZXISHgoaQ0xVU1RFUl9GSUxURVJfVU5TUEVDSUZJRUQQABIWChJDTFVTVEVSX0ZJTFRFUl9BTEwQChIcChhDTFVTVEVSX0ZJTFRFUl9VTkhFQUxUSFkQFBIYChRDTFVTVEVSX0ZJTFRFUl9TVEFMRRAeKpICCglEcmlmdEtpbmQSGgoWRFJJRlRfS0lORF9VTlNQRUNJRklFRBAAEiQKIERSSUZUX0tJTkRfU0hPT1RfV0lUSE9VVF9DTFVTVEVSEAoSJwojRFJJRlRfS0lORF9TSE9PVF9PRl9ERUxFVEVEX0NMVVNURVIQFBIkCiBEUklGVF9LSU5EX0NMVVNURVJfV0lUSE9VVF9TSE9PVBAeEioKJkRSSUZUX0tJTkRfS1VCRVJORVRFU19WRVJTSU9OX01JU01BVENIEDISJwojRFJJRlRfS0lORF9TSE9PVF9JTlZBTElEX0NMVVNURVJfSUQQPCIECCgQKCoZRFJJRlRfS0lORF9TTkFQU0hPVF9TVEFMRTKwBAoMRmxlZXRTZXJ2aWNlElsKD0dldEZsZWV0U3VtbWFyeRIgLmZsZWV0LnYxLkdldEZsZWV0U3VtbWFyeVJlcXVlc3QaIS5mbGVldC52MS5HZXRGbGVldFN1bW1hcnlSZXNwb25zZSIDkAIBEmEKEUxpc3RPcmdhbml6YXRpb25zEiIuZmxlZXQudjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0GiMuZmxlZXQudjEuTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZSIDkAIBElsKD0dldE9yZ2FuaXphdGlvbhIgLmZsZWV0LnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaIS5mbGVldC52MS5HZXRPcmdhbml6YXRpb25SZXNwb25zZSIDkAIBElIKDExpc3RDbHVzdGVycxIdLmZsZWV0LnYxLkxpc3RDbHVzdGVyc1JlcXVlc3QaHi5mbGVldC52MS5MaXN0Q2x1c3RlcnNSZXNwb25zZSIDkAIBEkwKCkdldENsdXN0ZXISGy5mbGVldC52MS5HZXRDbHVzdGVyUmVxdWVzdBocLmZsZWV0LnYxLkdldENsdXN0ZXJSZXNwb25zZSIDkAIBEmEKEUxpc3REcmlmdEZpbmRpbmdzEiIuZmxlZXQudjEuTGlzdERyaWZ0RmluZGluZ3NSZXF1ZXN0GiMuZmxlZXQudjEuTGlzdERyaWZ0RmluZGluZ3NSZXNwb25zZSIDkAIBQlpaTmdpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvcGxhdGZvcm0tYXBpL3BrZy9wcm90by9nZW4vZmxlZXQvdjE7ZmxlZXR2MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+
+/**
+ * WorkerHeartbeat is when one of cluster-worker's periodic loops last
+ * completed a pass, and how often it runs.
+ *
+ * @generated from message fleet.v1.WorkerHeartbeat
+ */
+export type WorkerHeartbeat = Message<"fleet.v1.WorkerHeartbeat"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp last_pass = 10;
+   */
+  lastPass?: Timestamp | undefined;
+
+  /**
+   * @generated from field: int32 interval_seconds = 20;
+   */
+  intervalSeconds: number;
+};
+
+/**
+ * Describes the message fleet.v1.WorkerHeartbeat.
+ * Use `create(WorkerHeartbeatSchema)` to create a new message.
+ */
+export const WorkerHeartbeatSchema: GenMessage<WorkerHeartbeat> = /*@__PURE__*/
+  messageDesc(file_fleet_v1_fleet, 0);
 
 /**
  * @generated from message fleet.v1.FleetSummary
@@ -71,29 +96,42 @@ export type FleetSummary = Message<"fleet.v1.FleetSummary"> & {
   memoryAllocatableMi: bigint;
 
   /**
+   * Open drift findings.
+   *
    * @generated from field: int32 drift_findings = 110;
    */
   driftFindings: number;
 
   /**
+   * Clusters with ClusterSummary.stale set.
+   *
    * @generated from field: int32 stale_snapshots = 120;
    */
   staleSnapshots: number;
 
   /**
-   * The last time cluster-worker saw a shoot in Gardener; absent when it has
-   * recorded none.
+   * The reconcile loop, which records the drift findings; absent before its
+   * first pass. Findings are only as current as its last pass.
    *
-   * @generated from field: google.protobuf.Timestamp gardener_inventory_refreshed = 130 [features.field_presence = EXPLICIT];
+   * @generated from field: fleet.v1.WorkerHeartbeat reconcile = 150;
    */
-  gardenerInventoryRefreshed?: Timestamp | undefined;
+  reconcile?: WorkerHeartbeat | undefined;
 
   /**
-   * How old a snapshot may get before it counts as stale.
+   * The inventory loop, which collects the snapshots; absent before its first
+   * pass, or when collection is off.
    *
-   * @generated from field: int32 stale_after_seconds = 140;
+   * @generated from field: fleet.v1.WorkerHeartbeat inventory = 160;
    */
-  staleAfterSeconds: number;
+  inventory?: WorkerHeartbeat | undefined;
+
+  /**
+   * How old a snapshot may get before it counts as stale: three inventory
+   * intervals. Zero while the inventory loop has not run.
+   *
+   * @generated from field: int32 snapshot_stale_after_seconds = 170;
+   */
+  snapshotStaleAfterSeconds: number;
 };
 
 /**
@@ -101,7 +139,7 @@ export type FleetSummary = Message<"fleet.v1.FleetSummary"> & {
  * Use `create(FleetSummarySchema)` to create a new message.
  */
 export const FleetSummarySchema: GenMessage<FleetSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 0);
+  messageDesc(file_fleet_v1_fleet, 1);
 
 /**
  * @generated from message fleet.v1.OrganizationSummary
@@ -163,7 +201,7 @@ export type OrganizationSummary = Message<"fleet.v1.OrganizationSummary"> & {
  * Use `create(OrganizationSummarySchema)` to create a new message.
  */
 export const OrganizationSummarySchema: GenMessage<OrganizationSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 1);
+  messageDesc(file_fleet_v1_fleet, 2);
 
 /**
  * ClusterSnapshot is the latest observation cluster-worker stored. observed is
@@ -225,7 +263,7 @@ export type ClusterSnapshot = Message<"fleet.v1.ClusterSnapshot"> & {
  * Use `create(ClusterSnapshotSchema)` to create a new message.
  */
 export const ClusterSnapshotSchema: GenMessage<ClusterSnapshot> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 2);
+  messageDesc(file_fleet_v1_fleet, 3);
 
 /**
  * @generated from message fleet.v1.ClusterSummary
@@ -267,11 +305,6 @@ export type ClusterSummary = Message<"fleet.v1.ClusterSummary"> & {
   status: ClusterStatus;
 
   /**
-   * @generated from field: fleet.v1.ClusterHealth health = 80;
-   */
-  health: ClusterHealth;
-
-  /**
    * @generated from field: string status_message = 90;
    */
   statusMessage: string;
@@ -306,7 +339,9 @@ export type ClusterSummary = Message<"fleet.v1.ClusterSummary"> & {
   snapshot?: ClusterSnapshot | undefined;
 
   /**
-   * Ready with no snapshot, or one older than stale_after.
+   * Ready with no snapshot, or one older than three inventory intervals. A
+   * cluster that turned ready less than that ago is given time for its first
+   * collection.
    *
    * @generated from field: bool stale = 150;
    */
@@ -318,7 +353,7 @@ export type ClusterSummary = Message<"fleet.v1.ClusterSummary"> & {
  * Use `create(ClusterSummarySchema)` to create a new message.
  */
 export const ClusterSummarySchema: GenMessage<ClusterSummary> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 3);
+  messageDesc(file_fleet_v1_fleet, 4);
 
 /**
  * @generated from message fleet.v1.NodePool
@@ -370,7 +405,7 @@ export type NodePool = Message<"fleet.v1.NodePool"> & {
  * Use `create(NodePoolSchema)` to create a new message.
  */
 export const NodePoolSchema: GenMessage<NodePool> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 4);
+  messageDesc(file_fleet_v1_fleet, 5);
 
 /**
  * @generated from message fleet.v1.Namespace
@@ -402,7 +437,7 @@ export type Namespace = Message<"fleet.v1.Namespace"> & {
  * Use `create(NamespaceSchema)` to create a new message.
  */
 export const NamespaceSchema: GenMessage<Namespace> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 5);
+  messageDesc(file_fleet_v1_fleet, 6);
 
 /**
  * @generated from message fleet.v1.Project
@@ -434,7 +469,7 @@ export type Project = Message<"fleet.v1.Project"> & {
  * Use `create(ProjectSchema)` to create a new message.
  */
 export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 6);
+  messageDesc(file_fleet_v1_fleet, 7);
 
 /**
  * GardenerShoot is what cluster-worker last saw of the cluster's shoot.
@@ -478,12 +513,17 @@ export type GardenerShoot = Message<"fleet.v1.GardenerShoot"> & {
  * Use `create(GardenerShootSchema)` to create a new message.
  */
 export const GardenerShootSchema: GenMessage<GardenerShoot> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 7);
+  messageDesc(file_fleet_v1_fleet, 8);
 
 /**
  * @generated from message fleet.v1.DriftFinding
  */
 export type DriftFinding = Message<"fleet.v1.DriftFinding"> & {
+  /**
+   * @generated from field: string id = 120;
+   */
+  id: string;
+
   /**
    * @generated from field: fleet.v1.DriftKind kind = 10;
    */
@@ -502,7 +542,9 @@ export type DriftFinding = Message<"fleet.v1.DriftFinding"> & {
   organizationName: string;
 
   /**
-   * @generated from field: string cluster_id = 40;
+   * Absent when the shoot's label is no cluster id.
+   *
+   * @generated from field: string cluster_id = 40 [features.field_presence = EXPLICIT];
    */
   clusterId: string;
 
@@ -522,11 +564,18 @@ export type DriftFinding = Message<"fleet.v1.DriftFinding"> & {
   shootNamespace: string;
 
   /**
-   * When the disagreement started, as far as the database can tell.
+   * The first reconcile pass that saw the disagreement.
    *
-   * @generated from field: google.protobuf.Timestamp since = 80 [features.field_presence = EXPLICIT];
+   * @generated from field: google.protobuf.Timestamp first_detected = 100;
    */
-  since?: Timestamp | undefined;
+  firstDetected?: Timestamp | undefined;
+
+  /**
+   * The latest pass that saw it.
+   *
+   * @generated from field: google.protobuf.Timestamp last_detected = 110;
+   */
+  lastDetected?: Timestamp | undefined;
 
   /**
    * @generated from field: string detail = 90;
@@ -539,7 +588,7 @@ export type DriftFinding = Message<"fleet.v1.DriftFinding"> & {
  * Use `create(DriftFindingSchema)` to create a new message.
  */
 export const DriftFindingSchema: GenMessage<DriftFinding> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 8);
+  messageDesc(file_fleet_v1_fleet, 9);
 
 /**
  * @generated from message fleet.v1.GetFleetSummaryRequest
@@ -552,7 +601,7 @@ export type GetFleetSummaryRequest = Message<"fleet.v1.GetFleetSummaryRequest"> 
  * Use `create(GetFleetSummaryRequestSchema)` to create a new message.
  */
 export const GetFleetSummaryRequestSchema: GenMessage<GetFleetSummaryRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 9);
+  messageDesc(file_fleet_v1_fleet, 10);
 
 /**
  * @generated from message fleet.v1.GetFleetSummaryResponse
@@ -569,12 +618,25 @@ export type GetFleetSummaryResponse = Message<"fleet.v1.GetFleetSummaryResponse"
  * Use `create(GetFleetSummaryResponseSchema)` to create a new message.
  */
 export const GetFleetSummaryResponseSchema: GenMessage<GetFleetSummaryResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 10);
+  messageDesc(file_fleet_v1_fleet, 11);
 
 /**
  * @generated from message fleet.v1.ListOrganizationsRequest
  */
 export type ListOrganizationsRequest = Message<"fleet.v1.ListOrganizationsRequest"> & {
+  /**
+   * Above 500 is read as 500; zero is 100.
+   *
+   * @generated from field: int32 page_size = 10;
+   */
+  pageSize: number;
+
+  /**
+   * A next_page_token from an earlier response, or empty for the first page.
+   *
+   * @generated from field: string page_token = 20;
+   */
+  pageToken: string;
 };
 
 /**
@@ -582,7 +644,7 @@ export type ListOrganizationsRequest = Message<"fleet.v1.ListOrganizationsReques
  * Use `create(ListOrganizationsRequestSchema)` to create a new message.
  */
 export const ListOrganizationsRequestSchema: GenMessage<ListOrganizationsRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 11);
+  messageDesc(file_fleet_v1_fleet, 12);
 
 /**
  * @generated from message fleet.v1.ListOrganizationsResponse
@@ -592,6 +654,13 @@ export type ListOrganizationsResponse = Message<"fleet.v1.ListOrganizationsRespo
    * @generated from field: repeated fleet.v1.OrganizationSummary organizations = 10;
    */
   organizations: OrganizationSummary[];
+
+  /**
+   * Empty on the last page.
+   *
+   * @generated from field: string next_page_token = 20;
+   */
+  nextPageToken: string;
 };
 
 /**
@@ -599,7 +668,7 @@ export type ListOrganizationsResponse = Message<"fleet.v1.ListOrganizationsRespo
  * Use `create(ListOrganizationsResponseSchema)` to create a new message.
  */
 export const ListOrganizationsResponseSchema: GenMessage<ListOrganizationsResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 12);
+  messageDesc(file_fleet_v1_fleet, 13);
 
 /**
  * @generated from message fleet.v1.GetOrganizationRequest
@@ -616,7 +685,7 @@ export type GetOrganizationRequest = Message<"fleet.v1.GetOrganizationRequest"> 
  * Use `create(GetOrganizationRequestSchema)` to create a new message.
  */
 export const GetOrganizationRequestSchema: GenMessage<GetOrganizationRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 13);
+  messageDesc(file_fleet_v1_fleet, 14);
 
 /**
  * @generated from message fleet.v1.GetOrganizationResponse
@@ -633,7 +702,7 @@ export type GetOrganizationResponse = Message<"fleet.v1.GetOrganizationResponse"
  * Use `create(GetOrganizationResponseSchema)` to create a new message.
  */
 export const GetOrganizationResponseSchema: GenMessage<GetOrganizationResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 14);
+  messageDesc(file_fleet_v1_fleet, 15);
 
 /**
  * @generated from message fleet.v1.ListClustersRequest
@@ -648,6 +717,21 @@ export type ListClustersRequest = Message<"fleet.v1.ListClustersRequest"> & {
    * @generated from field: fleet.v1.ClusterFilter filter = 20;
    */
   filter: ClusterFilter;
+
+  /**
+   * Above 500 is read as 500; zero is 100.
+   *
+   * @generated from field: int32 page_size = 30;
+   */
+  pageSize: number;
+
+  /**
+   * A next_page_token from an earlier response with the same organization_id
+   * and filter, or empty for the first page.
+   *
+   * @generated from field: string page_token = 40;
+   */
+  pageToken: string;
 };
 
 /**
@@ -655,7 +739,7 @@ export type ListClustersRequest = Message<"fleet.v1.ListClustersRequest"> & {
  * Use `create(ListClustersRequestSchema)` to create a new message.
  */
 export const ListClustersRequestSchema: GenMessage<ListClustersRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 15);
+  messageDesc(file_fleet_v1_fleet, 16);
 
 /**
  * @generated from message fleet.v1.ListClustersResponse
@@ -665,6 +749,13 @@ export type ListClustersResponse = Message<"fleet.v1.ListClustersResponse"> & {
    * @generated from field: repeated fleet.v1.ClusterSummary clusters = 10;
    */
   clusters: ClusterSummary[];
+
+  /**
+   * Empty on the last page.
+   *
+   * @generated from field: string next_page_token = 20;
+   */
+  nextPageToken: string;
 };
 
 /**
@@ -672,7 +763,7 @@ export type ListClustersResponse = Message<"fleet.v1.ListClustersResponse"> & {
  * Use `create(ListClustersResponseSchema)` to create a new message.
  */
 export const ListClustersResponseSchema: GenMessage<ListClustersResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 16);
+  messageDesc(file_fleet_v1_fleet, 17);
 
 /**
  * @generated from message fleet.v1.GetClusterRequest
@@ -689,7 +780,7 @@ export type GetClusterRequest = Message<"fleet.v1.GetClusterRequest"> & {
  * Use `create(GetClusterRequestSchema)` to create a new message.
  */
 export const GetClusterRequestSchema: GenMessage<GetClusterRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 17);
+  messageDesc(file_fleet_v1_fleet, 18);
 
 /**
  * @generated from message fleet.v1.GetClusterResponse
@@ -723,12 +814,25 @@ export type GetClusterResponse = Message<"fleet.v1.GetClusterResponse"> & {
  * Use `create(GetClusterResponseSchema)` to create a new message.
  */
 export const GetClusterResponseSchema: GenMessage<GetClusterResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 18);
+  messageDesc(file_fleet_v1_fleet, 19);
 
 /**
  * @generated from message fleet.v1.ListDriftFindingsRequest
  */
 export type ListDriftFindingsRequest = Message<"fleet.v1.ListDriftFindingsRequest"> & {
+  /**
+   * Above 500 is read as 500; zero is 100.
+   *
+   * @generated from field: int32 page_size = 10;
+   */
+  pageSize: number;
+
+  /**
+   * A next_page_token from an earlier response, or empty for the first page.
+   *
+   * @generated from field: string page_token = 20;
+   */
+  pageToken: string;
 };
 
 /**
@@ -736,7 +840,7 @@ export type ListDriftFindingsRequest = Message<"fleet.v1.ListDriftFindingsReques
  * Use `create(ListDriftFindingsRequestSchema)` to create a new message.
  */
 export const ListDriftFindingsRequestSchema: GenMessage<ListDriftFindingsRequest> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 19);
+  messageDesc(file_fleet_v1_fleet, 20);
 
 /**
  * @generated from message fleet.v1.ListDriftFindingsResponse
@@ -746,6 +850,13 @@ export type ListDriftFindingsResponse = Message<"fleet.v1.ListDriftFindingsRespo
    * @generated from field: repeated fleet.v1.DriftFinding findings = 10;
    */
   findings: DriftFinding[];
+
+  /**
+   * Empty on the last page.
+   *
+   * @generated from field: string next_page_token = 20;
+   */
+  nextPageToken: string;
 };
 
 /**
@@ -753,10 +864,11 @@ export type ListDriftFindingsResponse = Message<"fleet.v1.ListDriftFindingsRespo
  * Use `create(ListDriftFindingsResponseSchema)` to create a new message.
  */
 export const ListDriftFindingsResponseSchema: GenMessage<ListDriftFindingsResponse> = /*@__PURE__*/
-  messageDesc(file_fleet_v1_fleet, 20);
+  messageDesc(file_fleet_v1_fleet, 21);
 
 /**
- * ClusterStatus follows the console's reading of tenant.clusters.shoot_status.
+ * ClusterStatus is the status the console shows for the same cluster: both
+ * derive it with common/clusterstatus. Values mirror organization.v1.
  *
  * @generated from enum fleet.v1.ClusterStatus
  */
@@ -779,9 +891,9 @@ export enum ClusterStatus {
   /**
    * Running while an update fundament pushed rolls out.
    *
-   * @generated from enum value: CLUSTER_STATUS_UPDATING = 30;
+   * @generated from enum value: CLUSTER_STATUS_UPGRADING = 30;
    */
-  UPDATING = 30,
+  UPGRADING = 30,
 
   /**
    * @generated from enum value: CLUSTER_STATUS_ERROR = 40;
@@ -797,6 +909,25 @@ export enum ClusterStatus {
    * @generated from enum value: CLUSTER_STATUS_STOPPED = 60;
    */
   STOPPED = 60,
+
+  /**
+   * Ready, while the first health checks have not passed yet.
+   *
+   * @generated from enum value: CLUSTER_STATUS_STARTING = 70;
+   */
+  STARTING = 70,
+
+  /**
+   * @generated from enum value: CLUSTER_STATUS_UNHEALTHY = 80;
+   */
+  UNHEALTHY = 80,
+
+  /**
+   * The shoot disappeared from Gardener after it was seen.
+   *
+   * @generated from enum value: CLUSTER_STATUS_LOST = 90;
+   */
+  LOST = 90,
 }
 
 /**
@@ -804,34 +935,6 @@ export enum ClusterStatus {
  */
 export const ClusterStatusSchema: GenEnum<ClusterStatus> = /*@__PURE__*/
   enumDesc(file_fleet_v1_fleet, 0);
-
-/**
- * ClusterHealth is Gardener's health verdict, known only for ready clusters.
- *
- * @generated from enum fleet.v1.ClusterHealth
- */
-export enum ClusterHealth {
-  /**
-   * @generated from enum value: CLUSTER_HEALTH_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: CLUSTER_HEALTH_HEALTHY = 10;
-   */
-  HEALTHY = 10,
-
-  /**
-   * @generated from enum value: CLUSTER_HEALTH_UNHEALTHY = 20;
-   */
-  UNHEALTHY = 20,
-}
-
-/**
- * Describes the enum fleet.v1.ClusterHealth.
- */
-export const ClusterHealthSchema: GenEnum<ClusterHealth> = /*@__PURE__*/
-  enumDesc(file_fleet_v1_fleet, 1);
 
 /**
  * @generated from enum fleet.v1.ClusterFilter
@@ -848,14 +951,14 @@ export enum ClusterFilter {
   ALL = 10,
 
   /**
-   * Unhealthy, or in error.
+   * Unhealthy, in error, or lost.
    *
    * @generated from enum value: CLUSTER_FILTER_UNHEALTHY = 20;
    */
   UNHEALTHY = 20,
 
   /**
-   * Ready, with no snapshot or one older than stale_after.
+   * Ready, with no snapshot or a stale one (ClusterSummary.stale).
    *
    * @generated from enum value: CLUSTER_FILTER_STALE = 30;
    */
@@ -866,9 +969,12 @@ export enum ClusterFilter {
  * Describes the enum fleet.v1.ClusterFilter.
  */
 export const ClusterFilterSchema: GenEnum<ClusterFilter> = /*@__PURE__*/
-  enumDesc(file_fleet_v1_fleet, 2);
+  enumDesc(file_fleet_v1_fleet, 1);
 
 /**
+ * DriftKind is a disagreement between the database and Gardener that
+ * cluster-worker's reconcile loop observed and recorded.
+ *
  * @generated from enum fleet.v1.DriftKind
  */
 export enum DriftKind {
@@ -893,42 +999,46 @@ export enum DriftKind {
   SHOOT_OF_DELETED_CLUSTER = 20,
 
   /**
-   * A synced cluster has no shoot. Only reported while the Gardener inventory
-   * is fresh, so a stopped worker does not make every cluster look missing.
+   * A cluster whose latest sync completed has no shoot.
    *
    * @generated from enum value: DRIFT_KIND_CLUSTER_WITHOUT_SHOOT = 30;
    */
   CLUSTER_WITHOUT_SHOOT = 30,
 
   /**
-   * A ready cluster has no snapshot, or one older than stale_after.
-   *
-   * @generated from enum value: DRIFT_KIND_SNAPSHOT_STALE = 40;
-   */
-  SNAPSHOT_STALE = 40,
-
-  /**
-   * The database and the shoot disagree on the Kubernetes version while the
-   * cluster is not updating.
+   * A ready cluster that is not updating runs another Kubernetes minor
+   * version than the database holds. Patch versions are not compared:
+   * Gardener's maintenance moves them on its own.
    *
    * @generated from enum value: DRIFT_KIND_KUBERNETES_VERSION_MISMATCH = 50;
    */
   KUBERNETES_VERSION_MISMATCH = 50,
+
+  /**
+   * Gardener has a shoot whose fundament.io/cluster-id label is no id.
+   *
+   * @generated from enum value: DRIFT_KIND_SHOOT_INVALID_CLUSTER_ID = 60;
+   */
+  SHOOT_INVALID_CLUSTER_ID = 60,
 }
 
 /**
  * Describes the enum fleet.v1.DriftKind.
  */
 export const DriftKindSchema: GenEnum<DriftKind> = /*@__PURE__*/
-  enumDesc(file_fleet_v1_fleet, 3);
+  enumDesc(file_fleet_v1_fleet, 2);
 
 /**
  * FleetService is the staff view of every organization's clusters (FUN-23).
  * It accepts only the DCIM staff token and runs on the admin host. It reads the
  * database and nothing else: node, pod and namespace numbers come from the
- * snapshots cluster-worker stores, and drift from the Gardener inventory it
- * records. Deleted organizations, clusters, node pools, projects and
- * namespaces are left out everywhere except in drift findings.
+ * snapshots cluster-worker stores, and drift from the findings its reconcile
+ * loop records. Deleted organizations, clusters, node pools, projects and
+ * namespaces are left out everywhere except in drift findings, and so is the
+ * system organization, which is no tenant.
+ *
+ * The list RPCs are paged: page_size is capped at 500 and defaults to 100, and
+ * a response carries next_page_token while more may follow.
  *
  * @generated from service fleet.v1.FleetService
  */
@@ -944,7 +1054,7 @@ export const FleetService: GenService<{
     output: typeof GetFleetSummaryResponseSchema;
   },
   /**
-   * Every live organization with its aggregates.
+   * Live organizations with their aggregates, by alias.
    *
    * @generated from rpc fleet.v1.FleetService.ListOrganizations
    */
@@ -964,7 +1074,8 @@ export const FleetService: GenService<{
     output: typeof GetOrganizationResponseSchema;
   },
   /**
-   * Live clusters, optionally of one organization and narrowed by a filter.
+   * Live clusters, optionally of one organization and narrowed by a filter,
+   * by organization alias and cluster name.
    *
    * @generated from rpc fleet.v1.FleetService.ListClusters
    */
@@ -984,7 +1095,8 @@ export const FleetService: GenService<{
     output: typeof GetClusterResponseSchema;
   },
   /**
-   * Disagreements between the database, the snapshots and Gardener.
+   * Open disagreements between the database and Gardener, by kind and then
+   * oldest first.
    *
    * @generated from rpc fleet.v1.FleetService.ListDriftFindings
    */

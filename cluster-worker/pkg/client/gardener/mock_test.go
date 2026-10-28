@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // The mock reports a cluster each time its time-based status changes, and
@@ -83,31 +81,4 @@ func TestMockCreateFollowsGardener(t *testing.T) {
 	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, HealthGrace: true, APIServerAvailable: true}, at(6*time.Second))
 	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootUnhealthy, Operation: OperationCreate, APIServerAvailable: true}, at(7*time.Second))
 	assert.Equal(t, &ShootStatus{Status: StatusReady, Message: MsgShootReady, Operation: OperationCreate, Healthy: true, APIServerAvailable: true}, at(9*time.Second))
-}
-
-// The mock runs the nodes Gardener would: a cluster without node pools gets
-// no worker, and every pool runs its autoscaler minimum.
-func TestMockWorkerPoolsFollowBuildWorkers(t *testing.T) {
-	t.Parallel()
-
-	m := NewMock(slog.New(slog.NewTextHandler(io.Discard, nil)))
-
-	bare := testCluster()
-	bare.NodePools = nil
-	_, err := m.ApplyShoot(t.Context(), bare)
-	require.NoError(t, err)
-	assert.Empty(t, m.WorkerPools(bare.ID))
-
-	pooled := testCluster()
-	pooled.Name, pooled.ShootName = "pooled", "pooled"
-	pooled.NodePools = []NodePool{
-		{Name: "big", MachineType: "local", AutoscaleMin: 5, AutoscaleMax: 8},
-		{Name: "small", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 2},
-	}
-	_, err = m.ApplyShoot(t.Context(), pooled)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]int32{
-		kubename.GenerateWorkerName("big"):   5,
-		kubename.GenerateWorkerName("small"): 1,
-	}, m.WorkerPools(pooled.ID))
 }

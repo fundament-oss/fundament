@@ -69,11 +69,11 @@ export const clusterPath = (id: string): string => platformPath({ kind: 'cluster
 export function findingPath(finding: Pick<DriftFinding, 'kind' | 'clusterId'>): string | null {
   switch (finding.kind) {
     case DriftKind.CLUSTER_WITHOUT_SHOOT:
-    case DriftKind.SNAPSHOT_STALE:
     case DriftKind.KUBERNETES_VERSION_MISMATCH:
-      return clusterPath(finding.clusterId);
+      return finding.clusterId ? clusterPath(finding.clusterId) : null;
     case DriftKind.SHOOT_WITHOUT_CLUSTER:
     case DriftKind.SHOOT_OF_DELETED_CLUSTER:
+    case DriftKind.SHOOT_INVALID_CLUSTER_ID:
     case DriftKind.UNSPECIFIED:
       return null;
     default:

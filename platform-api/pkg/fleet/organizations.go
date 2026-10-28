@@ -13,18 +13,44 @@ import (
 	fleetv1 "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1"
 )
 
-func (s *Server) ListOrganizations(ctx context.Context, _ *fleetv1.ListOrganizationsRequest) (*fleetv1.ListOrganizationsResponse, error) {
-	rows, err := s.queries.OrganizationList(ctx, db.OrganizationListParams{})
+// organizationKey is where a page of organizations ends.
+type organizationKey struct {
+	Alias string    `json:"a"`
+	Name  string    `json:"n"`
+	ID    uuid.UUID `json:"i"`
+}
+
+func (s *Server) ListOrganizations(ctx context.Context, req *fleetv1.ListOrganizationsRequest) (*fleetv1.ListOrganizationsResponse, error) {
+	size := pageSize(req.GetPageSize())
+	// One more than the page, to tell whether another follows.
+	params := db.OrganizationListParams{PageLimit: size + 1}
+	var after organizationKey
+	ok, err := decodePageToken(req.GetPageToken(), &after)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		params.AfterAlias = pgtype.Text{String: after.Alias, Valid: true}
+		params.AfterName = pgtype.Text{String: after.Name, Valid: true}
+		params.AfterID = pgtype.UUID{Bytes: after.ID, Valid: true}
+	}
+
+	rows, err := s.queries.OrganizationList(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("list organizations: %w", err)
 	}
-
-	organizations := make([]*fleetv1.OrganizationSummary, 0, len(rows))
-	for i := range rows {
-		organizations = append(organizations, organizationSummaryFrom(&rows[i]))
+	resp := fleetv1.ListOrganizationsResponse_builder{}
+	if len(rows) > int(size) {
+		rows = rows[:size]
+		last := &rows[len(rows)-1]
+		resp.NextPageToken = encodePageToken(organizationKey{Alias: last.Alias, Name: last.Name, ID: last.ID})
 	}
 
-	return fleetv1.ListOrganizationsResponse_builder{Organizations: organizations}.Build(), nil
+	resp.Organizations, err = s.organizationSummaries(ctx, rows)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Build(), nil
 }
 
 func (s *Server) GetOrganization(ctx context.Context, req *fleetv1.GetOrganizationRequest) (*fleetv1.GetOrganizationResponse, error) {
@@ -32,6 +58,7 @@ func (s *Server) GetOrganization(ctx context.Context, req *fleetv1.GetOrganizati
 
 	rows, err := s.queries.OrganizationList(ctx, db.OrganizationListParams{
 		OrganizationID: pgtype.UUID{Bytes: id, Valid: true},
+		PageLimit:      1,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get organization: %w", err)
@@ -40,5 +67,34 @@ func (s *Server) GetOrganization(ctx context.Context, req *fleetv1.GetOrganizati
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("organization not found"))
 	}
 
-	return fleetv1.GetOrganizationResponse_builder{Organization: organizationSummaryFrom(&rows[0])}.Build(), nil
+	organizations, err := s.organizationSummaries(ctx, rows)
+	if err != nil {
+		return nil, err
+	}
+	return fleetv1.GetOrganizationResponse_builder{Organization: organizations[0]}.Build(), nil
+}
+
+// organizationSummaries adds how many clusters of each organization need
+// attention, derived per cluster the way the console does.
+func (s *Server) organizationSummaries(ctx context.Context, rows []db.OrganizationListRow) ([]*fleetv1.OrganizationSummary, error) {
+	ids := make([]uuid.UUID, 0, len(rows))
+	for i := range rows {
+		ids = append(ids, rows[i].ID)
+	}
+	inputs, err := s.queries.ClusterStatusInputList(ctx, db.ClusterStatusInputListParams{OrganizationIds: ids})
+	if err != nil {
+		return nil, fmt.Errorf("list cluster status: %w", err)
+	}
+	unhealthy := make(map[uuid.UUID]int32, len(rows))
+	for i := range inputs {
+		if clusterstatusOf(&inputs[i]).NeedsAttention() {
+			unhealthy[inputs[i].OrganizationID]++
+		}
+	}
+
+	organizations := make([]*fleetv1.OrganizationSummary, 0, len(rows))
+	for i := range rows {
+		organizations = append(organizations, organizationSummaryFrom(&rows[i], unhealthy[rows[i].ID]))
+	}
+	return organizations, nil
 }

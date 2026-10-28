@@ -29,8 +29,16 @@ func TestFleetRequiresStaffToken(t *testing.T) {
 		assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err), "a customer's console token is refused by issuer")
 	})
 
+	t.Run("DCIM issuer without the staff audience", func(t *testing.T) {
+		// Any service holding the shared secret could sign this; only
+		// dcim-authn-api mints the dcim-user audience.
+		token := mintToken(t, auth.DCIMIssuer, nil)
+		_, err := newClient(t, env, bearer(token)).GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
+		assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+	})
+
 	t.Run("token signed with another secret", func(t *testing.T) {
-		token := mintTokenWithSecret(t, []byte("not-the-secret"), auth.DCIMIssuer, nil)
+		token := mintTokenWithSecret(t, []byte("not-the-secret"), auth.DCIMIssuer, jwt.ClaimStrings{auth.TokenTypeDCIMUser})
 		_, err := newClient(t, env, bearer(token)).GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
 		assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 	})

@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -61,12 +61,15 @@ CREATE TABLE tenant.organizations (
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	quota_clusters integer NOT NULL DEFAULT 1,
+	listed_publicly boolean NOT NULL DEFAULT false,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
 	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--'),
 	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255),
 	CONSTRAINT organizations_ck_quota_clusters CHECK (quota_clusters >= 0)
 );
+-- ddl-end --
+COMMENT ON COLUMN tenant.organizations.listed_publicly IS E'Whether the public platform overview (FUN-23) names this organization. Off until the organization opts in.';
 -- ddl-end --
 ALTER TABLE tenant.organizations OWNER TO fun_owner;
 -- ddl-end --
@@ -3621,6 +3624,74 @@ USING btree
 WHERE (deleted IS NULL);
 -- ddl-end --
 
+-- object: tenant.drift_findings | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.drift_findings CASCADE;
+CREATE TABLE tenant.drift_findings (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	kind text NOT NULL,
+	cluster_id uuid,
+	shoot_uid text,
+	shoot_name text,
+	shoot_namespace text,
+	expected text,
+	observed text,
+	first_detected timestamptz NOT NULL DEFAULT now(),
+	last_detected timestamptz NOT NULL DEFAULT now(),
+	resolved timestamptz,
+	CONSTRAINT drift_findings_pk PRIMARY KEY (id),
+	CONSTRAINT drift_findings_uq_subject UNIQUE NULLS NOT DISTINCT (kind,cluster_id,shoot_uid,resolved),
+	CONSTRAINT drift_findings_ck_kind CHECK (kind IN ('shoot_without_cluster', 'shoot_of_deleted_cluster', 'cluster_without_shoot', 'kubernetes_version_mismatch', 'shoot_invalid_cluster_id')),
+	CONSTRAINT drift_findings_ck_subject CHECK (cluster_id IS NOT NULL OR shoot_uid IS NOT NULL)
+);
+-- ddl-end --
+COMMENT ON TABLE tenant.drift_findings IS E'Disagreements between the database and Gardener that cluster-worker''s reconcile loop observed (FUN-23). A finding stays open while every pass sees it and is resolved, never deleted, by the first pass that does not.';
+-- ddl-end --
+COMMENT ON COLUMN tenant.drift_findings.cluster_id IS E'The cluster the finding is about, or the id a shoot''s label names. NULL for a shoot whose label is no id.';
+-- ddl-end --
+COMMENT ON COLUMN tenant.drift_findings.shoot_uid IS E'The shoot the finding is about. NULL when the cluster has no shoot.';
+-- ddl-end --
+COMMENT ON COLUMN tenant.drift_findings.expected IS E'What the database holds, where the kind compares a value: the cluster''s Kubernetes version.';
+-- ddl-end --
+COMMENT ON COLUMN tenant.drift_findings.observed IS E'What Gardener holds, where the kind compares a value: the shoot''s Kubernetes version, or its cluster-id label.';
+-- ddl-end --
+ALTER TABLE tenant.drift_findings OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.drift_findings ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: drift_findings_idx_open | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.drift_findings_idx_open CASCADE;
+CREATE INDEX drift_findings_idx_open ON tenant.drift_findings
+USING btree
+(
+	kind,
+	first_detected,
+	id
+)
+WHERE (resolved IS NULL);
+-- ddl-end --
+
+-- object: tenant.worker_heartbeats | type: TABLE --
+-- DROP TABLE IF EXISTS tenant.worker_heartbeats CASCADE;
+CREATE TABLE tenant.worker_heartbeats (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	worker text NOT NULL,
+	interval_seconds integer NOT NULL,
+	last_pass timestamptz NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	CONSTRAINT worker_heartbeats_pk PRIMARY KEY (id),
+	CONSTRAINT worker_heartbeats_uq_worker UNIQUE (worker),
+	CONSTRAINT worker_heartbeats_ck_worker CHECK (worker IN ('reconcile', 'inventory')),
+	CONSTRAINT worker_heartbeats_ck_interval_seconds CHECK (interval_seconds > 0)
+);
+-- ddl-end --
+COMMENT ON TABLE tenant.worker_heartbeats IS E'When each of cluster-worker''s periodic loops last completed a pass, and how often it runs (FUN-23). Readers judge the freshness of what a loop records from here.';
+-- ddl-end --
+ALTER TABLE tenant.worker_heartbeats OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE tenant.worker_heartbeats ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
 -- object: cluster_snapshots_cluster_worker_policy | type: POLICY --
 -- DROP POLICY IF EXISTS cluster_snapshots_cluster_worker_policy ON tenant.cluster_snapshots CASCADE;
 CREATE POLICY cluster_snapshots_cluster_worker_policy ON tenant.cluster_snapshots
@@ -3738,6 +3809,63 @@ CREATE POLICY gardener_shoots_select_platform_admin ON tenant.gardener_shoots
 	USING (true);
 -- ddl-end --
 
+-- object: drift_findings_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS drift_findings_cluster_worker_policy ON tenant.drift_findings CASCADE;
+CREATE POLICY drift_findings_cluster_worker_policy ON tenant.drift_findings
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: drift_findings_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS drift_findings_select_platform_admin ON tenant.drift_findings CASCADE;
+CREATE POLICY drift_findings_select_platform_admin ON tenant.drift_findings
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: worker_heartbeats_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS worker_heartbeats_cluster_worker_policy ON tenant.worker_heartbeats CASCADE;
+CREATE POLICY worker_heartbeats_cluster_worker_policy ON tenant.worker_heartbeats
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: worker_heartbeats_select_platform_admin | type: POLICY --
+-- DROP POLICY IF EXISTS worker_heartbeats_select_platform_admin ON tenant.worker_heartbeats CASCADE;
+CREATE POLICY worker_heartbeats_select_platform_admin ON tenant.worker_heartbeats
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+-- ddl-end --
+
+-- object: tenant.system_organization_id | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.system_organization_id() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.system_organization_id ()
+	RETURNS uuid
+	LANGUAGE sql
+	IMMUTABLE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL SAFE
+	COST 1
+	AS 
+$function$
+-- The seeded system organization (db/seed/0100-system-org.sql) owns the
+-- first-party plugins and is no tenant. Every cross-organization read leaves
+-- it out through here rather than repeating the literal.
+SELECT '019b4000-0000-7000-8000-000000000000'::uuid
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.system_organization_id() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.platform_overview | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.platform_overview() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.platform_overview ()
@@ -3754,7 +3882,7 @@ $function$
 -- The public platform page (FUN-23) reads through here only: its role has no
 -- table grants, so names and counts are all it can ever see. Counts follow the
 -- chain organization -> cluster -> project -> namespace with every level live.
--- The seeded system organization owns first-party plugins and is no tenant.
+-- Only organizations that opted in are named; the system organization never.
 SELECT
     tenant.organizations.name,
     tenant.organizations.alias,
@@ -3772,7 +3900,8 @@ LEFT JOIN tenant.namespaces
     ON tenant.namespaces.project_id = tenant.projects.id
     AND tenant.namespaces.deleted IS NULL
 WHERE tenant.organizations.deleted IS NULL
-    AND tenant.organizations.id <> '019b4000-0000-7000-8000-000000000000'::uuid
+    AND tenant.organizations.listed_publicly
+    AND tenant.organizations.id <> tenant.system_organization_id()
 GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
 ORDER BY tenant.organizations.alias, tenant.organizations.name
 $function$;
@@ -5917,6 +6046,14 @@ GRANT USAGE
 -- ddl-end --
 
 
+-- object: "revoke_X_d61259af8f" | type: PERMISSION --
+REVOKE EXECUTE
+   ON FUNCTION tenant.platform_overview()
+   FROM PUBLIC;
+
+-- ddl-end --
+
+
 -- object: "grant_X_ac0f652a8e" | type: PERMISSION --
 GRANT EXECUTE
    ON FUNCTION tenant.platform_overview()
@@ -6032,6 +6169,46 @@ GRANT SELECT
 -- object: grant_r_e64e1d73e4 | type: PERMISSION --
 GRANT SELECT
    ON TABLE tenant.cluster_sync_state
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_ce19786afd | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.cluster_outbox
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_aeb84926bf | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.drift_findings
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_a77ce23fcb | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.drift_findings
+   TO fun_platform_admin_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_9abe38e04a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE tenant.worker_heartbeats
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_ac584b3312 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.worker_heartbeats
    TO fun_platform_admin_api;
 
 -- ddl-end --

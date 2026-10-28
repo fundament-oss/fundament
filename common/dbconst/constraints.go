@@ -163,6 +163,12 @@ const (
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsUqManufacturerModel = "device_catalogs_uq_manufacturer_model"
+	// ConstraintDriftFindingsCkKind is defined on tenant.drift_findings.
+	ConstraintDriftFindingsCkKind = "drift_findings_ck_kind"
+	// ConstraintDriftFindingsCkSubject is defined on tenant.drift_findings.
+	ConstraintDriftFindingsCkSubject = "drift_findings_ck_subject"
+	// ConstraintDriftFindingsUqSubject is defined on tenant.drift_findings.
+	ConstraintDriftFindingsUqSubject = "drift_findings_uq_subject"
 	// ConstraintGardenerShootsUqShootUid is defined on tenant.gardener_shoots.
 	ConstraintGardenerShootsUqShootUid = "gardener_shoots_uq_shoot_uid"
 	// ConstraintIdempotencyKeysCkSingleFk is defined on tenant.idempotency_keys.
@@ -415,4 +421,10 @@ const (
 	ConstraintVerifyDeleted = "verify_deleted"
 	// ConstraintVerifyQuota is defined on (constraint trigger).
 	ConstraintVerifyQuota = "verify_quota"
+	// ConstraintWorkerHeartbeatsCkIntervalSeconds is defined on tenant.worker_heartbeats.
+	ConstraintWorkerHeartbeatsCkIntervalSeconds = "worker_heartbeats_ck_interval_seconds"
+	// ConstraintWorkerHeartbeatsCkWorker is defined on tenant.worker_heartbeats.
+	ConstraintWorkerHeartbeatsCkWorker = "worker_heartbeats_ck_worker"
+	// ConstraintWorkerHeartbeatsUqWorker is defined on tenant.worker_heartbeats.
+	ConstraintWorkerHeartbeatsUqWorker = "worker_heartbeats_uq_worker"
 )

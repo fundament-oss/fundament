@@ -376,8 +376,6 @@ platformAdminApi:
   enabled: true
   replicas: 1
   logLevel: debug
-  # A few local inventory intervals.
-  staleAfter: 5m
   httproute:
     enabled: true
     parentRefs: *localGateway

@@ -161,8 +161,12 @@ type ClusterToSync struct {
 type ShootInfo struct {
 	Name      string
 	Namespace string
+	// ClusterID is uuid.Nil when InvalidClusterID is set.
 	ClusterID uuid.UUID
-	Labels    map[string]string
+	// InvalidClusterID marks a shoot whose fundament.io/cluster-id label is
+	// no cluster id. Listed so it can be reported; nothing else acts on it.
+	InvalidClusterID bool
+	Labels           map[string]string
 	// Deleting is set once the Shoot's deletion has started.
 	Deleting bool
 	// UID, KubernetesVersion, Region and Created feed the Gardener inventory

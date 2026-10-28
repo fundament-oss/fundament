@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { create } from '@bufbuild/protobuf';
@@ -5,6 +6,7 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import PlatformOverviewComponent, { matchesQuery, tilesFor } from './platform-overview.component';
 import { PLATFORM_OVERVIEW } from '../../connect/tokens';
 import { TitleService } from '../title.service';
+import { ConfigService } from '../config.service';
 import type { ObservableClient } from '../../connect/observable-client';
 import {
   GetPlatformOverviewResponseSchema,
@@ -34,11 +36,15 @@ const response = create(GetPlatformOverviewResponseSchema, {
   generatedAt: timestampFromDate(new Date('2026-10-14T14:02:00Z')),
 });
 
-async function render(client: Partial<ObservableClient<typeof OverviewService>>) {
+async function render(
+  client: Partial<ObservableClient<typeof OverviewService>>,
+  platformApiUrl = 'https://platform-api.example.com',
+) {
   TestBed.configureTestingModule({
     imports: [PlatformOverviewComponent],
     providers: [
       { provide: PLATFORM_OVERVIEW, useValue: client },
+      { provide: ConfigService, useValue: { getConfig: () => ({ platformApiUrl }) } },
       // The real one follows the organization, which this page has none of.
       { provide: TitleService, useValue: { setTitle: () => {} } },
     ],
@@ -51,6 +57,25 @@ async function render(client: Partial<ObservableClient<typeof OverviewService>>)
 }
 
 describe('PlatformOverviewComponent', () => {
+  it('says the overview is unavailable where no platform API runs, and calls nothing', async () => {
+    const getPlatformOverview = vi.fn(() => of(response));
+    const fixture = await render({ getPlatformOverview }, '');
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(getPlatformOverview).not.toHaveBeenCalled();
+    expect(element.querySelector('nldd-banner')?.getAttribute('text')).toBe('Overview unavailable');
+    expect(element.querySelector('nldd-table')).toBeNull();
+  });
+
+  it('explains an empty list: organizations opt in', async () => {
+    const empty = create(GetPlatformOverviewResponseSchema, { totals: {} });
+    const fixture = await render({ getPlatformOverview: () => of(empty) });
+
+    expect(fixture.nativeElement.querySelector('nldd-inline-dialog')?.getAttribute('text')).toBe(
+      'No organization listed yet',
+    );
+  });
+
   it('renders the totals and a row per organization', async () => {
     const fixture = await render({ getPlatformOverview: () => of(response) });
     const element: HTMLElement = fixture.nativeElement;

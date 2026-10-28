@@ -10,7 +10,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/caarlos0/env/v11"
 
@@ -30,9 +29,7 @@ type config struct {
 	// Required: this surface takes credentials, and an empty list would mean a
 	// wildcard origin, which browsers reject on credentialed requests.
 	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS,required,notEmpty"`
-	// How old a snapshot may get before it counts as stale.
-	StaleAfter        time.Duration `env:"STALE_AFTER" envDefault:"45m"`
-	DeploymentVersion string        `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
+	DeploymentVersion  string   `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
 }
 
 func main() {
@@ -55,7 +52,6 @@ func run() error {
 	logger.Info("starting platform-admin-api",
 		"listen_addr", cfg.ListenAddr,
 		"log_level", cfg.LogLevel.String(),
-		"stale_after", cfg.StaleAfter,
 	)
 
 	ctx := context.Background()
@@ -72,7 +68,6 @@ func run() error {
 	server := fleet.New(logger, fleet.Config{
 		JWTSecret:          []byte(cfg.JWTSecret),
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-		StaleAfter:         cfg.StaleAfter,
 	}, database)
 
 	mux := health.NewMux(logger, cfg.DeploymentVersion, database.Pool)

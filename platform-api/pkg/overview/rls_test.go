@@ -47,6 +47,7 @@ func TestPublicRoleReadsNoTable(t *testing.T) {
 
 func TestPublicRoleRunsOverviewFunction(t *testing.T) {
 	env := testpg.NewEnv(t, testDBPort)
+	env.Seed(t).ListPublicly(env.Seed(t).Organization("listed", "Listed"))
 	pool := env.RolePool(t, "fun_platform_public_api")
 
 	var count int
@@ -56,4 +57,13 @@ func TestPublicRoleRunsOverviewFunction(t *testing.T) {
 	// The binary refuses to start against an unknown schema, so the role must
 	// be able to read the migration version.
 	require.NoError(t, dbversion.AssertLatestVersion(t.Context(), pool))
+}
+
+// The function is SECURITY DEFINER and reads across organizations, so EXECUTE
+// is revoked from PUBLIC: a tenant-scoped role cannot use it to step past RLS.
+func TestTenantRoleCannotRunOverviewFunction(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	_, err := env.RolePool(t, "fun_fundament_api").Exec(t.Context(), `SELECT * FROM tenant.platform_overview()`)
+	require.Error(t, err)
+	assert.True(t, isGrantDenied(err), "expected insufficient_privilege, got %v", err)
 }

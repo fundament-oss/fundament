@@ -24,6 +24,7 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
 
@@ -114,7 +115,9 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
-// EnqueueAll queues every cluster that is due for collection.
+// EnqueueAll queues every cluster that is due for collection and records the
+// pass, so the fleet view can judge snapshots against the interval this worker
+// actually runs at.
 func (w *Worker) EnqueueAll(ctx context.Context) {
 	ids, err := w.queries.InventoryClusterList(ctx)
 	if err != nil {
@@ -127,6 +130,14 @@ func (w *Worker) EnqueueAll(ctx context.Context) {
 		w.queue.Add(id)
 	}
 	w.logger.Debug("queued clusters for inventory", "clusters", len(ids))
+
+	if err := w.queries.WorkerHeartbeatRecord(ctx, db.WorkerHeartbeatRecordParams{
+		Worker:          string(dbconst.WorkerHeartbeatWorker_Inventory),
+		IntervalSeconds: int32(w.cfg.Interval.Seconds()),
+		LastPass:        pgtype.Timestamptz{Time: w.clock(), Valid: true},
+	}); err != nil && ctx.Err() == nil {
+		w.logger.Error("failed to record inventory pass", "error", err)
+	}
 }
 
 func (w *Worker) processNext(ctx context.Context) bool {
@@ -143,28 +154,39 @@ func (w *Worker) processNext(ctx context.Context) bool {
 }
 
 // Collect reads one cluster's shoot and stores the snapshot in a single
-// transaction. A failed read lands in the cluster snapshot's last_error and is
-// returned; the previous numbers stay.
+// transaction. A failed read or store lands in the cluster snapshot's
+// last_error and is returned; the previous numbers stay. One Timeout covers
+// both, so a slow shoot leaves less time to store: the budget is per cluster,
+// which is what keeps a pass within its interval.
 func (w *Worker) Collect(ctx context.Context, clusterID uuid.UUID) error {
-	readCtx, cancel := context.WithTimeout(shoot.WithClientCache(ctx), w.cfg.Timeout)
+	collectCtx, cancel := context.WithTimeout(shoot.WithClientCache(ctx), w.cfg.Timeout)
 	defer cancel()
 
-	inv, err := w.reader.ReadInventory(readCtx, clusterID)
+	inv, err := w.reader.ReadInventory(collectCtx, clusterID)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil //nolint:nilerr // shutting down: the read was cancelled, not failed
-		}
-		if recordErr := w.queries.ClusterSnapshotRecordError(ctx, db.ClusterSnapshotRecordErrorParams{
-			ClusterID:   clusterID,
-			LastError:   pgtype.Text{String: truncate(err.Error(), maxErrorLength), Valid: true},
-			LastErrorAt: pgtype.Timestamptz{Time: w.clock(), Valid: true},
-		}); recordErr != nil {
-			return errors.Join(fmt.Errorf("read inventory: %w", err), fmt.Errorf("record error: %w", recordErr))
-		}
-		return fmt.Errorf("read inventory: %w", err)
+		return w.recordError(ctx, clusterID, fmt.Errorf("read inventory: %w", err))
 	}
+	if err := w.store(collectCtx, clusterID, inv); err != nil {
+		return w.recordError(ctx, clusterID, fmt.Errorf("store inventory: %w", err))
+	}
+	return nil
+}
 
-	return w.store(readCtx, clusterID, inv)
+// recordError stores a failed collection on the cluster's snapshot. It runs on
+// the worker's context, not the collection's, so a collection that ran out of
+// time still records why.
+func (w *Worker) recordError(ctx context.Context, clusterID uuid.UUID, err error) error {
+	if ctx.Err() != nil {
+		return nil //nolint:nilerr // shutting down: the collection was cancelled, not failed
+	}
+	if recordErr := w.queries.ClusterSnapshotRecordError(ctx, db.ClusterSnapshotRecordErrorParams{
+		ClusterID:   clusterID,
+		LastError:   pgtype.Text{String: truncate(err.Error(), maxErrorLength), Valid: true},
+		LastErrorAt: pgtype.Timestamptz{Time: w.clock(), Valid: true},
+	}); recordErr != nil {
+		return errors.Join(err, fmt.Errorf("record error: %w", recordErr))
+	}
+	return err
 }
 
 func (w *Worker) store(ctx context.Context, clusterID uuid.UUID, inv *shoot.Inventory) error {

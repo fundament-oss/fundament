@@ -64,12 +64,6 @@ type MockShootAccess struct {
 	DeleteRoleBindingError        error
 	ListRoleBindingsError         error
 	EnsureRoleError               error
-	ReadInventoryError            error
-
-	// WorkerPools reports the worker pools a cluster's shoot was last applied
-	// with, as worker name -> autoscaler minimum; ReadInventory runs that many
-	// nodes per pool. Wired to the mock Gardener client in mock mode.
-	WorkerPools func(clusterID uuid.UUID) map[string]int32
 }
 
 // MockClusterRole is the in-memory representation of an applied ClusterRole.

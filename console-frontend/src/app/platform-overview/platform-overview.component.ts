@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { PLATFORM_OVERVIEW } from '../../connect/tokens';
+import { ConfigService } from '../config.service';
 import type { OrganizationOverview, PlatformTotals } from '../../generated/platform/v1/overview_pb';
 import { TitleService } from '../title.service';
 import { formatTime } from '../utils/date-format';
@@ -58,10 +59,12 @@ export function tilesFor(totals: PlatformTotals | undefined): Tile[] {
 }
 
 /**
- * The public platform overview (FUN-23): every organization on Fundament with
- * how many clusters, projects and namespaces it runs. Anyone may read it,
- * signed in or not, so it renders without the console's shell and names
- * nothing inside an organization.
+ * The public platform overview (FUN-23): every organization on Fundament that
+ * chose to be listed, with how many clusters, projects and namespaces it runs.
+ * Anyone may read it, signed in or not, so it renders without the console's
+ * shell and names nothing inside an organization. An environment that does
+ * not run the public platform API has no overview, and the page says so
+ * instead of calling the console's own host.
  */
 @Component({
   selector: 'app-platform-overview',
@@ -73,6 +76,11 @@ export default class PlatformOverviewComponent implements OnInit {
   private client = inject(PLATFORM_OVERVIEW);
 
   private titleService = inject(TitleService);
+
+  private readonly configured = !!inject(ConfigService).getConfig().platformApiUrl;
+
+  /** No platform API in this environment. */
+  unavailable = signal(false);
 
   isLoading = signal(true);
 
@@ -92,6 +100,11 @@ export default class PlatformOverviewComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.titleService.setTitle('Platform');
+    if (!this.configured) {
+      this.unavailable.set(true);
+      this.isLoading.set(false);
+      return;
+    }
     try {
       const response = await firstValueFrom(this.client.getPlatformOverview({}));
       this.organizations.set(response.organizations);

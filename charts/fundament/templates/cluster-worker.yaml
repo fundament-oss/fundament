@@ -1,27 +1,48 @@
 {{- if $.Values.clusterWorker.enabled }}
+{{- /*
+One image, two Deployments (WORKER_MODE). cluster-worker provisions: outbox,
+status and reconcile. cluster-worker-inventory collects the staff fleet view's
+snapshots (FUN-23), only where that view is deployed: collection mints an
+admin kubeconfig per ready shoot every interval, for data nobody else reads.
+It runs one replica, with no leader election, so every shoot is read once per
+interval; Recreate keeps a rollout from running two.
+*/}}
+{{- $modes := list "provisioning" }}
+{{- if $.Values.platformAdminApi.enabled }}
+{{- $modes = append $modes "inventory" }}
+{{- end }}
+{{- range $mode := $modes }}
+{{- $provisioning := eq $mode "provisioning" }}
+{{- $name := ternary "cluster-worker" "cluster-worker-inventory" $provisioning }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-worker
+  name: {{ $name }}
   labels:
-    {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 4 }}
+    {{- include "fundament.labels" (dict "root" $ "name" $name "component" "worker") | nindent 4 }}
   annotations:
     reloader.stakater.com/auto: "true"
-    {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+    {{- if and $provisioning $.Values.clusterWorker.sandboxKubeconfigSecret }}
     # Mounted optional: true and created after the platform is up, so `auto`
     # never sees it referenced. Name it, so creating it restarts the pod.
     secret.reloader.stakater.com/reload: {{ $.Values.clusterWorker.sandboxKubeconfigSecret | quote }}
     {{- end }}
 spec:
+  {{- if $provisioning }}
   replicas: {{ $.Values.clusterWorker.replicas }}
+  {{- else }}
+  replicas: 1
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "fundament.selectorLabels" (dict "root" $ "name" "cluster-worker") | nindent 6 }}
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" $name) | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "fundament.labels" (dict "root" $ "name" "cluster-worker" "component" "worker") | nindent 8 }}
+        {{- include "fundament.labels" (dict "root" $ "name" $name "component" "worker") | nindent 8 }}
     spec:
       containers:
         - name: cluster-worker
@@ -35,16 +56,20 @@ spec:
                 secretKeyRef:
                   name: db-fun-cluster-worker
                   key: uri
+            - name: WORKER_MODE
+              value: {{ $mode }}
             - name: GARDENER_MODE
               value: {{ $.Values.clusterWorker.gardenerMode }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.clusterWorker.logLevel }}
+            {{- if $provisioning }}
             {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
             - name: GARDENER_SANDBOX_KUBECONFIG
               value: /etc/plugin-sandbox/kubeconfig
             {{- end }}
-            - name: LOG_LEVEL
-              value: {{ $.Values.clusterWorker.logLevel }}
             - name: CLUSTER_MAX_RECONCILE_DELETIONS
               value: {{ $.Values.clusterWorker.maxReconcileDeletions | quote }}
+            {{- else }}
             # Fleet inventory (FUN-23): node, pod and namespace counts per
             # ready shoot, read by the staff fleet view.
             - name: INVENTORY_INTERVAL
@@ -53,7 +78,8 @@ spec:
               value: {{ $.Values.clusterWorker.inventory.workers | quote }}
             - name: INVENTORY_TIMEOUT
               value: {{ $.Values.clusterWorker.inventory.timeout | quote }}
-            {{- if $.Values.pluginController.provisionShoots }}
+            {{- end }}
+            {{- if and $provisioning $.Values.pluginController.provisionShoots }}
             # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
             # provisioned onto every ready shoot by the pluginmachinery handler.
             # Off unless pluginController.provisionShoots: the image must be
@@ -138,14 +164,15 @@ spec:
             - name: GARDENER_IMMEDIATE_CLUSTER_DELETION
               value: {{ $.Values.clusterWorker.gardenerImmediateClusterDeletion | default false | quote }}
             {{- end }}
-          {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.clusterWorker.sandboxKubeconfigSecret }}
+          {{- $sandbox := and $provisioning $.Values.clusterWorker.sandboxKubeconfigSecret }}
+          {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $sandbox }}
           volumeMounts:
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: gardener-kubeconfig
               mountPath: /etc/gardener
               readOnly: true
             {{- end }}
-            {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+            {{- if $sandbox }}
             - name: plugin-sandbox-kubeconfig
               mountPath: /etc/plugin-sandbox
               readOnly: true
@@ -153,14 +180,14 @@ spec:
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
-      {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.clusterWorker.sandboxKubeconfigSecret }}
+      {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $sandbox }}
       volumes:
         {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
         {{- end }}
-        {{- if $.Values.clusterWorker.sandboxKubeconfigSecret }}
+        {{- if $sandbox }}
         - name: plugin-sandbox-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.sandboxKubeconfigSecret }}
@@ -170,4 +197,5 @@ spec:
                 path: kubeconfig
         {{- end }}
       {{- end }}
+{{- end }}
 {{- end }}

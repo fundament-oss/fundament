@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // MockEvent represents an event in the mock client's history.
@@ -765,23 +763,3 @@ var (
 	ErrEmptyName      = errors.New("name must not be empty")
 	ErrInvalidName    = errors.New("name must match DNS label format")
 )
-
-// WorkerPools reports the worker pools a cluster's shoot was last applied
-// with, as Gardener worker name -> autoscaler minimum, or nil when the cluster
-// has no shoot. The mock shoot access runs that many nodes per pool. It
-// follows buildWorkers: there is no default worker, so a shoot applied
-// without node pools runs none.
-func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	shoot, _ := m.findShootByClusterID(clusterID)
-	if shoot == nil || shoot.DeletedAt != nil {
-		return nil
-	}
-	pools := make(map[string]int32, len(shoot.Cluster.NodePools))
-	for _, np := range shoot.Cluster.NodePools {
-		pools[kubename.GenerateWorkerName(np.Name)] = np.AutoscaleMin
-	}
-	return pools
-}

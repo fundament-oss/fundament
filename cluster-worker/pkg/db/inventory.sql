@@ -134,3 +134,32 @@ ON CONFLICT (namespace_id) DO UPDATE
 SET
     observed = EXCLUDED.observed,
     pods = EXCLUDED.pods;
+
+-- name: InventoryMockNodePoolList :many
+-- Live node pools of a cluster with their autoscaler minimum, which the mock
+-- inventory runs as nodes (GARDENER_MODE=mock).
+SELECT
+    tenant.node_pools.name,
+    tenant.node_pools.autoscale_min
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = @cluster_id
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.name;
+
+-- name: InventoryMockNamespaceList :many
+-- Live namespaces of a cluster by name, for the mock inventory's pod counts.
+SELECT
+    tenant.namespaces.id,
+    tenant.namespaces.name
+FROM
+    tenant.namespaces
+    JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+WHERE
+    tenant.projects.cluster_id = @cluster_id
+    AND tenant.projects.deleted IS NULL
+    AND tenant.namespaces.deleted IS NULL
+ORDER BY
+    tenant.namespaces.id;

@@ -143,6 +143,95 @@ func (q *Queries) InventoryClusterList(ctx context.Context) ([]uuid.UUID, error)
 	return items, nil
 }
 
+const inventoryMockNamespaceList = `-- name: InventoryMockNamespaceList :many
+SELECT
+    tenant.namespaces.id,
+    tenant.namespaces.name
+FROM
+    tenant.namespaces
+    JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+WHERE
+    tenant.projects.cluster_id = $1
+    AND tenant.projects.deleted IS NULL
+    AND tenant.namespaces.deleted IS NULL
+ORDER BY
+    tenant.namespaces.id
+`
+
+type InventoryMockNamespaceListParams struct {
+	ClusterID uuid.UUID
+}
+
+type InventoryMockNamespaceListRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// Live namespaces of a cluster by name, for the mock inventory's pod counts.
+func (q *Queries) InventoryMockNamespaceList(ctx context.Context, arg InventoryMockNamespaceListParams) ([]InventoryMockNamespaceListRow, error) {
+	rows, err := q.db.Query(ctx, inventoryMockNamespaceList, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InventoryMockNamespaceListRow
+	for rows.Next() {
+		var i InventoryMockNamespaceListRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const inventoryMockNodePoolList = `-- name: InventoryMockNodePoolList :many
+SELECT
+    tenant.node_pools.name,
+    tenant.node_pools.autoscale_min
+FROM
+    tenant.node_pools
+WHERE
+    tenant.node_pools.cluster_id = $1
+    AND tenant.node_pools.deleted IS NULL
+ORDER BY
+    tenant.node_pools.name
+`
+
+type InventoryMockNodePoolListParams struct {
+	ClusterID uuid.UUID
+}
+
+type InventoryMockNodePoolListRow struct {
+	Name         string
+	AutoscaleMin int32
+}
+
+// Live node pools of a cluster with their autoscaler minimum, which the mock
+// inventory runs as nodes (GARDENER_MODE=mock).
+func (q *Queries) InventoryMockNodePoolList(ctx context.Context, arg InventoryMockNodePoolListParams) ([]InventoryMockNodePoolListRow, error) {
+	rows, err := q.db.Query(ctx, inventoryMockNodePoolList, arg.ClusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InventoryMockNodePoolListRow
+	for rows.Next() {
+		var i InventoryMockNodePoolListRow
+		if err := rows.Scan(&i.Name, &i.AutoscaleMin); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const inventoryNamespaceList = `-- name: InventoryNamespaceList :many
 SELECT
     tenant.namespaces.id

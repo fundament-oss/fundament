@@ -12,6 +12,89 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const driftFindingResolve = `-- name: DriftFindingResolve :execrows
+UPDATE tenant.drift_findings
+SET
+    resolved = $1
+WHERE
+    tenant.drift_findings.resolved IS NULL
+    AND tenant.drift_findings.last_detected < $1
+`
+
+type DriftFindingResolveParams struct {
+	Seen pgtype.Timestamptz
+}
+
+// Resolve every open finding the pass at seen did not detect again.
+func (q *Queries) DriftFindingResolve(ctx context.Context, arg DriftFindingResolveParams) (int64, error) {
+	result, err := q.db.Exec(ctx, driftFindingResolve, arg.Seen)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const driftFindingUpsert = `-- name: DriftFindingUpsert :exec
+INSERT INTO
+    tenant.drift_findings (
+        kind,
+        cluster_id,
+        shoot_uid,
+        shoot_name,
+        shoot_namespace,
+        expected,
+        observed,
+        first_detected,
+        last_detected
+    )
+SELECT
+    unnest($1::text[]),
+    nullif(unnest($2::text[]), '')::uuid,
+    nullif(unnest($3::text[]), ''),
+    nullif(unnest($4::text[]), ''),
+    nullif(unnest($5::text[]), ''),
+    nullif(unnest($6::text[]), ''),
+    nullif(unnest($7::text[]), ''),
+    $8::timestamptz,
+    $8::timestamptz
+ON CONFLICT ON CONSTRAINT drift_findings_uq_subject DO UPDATE
+SET
+    shoot_name = EXCLUDED.shoot_name,
+    shoot_namespace = EXCLUDED.shoot_namespace,
+    expected = EXCLUDED.expected,
+    observed = EXCLUDED.observed,
+    last_detected = EXCLUDED.last_detected
+`
+
+type DriftFindingUpsertParams struct {
+	Kinds           []string
+	ClusterIds      []string
+	ShootUids       []string
+	ShootNames      []string
+	ShootNamespaces []string
+	Expected        []string
+	Observed        []string
+	Seen            pgtype.Timestamptz
+}
+
+// Record what one reconcile pass found, the arrays zipped by position. A
+// finding still open keeps its first_detected; last_detected moves to this
+// pass. Empty strings stand for NULL, as pgx cannot send NULL array elements
+// for uuid.UUID.
+func (q *Queries) DriftFindingUpsert(ctx context.Context, arg DriftFindingUpsertParams) error {
+	_, err := q.db.Exec(ctx, driftFindingUpsert,
+		arg.Kinds,
+		arg.ClusterIds,
+		arg.ShootUids,
+		arg.ShootNames,
+		arg.ShootNamespaces,
+		arg.Expected,
+		arg.Observed,
+		arg.Seen,
+	)
+	return err
+}
+
 const gardenerShootMarkGone = `-- name: GardenerShootMarkGone :execrows
 UPDATE tenant.gardener_shoots
 SET
@@ -94,5 +177,36 @@ func (q *Queries) GardenerShootUpsert(ctx context.Context, arg GardenerShootUpse
 		arg.ShootCreated,
 		arg.Seen,
 	)
+	return err
+}
+
+const workerHeartbeatRecord = `-- name: WorkerHeartbeatRecord :exec
+INSERT INTO
+    tenant.worker_heartbeats (
+        worker,
+        interval_seconds,
+        last_pass
+    )
+VALUES
+    (
+        $1,
+        $2,
+        $3
+    )
+ON CONFLICT ON CONSTRAINT worker_heartbeats_uq_worker DO UPDATE
+SET
+    interval_seconds = EXCLUDED.interval_seconds,
+    last_pass = EXCLUDED.last_pass
+`
+
+type WorkerHeartbeatRecordParams struct {
+	Worker          string
+	IntervalSeconds int32
+	LastPass        pgtype.Timestamptz
+}
+
+// Record that a periodic loop completed a pass, and how often it runs.
+func (q *Queries) WorkerHeartbeatRecord(ctx context.Context, arg WorkerHeartbeatRecordParams) error {
+	_, err := q.db.Exec(ctx, workerHeartbeatRecord, arg.Worker, arg.IntervalSeconds, arg.LastPass)
 	return err
 }

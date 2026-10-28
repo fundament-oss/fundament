@@ -93,7 +93,7 @@
         </nldd-card>
       </nldd-collection>
       <nldd-rich-text spacing="flat">
-        <p>{{ inventoryRefreshed() }}</p>
+        <p>{{ freshness() }}.</p>
       </nldd-rich-text>
 
       <nldd-box>
@@ -477,7 +477,9 @@
      ══════════════════════════════════════════════════════════════ -->
 <ng-template #drift>
   <nldd-rich-text spacing="flat">
-    <p>Where the database, the snapshots and Gardener disagree. {{ inventoryRefreshed() }}.</p>
+    <p>
+      Where the database and Gardener disagree, as cluster-worker last saw them. {{ freshness() }}.
+    </p>
   </nldd-rich-text>
   <nldd-spacer size="16"></nldd-spacer>
   <nldd-box>
@@ -495,7 +497,7 @@
           <nldd-text-cell text="Since" hide-below="md"></nldd-text-cell>
           <nldd-text-cell text="Detail" hide-below="lg"></nldd-text-cell>
         </nldd-table-row>
-        @for (finding of api.findings(); track $index) {
+        @for (finding of api.findings(); track finding.id) {
           @let path = findingPath(finding);
           <nldd-table-row>
             <nldd-cell>
@@ -521,14 +523,17 @@
                 {{ finding.clusterName || finding.clusterId }}
               }
             </nldd-text-cell>
-            <nldd-text-cell hide-below="md" [attr.text]="ago(finding.since)"></nldd-text-cell>
+            <nldd-text-cell
+              hide-below="md"
+              [attr.text]="ago(finding.firstDetected)"
+            ></nldd-text-cell>
             <nldd-text-cell hide-below="lg" [attr.text]="finding.detail"></nldd-text-cell>
           </nldd-table-row>
         }
         <nldd-inline-dialog
           slot="empty"
           text="No drift"
-          supporting-text="The database, the snapshots and Gardener agree."
+          supporting-text="The database and Gardener agree."
         ></nldd-inline-dialog>
       </nldd-table>
     </nldd-container>

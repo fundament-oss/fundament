@@ -16,10 +16,19 @@
     </nldd-title>
     <nldd-spacer size="12"></nldd-spacer>
     <nldd-rich-text spacing="flat">
-      <p>Every organization on Fundament, with the clusters, projects and namespaces it runs.</p>
+      <p>
+        The organizations on Fundament that chose to be listed, with the clusters, projects and
+        namespaces they run.
+      </p>
     </nldd-rich-text>
     <nldd-spacer size="24"></nldd-spacer>
-    @if (isLoading()) {
+    @if (unavailable()) {
+      <nldd-banner
+        variant="accent"
+        text="Overview unavailable"
+        supporting-text="This environment does not publish the platform overview."
+      ></nldd-banner>
+    } @else if (isLoading()) {
       <nldd-activity-indicator
         show-text
         text="Loading the platform overview..."
@@ -119,10 +128,18 @@
                   ></nldd-text-cell>
                 </nldd-table-row>
               }
-              <nldd-inline-dialog
-                slot="empty"
-                text="No organization matches"
-              ></nldd-inline-dialog>
+              @if (organizations().length === 0) {
+                <nldd-inline-dialog
+                  slot="empty"
+                  text="No organization listed yet"
+                  supporting-text="Organizations appear here once they choose to be listed."
+                ></nldd-inline-dialog>
+              } @else {
+                <nldd-inline-dialog
+                  slot="empty"
+                  text="No organization matches"
+                ></nldd-inline-dialog>
+              }
             </nldd-table>
           </nldd-container>
         </nldd-box>

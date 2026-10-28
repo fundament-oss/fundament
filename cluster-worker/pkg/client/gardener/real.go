@@ -306,6 +306,8 @@ func (r *RealClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.
 }
 
 // ListShoots returns all Shoots managed by this worker (across all namespaces).
+// A shoot whose cluster-id label does not parse is listed too, with
+// InvalidClusterID set, so reconcile can report it.
 func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 
@@ -326,13 +328,14 @@ func (r *RealClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 				"shoot", shoot.Name,
 				"namespace", shoot.Namespace,
 				"cluster_id", clusterIDStr)
-			continue
+			clusterID = uuid.Nil
 		}
 
 		shoots = append(shoots, ShootInfo{
 			Name:              shoot.Name,
 			Namespace:         shoot.Namespace,
 			ClusterID:         clusterID,
+			InvalidClusterID:  err != nil,
 			Labels:            shoot.Labels,
 			Deleting:          shoot.DeletionTimestamp != nil,
 			UID:               string(shoot.UID),

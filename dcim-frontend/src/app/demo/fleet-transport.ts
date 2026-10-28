@@ -6,7 +6,6 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Code, ConnectError, Transport, createRouterTransport } from '@connectrpc/connect';
 import {
   ClusterFilter,
-  ClusterHealth,
   ClusterStatus,
   DriftKind,
   FleetService,
@@ -17,7 +16,9 @@ import {
   type OrganizationSummary,
 } from '../../generated/fleet/v1/fleet_pb';
 
-const STALE_AFTER_SECONDS = 45 * 60;
+// Three inventory intervals of 15 minutes, as platform-api derives it.
+const INVENTORY_INTERVAL_SECONDS = 15 * 60;
+const STALE_AFTER_SECONDS = 3 * INVENTORY_INTERVAL_SECONDS;
 
 const minutesAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 60_000));
 const daysAgo = (n: number) => minutesAgo(n * 24 * 60);
@@ -33,7 +34,6 @@ interface DemoCluster {
   organizationId: string;
   name: string;
   status: ClusterStatus;
-  health: ClusterHealth;
   pools: { name: string; min: number; max: number; nodes: number }[];
   observedMinutesAgo?: number;
   lastError?: string;
@@ -46,7 +46,6 @@ const CLUSTERS: DemoCluster[] = [
     organizationId: 'org-utrecht',
     name: 'productie',
     status: ClusterStatus.RUNNING,
-    health: ClusterHealth.HEALTHY,
     pools: [
       { name: 'workers', min: 3, max: 9, nodes: 5 },
       { name: 'batch', min: 0, max: 4, nodes: 0 },
@@ -62,8 +61,7 @@ const CLUSTERS: DemoCluster[] = [
     id: 'cl-utrecht-test',
     organizationId: 'org-utrecht',
     name: 'test',
-    status: ClusterStatus.UPDATING,
-    health: ClusterHealth.HEALTHY,
+    status: ClusterStatus.UPGRADING,
     pools: [{ name: 'workers', min: 1, max: 3, nodes: 2 }],
     observedMinutesAgo: 9,
     namespaces: [{ project: 'parkeren', name: 'parkeren-test', pods: 4 }],
@@ -72,8 +70,7 @@ const CLUSTERS: DemoCluster[] = [
     id: 'cl-zwolle-prod',
     organizationId: 'org-zwolle',
     name: 'productie',
-    status: ClusterStatus.RUNNING,
-    health: ClusterHealth.UNHEALTHY,
+    status: ClusterStatus.UNHEALTHY,
     pools: [{ name: 'workers', min: 2, max: 6, nodes: 6 }],
     observedMinutesAgo: 70,
     lastError: 'list nodes: Get "https://api.zwolle-prod": dial tcp: i/o timeout',
@@ -84,7 +81,6 @@ const CLUSTERS: DemoCluster[] = [
     organizationId: 'org-rvo',
     name: 'subsidies',
     status: ClusterStatus.RUNNING,
-    health: ClusterHealth.HEALTHY,
     pools: [{ name: 'workers', min: 2, max: 8, nodes: 3 }],
     observedMinutesAgo: 3,
     namespaces: [{ project: 'subsidies', name: 'subsidies-prod', pods: 22 }],
@@ -92,6 +88,12 @@ const CLUSTERS: DemoCluster[] = [
 ];
 
 const PODS_PER_NODE = 110;
+
+/** The statuses ClusterFilter.UNHEALTHY and clusters_unhealthy count. */
+const needsAttention = (c: { status: ClusterStatus }) =>
+  c.status === ClusterStatus.UNHEALTHY ||
+  c.status === ClusterStatus.ERROR ||
+  c.status === ClusterStatus.LOST;
 
 const nodesOf = (c: DemoCluster) => c.pools.reduce((sum, p) => sum + p.nodes, 0);
 const podsOf = (c: DemoCluster) =>
@@ -114,7 +116,6 @@ function clusterSummary(c: DemoCluster): ClusterSummary {
     region: 'nl-ams-1',
     kubernetesVersion: '1.33.4',
     status: c.status,
-    health: c.health,
     created: daysAgo(120),
     nodePools: c.pools.length,
     nodesMin: c.pools.reduce((sum, p) => sum + p.min, 0),
@@ -122,7 +123,7 @@ function clusterSummary(c: DemoCluster): ClusterSummary {
     snapshot: {
       observed,
       nodes,
-      nodesReady: c.health === ClusterHealth.UNHEALTHY ? nodes - 1 : nodes,
+      nodesReady: c.status === ClusterStatus.UNHEALTHY ? nodes - 1 : nodes,
       pods: podsOf(c),
       podAllocatable: nodes * PODS_PER_NODE,
       cpuAllocatableM: BigInt(nodes * 3920),
@@ -143,7 +144,7 @@ function organizationSummary(o: (typeof ORGANIZATIONS)[number]): OrganizationSum
     alias: o.alias,
     created: daysAgo(400),
     clusters: clusters.length,
-    clustersUnhealthy: clusters.filter((c) => c.health === ClusterHealth.UNHEALTHY).length,
+    clustersUnhealthy: clusters.filter(needsAttention).length,
     nodes: summaries.reduce((sum, c) => sum + (c.snapshot?.nodes ?? 0), 0),
     nodesReady: summaries.reduce((sum, c) => sum + (c.snapshot?.nodesReady ?? 0), 0),
     pods: summaries.reduce((sum, c) => sum + (c.snapshot?.pods ?? 0), 0),
@@ -153,15 +154,17 @@ function organizationSummary(o: (typeof ORGANIZATIONS)[number]): OrganizationSum
 
 const findings = () => [
   create(DriftFindingSchema, {
-    kind: DriftKind.SNAPSHOT_STALE,
-    organizationId: 'org-zwolle',
-    organizationName: 'gemeente-zwolle',
-    clusterId: 'cl-zwolle-prod',
-    clusterName: 'productie',
-    since: minutesAgo(70),
-    detail: 'Last collected 70 min ago. Last error: dial tcp: i/o timeout',
+    id: 'finding-odd-label',
+    kind: DriftKind.SHOOT_INVALID_CLUSTER_ID,
+    shootName: 'handmatig-01',
+    shootNamespace: 'garden-zwolle',
+    firstDetected: daysAgo(3),
+    lastDetected: minutesAgo(2),
+    detail:
+      'Gardener has a shoot whose fundament.io/cluster-id label "zwolle-handmatig" is no cluster id.',
   }),
   create(DriftFindingSchema, {
+    id: 'finding-archief',
     kind: DriftKind.SHOOT_OF_DELETED_CLUSTER,
     organizationId: 'org-rvo',
     organizationName: 'rvo',
@@ -169,7 +172,8 @@ const findings = () => [
     clusterName: 'archief',
     shootName: 'archief-7f3c',
     shootNamespace: 'garden-rvo',
-    since: minutesAgo(4),
+    firstDetected: minutesAgo(4),
+    lastDetected: minutesAgo(2),
     detail:
       'The cluster is deleted but Gardener still lists its shoot. Reconcile deletes orphaned shoots, so this should clear by itself.',
   }),
@@ -192,8 +196,8 @@ export default function createFleetDemoTransport(): Transport {
           summary: {
             organizations: ORGANIZATIONS.length,
             clusters: clusters.length,
-            clustersUnhealthy: clusters.filter((c) => c.health === ClusterHealth.UNHEALTHY).length,
-            clustersUpdating: clusters.filter((c) => c.status === ClusterStatus.UPDATING).length,
+            clustersUnhealthy: clusters.filter(needsAttention).length,
+            clustersUpdating: clusters.filter((c) => c.status === ClusterStatus.UPGRADING).length,
             nodes: sum((c) => c.snapshot?.nodes ?? 0),
             nodesReady: sum((c) => c.snapshot?.nodesReady ?? 0),
             pods: sum((c) => c.snapshot?.pods ?? 0),
@@ -201,9 +205,10 @@ export default function createFleetDemoTransport(): Transport {
             cpuAllocatableM: BigInt(sum((c) => Number(c.snapshot?.cpuAllocatableM ?? 0n))),
             memoryAllocatableMi: BigInt(sum((c) => Number(c.snapshot?.memoryAllocatableMi ?? 0n))),
             driftFindings: findings().length,
-            staleSnapshots: findings().filter((f) => f.kind === DriftKind.SNAPSHOT_STALE).length,
-            gardenerInventoryRefreshed: minutesAgo(2),
-            staleAfterSeconds: STALE_AFTER_SECONDS,
+            staleSnapshots: clusters.filter((c) => c.stale).length,
+            reconcile: { lastPass: minutesAgo(2), intervalSeconds: 5 * 60 },
+            inventory: { lastPass: minutesAgo(3), intervalSeconds: INVENTORY_INTERVAL_SECONDS },
+            snapshotStaleAfterSeconds: STALE_AFTER_SECONDS,
           },
         };
       },
@@ -224,7 +229,7 @@ export default function createFleetDemoTransport(): Transport {
         ).map(clusterSummary);
         switch (req.filter) {
           case ClusterFilter.UNHEALTHY:
-            return { clusters: clusters.filter((c) => c.health === ClusterHealth.UNHEALTHY) };
+            return { clusters: clusters.filter(needsAttention) };
           case ClusterFilter.STALE:
             return { clusters: clusters.filter((c) => c.stale) };
           case ClusterFilter.ALL:
@@ -242,7 +247,7 @@ export default function createFleetDemoTransport(): Transport {
         const projects = [...new Set(cluster.namespaces.map((ns) => ns.project))];
         // The node the summary counts as not ready sits in the first pool that has nodes.
         const notReadyPool =
-          cluster.health === ClusterHealth.UNHEALTHY
+          cluster.status === ClusterStatus.UNHEALTHY
             ? cluster.pools.findIndex((p) => p.nodes > 0)
             : -1;
         return {

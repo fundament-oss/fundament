@@ -132,3 +132,50 @@ func (s *Seed) GardenerShoot(clusterID uuid.UUID, name, version string, seenAgo 
 		        now() - make_interval(secs => $4), now() - make_interval(secs => $4))
 		RETURNING id`, clusterID, name, version, seenAgo.Seconds())
 }
+
+// SystemOrganizationID is the seeded system organization
+// (tenant.system_organization_id()), which no platform view lists.
+var SystemOrganizationID = uuid.MustParse("019b4000-0000-7000-8000-000000000000")
+
+// ListPublicly opts an organization into the public platform overview.
+func (s *Seed) ListPublicly(orgID uuid.UUID) {
+	s.t.Helper()
+	s.exec(`UPDATE tenant.organizations SET listed_publicly = true WHERE id = $1`, orgID)
+}
+
+// Heartbeat records that a cluster-worker loop completed a pass ago ago and
+// runs every interval.
+func (s *Seed) Heartbeat(worker string, interval, ago time.Duration) {
+	s.t.Helper()
+	s.exec(`INSERT INTO tenant.worker_heartbeats (worker, interval_seconds, last_pass)
+		VALUES ($1, $2, now() - make_interval(secs => $3))
+		ON CONFLICT (worker) DO UPDATE SET interval_seconds = EXCLUDED.interval_seconds, last_pass = EXCLUDED.last_pass`,
+		worker, int32(interval.Seconds()), ago.Seconds())
+}
+
+// Finding is a drift finding as reconcile records it. ClusterID uuid.Nil and
+// empty strings are stored as NULL.
+type Finding struct {
+	Kind             string
+	ClusterID        uuid.UUID
+	ShootName        string
+	Expected         string
+	Observed         string
+	FirstDetectedAgo time.Duration
+	Resolved         bool
+}
+
+// DriftFinding inserts a finding, open unless f.Resolved.
+func (s *Seed) DriftFinding(f Finding) uuid.UUID {
+	s.t.Helper()
+	var clusterID *uuid.UUID
+	if f.ClusterID != uuid.Nil {
+		clusterID = &f.ClusterID
+	}
+	return s.id(`INSERT INTO tenant.drift_findings
+		(kind, cluster_id, shoot_uid, shoot_name, shoot_namespace, expected, observed, first_detected, last_detected, resolved)
+		VALUES ($1, $2, NULLIF($3, '') || '-uid', NULLIF($3, ''), CASE WHEN $3 = '' THEN NULL ELSE 'garden-test' END,
+		        NULLIF($4, ''), NULLIF($5, ''), now() - make_interval(secs => $6), now(),
+		        CASE WHEN $7 THEN now() END)
+		RETURNING id`, f.Kind, clusterID, f.ShootName, f.Expected, f.Observed, f.FirstDetectedAgo.Seconds(), f.Resolved)
+}

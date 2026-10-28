@@ -21,8 +21,6 @@ import (
 
 var testJWTSecret = []byte("fleet-test-secret")
 
-const testStaleAfter = 45 * time.Minute
-
 // newClient starts the real server over HTTP, connected as the admin role:
 // authentication lives in headers, so a direct handler call would bypass the
 // thing most worth testing.
@@ -34,8 +32,7 @@ func newClient(t *testing.T, env *testpg.Env, opts ...connect.ClientOption) flee
 	t.Cleanup(database.Close)
 
 	server := fleet.New(slog.New(slog.DiscardHandler), fleet.Config{
-		JWTSecret:  testJWTSecret,
-		StaleAfter: testStaleAfter,
+		JWTSecret: testJWTSecret,
 	}, database)
 
 	ts := httptest.NewServer(server.Handler())
@@ -47,7 +44,7 @@ func newClient(t *testing.T, env *testpg.Env, opts ...connect.ClientOption) flee
 // staffClient is a client presenting a DCIM token.
 func staffClient(t *testing.T, env *testpg.Env) fleetv1connect.FleetServiceClient {
 	t.Helper()
-	return newClient(t, env, bearer(mintToken(t, auth.DCIMIssuer, nil)))
+	return newClient(t, env, bearer(mintToken(t, auth.DCIMIssuer, jwt.ClaimStrings{auth.TokenTypeDCIMUser})))
 }
 
 func bearer(token string) connect.ClientOption {
@@ -61,8 +58,9 @@ func bearer(token string) connect.ClientOption {
 	))
 }
 
-// mintToken mirrors dcim-authn-api's mintJWT for the DCIM issuer (no audience,
-// no organization ids) and authn-api's user token for the console issuer.
+// mintToken mirrors dcim-authn-api's mintJWT for the DCIM issuer (the
+// dcim-user audience, no organization ids) and authn-api's user token for the
+// console issuer.
 func mintToken(t *testing.T, issuer string, audience jwt.ClaimStrings) string {
 	t.Helper()
 	return mintTokenWithSecret(t, testJWTSecret, issuer, audience)

@@ -56,15 +56,17 @@ const (
 type FleetServiceClient interface {
 	// Platform-wide totals for the overview tiles.
 	GetFleetSummary(context.Context, *v1.GetFleetSummaryRequest) (*v1.GetFleetSummaryResponse, error)
-	// Every live organization with its aggregates.
+	// Live organizations with their aggregates, by alias.
 	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
 	// One live organization with its aggregates.
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
-	// Live clusters, optionally of one organization and narrowed by a filter.
+	// Live clusters, optionally of one organization and narrowed by a filter,
+	// by organization alias and cluster name.
 	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)
 	// One live cluster with its node pools, projects and namespaces.
 	GetCluster(context.Context, *v1.GetClusterRequest) (*v1.GetClusterResponse, error)
-	// Disagreements between the database, the snapshots and Gardener.
+	// Open disagreements between the database and Gardener, by kind and then
+	// oldest first.
 	ListDriftFindings(context.Context, *v1.ListDriftFindingsRequest) (*v1.ListDriftFindingsResponse, error)
 }
 
@@ -192,15 +194,17 @@ func (c *fleetServiceClient) ListDriftFindings(ctx context.Context, req *v1.List
 type FleetServiceHandler interface {
 	// Platform-wide totals for the overview tiles.
 	GetFleetSummary(context.Context, *v1.GetFleetSummaryRequest) (*v1.GetFleetSummaryResponse, error)
-	// Every live organization with its aggregates.
+	// Live organizations with their aggregates, by alias.
 	ListOrganizations(context.Context, *v1.ListOrganizationsRequest) (*v1.ListOrganizationsResponse, error)
 	// One live organization with its aggregates.
 	GetOrganization(context.Context, *v1.GetOrganizationRequest) (*v1.GetOrganizationResponse, error)
-	// Live clusters, optionally of one organization and narrowed by a filter.
+	// Live clusters, optionally of one organization and narrowed by a filter,
+	// by organization alias and cluster name.
 	ListClusters(context.Context, *v1.ListClustersRequest) (*v1.ListClustersResponse, error)
 	// One live cluster with its node pools, projects and namespaces.
 	GetCluster(context.Context, *v1.GetClusterRequest) (*v1.GetClusterResponse, error)
-	// Disagreements between the database, the snapshots and Gardener.
+	// Open disagreements between the database and Gardener, by kind and then
+	// oldest first.
 	ListDriftFindings(context.Context, *v1.ListDriftFindingsRequest) (*v1.ListDriftFindingsResponse, error)
 }
 

@@ -1,6 +1,5 @@
 import { timestampDate, type Timestamp } from '@bufbuild/protobuf/wkt';
 import {
-  ClusterHealth,
   ClusterStatus,
   DriftKind,
   type ClusterSnapshot,
@@ -16,26 +15,23 @@ export interface Tag {
   color: TagColor;
 }
 
-/** One tag for a cluster: what it is doing, and once it runs, how it is. */
-export function clusterTag(cluster: Pick<ClusterSummary, 'status' | 'health'>): Tag {
+/** One tag for a cluster: its status, as the console shows it. */
+export function clusterTag(cluster: Pick<ClusterSummary, 'status'>): Tag {
   switch (cluster.status) {
     case ClusterStatus.RUNNING:
-      switch (cluster.health) {
-        case ClusterHealth.HEALTHY:
-          return { text: 'Healthy', color: 'success' };
-        case ClusterHealth.UNHEALTHY:
-          return { text: 'Unhealthy', color: 'critical' };
-        case ClusterHealth.UNSPECIFIED:
-          return { text: 'Running', color: 'neutral' };
-        default:
-          throw new Error(`unhandled cluster health ${cluster.health satisfies never}`);
-      }
-    case ClusterStatus.UPDATING:
-      return { text: 'Updating', color: 'warning' };
+      return { text: 'Running', color: 'success' };
+    case ClusterStatus.STARTING:
+      return { text: 'Starting', color: 'neutral' };
+    case ClusterStatus.UPGRADING:
+      return { text: 'Upgrading', color: 'warning' };
+    case ClusterStatus.UNHEALTHY:
+      return { text: 'Unhealthy', color: 'critical' };
     case ClusterStatus.PROVISIONING:
       return { text: 'Provisioning', color: 'neutral' };
     case ClusterStatus.ERROR:
       return { text: 'Error', color: 'critical' };
+    case ClusterStatus.LOST:
+      return { text: 'Lost', color: 'critical' };
     case ClusterStatus.DELETING:
       return { text: 'Deleting', color: 'neutral' };
     case ClusterStatus.STOPPED:
@@ -55,10 +51,10 @@ export function driftKindTag(kind: DriftKind): Tag {
       return { text: 'Shoot of deleted cluster', color: 'warning' };
     case DriftKind.CLUSTER_WITHOUT_SHOOT:
       return { text: 'Cluster without shoot', color: 'critical' };
-    case DriftKind.SNAPSHOT_STALE:
-      return { text: 'Stale snapshot', color: 'warning' };
     case DriftKind.KUBERNETES_VERSION_MISMATCH:
       return { text: 'Version mismatch', color: 'warning' };
+    case DriftKind.SHOOT_INVALID_CLUSTER_ID:
+      return { text: 'Invalid cluster label', color: 'critical' };
     case DriftKind.UNSPECIFIED:
       return { text: 'Unknown', color: 'neutral' };
     default:
@@ -79,7 +75,7 @@ export function timeAgo(at: Date, now: Date): string {
 
 export interface Observed {
   text: string;
-  /** Older than stale_after, or never observed. */
+  /** Older than three inventory intervals, or never observed. */
   stale: boolean;
 }
 
@@ -132,12 +128,14 @@ export function capacityText(snapshot: ClusterSnapshot | undefined): string {
   return `${formatCores(snapshot.cpuAllocatableM)}, ${formatMemory(snapshot.memoryAllocatableMi)}`;
 }
 
-/** Where a node pool stands against its own bounds. */
+/** Where a node pool stands against its own bounds. A fixed-size pool
+ *  (minimum equals maximum) at its size is where it should be, not at a limit. */
 export function poolFlag(
   pool: Pick<NodePool, 'nodes' | 'autoscaleMin' | 'autoscaleMax' | 'observed'>,
 ): Tag | null {
   if (!pool.observed) return null;
   if (pool.nodes < pool.autoscaleMin) return { text: 'Below minimum', color: 'warning' };
+  if (pool.autoscaleMin === pool.autoscaleMax) return null;
   if (pool.nodes >= pool.autoscaleMax) return { text: 'At maximum', color: 'warning' };
   return null;
 }

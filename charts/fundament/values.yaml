@@ -186,6 +186,9 @@ clusterWorker:
   logLevel: info
   # Fleet inventory (FUN-23): how often every ready shoot's nodes, pods and
   # namespaces are counted, how many shoots at once, and how long one may take.
+  # Runs as its own Deployment, cluster-worker-inventory (one replica), and
+  # only while platformAdminApi.enabled: the fleet view is its only reader.
+  # The fleet view calls a snapshot stale after three intervals.
   inventory:
     interval: 15m
     workers: 4
@@ -494,9 +497,6 @@ platformAdminApi:
   enabled: false
   replicas: 1
   logLevel: info
-  # How old a cluster snapshot may get before it counts as stale. Keep it a
-  # few times clusterWorker.inventory.interval.
-  staleAfter: 45m
   httproute:
     enabled: false
     parentRefs: []

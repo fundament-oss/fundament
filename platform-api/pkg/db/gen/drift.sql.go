@@ -12,341 +12,92 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const driftClusterWithoutShoot = `-- name: DriftClusterWithoutShoot :many
+const driftFindingList = `-- name: DriftFindingList :many
 SELECT
-    tenant.clusters.id AS cluster_id,
+    tenant.drift_findings.id,
+    tenant.drift_findings.kind,
+    tenant.drift_findings.cluster_id,
+    tenant.drift_findings.shoot_name,
+    tenant.drift_findings.shoot_namespace,
+    tenant.drift_findings.expected,
+    tenant.drift_findings.observed,
+    tenant.drift_findings.first_detected,
+    tenant.drift_findings.last_detected,
     tenant.clusters.name AS cluster_name,
     tenant.clusters.organization_id,
-    tenant.organizations.name AS organization_name,
-    coalesce(
-        (
-            SELECT max(tenant.gardener_shoots.deleted)
-            FROM tenant.gardener_shoots
-            WHERE tenant.gardener_shoots.cluster_id = tenant.clusters.id
-        ),
-        tenant.clusters.shoot_status_updated,
-        tenant.clusters.created
-    )::timestamptz AS since
+    tenant.organizations.name AS organization_name
 FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    JOIN tenant.cluster_sync_state ON tenant.cluster_sync_state.cluster_id = tenant.clusters.id
+    tenant.drift_findings
+    LEFT JOIN tenant.clusters ON tenant.clusters.id = tenant.drift_findings.cluster_id
+    LEFT JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    tenant.clusters.deleted IS NULL
-    AND tenant.organizations.deleted IS NULL
-    AND tenant.cluster_sync_state.outbox_status = 'completed'
-    AND NOT EXISTS (
-        SELECT 1
-        FROM tenant.gardener_shoots
-        WHERE tenant.gardener_shoots.cluster_id = tenant.clusters.id
-            AND tenant.gardener_shoots.deleted IS NULL
-    )
-    AND coalesce(tenant.clusters.shoot_status_updated, tenant.clusters.created) < (
-        SELECT max(tenant.gardener_shoots.last_seen)
-        FROM tenant.gardener_shoots
-        WHERE tenant.gardener_shoots.deleted IS NULL
-    )
+    tenant.drift_findings.resolved IS NULL
+    AND tenant.clusters.organization_id IS DISTINCT FROM tenant.system_organization_id()
     AND (
-        SELECT max(tenant.gardener_shoots.last_seen)
-        FROM tenant.gardener_shoots
-        WHERE tenant.gardener_shoots.deleted IS NULL
-    ) >= $1::timestamptz
-ORDER BY
-    since
-`
-
-type DriftClusterWithoutShootParams struct {
-	FreshAfter pgtype.Timestamptz
-}
-
-type DriftClusterWithoutShootRow struct {
-	ClusterID        uuid.UUID
-	ClusterName      string
-	OrganizationID   uuid.UUID
-	OrganizationName string
-	Since            pgtype.Timestamptz
-}
-
-// A live cluster that reached Gardener but has no live shoot. Reported only
-// while the inventory was refreshed after fresh_after, and only for clusters
-// whose last status change predates that refresh: a stopped worker, or a
-// cluster created since the last reconcile, is not drift. since is when its
-// shoot was last seen to go, or else when it was synced.
-func (q *Queries) DriftClusterWithoutShoot(ctx context.Context, arg DriftClusterWithoutShootParams) ([]DriftClusterWithoutShootRow, error) {
-	rows, err := q.db.Query(ctx, driftClusterWithoutShoot, arg.FreshAfter)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []DriftClusterWithoutShootRow
-	for rows.Next() {
-		var i DriftClusterWithoutShootRow
-		if err := rows.Scan(
-			&i.ClusterID,
-			&i.ClusterName,
-			&i.OrganizationID,
-			&i.OrganizationName,
-			&i.Since,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const driftKubernetesVersionMismatch = `-- name: DriftKubernetesVersionMismatch :many
-SELECT
-    tenant.clusters.id AS cluster_id,
-    tenant.clusters.name AS cluster_name,
-    tenant.clusters.organization_id,
-    tenant.organizations.name AS organization_name,
-    tenant.clusters.kubernetes_version,
-    tenant.gardener_shoots.kubernetes_version AS shoot_kubernetes_version,
-    tenant.gardener_shoots.shoot_name,
-    tenant.gardener_shoots.shoot_namespace,
-    tenant.clusters.shoot_status_updated AS since
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    JOIN tenant.gardener_shoots ON tenant.gardener_shoots.cluster_id = tenant.clusters.id
-        AND tenant.gardener_shoots.deleted IS NULL
-WHERE
-    tenant.clusters.deleted IS NULL
-    AND tenant.organizations.deleted IS NULL
-    AND tenant.clusters.shoot_status = 'ready'
-    AND NOT tenant.clusters.shoot_updating
-    AND tenant.clusters.kubernetes_version <> tenant.gardener_shoots.kubernetes_version
-    AND tenant.gardener_shoots.last_seen > coalesce(tenant.clusters.shoot_status_updated, tenant.clusters.created)
-ORDER BY
-    tenant.clusters.name
-`
-
-type DriftKubernetesVersionMismatchRow struct {
-	ClusterID              uuid.UUID
-	ClusterName            string
-	OrganizationID         uuid.UUID
-	OrganizationName       string
-	KubernetesVersion      string
-	ShootKubernetesVersion string
-	ShootName              string
-	ShootNamespace         string
-	Since                  pgtype.Timestamptz
-}
-
-// A ready live cluster whose shoot runs another Kubernetes version while no
-// update is rolling out. The shoot must have been seen after the cluster's
-// last status change, so a version applied since the last reconcile is not
-// reported against the shoot's older spec.
-func (q *Queries) DriftKubernetesVersionMismatch(ctx context.Context) ([]DriftKubernetesVersionMismatchRow, error) {
-	rows, err := q.db.Query(ctx, driftKubernetesVersionMismatch)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []DriftKubernetesVersionMismatchRow
-	for rows.Next() {
-		var i DriftKubernetesVersionMismatchRow
-		if err := rows.Scan(
-			&i.ClusterID,
-			&i.ClusterName,
-			&i.OrganizationID,
-			&i.OrganizationName,
-			&i.KubernetesVersion,
-			&i.ShootKubernetesVersion,
-			&i.ShootName,
-			&i.ShootNamespace,
-			&i.Since,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const driftShootOfDeletedCluster = `-- name: DriftShootOfDeletedCluster :many
-SELECT
-    tenant.gardener_shoots.cluster_id,
-    tenant.gardener_shoots.shoot_name,
-    tenant.gardener_shoots.shoot_namespace,
-    tenant.clusters.name AS cluster_name,
-    tenant.clusters.organization_id,
-    tenant.organizations.name AS organization_name,
-    coalesce(tenant.clusters.deleted, tenant.organizations.deleted)::timestamptz AS since
-FROM
-    tenant.gardener_shoots
-    JOIN tenant.clusters ON tenant.clusters.id = tenant.gardener_shoots.cluster_id
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-WHERE
-    tenant.gardener_shoots.deleted IS NULL
-    AND (tenant.clusters.deleted IS NOT NULL OR tenant.organizations.deleted IS NOT NULL)
-ORDER BY
-    since
-`
-
-type DriftShootOfDeletedClusterRow struct {
-	ClusterID        uuid.UUID
-	ShootName        string
-	ShootNamespace   string
-	ClusterName      string
-	OrganizationID   uuid.UUID
-	OrganizationName string
-	Since            pgtype.Timestamptz
-}
-
-// A live shoot of a cluster that is deleted, or whose organization is. The
-// disagreement started when the cluster was deleted.
-func (q *Queries) DriftShootOfDeletedCluster(ctx context.Context) ([]DriftShootOfDeletedClusterRow, error) {
-	rows, err := q.db.Query(ctx, driftShootOfDeletedCluster)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []DriftShootOfDeletedClusterRow
-	for rows.Next() {
-		var i DriftShootOfDeletedClusterRow
-		if err := rows.Scan(
-			&i.ClusterID,
-			&i.ShootName,
-			&i.ShootNamespace,
-			&i.ClusterName,
-			&i.OrganizationID,
-			&i.OrganizationName,
-			&i.Since,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const driftShootWithoutCluster = `-- name: DriftShootWithoutCluster :many
-SELECT
-    tenant.gardener_shoots.cluster_id,
-    tenant.gardener_shoots.shoot_name,
-    tenant.gardener_shoots.shoot_namespace,
-    tenant.gardener_shoots.first_seen
-FROM
-    tenant.gardener_shoots
-WHERE
-    tenant.gardener_shoots.deleted IS NULL
-    AND NOT EXISTS (
-        SELECT 1
-        FROM tenant.clusters
-        WHERE tenant.clusters.id = tenant.gardener_shoots.cluster_id
+        $1::uuid IS NULL
+        OR (tenant.drift_findings.kind, tenant.drift_findings.first_detected, tenant.drift_findings.id)
+            > ($2::text, $3::timestamptz, $1::uuid)
     )
 ORDER BY
-    tenant.gardener_shoots.first_seen
+    tenant.drift_findings.kind,
+    tenant.drift_findings.first_detected,
+    tenant.drift_findings.id
+LIMIT $4::integer
 `
 
-type DriftShootWithoutClusterRow struct {
-	ClusterID      uuid.UUID
-	ShootName      string
-	ShootNamespace string
-	FirstSeen      pgtype.Timestamptz
+type DriftFindingListParams struct {
+	AfterID            pgtype.UUID
+	AfterKind          pgtype.Text
+	AfterFirstDetected pgtype.Timestamptz
+	PageLimit          int32
 }
 
-// A live shoot whose cluster id matches no cluster at all.
-func (q *Queries) DriftShootWithoutCluster(ctx context.Context) ([]DriftShootWithoutClusterRow, error) {
-	rows, err := q.db.Query(ctx, driftShootWithoutCluster)
+type DriftFindingListRow struct {
+	ID               uuid.UUID
+	Kind             string
+	ClusterID        pgtype.UUID
+	ShootName        pgtype.Text
+	ShootNamespace   pgtype.Text
+	Expected         pgtype.Text
+	Observed         pgtype.Text
+	FirstDetected    pgtype.Timestamptz
+	LastDetected     pgtype.Timestamptz
+	ClusterName      pgtype.Text
+	OrganizationID   pgtype.UUID
+	OrganizationName pgtype.Text
+}
+
+// Open drift findings as cluster-worker's reconcile loop recorded them, with
+// the cluster and organization they concern where those exist. Findings on
+// the system organization's clusters are left out, as everywhere. Paged by
+// (kind, first_detected, id) after the given key.
+func (q *Queries) DriftFindingList(ctx context.Context, arg DriftFindingListParams) ([]DriftFindingListRow, error) {
+	rows, err := q.db.Query(ctx, driftFindingList,
+		arg.AfterID,
+		arg.AfterKind,
+		arg.AfterFirstDetected,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DriftShootWithoutClusterRow
+	var items []DriftFindingListRow
 	for rows.Next() {
-		var i DriftShootWithoutClusterRow
+		var i DriftFindingListRow
 		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
 			&i.ClusterID,
 			&i.ShootName,
 			&i.ShootNamespace,
-			&i.FirstSeen,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const driftSnapshotStale = `-- name: DriftSnapshotStale :many
-SELECT
-    tenant.clusters.id AS cluster_id,
-    tenant.clusters.name AS cluster_name,
-    tenant.clusters.organization_id,
-    tenant.organizations.name AS organization_name,
-    tenant.cluster_snapshots.observed,
-    tenant.cluster_snapshots.last_error,
-    coalesce(
-        tenant.cluster_snapshots.observed,
-        tenant.clusters.shoot_status_updated,
-        tenant.clusters.created
-    )::timestamptz AS since
-FROM
-    tenant.clusters
-    JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
-    LEFT JOIN tenant.cluster_snapshots ON tenant.cluster_snapshots.cluster_id = tenant.clusters.id
-WHERE
-    tenant.clusters.deleted IS NULL
-    AND tenant.organizations.deleted IS NULL
-    AND tenant.clusters.shoot_status = 'ready'
-    AND coalesce(
-        tenant.cluster_snapshots.observed,
-        tenant.clusters.shoot_status_updated,
-        tenant.clusters.created
-    ) < $1::timestamptz
-ORDER BY
-    since
-`
-
-type DriftSnapshotStaleParams struct {
-	StaleBefore pgtype.Timestamptz
-}
-
-type DriftSnapshotStaleRow struct {
-	ClusterID        uuid.UUID
-	ClusterName      string
-	OrganizationID   uuid.UUID
-	OrganizationName string
-	Observed         pgtype.Timestamptz
-	LastError        pgtype.Text
-	Since            pgtype.Timestamptz
-}
-
-// A ready live cluster with no snapshot, or one older than stale_before. A
-// cluster that became ready less than stale_before ago is given time for its
-// first collection. Same rule as ClusterList's stale column.
-func (q *Queries) DriftSnapshotStale(ctx context.Context, arg DriftSnapshotStaleParams) ([]DriftSnapshotStaleRow, error) {
-	rows, err := q.db.Query(ctx, driftSnapshotStale, arg.StaleBefore)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []DriftSnapshotStaleRow
-	for rows.Next() {
-		var i DriftSnapshotStaleRow
-		if err := rows.Scan(
-			&i.ClusterID,
+			&i.Expected,
+			&i.Observed,
+			&i.FirstDetected,
+			&i.LastDetected,
 			&i.ClusterName,
 			&i.OrganizationID,
 			&i.OrganizationName,
-			&i.Observed,
-			&i.LastError,
-			&i.Since,
 		); err != nil {
 			return nil, err
 		}

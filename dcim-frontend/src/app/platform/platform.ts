@@ -48,8 +48,8 @@ const REFRESH_INTERVAL_MS = 60_000;
 /**
  * The Platform section (FUN-23): every organization's clusters as Fundament
  * staff see them. Counts come from the snapshots cluster-worker stores, so
- * each number carries when it was observed; drift compares the database with
- * the last Gardener inventory.
+ * each number carries when it was observed; drift is what cluster-worker's
+ * reconcile loop found the database and Gardener to disagree on.
  *
  * Read-only, all of it: what to change about a cluster is the organization's
  * call, made in their console.
@@ -146,11 +146,19 @@ export default class PlatformComponent implements OnInit, OnDestroy {
     ];
   });
 
-  protected readonly inventoryRefreshed = computed(() => {
-    const at = this.api.summary()?.gardenerInventoryRefreshed;
-    return at
-      ? `Gardener inventory refreshed ${timeAgo(timestampDate(at), this.now())}`
-      : 'Gardener inventory not recorded yet';
+  /** How current the findings and snapshots are: cluster-worker's loops
+   *  record each pass they complete. */
+  protected readonly freshness = computed(() => {
+    const summary = this.api.summary();
+    const reconcile = summary?.reconcile?.lastPass;
+    const inventory = summary?.inventory?.lastPass;
+    const drift = reconcile
+      ? `Drift checked ${timeAgo(timestampDate(reconcile), this.now())}`
+      : 'Drift not checked yet';
+    const snapshots = inventory
+      ? `snapshots collected ${timeAgo(timestampDate(inventory), this.now())}`
+      : 'no snapshots collected yet';
+    return `${drift}, ${snapshots}`;
   });
 
   /** Namespaces under their project, projects without any left out. */

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	commongardener "github.com/fundament-oss/fundament/common/gardener"
 	"github.com/fundament-oss/fundament/platform-api/internal/testpg"
 	fleetv1 "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1"
 )
@@ -109,21 +110,41 @@ func TestFleetSummaryCountsSeededClusters(t *testing.T) {
 	seed.Ready(updating, time.Minute)
 	seed.Status(updating, "ready", "healthy", true)
 	seed.ClusterSnapshot(updating, time.Minute, 1, 1, 5, 110)
+	// Awaiting its first health checks: starting, as the console says, not
+	// unhealthy.
+	starting := seed.Cluster(org, "starting")
+	seed.Ready(starting, time.Minute)
+	seed.Status(starting, "ready", "unhealthy", false)
+	_, err = env.Super.Exec(t.Context(), `UPDATE tenant.clusters SET shoot_status_message = $2 WHERE id = $1`,
+		starting, commongardener.MsgShootAwaitingHealth)
+	require.NoError(t, err)
+	// The inventory only collects ready clusters, so the last numbers of one
+	// in error are no longer counted.
+	failed := seed.Cluster(org, "failed")
+	seed.ClusterSnapshot(failed, time.Hour, 9, 9, 90, 990)
+	seed.Status(failed, "error", "", false)
+	seed.Heartbeat("inventory", 15*time.Minute, time.Minute)
+	seed.Heartbeat("reconcile", 5*time.Minute, time.Minute)
 
 	after, err := client.GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
 	require.NoError(t, err)
 
 	b, a := before.GetSummary(), after.GetSummary()
 	assert.Equal(t, b.GetOrganizations()+1, a.GetOrganizations())
-	assert.Equal(t, b.GetClusters()+3, a.GetClusters())
-	assert.Equal(t, b.GetClustersUnhealthy()+1, a.GetClustersUnhealthy())
+	assert.Equal(t, b.GetClusters()+5, a.GetClusters())
+	assert.Equal(t, b.GetClustersUnhealthy()+2, a.GetClustersUnhealthy(), "the sick one and the one in error")
 	assert.Equal(t, b.GetClustersUpdating()+1, a.GetClustersUpdating())
 	assert.Equal(t, b.GetNodes()+7, a.GetNodes())
 	assert.Equal(t, b.GetNodesReady()+5, a.GetNodesReady())
 	assert.Equal(t, b.GetPods()+75, a.GetPods())
 	assert.Equal(t, b.GetPodAllocatable()+770, a.GetPodAllocatable())
 	assert.Equal(t, b.GetCpuAllocatableM()+7*4000, a.GetCpuAllocatableM())
-	assert.Equal(t, int32(testStaleAfter.Seconds()), a.GetStaleAfterSeconds())
+	assert.Equal(t, int32((45 * time.Minute).Seconds()), a.GetSnapshotStaleAfterSeconds(), "three inventory intervals")
+	require.True(t, a.HasInventory())
+	assert.Equal(t, int32(900), a.GetInventory().GetIntervalSeconds())
+	require.True(t, a.HasReconcile())
+	assert.Equal(t, int32(300), a.GetReconcile().GetIntervalSeconds())
+	assert.False(t, b.HasReconcile(), "absent before the first pass")
 }
 
 func TestListClustersFilters(t *testing.T) {
@@ -145,6 +166,11 @@ func TestListClustersFilters(t *testing.T) {
 	seed.Ready(stale, 2*time.Hour)
 	seed.ClusterSnapshot(stale, 2*time.Hour, 2, 2, 10, 220)
 
+	lost := seed.Cluster(org, "lost")
+	seed.Status(lost, "lost", "", false)
+
+	seed.Heartbeat("inventory", 15*time.Minute, time.Minute)
+
 	list := func(filter fleetv1.ClusterFilter) []string {
 		t.Helper()
 		resp, err := client.ListClusters(t.Context(), fleetv1.ListClustersRequest_builder{
@@ -155,9 +181,131 @@ func TestListClustersFilters(t *testing.T) {
 		return clusterIDs(resp.GetClusters())
 	}
 
-	assert.ElementsMatch(t, []string{fine.String(), broken.String(), stale.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL))
-	assert.ElementsMatch(t, []string{broken.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_UNHEALTHY))
+	assert.ElementsMatch(t, []string{fine.String(), broken.String(), stale.String(), lost.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL))
+	assert.ElementsMatch(t, []string{broken.String(), lost.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_UNHEALTHY))
 	assert.ElementsMatch(t, []string{stale.String()}, list(fleetv1.ClusterFilter_CLUSTER_FILTER_STALE))
+}
+
+// Staleness is judged by the interval the inventory loop recorded, so a
+// deployment collecting every minute and one collecting every hour each get
+// their own cutoff. Before the loop ever ran nothing is called stale.
+func TestStaleFollowsInventoryInterval(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	seed := env.Seed(t)
+	client := staffClient(t, env)
+
+	org := seed.Organization("interval-org", "Interval Org")
+	cluster := seed.Cluster(org, "twenty-minutes")
+	seed.Ready(cluster, 2*time.Hour)
+	seed.ClusterSnapshot(cluster, 20*time.Minute, 1, 1, 1, 110)
+
+	isStale := func() bool {
+		t.Helper()
+		resp, err := client.GetCluster(t.Context(), fleetv1.GetClusterRequest_builder{ClusterId: cluster.String()}.Build())
+		require.NoError(t, err)
+		return resp.GetCluster().GetStale()
+	}
+
+	assert.False(t, isStale(), "no inventory pass recorded yet")
+	seed.Heartbeat("inventory", time.Minute, 0)
+	assert.True(t, isStale(), "20 minutes is more than three 1-minute intervals")
+	seed.Heartbeat("inventory", 15*time.Minute, 0)
+	assert.False(t, isStale(), "20 minutes is less than three 15-minute intervals")
+}
+
+func TestListClustersPages(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	seed := env.Seed(t)
+	client := staffClient(t, env)
+
+	org := seed.Organization("paged-org", "Paged Org")
+	var want []string
+	for _, name := range []string{"a", "b", "c", "d", "e"} {
+		want = append(want, seed.Cluster(org, name).String())
+	}
+	// Two of five in error, so a filtered page has to read past the first
+	// batch to fill up.
+	for _, id := range want[2:4] {
+		seed.Status(uuid.MustParse(id), "error", "", false)
+	}
+
+	collect := func(filter fleetv1.ClusterFilter, size int32) ([]string, int) {
+		t.Helper()
+		var ids []string
+		token := ""
+		pages := 0
+		for {
+			resp, err := client.ListClusters(t.Context(), fleetv1.ListClustersRequest_builder{
+				OrganizationId: new(org.String()),
+				Filter:         filter,
+				PageSize:       size,
+				PageToken:      token,
+			}.Build())
+			require.NoError(t, err)
+			pages++
+			assert.LessOrEqual(t, len(resp.GetClusters()), int(size))
+			ids = append(ids, clusterIDs(resp.GetClusters())...)
+			token = resp.GetNextPageToken()
+			if token == "" || pages > 10 {
+				return ids, pages
+			}
+		}
+	}
+
+	all, pages := collect(fleetv1.ClusterFilter_CLUSTER_FILTER_ALL, 2)
+	assert.Equal(t, want, all, "every cluster once, by name")
+	assert.Equal(t, 3, pages)
+
+	broken, _ := collect(fleetv1.ClusterFilter_CLUSTER_FILTER_UNHEALTHY, 1)
+	assert.Equal(t, want[2:4], broken)
+}
+
+func TestListOrganizationsPages(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	seed := env.Seed(t)
+	client := staffClient(t, env)
+
+	for _, name := range []string{"page-a", "page-b", "page-c"} {
+		seed.Organization(name, name)
+	}
+
+	first, err := client.ListOrganizations(t.Context(), fleetv1.ListOrganizationsRequest_builder{PageSize: 2}.Build())
+	require.NoError(t, err)
+	require.Len(t, first.GetOrganizations(), 2)
+	require.NotEmpty(t, first.GetNextPageToken())
+
+	second, err := client.ListOrganizations(t.Context(), fleetv1.ListOrganizationsRequest_builder{
+		PageSize: 2, PageToken: first.GetNextPageToken(),
+	}.Build())
+	require.NoError(t, err)
+
+	var names []string
+	for _, o := range append(first.GetOrganizations(), second.GetOrganizations()...) {
+		names = append(names, o.GetName())
+	}
+	assert.Subset(t, names, []string{"page-a", "page-b", "page-c"})
+	assert.NotContains(t, names, "system")
+}
+
+// The system organization is no tenant: its clusters are in no list, so the
+// list agrees with the summary.
+func TestFleetSkipsSystemOrganization(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	seed := env.Seed(t)
+	client := staffClient(t, env)
+
+	system := seed.Cluster(testpg.SystemOrganizationID, "plugins")
+
+	all, err := client.ListClusters(t.Context(), &fleetv1.ListClustersRequest{})
+	require.NoError(t, err)
+	assert.NotContains(t, clusterIDs(all.GetClusters()), system.String())
+
+	_, err = client.GetCluster(t.Context(), fleetv1.GetClusterRequest_builder{ClusterId: system.String()}.Build())
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+
+	summary, err := client.GetFleetSummary(t.Context(), &fleetv1.GetFleetSummaryRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, int32(len(all.GetClusters())), summary.GetSummary().GetClusters())
 }
 
 func TestGetClusterDetail(t *testing.T) {
@@ -184,7 +332,6 @@ func TestGetClusterDetail(t *testing.T) {
 	assert.Equal(t, "detail", c.GetName())
 	assert.Equal(t, "detail-org", c.GetOrganizationName())
 	assert.Equal(t, fleetv1.ClusterStatus_CLUSTER_STATUS_RUNNING, c.GetStatus())
-	assert.Equal(t, fleetv1.ClusterHealth_CLUSTER_HEALTH_HEALTHY, c.GetHealth())
 	assert.Equal(t, int32(3), c.GetNodesMin())
 	assert.Equal(t, int32(6), c.GetNodesMax())
 	assert.Equal(t, int32(3), c.GetSnapshot().GetNodes())

@@ -100,6 +100,7 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 	seed := env.Seed(t)
 
 	org := seed.Organization("counted", "Counted Org")
+	seed.ListPublicly(org)
 	cluster := seed.Cluster(org, "live")
 	project := seed.Project(cluster, "live-project")
 	seed.Namespace(project, "ns-live-1")
@@ -121,6 +122,7 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 	// No trigger guards an organization, so a deleted one can still hold live
 	// clusters; they must not count either.
 	gone := seed.Organization("gone", "Gone Org")
+	seed.ListPublicly(gone)
 	seed.Cluster(gone, "orphaned")
 	seed.SoftDelete("organizations", gone)
 
@@ -150,6 +152,26 @@ func TestOverviewCountsLiveRowsOnly(t *testing.T) {
 	assert.NotNil(t, resp.GetGeneratedAt())
 }
 
+// An organization is named only once it opted in (FUN-23), and one that did
+// not is not counted in the totals either: the totals add up the rows.
+func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
+	env := testpg.NewEnv(t, testDBPort)
+	seed := env.Seed(t)
+
+	listed := seed.Organization("listed", "Listed Org")
+	seed.ListPublicly(listed)
+	seed.Cluster(listed, "listed-cluster")
+	unlisted := seed.Organization("unlisted", "Unlisted Org")
+	seed.Cluster(unlisted, "unlisted-cluster")
+
+	resp, _, body := getOverview(t, newServer(t, env))
+
+	require.NotNil(t, findOrganization(resp, "listed"))
+	assert.Nil(t, findOrganization(resp, "unlisted"))
+	assert.NotContains(t, body, "Unlisted Org")
+	assert.Equal(t, int32(len(resp.GetOrganizations())), resp.GetTotals().GetOrganizations())
+}
+
 // The page shows names and counts only: nothing that names a cluster,
 // project or namespace, and no ids.
 func TestOverviewExposesNoNamesOrIDs(t *testing.T) {
@@ -157,6 +179,7 @@ func TestOverviewExposesNoNamesOrIDs(t *testing.T) {
 	seed := env.Seed(t)
 
 	org := seed.Organization("visible-org", "Visible Org")
+	seed.ListPublicly(org)
 	cluster := seed.Cluster(org, "secret-cluster-name")
 	project := seed.Project(cluster, "secret-project-name")
 	namespace := seed.Namespace(project, "secret-namespace-name")
@@ -178,6 +201,7 @@ func TestOverviewIsCached(t *testing.T) {
 	env := testpg.NewEnv(t, testDBPort)
 	seed := env.Seed(t)
 	org := seed.Organization("cached", "Cached Org")
+	seed.ListPublicly(org)
 	seed.Cluster(org, "first")
 
 	clock := &fakeClock{now: time.Now()}
