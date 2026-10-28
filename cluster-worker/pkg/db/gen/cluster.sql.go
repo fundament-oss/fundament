@@ -781,8 +781,13 @@ SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
     tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.created,
     tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.status_message,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated
 FROM
     tenant.node_pools
 WHERE
@@ -798,16 +803,22 @@ type NodePoolListStatusByClusterIDParams struct {
 }
 
 type NodePoolListStatusByClusterIDRow struct {
-	ID            uuid.UUID
-	Name          string
-	MachineType   string
-	Status        pgtype.Text
-	StatusMessage pgtype.Text
+	ID               uuid.UUID
+	Name             string
+	MachineType      string
+	AutoscaleMin     int32
+	Created          pgtype.Timestamptz
+	Status           pgtype.Text
+	StatusMessage    pgtype.Text
+	NodeCount        pgtype.Int4
+	NodeCountReady   pgtype.Int4
+	NodeCountUpdated pgtype.Timestamptz
 }
 
-// The status path needs only identity, the machine type its reason names and
-// the stored classification; the worker-group build query above, with its
-// catalog joins, stays with sync.
+// The status path needs only identity, the machine type its reason names, the
+// minimum its own nodes are held to and when it was created (older nodes are a
+// predecessor's), and the stored classification and node counts; the
+// worker-group build query above, with its catalog joins, stays with sync.
 func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
 	if err != nil {
@@ -821,8 +832,13 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 			&i.ID,
 			&i.Name,
 			&i.MachineType,
+			&i.AutoscaleMin,
+			&i.Created,
 			&i.Status,
 			&i.StatusMessage,
+			&i.NodeCount,
+			&i.NodeCountReady,
+			&i.NodeCountUpdated,
 		); err != nil {
 			return nil, err
 		}
@@ -832,6 +848,34 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 		return nil, err
 	}
 	return items, nil
+}
+
+const nodePoolUpdateNodeCount = `-- name: NodePoolUpdateNodeCount :execrows
+UPDATE tenant.node_pools
+SET
+    node_count = $1,
+    node_count_ready = $2,
+    node_count_updated = now()
+WHERE
+    id = $3
+    AND deleted IS NULL
+`
+
+type NodePoolUpdateNodeCountParams struct {
+	NodeCount      pgtype.Int4
+	NodeCountReady pgtype.Int4
+	NodePoolID     uuid.UUID
+}
+
+// Record how many of the pool's nodes the shoot's API server lists, for the
+// console while the shoot has no Prometheus yet. Keyed by id like
+// NodePoolUpdateStatus.
+func (q *Queries) NodePoolUpdateNodeCount(ctx context.Context, arg NodePoolUpdateNodeCountParams) (int64, error) {
+	result, err := q.db.Exec(ctx, nodePoolUpdateNodeCount, arg.NodeCount, arg.NodeCountReady, arg.NodePoolID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const nodePoolUpdateStatus = `-- name: NodePoolUpdateStatus :execrows

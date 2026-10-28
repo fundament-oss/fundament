@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -23,4 +24,10 @@ func (h *Handler) StatusRequeues(clusterID uuid.UUID) int {
 // StatusQueueLen reports how many status checks are queued.
 func (h *Handler) StatusQueueLen() int {
 	return h.statusQueue.Len()
+}
+
+// CheckClusterRetryAfter runs one cluster's status check and reports how soon
+// it asks to be checked again.
+func (h *Handler) CheckClusterRetryAfter(ctx context.Context, clusterID uuid.UUID) (time.Duration, error) {
+	return h.checkCluster(ctx, clusterID)
 }

@@ -114,15 +114,21 @@ ORDER BY
     tenant.node_pools.id;
 
 -- name: NodePoolListStatusByClusterID :many
--- The status path needs only identity, the machine type its reason names and
--- the stored classification; the worker-group build query above, with its
--- catalog joins, stays with sync.
+-- The status path needs only identity, the machine type its reason names, the
+-- minimum its own nodes are held to and when it was created (older nodes are a
+-- predecessor's), and the stored classification and node counts; the
+-- worker-group build query above, with its catalog joins, stays with sync.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
     tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.created,
     tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.status_message,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated
 FROM
     tenant.node_pools
 WHERE
@@ -180,6 +186,19 @@ SET
     status = @status,
     status_message = @message,
     status_updated = now()
+WHERE
+    id = @node_pool_id
+    AND deleted IS NULL;
+
+-- name: NodePoolUpdateNodeCount :execrows
+-- Record how many of the pool's nodes the shoot's API server lists, for the
+-- console while the shoot has no Prometheus yet. Keyed by id like
+-- NodePoolUpdateStatus.
+UPDATE tenant.node_pools
+SET
+    node_count = @node_count,
+    node_count_ready = @node_count_ready,
+    node_count_updated = now()
 WHERE
     id = @node_pool_id
     AND deleted IS NULL;

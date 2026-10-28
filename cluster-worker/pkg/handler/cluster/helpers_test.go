@@ -329,6 +329,19 @@ func getNodePoolCount(t *testing.T, db *testDB, clusterID uuid.UUID, name string
 	return *n, *r, true
 }
 
+// getNodePoolCountUpdated returns when a pool's node counts were last stored.
+func getNodePoolCountUpdated(t *testing.T, db *testDB, clusterID uuid.UUID, name string) time.Time {
+	t.Helper()
+
+	var updated time.Time
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT node_count_updated FROM tenant.node_pools WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL`,
+		clusterID, name,
+	).Scan(&updated)
+	require.NoError(t, err)
+	return updated
+}
+
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).
 func getClusterShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID) *string {
 	t.Helper()

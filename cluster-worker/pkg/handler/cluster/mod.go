@@ -80,6 +80,10 @@ type Handler struct {
 	// statusQueue holds the IDs of clusters whose status needs a check.
 	statusQueue workqueue.TypedRateLimitingInterface[uuid.UUID]
 
+	// poolNodes reads each pool's nodes from the shoot; nil reads nothing
+	// (see SetPoolNodeReader).
+	poolNodes PoolNodeReader
+
 	preconditions map[handler.EntityType][]handler.Precondition
 }
 

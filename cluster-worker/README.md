@@ -306,6 +306,29 @@ organization-api serves the stored status and reason until a pool is `ready`, th
 live node metrics take over. The watch treats a change in the worker detail as a status
 change, so a new reason reaches the pool row without waiting for the sweep.
 
+Gardener's report is shoot-wide, and a new shoot gets its Prometheus only once every
+pool has its machines, so a create that hangs on one pool would keep every pool
+`progressing` with no node count. With a real Gardener, the status check therefore also
+reads each pool's own nodes from the shoot's API server (`ShootAccess.ListNodePools`, by
+the `worker.gardener.cloud/pool` label, from the watch cache), but only once Gardener
+reports the API server available, and while the shoot's create runs or some pool waits
+for its machines: `progressing`, `waiting`, or new while the create or a change of ours
+shapes it. While it reads, the check runs again every minute, since nodes come up
+without Gardener writing the Shoot. A pool that no Gardener text names, with at least
+`autoscale_min` of its own nodes all Ready, is `ready` whatever the other pools do,
+provided it is `progressing`, `waiting`, or new while the create or a change of ours
+shapes it. Its own nodes are those created after the pool: a pool replaced by one of the
+same name (a machine type changes that way) has the same worker name, so the
+predecessor's nodes carry its label. An `error` stays until a new change, and a new
+pool's nodes don't count while its change has not left the outbox. All nodes with the
+label are counted for the console and stored on the pool (`node_count`,
+`node_count_ready`, `node_count_updated`) when they change or are a minute old, in the
+same transaction as a status change. The reads reuse a shoot's admin credentials for
+five minutes. A failed read changes nothing, and a lost cluster's counts are cleared
+with its status. organization-api shows stored counts younger than five minutes for a
+pool its Prometheus does not report; the create deploys the shoot's Prometheus last, so
+they cover the time until it does.
+
 ### Status cache
 
 In real mode status checks read Shoots from a watch-backed cache instead of asking
