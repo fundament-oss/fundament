@@ -109,6 +109,24 @@ func (q *Queries) OrganizationList(ctx context.Context) ([]OrganizationListRow, 
 	return items, nil
 }
 
+const organizationLockForMemberRemoval = `-- name: OrganizationLockForMemberRemoval :exec
+SELECT id
+FROM tenant.organizations
+WHERE id = authn.current_organization_id()
+FOR NO KEY UPDATE
+`
+
+// Serializes member removals in the current organization. Removing a member
+// removes their project memberships (trigger remove_project_memberships), and
+// the protect_last_admin trigger locks each project after its member row, in
+// the order the rows are scanned: two removals that each hold one project and
+// wait for the other would deadlock. Taken before the membership row, so it
+// keeps the order of a funops organization delete, which locks this row first.
+func (q *Queries) OrganizationLockForMemberRemoval(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, organizationLockForMemberRemoval)
+	return err
+}
+
 const organizationMachineQuotaList = `-- name: OrganizationMachineQuotaList :many
 WITH offering AS MATERIALIZED (
     SELECT

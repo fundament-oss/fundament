@@ -60,8 +60,8 @@ funops <resource> <action> [arguments] [flags]
 
 Examples:
 ----
-funops organization create acme-corp
-funops organization create acme-corp --output json
+funops organization create acme-corp --node-quota eu-west-1/n1-standard-2=3
+funops organization create acme-corp --node-quota local/local-small=3 --output json
 funops organization member add acme-corp alice@acme-corp.com --permission admin
 funops organization member add acme-corp bart@acme-corp.com --create-user
 funops organization member list acme-corp
@@ -82,7 +82,7 @@ Users are addressed by ID or by email, never by name: names are what the identit
 
 === Quotas
 
-What an organization may build is capped by quotas the operator sets with `funops organization quota`: how many clusters it may have (`quota_clusters` on the organization, one for a new organization) and how many nodes of each machine type it may have per region (`tenant.organization_machine_quotas`, keyed by the catalog offering; no row means zero). The database enforces both with constraint triggers on `tenant.clusters` and `tenant.node_pools`, so every path that writes those rows is covered. The default worker group the cluster-worker gives a cluster without node pools is no row and stays outside the quota. The node quota caps the sum of the autoscale maxima of the organization's pools of that offering, across its clusters.
+What an organization may build is capped by quotas the operator sets with `funops organization quota`: how many clusters it may have (`quota_clusters` on the organization, one for a new organization) and how many nodes of each machine type it may have per region (`tenant.organization_machine_quotas`, keyed by the catalog offering; no row means zero). The database enforces both with constraint triggers on `tenant.clusters` and `tenant.node_pools`, so every path that writes those rows is covered. Every node a cluster runs comes from one of its node pools: the cluster-worker builds no Shoot for a cluster without pools and never updates a Shoot to zero workers, so nothing new runs outside the quota. A cluster that already ran on the old built-in `default` worker group before pools were required keeps it until it gets a pool (its sync fails meanwhile), and stays outside the quota until then. `funops organization create` therefore requires at least one starting node quota (`--node-quota <region>/<machine-type>=<max>`, set in the same transaction as the organization): an organization without one could create a cluster that never starts. The node quota caps the sum of the autoscale maxima of the organization's pools of that offering, across its clusters.
 
 A quota only ever stops something new: a cluster, a pool, or a pool growing. Lowering it below what is in use is allowed and leaves the existing rows alone, so an operator can tighten a quota without interrupting a tenant; `quota get-clusters` and `quota list-nodes` show the excess. Deleted clusters and their pools count until Gardener confirms the shoot is gone, as `organization delete` counts them.
 

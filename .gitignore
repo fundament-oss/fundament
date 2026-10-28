@@ -37,3 +37,6 @@ charts/fundament/values-gardener-local.yaml
 # and running npm or npx in one of them leaves a second lockfile behind that
 # nobody reads and that drifts from the one that counts.
 package-lock.json
+
+# Rendered by `just plugins dev` from plugins/sandbox/dev/*.yaml.tmpl
+plugins/sandbox/dev/.render/

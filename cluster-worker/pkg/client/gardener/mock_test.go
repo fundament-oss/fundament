@@ -40,7 +40,9 @@ func TestMockNotifyStatusChanges(t *testing.T) {
 	assert.Equal(t, []uuid.UUID{cluster.ID}, reported, "the change to ready is reported")
 
 	reported = nil
-	require.NoError(t, m.DeleteShootByClusterID(t.Context(), cluster.ID))
+	found, err := m.DeleteShootByClusterID(t.Context(), cluster.ID)
+	require.NoError(t, err)
+	require.True(t, found)
 	now = now.Add(m.DeleteDelay)
 	status, err := m.GetShootStatus(t.Context(), cluster)
 	require.NoError(t, err)
@@ -84,16 +86,17 @@ func TestMockCreateFollowsGardener(t *testing.T) {
 }
 
 // The mock runs the nodes Gardener would: a cluster without node pools gets
-// the default worker, and every pool runs its autoscaler minimum.
+// no worker, and every pool runs its autoscaler minimum.
 func TestMockWorkerPoolsFollowBuildWorkers(t *testing.T) {
 	t.Parallel()
 
 	m := NewMock(slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	bare := testCluster()
+	bare.NodePools = nil
 	_, err := m.ApplyShoot(t.Context(), bare)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]int32{"default": defaultWorkerMinimum}, m.WorkerPools(bare.ID))
+	assert.Empty(t, m.WorkerPools(bare.ID))
 
 	pooled := testCluster()
 	pooled.Name, pooled.ShootName = "pooled", "pooled"

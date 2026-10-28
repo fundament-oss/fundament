@@ -43,6 +43,8 @@ spec:
             {{- end }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
+            - name: CLUSTER_MAX_RECONCILE_DELETIONS
+              value: {{ $.Values.clusterWorker.maxReconcileDeletions | quote }}
             # Fleet inventory (FUN-23): node, pod and namespace counts per
             # ready shoot, read by the staff fleet view.
             - name: INVENTORY_INTERVAL

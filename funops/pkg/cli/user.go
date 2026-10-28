@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
@@ -215,8 +216,22 @@ func (c *UserDeleteCmd) Run(ctx *Context) error {
 
 	ctx.Logger.Debug("deleting user registration", "user_id", user.ID.String(), "email", user.Email)
 
+	if err := qtx.MembershipLockOrganizationsForRemoval(bgCtx, db.MembershipLockOrganizationsForRemovalParams{
+		UserID: user.ID,
+	}); err != nil {
+		return fmt.Errorf("failed to lock organizations: %w", err)
+	}
+
 	revoked, err := qtx.MembershipRevokeAllForUser(bgCtx, db.MembershipRevokeAllForUserParams{UserID: user.ID})
 	if err != nil {
+		if isLastProjectAdmin(err) {
+			// Release the aborted transaction's connection first: the lookup
+			// reads from the pool and would wait on it forever if that is the
+			// pool's only connection.
+			rollback.Rollback(bgCtx, tx, ctx.Logger)
+			return lastAdminProjectsError(bgCtx, ctx, user.ID, pgtype.UUID{},
+				fmt.Sprintf("user %q is the only admin of projects; make someone else admin of them first", c.User))
+		}
 		return fmt.Errorf("failed to revoke memberships: %w", err)
 	}
 

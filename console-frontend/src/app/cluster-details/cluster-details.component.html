@@ -195,10 +195,26 @@
                   ></nldd-text-cell>
                 </nldd-list-item>
               }
+              @if (clusterData.syncState?.outboxMessage) {
+                <nldd-list-item>
+                  <nldd-text-cell
+                    text="Waiting for"
+                    width="fit-content"
+                  ></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="right"
+                    [attr.text]="formatEventMessage(clusterData.syncState!.outboxMessage!)"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
                   <!-- Width on the label on purpose: beside a long error the shared min-content rule still lets it collapse to one letter per line. -->
-                  <nldd-text-cell text="Sync error" width="fit-content"></nldd-text-cell>
+                  <nldd-text-cell
+                    text="Sync error"
+                    width="fit-content"
+                  ></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
@@ -408,7 +424,9 @@
                            while it retries or after it failed for good. -->
                       @if (pool.syncError) {
                         <nldd-spacer size="8"></nldd-spacer>
-                        <nldd-text size="sm" color="critical"
+                        <nldd-text
+                          size="sm"
+                          color="critical"
                           >Sync error: {{ formatEventMessage(pool.syncError) }}</nldd-text
                         >
                       }
@@ -505,24 +523,17 @@
             <nldd-spacer size="8"></nldd-spacer>
             <nldd-rich-text spacing="flat">
               <p>Deleting a cluster is permanent and cannot be undone.</p>
-              @if (namespaces().length > 0) {
+              @if (projects().length > 0) {
                 <p>
-                  This cluster still has {{ namespaces().length }} namespace{{
-                    namespaces().length === 1 ? '' : 's'
-                  }}.
-                  <nldd-link
-                    [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/namespaces')"
-                    (click)="
-                      pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/namespaces')
-                    "
-                    text="Delete all namespaces"
-                  ></nldd-link>
-                  before you can delete the cluster.
+                  This cluster still has {{ projects().length }} project{{
+                    projects().length === 1 ? '' : 's'
+                  }}. Delete {{ projects().length === 1 ? 'it, and its' : 'them, and their' }}
+                  namespaces, before you can delete the cluster.
                 </p>
-              } @else if (namespacesLoadError()) {
+              } @else if (projectsLoadError()) {
                 <p>
-                  Couldn't load this cluster's namespaces, so deletion is blocked until we can
-                  confirm it is empty. Reload the page and try again.
+                  Couldn't load this cluster's projects, so deletion is blocked until we can confirm
+                  it is empty. Reload the page and try again.
                 </p>
               }
             </nldd-rich-text>
@@ -630,14 +641,33 @@
   accessible-label="Cluster deletion blocked"
   (close)="showDeleteBlockedModal.set(false)"
 >
-  @if (namespaces().length > 0) {
-    <nldd-button
-      slot="actions"
-      type="button"
-      (click)="goToNamespaces()"
-      text="Manage namespaces"
-      variant="primary"
-    ></nldd-button>
+  @if (projects().length > 0) {
+    <!-- Each row leads to the project's settings, where it is deleted. -->
+    <nldd-list
+      variant="box-tinted"
+      accessible-label="Projects on this cluster"
+    >
+      @for (project of projects(); track project.id) {
+        <nldd-list-item
+          [attr.href]="pageNav.path('/projects/' + project.id + '/general')"
+          (click)="goToProject($event, project.id)"
+        >
+          <nldd-text-cell
+            width="full"
+            [attr.text]="project.name"
+            [attr.supporting-text]="
+              project.namespaceCount + ' namespace' + (project.namespaceCount === 1 ? '' : 's')
+            "
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-icon-cell
+            icon="chevron-right"
+            size="20"
+            color="secondary"
+          ></nldd-icon-cell>
+        </nldd-list-item>
+      }
+    </nldd-list>
   }
   <nldd-button
     slot="actions"

@@ -33,6 +33,7 @@ pluginController:
   logLevel: debug
   # Lets plugin-controller skip the definitionHash check. Never enable in production.
   allowUnpinnedHash: true
+  allowDevMode: true
   # The sandbox cluster is network-isolated from marketplace-catalog-api (which
   # lives in the management cluster). `just plugins sandbox-catalog` bridges the
   # two via a relay container published on the host; the controller reaches it

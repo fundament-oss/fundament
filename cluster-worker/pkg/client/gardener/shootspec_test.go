@@ -21,6 +21,7 @@ func testCluster() *ClusterToSync {
 		Namespace:         "garden-test",
 		Region:            "local",
 		KubernetesVersion: "1.35.6",
+		NodePools:         []NodePool{{Name: "workers", MachineType: "local", AutoscaleMin: 1, AutoscaleMax: 3}},
 	}
 }
 

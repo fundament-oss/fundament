@@ -89,6 +89,12 @@ resource "fundament_cluster" "test" {
   name               = "tf-acc-pm-c-%[2]s"
   region             = "eu-west-1"
   kubernetes_version = "1.28"
+  node_pool {
+    name          = "workers"
+    machine_type  = "n1-standard-1"
+    autoscale_min = 1
+    autoscale_max = 1
+  }
 }
 
 resource "fundament_project" "test" {
@@ -96,15 +102,12 @@ resource "fundament_project" "test" {
   cluster_id = fundament_cluster.test.id
 }
 
-resource "fundament_organization_member" "test" {
-  email      = "tf-acc-pm-%[2]s@test.example.com"
-  permission = "viewer"
-}
+data "fundament_organization_members" "all" {}
 
 resource "fundament_project_member" "test" {
   project_id = fundament_project.test.id
-  user_id    = fundament_organization_member.test.user_id
+  user_id    = one([for m in data.fundament_organization_members.all.members : m.user_id if m.email == %[5]q])
   permission = %[1]q
 }
-`, permission, suffix, endpoint, organizationID)
+`, permission, suffix, endpoint, organizationID, testMemberEmail)
 }

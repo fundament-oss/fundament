@@ -103,20 +103,48 @@ func (s *Server) CreatePluginVersion(
 	// claiming the same semantic version twice.
 	version := normalizeVersion(req.GetVersion())
 
-	created, err := s.queries.PluginVersionCreate(ctx, db.PluginVersionCreateParams{
+	createParams := db.PluginVersionCreateParams{
 		PluginID:      pluginID,
 		PluginVersion: version,
 		Manifest:      req.GetManifest(),
 		Hash:          manifest.hash,
 		Image:         manifest.image,
 		ReleaseNotes:  req.GetReleaseNotes(),
-	})
-	if err != nil {
-		if isUniqueViolation(err) {
-			return nil, connect.NewError(connect.CodeAlreadyExists,
-				fmt.Errorf("version %q already exists for this plugin", version))
+	}
+
+	replaceTarget := false
+	if req.GetReplace() {
+		activeStatus, err := s.queries.PluginVersionGetActiveByPluginVersion(ctx, db.PluginVersionGetActiveByPluginVersionParams{
+			PluginID: pluginID, PluginVersion: version,
+		})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			// Nothing to replace: falls through to the plain create below.
+		case err != nil:
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("looking up active plugin version: %w", err))
+		case activeStatus != dbconst.PluginDefinitionStatus_Draft:
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("only draft versions can be replaced"))
+		default:
+			replaceTarget = true
 		}
-		return nil, s.writeError(ctx, err, "creating plugin version")
+	}
+
+	var created db.PluginVersionCreateRow
+	if replaceTarget {
+		created, err = s.replaceDraftVersion(ctx, pluginID, version, createParams)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		created, err = s.queries.PluginVersionCreate(ctx, createParams)
+		if err != nil {
+			if isUniqueViolation(err) {
+				return nil, connect.NewError(connect.CodeAlreadyExists,
+					fmt.Errorf("version %q already exists for this plugin", version))
+			}
+			return nil, s.writeError(ctx, err, "creating plugin version")
+		}
 	}
 
 	return registryv1.CreatePluginVersionResponse_builder{
@@ -131,6 +159,51 @@ func (s *Server) CreatePluginVersion(
 			Created:        timestamptzOrNil(created.Created),
 		}.Build(),
 	}.Build(), nil
+}
+
+// replaceDraftVersion soft-deletes the active draft and inserts the new row in
+// one transaction, so the (plugin_id, version) slot is never empty to claim.
+func (s *Server) replaceDraftVersion(
+	ctx context.Context,
+	pluginID uuid.UUID,
+	version string,
+	createParams db.PluginVersionCreateParams,
+) (db.PluginVersionCreateRow, error) {
+	tx, err := s.db.Pool.Begin(ctx)
+	if err != nil {
+		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("begin transaction: %w", err))
+	}
+	defer rollback.Rollback(ctx, tx, s.logger)
+	qtx := s.queries.WithTx(tx)
+
+	deleted, err := qtx.PluginVersionSoftDeleteActiveByPluginVersion(ctx, db.PluginVersionSoftDeleteActiveByPluginVersionParams{
+		PluginID: pluginID, PluginVersion: version,
+	})
+	if err != nil {
+		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("soft-deleting replaced plugin version: %w", err))
+	}
+	// The draft was submitted since the handler's status check.
+	if deleted == 0 {
+		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("only draft versions can be replaced"))
+	}
+
+	created, err := qtx.PluginVersionCreate(ctx, createParams)
+	if err != nil {
+		// A concurrent replace raced past the draft check above and lost the
+		// unique index; the slot now holds the winner's draft, so a retry works.
+		if isUniqueViolation(err) {
+			return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeAborted,
+				errors.New("the draft was replaced concurrently; retry the publish"))
+		}
+		return db.PluginVersionCreateRow{}, s.writeError(ctx, err, "creating plugin version")
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return db.PluginVersionCreateRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("commit transaction: %w", err))
+	}
+
+	return created, nil
 }
 
 // SubmitPluginVersion opens a review round. Resubmitting after
@@ -164,6 +237,19 @@ func (s *Server) SubmitPluginVersion(
 			return nil, err
 		}
 		return registryv1.SubmitPluginVersionResponse_builder{Version: version}.Build(), nil
+	}
+
+	// A replace vacates this (plugin_id, version) slot for a new row; the slot
+	// itself must then be published as a new version rather than submitted.
+	wasReplaced, err := s.queries.PluginVersionWasReplaced(ctx, db.PluginVersionWasReplacedParams{
+		PluginID: row.PluginID, PluginVersion: row.PluginVersion,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("checking replace history: %w", err))
+	}
+	if wasReplaced {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("version %s was replaced during development and cannot be submitted; publish it as a new version", row.PluginVersion))
 	}
 
 	if !canSubmit(row.Status) {

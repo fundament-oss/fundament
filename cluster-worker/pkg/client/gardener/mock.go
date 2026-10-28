@@ -262,14 +262,14 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 }
 
 // DeleteShootByClusterID records the call and marks the shoot for deletion by cluster ID.
-func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) error {
+func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.UUID) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.DeleteByClusterID = append(m.DeleteByClusterID, clusterID)
 
 	if m.DeleteError != nil {
-		return m.DeleteError
+		return false, m.DeleteError
 	}
 
 	// Find shoot by cluster ID
@@ -278,12 +278,12 @@ func (m *MockClient) DeleteShootByClusterID(ctx context.Context, clusterID uuid.
 		if shoot.Info.ClusterID == clusterID {
 			shoot.DeletedAt = &now
 			m.logger.Info("MOCK: marked shoot for deletion by cluster ID", "shoot", name, "cluster_id", clusterID)
-			return nil
+			return true, nil
 		}
 	}
 
 	m.logger.Debug("MOCK: shoot not found for deletion by cluster ID", "cluster_id", clusterID)
-	return nil
+	return false, nil
 }
 
 // ListShoots returns all shoots stored in memory (excludes fully deleted ones).
@@ -306,6 +306,7 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 			continue
 		}
 		info := s.Info
+		info.Deleting = s.DeletedAt != nil
 		// Version and region follow the latest apply, as a real Shoot's spec does.
 		info.KubernetesVersion = s.Cluster.KubernetesVersion
 		info.Region = mockRegion(&s.Cluster)
@@ -584,6 +585,19 @@ func (m *MockClient) StatusCallsFor(clusterID uuid.UUID) int {
 	return count
 }
 
+// ApplyCallsFor returns the ApplyShoot calls made for the cluster.
+func (m *MockClient) ApplyCallsFor(clusterID uuid.UUID) []ClusterToSync {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var calls []ClusterToSync
+	for i := range m.ApplyCalls {
+		if m.ApplyCalls[i].ID == clusterID {
+			calls = append(calls, m.ApplyCalls[i])
+		}
+	}
+	return calls
+}
+
 // HasShootForCluster checks if a shoot exists for the given cluster ID (excludes deleted shoots).
 func (m *MockClient) HasShootForCluster(clusterID uuid.UUID) bool {
 	m.mu.RLock()
@@ -755,7 +769,8 @@ var (
 // WorkerPools reports the worker pools a cluster's shoot was last applied
 // with, as Gardener worker name -> autoscaler minimum, or nil when the cluster
 // has no shoot. The mock shoot access runs that many nodes per pool. It
-// follows buildWorkers: no node pools is one default worker.
+// follows buildWorkers: there is no default worker, so a shoot applied
+// without node pools runs none.
 func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -763,9 +778,6 @@ func (m *MockClient) WorkerPools(clusterID uuid.UUID) map[string]int32 {
 	shoot, _ := m.findShootByClusterID(clusterID)
 	if shoot == nil || shoot.DeletedAt != nil {
 		return nil
-	}
-	if len(shoot.Cluster.NodePools) == 0 {
-		return map[string]int32{"default": defaultWorkerMinimum}
 	}
 	pools := make(map[string]int32, len(shoot.Cluster.NodePools))
 	for _, np := range shoot.Cluster.NodePools {

@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -15,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 )
 
 // testKubeconfig is a minimal kubeconfig that accessFromKubeconfig can parse.
@@ -41,6 +45,7 @@ type fakeSource struct {
 	calls atomic.Int32
 
 	expiresIn time.Duration // lifetime of returned kubeconfigs
+	server    string        // if set, the API server in returned kubeconfigs
 	failAfter int32         // calls beyond this many fail (0 = never fail)
 	blockCtx  bool          // block in FindShoot until ctx is done
 	release   chan struct{} // if non-nil, FindShoot blocks until closed
@@ -72,8 +77,12 @@ func (f *fakeSource) FindShoot(ctx context.Context, clusterID string) (*gardenco
 }
 
 func (f *fakeSource) AdminKubeconfigForShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, expirationSeconds int64) (*AdminKubeconfig, error) {
+	kubeconfig := testKubeconfig
+	if f.server != "" {
+		kubeconfig = strings.Replace(kubeconfig, "https://shoot.example.com:443", f.server, 1)
+	}
 	return &AdminKubeconfig{
-		Kubeconfig: []byte(testKubeconfig),
+		Kubeconfig: []byte(kubeconfig),
 		ExpiresAt:  time.Now().Add(f.expiresIn),
 	}, nil
 }
@@ -269,4 +278,41 @@ func TestAccessForBackgroundRefresh(t *testing.T) {
 		item := cache.entries.Get("c1")
 		return item != nil && item.Value() != stale
 	}, 2*time.Second, 5*time.Millisecond, "background refresh never replaced the entry")
+}
+
+// TestAccessForUntrustedCertificateDropsEntry pins that a cluster created
+// again under the same address, with a new certificate authority, gets fresh
+// credentials on the next request instead of failing until the cached ones
+// expire, through the transport and through clients built from RESTConfig.
+func TestAccessForUntrustedCertificateDropsEntry(t *testing.T) {
+	t.Parallel()
+	// The kubeconfig carries no CA, so nothing trusts the test server's
+	// certificate, like the cached credentials of the cluster's previous
+	// incarnation.
+	upstream := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	t.Cleanup(upstream.Close)
+
+	fake := &fakeSource{expiresIn: time.Hour, server: upstream.URL}
+	cache := newTestCache(t, fake)
+
+	for name, client := range map[string]func(*ShootAccess) *http.Client{
+		"transport": func(access *ShootAccess) *http.Client { return &http.Client{Transport: access.Transport} },
+		"rest config": func(access *ShootAccess) *http.Client {
+			c, err := rest.HTTPClientFor(access.RESTConfig)
+			require.NoError(t, err)
+			return c
+		},
+	} {
+		access, err := cache.AccessFor(context.Background(), "c1")
+		require.NoError(t, err)
+
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, upstream.URL, http.NoBody)
+		require.NoError(t, err)
+		resp, err := client(access).Do(req)
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		require.Error(t, err, name)
+		assert.Nil(t, cache.entries.Get("c1"), "%s: the entry is dropped", name)
+	}
 }

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -99,7 +100,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 			},
 			"status": schema.StringAttribute{
-				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), deleting or stopped.",
+				Description: "The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), lost (the cluster no longer exists in Gardener; a change to it creates it again, empty), deleting or stopped.",
 				Computed:    true,
 			},
 		},
@@ -193,11 +194,9 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// cluster-worker may already have given the Shoot a default worker pool;
-	// created right away, the pools replace it before Gardener builds workers.
-	// A new cluster has no pools, so there is nothing to list; ListNodePools
-	// could also be refused until the new cluster's permissions are synced.
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, plan.ID.ValueString(), plan.Region.ValueString(), nil, plan.NodePools)...)
+	// The cluster waits for its first pool before it gets a Shoot, so its pools
+	// follow right away, all in one call.
+	resp.Diagnostics.Append(setNodePools(ctx, r.client, plan.ID.ValueString(), plan.NodePools)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -209,7 +208,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString())
+	cluster, err := waitForClusterRunning(waitCtx, r.client, plan.ID.ValueString(), true)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", plan.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -400,14 +399,21 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		"kubernetes_version_new": plan.KubernetesVersion.ValueString(),
 	})
 
+	// The live pools, not the refreshed state: a pool changed elsewhere since
+	// the refresh still counts.
 	current, err := listNodePools(ctx, r.client, state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Node Pools", fmt.Sprintf("Cluster %q: %s", state.Name.ValueString(), err))
 		return
 	}
+	currentPools := make([]ClusterNodePoolModel, 0, len(current))
+	for _, pool := range current {
+		currentPools = append(currentPools, pool.Pool)
+	}
+
 	// Check the machine types before anything changes, so a type the region
 	// does not offer fails before an upgrade has gone out.
-	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), planNodePoolChanges(current, plan.NodePools).Create)...)
+	resp.Diagnostics.Append(checkMachineTypes(ctx, r.client, state.Region.ValueString(), newOrRetyped(currentPools, plan.NodePools))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -419,9 +425,12 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 
-	resp.Diagnostics.Append(applyNodePoolChanges(ctx, r.client, state.ID.ValueString(), state.Region.ValueString(), current, plan.NodePools)...)
-	if resp.Diagnostics.HasError() {
-		return
+	poolsChanged := !sameNodePools(currentPools, plan.NodePools)
+	if poolsChanged {
+		resp.Diagnostics.Append(setNodePools(ctx, r.client, state.ID.ValueString(), plan.NodePools)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	updateTimeout, diags := plan.Timeouts.Update(ctx, defaultClusterUpdateTimeout)
@@ -431,7 +440,8 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
-	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString())
+	changed := !plan.KubernetesVersion.Equal(state.KubernetesVersion) || poolsChanged
+	cluster, err := waitForClusterRunning(waitCtx, r.client, state.ID.ValueString(), changed)
 	if err != nil {
 		detail := fmt.Sprintf("Cluster %q: %s.", state.Name.ValueString(), err)
 		if waitInconclusive(err) {
@@ -540,9 +550,15 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 				"id": state.ID.ValueString(),
 			})
 		case connect.CodeFailedPrecondition:
+			// The API names the projects that keep the cluster, so they are
+			// passed on: they may live outside this configuration.
+			reason := err.Error()
+			if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+				reason = connectErr.Message()
+			}
 			resp.Diagnostics.AddError(
 				"Cluster Cannot Be Deleted",
-				fmt.Sprintf("Cluster %q cannot be deleted because it has dependent resources (e.g., namespaces). Delete those resources first.", state.ID.ValueString()),
+				fmt.Sprintf("Cluster %q cannot be deleted: %s.", state.Name.ValueString(), reason),
 			)
 			return
 		default:

@@ -1,0 +1,39 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: fundament-plugin-dev-@NAME@
+
+build:
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+
+  local:
+    useBuildkit: true
+    push: true
+
+  artifacts:
+    # Bare name: --default-repo qualifies it at build time. A pre-qualified
+    # name here gets re-prefixed by skaffold's default-repo munging.
+    - image: @NAME@-plugin-dev
+      context: "@ROOT@"
+      docker:
+        dockerfile: plugins/hotreload/Dockerfile
+        buildArgs:
+          PLUGIN_PATH: "@PATH@"
+      sync: {}
+
+manifests:
+  rawYaml:
+    - installation.yaml
+
+deploy:
+  kubectl: {}
+  kubeContext: k3d-fundament-plugin
+
+# Matches spec.dev.image by base name and rewrites it to the fully-qualified
+# tag@digest skaffold just built and pushed.
+resourceSelector:
+  allow:
+    - groupKind: PluginInstallation.plugins.fundament.io
+      image: [".*"]

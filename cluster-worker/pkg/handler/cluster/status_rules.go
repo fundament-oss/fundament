@@ -127,7 +127,7 @@ func nextShootStatus(stored storedShootState, observed *gardener.ShootStatus) sh
 // recreated Shoot's API server is announced again.
 func shootGone(observed *gardener.ShootStatus) bool {
 	switch observed.Status {
-	case gardener.StatusDeleting, gardener.StatusDeleted:
+	case gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
 		return true
 	case gardener.StatusPending:
 		return observed.Message == gardener.MsgShootNotFound
@@ -157,13 +157,19 @@ func nextLifecycleStatus(stored storedShootState, observed *gardener.ShootStatus
 	}
 
 	// A Shoot that disappears after fundament has seen it was lost, not "not
-	// created yet": record that, since drift reconciliation will recreate it
-	// and the history would otherwise show a fresh create with no reason.
-	if observed.Status == gardener.StatusPending && observed.Message == gardener.MsgShootNotFound && shootWasSeen(stored.Status) {
-		return shootStatusUpdate{
-			Status:  gardener.StatusPending,
-			Message: observed.Message,
-			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: observed.Message}},
+	// created yet": its workloads and data are gone. Nothing recreates it by
+	// itself; the cluster stays lost until a change to it creates the Shoot
+	// again.
+	if observed.Status == gardener.StatusPending && observed.Message == gardener.MsgShootNotFound {
+		if stored.Status == gardener.StatusLost {
+			return shootStatusUpdate{Status: gardener.StatusLost, Message: stored.Message}
+		}
+		if shootWasSeen(stored.Status) {
+			return shootStatusUpdate{
+				Status:  gardener.StatusLost,
+				Message: gardener.MsgShootLost,
+				Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusLost, Message: gardener.MsgShootLost}},
+			}
 		}
 	}
 
@@ -238,7 +244,7 @@ func readyDuringUpdate(stored storedShootState, observed *gardener.ShootStatus) 
 			Health:  health,
 			Events:  []statusEvent{{Type: dbconst.ClusterEventEventType_StatusReady, Message: message}},
 		}, true
-	case gardener.StatusPending, gardener.StatusError, gardener.StatusDeleting, gardener.StatusDeleted:
+	case gardener.StatusPending, gardener.StatusError, gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
 		return shootStatusUpdate{}, false
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", observed.Status))
@@ -318,12 +324,12 @@ func healthEvent(health dbconst.ClusterShootHealth, message string) statusEvent 
 }
 
 // shootWasSeen reports whether a stored status can only come from a check that
-// found the Shoot in Gardener.
+// found the Shoot in Gardener. A lost cluster's check did not find it.
 func shootWasSeen(status gardener.ShootStatusType) bool {
 	switch status {
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError, gardener.StatusDeleting:
 		return true
-	case "", gardener.StatusPending, gardener.StatusDeleted:
+	case "", gardener.StatusPending, gardener.StatusDeleted, gardener.StatusLost:
 		return false
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", status))
@@ -352,6 +358,9 @@ func statusTransitionEvent(status gardener.ShootStatusType) dbconst.ClusterEvent
 		return ""
 	case gardener.StatusDeleted:
 		// Handled in checkDeletedCluster
+		return ""
+	case gardener.StatusLost:
+		// Handled in nextLifecycleStatus
 		return ""
 	default:
 		panic(fmt.Sprintf("unhandled shoot status: %s", status))

@@ -211,7 +211,7 @@ func nodePoolEvents(pool storedNodePool, next dbconst.NodePoolStatus, message st
 // log and move on; the next check retries.
 func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.ClusterGetForStatusCheckRow, observed *gardener.ShootStatus) {
 	switch observed.Status {
-	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted:
+	case gardener.StatusPending, gardener.StatusDeleting, gardener.StatusDeleted, gardener.StatusLost:
 		return // nothing a pool could learn from these
 	case gardener.StatusProgressing, gardener.StatusReady, gardener.StatusError:
 	default:

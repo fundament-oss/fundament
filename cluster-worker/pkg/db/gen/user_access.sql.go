@@ -35,6 +35,14 @@ SELECT
                 AND tenant.project_members.user_id = $1
                 AND tenant.project_members.deleted IS NULL
         )
+            AND EXISTS (
+                SELECT 1
+                FROM tenant.organizations_users
+                WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
+                    AND tenant.organizations_users.user_id = $1
+                    AND tenant.organizations_users.status = 'accepted'
+                    AND tenant.organizations_users.deleted IS NULL
+            )
             THEN 'member'
         ELSE 'none'
     END AS access_level
@@ -50,9 +58,11 @@ type ResolveUserAccessParams struct {
 
 // Determines the desired access level for a user on a cluster.
 // Returns 'admin' if the user is an accepted org admin, 'member' if the user
-// is a project member on any project in the cluster, or 'none' otherwise.
+// is an accepted org member and a project member on any project in the
+// cluster, or 'none' otherwise. A project membership without an organization
+// membership grants nothing: it would come back into effect with a new
+// invitation.
 // Used by the write path (UserSyncHandler).
-// NOTE: Duplicated in authn-api/pkg/db/queries.sql — keep both in sync.
 func (q *Queries) ResolveUserAccess(ctx context.Context, arg ResolveUserAccessParams) (string, error) {
 	row := q.db.QueryRow(ctx, resolveUserAccess, arg.UserID, arg.ClusterID)
 	var access_level string
@@ -91,11 +101,11 @@ JOIN tenant.project_members
     ON tenant.project_members.project_id = tenant.projects.id AND tenant.project_members.deleted IS NULL
 JOIN tenant.users ON tenant.users.id = tenant.project_members.user_id AND tenant.users.deleted IS NULL
 WHERE tenant.clusters.id = $1
-    AND NOT EXISTS (
+    AND EXISTS (
         SELECT 1 FROM tenant.organizations_users
         WHERE tenant.organizations_users.organization_id = tenant.clusters.organization_id
             AND tenant.organizations_users.user_id = tenant.project_members.user_id
-            AND tenant.organizations_users.permission = 'admin'
+            AND tenant.organizations_users.permission != 'admin'
             AND tenant.organizations_users.status = 'accepted'
             AND tenant.organizations_users.deleted IS NULL
     )
@@ -112,6 +122,8 @@ type UserListForClusterRow struct {
 }
 
 // Returns all users who should have access to a cluster, with their access level.
+// Project members count only while they are accepted org members; org admins
+// are listed once, as admin.
 // Used by the reconciliation loop to compare against actual state on the shoot.
 func (q *Queries) UserListForCluster(ctx context.Context, arg UserListForClusterParams) ([]UserListForClusterRow, error) {
 	rows, err := q.db.Query(ctx, userListForCluster, arg.ClusterID)

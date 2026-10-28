@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,7 +13,8 @@ import (
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 )
 
-// Reconcile compares DB state with Gardener state to detect drift and clean up orphans.
+// Reconcile compares DB state with Gardener state to report lost shoots and
+// to finish deleting the shoots of deleted clusters.
 func (h *Handler) Reconcile(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return nil //nolint:nilerr // graceful shutdown
@@ -33,7 +35,7 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	}
 
 	// The inventory is a record for the staff fleet view (FUN-23); failing to
-	// write it must not stop drift repair or orphan cleanup.
+	// write it must not stop the missing-shoot check or orphan cleanup.
 	if err := h.recordGardenerInventory(ctx, shoots); err != nil {
 		h.logger.Error("failed to record Gardener inventory", "error", err)
 	}
@@ -53,47 +55,117 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 		}
 	}
 
-	// Drift detection: clusters missing in Gardener. The insert decides whether
-	// one is repaired (its latest sync completed and nothing is queued).
-	var driftedCount int
+	// Synced clusters whose shoot is missing in Gardener are not recreated: a
+	// new, empty shoot under the same name would hide that the workloads and
+	// data are gone. The status check records the cluster as lost; a change
+	// to the cluster creates the shoot again.
+	//
+	// The status check only calls a shoot lost once it has seen it, since
+	// Gardener can report a just-created shoot as not found. A shoot that
+	// disappears before its first check therefore stays pending, and is
+	// logged here on every pass until a change to the cluster creates it
+	// again.
+	var missingCount int
 	for _, cluster := range dbClusters {
-		_, exists := shootByClusterID[cluster.ID]
-		if exists {
+		if !cluster.LatestSyncCompleted {
 			continue
 		}
-		queued, err := h.queries.OutboxInsertReconcile(ctx, db.OutboxInsertReconcileParams{
-			ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
-		})
-		if err != nil {
-			h.logger.Error("failed to insert reconcile outbox row", "cluster_id", cluster.ID, "error", err)
+		if _, exists := shootByClusterID[cluster.ID]; exists {
 			continue
 		}
-		if queued == 0 {
+		missingCount++
+		if gardener.ShootStatusType(cluster.ShootStatus.String) == gardener.StatusLost {
 			continue
 		}
-		h.logger.Warn("drift detected: shoot missing in Gardener",
+		h.logger.Error("shoot missing in Gardener, not recreating it",
 			"cluster_id", cluster.ID, "name", cluster.Name)
-		driftedCount++
+		h.EnqueueStatusCheck(cluster.ID)
 	}
 
-	// Orphan cleanup: shoots in Gardener without a DB cluster
-	for clusterID, shoot := range shootByClusterID {
-		if _, exists := dbClusterByID[clusterID]; !exists {
-			h.logger.Warn("deleting orphaned shoot in Gardener",
-				"shoot", shoot.Name, "cluster_id", clusterID)
-			if err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
-				h.logger.Error("failed to delete orphaned shoot",
-					"shoot", shoot.Name, "error", err)
-			}
-		}
-	}
+	unknownCount, err := h.cleanupOrphans(ctx, dbClusterByID, shootByClusterID)
 
 	h.logger.Info("cluster reconciliation complete",
 		"clusters", len(dbClusters),
 		"shoots", len(shoots),
-		"drift_detected", driftedCount)
+		"shoots_missing", missingCount,
+		"unknown_shoots", unknownCount)
 
-	return nil
+	return err
+}
+
+// cleanupOrphans handles shoots in Gardener without an active cluster. Only a
+// shoot whose cluster row exists and is soft-deleted is deleted: a user asked
+// for that and the delete sync did not finish it. A shoot without a cluster
+// row is reported and left alone, since an empty, restored or wrong database
+// or another installation sharing this Gardener looks exactly the same.
+// Returns the number of shoots without a cluster row.
+func (h *Handler) cleanupOrphans(ctx context.Context, dbClusterByID map[uuid.UUID]db.ClusterListActiveRow, shootByClusterID map[uuid.UUID]gardener.ShootInfo) (int, error) {
+	var orphanIDs []uuid.UUID
+	for clusterID := range shootByClusterID {
+		if _, exists := dbClusterByID[clusterID]; !exists {
+			orphanIDs = append(orphanIDs, clusterID)
+		}
+	}
+	if len(orphanIDs) == 0 {
+		return 0, nil
+	}
+
+	deletedClusters, err := h.queries.ClusterListDeletedByIDs(ctx, db.ClusterListDeletedByIDsParams{ClusterIds: orphanIDs})
+	if err != nil {
+		h.logger.Error("failed to list deleted clusters from DB", "error", err)
+		return 0, fmt.Errorf("list deleted clusters: %w", err)
+	}
+
+	deleted := make(map[uuid.UUID]bool, len(deletedClusters))
+	// Shoots already being deleted are only confirmed again: their deletion was
+	// started before, and repeating it only adds the confirmations Gardener may
+	// still need. They do not count towards the limit.
+	var toConfirm, toStart []uuid.UUID
+	for _, c := range deletedClusters {
+		deleted[c.ID] = true
+		// The delete sync is still working on this cluster; it deletes the
+		// shoot itself, or settles as failed and leaves it to a later pass.
+		if c.SyncRunning {
+			continue
+		}
+		if shootByClusterID[c.ID].Deleting {
+			toConfirm = append(toConfirm, c.ID)
+		} else {
+			toStart = append(toStart, c.ID)
+		}
+	}
+
+	var unknownCount int
+	for _, clusterID := range orphanIDs {
+		if !deleted[clusterID] {
+			shoot := shootByClusterID[clusterID]
+			h.logger.Warn("shoot has no cluster in the database, not deleting it",
+				"shoot", shoot.Name, "namespace", shoot.Namespace, "cluster_id", clusterID)
+			unknownCount++
+		}
+	}
+
+	// Refusing does not fail the pass: the reconcile worker exits after a few
+	// failed passes, which would stop the outbox and status workers as well.
+	if len(toStart) > h.cfg.MaxReconcileDeletions {
+		h.logger.Error("refusing to delete shoots: too many in one pass, check the database",
+			"shoots_to_delete", len(toStart),
+			"max", h.cfg.MaxReconcileDeletions,
+			"cluster_ids", toStart)
+		toStart = nil
+	}
+
+	for _, clusterID := range slices.Concat(toConfirm, toStart) {
+		shoot := shootByClusterID[clusterID]
+		h.logger.Warn("deleting shoot of deleted cluster in Gardener",
+			"shoot", shoot.Name, "cluster_id", clusterID)
+		if _, err := h.gardener.DeleteShootByClusterID(ctx, clusterID); err != nil {
+			h.logger.Error("failed to delete shoot of deleted cluster",
+				"shoot", shoot.Name, "error", err)
+		}
+	}
+
+	return unknownCount, nil
 }
 
 // recordGardenerInventory upserts the shoots one successful ListShoots

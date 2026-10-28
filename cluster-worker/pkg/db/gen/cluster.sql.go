@@ -12,6 +12,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clusterCreateEventUnlessLatest = `-- name: ClusterCreateEventUnlessLatest :execrows
+INSERT INTO tenant.cluster_events (cluster_id, event_type, message)
+SELECT $1, $2, $3
+WHERE (
+    SELECT tenant.cluster_events.event_type = $2::text
+       AND tenant.cluster_events.message IS NOT DISTINCT FROM $3::text
+    FROM tenant.cluster_events
+    WHERE tenant.cluster_events.cluster_id = $1
+    ORDER BY tenant.cluster_events.created DESC, tenant.cluster_events.id DESC
+    LIMIT 1
+) IS DISTINCT FROM true
+`
+
+type ClusterCreateEventUnlessLatestParams struct {
+	ClusterID uuid.UUID
+	EventType string
+	Message   pgtype.Text
+}
+
+// Insert an event unless the cluster's latest one already says the same (type
+// and message): a cluster waiting on a precondition records the wait once,
+// however many of its outbox rows park meanwhile. The caller holds the
+// cluster row (OutboxLockCluster), so two parks cannot both insert.
+func (q *Queries) ClusterCreateEventUnlessLatest(ctx context.Context, arg ClusterCreateEventUnlessLatestParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterCreateEventUnlessLatest, arg.ClusterID, arg.EventType, arg.Message)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clusterCreateStatusEvent = `-- name: ClusterCreateStatusEvent :one
 INSERT INTO
     tenant.cluster_events (cluster_id, event_type, message)
@@ -352,7 +383,16 @@ SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.organizations.name AS organization_name
+    tenant.clusters.shoot_status,
+    tenant.organizations.name AS organization_name,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS latest_sync_completed
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
@@ -363,14 +403,19 @@ ORDER BY
 `
 
 type ClusterListActiveRow struct {
-	ID               uuid.UUID
-	Name             string
-	Deleted          pgtype.Timestamptz
-	OrganizationName string
+	ID                  uuid.UUID
+	Name                string
+	Deleted             pgtype.Timestamptz
+	ShootStatus         pgtype.Text
+	OrganizationName    string
+	LatestSyncCompleted bool
 }
 
-// Used by periodic reconciliation to compare with Gardener state. Whether a
-// cluster missing in Gardener is repaired is OutboxInsertReconcile's decision.
+// Used by periodic reconciliation to compare with Gardener state.
+// latest_sync_completed: the cluster's own latest sync row completed, so a
+// missing Shoot is not one a queued or failing sync has yet to create. "Latest
+// sync row" is the cluster_sync_state view's row
+// (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
 func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow, error) {
 	rows, err := q.db.Query(ctx, clusterListActive)
 	if err != nil {
@@ -384,8 +429,64 @@ func (q *Queries) ClusterListActive(ctx context.Context) ([]ClusterListActiveRow
 			&i.ID,
 			&i.Name,
 			&i.Deleted,
+			&i.ShootStatus,
 			&i.OrganizationName,
+			&i.LatestSyncCompleted,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const clusterListDeletedByIDs = `-- name: ClusterListDeletedByIDs :many
+SELECT
+    tenant.clusters.id,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS sync_running
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = ANY($1::uuid[])
+    AND tenant.clusters.deleted IS NOT NULL
+ORDER BY
+    tenant.clusters.id
+`
+
+type ClusterListDeletedByIDsParams struct {
+	ClusterIds []uuid.UUID
+}
+
+type ClusterListDeletedByIDsRow struct {
+	ID          uuid.UUID
+	SyncRunning bool
+}
+
+// Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
+// Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+// and only once the delete sync has settled.
+// sync_running: the cluster's own latest sync row (as in ClusterGetPushState)
+// is still queued.
+func (q *Queries) ClusterListDeletedByIDs(ctx context.Context, arg ClusterListDeletedByIDsParams) ([]ClusterListDeletedByIDsRow, error) {
+	rows, err := q.db.Query(ctx, clusterListDeletedByIDs, arg.ClusterIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClusterListDeletedByIDsRow
+	for rows.Next() {
+		var i ClusterListDeletedByIDsRow
+		if err := rows.Scan(&i.ID, &i.SyncRunning); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -441,6 +542,38 @@ func (q *Queries) ClusterListForStatusSweep(ctx context.Context) ([]uuid.UUID, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const clusterMarkShootDeleted = `-- name: ClusterMarkShootDeleted :execrows
+UPDATE tenant.clusters
+SET
+    shoot_status = 'deleted',
+    shoot_status_message = $1,
+    shoot_health = NULL,
+    shoot_updating = false,
+    shoot_api_available = NULL,
+    shoot_status_updated = now()
+WHERE
+    id = $2
+    AND deleted IS NOT NULL
+    AND shoot_status IS DISTINCT FROM 'deleted'
+`
+
+type ClusterMarkShootDeletedParams struct {
+	Message   pgtype.Text
+	ClusterID uuid.UUID
+}
+
+// Record that a deleted cluster has no Shoot (it never reached Gardener, or
+// the Shoot is already gone), so it stops counting against the organization's
+// cluster quota at once instead of at the next status sweep. The same end
+// state the sweep writes when it confirms a deletion.
+func (q *Queries) ClusterMarkShootDeleted(ctx context.Context, arg ClusterMarkShootDeletedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clusterMarkShootDeleted, arg.Message, arg.ClusterID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const clusterMarkShootUpdating = `-- name: ClusterMarkShootUpdating :execrows
@@ -528,6 +661,29 @@ func (q *Queries) ClusterUpdateShootStatus(ctx context.Context, arg ClusterUpdat
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const nodePoolClearStatusByClusterID = `-- name: NodePoolClearStatusByClusterID :exec
+UPDATE tenant.node_pools
+SET
+    status = NULL,
+    status_message = NULL,
+    status_updated = now()
+WHERE
+    cluster_id = $1
+    AND deleted IS NULL
+`
+
+type NodePoolClearStatusByClusterIDParams struct {
+	ClusterID uuid.UUID
+}
+
+// Forget what was recorded about a lost cluster's pools: their machines went
+// with the Shoot. When a change creates it again they read as new, so as
+// progressing while the create runs, instead of their old status and reason.
+func (q *Queries) NodePoolClearStatusByClusterID(ctx context.Context, arg NodePoolClearStatusByClusterIDParams) error {
+	_, err := q.db.Exec(ctx, nodePoolClearStatusByClusterID, arg.ClusterID)
+	return err
 }
 
 const nodePoolGetClusterID = `-- name: NodePoolGetClusterID :one

@@ -13,11 +13,12 @@ import (
 // clusterStatusFromDB derives cluster status from the deleted flag, Gardener's
 // shoot status and the cluster's own sync. A cluster whose sync failed for good
 // is in error when Gardener does not have its Shoot: it never reached Gardener
-// (no status yet, no sync ever completed) or Gardener lost it (pending). Before
-// the first status is recorded a cluster that did reach Gardener is still
-// provisioning, whatever later sync failed. A sync that fails for a cluster
-// that already runs leaves the status alone; the failure shows in the sync
-// state.
+// (no status yet, no sync ever completed) or its Shoot disappeared before a
+// status check saw it (pending). Before the first status is recorded a cluster
+// that did reach Gardener is still provisioning, whatever later sync failed. A
+// sync that fails for a cluster that already runs leaves the status alone; the
+// failure shows in the sync state. A cluster whose Shoot disappeared after a
+// status check saw it is lost, until a change creates the Shoot again.
 // A freshly created cluster whose health checks have not passed yet is
 // starting, not unhealthy — the worker marks that window with the
 // awaiting-health message. After that, a ready cluster whose health
@@ -61,6 +62,8 @@ func clusterStatusFromDB(deleted pgtype.Timestamptz, shootStatus pgtype.Text, sh
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING
 	case "deleted":
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED
+	case "lost":
+		return organizationv1.ClusterStatus_CLUSTER_STATUS_LOST
 	default:
 		return organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
 	}
@@ -98,6 +101,11 @@ func syncStateFromRow(
 	message, isError := syncError(outboxStatus, outboxError)
 	if isError {
 		state.SetOutboxError(message)
+	}
+	// A pending row's status_info is not an error but why it waits (a
+	// precondition it is parked or deferred on).
+	if outboxStatus.Valid && outboxStatus.String == "pending" && outboxError.Valid && outboxError.String != "" {
+		state.SetOutboxMessage(outboxError.String)
 	}
 	if shootStatus.Valid {
 		state.SetShootStatus(shootStatus.String)

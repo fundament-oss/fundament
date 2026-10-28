@@ -172,6 +172,21 @@ BEGIN
         END,
         'trigger'
     );
+    -- Wake the cluster's rows parked until its first pool. The cluster row is
+    -- locked first: a worker about to park locks it too and rechecks the pools
+    -- under that lock, so a pool is either seen by the recheck or finds the
+    -- row parked. Only parked rows are touched: a claimed row is never one, so
+    -- this never waits for a sync in progress.
+    IF TG_OP = 'INSERT' AND NEW.deleted IS NULL THEN
+        PERFORM 1 FROM tenant.clusters
+        WHERE tenant.clusters.id = NEW.cluster_id
+        FOR NO KEY UPDATE;
+        UPDATE tenant.cluster_outbox
+        SET retry_after = now()
+        WHERE tenant.cluster_outbox.cluster_id = NEW.cluster_id
+          AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+          AND tenant.cluster_outbox.retry_after = 'infinity';
+    END IF;
     RETURN NULL;
 END;
 $function$;
@@ -702,6 +717,17 @@ BEGIN
                 END,
                 'trigger');
     END IF;
+    -- A row parked until the cluster's first node pool would wait forever once
+    -- the cluster is deleted: wake the cluster's parked rows, so they run the
+    -- delete path and complete. This update holds the cluster row, which a
+    -- worker about to park locks before it rechecks (see the node pool trigger).
+    IF TG_OP = 'UPDATE' AND OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        UPDATE tenant.cluster_outbox
+        SET retry_after = now()
+        WHERE tenant.cluster_outbox.cluster_id = NEW.id
+          AND tenant.cluster_outbox.status IN ('pending', 'retrying')
+          AND tenant.cluster_outbox.retry_after = 'infinity';
+    END IF;
     RETURN NEW;
 END;
 $function$;
@@ -739,6 +765,49 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.cluster_outbox_organization_user_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organizations_users_tr_remove_project_memberships | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organizations_users_tr_remove_project_memberships() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organizations_users_tr_remove_project_memberships ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- A user who leaves the organization leaves its projects too: a project
+    -- membership left behind keeps its RBAC on the clusters and comes back into
+    -- effect when the user is invited again. Every writer that revokes a
+    -- membership is covered, the organization-api and funops alike. The
+    -- protect_last_admin trigger refuses this while the user is the only admin
+    -- of a project.
+    -- Deleted projects are skipped: their memberships grant nothing, and
+    -- protect_last_admin would refuse removing their only admin.
+    -- The query takes a fresh snapshot, so it also sees a project membership
+    -- added by a transaction this row update waited for.
+    IF OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN
+        UPDATE tenant.project_members
+        SET deleted = now()
+        WHERE tenant.project_members.user_id = NEW.user_id
+            AND tenant.project_members.deleted IS NULL
+            AND tenant.project_members.project_id IN (
+                SELECT tenant.projects.id
+                FROM tenant.projects
+                JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+                WHERE tenant.clusters.organization_id = NEW.organization_id
+                    AND tenant.projects.deleted IS NULL
+            );
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organizations_users_tr_remove_project_memberships() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_outbox_project_member_trigger | type: FUNCTION --
@@ -946,6 +1015,14 @@ BEGIN
     IF OLD.role = 'admin' AND OLD.deleted IS NULL THEN
         -- Check if this is a soft delete (setting deleted) or role demotion
         IF (NEW.deleted IS NOT NULL) OR (NEW.role != 'admin') THEN
+            -- Lock the project so concurrent removals or demotions of its admins
+            -- take turns: each counts the admins only after the previous one has
+            -- committed, and the last one is refused instead of both passing.
+            PERFORM 1
+            FROM tenant.projects
+            WHERE id = OLD.project_id
+            FOR NO KEY UPDATE;
+
             SELECT COUNT(*) INTO admin_count
             FROM tenant.project_members
             WHERE project_id = OLD.project_id
@@ -2220,7 +2297,7 @@ CREATE TABLE tenant.cluster_events (
 	message text,
 	attempt integer,
 	CONSTRAINT cluster_events_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','status_api_available','user_sync_succeeded','user_sync_failed','nodepool_waiting','nodepool_error','nodepool_ready')),
+	CONSTRAINT cluster_events_ck_event_type CHECK (event_type IN ('sync_requested','sync_claimed','sync_succeeded','sync_failed','status_progressing','status_ready','status_error','status_deleted','status_healthy','status_unhealthy','status_warning','status_lost','status_api_available','user_sync_succeeded','user_sync_failed','nodepool_waiting','nodepool_error','nodepool_ready','sync_waiting_for_precondition')),
 	CONSTRAINT cluster_events_ck_sync_action CHECK (sync_action IN ('sync','delete'))
 );
 -- ddl-end --
@@ -2949,6 +3026,15 @@ CREATE OR REPLACE TRIGGER cluster_outbox_organization_user
 	ON tenant.organizations_users
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.cluster_outbox_organization_user_trigger();
+-- ddl-end --
+
+-- object: remove_project_memberships | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS remove_project_memberships ON tenant.organizations_users CASCADE;
+CREATE OR REPLACE TRIGGER remove_project_memberships
+	AFTER UPDATE
+	ON tenant.organizations_users
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.organizations_users_tr_remove_project_memberships();
 -- ddl-end --
 
 -- object: cluster_outbox_project_member | type: TRIGGER --

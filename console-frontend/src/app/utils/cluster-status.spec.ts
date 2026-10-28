@@ -20,12 +20,13 @@ describe('isKubeconfigAvailable', () => {
     });
   });
 
-  it('withholds it from a cluster that is being removed or unknown', () => {
+  it('withholds it from a cluster that is being removed, lost or unknown', () => {
     [
       ClusterStatus.UNSPECIFIED,
       ClusterStatus.STOPPING,
       ClusterStatus.STOPPED,
       ClusterStatus.DELETING,
+      ClusterStatus.LOST,
     ].forEach((status) => {
       expect(isKubeconfigAvailable(status)).toBe(false);
     });
@@ -61,6 +62,7 @@ describe('kubeconfigHint', () => {
       ClusterStatus.STOPPING,
       ClusterStatus.STOPPED,
       ClusterStatus.DELETING,
+      ClusterStatus.LOST,
     ].forEach((status) => {
       expect(isKubeconfigAvailable(status)).toBe(false);
       expect(kubeconfigHint(status)).not.toBeNull();

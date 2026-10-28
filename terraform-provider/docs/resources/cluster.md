@@ -44,13 +44,13 @@ resource "fundament_cluster" "example" {
 
 ### Optional
 
-- `node_pool` (Block List) A node pool of the cluster. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. Without any node_pool block, Gardener runs a default worker pool that fundament does not list. (see [below for nested schema](#nestedblock--node_pool))
+- `node_pool` (Block List) A node pool of the cluster, at least one: a cluster runs only on its node pools and starts once it has one. The blocks are the cluster's complete set of node pools: pools added elsewhere, such as in the console, are removed on the next apply. (see [below for nested schema](#nestedblock--node_pool))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
 - `id` (String) The unique identifier of the cluster.
-- `status` (String) The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), deleting or stopped.
+- `status` (String) The current status of the cluster: provisioning, starting (the cluster serves while its health checks settle), running, upgrading (Gardener rolls out a change; the cluster stays usable), unhealthy (the cluster serves but a health condition fails, such as a node pool without machines), error (Gardener reports a problem, which it usually retries), lost (the cluster no longer exists in Gardener; a change to it creates it again, empty), deleting or stopped.
 
 <a id="nestedblock--node_pool"></a>
 ### Nested Schema for `node_pool`

@@ -283,7 +283,8 @@ func TestReconcileRecordsGardenerInventory(t *testing.T) {
 	assert.Nil(t, first[keptID].deleted)
 
 	// One shoot disappears from Gardener and the other is updated.
-	require.NoError(t, mock.DeleteShootByClusterID(t.Context(), goneID))
+	_, err := mock.DeleteShootByClusterID(t.Context(), goneID)
+	require.NoError(t, err)
 	applyMockShoot(t, mock, keptID, "kept", "1.32.0")
 
 	require.NoError(t, h.Reconcile(t.Context()))
@@ -329,7 +330,8 @@ func TestReconcileEmptyListMarksEverythingGone(t *testing.T) {
 	applyMockShoot(t, mock, clusterID, "last-one", "1.31.1")
 	require.NoError(t, h.Reconcile(t.Context()))
 
-	require.NoError(t, mock.DeleteShootByClusterID(t.Context(), clusterID))
+	_, err := mock.DeleteShootByClusterID(t.Context(), clusterID)
+	require.NoError(t, err)
 	require.NoError(t, h.Reconcile(t.Context()))
 
 	assert.NotNil(t, gardenerShoots(t, db)[clusterID].deleted)

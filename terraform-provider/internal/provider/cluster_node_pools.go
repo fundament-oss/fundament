@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -33,9 +34,9 @@ var nodePoolNamePattern = regexp.MustCompile(`^[a-z]([-a-z0-9]*[a-z0-9])?$`)
 
 func clusterNodePoolBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "A node pool of the cluster. The blocks are the cluster's complete set of node pools: " +
-			"pools added elsewhere, such as in the console, are removed on the next apply. " +
-			"Without any node_pool block, Gardener runs a default worker pool that fundament does not list.",
+		Description: "A node pool of the cluster, at least one: a cluster runs only on its node pools and starts once it has one. " +
+			"The blocks are the cluster's complete set of node pools: " +
+			"pools added elsewhere, such as in the console, are removed on the next apply.",
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"name": schema.StringAttribute{
@@ -62,7 +63,7 @@ func clusterNodePoolBlock() schema.ListNestedBlock {
 				},
 			},
 		},
-		Validators: []validator.List{nodePoolsValidator{}},
+		Validators: []validator.List{listvalidator.SizeAtLeast(1), nodePoolsValidator{}},
 	}
 }
 
@@ -71,7 +72,7 @@ func clusterNodePoolBlock() schema.ListNestedBlock {
 type nodePoolsValidator struct{}
 
 func (v nodePoolsValidator) Description(_ context.Context) string {
-	return "node pool names must be unique within the cluster, and autoscale_max at least autoscale_min"
+	return "node pool names must be unique within the cluster, autoscale_max at least autoscale_min, and at least one pool with autoscale_max above 0"
 }
 
 func (v nodePoolsValidator) MarkdownDescription(ctx context.Context) string {
@@ -79,7 +80,13 @@ func (v nodePoolsValidator) MarkdownDescription(ctx context.Context) string {
 }
 
 func (v nodePoolsValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) { //nolint:gocritic // signature set by validator.List
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+	// A list validator such as SizeAtLeast skips a null list, so refuse a
+	// missing node_pool here: the cluster would never get a Shoot.
+	if req.ConfigValue.IsNull() {
+		resp.Diagnostics.AddAttributeError(req.Path, "Missing Node Pool", "At least one node_pool block is required.")
+		return
+	}
+	if req.ConfigValue.IsUnknown() {
 		return
 	}
 
@@ -87,6 +94,19 @@ func (v nodePoolsValidator) ValidateList(ctx context.Context, req validator.List
 	resp.Diagnostics.Append(req.ConfigValue.ElementsAs(ctx, &pools, false)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// A cluster needs a pool that can run nodes: the API refuses to leave a
+	// cluster with only empty pools, and Gardener refuses such a Shoot.
+	active := false
+	for _, pool := range pools {
+		if pool.AutoscaleMax.IsNull() || pool.AutoscaleMax.IsUnknown() || pool.AutoscaleMax.ValueInt64() > 0 {
+			active = true
+		}
+	}
+	if len(pools) > 0 && !active {
+		resp.Diagnostics.AddAttributeError(req.Path, "No Node Pool Can Run Nodes",
+			"At least one node_pool needs an autoscale_max above 0.")
 	}
 
 	seen := map[string]bool{}
@@ -116,52 +136,9 @@ func (v nodePoolsValidator) ValidateList(ctx context.Context, req validator.List
 	}
 }
 
-// nodePoolChanges are the API calls that turn the current node pools into the planned ones.
-type nodePoolChanges struct {
-	// Create and Delete hold a pool whose machine type changes, under the same name.
-	Create []ClusterNodePoolModel
-	Update []existingNodePool
-	Delete []existingNodePool
-}
-
 type existingNodePool struct {
 	ID   string
 	Pool ClusterNodePoolModel
-}
-
-func planNodePoolChanges(current []existingNodePool, planned []ClusterNodePoolModel) nodePoolChanges {
-	var changes nodePoolChanges
-
-	byName := map[string]existingNodePool{}
-	for _, pool := range current {
-		byName[pool.Pool.Name.ValueString()] = pool
-	}
-
-	plannedNames := map[string]bool{}
-	for _, pool := range planned {
-		plannedNames[pool.Name.ValueString()] = true
-
-		existing, ok := byName[pool.Name.ValueString()]
-		switch {
-		case !ok:
-			changes.Create = append(changes.Create, pool)
-		case existing.Pool.MachineType.ValueString() != pool.MachineType.ValueString():
-			// The API cannot change a pool's machine type: replace the pool.
-			changes.Delete = append(changes.Delete, existing)
-			changes.Create = append(changes.Create, pool)
-		case existing.Pool.AutoscaleMin.ValueInt64() != pool.AutoscaleMin.ValueInt64(),
-			existing.Pool.AutoscaleMax.ValueInt64() != pool.AutoscaleMax.ValueInt64():
-			changes.Update = append(changes.Update, existingNodePool{ID: existing.ID, Pool: pool})
-		}
-	}
-
-	for _, pool := range current {
-		if !plannedNames[pool.Pool.Name.ValueString()] {
-			changes.Delete = append(changes.Delete, pool)
-		}
-	}
-
-	return changes
 }
 
 // listNodePools reads the cluster's node pools from the API.
@@ -220,65 +197,111 @@ func orderNodePools(pools []existingNodePool, prior []ClusterNodePoolModel) []Cl
 	return result
 }
 
-// applyNodePoolChanges turns the cluster's current node pools into planned. New
-// pools are created before old ones are removed, so the cluster keeps workers in between.
-func applyNodePoolChanges(ctx context.Context, client *FundamentClient, clusterID, region string, current []existingNodePool, planned []ClusterNodePoolModel) diag.Diagnostics {
+// setNodePools makes planned the cluster's complete set of node pools in one
+// API call. The API applies it at once or not at all: the cluster never passes
+// through zero pools or an intermediate set, and a pool replaced at full quota
+// fits because the old one goes in the same step. Pools are matched by name, so
+// one whose machine type changes is replaced under its name.
+func setNodePools(ctx context.Context, client *FundamentClient, clusterID string, planned []ClusterNodePoolModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	changes := planNodePoolChanges(current, planned)
-
-	// A pool whose machine type changes is deleted before its replacement is
-	// created; check the new machine types first, so a refused create cannot
-	// leave the cluster without the pool.
-	diags.Append(checkMachineTypes(ctx, client, region, changes.Create)...)
-	if diags.HasError() {
-		return diags
-	}
-
-	// A pool whose machine type changes keeps its name, which must be free first.
-	replaced := map[string]bool{}
-	for _, pool := range changes.Create {
-		replaced[pool.Name.ValueString()] = true
-	}
-	for i := range changes.Delete {
-		if replaced[changes.Delete[i].Pool.Name.ValueString()] {
-			diags.Append(deleteNodePool(ctx, client, &changes.Delete[i])...)
-		}
-	}
-	if diags.HasError() {
-		return diags
-	}
-
-	for i := range changes.Create {
-		diags.Append(createNodePool(ctx, client, clusterID, &changes.Create[i])...)
-		if diags.HasError() {
-			return diags
-		}
-	}
-
-	for _, pool := range changes.Update {
-		tflog.Debug(ctx, "Updating node pool", map[string]any{"cluster_id": clusterID, "name": pool.Pool.Name.ValueString()})
-		_, err := client.ClusterService.UpdateNodePool(ctx, organizationv1.UpdateNodePoolRequest_builder{
-			NodePoolId:   pool.ID,
-			AutoscaleMin: int32(pool.Pool.AutoscaleMin.ValueInt64()), //nolint:gosec // the schema bounds it to int32
-			AutoscaleMax: int32(pool.Pool.AutoscaleMax.ValueInt64()), //nolint:gosec // the schema bounds it to int32
+	specs := make([]*organizationv1.NodePoolSpec, 0, len(planned))
+	for _, pool := range planned {
+		specs = append(specs, organizationv1.NodePoolSpec_builder{
+			Name:         pool.Name.ValueString(),
+			MachineType:  pool.MachineType.ValueString(),
+			AutoscaleMin: int32(pool.AutoscaleMin.ValueInt64()), //nolint:gosec // the schema bounds it to int32
+			AutoscaleMax: int32(pool.AutoscaleMax.ValueInt64()), //nolint:gosec // the schema bounds it to int32
 		}.Build())
-		if err != nil {
-			diags.AddError("Unable to Update Node Pool", fmt.Sprintf("Node pool %q: %s", pool.Pool.Name.ValueString(), err))
-			return diags
-		}
 	}
 
-	for i := range changes.Delete {
-		if !replaced[changes.Delete[i].Pool.Name.ValueString()] {
-			diags.Append(deleteNodePool(ctx, client, &changes.Delete[i])...)
-			if diags.HasError() {
-				return diags
-			}
-		}
+	tflog.Debug(ctx, "Setting node pools", map[string]any{"cluster_id": clusterID, "count": len(specs)})
+	// The whole set is idempotent, so a call whose answer was lost is simply
+	// made again: without this, a dropped connection right after CreateCluster
+	// would taint the cluster and the next apply would recreate it.
+	err := retryTransient(ctx, defaultClock, func(ctx context.Context) error {
+		_, err := client.ClusterService.SetNodePools(ctx, organizationv1.SetNodePoolsRequest_builder{
+			ClusterId: clusterID,
+			NodePools: specs,
+		}.Build())
+		return err
+	})
+	if err != nil {
+		diags.AddError("Unable to Set Node Pools", err.Error())
 	}
-
 	return diags
+}
+
+// retryTransient runs call again, with backoff, while it fails for a reason
+// that says nothing about the request: the server was unreachable or did not
+// answer in time. A refusal is returned as is.
+func retryTransient(ctx context.Context, clk clock, call func(ctx context.Context) error) error {
+	deadlineCtx, cancel := context.WithTimeout(ctx, idempotencyTotalBudget)
+	defer cancel()
+
+	backoff := idempotencyInitialBackoff
+	for {
+		err := call(deadlineCtx)
+		if err == nil || !transient(err) {
+			return err
+		}
+		if sleepErr := clk.Sleep(deadlineCtx, backoff); sleepErr != nil {
+			return err
+		}
+		backoff = min(backoff*2, idempotencyMaxBackoff)
+	}
+}
+
+// transient reports whether an error is worth another try: the server could
+// not be reached, or the call ran out of time before it answered.
+func transient(err error) bool {
+	switch connect.CodeOf(err) {
+	case connect.CodeUnavailable, connect.CodeDeadlineExceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// sameNodePools reports whether two sets of pools are the same, in any order:
+// an apply whose planned pools are what the cluster runs needs no node pool call.
+func sameNodePools(a, b []ClusterNodePoolModel) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	key := func(pool ClusterNodePoolModel) string {
+		return fmt.Sprintf("%s|%s|%d|%d", pool.Name.ValueString(), pool.MachineType.ValueString(),
+			pool.AutoscaleMin.ValueInt64(), pool.AutoscaleMax.ValueInt64())
+	}
+	counts := make(map[string]int, len(a))
+	for _, pool := range a {
+		counts[key(pool)]++
+	}
+	for _, pool := range b {
+		counts[key(pool)]--
+		if counts[key(pool)] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// newOrRetyped returns the planned pools that are not already running under
+// the same name and machine type: the ones whose machine type the region has
+// to offer. A pool that keeps its machine type may be a legacy one the catalog
+// no longer lists; it keeps running and must not block other changes.
+func newOrRetyped(current, planned []ClusterNodePoolModel) []ClusterNodePoolModel {
+	running := make(map[string]string, len(current))
+	for _, pool := range current {
+		running[pool.Name.ValueString()] = pool.MachineType.ValueString()
+	}
+	var out []ClusterNodePoolModel
+	for _, pool := range planned {
+		if machineType, ok := running[pool.Name.ValueString()]; !ok || machineType != pool.MachineType.ValueString() {
+			out = append(out, pool)
+		}
+	}
+	return out
 }
 
 // checkMachineTypes reports every pool whose machine type the region's catalog does not offer.
@@ -310,36 +333,6 @@ func checkMachineTypes(ctx context.Context, client *FundamentClient, region stri
 				fmt.Sprintf("Node pool %q: region %q does not offer machine type %q; it offers %s.",
 					pool.Name.ValueString(), region, pool.MachineType.ValueString(), strings.Join(offered, ", ")))
 		}
-	}
-	return diags
-}
-
-func createNodePool(ctx context.Context, client *FundamentClient, clusterID string, pool *ClusterNodePoolModel) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	tflog.Debug(ctx, "Creating node pool", map[string]any{"cluster_id": clusterID, "name": pool.Name.ValueString()})
-	_, err := createIdempotent(ctx, client.ClusterService.CreateNodePool, organizationv1.CreateNodePoolRequest_builder{
-		ClusterId:    clusterID,
-		Name:         pool.Name.ValueString(),
-		MachineType:  pool.MachineType.ValueString(),
-		AutoscaleMin: int32(pool.AutoscaleMin.ValueInt64()), //nolint:gosec // the schema bounds it to int32
-		AutoscaleMax: int32(pool.AutoscaleMax.ValueInt64()), //nolint:gosec // the schema bounds it to int32
-	}.Build())
-	if err != nil {
-		diags.AddError("Unable to Create Node Pool", fmt.Sprintf("Node pool %q: %s", pool.Name.ValueString(), err))
-	}
-	return diags
-}
-
-func deleteNodePool(ctx context.Context, client *FundamentClient, pool *existingNodePool) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	tflog.Debug(ctx, "Deleting node pool", map[string]any{"name": pool.Pool.Name.ValueString()})
-	_, err := client.ClusterService.DeleteNodePool(ctx, organizationv1.DeleteNodePoolRequest_builder{
-		NodePoolId: pool.ID,
-	}.Build())
-	if err != nil && connect.CodeOf(err) != connect.CodeNotFound {
-		diags.AddError("Unable to Delete Node Pool", fmt.Sprintf("Node pool %q: %s", pool.Pool.Name.ValueString(), err))
 	}
 	return diags
 }

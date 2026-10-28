@@ -20,8 +20,9 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import { NodePoolNotCreated, describeRefusals } from '../utils/node-pool-refusal';
 import PageNavService from '../page-nav.service';
+import opensElsewhere from '../opens-elsewhere';
 import { NotificationService } from '../notification.service';
-import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, METRICS, PLUGIN, PROJECT } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -32,7 +33,7 @@ import {
   type ClusterEvent,
   type SyncState,
 } from '../../generated/v1/cluster_pb';
-import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
+import { ListProjectsRequestSchema, type Project } from '../../generated/v1/project_pb';
 import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
@@ -132,8 +133,7 @@ const NODE_POOL_STATUS_LABELS: Record<NodePoolStatus, string> = {
   [NodePoolStatus.FAILED]: 'Failed',
 };
 
-const getNodePoolStatusLabel = (status: NodePoolStatus): string =>
-  NODE_POOL_STATUS_LABELS[status];
+const getNodePoolStatusLabel = (status: NodePoolStatus): string => NODE_POOL_STATUS_LABELS[status];
 
 // Hoisted: the template binds this per pool card, so it runs every change
 // detection cycle on a page that polls.
@@ -147,8 +147,7 @@ const NODE_POOL_STATUS_COLORS: Record<NodePoolStatus, string> = {
   [NodePoolStatus.FAILED]: 'critical',
 };
 
-const getNodePoolStatusColor = (status: NodePoolStatus): string =>
-  NODE_POOL_STATUS_COLORS[status];
+const getNodePoolStatusColor = (status: NodePoolStatus): string => NODE_POOL_STATUS_COLORS[status];
 
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
  *  no sync record at all, and not knowing whether a cluster is reconciling is a
@@ -161,6 +160,7 @@ const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
     progressing: 'mintgroen',
     pending: 'lichtblauw',
     error: 'critical',
+    lost: 'critical',
     deleting: 'oranje',
   };
   return colors[syncState.shootStatus ?? ''] || 'neutral';
@@ -188,6 +188,7 @@ const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (syncState.outboxError) return 'Error';
   if (syncState.outboxStatus === 'completed') return 'Synced';
   if (syncState.outboxStatus === 'failed') return 'Failed';
+  if (syncState.outboxMessage) return 'Waiting';
   if (syncState.outboxStatus) return 'Syncing';
   return 'Pending';
 };
@@ -212,6 +213,7 @@ const getEventTypeLabel = (eventType: string): string => {
     nodepool_waiting: 'Node pool waiting',
     nodepool_error: 'Node pool failed',
     nodepool_ready: 'Node pool ready',
+    sync_waiting_for_precondition: 'Waiting',
   };
   return labels[eventType] || eventType;
 };
@@ -225,9 +227,14 @@ const CRITICAL_EVENT_TYPES: ReadonlySet<string> = new Set([
   'nodepool_error',
 ]);
 
-/** Gardener is already retrying these by itself, so they stay a notch below
- *  critical even though something is amiss. */
-const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set(['status_warning', 'nodepool_waiting']);
+/** Something is amiss but in progress: Gardener is retrying it by itself, or
+ *  the cluster waits for a precondition (such as its first node pool) and
+ *  resumes on its own once that is met. A notch below critical. */
+const WARNING_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'status_warning',
+  'nodepool_waiting',
+  'sync_waiting_for_precondition',
+]);
 
 /** Only problems get tinted. On a timeline every dot is the same neutral track
  *  color, so the row itself has to carry the one distinction that matters — and
@@ -309,7 +316,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private metricsClient = inject(METRICS);
 
-  private namespaceClient = inject(NAMESPACE);
+  private projectClient = inject(PROJECT);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -366,14 +373,19 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   showDeleteBlockedModal = signal<boolean>(false);
 
-  /** Why deletion is blocked, or null when it is not. */
+  /** Why deletion is blocked, or null when it is not. The API refuses a
+   *  cluster that still has projects, so they are what has to go first. The
+   *  user is sent to each project rather than offered one confirmation that
+   *  deletes them all: the API does not cascade (see DeleteCluster). */
   deleteBlockedReason = computed(() => {
-    const count = this.namespaces().length;
+    const count = this.projects().length;
     if (count > 0) {
-      return `This cluster still has ${count} namespace${count === 1 ? '' : 's'}. Kubernetes will not release a cluster while namespaces are running on it, so remove them first and then delete the cluster.`;
+      return count === 1
+        ? 'This cluster still has a project. Delete it, and its namespaces, before you delete the cluster.'
+        : `This cluster still has ${count} projects. Delete them, and their namespaces, before you delete the cluster.`;
     }
-    if (this.namespacesLoadError()) {
-      return "We couldn't load this cluster's namespaces, so there is no way to confirm it is empty. Reload the page and try again.";
+    if (this.projectsLoadError()) {
+      return "We couldn't load this cluster's projects, so there is no way to confirm it is empty. Reload the page and try again.";
     }
     return null;
   });
@@ -387,21 +399,25 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.showDeleteModal.set(true);
   }
 
-  goToNamespaces(): void {
+  /** Routes client-side while leaving the row a real link. A project opened in
+   *  another tab leaves the dialog open, so the rest of the list stays at hand. */
+  goToProject(event: Event, projectId: string): void {
+    if (opensElsewhere(event)) return;
+    event.preventDefault();
     this.showDeleteBlockedModal.set(false);
-    this.pageNav.goTo(`/clusters/${this.clusterData.basics.id}/namespaces`);
+    this.pageNav.goTo(`/projects/${projectId}/general`);
   }
 
   /** A download that produced no file leaves nothing on screen to show for it,
    *  so this says so where it cannot be missed. */
   kubeconfigError = signal<string | null>(null);
 
-  // Namespace management
-  namespaces = signal<Namespace[]>([]);
+  // The projects on this cluster: each one blocks its deletion.
+  projects = signal<Project[]>([]);
 
-  // True when the namespace list failed to load, so the count is unknown and
+  // True when the project list failed to load, so the count is unknown and
   // cluster deletion must not be unlocked on a falsely-empty list.
-  namespacesLoadError = signal<boolean>(false);
+  projectsLoadError = signal<boolean>(false);
 
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
@@ -482,9 +498,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.clusterData.created = response.cluster.created;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      // Fetch namespaces, plugins, and events in parallel
+      // Fetch projects, plugins, and events in parallel
       await Promise.all([
-        this.loadNamespaces(clusterId),
+        this.loadProjects(clusterId),
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
         this.loadResourceUsage(clusterId),
@@ -765,6 +781,22 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       );
       this.pageNav.goTo('/clusters');
     } catch (error) {
+      if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
+        // A project was added after the page loaded: show what blocks the
+        // deletion now, the same way the button does. That includes a reload
+        // that failed, which would otherwise leave the old, empty list.
+        await this.loadProjects(this.clusterData.basics.id);
+        if (this.deleteBlockedReason()) {
+          this.showDeleteModal.set(false);
+          this.showDeleteBlockedModal.set(true);
+        } else {
+          // Its projects were deleted in the meantime, so a retry can succeed.
+          this.errorMessage.set(
+            `This cluster could not be deleted: ${error.rawMessage}. Try again.`,
+          );
+        }
+        return;
+      }
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
@@ -775,19 +807,18 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Namespace management methods
-  async loadNamespaces(clusterId: string): Promise<void> {
+  async loadProjects(clusterId: string): Promise<void> {
     try {
-      const request = create(ListClusterNamespacesRequestSchema, { clusterId });
-      const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
-      this.namespaces.set(response.namespaces);
-      this.namespacesLoadError.set(false);
+      const request = create(ListProjectsRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.projectClient.listProjects(request));
+      this.projects.set(response.projects);
+      this.projectsLoadError.set(false);
     } catch (error) {
-      this.namespacesLoadError.set(true);
+      this.projectsLoadError.set(true);
       this.notificationService.error(
         error instanceof Error
-          ? `Failed to load namespaces: ${error.message}`
-          : 'Failed to load namespaces',
+          ? `Failed to load projects: ${error.message}`
+          : 'Failed to load projects',
       );
     }
   }

@@ -127,3 +127,48 @@ func TestProjectRBAC_ReconcileRepairsDrift(t *testing.T) {
 	assert.Equal(t, "admin", f.binding(f.projAdmin).RoleRef.Name, "wrong role corrected")
 	assert.Nil(t, f.binding(stranger), "orphan removed")
 }
+
+// A project membership left behind by a removal from the organization neither
+// keeps its RoleBinding nor its ServiceAccount: the user sync for the removal
+// and the reconcile loop both treat it as no access. The database removes the
+// project memberships with the organization membership, so the leftover is put
+// back by hand, as one left from before it did.
+func TestProjectRBAC_RemovedOrgMemberLosesAccess(t *testing.T) {
+	t.Parallel()
+	f := newProjectRBACFixture(t, "prbac-org-removed")
+	h := newUserSyncHandler(t, f.db, f.mock)
+	ctx := t.Context()
+
+	orgUserID := getOrgUserID(t, f.db, acmeCorpOrgID, f.projViewer)
+	require.NoError(t, h.Sync(ctx, orgUserID, handler.SyncContext{
+		EntityType: handler.EntityOrgUser,
+		Event:      dbconst.ClusterOutboxEvent_Created,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
+	}))
+	require.True(t, f.mock.HasSA(f.clusterID, f.projViewer), "precondition: SA exists")
+	require.NotNil(t, f.binding(f.projViewer), "precondition: binding exists")
+
+	_, err := f.db.adminPool.Exec(ctx,
+		`UPDATE tenant.organizations_users SET deleted = now(), status = 'revoked' WHERE id = $1`, orgUserID)
+	require.NoError(t, err)
+	_, err = f.db.adminPool.Exec(ctx,
+		`INSERT INTO tenant.project_members (project_id, user_id, role) VALUES ($1, $2, 'viewer')`,
+		f.projectID, f.projViewer)
+	require.NoError(t, err)
+
+	require.NoError(t, h.Sync(ctx, orgUserID, handler.SyncContext{
+		EntityType: handler.EntityOrgUser,
+		Event:      dbconst.ClusterOutboxEvent_Updated,
+		Source:     dbconst.ClusterOutboxSource_Trigger,
+	}))
+	assert.False(t, f.mock.HasSA(f.clusterID, f.projViewer), "SA removed with the org membership")
+	assert.Nil(t, f.binding(f.projViewer), "binding removed with the org membership")
+
+	// Drift put back on the shoot is removed again by the reconcile loop.
+	require.NoError(t, f.mock.EnsureRoleBinding(ctx, f.clusterID, f.namespace, projectrbac.BindingName(f.projViewer),
+		projectrbac.RoleRef("view"), projectrbac.Subjects(f.projViewer), projectrbac.Labels(f.projViewer)))
+	require.NoError(t, h.Reconcile(ctx))
+	assert.False(t, f.mock.HasSA(f.clusterID, f.projViewer), "reconcile does not recreate the SA")
+	assert.Nil(t, f.binding(f.projViewer), "reconcile removes the binding")
+	assert.NotNil(t, f.binding(f.projAdmin), "other members are untouched")
+}

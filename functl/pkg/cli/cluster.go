@@ -107,6 +107,9 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		if sync.HasOutboxStatus() {
 			PrintKeyValue(w, "Sync Status", sync.GetOutboxStatus())
 		}
+		if sync.HasOutboxMessage() {
+			PrintKeyValue(w, "Sync Message", sync.GetOutboxMessage())
+		}
 		if sync.HasOutboxError() {
 			PrintKeyValue(w, "Sync Error", sync.GetOutboxError())
 		}
@@ -152,6 +155,8 @@ func formatClusterStatus(status organizationv1.ClusterStatus) string {
 		return "stopping"
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 		return "stopped"
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_LOST:
+		return "lost"
 	default:
 		return "unknown"
 	}

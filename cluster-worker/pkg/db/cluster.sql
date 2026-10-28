@@ -39,18 +39,54 @@ RETURNING
     id;
 
 -- name: ClusterListActive :many
--- Used by periodic reconciliation to compare with Gardener state. Whether a
--- cluster missing in Gardener is repaired is OutboxInsertReconcile's decision.
+-- Used by periodic reconciliation to compare with Gardener state.
+-- latest_sync_completed: the cluster's own latest sync row completed, so a
+-- missing Shoot is not one a queued or failing sync has yet to create. "Latest
+-- sync row" is the cluster_sync_state view's row
+-- (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
-    tenant.organizations.name AS organization_name
+    tenant.clusters.shoot_status,
+    tenant.organizations.name AS organization_name,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ) = 'completed', false)::boolean AS latest_sync_completed
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
     tenant.clusters.deleted IS NULL
+ORDER BY
+    tenant.clusters.id;
+
+-- name: ClusterListDeletedByIDs :many
+-- Of the given cluster IDs, those whose cluster row exists and is soft-deleted.
+-- Periodic reconciliation only deletes a Shoot whose cluster a user deleted,
+-- and only once the delete sync has settled.
+-- sync_running: the cluster's own latest sync row (as in ClusterGetPushState)
+-- is still queued.
+SELECT
+    tenant.clusters.id,
+    COALESCE((
+        SELECT tenant.cluster_outbox.status IN ('pending', 'retrying')
+        FROM tenant.cluster_outbox
+        WHERE tenant.cluster_outbox.cluster_id = tenant.clusters.id
+          AND tenant.cluster_outbox.event IN ('created', 'updated', 'deleted', 'reconcile')
+        ORDER BY tenant.cluster_outbox.id DESC
+        LIMIT 1
+    ), false)::boolean AS sync_running
+FROM
+    tenant.clusters
+WHERE
+    tenant.clusters.id = ANY(@cluster_ids::uuid[])
+    AND tenant.clusters.deleted IS NOT NULL
 ORDER BY
     tenant.clusters.id;
 
@@ -144,6 +180,19 @@ SET
     status_updated = now()
 WHERE
     id = @node_pool_id
+    AND deleted IS NULL;
+
+-- name: NodePoolClearStatusByClusterID :exec
+-- Forget what was recorded about a lost cluster's pools: their machines went
+-- with the Shoot. When a change creates it again they read as new, so as
+-- progressing while the create runs, instead of their old status and reason.
+UPDATE tenant.node_pools
+SET
+    status = NULL,
+    status_message = NULL,
+    status_updated = now()
+WHERE
+    cluster_id = @cluster_id
     AND deleted IS NULL;
 
 -- name: NodePoolGetClusterID :one
@@ -317,6 +366,40 @@ ORDER BY
     tenant.cluster_events.created DESC
 LIMIT
     1;
+
+-- name: ClusterMarkShootDeleted :execrows
+-- Record that a deleted cluster has no Shoot (it never reached Gardener, or
+-- the Shoot is already gone), so it stops counting against the organization's
+-- cluster quota at once instead of at the next status sweep. The same end
+-- state the sweep writes when it confirms a deletion.
+UPDATE tenant.clusters
+SET
+    shoot_status = 'deleted',
+    shoot_status_message = @message,
+    shoot_health = NULL,
+    shoot_updating = false,
+    shoot_api_available = NULL,
+    shoot_status_updated = now()
+WHERE
+    id = @cluster_id
+    AND deleted IS NOT NULL
+    AND shoot_status IS DISTINCT FROM 'deleted';
+
+-- name: ClusterCreateEventUnlessLatest :execrows
+-- Insert an event unless the cluster's latest one already says the same (type
+-- and message): a cluster waiting on a precondition records the wait once,
+-- however many of its outbox rows park meanwhile. The caller holds the
+-- cluster row (OutboxLockCluster), so two parks cannot both insert.
+INSERT INTO tenant.cluster_events (cluster_id, event_type, message)
+SELECT @cluster_id, @event_type, @message
+WHERE (
+    SELECT tenant.cluster_events.event_type = @event_type::text
+       AND tenant.cluster_events.message IS NOT DISTINCT FROM @message::text
+    FROM tenant.cluster_events
+    WHERE tenant.cluster_events.cluster_id = @cluster_id
+    ORDER BY tenant.cluster_events.created DESC, tenant.cluster_events.id DESC
+    LIMIT 1
+) IS DISTINCT FROM true;
 
 -- name: ClusterCreateStatusEvent :one
 -- Insert status event (only for milestone states: ready, error, deleted).

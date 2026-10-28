@@ -141,7 +141,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		case dbconst.ClusterEventEventType_StatusUnhealthy:
 			h.logger.Warn("ready shoot became unhealthy", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		case dbconst.ClusterEventEventType_StatusLost:
-			h.logger.Warn("shoot disappeared from Gardener", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
+			h.logger.Error("ALERT: shoot disappeared from Gardener, not recreating it", "cluster_id", cluster.ID, "name", cluster.Name, "previous_status", stored.Status)
 		case dbconst.ClusterEventEventType_StatusWarning:
 			h.logger.Warn("gardener is retrying a failed shoot operation", "cluster_id", cluster.ID, "name", cluster.Name, "message", event.Message)
 		default:
@@ -255,6 +255,12 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 			Message:   pgtype.Text{String: event.Message, Valid: true},
 		}); err != nil {
 			return false, fmt.Errorf("create %s event: %w", event.Type, err)
+		}
+	}
+
+	if update.Status == gardener.StatusLost {
+		if err := qtx.NodePoolClearStatusByClusterID(ctx, db.NodePoolClearStatusByClusterIDParams{ClusterID: cluster.ID}); err != nil {
+			return false, fmt.Errorf("clear node pool status: %w", err)
 		}
 	}
 

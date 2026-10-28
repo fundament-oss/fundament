@@ -20,7 +20,7 @@ kubectl ──(JWT)──> kube-api-proxy ──(SA token)──> shoot API serv
 
 - `cmd/fun-kube-api-proxy` — entrypoint, config, server lifecycle
 - `pkg/proxy` — HTTP server, routing, JWT auth, OpenFGA authz
-- `pkg/kube` — reverse proxy, admin kubeconfig cache, 401 retry transport, mock client
+- `pkg/kube` — reverse proxy, admin kubeconfig cache, mock client
 - `pkg/token` — per-user SA token cache with proactive refresh and singleflight dedup
 - `pkg/gardener` — Gardener API client for admin kubeconfig requests
 
@@ -46,8 +46,8 @@ kubectl ──(JWT)──> kube-api-proxy ──(SA token)──> shoot API serv
 
 Two-level cache minimizes latency and Gardener API calls:
 
-- **Admin kubeconfig cache** (per cluster): singleflight-deduplicated, refreshes at 70% of TTL
-- **SA token cache** (per user+cluster pair): 15-minute TTL from TokenRequest API, proactive refresh at 80% of TTL, force-refresh on 401
+- **Admin kubeconfig cache** (per cluster): singleflight-deduplicated, refreshes at 70% of TTL, dropped when the cluster's TLS certificate fails verification (a cluster created again under the same name has a new certificate authority)
+- **SA token cache** (per SA+cluster pair): 15-minute TTL from TokenRequest API, proactive refresh at 80% of TTL, dropped when the cluster answers a request with 401 or presents a certificate the cached credentials do not trust, so the next request gets a new token
 
 ## Error responses
 
