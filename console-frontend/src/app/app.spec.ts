@@ -270,8 +270,7 @@ describe('App', () => {
   // load off: the page would end up with no plugin and say it is not available.
   describe('plugin registry', () => {
     async function setUpProject() {
-      const project = signal<{ cluster: { id: string } } | undefined>(undefined);
-      const projectsLoaded = signal(false);
+      const projects = signal<Record<string, { cluster: { id: string } }>>({});
       const registry = { loadPlugins: vi.fn(async () => {}), reset: vi.fn() };
       // Only the shell's effects are under test, not its markup.
       TestBed.overrideTemplate(App, '');
@@ -284,48 +283,69 @@ describe('App', () => {
             organizations: signal([]),
             clusterSummaries: signal([]),
             clustersLoaded: signal(false),
-            projectsLoaded,
             getOrganizationById: () => undefined,
-            getProjectById: () => project(),
+            getProjectById: (id: string) => projects()[id],
             getClusterById: () => undefined,
           },
         },
       ]);
       const app = TestBed.createComponent(App).componentInstance;
+      app.selectedOrgId.set('org-1');
       app.currentUrl.set('/projects/p-1/plugin-resources/acme--openftv/openftvmanagers');
       TestBed.tick();
-      return { app, project, projectsLoaded, registry };
+      return { app, projects, registry };
     }
 
-    it('leaves the registry alone while the project is open but its cluster is unknown', async () => {
-      const { project, registry } = await setUpProject();
+    it('leaves the registry alone before the project has a cluster', async () => {
+      const { projects, registry } = await setUpProject();
 
-      project.set({ cluster: { id: 'cl-1' } });
-      TestBed.tick();
-      project.set(undefined);
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
       TestBed.tick();
 
       expect(registry.reset).not.toHaveBeenCalled();
       expect(registry.loadPlugins).toHaveBeenCalledWith('cl-1', { fresh: true });
     });
 
-    // /projects/new, or a project deleted while open: the projects are in and
-    // this one is not among them, so no cluster is coming.
-    it('resets the registry once the projects are in without this one', async () => {
-      const { project, projectsLoaded, registry } = await setUpProject();
-      project.set({ cluster: { id: 'cl-1' } });
+    it('keeps the registry while the open project is reloading', async () => {
+      const { projects, registry } = await setUpProject();
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
       TestBed.tick();
 
-      project.set(undefined);
-      projectsLoaded.set(true);
+      projects.set({});
+      TestBed.tick();
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
+      TestBed.tick();
+
+      expect(registry.reset).not.toHaveBeenCalled();
+      expect(registry.loadPlugins).toHaveBeenLastCalledWith('cl-1', { fresh: false });
+    });
+
+    it('resets the registry for a project with no cluster to follow', async () => {
+      const { app, projects, registry } = await setUpProject();
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
+      TestBed.tick();
+
+      app.currentUrl.set('/projects/new');
+      TestBed.tick();
+
+      expect(registry.reset).toHaveBeenCalledTimes(1);
+    });
+
+    it('resets the registry when the organization changes under the open project', async () => {
+      const { app, projects, registry } = await setUpProject();
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
+      TestBed.tick();
+
+      projects.set({});
+      app.selectedOrgId.set('org-2');
       TestBed.tick();
 
       expect(registry.reset).toHaveBeenCalledTimes(1);
     });
 
     it('resets the registry once the project is left', async () => {
-      const { app, project, registry } = await setUpProject();
-      project.set({ cluster: { id: 'cl-1' } });
+      const { app, projects, registry } = await setUpProject();
+      projects.set({ 'p-1': { cluster: { id: 'cl-1' } } });
       TestBed.tick();
 
       app.currentUrl.set('/clusters');

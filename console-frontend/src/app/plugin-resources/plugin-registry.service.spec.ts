@@ -337,9 +337,25 @@ describe('PluginRegistryService', () => {
     await registry.loadPlugins('cl-2');
     await registry.loadPlugins('cl-1');
     respond(new Response(JSON.stringify(SCHEMA), { status: 200 }));
-    await read;
 
+    // The caller still gets what it read; only the cache is not refilled.
+    expect((await read).map((crd) => crd.kind)).toEqual(['Certificate']);
     expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeUndefined();
+  });
+
+  it('keeps the menu when a load for the same cluster follows one that threw', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+
+    getConfig.mockImplementationOnce(() => {
+      throw new Error('no config');
+    });
+    await vi.advanceTimersByTimeAsync(30000);
+    const next = registry.loadPlugins('cl-1');
+
+    expect(registry.allPlugins()).toHaveLength(1);
+    await next;
   });
 
   it("drops the previous cluster's menu when switching clusters", async () => {

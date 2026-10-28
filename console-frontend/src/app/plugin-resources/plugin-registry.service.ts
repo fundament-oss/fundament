@@ -49,6 +49,12 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
+/** The names a resource kind can be looked up by: plural, kind, and
+ *  "<plural>.<group>". */
+export function crdKeys(crd: ParsedCrd): string[] {
+  return [crd.plural, crd.kind, `${crd.plural}.${crd.group}`];
+}
+
 function mapDefinition(
   def: ProtoPluginDefinition,
   installation: {
@@ -182,7 +188,10 @@ export default class PluginRegistryService {
    *  `fresh` reads again now instead of at the next poll, for a project just
    *  opened; a read already under way is fresh enough and is joined. */
   loadPlugins(clusterId: string, { fresh = false } = {}): Promise<void> {
-    if (clusterId === this.activeClusterId && this.latestLoad) {
+    if (clusterId === this.activeClusterId) {
+      // A load that threw left no next read: start one, keeping what the
+      // cluster had rather than clearing it.
+      if (!this.latestLoad) return this.startRun(clusterId, this.generation);
       // A retry already waiting on the backoff timer runs now instead; one
       // that is under way is what the caller waits on.
       if ((fresh || this.lastSyncFailed) && this.pollTimer) {
@@ -437,19 +446,22 @@ export default class PluginRegistryService {
     }
   }
 
+  /** Reads the plugin's CRDs and caches their schemas. Resolves with what was
+   *  read, so a caller is not left without it when a reset or cluster switch
+   *  since the read keeps it out of the cache. */
   async loadCrdsForPlugin(
     pluginName: string,
     clusterId: string,
     kubeApiProxyUrl: string,
-  ): Promise<void> {
+  ): Promise<ParsedCrd[]> {
     const plugin = this.getPlugin(pluginName);
-    if (!plugin) return;
+    if (!plugin) return [];
 
     const base = kubeApiProxyUrl.replace(/\/$/, '');
     const { generation } = this;
 
-    await Promise.allSettled(
-      plugin.crds.map(async (crdName) => {
+    const results = await Promise.allSettled(
+      plugin.crds.map(async (crdName): Promise<ParsedCrd | null> => {
         const url = `${base}/clusters/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${crdName}`;
         const response = await fetch(url, {
           credentials: 'include',
@@ -458,20 +470,21 @@ export default class PluginRegistryService {
         if (!response.ok) {
           // eslint-disable-next-line no-console
           console.error(`[PluginRegistry] Failed to fetch CRD ${crdName}: ${response.status}`);
-          return;
+          return null;
         }
 
-        const raw = (await response.json()) as RawCrdYaml;
-        // A cluster switch since the read cleared the cache; refilling it
-        // would hand back a schema the next read may not get.
-        if (generation !== this.generation) return;
-        const parsed = parseCrd(raw);
-        const fullName = `${parsed.plural}.${parsed.group}`;
-        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.plural}`, parsed);
-        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${parsed.kind}`, parsed);
-        this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${fullName}`, parsed);
+        const parsed = parseCrd((await response.json()) as RawCrdYaml);
+        // A reset or cluster switch since the read cleared the cache; refilling
+        // it would hand a later caller a schema its own read may not get.
+        if (generation === this.generation) {
+          crdKeys(parsed).forEach((key) =>
+            this.parsedCrdByPlural.set(`${pluginName}/${clusterId}/${key}`, parsed),
+          );
+        }
+        return parsed;
       }),
     );
+    return results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []));
   }
 
   reset(): void {

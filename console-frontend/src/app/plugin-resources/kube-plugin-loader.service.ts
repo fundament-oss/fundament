@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ConfigService } from '../config.service';
-import PluginRegistryService from './plugin-registry.service';
+import PluginRegistryService, { crdKeys } from './plugin-registry.service';
 import PluginResourceStoreService from './plugin-resource-store.service';
 import type { ParsedCrd, KubeResource } from './types';
 
@@ -22,8 +22,11 @@ export default class KubePluginLoaderService {
   ): Promise<ParsedCrd | undefined> {
     const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
     await this.registry.loadPlugins(clusterId);
-    await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl);
-    return this.registry.getCrd(pluginName, resourceKind, clusterId);
+    const read = await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl);
+    return (
+      read.find((crd) => crdKeys(crd).includes(resourceKind)) ??
+      this.registry.getCrd(pluginName, resourceKind, clusterId)
+    );
   }
 
   async loadCrdAndResources(
