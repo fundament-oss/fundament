@@ -30,6 +30,16 @@ function installation(
 /** What the apiserver returns for the menu's CRD, cut down to what is read. */
 const CRD = { spec: { names: { kind: 'Certificate' } } };
 
+/** The same CRD with as much as a parsed schema needs. */
+const SCHEMA = {
+  spec: {
+    group: 'cert-manager.io',
+    scope: 'Namespaced',
+    names: { kind: 'Certificate', plural: 'certificates', singular: 'certificate' },
+    versions: [{ name: 'v1', storage: true, schema: { openAPIV3Schema: {} } }],
+  },
+};
+
 function isCrdRead(url: unknown): boolean {
   return String(url).includes('customresourcedefinitions');
 }
@@ -262,6 +272,101 @@ describe('PluginRegistryService', () => {
     await registry.loadPlugins('cl-1');
 
     expect(registry.allPlugins()).toHaveLength(1);
+  });
+
+  it('reads again at once when a fresh read is asked for', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    await registry.loadPlugins('cl-1');
+
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1', { fresh: true });
+
+    expect(listReads()).toBe(2);
+    expect(registry.allPlugins()).toHaveLength(1);
+  });
+
+  // A resource page and the app shell both load on a refresh: the second
+  // caller must join the first, not cut it off.
+  it('joins a read under way when a fresh read is asked for', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+
+    const first = registry.loadPlugins('cl-1');
+    const second = registry.loadPlugins('cl-1', { fresh: true });
+    await Promise.all([first, second]);
+
+    expect(listReads()).toBe(1);
+    expect(registry.getPlugin('acme--cert-manager')).toBeDefined();
+  });
+
+  it("does not hand back a cluster's CRD schema after switching away and back", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+    vi.mocked(fetch).mockImplementationOnce(
+      async () => new Response(JSON.stringify(SCHEMA), { status: 200 }),
+    );
+    await registry.loadCrdsForPlugin('acme--cert-manager', 'cl-1', 'https://proxy.test');
+    expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeDefined();
+
+    await registry.loadPlugins('cl-2');
+    await registry.loadPlugins('cl-1');
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      isCrdRead(url)
+        ? new Response('', { status: 403 })
+        : new Response(JSON.stringify({ items }), { status: 200 }),
+    );
+    await registry.loadCrdsForPlugin('acme--cert-manager', 'cl-1', 'https://proxy.test');
+
+    expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeUndefined();
+  });
+
+  it('drops a CRD schema that arrives after a cluster switch', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+    let respond: (response: Response) => void = () => {};
+    vi.mocked(fetch).mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          respond = resolve;
+        }),
+    );
+    const read = registry.loadCrdsForPlugin('acme--cert-manager', 'cl-1', 'https://proxy.test');
+
+    await registry.loadPlugins('cl-2');
+    await registry.loadPlugins('cl-1');
+    respond(new Response(JSON.stringify(SCHEMA), { status: 200 }));
+
+    // The caller still gets what it read; only the cache is not refilled.
+    expect((await read).map((crd) => crd.kind)).toEqual(['Certificate']);
+    expect(registry.getCrd('acme--cert-manager', 'certificates', 'cl-1')).toBeUndefined();
+  });
+
+  it('keeps the menu when a load for the same cluster follows one that threw', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+
+    getConfig.mockImplementationOnce(() => {
+      throw new Error('no config');
+    });
+    await vi.advanceTimersByTimeAsync(30000);
+    const next = registry.loadPlugins('cl-1');
+
+    expect(registry.allPlugins()).toHaveLength(1);
+    await next;
+  });
+
+  it("drops the previous cluster's menu when switching clusters", async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    items = [installation('Running')];
+    await registry.loadPlugins('cl-1');
+
+    items = [];
+    const next = registry.loadPlugins('cl-2');
+    expect(registry.allPlugins()).toEqual([]);
+    await next;
   });
 
   it('stops reading when the project is left', async () => {

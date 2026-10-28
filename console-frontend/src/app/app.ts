@@ -244,23 +244,37 @@ export default class App implements OnInit {
 
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
-    // so the cluster resolves later and has to bring the plugins with it.
+    // so the cluster resolves later and has to bring the plugins with it. Only
+    // what the shell loaded is torn down: a project or organization other than
+    // the one it loaded for resets, but on a refresh it has loaded nothing, so
+    // a load a resource page started meanwhile is not cut off.
     effect(() => {
+      const orgId = this.selectedOrgId();
       const projectId = this.activeProjectId();
       const clusterId = this.activeProjectClusterId();
 
-      if (projectId && clusterId) {
-        untracked(() => this.loadPluginsForCluster(clusterId));
-      } else {
-        untracked(() => this.pluginRegistry.reset());
-      }
+      untracked(() => {
+        const key = projectId ? `${orgId}/${projectId}` : null;
+        if (key && clusterId) {
+          const opened = key !== this.pluginsLoadedFor;
+          this.pluginsLoadedFor = key;
+          this.loadPluginsForCluster(clusterId, opened).catch(() => {});
+        } else if (this.pluginsLoadedFor !== null && key !== this.pluginsLoadedFor) {
+          this.pluginsLoadedFor = null;
+          this.pluginRegistry.reset();
+        }
+      });
     });
   }
 
-  private async loadPluginsForCluster(clusterId: string): Promise<void> {
-    this.pluginRegistry.reset();
+  // The organization and project the shell last loaded plugins for.
+  private pluginsLoadedFor: string | null = null;
+
+  // Fresh only for a project just opened, so it shows plugins installed since
+  // the last poll; a rerun for the same project leaves the poll's pace alone.
+  private async loadPluginsForCluster(clusterId: string, fresh: boolean): Promise<void> {
     this.clusterContext.onClusterChange(clusterId);
-    await this.pluginRegistry.loadPlugins(clusterId);
+    await this.pluginRegistry.loadPlugins(clusterId, { fresh });
   }
 
   async ngOnInit() {
