@@ -165,3 +165,52 @@ func Test_NodePool_List_DegradesWithoutMetrics(t *testing.T) {
 		assert.Empty(t, pool.GetVersion())
 	}
 }
+
+// A new shoot has no Prometheus until every pool has its machines. Meanwhile
+// a pool reports the node counts cluster-worker read from the shoot's API
+// server, while those are fresh.
+func Test_NodePool_List_FallsBackToStoredNodeCounts(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+	)
+	token := env.createAuthnToken(t, userID)
+
+	clusterID, client, ctx := nodePoolTestCluster(t, env, orgID, token)
+	_, err := env.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET status = 'ready', node_count = 2, node_count_ready = 2, node_count_updated = now()
+		 WHERE cluster_id = $1 AND name = 'workers'`, clusterID)
+	require.NoError(t, err)
+	_, err = env.adminPool.Exec(t.Context(),
+		`UPDATE tenant.node_pools SET status = 'ready', node_count = 1, node_count_ready = 1, node_count_updated = now() - interval '1 hour'
+		 WHERE cluster_id = $1 AND name = 'spot'`, clusterID)
+	require.NoError(t, err)
+
+	res, err := client.ListNodePools(ctx, organizationv1.ListNodePoolsRequest_builder{
+		ClusterId: clusterID,
+	}.Build())
+	require.NoError(t, err)
+	require.Len(t, res.GetNodePools(), 2)
+
+	pools := make(map[string]*organizationv1.NodePool, len(res.GetNodePools()))
+	for _, pool := range res.GetNodePools() {
+		pools[pool.GetName()] = pool
+	}
+
+	workers := pools["workers"]
+	require.NotNil(t, workers)
+	assert.Equal(t, int32(2), workers.GetCurrentNodes())
+	assert.Equal(t, organizationv1.NodePoolStatus_NODE_POOL_STATUS_HEALTHY, workers.GetStatus())
+	assert.Empty(t, workers.GetVersion())
+
+	// Counts older than half an hour are not shown.
+	spot := pools["spot"]
+	require.NotNil(t, spot)
+	assert.Equal(t, int32(0), spot.GetCurrentNodes())
+	assert.Equal(t, organizationv1.NodePoolStatus_NODE_POOL_STATUS_UNSPECIFIED, spot.GetStatus())
+}

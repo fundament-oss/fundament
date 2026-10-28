@@ -14,6 +14,9 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
@@ -36,6 +39,9 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
