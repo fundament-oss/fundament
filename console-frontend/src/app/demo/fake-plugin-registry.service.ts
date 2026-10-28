@@ -13,7 +13,14 @@ import * as fx from './fixtures';
 @Injectable({ providedIn: 'root' })
 export default class FakePluginRegistryService implements Pick<
   PluginRegistryService,
-  'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'crdKind' | 'allPlugins'
+  | 'loadPlugins'
+  | 'loadCrdsForPlugin'
+  | 'reset'
+  | 'getPlugin'
+  | 'getCrd'
+  | 'crdKind'
+  | 'crdScope'
+  | 'allPlugins'
 > {
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
   // reflects the install the walkthrough performs on its plugin slide.
@@ -122,6 +129,14 @@ export default class FakePluginRegistryService implements Pick<
     return Object.values(fx.pluginCrds)
       .flat()
       .find((crd) => crdRef === `${crd.plural}.${crd.group}`)?.kind;
+  }
+
+  /** The scope of the CRD a menu entry points at, from the fixtures. */
+  // eslint-disable-next-line class-methods-use-this
+  crdScope(crdRef: string): ParsedCrd['scope'] | undefined {
+    return Object.values(fx.pluginCrds)
+      .flat()
+      .find((crd) => crdRef === `${crd.plural}.${crd.group}`)?.scope;
   }
 
   allPlugins = this.plugins.asReadonly();

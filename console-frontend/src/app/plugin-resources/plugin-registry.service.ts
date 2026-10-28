@@ -4,14 +4,24 @@ import type {
   PluginDefinition,
   ParsedCrd,
   RawCrdYaml,
+  PluginMenuItem,
   PluginInstallationItem,
   PluginInstallationListResponse,
 } from './types';
-import type { PluginDefinition as ProtoPluginDefinition } from '../../generated/v1/plugin_pb';
+import type {
+  PluginDefinition as ProtoPluginDefinition,
+  PluginMenuEntry as ProtoPluginMenuEntry,
+} from '../../generated/v1/plugin_pb';
 import { PLUGIN } from '../../connect/tokens';
 import { parseObjectSchema } from './crd-schema.utils';
 import { ConfigService } from '../config.service';
 import { installPhase, isInstallInProgress } from '../utils/plugin-install-status';
+
+type CrdScope = 'Namespaced' | 'Cluster';
+interface CrdKindInfo {
+  kind: string;
+  scope?: CrdScope;
+}
 
 function parseCrd(raw: RawCrdYaml): ParsedCrd {
   const version = raw.spec.versions.find((v) => v.storage) ?? raw.spec.versions[0];
@@ -49,6 +59,15 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
+function mapMenuEntry(e: ProtoPluginMenuEntry): PluginMenuItem {
+  return {
+    crd: e.crd,
+    label: e.label || undefined,
+    singularLabel: e.singularLabel || undefined,
+    icon: e.icon || undefined,
+  };
+}
+
 function mapDefinition(
   def: ProtoPluginDefinition,
   installation: {
@@ -65,12 +84,8 @@ function mapDefinition(
     description: def.metadata?.description ?? '',
     author: def.metadata?.author || undefined,
     menu: {
-      project: def.menu?.project?.map((e) => ({
-        crd: e.crd,
-        label: e.label || undefined,
-        singularLabel: e.singularLabel || undefined,
-        icon: e.icon || undefined,
-      })),
+      organization: def.menu?.organization?.map(mapMenuEntry),
+      project: def.menu?.project?.map(mapMenuEntry),
     },
     crds: def.crds ?? [],
     customComponents:
@@ -172,7 +187,9 @@ export default class PluginRegistryService {
   // acronym's case survive. A signal, so the sidebar redraws when they arrive:
   // it is built from the definitions alone, which name the CRDs but do not say
   // how they are spelled.
-  private crdKinds = signal<ReadonlyMap<string, string>>(new Map());
+  // Their scope rides along from the same read, so the nav can tell a
+  // cluster-scoped entry from a namespaced one.
+  private crdKinds = signal<ReadonlyMap<string, CrdKindInfo>>(new Map());
 
   private configService = inject(ConfigService);
 
@@ -388,8 +405,8 @@ export default class PluginRegistryService {
   }
 
   /**
-   * Reads the kind of every CRD the menus point at, so the sidebar can spell a
-   * resource the way the CRD does. A read that fails is skipped silently: the
+   * Reads the kind and scope of every CRD the menus point at, so the sidebar can
+   * spell a resource the way the CRD does and place it by scope. A read that fails is skipped silently: the
    * reference-derived label stands in, and a CRD the user may not read must not
    * take the menu with it.
    */
@@ -398,7 +415,10 @@ export default class PluginRegistryService {
     const refs = [
       ...new Set(
         this.plugins()
-          .flatMap((plugin) => plugin.menu.project ?? [])
+          .flatMap((plugin) => [
+            ...(plugin.menu.organization ?? []),
+            ...(plugin.menu.project ?? []),
+          ])
           .map((entry) => entry.crd)
           .filter((ref) => ref && !known.has(ref)),
       ),
@@ -407,7 +427,7 @@ export default class PluginRegistryService {
 
     const base = this.configService.getConfig().kubeApiProxyUrl.replace(/\/$/, '');
     const found = await Promise.all(
-      refs.map(async (ref): Promise<[string, string] | null> => {
+      refs.map(async (ref): Promise<[string, CrdKindInfo] | null> => {
         try {
           const response = await fetch(
             `${base}/clusters/${clusterId}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${ref}`,
@@ -416,7 +436,13 @@ export default class PluginRegistryService {
           if (!response.ok) return null;
           const raw = (await response.json()) as RawCrdYaml;
           const kind = raw.spec?.names?.kind;
-          return kind ? [ref, kind] : null;
+          const scope = raw.spec?.scope;
+          return kind
+            ? [
+                ref,
+                { kind, scope: scope === 'Namespaced' || scope === 'Cluster' ? scope : undefined },
+              ]
+            : null;
         } catch {
           return null;
         }
@@ -424,14 +450,19 @@ export default class PluginRegistryService {
     );
     if (generation !== this.generation) return;
 
-    const resolved = found.filter((entry): entry is [string, string] => entry !== null);
+    const resolved = found.filter((entry): entry is [string, CrdKindInfo] => entry !== null);
     if (resolved.length === 0) return;
     this.crdKinds.set(new Map([...this.crdKinds(), ...resolved]));
   }
 
   /** The kind of the CRD a menu entry points at, once it has been read. */
   crdKind(crdRef: string): string | undefined {
-    return this.crdKinds().get(crdRef);
+    return this.crdKinds().get(crdRef)?.kind;
+  }
+
+  /** The scope of the CRD a menu entry points at, once it has been read. */
+  crdScope(crdRef: string): CrdScope | undefined {
+    return this.crdKinds().get(crdRef)?.scope;
   }
 
   private stopPolling(): void {

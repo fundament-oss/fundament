@@ -91,10 +91,13 @@ function depthForPath(url: string): number {
   return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
-/** One step up from a page: the project it belongs to, or the organization when
- *  it belongs to none. Relative to the organization, which is what goTo takes. */
-function parentOf(url: string): string {
+/** One step up from a page: the project or cluster it belongs to, or the
+ *  organization when it belongs to none. Relative to the organization, which is
+ *  what goTo takes. */
+export function parentOf(url: string): string {
   const path = withinOrganization(url.split(/[?#]/)[0]);
+  const cluster = /^\/clusters\/([^/]+)\/plugin-resources\//.exec(path);
+  if (cluster) return `/clusters/${cluster[1]}`;
   const project = /^\/projects\/([^/]+)\//.exec(path);
   return project ? `/projects/${project[1]}` : '/';
 }
@@ -245,11 +248,11 @@ export default class App implements OnInit {
     // Follows the project's cluster, not only the URL: opening or refreshing a
     // project URL directly gets here before the organization's projects are in,
     // so the cluster resolves later and has to bring the plugins with it.
+    // Outside a project, the cluster page in view decides.
     effect(() => {
-      const projectId = this.activeProjectId();
-      const clusterId = this.activeProjectClusterId();
+      const clusterId = this.activeProjectClusterId() ?? this.activeClusterId();
 
-      if (projectId && clusterId) {
+      if (clusterId) {
         untracked(() => this.loadPluginsForCluster(clusterId));
       } else {
         untracked(() => this.pluginRegistry.reset());
@@ -762,6 +765,13 @@ export default class App implements OnInit {
   activeProjectId = computed(
     () => withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1] ?? null,
   );
+
+  /** The cluster page the URL is in, or null. `clusters/new` is the create
+   *  sheet over the list, not a cluster. */
+  activeClusterId = computed(() => {
+    const id = withinOrganization(this.currentUrl()).match(/^\/clusters\/([^/?#]+)/)?.[1];
+    return id && id !== 'new' ? id : null;
+  });
 
   /** The cluster the active project runs on, or null until the organization's
    *  projects have loaded. */

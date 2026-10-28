@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -216,14 +218,68 @@ func (n *namespaceLister) serve(w http.ResponseWriter, r *http.Request, userID, 
 		"user_id", userID, "cluster_id", clusterID, "admin", vis.admin,
 		"projects", len(vis.projectIDs), "query", r.URL.RawQuery)
 
+	n.upstream.ServeHTTP(w, r.WithContext(n.listerContext(ctx, token, userID, clusterID)))
+}
+
+// listerContext reaches the cluster as the proxy SA impersonating the user's
+// SA plus the group that may read namespaces.
+func (n *namespaceLister) listerContext(ctx context.Context, token string, userID, clusterID uuid.UUID) context.Context {
 	ctx = WithSAToken(ctx, token)
 	ctx = kube.WithTokenRejected(ctx, func() { n.forgetProxyToken(clusterID.String(), token) })
 	ctx = kube.WithImpersonation(ctx, kube.Impersonation{
 		User:   shootidentity.UserServiceAccountUsername(userID.String()),
 		Groups: []string{shootidentity.NamespaceListerGroup},
 	})
-	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
-	n.upstream.ServeHTTP(w, r.WithContext(ctx))
+	return context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())
+}
+
+// errProxyCredentials marks a projectNamespaces failure to get the proxy SA token.
+var errProxyCredentials = errors.New("get kube-api-proxy SA token")
+
+// projectNamespaces returns the sorted names of projectID's namespaces; none
+// when the user can't view the project.
+func (n *namespaceLister) projectNamespaces(ctx context.Context, userID, clusterID, projectID uuid.UUID) ([]string, error) {
+	vis, err := n.visibility.resolve(ctx, userID, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	token, err := n.proxyToken(ctx, clusterID.String())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errProxyCredentials, err)
+	}
+
+	selector := shootidentity.LabelProjectID + "=" + projectID.String()
+	if req := projectRequirement(vis); req != "" {
+		selector += "," + req
+	}
+	target := "/api/v1/namespaces?" + url.Values{"labelSelector": {selector}}.Encode()
+	r, err := http.NewRequestWithContext(n.listerContext(ctx, token, userID, clusterID), http.MethodGet, target, http.NoBody)
+	if err != nil {
+		return nil, fmt.Errorf("build namespace list request: %w", err)
+	}
+	r.Header.Set("Accept", "application/json")
+
+	buf := &bufferedResponse{header: http.Header{}, status: http.StatusOK}
+	n.upstream.ServeHTTP(buf, r)
+	if buf.status/100 != 2 {
+		return nil, fmt.Errorf("list project namespaces: status %d: %s", buf.status, buf.body.String())
+	}
+	var list struct {
+		Items []struct {
+			Metadata struct {
+				Name string `json:"name"`
+			} `json:"metadata"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(buf.body.Bytes(), &list); err != nil {
+		return nil, fmt.Errorf("decode namespace list: %w", err)
+	}
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Metadata.Name)
+	}
+	slices.Sort(names)
+	return names, nil
 }
 
 func cloneURL(u *url.URL) *url.URL {

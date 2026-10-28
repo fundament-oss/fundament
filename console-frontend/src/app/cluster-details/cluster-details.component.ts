@@ -53,6 +53,7 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import MockBadgeComponent from '../mock-badge/mock-badge.component';
 import ClusterDefaultsBlockComponent from '../container-defaults/cluster-defaults-block.component';
+import ClusterPluginResourcesBlockComponent from './cluster-plugin-resources-block.component';
 import { ConfigService } from '../config.service';
 import focusFirstModalInput from '../modal-focus';
 import {
@@ -278,6 +279,7 @@ const getEventLine = (event: ClusterEvent): string => {
     PluginIconComponent,
     MockBadgeComponent,
     ClusterDefaultsBlockComponent,
+    ClusterPluginResourcesBlockComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
@@ -522,13 +524,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
    *  them, so a slow response can land after a newer one; each request takes a
    *  number and only the latest may write. */
   private nodePoolsRequest = 0;
+
   private eventsRequest = 0;
 
   /** What the node pool cards show. Its own method because the sheet that edits
    *  the pools stands over this page rather than replacing it, so this page has
    *  to fetch them again on its own. */
   private async loadNodePools(clusterId: string): Promise<void> {
-    const request = ++this.nodePoolsRequest;
+    this.nodePoolsRequest += 1;
+    const request = this.nodePoolsRequest;
     try {
       const response = await firstValueFrom(
         this.client.listNodePools(create(ListNodePoolsRequestSchema, { clusterId })),
@@ -579,7 +583,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // a status that moves on its own. On a cluster sitting still they only
       // refresh every 6th tick — listNodePools fans out to Prometheus server
       // side, and an idle tab must not fire that every 5 seconds.
-      this.pollTick++;
+      this.pollTick += 1;
       if (statusChanged || shouldPollStatus(response.cluster.status) || this.pollTick % 6 === 0) {
         this.loadNodePools(clusterId).catch(() => {});
         this.loadClusterEvents(clusterId).catch(() => {});
@@ -917,7 +921,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   async loadClusterEvents(clusterId: string): Promise<void> {
-    const requestNumber = ++this.eventsRequest;
+    this.eventsRequest += 1;
+    const requestNumber = this.eventsRequest;
     try {
       this.isLoadingEvents.set(true);
       const request = create(GetClusterActivityRequestSchema, { clusterId, limit: 20 });

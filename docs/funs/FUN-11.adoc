@@ -112,8 +112,8 @@ The definition is validated by `plugin-sdk/pluginruntime/LoadDefinition()` which
 ** `capabilities`: Simple string list (e.g. `internet_access`).
 ** `rbac`: Kubernetes PolicyRule structures declaring the API groups, resources, and verbs the plugin requires.
 * **menu**: How the plugin appears in the Fundament console.
-** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs).
-** `project`: Menu entries visible to project members (namespace-scoped CRDs).
+** `organization`: Menu entries visible to organization admins (cluster-scoped CRDs), shown on the cluster page.
+** `project`: Menu entries visible to project members (namespace-scoped CRDs), shown on the project page.
 ** Each entry has: `crd` (fully-qualified CRD name), `list`, `detail`, `create` (booleans), and `icon`.
 * **customComponents**: Optional mapping of CRDs to custom UI component names (list/detail).
 * **uiHints**: Per-CRD form layout and status display hints.
@@ -239,8 +239,18 @@ Deletion is handled via a finalizer; the controller cleans up child resources be
 
 When a Plugin is installed in a Cluster, the Console UI displays menu items based on the plugin's `menu` definition:
 
-* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers).
-* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests).
+* **Organization menu** (for the organization admin): Cluster-scoped CRDs (e.g. CertificateIssuers), shown in a "Plugin resources" block on the cluster page of each cluster the plugin is installed on, at `clusters/:id/plugin-resources/...`.
+* **Project menu** (for the project member): Namespace-scoped CRDs (e.g. Certificates, CertificateRequests), shown in the project sidebar. Lists contain only resources in the project's namespaces. The generated list has a namespace picker; custom list UIs receive the project's `namespaces`, `namespaceDisplayNames` and `projectId` and do their own filtering.
+
+Entries whose CRD scope does not match their menu section are not shown (the console logs a warning).
+
+Project lists use a kube-api-proxy filter:
+
+* A cluster-wide `GET` list under `/apis/{group}/{version}/{plural}` with `?fundamentProjectId=<uuid>` returns only items in that project's namespaces.
+* Namespaces are found by the `fundament.io/project-id` label, limited to projects the caller can view. Each namespace is fetched with the caller's own credentials (for a PluginToken: the usual per-request checks) and the items are merged.
+* JSON only; `watch`, `limit` and `continue` are rejected with 400, as is the parameter on any other cluster-wide list (such as core `/api/v1/{plural}`). The parameter is never forwarded to the cluster.
+
+The plugin SDK passes `projectId` in the `fundament:init` context on project pages, and `fundament.k8s.list({..., projectId})` adds `fundamentProjectId` to the request.
 
 Each menu entry can enable list, detail, and create views. Icons are specified per entry.
 

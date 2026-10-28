@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
-import App from './app';
+import App, { parentOf } from './app';
 import AuthnApiService from './authn-api.service';
 import {
   OrganizationService,
@@ -22,6 +22,8 @@ import {
 import { ConfigService, type AppConfiguration } from './config.service';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
+import PluginRegistryService from './plugin-resources/plugin-registry.service';
+import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import {
   AUTHN_TRANSPORT,
   ORGANIZATION_TRANSPORT,
@@ -262,5 +264,78 @@ describe('App', () => {
     expect(calls).toEqual(['refreshToken', 'loadOrganizationData']);
     expect(refreshToken).toHaveBeenCalledTimes(1);
     expect(app.selectedOrgId()).toBe(ORGANIZATION.id);
+  });
+
+  it('follows the cluster in the URL when no project is active', async () => {
+    const loadPlugins = vi.fn(async () => {});
+    const reset = vi.fn();
+    await configure([
+      {
+        provide: Router,
+        useValue: {
+          url: '/',
+          events: NEVER,
+          getCurrentNavigation: () => null,
+          serializeUrl: (tree: unknown) => tree as string,
+          navigateByUrl: () => {},
+        },
+      },
+      {
+        provide: OrganizationDataService,
+        useValue: {
+          userOrganizations: signal([]),
+          organizations: signal([]),
+          clusterSummaries: signal([]),
+          clustersLoaded: signal(false),
+          getOrganizationById: () => undefined,
+          getProjectById: (id: string) => (id === 'p1' ? { cluster: { id: 'c1' } } : undefined),
+          getClusterById: () => undefined,
+        },
+      },
+      {
+        provide: PluginRegistryService,
+        useValue: { loadPlugins, reset, allPlugins: signal([]) },
+      },
+      { provide: KubeClusterContextService, useValue: { onClusterChange: () => {} } },
+    ]);
+    // Only the effects are under test; the sidebar would need the whole shell.
+    TestBed.overrideComponent(App, { set: { template: '' } });
+    const app = TestBed.createComponent(App).componentInstance;
+
+    app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    TestBed.tick();
+    expect(loadPlugins).toHaveBeenLastCalledWith('c2');
+
+    app.currentUrl.set('/organizations/acme-corp/projects/p1');
+    TestBed.tick();
+    expect(loadPlugins).toHaveBeenLastCalledWith('c1');
+
+    loadPlugins.mockClear();
+    app.currentUrl.set('/organizations/acme-corp/clusters/new');
+    TestBed.tick();
+    expect(reset).toHaveBeenCalled();
+    expect(loadPlugins).not.toHaveBeenCalled();
+
+    app.currentUrl.set('/organizations/acme-corp/clusters/c2');
+    TestBed.tick();
+    reset.mockClear();
+    loadPlugins.mockClear();
+    app.currentUrl.set('/organizations/acme-corp/clusters');
+    TestBed.tick();
+    expect(reset).toHaveBeenCalled();
+    expect(loadPlugins).not.toHaveBeenCalled();
+  });
+});
+
+describe('parentOf', () => {
+  it('leads a cluster plugin page to its cluster', () => {
+    expect(parentOf('/organizations/acme-corp/clusters/c1/plugin-resources/p/Kind/x?a=b')).toBe(
+      '/clusters/c1',
+    );
+  });
+
+  it('keeps leading project pages to their project and others to the organization', () => {
+    expect(parentOf('/organizations/acme-corp/projects/p1/members')).toBe('/projects/p1');
+    expect(parentOf('/organizations/acme-corp/clusters/c1')).toBe('/');
   });
 });
