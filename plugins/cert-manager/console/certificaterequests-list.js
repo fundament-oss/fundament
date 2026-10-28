@@ -9,13 +9,14 @@
       } from './_shared.js';
 
       await loadSdk();
-      await fundament.init;
+      const ctx = await fundament.init;
       const tbody = document.getElementById('rows');
 
       try {
         const { items } = await fundament.k8s.list({
           group: 'cert-manager.io',
           version: 'v1',
+          projectId: ctx.projectId,
           resource: 'certificaterequests',
         });
         if (!items || items.length === 0) {

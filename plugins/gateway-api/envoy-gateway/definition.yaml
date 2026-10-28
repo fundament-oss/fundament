@@ -135,12 +135,6 @@ spec:
         list: true
         detail: true
         icon: gauge
-    organization:
-      - crd: gateways.gateway.networking.k8s.io
-        label: Gateways
-        list: true
-        detail: true
-        icon: server
 
   customComponents:
     Gateway:

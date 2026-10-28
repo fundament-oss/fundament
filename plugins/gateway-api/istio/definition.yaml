@@ -111,33 +111,41 @@ spec:
       - apiGroups: ["rbac.authorization.k8s.io"]
         resources: ["clusterrolebindings", "rolebindings"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  crds:
+    - gateways.gateway.networking.k8s.io
+    - httproutes.gateway.networking.k8s.io
+    - grpcroutes.gateway.networking.k8s.io
+    - tcproutes.gateway.networking.k8s.io
+    - tlsroutes.gateway.networking.k8s.io
+
   menu:
     project:
       - crd: gateways.gateway.networking.k8s.io
+        label: Gateways
         list: true
         detail: true
         icon: server
       - crd: httproutes.gateway.networking.k8s.io
+        label: HTTP routes
         list: true
         detail: true
         icon: globe
       - crd: grpcroutes.gateway.networking.k8s.io
+        label: gRPC routes
         list: true
         detail: true
         icon: zap
       - crd: tcproutes.gateway.networking.k8s.io
+        label: TCP routes
         list: true
         detail: true
         icon: cable
       - crd: tlsroutes.gateway.networking.k8s.io
+        label: TLS routes
         list: true
         detail: true
         icon: lock
-    organization:
-      - crd: gateways.gateway.networking.k8s.io
-        list: true
-        detail: true
-        icon: server
   uiHints:
     gateways.gateway.networking.k8s.io:
       statusMapping:
