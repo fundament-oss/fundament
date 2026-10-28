@@ -356,13 +356,15 @@ func (r *RealClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 // status step derive exactly the same thing from the same object. The worker
 // detail — the EveryNodeReady message and lastErrors, which name the machine
 // deployments that cannot get machines — is attached here, once, so every
-// lifecycle branch carries it.
+// lifecycle branch carries it, together with the technical ID those names
+// start with.
 func shootStatusOf(shoot *gardencorev1beta1.Shoot) *ShootStatus {
 	status := shootLifecycleOf(shoot)
 	if shoot != nil && shoot.DeletionTimestamp == nil {
 		status.APIServerAvailable = shootConditionTrue(shoot, gardencorev1beta1.ShootAPIServerAvailable)
 		status.EveryNodeReadyMessage = everyNodeReadyMessage(shoot)
 		status.LastErrors = shootLastErrors(shoot)
+		status.TechnicalID = shoot.Status.TechnicalID
 	}
 	return status
 }

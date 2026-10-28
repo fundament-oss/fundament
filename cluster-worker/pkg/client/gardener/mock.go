@@ -101,6 +101,9 @@ type StatusOverride struct {
 	// EveryNodeReadyMessage and LastErrors feed the per-pool classification.
 	EveryNodeReadyMessage string
 	LastErrors            []string
+	// TechnicalID is reported as is: the worker detail names a pool only
+	// after the technical ID, so a test that expects a match sets both.
+	TechnicalID string
 }
 
 // NewMock creates a new MockClient with default settings.
@@ -368,6 +371,7 @@ func (m *MockClient) statusFor(clusterID uuid.UUID, shoot *mockShoot, now time.T
 			Status: override.Status, Message: override.Message, Operation: override.Operation,
 			Healthy: override.Healthy, Retrying: override.Retrying, APIServerAvailable: override.APIServerAvailable,
 			EveryNodeReadyMessage: override.EveryNodeReadyMessage, LastErrors: override.LastErrors,
+			TechnicalID: override.TechnicalID,
 		}
 	}
 	if shoot == nil {
