@@ -244,6 +244,7 @@ func TestListClustersPages(t *testing.T) {
 			require.NoError(t, err)
 			pages++
 			assert.LessOrEqual(t, len(resp.GetClusters()), int(size))
+			assert.NotEmpty(t, resp.GetClusters(), "no page is empty, the last one included")
 			ids = append(ids, clusterIDs(resp.GetClusters())...)
 			token = resp.GetNextPageToken()
 			if token == "" || pages > 10 {
@@ -269,19 +270,23 @@ func TestListOrganizationsPages(t *testing.T) {
 		seed.Organization(name, name)
 	}
 
-	first, err := client.ListOrganizations(t.Context(), fleetv1.ListOrganizationsRequest_builder{PageSize: 2}.Build())
-	require.NoError(t, err)
-	require.Len(t, first.GetOrganizations(), 2)
-	require.NotEmpty(t, first.GetNextPageToken())
-
-	second, err := client.ListOrganizations(t.Context(), fleetv1.ListOrganizationsRequest_builder{
-		PageSize: 2, PageToken: first.GetNextPageToken(),
-	}.Build())
-	require.NoError(t, err)
-
+	// The template holds organizations of its own, so walk every page.
 	var names []string
-	for _, o := range append(first.GetOrganizations(), second.GetOrganizations()...) {
-		names = append(names, o.GetName())
+	token := ""
+	for pages := 0; ; pages++ {
+		require.Less(t, pages, 20, "paging does not end")
+		resp, err := client.ListOrganizations(t.Context(), fleetv1.ListOrganizationsRequest_builder{
+			PageSize: 2, PageToken: token,
+		}.Build())
+		require.NoError(t, err)
+		assert.LessOrEqual(t, len(resp.GetOrganizations()), 2)
+		for _, o := range resp.GetOrganizations() {
+			names = append(names, o.GetName())
+		}
+		token = resp.GetNextPageToken()
+		if token == "" {
+			break
+		}
 	}
 	assert.Subset(t, names, []string{"page-a", "page-b", "page-c"})
 	assert.NotContains(t, names, "system")

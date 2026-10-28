@@ -205,7 +205,8 @@ type WorkerHeartbeatRecordParams struct {
 	LastPass        pgtype.Timestamptz
 }
 
-// Record that a periodic loop completed a pass, and how often it runs.
+// Record that a periodic loop ran a pass, and how often it runs. Reconcile
+// records a finished pass; inventory one whose clusters are queued.
 func (q *Queries) WorkerHeartbeatRecord(ctx context.Context, arg WorkerHeartbeatRecordParams) error {
 	_, err := q.db.Exec(ctx, workerHeartbeatRecord, arg.Worker, arg.IntervalSeconds, arg.LastPass)
 	return err

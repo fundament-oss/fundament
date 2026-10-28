@@ -77,7 +77,7 @@ An environment that does not run `platform-public-api` leaves `platformApiUrl` e
 
 An organization is listed only once `tenant.organizations.listed_publicly` is set. It defaults to false, so a new organization, and every existing one, stays off the page until it opts in. Organizations that are not listed are not in the totals either: the totals add up the rows, so the page cannot be used to count who is hidden.
 
-For now a platform operator sets the column when an organization asks. A setting in the console's organization page is deferred. Relaxing the rule later, to listed by default, is a change of the column default and needs no migration of the data.
+For now a platform operator sets the column when an organization asks. A setting in the console's organization page is deferred. Relaxing the rule later, to listed by default, takes a new column default, which lists new organizations only. The existing ones keep false, and a false set on purpose cannot be told from one never set, so listing them too means asking them first.
 
 Whether organizations should be public at all, opted in or not, is for legal and the organizations to agree to (link:/adr/0019-data-protection-certification[ADR-0019] is in play). With nobody listed by default, running the public API in a test environment shows an empty page; listing a real organization waits for that sign-off.
 

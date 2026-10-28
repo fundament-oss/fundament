@@ -72,7 +72,7 @@ describe('capacity', () => {
 describe('poolFlag', () => {
   const seen = timestampFromDate(now);
 
-  it('flags a pool below its minimum or at its maximum', () => {
+  it('flags a pool below its minimum, at its maximum or above it', () => {
     expect(poolFlag({ nodes: 1, autoscaleMin: 2, autoscaleMax: 5, observed: seen })?.text).toBe(
       'Below minimum',
     );
@@ -80,12 +80,18 @@ describe('poolFlag', () => {
       'At maximum',
     );
     expect(poolFlag({ nodes: 3, autoscaleMin: 1, autoscaleMax: 5, observed: seen })).toBeNull();
+    expect(poolFlag({ nodes: 6, autoscaleMin: 1, autoscaleMax: 5, observed: seen })?.text).toBe(
+      'Above maximum',
+    );
   });
 
   it('leaves a fixed-size pool at its size alone', () => {
     expect(poolFlag({ nodes: 3, autoscaleMin: 3, autoscaleMax: 3, observed: seen })).toBeNull();
     expect(poolFlag({ nodes: 2, autoscaleMin: 3, autoscaleMax: 3, observed: seen })?.text).toBe(
       'Below minimum',
+    );
+    expect(poolFlag({ nodes: 4, autoscaleMin: 3, autoscaleMax: 3, observed: seen })?.text).toBe(
+      'Above maximum',
     );
   });
 

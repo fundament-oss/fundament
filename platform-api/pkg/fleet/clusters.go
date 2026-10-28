@@ -25,7 +25,8 @@ type clusterKey struct {
 // ListClusters reads clusters in batches of the page size and keeps those
 // that match the filter, until the page is full or the clusters run out. The
 // filter is applied here because the UNHEALTHY rule is common/clusterstatus,
-// which has no SQL twin.
+// which has no SQL twin. A full page gets a token only once one more match is
+// found, so the last page is never an empty one.
 func (s *Server) ListClusters(ctx context.Context, req *fleetv1.ListClustersRequest) (*fleetv1.ListClustersResponse, error) {
 	hb, err := s.heartbeats(ctx)
 	if err != nil {
@@ -43,6 +44,7 @@ func (s *Server) ListClusters(ctx context.Context, req *fleetv1.ListClustersRequ
 	}
 
 	resp := fleetv1.ListClustersResponse_builder{}
+	var last clusterKey
 	for {
 		if ok {
 			params.AfterAlias = pgtype.Text{String: after.Alias, Valid: true}
@@ -55,22 +57,23 @@ func (s *Server) ListClusters(ctx context.Context, req *fleetv1.ListClustersRequ
 		}
 		for i := range rows {
 			row := &rows[i]
-			after, ok = clusterKey{Alias: row.OrganizationAlias, Name: row.Name, ID: row.ID}, true
 			if !matchesFilter(row, req.GetFilter()) {
 				continue
 			}
-			resp.Clusters = append(resp.Clusters, clusterSummaryFrom(row))
 			if len(resp.Clusters) == int(size) {
-				// More may follow unless this was the last row there is.
-				if i < len(rows)-1 || len(rows) == int(size) {
-					resp.NextPageToken = encodePageToken(after)
-				}
+				// A match beyond a full page: the next page starts after the
+				// last cluster on this one.
+				resp.NextPageToken = encodePageToken(last)
 				return resp.Build(), nil
 			}
+			resp.Clusters = append(resp.Clusters, clusterSummaryFrom(row))
+			last = clusterKey{Alias: row.OrganizationAlias, Name: row.Name, ID: row.ID}
 		}
 		if len(rows) < int(size) {
 			return resp.Build(), nil
 		}
+		end := &rows[len(rows)-1]
+		after, ok = clusterKey{Alias: end.OrganizationAlias, Name: end.Name, ID: end.ID}, true
 	}
 }
 

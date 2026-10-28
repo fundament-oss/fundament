@@ -129,13 +129,15 @@ export function capacityText(snapshot: ClusterSnapshot | undefined): string {
 }
 
 /** Where a node pool stands against its own bounds. A fixed-size pool
- *  (minimum equals maximum) at its size is where it should be, not at a limit. */
+ *  (minimum equals maximum) at its size is where it should be, not at a limit;
+ *  one above its size is flagged like any other pool. */
 export function poolFlag(
   pool: Pick<NodePool, 'nodes' | 'autoscaleMin' | 'autoscaleMax' | 'observed'>,
 ): Tag | null {
   if (!pool.observed) return null;
   if (pool.nodes < pool.autoscaleMin) return { text: 'Below minimum', color: 'warning' };
+  if (pool.nodes > pool.autoscaleMax) return { text: 'Above maximum', color: 'warning' };
   if (pool.autoscaleMin === pool.autoscaleMax) return null;
-  if (pool.nodes >= pool.autoscaleMax) return { text: 'At maximum', color: 'warning' };
+  if (pool.nodes === pool.autoscaleMax) return { text: 'At maximum', color: 'warning' };
   return null;
 }

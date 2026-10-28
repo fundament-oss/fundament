@@ -3685,7 +3685,7 @@ CREATE TABLE tenant.worker_heartbeats (
 	CONSTRAINT worker_heartbeats_ck_interval_seconds CHECK (interval_seconds > 0)
 );
 -- ddl-end --
-COMMENT ON TABLE tenant.worker_heartbeats IS E'When each of cluster-worker''s periodic loops last completed a pass, and how often it runs (FUN-23). Readers judge the freshness of what a loop records from here.';
+COMMENT ON TABLE tenant.worker_heartbeats IS E'When each of cluster-worker''s periodic loops last ran a pass, and how often it runs (FUN-23). Reconcile records a pass once it is done; inventory records one once it has queued every ready cluster, before they are collected. Readers judge the freshness of what a loop records from here.';
 -- ddl-end --
 ALTER TABLE tenant.worker_heartbeats OWNER TO fun_owner;
 -- ddl-end --

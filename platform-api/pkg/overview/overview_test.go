@@ -169,7 +169,13 @@ func TestOverviewListsOptedInOrganizationsOnly(t *testing.T) {
 	require.NotNil(t, findOrganization(resp, "listed"))
 	assert.Nil(t, findOrganization(resp, "unlisted"))
 	assert.NotContains(t, body, "Unlisted Org")
+
+	var clusters int32
+	for _, o := range resp.GetOrganizations() {
+		clusters += o.GetClusters()
+	}
 	assert.Equal(t, int32(len(resp.GetOrganizations())), resp.GetTotals().GetOrganizations())
+	assert.Equal(t, clusters, resp.GetTotals().GetClusters(), "the unlisted cluster is not counted")
 }
 
 // The page shows names and counts only: nothing that names a cluster,

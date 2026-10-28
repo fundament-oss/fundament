@@ -74,5 +74,5 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 | prediscussion
 
 | link:/funs/fun-23[FUN-23 Platform overview and fleet inventory]
-| prediscussion
+| discussion
 |===

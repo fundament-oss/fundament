@@ -4355,7 +4355,7 @@ END;]]> </definition>
 <table name="worker_heartbeats" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<comment> <![CDATA[When each of cluster-worker's periodic loops last completed a pass, and how often it runs (FUN-23). Readers judge the freshness of what a loop records from here.]]> </comment>
+	<comment> <![CDATA[When each of cluster-worker's periodic loops last ran a pass, and how often it runs (FUN-23). Reconcile records a pass once it is done; inventory records one once it has queued every ready cluster, before they are collected. Readers judge the freshness of what a loop records from here.]]> </comment>
 	<position x="-1200" y="2360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>

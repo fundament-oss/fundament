@@ -33,8 +33,8 @@ export async function readAllPages<T>(
  * The fleet as the Platform section shows it (FUN-23), held in signals.
  *
  * The fleet-wide reads (the summary, every organization, the drift findings)
- * load once per visit to the section and feed the menu as well as the
- * overview. One organization or one cluster loads when it is opened. A read
+ * load on each visit to the section and on every refresh, and feed the menu as
+ * well as the overview. One organization or one cluster loads when it is opened. A read
  * that a newer one overtook is dropped, so clicking through quickly cannot
  * leave the page showing the cluster before last, nor an older fleet. Reading
  * the same organization or cluster again keeps what is shown until the answer

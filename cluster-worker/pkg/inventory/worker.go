@@ -44,10 +44,12 @@ type Config struct {
 }
 
 // Validate rejects settings the worker cannot run with: time.NewTicker panics
-// on a non-positive interval, and a non-positive timeout fails every collection.
+// on a non-positive interval, a heartbeat stores the interval in whole seconds
+// (and requires at least one), and a non-positive timeout fails every
+// collection.
 func (c Config) Validate() error {
-	if c.Interval <= 0 {
-		return fmt.Errorf("INVENTORY_INTERVAL must be positive, got %s", c.Interval)
+	if c.Interval < time.Second {
+		return fmt.Errorf("INVENTORY_INTERVAL must be at least 1s, got %s", c.Interval)
 	}
 	if c.Timeout <= 0 {
 		return fmt.Errorf("INVENTORY_TIMEOUT must be positive, got %s", c.Timeout)
@@ -117,7 +119,8 @@ func (w *Worker) Run(ctx context.Context) error {
 
 // EnqueueAll queues every cluster that is due for collection and records the
 // pass, so the fleet view can judge snapshots against the interval this worker
-// actually runs at.
+// actually runs at. The pass is recorded once the clusters are queued, not
+// once they are collected.
 func (w *Worker) EnqueueAll(ctx context.Context) {
 	ids, err := w.queries.InventoryClusterList(ctx)
 	if err != nil {
@@ -156,8 +159,9 @@ func (w *Worker) processNext(ctx context.Context) bool {
 // Collect reads one cluster's shoot and stores the snapshot in a single
 // transaction. A failed read or store lands in the cluster snapshot's
 // last_error and is returned; the previous numbers stay. One Timeout covers
-// both, so a slow shoot leaves less time to store: the budget is per cluster,
-// which is what keeps a pass within its interval.
+// both, so a slow shoot leaves less time to store. It bounds one collection
+// only: how long a whole pass takes depends on the number of clusters and
+// Workers.
 func (w *Worker) Collect(ctx context.Context, clusterID uuid.UUID) error {
 	collectCtx, cancel := context.WithTimeout(shoot.WithClientCache(ctx), w.cfg.Timeout)
 	defer cancel()
