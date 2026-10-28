@@ -80,12 +80,26 @@ func TestShootStatusWorkerDetail(t *testing.T) {
 			gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootEveryNodeReady, Status: gardencorev1beta1.ConditionFalse, Message: enrMsg},
 		)
 		shoot.Status.LastErrors = []gardencorev1beta1.LastError{{Description: "no machine available"}}
+		shoot.Status.TechnicalID = "shoot--acme--tf-a"
 
 		status := shootStatusOf(shoot)
 		assert.Equal(t, StatusProgressing, status.Status)
 		assert.False(t, status.Healthy, "EveryNodeReady False must count as unhealthy")
 		assert.Equal(t, enrMsg, status.EveryNodeReadyMessage)
 		assert.Equal(t, []string{"no machine available"}, status.LastErrors)
+		assert.Equal(t, "shoot--acme--tf-a", status.TechnicalID)
+	})
+
+	t.Run("a deleting shoot carries no technical ID", func(t *testing.T) {
+		t.Parallel()
+		shoot := statusTestShoot(clusterID,
+			lastOp(gardencorev1beta1.LastOperationTypeDelete, gardencorev1beta1.LastOperationStateProcessing, "deleting"),
+		)
+		shoot.Status.TechnicalID = "shoot--acme--tf-a"
+		now := metav1.Now()
+		shoot.DeletionTimestamp = &now
+
+		assert.Empty(t, shootStatusOf(shoot).TechnicalID)
 	})
 
 	t.Run("progressing condition does not surface a reason", func(t *testing.T) {
