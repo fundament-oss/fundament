@@ -23,3 +23,19 @@ func TestDefinition_MenuScope(t *testing.T) {
 	assert.Empty(t, def.Spec.Menu.Organization)
 	assert.NotEmpty(t, def.Spec.Menu.Project)
 }
+
+// The console loads a menu entry's schema only when spec.crds lists its CRD.
+func TestDefinition_MenuCRDsListed(t *testing.T) {
+	t.Parallel()
+
+	src, err := os.ReadFile("definition.yaml")
+	require.NoError(t, err)
+
+	def, err := pluginruntime.ParseSourceDefinition(src)
+	require.NoError(t, err)
+
+	for _, e := range def.Spec.Menu.Project {
+		assert.Contains(t, def.Spec.CRDs, e.CRD)
+		assert.NotEmpty(t, e.Label, e.CRD)
+	}
+}
