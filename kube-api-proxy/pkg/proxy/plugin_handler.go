@@ -27,8 +27,8 @@ type pluginGateway struct {
 	pluginSA    pluginsa.Resolver
 	canView     ClusterViewChecker
 	kubeHandler http.Handler
-	// projectNamespaces resolves project lists; nil in mock mode, where the
-	// list passes through unfiltered.
+	// projectNamespaces resolves project lists; nil in pure mock mode, where
+	// the list passes through unfiltered.
 	projectNamespaces func(ctx context.Context, userID, clusterID, projectID uuid.UUID) ([]string, error)
 
 	// lastForwarded is a test hook; nil in production.
