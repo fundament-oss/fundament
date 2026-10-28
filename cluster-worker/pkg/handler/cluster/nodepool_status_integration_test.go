@@ -15,7 +15,9 @@ import (
 )
 
 // Gardener's text names the generated worker name, never the raw pool name.
-var enrNomach = `machine deployment "shoot--acme--tf-a-` + kubename.GenerateWorkerName("nomach") + `-z1" is waiting for machines to join`
+const enrTechnicalID = "shoot--acme--tf-a"
+
+var enrNomach = `machine deployment "` + enrTechnicalID + `-` + kubename.GenerateWorkerName("nomach") + `-z1" is waiting for machines to join`
 
 func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 	t.Parallel()
@@ -34,6 +36,7 @@ func TestCheckStatusRecordsWaitingNodePool(t *testing.T) {
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           enrTechnicalID,
 	})
 
 	require.NoError(t, checkStatus(t, h))
@@ -147,6 +150,7 @@ func TestCheckStatusSkipsDeletedPools(t *testing.T) {
 		Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile,
 		Message:               "Reconcile: Waiting until worker resource status is updated",
 		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           enrTechnicalID,
 	})
 
 	require.NoError(t, checkStatus(t, h))

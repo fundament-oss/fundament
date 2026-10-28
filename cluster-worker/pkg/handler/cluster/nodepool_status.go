@@ -132,25 +132,48 @@ func hasWorkerDetail(observed *gardener.ShootStatus) bool {
 }
 
 // poolComplaint returns the Gardener text naming this pool's machine
-// deployment, or "". Gardener names deployments, machines and nodes
-// <shoot>-<worker>-z<n>, where <worker> is the generated worker name — a
-// fixed-length prefix+hash (kubename.GenerateWorkerName), never the raw pool
-// name. Matching the whole -<worker>-z fragment keeps a shoot's technical ID
-// (also in every message) from matching a pool named like it.
+// deployment, or "". Gardener's providers name deployments, machines and
+// nodes <technicalID>-<worker>, where <worker> is the generated worker name
+// (kubename.GenerateWorkerName), never the raw pool name. What follows
+// differs per provider: -z<n> on the local provider, the machine set's hash
+// on metal-stack. So the match is the whole <technicalID>-<worker> ending at
+// a name boundary: a project or shoot named like the worker, another shoot's
+// machines and another pool's worker name all fail it. Without a technical
+// ID Gardener has created no machines, and nothing names a pool.
 func poolComplaint(name string, observed *gardener.ShootStatus) string {
-	if !hasWorkerDetail(observed) {
+	if !hasWorkerDetail(observed) || observed.TechnicalID == "" {
 		return ""
 	}
-	workerName := "-" + kubename.GenerateWorkerName(name) + "-z"
-	if strings.Contains(observed.EveryNodeReadyMessage, workerName) {
+	workerPrefix := observed.TechnicalID + "-" + kubename.GenerateWorkerName(name)
+	if namesWorker(observed.EveryNodeReadyMessage, workerPrefix) {
 		return reasonText(observed.EveryNodeReadyMessage)
 	}
 	for _, desc := range observed.LastErrors {
-		if strings.Contains(desc, workerName) {
+		if namesWorker(desc, workerPrefix) {
 			return reasonText(desc)
 		}
 	}
 	return ""
+}
+
+// namesWorker reports whether text contains workerPrefix as a whole name
+// part: followed by the end of the text or by a character no Kubernetes name
+// continues a part with (anything but a lowercase letter or a digit).
+func namesWorker(text, workerPrefix string) bool {
+	for {
+		_, rest, found := strings.Cut(text, workerPrefix)
+		if !found {
+			return false
+		}
+		if rest == "" || !isNameChar(rest[0]) {
+			return true
+		}
+		text = rest
+	}
+}
+
+func isNameChar(c byte) bool {
+	return ('a' <= c && c <= 'z') || ('0' <= c && c <= '9')
 }
 
 // maxReasonLen caps Gardener's text before it is stored and shown: it is node
