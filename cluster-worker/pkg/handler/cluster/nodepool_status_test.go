@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -349,4 +350,75 @@ func TestPoolComplaintMatchesWholeNames(t *testing.T) {
 			assert.Equal(t, tt.want, poolComplaint("nomach", observed) != "")
 		})
 	}
+}
+
+func TestPlainReason(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", plainReason("c1-medium-x86", metalMessage("medium")))
+	assert.Equal(t, "No free machine is available for this pool.", plainReason("", metalMessage("medium")))
+	assert.Empty(t, plainReason("local", enrMessage("nomach")), "unknown text has no plain reason")
+}
+
+func TestPoolTextOwnPart(t *testing.T) {
+	t.Parallel()
+
+	machine := func(pool, failure string) string {
+		return `machine "` + metalTechnicalID + `-` + kubename.GenerateWorkerName(pool) + `-68c79-bnnvm" failed: ` + failure
+	}
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusError,
+		LastErrors: []string{`task "Waiting until shoot worker nodes have been reconciled" failed: ` +
+			machine("small", "quota exceeded") + "; " + machine("medium", `{"message":"no machine available"}`)},
+		TechnicalID: metalTechnicalID,
+	}
+
+	text, own := poolText("small", observed)
+	assert.Equal(t, observed.LastErrors[0], text)
+	assert.Equal(t, `-68c79-bnnvm" failed: quota exceeded; machine "`, own, "own part stops at the next machine name")
+	assert.Empty(t, plainReason("c1-small-x86", own), "another pool's failure in the same text is not this pool's")
+
+	_, own = poolText("medium", observed)
+	assert.Equal(t, "No free c1-medium-x86 machine is available.", plainReason("c1-medium-x86", own))
+}
+
+func TestNextNodePoolStatusesPlainReason(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "medium", MachineType: "c1-large-x86", Status: "waiting", Message: "No free c1-medium-x86 machine is available."}}
+
+	t.Run("a pending change leaves the machine type out", func(t *testing.T) {
+		t.Parallel()
+		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage("medium"), TechnicalID: metalTechnicalID}
+		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool."}},
+			nextNodePoolStatuses(stored, observed, false, true))
+	})
+
+	t.Run("a failure past the stored text cap is still recognised", func(t *testing.T) {
+		t.Parallel()
+		long := `task "Waiting until shoot worker nodes have been reconciled" failed: ` + strings.Repeat("x", maxReasonLen) + " " + metalMessage("medium")
+		observed := &gardener.ShootStatus{Status: gardener.StatusError, LastErrors: []string{long}, TechnicalID: metalTechnicalID}
+		updates := nextNodePoolStatuses(stored, observed, false, false)
+		require.Len(t, updates, 1)
+		assert.Equal(t, "No free c1-large-x86 machine is available.", updates[0].Message)
+	})
+}
+
+// The issue's case end to end: during the initial create, the pool metal-stack
+// has no machines for waits with the plain reason; the other pool is not named.
+func TestNextNodePoolStatusesMetalCreate(t *testing.T) {
+	t.Parallel()
+
+	stored := []storedNodePool{{Name: "small", MachineType: "c1-small-x86"}, {Name: "medium", MachineType: "c1-medium-x86"}}
+	observed := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		EveryNodeReadyMessage: metalMessage("medium"),
+		TechnicalID:           metalTechnicalID,
+	}
+	reason := "No free c1-medium-x86 machine is available."
+	assert.Equal(t, []nodePoolUpdate{
+		{Name: "small", Status: dbconst.NodePoolStatus_Progressing},
+		{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: reason,
+			Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool medium: " + reason}}},
+	}, nextNodePoolStatuses(stored, observed, false, false))
 }

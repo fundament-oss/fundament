@@ -212,3 +212,38 @@ func TestClusterGetPushStateSyncPending(t *testing.T) {
 		assert.Equal(t, tc.want, push.SyncPending, tc.name)
 	}
 }
+
+// Issue 1383: on metal-stack, machine names carry no zone suffix. A cluster
+// being created with one pool metal-api has no machines for reports that pool
+// waiting, with its machine type in plain words; the other pool is not named.
+func TestCheckStatusRecordsWaitingMetalPool(t *testing.T) {
+	t.Parallel()
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "metal")
+	insertNodePool(t, db, clusterID, "small", "n1-standard-4", 2, 2)
+	insertNodePool(t, db, clusterID, "medium", "n1-highmem-8", 2, 2)
+	markClusterSyncsCompleted(t, db, clusterID)
+
+	technicalID := "shoot--systemd819--enricotef4f"
+	mock.SetShootStatusOverride(clusterID, gardener.StatusOverride{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		Message: "Create: Waiting until shoot worker nodes have been reconciled",
+		EveryNodeReadyMessage: `Worker extension (` + technicalID + `/enricotef4f) reports failing health check: machine "` +
+			technicalID + `-` + kubename.GenerateWorkerName("medium") + `-68c79-bnnvm" failed: ` +
+			`[POST /v1/machine/allocate][422] allocateMachine default "{\"statuscode\":422,\"message\":\"no machine available\"}"`,
+		TechnicalID: technicalID,
+	})
+
+	require.NoError(t, checkStatus(t, h))
+
+	status, message := getNodePoolStatus(t, db, clusterID, "medium")
+	assert.Equal(t, "waiting", status)
+	assert.Equal(t, "No free n1-highmem-8 machine is available.", message)
+	smallStatus, smallMessage := getNodePoolStatus(t, db, clusterID, "small")
+	assert.Equal(t, "progressing", smallStatus)
+	assert.Empty(t, smallMessage)
+	assert.Equal(t, 1, countEvents(t, db, clusterID, "nodepool_waiting"))
+}

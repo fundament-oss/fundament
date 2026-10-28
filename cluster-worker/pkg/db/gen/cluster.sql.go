@@ -776,6 +776,7 @@ const nodePoolListStatusByClusterID = `-- name: NodePoolListStatusByClusterID :m
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
+    tenant.node_pools.machine_type,
     tenant.node_pools.status,
     tenant.node_pools.status_message
 FROM
@@ -795,12 +796,14 @@ type NodePoolListStatusByClusterIDParams struct {
 type NodePoolListStatusByClusterIDRow struct {
 	ID            uuid.UUID
 	Name          string
+	MachineType   string
 	Status        pgtype.Text
 	StatusMessage pgtype.Text
 }
 
-// The status path needs only identity and the stored classification; the
-// worker-group build query above, with its catalog joins, stays with sync.
+// The status path needs only identity, the machine type its reason names and
+// the stored classification; the worker-group build query above, with its
+// catalog joins, stays with sync.
 func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoolListStatusByClusterIDParams) ([]NodePoolListStatusByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListStatusByClusterID, arg.ClusterID)
 	if err != nil {
@@ -813,6 +816,7 @@ func (q *Queries) NodePoolListStatusByClusterID(ctx context.Context, arg NodePoo
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.MachineType,
 			&i.Status,
 			&i.StatusMessage,
 		); err != nil {

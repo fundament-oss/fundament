@@ -114,11 +114,13 @@ ORDER BY
     tenant.node_pools.id;
 
 -- name: NodePoolListStatusByClusterID :many
--- The status path needs only identity and the stored classification; the
--- worker-group build query above, with its catalog joins, stays with sync.
+-- The status path needs only identity, the machine type its reason names and
+-- the stored classification; the worker-group build query above, with its
+-- catalog joins, stays with sync.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
+    tenant.node_pools.machine_type,
     tenant.node_pools.status,
     tenant.node_pools.status_message
 FROM

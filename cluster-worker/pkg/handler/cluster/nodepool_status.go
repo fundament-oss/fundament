@@ -21,10 +21,11 @@ import (
 // These rules turn that into a per-pool status. Pure, like nextShootStatus.
 
 type storedNodePool struct {
-	ID      uuid.UUID
-	Name    string
-	Status  string // tenant.node_pools.status; "" when never classified
-	Message string // tenant.node_pools.status_message
+	ID          uuid.UUID
+	Name        string
+	MachineType string
+	Status      string // tenant.node_pools.status; "" when never classified
+	Message     string // tenant.node_pools.status_message
 }
 
 type nodePoolUpdate struct {
@@ -85,7 +86,7 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushe
 	staleReport := syncPending &&
 		(pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Progressing))
 
-	if complaint := poolComplaint(pool.Name, observed); complaint != "" && !staleReport {
+	if text, own := poolText(pool.Name, observed); text != "" && !staleReport {
 		settled := pool.Status == "" || pool.Status == string(dbconst.NodePoolStatus_Ready)
 		if settled && !pushed && !creating {
 			// A complaint about a settled pool with no change of ours in
@@ -94,10 +95,20 @@ func classifyNodePool(pool storedNodePool, observed *gardener.ShootStatus, pushe
 			// A NULL status is a pool from before this feature: also settled.
 			return "", "", false
 		}
-		if observed.Status == gardener.StatusError && !observed.Retrying {
-			return dbconst.NodePoolStatus_Error, complaint, true
+		machineType := pool.MachineType
+		if syncPending {
+			// Gardener's text predates a saved change, which may be this
+			// pool's new machine type.
+			machineType = ""
 		}
-		return dbconst.NodePoolStatus_Waiting, complaint, true
+		reason := plainReason(machineType, own)
+		if reason == "" {
+			reason = reasonText(text)
+		}
+		if observed.Status == gardener.StatusError && !observed.Retrying {
+			return dbconst.NodePoolStatus_Error, reason, true
+		}
+		return dbconst.NodePoolStatus_Waiting, reason, true
 	}
 
 	switch {
@@ -131,42 +142,54 @@ func hasWorkerDetail(observed *gardener.ShootStatus) bool {
 	return observed.EveryNodeReadyMessage != "" || len(observed.LastErrors) > 0
 }
 
-// poolComplaint returns the Gardener text naming this pool's machine
-// deployment, or "". Gardener's providers name deployments, machines and
-// nodes <technicalID>-<worker>, where <worker> is the generated worker name
+// poolComplaint returns the cleaned Gardener text naming this pool's machine
+// deployment, or "" (see poolText).
+func poolComplaint(name string, observed *gardener.ShootStatus) string {
+	text, _ := poolText(name, observed)
+	return reasonText(text)
+}
+
+// poolText returns the raw Gardener text naming this pool's machine
+// deployment, or "", and own: the part of it after the pool's name, up to the
+// next machine name of the shoot, which is about this pool's machines alone.
+// Gardener's providers name deployments, machines and nodes
+// <technicalID>-<worker>, where <worker> is the generated worker name
 // (kubename.GenerateWorkerName), never the raw pool name. What follows
 // differs per provider: -z<n> on the local provider, the machine set's hash
 // on metal-stack. So the match is the whole <technicalID>-<worker> ending at
 // a name boundary: a project or shoot named like the worker, another shoot's
 // machines and another pool's worker name all fail it. Without a technical
 // ID Gardener has created no machines, and nothing names a pool.
-func poolComplaint(name string, observed *gardener.ShootStatus) string {
+func poolText(name string, observed *gardener.ShootStatus) (text, own string) {
 	if !hasWorkerDetail(observed) || observed.TechnicalID == "" {
-		return ""
+		return "", ""
 	}
 	workerPrefix := observed.TechnicalID + "-" + kubename.GenerateWorkerName(name)
-	if namesWorker(observed.EveryNodeReadyMessage, workerPrefix) {
-		return reasonText(observed.EveryNodeReadyMessage)
-	}
-	for _, desc := range observed.LastErrors {
-		if namesWorker(desc, workerPrefix) {
-			return reasonText(desc)
+	for _, candidate := range append([]string{observed.EveryNodeReadyMessage}, observed.LastErrors...) {
+		rest, found := afterWorker(candidate, workerPrefix)
+		if !found {
+			continue
 		}
+		if next := strings.Index(rest, observed.TechnicalID+"-"); next >= 0 {
+			rest = rest[:next]
+		}
+		return candidate, rest
 	}
-	return ""
+	return "", ""
 }
 
-// namesWorker reports whether text contains workerPrefix as a whole name
-// part: followed by the end of the text or by a character no Kubernetes name
-// continues a part with (anything but a lowercase letter or a digit).
-func namesWorker(text, workerPrefix string) bool {
+// afterWorker returns the text after the first occurrence of workerPrefix as
+// a whole name part: followed by the end of the text or by a character no
+// Kubernetes name continues a part with (anything but a lowercase letter or a
+// digit).
+func afterWorker(text, workerPrefix string) (rest string, found bool) {
 	for {
-		_, rest, found := strings.Cut(text, workerPrefix)
+		_, rest, found = strings.Cut(text, workerPrefix)
 		if !found {
-			return false
+			return "", false
 		}
 		if rest == "" || !isNameChar(rest[0]) {
-			return true
+			return rest, true
 		}
 		text = rest
 	}
@@ -197,6 +220,36 @@ func reasonText(s string) string {
 		s = string(runes[:maxReasonLen-1]) + "…"
 	}
 	return s
+}
+
+// knownReasons turn provider text that Gardener passes on into words a user
+// understands. Gardener has an error code for a depleted resource, but
+// provider-metal sets no error codes, so its text is all there is to go by.
+var knownReasons = []struct {
+	fragment string
+	reason   func(machineType string) string
+}{
+	// provider-metal: metal-api has no free machine of the pool's size.
+	{`no machine available`, func(machineType string) string {
+		if machineType == "" {
+			return "No free machine is available for this pool."
+		}
+		return "No free " + machineType + " machine is available."
+	}},
+}
+
+// plainReason returns a known provider failure in the part of Gardener's
+// text about one pool's machines in plain words, or "". It reads the raw
+// text, so the cap on stored text cannot cut the failure off. machineType is
+// "" when it may not be the type Gardener's text is about. The text itself is
+// logged by updateNodePoolStatuses.
+func plainReason(machineType, own string) string {
+	for _, known := range knownReasons {
+		if strings.Contains(own, known.fragment) {
+			return known.reason(machineType)
+		}
+	}
+	return ""
 }
 
 // nodePoolEvents records transitions only: into waiting/error, and into
@@ -252,7 +305,7 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 
 	stored := make([]storedNodePool, len(rows))
 	for i := range rows {
-		stored[i] = storedNodePool{ID: rows[i].ID, Name: rows[i].Name, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String}
+		stored[i] = storedNodePool{ID: rows[i].ID, Name: rows[i].Name, MachineType: rows[i].MachineType, Status: rows[i].Status.String, Message: rows[i].StatusMessage.String}
 	}
 
 	// Read what is in flight after the pool list, not from the cluster row the
@@ -270,7 +323,8 @@ func (h *Handler) updateNodePoolStatuses(ctx context.Context, cluster *db.Cluste
 		}
 		for _, event := range update.Events {
 			if event.Type == dbconst.ClusterEventEventType_NodepoolWaiting || event.Type == dbconst.ClusterEventEventType_NodepoolError {
-				h.logger.Warn("node pool machines not provisioning", "cluster_id", cluster.ID, "pool", update.Name, "message", update.Message)
+				h.logger.Warn("node pool machines not provisioning", "cluster_id", cluster.ID, "pool", update.Name, "message", update.Message,
+					"gardener_text", poolComplaint(update.Name, observed))
 			}
 		}
 	}
