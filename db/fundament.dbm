@@ -1697,6 +1697,15 @@ END;]]> </definition>
 	<column name="status_updated">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="node_count">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="node_count_ready">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="node_count_updated">
+		<type name="timestamptz" length="0"/>
+	</column>
 	<constraint name="node_pools_pk" type="pk-constr" table="tenant.node_pools">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
@@ -1709,6 +1718,9 @@ END;]]> </definition>
 	</constraint>
 	<constraint name="node_pools_ck_status" type="ck-constr" table="tenant.node_pools">
 			<expression> <![CDATA[status IN ('progressing','waiting','error','ready')]]> </expression>
+	</constraint>
+	<constraint name="node_pools_ck_node_count" type="ck-constr" table="tenant.node_pools">
+			<expression> <![CDATA[(node_count IS NULL AND node_count_ready IS NULL AND node_count_updated IS NULL) OR (node_count IS NOT NULL AND node_count_ready IS NOT NULL AND node_count_updated IS NOT NULL AND node_count_ready >= 0 AND node_count_ready <= node_count)]]> </expression>
 	</constraint>
 </table>
 
@@ -5334,6 +5346,21 @@ ORDER BY node_pool_id, outbox_id DESC]]> </definition>
 </permission>
 <permission>
 	<object name="status_updated" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="node_count" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="node_count_ready" parent="tenant.node_pools" type="column"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges update="true"/>
+</permission>
+<permission>
+	<object name="node_count_updated" parent="tenant.node_pools" type="column"/>
 	<roles names="fun_cluster_worker"/>
 	<privileges update="true"/>
 </permission>

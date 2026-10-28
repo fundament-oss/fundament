@@ -32,7 +32,8 @@ func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	setShootStatus(t, db, clusterID, "ready")
 	poolID := insertNodePoolReturningID(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
 	_, err := db.adminPool.Exec(t.Context(),
-		`UPDATE tenant.node_pools SET status = 'waiting', status_message = 'no machines' WHERE id = $1`, poolID)
+		`UPDATE tenant.node_pools SET status = 'waiting', status_message = 'no machines',
+		 node_count = 1, node_count_ready = 0, node_count_updated = now() WHERE id = $1`, poolID)
 	require.NoError(t, err)
 
 	err = h.Reconcile(t.Context())
@@ -50,6 +51,8 @@ func TestReconcileReportsLostShootWithoutRecreatingIt(t *testing.T) {
 	poolStatus, poolMessage := getNodePoolStatus(t, db, clusterID, "workers")
 	assert.Empty(t, poolStatus)
 	assert.Empty(t, poolMessage)
+	_, _, counted := getNodePoolCount(t, db, clusterID, "workers")
+	assert.False(t, counted, "the node counts went with the shoot")
 }
 
 func TestChangeToLostClusterCreatesShootAgain(t *testing.T) {

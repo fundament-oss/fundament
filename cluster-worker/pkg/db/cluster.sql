@@ -188,11 +188,15 @@ WHERE
 -- Forget what was recorded about a lost cluster's pools: their machines went
 -- with the Shoot. When a change creates it again they read as new, so as
 -- progressing while the create runs, instead of their old status and reason.
+-- Their node counts went with them too.
 UPDATE tenant.node_pools
 SET
     status = NULL,
     status_message = NULL,
-    status_updated = now()
+    status_updated = now(),
+    node_count = NULL,
+    node_count_ready = NULL,
+    node_count_updated = NULL
 WHERE
     cluster_id = @cluster_id
     AND deleted IS NULL;

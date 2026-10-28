@@ -668,7 +668,10 @@ UPDATE tenant.node_pools
 SET
     status = NULL,
     status_message = NULL,
-    status_updated = now()
+    status_updated = now(),
+    node_count = NULL,
+    node_count_ready = NULL,
+    node_count_updated = NULL
 WHERE
     cluster_id = $1
     AND deleted IS NULL
@@ -681,6 +684,7 @@ type NodePoolClearStatusByClusterIDParams struct {
 // Forget what was recorded about a lost cluster's pools: their machines went
 // with the Shoot. When a change creates it again they read as new, so as
 // progressing while the create runs, instead of their old status and reason.
+// Their node counts went with them too.
 func (q *Queries) NodePoolClearStatusByClusterID(ctx context.Context, arg NodePoolClearStatusByClusterIDParams) error {
 	_, err := q.db.Exec(ctx, nodePoolClearStatusByClusterID, arg.ClusterID)
 	return err

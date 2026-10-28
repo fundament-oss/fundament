@@ -312,6 +312,23 @@ func getNodePoolStatus(t *testing.T, db *testDB, clusterID uuid.UUID, name strin
 	return status, message
 }
 
+// getNodePoolCount returns a pool's stored node counts; ok is false while
+// none were recorded.
+func getNodePoolCount(t *testing.T, db *testDB, clusterID uuid.UUID, name string) (nodes, ready int32, ok bool) {
+	t.Helper()
+
+	var n, r *int32
+	err := db.adminPool.QueryRow(t.Context(),
+		`SELECT node_count, node_count_ready FROM tenant.node_pools WHERE cluster_id = $1 AND name = $2 AND deleted IS NULL`,
+		clusterID, name,
+	).Scan(&n, &r)
+	require.NoError(t, err)
+	if n == nil || r == nil {
+		return 0, 0, false
+	}
+	return *n, *r, true
+}
+
 // getClusterShootStatus returns the current shoot_status of a cluster (nil if NULL).
 func getClusterShootStatus(t *testing.T, db *testDB, clusterID uuid.UUID) *string {
 	t.Helper()
