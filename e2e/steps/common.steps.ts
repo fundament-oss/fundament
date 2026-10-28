@@ -130,7 +130,7 @@ Given(
   async function (this: ICustomWorld, name: string) {
     let response;
     try {
-      response = await this.apiKeyService!.createAPIKey({ name });
+      response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
     } catch (err) {
       if (err instanceof ConnectRpcError && err.code === 'already_exists') {
         // A leftover key from a previous test run. Delete it and retry.
@@ -139,7 +139,7 @@ Given(
         if (existing) {
           await this.apiKeyService!.deleteAPIKey(existing.id);
         }
-        response = await this.apiKeyService!.createAPIKey({ name });
+        response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
       } else {
         throw err;
       }

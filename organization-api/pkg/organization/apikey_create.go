@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -94,7 +95,7 @@ func (s *Server) CreateAPIKey(
 func parseAPIKeyExpiresIn(value string, maximum time.Duration) (time.Duration, error) {
 	if value == "" {
 		if maximum > 0 {
-			return 0, fmt.Errorf("expires_in: must be set, at most %s", maximum)
+			return 0, fmt.Errorf("expires_in: must be set, at most %s", formatAPIKeyExpiresIn(maximum))
 		}
 		return 0, nil
 	}
@@ -107,7 +108,19 @@ func parseAPIKeyExpiresIn(value string, maximum time.Duration) (time.Duration, e
 		return 0, fmt.Errorf("expires_in: must be positive")
 	}
 	if maximum > 0 && expiresIn > maximum {
-		return 0, fmt.Errorf("expires_in: must be at most %s", maximum)
+		return 0, fmt.Errorf("expires_in: must be at most %s", formatAPIKeyExpiresIn(maximum))
 	}
 	return expiresIn, nil
+}
+
+// formatAPIKeyExpiresIn drops the zero units time.Duration.String adds: 8760h, not 8760h0m0s.
+func formatAPIKeyExpiresIn(d time.Duration) string {
+	s := d.String()
+	if trimmed, ok := strings.CutSuffix(s, "m0s"); ok {
+		s = trimmed + "m"
+	}
+	if trimmed, ok := strings.CutSuffix(s, "h0m"); ok {
+		s = trimmed + "h"
+	}
+	return s
 }

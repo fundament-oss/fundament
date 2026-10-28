@@ -59,7 +59,7 @@
           </nldd-form-field>
           <nldd-form-field
             label="Expires after"
-            optional
+            [attr.optional]="maxExpiresIn() ? null : ''"
             optional-label="Optional"
           >
             <nldd-text-field
@@ -78,7 +78,11 @@
               }}</nldd-validation-item>
             </nldd-validation-list>
             <nldd-form-field-help-text>
-              A duration, for example 300s, 5m or 1h. Leave it empty and the key never expires.
+              @if (maxExpiresIn()) {
+                A duration, for example 300s, 5m or 1h, at most {{ maxExpiresIn() }}.
+              } @else {
+                A duration, for example 300s, 5m or 1h. Leave it empty and the key never expires.
+              }
             </nldd-form-field-help-text>
           </nldd-form-field>
           <nldd-form-actions>

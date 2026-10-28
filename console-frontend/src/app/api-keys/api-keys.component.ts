@@ -158,6 +158,9 @@ export default class ApiKeysComponent {
 
   newKeyExpiresInError = signal<string | null>(null);
 
+  /** Longest lifetime the server allows, such as "8760h"; empty when keys may never expire. */
+  maxExpiresIn = signal('');
+
   // Modal state
   showRevokeModal = signal(false);
 
@@ -232,6 +235,7 @@ export default class ApiKeysComponent {
       const request = create(ListAPIKeysRequestSchema, {});
       const response = await firstValueFrom(this.apiKeyClient.listAPIKeys(request));
       this.apiKeys.set(response.apiKeys);
+      this.maxExpiresIn.set(response.maxExpiresIn);
     } catch (err) {
       this.error.set(
         err instanceof Error

@@ -175,8 +175,8 @@ func Test_APIKey_Create_ExpiresIn_Validation(t *testing.T) {
 		"trailing_dot":       {expiresIn: "1.s"},
 		"leading_dot":        {expiresIn: ".5h"},
 		"at_maximum":         {maxExpiresIn: 720 * time.Hour, expiresIn: "720h"},
-		"above_maximum":      {maxExpiresIn: 720 * time.Hour, expiresIn: "721h", wantMessage: "must be at most 720h0m0s"},
-		"never_with_maximum": {maxExpiresIn: 720 * time.Hour, expiresIn: "", wantMessage: "must be set, at most 720h0m0s"},
+		"above_maximum":      {maxExpiresIn: 720 * time.Hour, expiresIn: "721h", wantMessage: "must be at most 720h"},
+		"never_with_maximum": {maxExpiresIn: 720 * time.Hour, expiresIn: "", wantMessage: "must be set, at most 720h"},
 	}
 
 	for name, tc := range tests {
