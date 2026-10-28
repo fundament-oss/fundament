@@ -57,9 +57,13 @@ active node pools (reusing the sync path's query) and classifies each pool:
 | `error` | `lastOperation` is `Failed` and the failure names the pool |
 
 Machine deployment names carry the generated worker name
-(`kubename.GenerateWorkerName(pool)`), never the raw pool name; matching uses the
-`-<worker>-z` fragment to avoid prefix collisions (`web` vs `web2`) and the shoot's
-technical ID, covered by unit tests.
+(`kubename.GenerateWorkerName(pool)`), never the raw pool name. Matching uses the whole
+`<technicalID>-<worker>` (the Shoot's `.status.technicalID`) ending at a name boundary,
+to avoid prefix collisions (`web` vs `web2`) and the shoot's technical ID, covered by
+unit tests. The `-<worker>-z` fragment this section first named only fits the local
+provider: provider-metal names deployments `<technicalID>-<worker>` and machines
+`<technicalID>-<worker>-<hash>-<id>`, with no zone suffix
+([issue 1383](https://gitlab.com/digilab.overheid.nl/miscellaneous/issues/-/work_items/1383)).
 
 Storage: three new columns on `tenant.node_pools` — `status text`, `status_message text`,
 `status_updated timestamptz` — with a CHECK constraint for the values (no postgres enums).
@@ -121,7 +125,7 @@ functl: `cluster get` output gains a node pools table — name, machine type, no
 
 - **Unit (cluster-worker):** extend the pure `nextShootStatus` table tests for the changed
   ready+Reconcile rule; new pool-classification tests with real-shaped `EveryNodeReady`
-  messages and `lastErrors` fixtures, including the `-<pool>-z` prefix-collision case.
+  messages and `lastErrors` fixtures, including the prefix-collision case, in both the local provider's `-z<n>` form and metal-stack's form without a zone suffix.
 - **Integration (cluster-worker, embedded PG + mock Gardener):** extend the mock's
   `StatusOverride` with per-pool condition data; scenarios: ready cluster + stuck pool →
   pool `waiting` with reason, `nodepool_waiting` event written once per message, cluster

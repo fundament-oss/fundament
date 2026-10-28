@@ -282,10 +282,20 @@ is new (NULL) or `progressing` stays `progressing` rather than reading ready, an
 complaint naming it is ignored; a pool stored `ready` keeps its status.
 The in-flight state is read after the pool list (a pool's INSERT commits together with
 its outbox row), so a pool inserted mid-check is never classified from a stale
-nothing-in-flight state. Matching uses the `-<worker>-z` fragment of
-Gardener's machine deployment names, so one pool can never match another's text, nor
-the shoot's technical ID. Gardener's reason text is cleaned before it is stored
-(control characters dropped, capped at 1 KiB): it is node and provider text. A failure
+nothing-in-flight state. Gardener's providers name machine deployments, machines and
+nodes `<technicalID>-<worker>` (the technical ID is the Shoot's `.status.technicalID`,
+its namespace in the seed), followed by `-z<n>` on the local provider and by the
+machine set's hash on metal-stack. Matching uses the whole `<technicalID>-<worker>`
+ending at a name boundary, so one pool can never match another's text, another
+shoot's machines, or a project or shoot named like the worker. The reason is cleaned
+before it is stored (control characters dropped, capped at 1 KiB): it is node and
+provider text. A provider failure the worker recognises is stored in plain words
+instead (metal-stack's `no machine available` becomes "No free `<machine type>`
+machine is available."), and Gardener's own text is logged next to it; provider-metal
+sets no Gardener error codes, so the text is all there is to go by. Only the part of
+the text from the pool's machine name to the next machine name is read for it, so
+another pool's failure in the same text is not this pool's, and while a saved change
+has not reached Gardener the machine type is left out: Gardener's text predates it. A failure
 that names no pool stays cluster-level; a `pending`/`deleting` shoot leaves pool rows
 untouched. Only transitions record events — `nodepool_waiting` / `nodepool_error` with
 the reason at that moment, `nodepool_ready` on recovery; Gardener rewrites its reason
