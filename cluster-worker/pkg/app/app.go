@@ -162,6 +162,12 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Each pool's own nodes settle its status before the shoot does. Mock
+	// shoots have no nodes, so only a real Gardener's are read.
+	if cfg.Gardener.Mode == "real" {
+		ch.SetPoolNodeReader(shootAccess)
+	}
+
 	ush := usersync.New(pool, shootAccess, logger)
 	registry.RegisterSync(handler.EntityOrgUser, ush)
 	registry.RegisterSync(handler.EntityProjectMember, ush)

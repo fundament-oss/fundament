@@ -114,15 +114,21 @@ ORDER BY
     tenant.node_pools.id;
 
 -- name: NodePoolListStatusByClusterID :many
--- The status path needs only identity, the machine type its reason names and
--- the stored classification; the worker-group build query above, with its
--- catalog joins, stays with sync.
+-- The status path needs only identity, the machine type its reason names, the
+-- minimum its own nodes are held to and when it was created (older nodes are a
+-- predecessor's), and the stored classification and node counts; the
+-- worker-group build query above, with its catalog joins, stays with sync.
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
     tenant.node_pools.machine_type,
+    tenant.node_pools.autoscale_min,
+    tenant.node_pools.created,
     tenant.node_pools.status,
-    tenant.node_pools.status_message
+    tenant.node_pools.status_message,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated
 FROM
     tenant.node_pools
 WHERE
@@ -184,15 +190,32 @@ WHERE
     id = @node_pool_id
     AND deleted IS NULL;
 
+-- name: NodePoolUpdateNodeCount :execrows
+-- Record how many of the pool's nodes the shoot's API server lists, for the
+-- console while the shoot has no Prometheus yet. Keyed by id like
+-- NodePoolUpdateStatus.
+UPDATE tenant.node_pools
+SET
+    node_count = @node_count,
+    node_count_ready = @node_count_ready,
+    node_count_updated = now()
+WHERE
+    id = @node_pool_id
+    AND deleted IS NULL;
+
 -- name: NodePoolClearStatusByClusterID :exec
 -- Forget what was recorded about a lost cluster's pools: their machines went
 -- with the Shoot. When a change creates it again they read as new, so as
 -- progressing while the create runs, instead of their old status and reason.
+-- Their node counts went with them too.
 UPDATE tenant.node_pools
 SET
     status = NULL,
     status_message = NULL,
-    status_updated = now()
+    status_updated = now(),
+    node_count = NULL,
+    node_count_ready = NULL,
+    node_count_updated = NULL
 WHERE
     cluster_id = @cluster_id
     AND deleted IS NULL;

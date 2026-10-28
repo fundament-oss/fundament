@@ -149,6 +149,9 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
@@ -173,6 +176,9 @@ type NodePoolGetByIDRow struct {
 	Status              pgtype.Text
 	StatusMessage       pgtype.Text
 	StatusUpdated       pgtype.Timestamptz
+	NodeCount           pgtype.Int4
+	NodeCountReady      pgtype.Int4
+	NodeCountUpdated    pgtype.Timestamptz
 	SyncStatus          pgtype.Text
 	SyncError           pgtype.Text
 }
@@ -194,6 +200,9 @@ func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams
 		&i.Status,
 		&i.StatusMessage,
 		&i.StatusUpdated,
+		&i.NodeCount,
+		&i.NodeCountReady,
+		&i.NodeCountUpdated,
 		&i.SyncStatus,
 		&i.SyncError,
 	)
@@ -214,6 +223,9 @@ SELECT
     tenant.node_pools.status,
     tenant.node_pools.status_message,
     tenant.node_pools.status_updated,
+    tenant.node_pools.node_count,
+    tenant.node_pools.node_count_ready,
+    tenant.node_pools.node_count_updated,
     tenant.node_pool_sync_state.outbox_status AS sync_status,
     tenant.node_pool_sync_state.outbox_error AS sync_error
 FROM tenant.node_pools
@@ -239,6 +251,9 @@ type NodePoolListByClusterIDRow struct {
 	Status              pgtype.Text
 	StatusMessage       pgtype.Text
 	StatusUpdated       pgtype.Timestamptz
+	NodeCount           pgtype.Int4
+	NodeCountReady      pgtype.Int4
+	NodeCountUpdated    pgtype.Timestamptz
 	SyncStatus          pgtype.Text
 	SyncError           pgtype.Text
 }
@@ -266,6 +281,9 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.Status,
 			&i.StatusMessage,
 			&i.StatusUpdated,
+			&i.NodeCount,
+			&i.NodeCountReady,
+			&i.NodeCountUpdated,
 			&i.SyncStatus,
 			&i.SyncError,
 		); err != nil {

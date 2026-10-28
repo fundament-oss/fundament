@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-beta
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -1381,9 +1381,13 @@ CREATE TABLE tenant.node_pools (
 	status text,
 	status_message text,
 	status_updated timestamptz,
+	node_count integer,
+	node_count_ready integer,
+	node_count_updated timestamptz,
 	CONSTRAINT node_pools_pk PRIMARY KEY (id),
 	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted),
-	CONSTRAINT node_pools_ck_status CHECK (status IN ('progressing','waiting','error','ready'))
+	CONSTRAINT node_pools_ck_status CHECK (status IN ('progressing','waiting','error','ready')),
+	CONSTRAINT node_pools_ck_node_count CHECK ((node_count IS NULL AND node_count_ready IS NULL AND node_count_updated IS NULL) OR (node_count IS NOT NULL AND node_count_ready IS NOT NULL AND node_count_updated IS NOT NULL AND node_count_ready >= 0 AND node_count_ready <= node_count))
 );
 -- ddl-end --
 ALTER TABLE tenant.node_pools OWNER TO fun_owner;
@@ -4459,6 +4463,30 @@ GRANT UPDATE(status_message)
 
 -- object: grant_w_ce2e269291 | type: PERMISSION --
 GRANT UPDATE(status_updated)
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_e3c01547f4 | type: PERMISSION --
+GRANT UPDATE(node_count)
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_0400d7e7bd | type: PERMISSION --
+GRANT UPDATE(node_count_ready)
+   ON TABLE tenant.node_pools
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_w_f42f507194 | type: PERMISSION --
+GRANT UPDATE(node_count_updated)
    ON TABLE tenant.node_pools
    TO fun_cluster_worker;
 

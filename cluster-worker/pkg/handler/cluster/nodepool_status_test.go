@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/kubename"
 )
@@ -44,6 +45,7 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		observed    *gardener.ShootStatus
 		updating    bool
 		syncPending bool
+		nodes       map[string]shoot.PoolNodes
 		want        []nodePoolUpdate
 	}{
 		{
@@ -258,10 +260,118 @@ func TestNextNodePoolStatuses(t *testing.T) {
 		},
 	}
 
+	creating := &gardener.ShootStatus{
+		Status: gardener.StatusProgressing, Operation: gardener.OperationCreate,
+		Message: "Create: Waiting until shoot worker nodes have been reconciled", APIServerAvailable: true,
+		EveryNodeReadyMessage: enrNomach,
+		TechnicalID:           fixtureTechnicalID,
+	}
+	ownNodesTests := []struct {
+		name        string
+		stored      []storedNodePool
+		observed    *gardener.ShootStatus
+		updating    bool
+		syncPending bool
+		nodes       map[string]shoot.PoolNodes
+		want        []nodePoolUpdate
+	}{
+		{
+			name:     "create hangs on one pool: the pool with its nodes is ready, the named one waits",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 2}, {Name: "nomach", AutoscaleMin: 2}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 2, Ready: 2}, "nomach": {}},
+			want: []nodePoolUpdate{
+				{Name: "small", Status: dbconst.NodePoolStatus_Ready},
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
+			},
+		},
+		{
+			name:     "a progressing pool whose nodes stand turns ready with an event",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 2, Status: "progressing"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 3, Ready: 3}},
+			want: []nodePoolUpdate{
+				{Name: "small", Status: dbconst.NodePoolStatus_Ready,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool small: machines are ready"}}},
+			},
+		},
+		{
+			name:     "fewer nodes than the minimum keep the pool progressing",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 2, Status: "progressing"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 1, Ready: 1}},
+			want:     nil,
+		},
+		{
+			name:     "a node that is not Ready keeps the pool progressing",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 2, Status: "progressing"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 2, Ready: 1}},
+			want:     nil,
+		},
+		{
+			name:     "a waiting pool that Gardener no longer names recovers once its nodes stand",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 1, Status: "waiting", Message: enrMessage("small")}, {Name: "nomach", AutoscaleMin: 1, Status: "waiting", Message: enrNomach}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 1, Ready: 1}, "nomach": {}},
+			want: []nodePoolUpdate{
+				{Name: "small", Status: dbconst.NodePoolStatus_Ready,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolReady, Message: "Node pool small: machines are ready"}}},
+			},
+		},
+		{
+			name:     "a pool Gardener names waits even when its minimum stands",
+			stored:   []storedNodePool{{Name: "nomach", AutoscaleMin: 1, Status: "progressing"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"nomach": {Nodes: 1, Ready: 1}},
+			want: []nodePoolUpdate{
+				{Name: "nomach", Status: dbconst.NodePoolStatus_Waiting, Message: enrNomach,
+					Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool nomach: " + enrNomach}}},
+			},
+		},
+		{
+			name:     "a failed pool stays failed until a new change",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 1, Status: "error", Message: "boom"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"small": {Nodes: 1, Ready: 1}},
+			want:     nil,
+		},
+		{
+			name:     "a never-classified pool with no change of ours is left to its metrics",
+			stored:   []storedNodePool{{Name: "workers", AutoscaleMin: 1}},
+			observed: quietReconcile,
+			nodes:    map[string]shoot.PoolNodes{"workers": {Nodes: 2, Ready: 2}},
+			want:     nil,
+		},
+		{
+			name:        "nodes of a deleted pool of the same name do not make its successor ready",
+			stored:      []storedNodePool{{Name: "small", AutoscaleMin: 1, Status: "progressing"}},
+			observed:    quietReconcile,
+			syncPending: true,
+			nodes:       map[string]shoot.PoolNodes{"small": {Nodes: 1, Ready: 1}},
+			want:        nil,
+		},
+		{
+			name:     "a pool scaled to zero proves nothing by its nodes",
+			stored:   []storedNodePool{{Name: "spare", AutoscaleMin: 0, Status: "progressing"}},
+			observed: creating,
+			nodes:    map[string]shoot.PoolNodes{"spare": {}},
+			want:     nil,
+		},
+		{
+			name:     "without node counts the shoot-wide rules decide alone",
+			stored:   []storedNodePool{{Name: "small", AutoscaleMin: 1, Status: "progressing"}},
+			observed: creating,
+			want:     nil,
+		},
+	}
+	tests = append(tests, ownNodesTests...)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.updating, tt.syncPending))
+			assert.Equal(t, tt.want, nextNodePoolStatuses(tt.stored, tt.observed, tt.updating, tt.syncPending, tt.nodes))
 		})
 	}
 }
@@ -391,14 +501,14 @@ func TestNextNodePoolStatusesPlainReason(t *testing.T) {
 		t.Parallel()
 		observed := &gardener.ShootStatus{Status: gardener.StatusProgressing, Operation: gardener.OperationReconcile, EveryNodeReadyMessage: metalMessage("medium"), TechnicalID: metalTechnicalID}
 		assert.Equal(t, []nodePoolUpdate{{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: "No free machine is available for this pool."}},
-			nextNodePoolStatuses(stored, observed, false, true))
+			nextNodePoolStatuses(stored, observed, false, true, nil))
 	})
 
 	t.Run("a failure past the stored text cap is still recognised", func(t *testing.T) {
 		t.Parallel()
 		long := `task "Waiting until shoot worker nodes have been reconciled" failed: ` + strings.Repeat("x", maxReasonLen) + " " + metalMessage("medium")
 		observed := &gardener.ShootStatus{Status: gardener.StatusError, LastErrors: []string{long}, TechnicalID: metalTechnicalID}
-		updates := nextNodePoolStatuses(stored, observed, false, false)
+		updates := nextNodePoolStatuses(stored, observed, false, false, nil)
 		require.Len(t, updates, 1)
 		assert.Equal(t, "No free c1-large-x86 machine is available.", updates[0].Message)
 	})
@@ -420,5 +530,5 @@ func TestNextNodePoolStatusesMetalCreate(t *testing.T) {
 		{Name: "small", Status: dbconst.NodePoolStatus_Progressing},
 		{Name: "medium", Status: dbconst.NodePoolStatus_Waiting, Message: reason,
 			Events: []statusEvent{{Type: dbconst.ClusterEventEventType_NodepoolWaiting, Message: "Node pool medium: " + reason}}},
-	}, nextNodePoolStatuses(stored, observed, false, false))
+	}, nextNodePoolStatuses(stored, observed, false, false, nil))
 }

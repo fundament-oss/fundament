@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/fundament-oss/fundament/common/kubename"
+	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -19,7 +20,8 @@ import (
 // those three come from the same per-shoot Prometheus the metrics panels read
 // (ADR-0026). A cluster whose monitoring stack is unreachable degrades the way
 // the panels do: unknown status and no node count, never an error that empties
-// the page.
+// the page. The one exception is a shoot whose Prometheus does not exist yet
+// (see runtimeForPool).
 
 const (
 	// Gardener labels every node with the worker pool it was created for.
@@ -55,17 +57,38 @@ func (r nodePoolRuntime) status() organizationv1.NodePoolStatus {
 	}
 }
 
+// storedNodeCountMaxAge is how old the node counts cluster-worker stored may
+// be and still stand in for Prometheus. It records them at least once a
+// minute while a pool waits for its machines or the shoot's create runs, and
+// the create deploys the shoot's Prometheus last. Counts that stopped being
+// recorded then describe a settled cluster, where an unreachable Prometheus
+// must read as unknown, not as the last count: a few missed reads at most.
+const storedNodeCountMaxAge = 5 * time.Minute
+
 // runtimeForPool looks a pool up in the runtimes map. The map is keyed by the
 // worker.gardener.cloud/pool node label, which carries the generated worker
 // name — never the pool name the user chose — so the translation lives here,
 // next to how the map is built, not at each call site.
-func runtimeForPool(runtimes map[string]nodePoolRuntime, poolName string) nodePoolRuntime {
-	return runtimes[kubename.GenerateWorkerName(poolName)]
+//
+// A pool Prometheus does not report (a new shoot gets its Prometheus only
+// once every pool has its machines) falls back to the node counts
+// cluster-worker read from the shoot's API server, while those are fresh.
+// They carry no kubelet version.
+func runtimeForPool(runtimes map[string]nodePoolRuntime, pool *db.NodePoolListByClusterIDRow, now time.Time) nodePoolRuntime {
+	if runtime, ok := runtimes[kubename.GenerateWorkerName(pool.Name)]; ok {
+		return runtime
+	}
+	if !pool.NodeCount.Valid || !pool.NodeCountReady.Valid || !pool.NodeCountUpdated.Valid ||
+		now.Sub(pool.NodeCountUpdated.Time) >= storedNodeCountMaxAge {
+		return nodePoolRuntime{}
+	}
+	return nodePoolRuntime{nodes: pool.NodeCount.Int32, ready: pool.NodeCountReady.Int32}
 }
 
 // nodePoolRuntimes reads the live state of every pool on a cluster, keyed by
 // pool name. A cluster with no reachable Prometheus returns an empty map, so
-// every pool falls back to the zero value.
+// every pool falls back to its fresh stored counts or, without those, the zero
+// value (see runtimeForPool).
 func (s *Server) nodePoolRuntimes(ctx context.Context, clusterID uuid.UUID, pools int) map[string]nodePoolRuntime {
 	// A cluster without pools has nothing to enrich, and asking anyway costs
 	// three round trips to the seed ingress.

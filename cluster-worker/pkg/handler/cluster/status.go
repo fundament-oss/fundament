@@ -91,7 +91,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 	// Pool status is derived from the same report, before the cluster-level
 	// early return below: a check that changes nothing for the cluster row can
 	// still carry a new reason for a pool.
-	h.updateNodePoolStatuses(ctx, cluster, shootStatus)
+	poolRecheck := h.updateNodePoolStatuses(ctx, cluster, shootStatus)
 
 	stored := storedShootState{
 		Status:   gardener.ShootStatusType(cluster.ShootStatus.String),
@@ -117,6 +117,7 @@ func (h *Handler) checkActiveCluster(ctx context.Context, cluster *db.ClusterGet
 		}
 		retryAfter = addProgressEvent(&update, last, time.Now(), h.cfg.StatusProgressEventInterval)
 	}
+	retryAfter = soonest(retryAfter, poolRecheck)
 	if update.unchanged(stored) {
 		// Gardener writes a Shoot after every reconcile task; most of those
 		// leave what fundament records as it is.
@@ -289,4 +290,12 @@ func (h *Handler) writeShootStatus(ctx context.Context, cluster *db.ClusterGetFo
 		return false, fmt.Errorf("commit status transaction: %w", err)
 	}
 	return true, nil
+}
+
+// soonest returns the shorter of two delays, where 0 means none.
+func soonest(a, b time.Duration) time.Duration {
+	if a == 0 || (b != 0 && b < a) {
+		return b
+	}
+	return a
 }
