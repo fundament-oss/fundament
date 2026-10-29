@@ -75,7 +75,11 @@ func (s *Server) GetOrganization(ctx context.Context, req *fleetv1.GetOrganizati
 }
 
 // organizationSummaries adds how many clusters of each organization need
-// attention, derived per cluster the way the console does.
+// attention, derived per cluster the way the console does. The status query
+// is limited to this page's organizations, so reading every page reads each
+// live cluster once; with GetFleetSummary's own read, a full DCIM refresh
+// derives every status twice. That is cheap next to the snapshot joins, and
+// is left uncached so the counts always agree with the cluster list.
 func (s *Server) organizationSummaries(ctx context.Context, rows []db.OrganizationListRow) ([]*fleetv1.OrganizationSummary, error) {
 	ids := make([]uuid.UUID, 0, len(rows))
 	for i := range rows {

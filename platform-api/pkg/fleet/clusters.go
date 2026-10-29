@@ -24,16 +24,21 @@ type clusterKey struct {
 
 // ListClusters reads clusters in batches of the page size and keeps those
 // that match the filter, until the page is full or the clusters run out. The
-// filter is applied here because the UNHEALTHY rule is common/clusterstatus,
-// which has no SQL twin. A full page gets a token only once one more match is
-// found, so the last page is never an empty one.
+// STALE filter is applied in SQL as well; UNHEALTHY only here, because its
+// rule is common/clusterstatus, which has no SQL twin. A full page gets a
+// token only once one more match is found, so the last page is never an empty
+// one.
 func (s *Server) ListClusters(ctx context.Context, req *fleetv1.ListClustersRequest) (*fleetv1.ListClustersResponse, error) {
 	hb, err := s.heartbeats(ctx)
 	if err != nil {
 		return nil, err
 	}
 	size := pageSize(req.GetPageSize())
-	params := db.ClusterListParams{StaleBefore: s.staleBefore(hb), PageLimit: size}
+	params := db.ClusterListParams{
+		StaleBefore: s.staleBefore(hb),
+		OnlyStale:   req.GetFilter() == fleetv1.ClusterFilter_CLUSTER_FILTER_STALE,
+		PageLimit:   size,
+	}
 	if req.HasOrganizationId() {
 		params.OrganizationID = pgtype.UUID{Bytes: uuid.MustParse(req.GetOrganizationId()), Valid: true}
 	}

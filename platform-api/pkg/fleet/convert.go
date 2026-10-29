@@ -11,29 +11,32 @@ import (
 	fleetv1 "github.com/fundament-oss/fundament/platform-api/pkg/proto/gen/fleet/v1"
 )
 
-// clusterStatus derives the status the way the console does
-// (common/clusterstatus) and maps it onto the fleet API.
+// clusterStatus derives the status of a ClusterList row the way the console
+// does (common/clusterstatus).
 func clusterStatus(row *db.ClusterListRow) clusterstatus.Status {
-	return clusterstatus.FromDB(clusterstatus.Input{
-		ShootStatus:     row.ShootStatus,
-		ShootMessage:    row.ShootStatusMessage,
-		ShootHealth:     row.ShootHealth,
-		Updating:        row.ShootUpdating,
-		OutboxStatus:    row.OutboxStatus,
-		ReachedGardener: row.ReachedGardener,
-	})
+	return deriveStatus(row.ShootStatus, row.ShootStatusMessage, row.ShootHealth,
+		row.ShootUpdating, row.OutboxStatus, row.ReachedGardener)
 }
 
 // clusterstatusOf derives the status of a ClusterStatusInputList row, the
-// same way as clusterStatus. Live clusters only, so never deleted.
+// same way as clusterStatus.
 func clusterstatusOf(row *db.ClusterStatusInputListRow) clusterstatus.Status {
+	return deriveStatus(row.ShootStatus, row.ShootStatusMessage, row.ShootHealth,
+		row.ShootUpdating, row.OutboxStatus, row.ReachedGardener)
+}
+
+// deriveStatus is the one mapping onto clusterstatus.Input for both row
+// types, so the list's UNHEALTHY filter and the unhealthy counts cannot
+// drift apart: a new input is a new parameter, which both callers must pass.
+// Both queries read live clusters only, so Deleted is never set.
+func deriveStatus(shootStatus, shootMessage, shootHealth pgtype.Text, updating bool, outboxStatus pgtype.Text, reachedGardener bool) clusterstatus.Status {
 	return clusterstatus.FromDB(clusterstatus.Input{
-		ShootStatus:     row.ShootStatus,
-		ShootMessage:    row.ShootStatusMessage,
-		ShootHealth:     row.ShootHealth,
-		Updating:        row.ShootUpdating,
-		OutboxStatus:    row.OutboxStatus,
-		ReachedGardener: row.ReachedGardener,
+		ShootStatus:     shootStatus,
+		ShootMessage:    shootMessage,
+		ShootHealth:     shootHealth,
+		Updating:        updating,
+		OutboxStatus:    outboxStatus,
+		ReachedGardener: reachedGardener,
 	})
 }
 

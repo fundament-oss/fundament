@@ -55,6 +55,10 @@ func NewRealShootAccess(gardenerClient gardener.Client, logger *slog.Logger) *Re
 		logger:   logger.With("component", "shoot-access"),
 	}
 
+	// The three factories are spelled out rather than built by one generic
+	// helper: the NewForConfig constructors return concrete clientsets while
+	// the fields hold interfaces, and Go cannot convert a type parameter to
+	// another without a runtime assertion.
 	r.newClient = func(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error) {
 		cfg, err := r.restConfigForCluster(ctx, clusterID)
 		if err != nil {

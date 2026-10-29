@@ -27,6 +27,7 @@ import {
   formatCores,
   formatDate,
   formatMemory,
+  lastPass,
   nodesText,
   observed,
   poolFlag,
@@ -150,14 +151,10 @@ export default class PlatformComponent implements OnInit, OnDestroy {
    *  record each pass they complete. */
   protected readonly freshness = computed(() => {
     const summary = this.api.summary();
-    const reconcile = summary?.reconcile?.lastPass;
-    const inventory = summary?.inventory?.lastPass;
-    const drift = reconcile
-      ? `Drift checked ${timeAgo(timestampDate(reconcile), this.now())}`
-      : 'Drift not checked yet';
-    const snapshots = inventory
-      ? `snapshots collected ${timeAgo(timestampDate(inventory), this.now())}`
-      : 'no snapshots collected yet';
+    const reconcile = lastPass(summary?.reconcile, this.now());
+    const inventory = lastPass(summary?.inventory, this.now());
+    const drift = reconcile ? `Drift checked ${reconcile}` : 'Drift not checked yet';
+    const snapshots = inventory ? `snapshots collected ${inventory}` : 'no snapshots collected yet';
     return `${drift}, ${snapshots}`;
   });
 

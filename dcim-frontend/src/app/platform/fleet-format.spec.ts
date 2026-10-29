@@ -1,10 +1,12 @@
+import { create } from '@bufbuild/protobuf';
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
-import { ClusterStatus, DriftKind } from '../../generated/fleet/v1/fleet_pb';
+import { ClusterStatus, DriftKind, WorkerHeartbeatSchema } from '../../generated/fleet/v1/fleet_pb';
 import {
   clusterTag,
   driftKindTag,
   formatCores,
   formatMemory,
+  lastPass,
   observed,
   poolFlag,
   timeAgo,
@@ -56,6 +58,20 @@ describe('observed', () => {
       text: '10 min ago',
       stale: false,
     });
+  });
+});
+
+describe('lastPass', () => {
+  it('marks a pass overdue after three missed intervals', () => {
+    const heartbeat = (ms: number) =>
+      create(WorkerHeartbeatSchema, {
+        lastPass: timestampFromDate(ago(ms)),
+        intervalSeconds: 300,
+      });
+    expect(lastPass(undefined, now)).toBeUndefined();
+    expect(lastPass(create(WorkerHeartbeatSchema, { intervalSeconds: 300 }), now)).toBeUndefined();
+    expect(lastPass(heartbeat(4 * 60_000), now)).toBe('4 min ago');
+    expect(lastPass(heartbeat(3 * 3_600_000), now)).toBe('3 h ago (overdue)');
   });
 });
 

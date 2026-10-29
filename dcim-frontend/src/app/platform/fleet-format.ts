@@ -5,6 +5,7 @@ import {
   type ClusterSnapshot,
   type ClusterSummary,
   type NodePool,
+  type WorkerHeartbeat,
 } from '../../generated/fleet/v1/fleet_pb';
 
 /** The colours a tag takes here: the semantic four only. */
@@ -91,6 +92,23 @@ export function observed(
     text: timeAgo(date, now),
     stale: now.getTime() - date.getTime() > staleAfterSeconds * 1000,
   };
+}
+
+/** How many of its own intervals a loop may miss before its last pass is
+ *  overdue: the rule the API applies to snapshots. */
+const OVERDUE_AFTER_INTERVALS = 3;
+
+/** When a cluster-worker loop last completed a pass, marked overdue once it
+ *  has missed three of its intervals. A pass that fails to record what it saw
+ *  records no heartbeat either, so this is where a failing loop shows. */
+export function lastPass(heartbeat: WorkerHeartbeat | undefined, now: Date): string | undefined {
+  if (!heartbeat?.lastPass) return undefined;
+  const { text, stale } = observed(
+    heartbeat.lastPass,
+    OVERDUE_AFTER_INTERVALS * heartbeat.intervalSeconds,
+    now,
+  );
+  return stale ? `${text} (overdue)` : text;
 }
 
 /** Millicores as cores, one decimal below ten. */

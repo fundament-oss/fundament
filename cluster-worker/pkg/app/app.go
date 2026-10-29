@@ -198,6 +198,9 @@ func newProvisioning(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App
 	if cfg.Cluster.MaxReconcileDeletions < 0 {
 		return nil, fmt.Errorf("invalid CLUSTER_MAX_RECONCILE_DELETIONS: %d (must be 0 or more)", cfg.Cluster.MaxReconcileDeletions)
 	}
+	if err := cfg.Reconcile.Validate(); err != nil {
+		return nil, err
+	}
 
 	gardenerClient, err := createGardenerClient(cfg, logger)
 	if err != nil {

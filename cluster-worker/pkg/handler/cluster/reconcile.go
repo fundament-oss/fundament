@@ -54,6 +54,12 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 			})
 			continue
 		}
+		// Two shoots with one cluster id (a recreate in flight, a copied
+		// label) keep the oldest, so a finding's subject, which includes the
+		// shoot uid, does not change with Gardener's list order.
+		if prev, ok := shootByClusterID[s.ClusterID]; ok && !olderShoot(s, prev) {
+			continue
+		}
 		shootByClusterID[s.ClusterID] = s
 	}
 
@@ -112,7 +118,9 @@ func (h *Handler) Reconcile(ctx context.Context) error {
 	}
 
 	// The record is for the staff fleet view; failing to write it must not
-	// stop the orphan cleanup.
+	// stop the orphan cleanup. The failure is not stored anywhere else: the
+	// heartbeat is part of the same transaction, so the fleet view sees the
+	// reconcile pass go overdue and marks the drift findings as such.
 	if err := h.recordObservation(ctx, shoots, findings); err != nil {
 		h.logger.Error("failed to record Gardener observation", "error", err)
 	}
@@ -159,6 +167,15 @@ func versionMismatch(cluster *db.ClusterListActiveRow, s gardener.ShootInfo) (dr
 		expected:  cluster.KubernetesVersion,
 		observed:  s.KubernetesVersion,
 	}, true
+}
+
+// olderShoot orders shoots by creation, then by uid for shoots created in the
+// same second.
+func olderShoot(a, b gardener.ShootInfo) bool {
+	if !a.Created.Equal(b.Created) {
+		return a.Created.Before(b.Created)
+	}
+	return a.UID < b.UID
 }
 
 // minorVersion cuts a Kubernetes version to major.minor: "1.31.4" -> "1.31".

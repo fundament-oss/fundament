@@ -32,6 +32,11 @@ import (
 // response body; the start says what went wrong.
 const maxErrorLength = 1000
 
+// recordErrorTimeout bounds storing a failed collection. It cannot use the
+// collection's deadline, which may be what failed it, and without one of its
+// own a stalled database would hold the worker, and its queue slot, forever.
+const recordErrorTimeout = 10 * time.Second
+
 // Config is read under the INVENTORY_ prefix.
 type Config struct {
 	// Interval is how often every ready cluster is queued for collection.
@@ -178,11 +183,13 @@ func (w *Worker) Collect(ctx context.Context, clusterID uuid.UUID) error {
 
 // recordError stores a failed collection on the cluster's snapshot. It runs on
 // the worker's context, not the collection's, so a collection that ran out of
-// time still records why.
+// time still records why, bounded by recordErrorTimeout.
 func (w *Worker) recordError(ctx context.Context, clusterID uuid.UUID, err error) error {
 	if ctx.Err() != nil {
 		return nil //nolint:nilerr // shutting down: the collection was cancelled, not failed
 	}
+	ctx, cancel := context.WithTimeout(ctx, recordErrorTimeout)
+	defer cancel()
 	if recordErr := w.queries.ClusterSnapshotRecordError(ctx, db.ClusterSnapshotRecordErrorParams{
 		ClusterID:   clusterID,
 		LastError:   pgtype.Text{String: truncate(err.Error(), maxErrorLength), Valid: true},
