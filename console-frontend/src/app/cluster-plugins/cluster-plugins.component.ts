@@ -20,14 +20,13 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import fetchPluginConfigSchema from '../plugin-installation/plugin-config-schema';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
-import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
+import { NotificationService } from '../notification.service';
 
 import '@nldd/design-system/banner';
 import '@nldd/design-system/button';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/page';
-import '@nldd/design-system/sheet';
 import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/title';
@@ -35,13 +34,15 @@ import '@nldd/design-system/top-title-bar';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [SharedPluginsFormComponent, SheetSyncDirective],
+  imports: [SharedPluginsFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
-  private pageNav = inject(PageNavService);
+  protected pageNav = inject(PageNavService);
+
+  private notificationService = inject(NotificationService);
 
   @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
 
@@ -88,7 +89,7 @@ export default class ClusterPluginsComponent implements OnInit {
 
   protected isClusterRunning = computed(() => isClusterReachable(this.clusterStatus()));
 
-  /** The state where this sheet has nothing to offer: the status is in, and it
+  /** The state where this page has nothing to offer: the status is in, and it
    *  is not running. Not while loading, when the status is still UNSPECIFIED. */
   protected notRunning = computed(() => !this.isLoading() && !this.isClusterRunning());
 
@@ -191,16 +192,15 @@ export default class ClusterPluginsComponent implements OnInit {
         return;
       }
 
-      this.pageNav.goTo(`/clusters/${this.clusterId}`);
+      // A page now rather than a sheet, so it stays: what was saved becomes
+      // what the next save is compared against.
+      this.notificationService.success('Plugins updated');
+      await this.load();
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
     } finally {
       this.isSubmitting.set(false);
     }
-  }
-
-  onCancel() {
-    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 
   // True when the pinned definition declares required config keys. The shared

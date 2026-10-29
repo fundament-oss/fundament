@@ -1,56 +1,61 @@
-<nldd-sheet
-  #sheet
-  appSheetSync
-  [show]="true"
-  placement="right"
-  accessible-label="Edit node pools"
-  (close)="onCancel()"
->
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      text="Node pools"
-      collapse-anchor="node-pools-title"
-      dismiss-text="Cancel"
-      (dismiss)="onCancel()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title
-        id="node-pools-title"
-        size="3"
-      >
-        <h1>Node pools</h1>
-      </nldd-title>
+<!-- A page in the cluster's menu, beside General. No (back) of its own: the
+     event bubbles to the shell, which steps up to the cluster's menu. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Node pools"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="node-pools-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="node-pools-title"
+      size="2"
+    >
+      <h1>Node pools</h1>
+    </nldd-title>
+    <nldd-spacer size="16"></nldd-spacer>
+    @if (errorMessage()) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
       <nldd-spacer size="16"></nldd-spacer>
-      @if (errorMessage()) {
-        <nldd-banner
-          variant="critical"
-          [attr.text]="errorMessage()"
-        ></nldd-banner>
-        <nldd-spacer size="16"></nldd-spacer>
-      }
-      @if (isLoading()) {
-        <nldd-activity-indicator
-          show-text
-          text="Loading node pools..."
-        ></nldd-activity-indicator>
-      } @else {
-        <app-shared-node-pools-form
-          [initialData]="initialNodePools()"
-          [machineTypeOptions]="machineTypeOptions()"
-          (formSubmit)="onFormSubmit($event)"
-        >
-          <!-- No cancel button: the title bar's dismiss already covers leaving. -->
-          <nldd-button
-            type="button"
-            (click)="nodePoolsForm.submit()"
-            text="Save changes"
-            [loading]="isSubmitting()"
-            width="full"
-            variant="primary"
-          ></nldd-button>
-        </app-shared-node-pools-form>
-      }
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
+    }
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading node pools..."
+      ></nldd-activity-indicator>
+    } @else if (loadFailed()) {
+      <!-- In place of the form, as on the plugins page: a save is checked
+           against the pools read here, and there are none to check against. -->
+      <nldd-inline-dialog
+        variant="alert"
+        text="The node pools could not be loaded"
+        supporting-text="Without them there is no telling what a save would change, so editing them is off the table for now."
+      >
+        <nldd-button
+          slot="actions"
+          type="button"
+          text="Try again"
+          (click)="loadNodePools()"
+        ></nldd-button>
+      </nldd-inline-dialog>
+    } @else {
+      <app-shared-node-pools-form
+        [initialData]="initialNodePools()"
+        [machineTypeOptions]="machineTypeOptions()"
+        (formSubmit)="onFormSubmit($event)"
+      >
+        <nldd-button
+          type="button"
+          (click)="nodePoolsForm.submit()"
+          text="Save changes"
+          [loading]="isSubmitting()"
+          variant="primary"
+        ></nldd-button>
+      </app-shared-node-pools-form>
+    }
+  </nldd-simple-section>
+</nldd-page>

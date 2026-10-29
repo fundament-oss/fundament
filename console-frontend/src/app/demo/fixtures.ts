@@ -35,7 +35,11 @@ import {
   type PluginDetail,
   type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, ContainerDefaultsSchema, NodePoolStatus } from '../../generated/v1/common_pb';
+import {
+  ClusterStatus,
+  ContainerDefaultsSchema,
+  NodePoolStatus,
+} from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
@@ -742,7 +746,7 @@ export const seededInstalls: Record<string, string[]> = {
 //
 // What the console normally reads from the cluster through kube-api-proxy: the
 // plugin definition behind an installation, its CRDs, and the objects of those
-// CRDs. Only cert-manager carries a project menu here — that is the plugin the
+// CRDs. Only cert-manager carries a menu here — that is the plugin the
 // walkthrough installs, and a plugin without a menu simply has no console UI,
 // exactly as in production.
 //
@@ -797,9 +801,41 @@ const certificateCrd: ParsedCrd = {
   },
 };
 
+// Cluster-scoped, so it belongs in the cluster's menu rather than a project's:
+// the issuers sign certificates for every project on the cluster.
+const clusterIssuerCrd: ParsedCrd = {
+  group: 'cert-manager.io',
+  kind: 'ClusterIssuer',
+  plural: 'clusterissuers',
+  singular: 'clusterissuer',
+  scope: 'Cluster',
+  version: 'v1',
+  additionalPrinterColumns: [
+    { name: 'Ready', type: 'string', jsonPath: '.status.conditions[?(@.type=="Ready")].status' },
+    { name: 'Age', type: 'date', jsonPath: '.metadata.creationTimestamp' },
+  ],
+  specSchema: {
+    properties: {
+      acme: {
+        type: 'object',
+        description: 'Issues certificates from an ACME server such as Let’s Encrypt.',
+        properties: {
+          server: { type: 'string', description: 'The ACME directory URL.' },
+          email: { type: 'string', description: 'The account the ACME server mails about expiry.' },
+        },
+      },
+      selfSigned: {
+        type: 'object',
+        description: 'Signs certificates with their own key.',
+      },
+    },
+  },
+  statusSchema: { properties: {} },
+};
+
 /** Parsed CRDs per plugin, in place of the ones kube-api-proxy would serve. */
 export const pluginCrds: Record<string, ParsedCrd[]> = {
-  'cert-manager': [certificateCrd],
+  'cert-manager': [certificateCrd, clusterIssuerCrd],
 };
 
 /** Plugin definitions per catalog name; an installation without one has no UI. */
@@ -812,10 +848,19 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
     author: 'Fundament',
     // Menu entries reference a CRD by `plural.group`, exactly as the real
     // definition.yaml in plugins/cert-manager does.
-    menu: { project: [{ crd: 'certificates.cert-manager.io', icon: 'certificate' }] },
-    crds: ['certificates.cert-manager.io'],
+    menu: {
+      organization: [{ crd: 'clusterissuers.cert-manager.io', icon: 'certificate' }],
+      project: [{ crd: 'certificates.cert-manager.io', icon: 'certificate' }],
+    },
+    crds: ['certificates.cert-manager.io', 'clusterissuers.cert-manager.io'],
     allowedResources: [
       { group: 'cert-manager.io', version: 'v1', resource: 'certificates', verbs: ['get', 'list'] },
+      {
+        group: 'cert-manager.io',
+        version: 'v1',
+        resource: 'clusterissuers',
+        verbs: ['get', 'list'],
+      },
     ],
     installationId: 'demo-cert-manager',
     installationName: 'system--cert-manager',
@@ -884,6 +929,37 @@ export const pluginResources: Record<string, KubeResource[]> = {
     certificate('burgerzaken-portaal', 'burgerzaken-prod', 'burgerzaken.gemeente.nl', true, 90),
     certificate('burgerzaken-api', 'burgerzaken-prod', 'api.burgerzaken.gemeente.nl', true, 42),
     certificate('burgerzaken-afspraken', 'burgerzaken-prod', 'afspraken.gemeente.nl', false, 0),
+  ],
+  'cert-manager/ClusterIssuer': [
+    {
+      apiVersion: 'cert-manager.io/v1',
+      kind: 'ClusterIssuer',
+      metadata: {
+        name: 'letsencrypt',
+        uid: 'demo-clusterissuer-letsencrypt',
+        creationTimestamp: new Date(Date.now() - 120 * 86_400_000).toISOString(),
+      },
+      spec: {
+        acme: {
+          server: 'https://acme-v02.api.letsencrypt.org/directory',
+          email: 'platform@gemeente.nl',
+        },
+      },
+      status: {
+        conditions: [{ type: 'Ready', status: 'True', reason: 'ACMEAccountRegistered' }],
+      },
+    },
+    {
+      apiVersion: 'cert-manager.io/v1',
+      kind: 'ClusterIssuer',
+      metadata: {
+        name: 'self-signed',
+        uid: 'demo-clusterissuer-self-signed',
+        creationTimestamp: new Date(Date.now() - 120 * 86_400_000).toISOString(),
+      },
+      spec: { selfSigned: {} },
+      status: { conditions: [{ type: 'Ready', status: 'True', reason: 'IsReady' }] },
+    },
   ],
 };
 

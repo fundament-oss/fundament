@@ -94,6 +94,22 @@ describe('demo plugin sidebar', () => {
     ]);
   });
 
+  it('puts the cluster-scoped issuers in the cluster menu, not the project menu', async () => {
+    const registry = TestBed.inject(PluginRegistryService);
+    const nav = TestBed.inject(PluginNavService);
+
+    await registry.loadPlugins('cl-production');
+    document.dispatchEvent(new CustomEvent(PLUGIN_INSTALLS_ENSURE_EVENT));
+    await Promise.resolve();
+
+    expect(nav.clusterNav().flatMap((group) => group.items.map((item) => item.crdPlural))).toEqual([
+      'clusterissuers.cert-manager.io',
+    ]);
+    expect(nav.projectNav().flatMap((group) => group.items.map((item) => item.crdPlural))).toEqual([
+      'certificates.cert-manager.io',
+    ]);
+  });
+
   it('lists the objects of a CRD addressed by installation name', async () => {
     const registry = TestBed.inject(PluginRegistryService);
     const crd = registry.getCrd(

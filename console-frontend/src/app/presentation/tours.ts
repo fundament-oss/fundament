@@ -209,7 +209,7 @@ const intro: Tour = {
           'The activity feed shows what the platform is doing in the background.',
         ),
       ],
-      route: '/clusters/cl-production',
+      route: '/clusters/cl-production/general',
     },
     {
       id: 'cluster-nodes',
@@ -826,7 +826,7 @@ const platformEngineer: Tour = {
           'The activity feed shows every reconciliation, with the attempt and the result.',
         ),
       ],
-      route: '/clusters/cl-production',
+      route: '/clusters/cl-production/general',
     },
     {
       id: 'nodes',
@@ -1007,7 +1007,7 @@ const securityOfficer: Tour = {
           'You never have to ask anyone what happened.',
         ),
       ],
-      route: '/clusters/cl-production',
+      route: '/clusters/cl-production/general',
     },
     {
       id: 'cluster-defaults',
@@ -1016,7 +1016,7 @@ const securityOfficer: Tour = {
         'Elk cluster heeft eigen standaardwaarden voor requests en limits; waar het cluster een waarde zet, kan een project alleen lager.',
         'Every cluster has its own default requests and limits; wherever the cluster sets one, a project can only go lower.',
       ),
-      route: '/clusters/cl-production',
+      route: '/clusters/cl-production/general',
       skippable: true,
       // The block sits below the status, usage and node pools; the slide
       // before this one is on the same page, so nothing scrolls on its own.
@@ -1034,7 +1034,10 @@ const securityOfficer: Tour = {
           'Een verlaagd quotum raakt niets dat draait, alleen wat er nog bij zou komen.',
           'A lowered quota touches nothing that runs, only what would be added.',
         ),
-        loc('Meer nodig? Vraag het een Fundament-operator.', 'Need more? Ask a Fundament operator.'),
+        loc(
+          'Meer nodig? Vraag het een Fundament-operator.',
+          'Need more? Ask a Fundament operator.',
+        ),
       ],
       route: '/quotas',
       skippable: true,

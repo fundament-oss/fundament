@@ -149,10 +149,12 @@ const routes: Routes = [
       },
       {
         path: 'quotas',
+        data: { orgAdminOnly: true },
         loadComponent: () => import('./quotas/quotas.component').then((m) => m.default),
       },
       {
         path: 'clusters',
+        data: { orgAdminOnly: true },
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         // The form is a sheet the shell owns, so the address only opens it.
         children: [
@@ -197,34 +199,44 @@ const routes: Routes = [
           import('./project-detail/project-detail.component').then((m) => m.default),
       },
       {
+        // Nothing in the main pane, like a project: the secondary sidebar is the
+        // cluster's menu, and you pick what to open from there. After the
+        // `clusters` route above, so `clusters/new` is its sheet, not a cluster.
         path: 'clusters/:id',
+        data: { orgAdminOnly: true },
+        children: [],
+      },
+      {
+        path: 'clusters/:id/general',
+        data: { orgAdminOnly: true },
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
-        // Both editors open as a sheet over the detail page, so they are children
-        // of it: the page behind the sheet stays mounted and keeps its scroll.
-        children: [
-          {
-            path: 'nodes',
-            loadComponent: () =>
-              import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
-          },
-          {
-            path: 'namespaces',
-            loadComponent: () =>
-              import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
-          },
-          {
-            path: 'plugins',
-            loadComponent: () =>
-              import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
-          },
-        ],
+      },
+      // Pages of their own in the cluster's menu, beside General rather than
+      // sheets over it.
+      {
+        path: 'clusters/:id/nodes',
+        data: { orgAdminOnly: true },
+        loadComponent: () =>
+          import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
+      },
+      {
+        path: 'clusters/:id/namespaces',
+        data: { orgAdminOnly: true },
+        loadComponent: () =>
+          import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
+      },
+      {
+        path: 'clusters/:id/plugins',
+        data: { orgAdminOnly: true },
+        loadComponent: () =>
+          import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
       },
       // Plugin resource routes (cluster-level): a page of their own, not a sheet
       // over the cluster page. The data tells the components `:id` is a cluster.
       {
         path: 'clusters/:id/plugin-resources/:pluginName',
-        data: { pluginScope: 'cluster' },
+        data: { pluginScope: 'cluster', orgAdminOnly: true },
         children: [
           {
             path: ':resourceKind',
@@ -321,15 +333,18 @@ const routes: Routes = [
       },
       {
         path: 'plugins',
+        data: { orgAdminOnly: true },
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
       },
       {
         path: 'plugins/:id',
+        data: { orgAdminOnly: true },
         loadComponent: () =>
           import('./plugin-details/plugin-details.component').then((m) => m.default),
       },
       {
         path: 'metrics',
+        data: { orgAdminOnly: true },
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
       },
       {
@@ -338,6 +353,7 @@ const routes: Routes = [
           import('./logs/log-explorer/log-explorer.component').then((m) => m.default),
         data: {
           breadcrumbs: [{ label: 'Log explorer' }],
+          orgAdminOnly: true,
         },
       },
       // 'logs/analytics' is intentionally unrouted. Every figure on that page is

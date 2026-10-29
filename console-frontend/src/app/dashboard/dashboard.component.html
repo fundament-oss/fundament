@@ -93,10 +93,10 @@
               padding-bottom="16"
             >
               <nldd-button
-                [attr.href]="pageNav.path('/clusters/' + cluster.id)"
+                [attr.href]="pageNav.path('/clusters/' + cluster.id + '/general')"
                 text="View details"
                 variant="primary"
-                (click)="pageNav.navigate($event, '/clusters/' + cluster.id)"
+                (click)="pageNav.navigate($event, '/clusters/' + cluster.id + '/general')"
               ></nldd-button>
             </nldd-container>
           </nldd-card>

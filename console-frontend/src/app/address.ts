@@ -59,6 +59,20 @@ export function inOrganization(organization: string | null, path = '/'): string 
  */
 export const HOME = '/clusters';
 
+/**
+ * The project or the cluster an address within the organization is in, and
+ * what is open under it: `rest` is `''` at its own address and `/general` on
+ * its General page. `/projects/new` and `/clusters/new` look the same to a
+ * pattern but are sheets over a page, so they are in none.
+ */
+export function contextOf(
+  within: string,
+): { kind: 'projects' | 'clusters'; id: string; rest: string } | null {
+  const match = /^\/(projects|clusters)\/([^/?#]+)([^?#]*)/.exec(within);
+  if (!match || match[2] === 'new') return null;
+  return { kind: match[1] as 'projects' | 'clusters', id: match[2], rest: match[3] };
+}
+
 /** Whether an address names no page at all: the bare root, with or without the
  *  query string a visit brought along. */
 export function atRoot(url: string): boolean {

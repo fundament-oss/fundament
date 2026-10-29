@@ -113,6 +113,19 @@ export class OrganizationDataService {
     this.refreshMembers();
   });
 
+  /** What nodePoolsChanged stood at when the clusters were last reloaded for
+   *  it, for the same reason. */
+  private seenNodePoolsChanged = this.nodePoolsChanged();
+
+  /** A cluster's summary carries its pool count, which the cluster menu shows
+   *  beside the page that changes it. */
+  private readonly reloadOnNodePoolsChanged = effect(() => {
+    const changed = this.nodePoolsChanged();
+    if (changed === this.seenNodePoolsChanged) return;
+    this.seenNodePoolsChanged = changed;
+    this.reloadClusters();
+  });
+
   /** How many accepted members the organization has, for the sidebar next to
    *  Members, as Clusters shows the length of its list. A pending invitation is
    *  not a member yet. Null until the list is in. */
@@ -517,15 +530,31 @@ export class OrganizationDataService {
     ];
   }
 
+  /** The longest wait between tries of a member list that has never come in. */
+  private static readonly MEMBERS_MAX_BACKOFF_MS = 30000;
+
   /** Fetch the member list for the cache's own sake, with no page waiting on
    *  it. A failure is logged, unless the organization changed meanwhile: that
-   *  organization's own load asks again, and this list was never for it. */
-  private refreshMembers(): void {
+   *  organization's own load asks again, and this list was never for it.
+   *
+   *  A list that has not come in once is asked for again, backing off: your
+   *  role is read from it, and without it the menu offers neither an admin's
+   *  pages nor a viewer's for the rest of the session. One that came in before
+   *  keeps what it had, as a page's own reload does. */
+  private refreshMembers(attempt = 0): void {
     const { generation } = this;
     this.reloadMembers().catch((error: unknown) => {
       if (generation !== this.generation) return;
       // eslint-disable-next-line no-console
       console.error('Error loading members:', error);
+      if (this.membersLoaded()) return;
+      setTimeout(
+        () => {
+          if (generation !== this.generation || this.membersLoaded()) return;
+          this.refreshMembers(attempt + 1);
+        },
+        Math.min(1000 * 2 ** attempt, OrganizationDataService.MEMBERS_MAX_BACKOFF_MS),
+      );
     });
   }
 

@@ -1,113 +1,101 @@
-<nldd-sheet
-  #sheet
-  appSheetSync
-  [show]="true"
-  placement="right"
-  accessible-label="Cluster namespaces"
-  (close)="onCancel()"
->
-  <nldd-page sticky-header>
-    <!-- One sheet, two steps. The add form replaces the list rather than opening
-         a second sheet on top of it, so the title bar's back button is the way
-         out of it — the same shape as the cluster form. -->
-    <nldd-top-title-bar
-      slot="header"
-      collapse-anchor="cluster-namespaces-title"
-      dismiss-text="Close"
-      (dismiss)="onCancel()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title
-        id="cluster-namespaces-title"
-        size="3"
-      >
-        <h1>Namespaces</h1>
-      </nldd-title>
+<!-- A page in the cluster's menu, beside General. No (back) of its own: the
+     event bubbles to the shell, which steps up to the cluster's menu. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Namespaces"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="cluster-namespaces-title"
+  ></nldd-top-title-bar>
+  <nldd-simple-section>
+    <nldd-title
+      id="cluster-namespaces-title"
+      size="2"
+    >
+      <h1>Namespaces</h1>
+    </nldd-title>
+    <nldd-spacer size="16"></nldd-spacer>
+    @if (errorMessage()) {
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
       <nldd-spacer size="16"></nldd-spacer>
-      @if (errorMessage()) {
-        <nldd-banner
-          variant="critical"
-          [attr.text]="errorMessage()"
-        ></nldd-banner>
-        <nldd-spacer size="16"></nldd-spacer>
-      }
-      @if (isLoading()) {
-        <nldd-activity-indicator
-          show-text
-          text="Loading namespaces..."
-        ></nldd-activity-indicator>
-      } @else if (namespaces().length === 0) {
-        <nldd-inline-dialog
-          icon="brackets-ellipsis"
-          icon-color="secondary"
-          text="No namespaces in this cluster yet."
-        >
-        </nldd-inline-dialog>
-      } @else {
-        <nldd-list
-          variant="box-tinted"
-          accessible-label="Namespaces"
-        >
-          @for (namespace of namespaces(); track namespace.id) {
-            <nldd-list-item>
-              <!-- Two lines rather than one with a middot: at this width it wraps
+    }
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading namespaces..."
+      ></nldd-activity-indicator>
+    } @else if (namespaces().length === 0) {
+      <nldd-inline-dialog
+        icon="brackets-ellipsis"
+        icon-color="secondary"
+        text="No namespaces in this cluster yet."
+      >
+      </nldd-inline-dialog>
+    } @else {
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Namespaces"
+      >
+        @for (namespace of namespaces(); track namespace.id) {
+          <nldd-list-item>
+            <!-- Two lines rather than one with a middot: at this width it wraps
                    anyway, and then the break lands mid-sentence instead of
                    between the two facts. Both read as label and value, so both
                    carry the colon. -->
-              <nldd-title-cell [attr.text]="namespace.name">
-                <span slot="supporting-text">
-                  Project: {{ getProjectName(namespace.projectId) }}<br />
-                  Created: {{ formatDate(namespace.created) }}
-                </span>
-              </nldd-title-cell>
-              <nldd-cell width="fit-content">
-                <nldd-button
-                  type="button"
-                  (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
-                  text="Delete"
-                  start-icon="delete"
-                  size="sm"
-                  variant="destructive"
-                ></nldd-button>
-              </nldd-cell>
-            </nldd-list-item>
-          }
-        </nldd-list>
-        <nldd-spacer size="24"></nldd-spacer>
-        <!-- Not a bulk selection in the list: picking every row one by one to
+            <nldd-title-cell [attr.text]="namespace.name">
+              <span slot="supporting-text">
+                Project: {{ getProjectName(namespace.projectId) }}<br />
+                Created: {{ formatDate(namespace.created) }}
+              </span>
+            </nldd-title-cell>
+            <nldd-cell width="fit-content">
+              <nldd-button
+                type="button"
+                (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
+                text="Delete"
+                start-icon="delete"
+                size="sm"
+                variant="destructive"
+              ></nldd-button>
+            </nldd-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="24"></nldd-spacer>
+      <!-- Not a bulk selection in the list: picking every row one by one to
              empty a cluster is work, and a checkbox column that is only there
              for that case makes every row heavier. One box, one door, and the
              dialog after it still asks. -->
-        <nldd-box background="critical">
-          <nldd-container padding="16">
-            <nldd-title size="5">
-              <h3>
-                Delete all {{ namespaces().length }} namespace{{
-                  namespaces().length === 1 ? '' : 's'
-                }}
-              </h3>
-            </nldd-title>
-            <nldd-spacer size="8"></nldd-spacer>
-            <nldd-rich-text spacing="flat">
-              <p>
-                Deleting a namespace removes every resource running in it. This cannot be undone.
-              </p>
-            </nldd-rich-text>
-            <nldd-spacer size="16"></nldd-spacer>
-            <nldd-button
-              type="button"
-              (click)="openBulkDeleteModal()"
-              text="Delete namespaces"
-              start-icon="delete"
-              variant="destructive"
-              [attr.loading]="isBulkDeleting() ? '' : null"
-            ></nldd-button>
-          </nldd-container>
-        </nldd-box>
-      }
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="5">
+            <h3>
+              Delete all {{ namespaces().length }} namespace{{
+                namespaces().length === 1 ? '' : 's'
+              }}
+            </h3>
+          </nldd-title>
+          <nldd-spacer size="8"></nldd-spacer>
+          <nldd-rich-text spacing="flat">
+            <p>Deleting a namespace removes every resource running in it. This cannot be undone.</p>
+          </nldd-rich-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            type="button"
+            (click)="openBulkDeleteModal()"
+            text="Delete namespaces"
+            start-icon="delete"
+            variant="destructive"
+            [attr.loading]="isBulkDeleting() ? '' : null"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    }
+  </nldd-simple-section>
+</nldd-page>
 <!-- Delete Namespace Modal -->
 <nldd-modal-dialog
   #deleteNamespaceDialog
