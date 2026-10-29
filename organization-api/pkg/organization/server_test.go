@@ -51,6 +51,7 @@ type apiOptions struct {
 	logsURL         string
 	gardenerClient  gardener.Client
 	mockLogsClient  *logs.MockClient
+	apiKeyMaxExpiry time.Duration
 }
 
 type APIOption func(*apiOptions)
@@ -107,6 +108,19 @@ func WithClock(c clock.Clock) APIOption {
 	return func(o *apiOptions) {
 		o.clock = c
 	}
+}
+
+func WithAPIKeyMaxExpiresIn(d time.Duration) APIOption {
+	return func(o *apiOptions) {
+		o.apiKeyMaxExpiry = d
+	}
+}
+
+func Test_New_NegativeAPIKeyMaxExpiresIn(t *testing.T) {
+	t.Parallel()
+
+	_, err := organization.New(slog.Default(), &organization.Config{APIKeyMaxExpiresIn: -time.Hour}, nil, nil, nil)
+	require.ErrorContains(t, err, "must not be negative")
 }
 
 func WithIdempotency() APIOption {
@@ -181,6 +195,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		LogsURL:            opts.logsURL,
 		GardenerClient:     opts.gardenerClient,
 		MockLogsClient:     opts.mockLogsClient,
+		APIKeyMaxExpiresIn: opts.apiKeyMaxExpiry,
 	}
 
 	var idempotencyStore *idempotency.Store

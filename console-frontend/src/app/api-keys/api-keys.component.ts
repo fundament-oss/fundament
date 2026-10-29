@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { type Timestamp, timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -71,6 +72,16 @@ const getNameError = (field?: { invalid: boolean | null; touched: boolean | null
     return 'Name is required';
   }
   return '';
+};
+
+/** The server's reason for refusing the lifetime, worded for under the field;
+ *  null when the refusal is about something else. */
+const getExpiresInRefusal = (err: unknown): string | null => {
+  if (!(err instanceof ConnectError) || err.code !== Code.InvalidArgument) return null;
+  const match = /expires_in: ([^\n[]+)/.exec(err.rawMessage);
+  if (!match) return null;
+  const reason = match[1].trim();
+  return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`;
 };
 
 const formatDate = (timestamp: Timestamp | undefined): string => formatDateUtil(timestamp, 'Never');
@@ -144,6 +155,11 @@ export default class ApiKeysComponent {
   newKeySubmitted = signal(false);
 
   newKeyExpiresIn = signal('');
+
+  newKeyExpiresInError = signal<string | null>(null);
+
+  /** Longest lifetime the server allows, such as "8760h"; empty when keys may never expire. */
+  maxExpiresIn = signal('');
 
   // Modal state
   showRevokeModal = signal(false);
@@ -219,6 +235,7 @@ export default class ApiKeysComponent {
       const request = create(ListAPIKeysRequestSchema, {});
       const response = await firstValueFrom(this.apiKeyClient.listAPIKeys(request));
       this.apiKeys.set(response.apiKeys);
+      this.maxExpiresIn.set(response.maxExpiresIn);
     } catch (err) {
       this.error.set(
         err instanceof Error
@@ -299,6 +316,7 @@ export default class ApiKeysComponent {
     this.newKeyName.set('');
     this.newKeySubmitted.set(false);
     this.newKeyExpiresIn.set('');
+    this.newKeyExpiresInError.set(null);
     this.error.set(null);
   }
 
@@ -307,6 +325,8 @@ export default class ApiKeysComponent {
     this.newKeyName.set('');
     this.newKeySubmitted.set(false);
     this.newKeyExpiresIn.set('');
+    this.newKeyExpiresInError.set(null);
+    this.error.set(null);
   }
 
   async createApiKey(event?: Event) {
@@ -321,6 +341,7 @@ export default class ApiKeysComponent {
 
     this.loading.set(true);
     this.error.set(null);
+    this.newKeyExpiresInError.set(null);
 
     try {
       const expiresIn = this.newKeyExpiresIn();
@@ -346,6 +367,11 @@ export default class ApiKeysComponent {
       // Reload the list to show the new key
       await this.loadApiKeys();
     } catch (err) {
+      const expiresInRefusal = getExpiresInRefusal(err);
+      if (expiresInRefusal) {
+        this.newKeyExpiresInError.set(expiresInRefusal);
+        return;
+      }
       this.error.set(
         err instanceof Error
           ? `Failed to create API key: ${err.message}`

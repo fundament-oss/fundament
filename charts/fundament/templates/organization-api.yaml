@@ -42,6 +42,10 @@ spec:
               value: {{ $.Values.organizationApi.prometheusURL | quote }}
             - name: LOGS_URL
               value: {{ $.Values.organizationApi.logsURL | quote }}
+            {{- with $.Values.organizationApi.apiKeyMaxExpiresIn }}
+            - name: API_KEY_MAX_EXPIRES_IN
+              value: {{ . | quote }}
+            {{- end }}
             # The console and the developer portal (its "Publishing as" names)
             # call organization-api with the session cookie. Left unset, rs/cors
             # answers "*", which a browser refuses for a credentialed call.

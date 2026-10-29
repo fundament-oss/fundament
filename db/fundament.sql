@@ -1145,25 +1145,18 @@ CREATE POLICY api_keys_organization_policy ON authn.api_keys
 -- object: authn.api_key_get_by_hash | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authn.api_key_get_by_hash(bytea) CASCADE;
 CREATE OR REPLACE FUNCTION authn.api_key_get_by_hash (IN p_token_hash bytea)
-	RETURNS authn.api_keys
+	RETURNS SETOF authn.api_keys
 	LANGUAGE plpgsql
 	VOLATILE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
 	PARALLEL UNSAFE
 	COST 10
+	ROWS 1
 	AS 
 $function$
-DECLARE
-	result authn.api_keys;
 BEGIN
-	SELECT * INTO result FROM authn.api_keys WHERE token_hash = p_token_hash;
-
-	IF NOT FOUND THEN
-		RETURN NULL;
-	END IF;
-
-	RETURN result;
+	RETURN QUERY SELECT * FROM authn.api_keys WHERE token_hash = p_token_hash;
 END;
 $function$;
 -- ddl-end --

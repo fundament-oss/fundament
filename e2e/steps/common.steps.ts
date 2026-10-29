@@ -130,7 +130,7 @@ Given(
   async function (this: ICustomWorld, name: string) {
     let response;
     try {
-      response = await this.apiKeyService!.createAPIKey({ name });
+      response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
     } catch (err) {
       if (err instanceof ConnectRpcError && err.code === 'already_exists') {
         // A leftover key from a previous test run. Delete it and retry.
@@ -139,7 +139,7 @@ Given(
         if (existing) {
           await this.apiKeyService!.deleteAPIKey(existing.id);
         }
-        response = await this.apiKeyService!.createAPIKey({ name });
+        response = await this.apiKeyService!.createAPIKey({ name, expiresIn: '1h' });
       } else {
         throw err;
       }
@@ -202,6 +202,28 @@ When('I delete the API key', async function (this: ICustomWorld) {
     this.lastApiError = error as Error;
   }
 });
+
+When(
+  'I try to create an API key named {string} with expiry {string}',
+  async function (this: ICustomWorld, name: string, expiresIn: string) {
+    try {
+      const response = await this.apiKeyService!.createAPIKey({
+        name,
+        expiresIn,
+      });
+      // Tracked so the cleanup removes a key that should have been refused.
+      this.createdApiKeys.set(name, response);
+      if (this.currentUserEmail) {
+        this.createdApiKeysByUser
+          .get(this.currentUserEmail)
+          ?.set(name, response);
+      }
+      this.lastApiError = undefined;
+    } catch (error) {
+      this.lastApiError = error as Error;
+    }
+  },
+);
 
 // --- Common Then Steps ---
 
