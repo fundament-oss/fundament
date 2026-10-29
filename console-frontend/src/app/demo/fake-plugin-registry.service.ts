@@ -85,8 +85,8 @@ export default class FakePluginRegistryService implements Pick<
   // CRDs come from the fixtures with the definitions, so there is nothing to load.
   // Kept for signature parity with the real service.
   // eslint-disable-next-line class-methods-use-this
-  async loadCrdsForPlugin(): Promise<void> {
-    // Intentionally empty.
+  async loadCrdsForPlugin(): Promise<ParsedCrd[]> {
+    return [];
   }
 
   reset(): void {

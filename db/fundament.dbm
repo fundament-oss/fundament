@@ -1336,13 +1336,13 @@ END;]]> </definition>
 
 <function name="api_key_get_by_hash"
 		window-func="false"
-		returns-setof="false"
+		returns-setof="true"
 		behavior-type="CALLED ON NULL INPUT"
 		function-type="VOLATILE"
 		security-type="SECURITY DEFINER"
 		parallel-type="PARALLEL UNSAFE"
 		execution-cost="10"
-		row-amount="0">
+		row-amount="1">
 	<schema name="authn"/>
 	<role name="fun_owner"/>
 	<language name="plpgsql"/>
@@ -1352,16 +1352,8 @@ END;]]> </definition>
 	<parameter name="p_token_hash" in="true">
 		<type name="bytea" length="0"/>
 	</parameter>
-	<definition> <![CDATA[DECLARE
-	result authn.api_keys;
-BEGIN
-	SELECT * INTO result FROM authn.api_keys WHERE token_hash = p_token_hash;
-
-	IF NOT FOUND THEN
-		RETURN NULL;
-	END IF;
-
-	RETURN result;
+	<definition> <![CDATA[BEGIN
+	RETURN QUERY SELECT * FROM authn.api_keys WHERE token_hash = p_token_hash;
 END;]]> </definition>
 </function>
 

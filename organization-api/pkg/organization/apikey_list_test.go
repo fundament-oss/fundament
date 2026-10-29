@@ -3,6 +3,7 @@ package organization_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
@@ -95,4 +96,41 @@ func Test_APIKey_List(t *testing.T) {
 	assert.Equal(t, "my-key", key.GetName())
 	assert.Equal(t, createRes.GetTokenPrefix(), key.GetTokenPrefix())
 	assert.Equal(t, 8, len(key.GetTokenPrefix()))
+}
+
+func Test_APIKey_List_MaxExpiresIn(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		maxExpiresIn time.Duration
+		want         string
+	}{
+		"no_maximum": {},
+		"hours":      {maxExpiresIn: 8760 * time.Hour, want: "8760h"},
+		"minutes":    {maxExpiresIn: 90 * time.Minute, want: "1h30m"},
+		"seconds":    {maxExpiresIn: 30 * time.Second, want: "30s"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			orgID := uuid.New()
+			userID := uuid.New()
+			env := newTestAPI(t,
+				WithOrganization(orgID, "test-org"),
+				WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+				WithAPIKeyMaxExpiresIn(tc.maxExpiresIn),
+			)
+
+			client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
+			ctx, callInfo := connect.NewClientContext(context.Background())
+			callInfo.RequestHeader().Set("Authorization", "Bearer "+env.createAuthnToken(t, userID))
+			callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+
+			res, err := client.ListAPIKeys(ctx, organizationv1.ListAPIKeysRequest_builder{}.Build())
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, res.GetMaxExpiresIn())
+		})
+	}
 }

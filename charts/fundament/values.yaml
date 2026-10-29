@@ -143,6 +143,9 @@ organizationApi:
   # resolved from the monitoring secret (requires the Gardener kubeconfig);
   # any other URL queries that single Loki-compatible backend.
   logsURL: mock
+  # Longest lifetime of an API key, as a Go duration; every key must expire
+  # within it. Empty means no maximum, and keys may then never expire.
+  apiKeyMaxExpiresIn: 8760h
   # Optional Secret (key ca.crt) trusted for the seed-ingress TLS on top of each
   # shoot's own CA (read from <shoot>.ca-cluster; the Gardener credential needs
   # get on configmaps). Only needed when the seed serves one wildcard cert for

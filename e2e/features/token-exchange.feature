@@ -90,3 +90,4 @@ Feature: API Token Exchange
   Scenario: Exchange non-existent token fails
     When I call ExchangeToken with a valid-format but non-existent token
     Then I should receive an unauthenticated error
+    And the error message should contain "invalid token"

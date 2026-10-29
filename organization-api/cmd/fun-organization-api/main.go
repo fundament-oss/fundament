@@ -51,6 +51,8 @@ type config struct {
 	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
+	// Unset lets API keys live forever; set, every key must expire within it.
+	APIKeyMaxExpiresIn time.Duration `env:"API_KEY_MAX_EXPIRES_IN"`
 	// Served on /version so callers outside the cluster can tell which release
 	// is answering; the previous one keeps serving until Flux reconciles.
 	DeploymentVersion string `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
@@ -184,6 +186,7 @@ func run() error {
 		PrometheusCAFile:        cfg.PrometheusCAFile,
 		KubeAPIProxyURL:         cfg.KubeAPIProxyURL,
 		GardenerClient:          gardenerClient,
+		APIKeyMaxExpiresIn:      cfg.APIKeyMaxExpiresIn,
 	}
 
 	server, err := organization.New(logger, orgcfg, db, authzClient, idempotencyStore, opts...)

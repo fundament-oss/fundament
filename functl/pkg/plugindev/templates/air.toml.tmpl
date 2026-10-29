@@ -3,12 +3,15 @@ tmp_dir = "tmp"
 
 [build]
 # -w skips DWARF generation: halves link time, and nothing debugs this binary.
-cmd = "go build -ldflags=-w -o tmp/plugin ./plugins/@PATH@/"
+cmd = "go build -ldflags=-w -o tmp/plugin ${PLUGIN_PACKAGE}"
 entrypoint = "tmp/plugin"
 # html/css/js are go:embed'd console assets; a save must recompile to re-embed.
 include_ext = ["go", "html", "css", "js"]
-include_dir = ["plugins/@PATH@", "plugin-sdk", "common"]
-exclude_dir = ["tmp"]
+# The build context holds only what the build needs, so watch all of it.
+include_dir = ["."]
+# A synced go.mod/go.sum rebuilds too; go build fetches any new modules.
+include_file = ["go.mod", "go.sum"]
+exclude_dir = ["tmp", ".gocache"]
 delay = 100
 # The plugin exits when platform env/services are unavailable; this brings it back.
 rerun = true
