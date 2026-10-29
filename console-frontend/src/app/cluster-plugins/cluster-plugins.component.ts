@@ -117,13 +117,26 @@ export default class ClusterPluginsComponent implements OnInit {
           this.clusterStatus.set(status);
         }),
         firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
-        this.pluginInstallationService.listInstallations(this.clusterId).catch(() => []),
+        this.pluginInstallationService.listInstallations(this.clusterId).catch(() => null),
       ]);
 
-      this.allPlugins = pluginsResponse.plugins;
-      this.currentInstallations = installations;
+      // A cluster that is not running gets no form, so its installations do
+      // not matter. A running one does: read as an empty list, a failed fetch
+      // would uncheck every plugin and leave the next save nothing to uninstall.
+      if (installations === null && this.isClusterRunning()) {
+        throw new Error('installations not loaded');
+      }
 
-      const installedNames = new Set(installations.map((i) => i.spec.definitionRef.pluginName));
+      this.allPlugins = pluginsResponse.plugins;
+      // An uninstall only starts the deletion: the finalizer holds the CR
+      // until cleanup is done, so the reload after a save can still list it.
+      this.currentInstallations = (installations ?? []).filter(
+        (i) => !i.metadata.deletionTimestamp,
+      );
+
+      const installedNames = new Set(
+        this.currentInstallations.map((i) => i.spec.definitionRef.pluginName),
+      );
       this.currentPluginIds.set(
         this.allPlugins.filter((p) => installedNames.has(p.name)).map((p) => p.id),
       );

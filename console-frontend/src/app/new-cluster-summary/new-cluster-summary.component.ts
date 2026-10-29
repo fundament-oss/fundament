@@ -154,8 +154,9 @@ export default class NewClusterSummaryComponent {
     const notCreated = await this.setNodePools(clusterId, formState.nodePools ?? []);
     await reloaded;
     // The list that came back may predate the pools, and the cluster menu
-    // counts them.
-    if ((formState.nodePools ?? []).length > notCreated.length) {
+    // counts them. Any requested pool counts: one reported as not created
+    // may still have been applied when the read that should confirm it failed.
+    if ((formState.nodePools ?? []).length > 0) {
       this.organizationDataService.nodePoolsChanged.update((revision) => revision + 1);
     }
 

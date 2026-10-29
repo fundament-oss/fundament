@@ -333,50 +333,54 @@
                   text="Invited"
                 ></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <nldd-icon-button
-                    icon="more"
-                    size="sm"
-                    variant="secondary"
-                    popup-type="menu"
-                    [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
-                  >
-                    <nldd-menu slot="popup">
-                      <!-- The role is part of the invitation, so it can still be
+                <!-- Changing or withdrawing an invitation is an admin's, like
+                     making one. -->
+                @if (orgRole.isOrgAdmin()) {
+                  <nldd-cell width="fit-content">
+                    <nldd-icon-button
+                      icon="more"
+                      size="sm"
+                      variant="secondary"
+                      popup-type="menu"
+                      [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
+                    >
+                      <nldd-menu slot="popup">
+                        <!-- The role is part of the invitation, so it can still be
                            corrected: without this a wrong one costs a cancel, a
                            second invite and a second mail to the same person. -->
-                      <nldd-menu-item
-                        icon="user-admin"
-                        [attr.text]="
-                          member.permission === 'admin'
-                            ? 'Switch to organization viewer'
-                            : 'Switch to organization admin'
-                        "
-                        (select)="setPermission(member)"
-                      ></nldd-menu-item>
-                      <!-- Nothing was ever sent, so this is not a resend: it is
+                        <nldd-menu-item
+                          icon="user-admin"
+                          [attr.text]="
+                            member.permission === 'admin'
+                              ? 'Switch to organization viewer'
+                              : 'Switch to organization admin'
+                          "
+                          (select)="setPermission(member)"
+                        ></nldd-menu-item>
+                        <!-- Nothing was ever sent, so this is not a resend: it is
                            the message the admin still has to deliver by hand,
                            for an invitation made last week or made by functl.
                            Guarded on the address: the proto says email is set
                            for invited members, and without one the message
                            would name nobody to send it to. -->
-                      @if (member.email) {
+                        @if (member.email) {
+                          <nldd-menu-item
+                            text="Send invitation email…"
+                            icon="envelope"
+                            (select)="openInvitationEmail(member)"
+                          ></nldd-menu-item>
+                        }
+                        <nldd-menu-divider></nldd-menu-divider>
                         <nldd-menu-item
-                          text="Send invitation email…"
-                          icon="envelope"
-                          (select)="openInvitationEmail(member)"
+                          text="Cancel invitation"
+                          icon="delete"
+                          destructive
+                          (select)="cancelInvitation(member.id)"
                         ></nldd-menu-item>
-                      }
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Cancel invitation"
-                        icon="delete"
-                        destructive
-                        (select)="cancelInvitation(member.id)"
-                      ></nldd-menu-item>
-                    </nldd-menu>
-                  </nldd-icon-button>
-                </nldd-cell>
+                      </nldd-menu>
+                    </nldd-icon-button>
+                  </nldd-cell>
+                }
               } @else if (member.isCurrentUser) {
                 <!-- Where the actions would be, saying why there are none. -->
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -387,7 +391,8 @@
                   text="You"
                 ></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              } @else {
+              } @else if (orgRole.isOrgAdmin()) {
+                <!-- A viewer reads the row: roles and removal are an admin's. -->
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
                   <!-- No chevron: the ellipsis already says a menu opens. -->

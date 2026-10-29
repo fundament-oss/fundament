@@ -136,7 +136,9 @@ export interface PluginInstallationCondition {
 }
 
 export interface PluginInstallationItem {
-  metadata: { name: string; uid: string };
+  // deletionTimestamp is set while the controller's finalizer still holds a
+  // deleted installation.
+  metadata: { name: string; uid: string; deletionTimestamp?: string };
   spec: {
     definitionRef: {
       organizationName: string;
