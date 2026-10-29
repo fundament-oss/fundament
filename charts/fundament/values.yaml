@@ -37,6 +37,8 @@ externalUrls:
   marketplaceCatalogApi: "" # e.g., https://marketplace-catalog-api.example.com (catalog; read by the console and from plugin clusters)
   marketplaceRegistryApi: "" # e.g., https://marketplace-registry.example.com
   marketplaceAdminApi: "" # e.g., https://marketplace-admin.example.com
+  platformPublicApi: "" # e.g., https://platform-public-api.example.com (anonymous overview the console's /platform page reads; empty hides the page's numbers)
+  platformAdminApi: "" # e.g., https://platform-admin-api.example.com (staff fleet view in DCIM; restricted host)
   cookieDomain: "" # e.g., example.com
 
 # Marks a test environment (PR previews, the sandbox) as one. Each frontend
@@ -73,6 +75,9 @@ images:
   marketplaceCatalogApi: ghcr.io/fundament-oss/fundament/marketplace-catalog-api:latest
   marketplaceRegistryApi: ghcr.io/fundament-oss/fundament/marketplace-registry-api:latest
   marketplaceAdminApi: ghcr.io/fundament-oss/fundament/marketplace-admin-api:latest
+  # One source (platform-api/), built once per binary (BINARY=...).
+  platformPublicApi: ghcr.io/fundament-oss/fundament/platform-public-api:latest
+  platformAdminApi: ghcr.io/fundament-oss/fundament/platform-admin-api:latest
   # Same source as marketplaceFrontend, built for the other two audiences
   # (BUILD_SCRIPT=build:registry / build:admin), like consoleDemoFrontend.
   marketplaceRegistryFrontend: ghcr.io/fundament-oss/fundament/marketplace-registry-frontend:latest
@@ -182,6 +187,15 @@ clusterWorker:
   enabled: false
   replicas: 1
   logLevel: info
+  # Fleet inventory (FUN-23): how often every ready shoot's nodes, pods and
+  # namespaces are counted, how many shoots at once, and how long one may take.
+  # Runs as its own Deployment, cluster-worker-inventory (one replica), and
+  # only while platformAdminApi.enabled: the fleet view is its only reader.
+  # The fleet view calls a snapshot stale after three intervals.
+  inventory:
+    interval: 15m
+    workers: 4
+    timeout: 30s
   gardenerMode: mock # mock or real
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
@@ -460,6 +474,29 @@ marketplaceRegistryApi:
 
 # Marketplace Admin API (the Fundament review backoffice)
 marketplaceAdminApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Platform Public API: anonymous per-organization counts for the console's
+# /platform page (FUN-23).
+platformPublicApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  cacheTTL: 60s # how long one overview answer is served to every visitor
+  httproute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+
+# Platform Admin API: the staff fleet view in DCIM (FUN-23). Authenticated
+# with the DCIM token, so it picks up the shared jwtSecret.
+platformAdminApi:
   enabled: false
   replicas: 1
   logLevel: info

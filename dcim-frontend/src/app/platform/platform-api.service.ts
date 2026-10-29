@@ -1,0 +1,147 @@
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { FLEET_CLIENT } from '../../connect/tokens';
+import connectErrorMessage from '../../connect/error';
+import type {
+  ClusterSummary,
+  DriftFinding,
+  FleetSummary,
+  GetClusterResponse,
+  OrganizationSummary,
+} from '../../generated/fleet/v1/fleet_pb';
+
+/** What the API's own default is, for the moment before the summary is in. */
+const DEFAULT_STALE_AFTER_SECONDS = 45 * 60;
+
+/** Reads every page of a paged list RPC, following next_page_token. */
+export async function readAllPages<T>(
+  read: (pageToken: string) => Promise<{ items: T[]; nextPageToken: string }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let token = '';
+  do {
+    // One page waits on the one before: the token comes from it.
+    // eslint-disable-next-line no-await-in-loop
+    const page = await read(token);
+    all.push(...page.items);
+    token = page.nextPageToken;
+  } while (token);
+  return all;
+}
+
+/**
+ * The fleet as the Platform section shows it (FUN-23), held in signals.
+ *
+ * The fleet-wide reads (the summary, every organization, the drift findings)
+ * load on each visit to the section and on every refresh, and feed the menu as
+ * well as the overview. One organization or one cluster loads when it is opened. A read
+ * that a newer one overtook is dropped, so clicking through quickly cannot
+ * leave the page showing the cluster before last, nor an older fleet. Reading
+ * the same organization or cluster again keeps what is shown until the answer
+ * is in, so the minutely refresh does not blank the page.
+ */
+@Injectable({ providedIn: 'root' })
+export default class PlatformApiService {
+  private readonly client = inject(FLEET_CLIENT);
+
+  readonly summary = signal<FleetSummary | undefined>(undefined);
+
+  readonly organizations = signal<OrganizationSummary[]>([]);
+
+  readonly findings = signal<DriftFinding[]>([]);
+
+  readonly fleetLoaded = signal(false);
+
+  readonly fleetError = signal<string | null>(null);
+
+  readonly organization = signal<OrganizationSummary | undefined>(undefined);
+
+  readonly clusters = signal<ClusterSummary[]>([]);
+
+  readonly cluster = signal<GetClusterResponse | undefined>(undefined);
+
+  readonly detailLoading = signal(false);
+
+  readonly detailError = signal<string | null>(null);
+
+  readonly staleAfterSeconds = computed(
+    () => this.summary()?.snapshotStaleAfterSeconds || DEFAULT_STALE_AFTER_SECONDS,
+  );
+
+  private fleetRequest = 0;
+
+  private detailRequest = 0;
+
+  async loadFleet(): Promise<void> {
+    this.fleetRequest += 1;
+    const request = this.fleetRequest;
+    this.fleetError.set(null);
+    try {
+      const [summary, organizations, findings] = await Promise.all([
+        firstValueFrom(this.client.getFleetSummary({})),
+        readAllPages(async (pageToken) => {
+          const page = await firstValueFrom(this.client.listOrganizations({ pageToken }));
+          return { items: page.organizations, nextPageToken: page.nextPageToken };
+        }),
+        readAllPages(async (pageToken) => {
+          const page = await firstValueFrom(this.client.listDriftFindings({ pageToken }));
+          return { items: page.findings, nextPageToken: page.nextPageToken };
+        }),
+      ]);
+      if (request !== this.fleetRequest) return;
+      this.summary.set(summary.summary);
+      this.organizations.set(organizations);
+      this.findings.set(findings);
+      this.fleetLoaded.set(true);
+    } catch (err) {
+      if (request === this.fleetRequest) this.fleetError.set(connectErrorMessage(err));
+    }
+  }
+
+  async loadOrganization(id: string): Promise<void> {
+    const request = this.startDetail();
+    if (this.organization()?.id !== id) {
+      this.organization.set(undefined);
+      this.clusters.set([]);
+    }
+    try {
+      const [organization, clusters] = await Promise.all([
+        firstValueFrom(this.client.getOrganization({ organizationId: id })),
+        readAllPages(async (pageToken) => {
+          const page = await firstValueFrom(
+            this.client.listClusters({ organizationId: id, pageToken }),
+          );
+          return { items: page.clusters, nextPageToken: page.nextPageToken };
+        }),
+      ]);
+      if (request !== this.detailRequest) return;
+      this.organization.set(organization.organization);
+      this.clusters.set(clusters);
+    } catch (err) {
+      if (request === this.detailRequest) this.detailError.set(connectErrorMessage(err));
+    } finally {
+      if (request === this.detailRequest) this.detailLoading.set(false);
+    }
+  }
+
+  async loadCluster(id: string): Promise<void> {
+    const request = this.startDetail();
+    if (this.cluster()?.cluster?.id !== id) this.cluster.set(undefined);
+    try {
+      const cluster = await firstValueFrom(this.client.getCluster({ clusterId: id }));
+      if (request !== this.detailRequest) return;
+      this.cluster.set(cluster);
+    } catch (err) {
+      if (request === this.detailRequest) this.detailError.set(connectErrorMessage(err));
+    } finally {
+      if (request === this.detailRequest) this.detailLoading.set(false);
+    }
+  }
+
+  private startDetail(): number {
+    this.detailRequest += 1;
+    this.detailLoading.set(true);
+    this.detailError.set(null);
+    return this.detailRequest;
+  }
+}

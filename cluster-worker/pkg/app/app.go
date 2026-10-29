@@ -23,14 +23,26 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/pluginmachinery"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/proxyidentity"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/inventory"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/status"
 	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
+// Modes the worker runs in. One image runs as two Deployments: provisioning
+// syncs, watches and reconciles clusters; inventory collects the staff fleet
+// view's snapshots (FUN-23). They share the Gardener client config but no
+// process, so collection cannot hold back provisioning and scales on its own.
+const (
+	ModeProvisioning = "provisioning"
+	ModeInventory    = "inventory"
+)
+
 // Config holds all configuration for the cluster-worker application.
 type Config struct {
+	// Mode is provisioning or inventory.
+	Mode            string        `env:"WORKER_MODE" envDefault:"provisioning"`
 	HealthPort      int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
@@ -41,6 +53,7 @@ type Config struct {
 	Reconcile reconcile.Config       `envPrefix:"RECONCILE_"`
 	Cluster   clusterhandler.Config  `envPrefix:"CLUSTER_"`
 	Plugin    pluginmachinery.Config `envPrefix:"PLUGIN_"`
+	Inventory inventory.Config       `envPrefix:"INVENTORY_"`
 }
 
 // GardenerConfig configures the Gardener client and the provider defaults the
@@ -117,7 +130,8 @@ type statusNotifierRunner interface {
 	RunStatusNotifier(ctx context.Context) error
 }
 
-// App holds the wired-up application components.
+// App holds the wired-up application components. In inventory mode only
+// inventoryWorker is set; in provisioning mode everything else.
 type App struct {
 	pool            *pgxpool.Pool
 	registry        *handler.Registry
@@ -125,6 +139,7 @@ type App struct {
 	statusWorker    *status.Worker
 	statusChecks    *clusterhandler.Handler // runs the queued status checks
 	reconcileWorker *reconcile.Worker
+	inventoryWorker *inventory.Worker
 	statusCache     statusCacheRunner    // nil when the client has no status cache
 	statusNotifier  statusNotifierRunner // nil when the client reports changes through a watch
 	healthServer    *http.Server
@@ -132,10 +147,59 @@ type App struct {
 	cfg             *Config
 }
 
-// New creates and wires up the cluster-worker application.
+// New creates and wires up the cluster-worker application for its mode.
 func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
+	switch cfg.Mode {
+	case ModeProvisioning:
+		return newProvisioning(pool, logger, cfg)
+	case ModeInventory:
+		return newInventory(pool, logger, cfg)
+	default:
+		return nil, fmt.Errorf("invalid WORKER_MODE: %s (must be %s or %s)", cfg.Mode, ModeProvisioning, ModeInventory)
+	}
+}
+
+// newInventory wires up the inventory worker alone. In mock mode it reads the
+// database, as the mock Gardener's shoots live in the provisioning worker.
+func newInventory(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
+	if err := cfg.Inventory.Validate(); err != nil {
+		return nil, err
+	}
+
+	var reader shoot.InventoryReader
+	switch cfg.Gardener.Mode {
+	case "mock":
+		logger.Info("using mock inventory (from the database)")
+		reader = inventory.NewMockReader(pool)
+	case "real":
+		gardenerClient, err := createGardenerClient(cfg, logger)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("using real shoot access (AdminKubeconfigRequest)")
+		reader = shoot.NewRealShootAccess(gardenerClient, logger)
+	default:
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", cfg.Gardener.Mode)
+	}
+
+	return &App{
+		pool:            pool,
+		inventoryWorker: inventory.New(pool, reader, logger, cfg.Inventory),
+		// Ready once serving: a snapshot that cannot be collected is recorded
+		// on the snapshot, not in the pod's readiness.
+		healthServer: startHealthServer(cfg.HealthPort, logger),
+		logger:       logger,
+		cfg:          cfg,
+	}, nil
+}
+
+// newProvisioning wires up the outbox, status and reconcile workers.
+func newProvisioning(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	if cfg.Cluster.MaxReconcileDeletions < 0 {
 		return nil, fmt.Errorf("invalid CLUSTER_MAX_RECONCILE_DELETIONS: %d (must be 0 or more)", cfg.Cluster.MaxReconcileDeletions)
+	}
+	if err := cfg.Reconcile.Validate(); err != nil {
+		return nil, err
 	}
 
 	gardenerClient, err := createGardenerClient(cfg, logger)
@@ -145,8 +209,11 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 
 	registry := handler.NewRegistry()
 
-	// Cluster handler (sync, status, reconcile)
-	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, cfg.Cluster)
+	// Cluster handler (sync, status, reconcile). It records each reconcile
+	// pass with the loop's interval.
+	clusterCfg := cfg.Cluster
+	clusterCfg.ReconcileInterval = cfg.Reconcile.Interval
+	ch := clusterhandler.New(pool, gardenerClient, gardenerClient, logger, clusterCfg)
 	// Shoot status changes (the status cache's watch in real mode, a timer in
 	// mock mode) queue a status check right away; the sweep is the backstop.
 	if notifier, ok := gardenerClient.(statusChangeNotifier); ok {
@@ -200,7 +267,6 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	statusWorker := status.New(registry, logger, cfg.Status)
 	reconcileWorker := reconcile.New(registry, logger, cfg.Reconcile)
 
-	// Health server
 	healthServer := startHealthServer(cfg.HealthPort, logger, outboxWorker, statusWorker, reconcileWorker)
 
 	statusCache, _ := gardenerClient.(statusCacheRunner)
@@ -223,14 +289,24 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 
 // Run starts all workers concurrently and blocks until shutdown.
 func (a *App) Run(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
+
+	if a.cfg.Mode == ModeInventory {
+		a.logger.Info("cluster-worker starting",
+			"mode", a.cfg.Mode,
+			"inventory_interval", a.cfg.Inventory.Interval,
+			"gardener_mode", a.cfg.Gardener.Mode)
+		g.Go(func() error { return a.inventoryWorker.Run(ctx) })
+		return a.wait(g)
+	}
+
 	a.logger.Info("cluster-worker starting",
+		"mode", a.cfg.Mode,
 		"poll_interval", a.cfg.Outbox.PollInterval,
 		"reconcile_interval", a.cfg.Reconcile.Interval,
 		"status_interval", a.cfg.Status.Interval,
 		"max_retries", a.cfg.Outbox.MaxRetries,
 		"gardener_mode", a.cfg.Gardener.Mode)
-
-	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error { return a.outboxWorker.Run(ctx) })
 	g.Go(func() error {
@@ -251,6 +327,11 @@ func (a *App) Run(ctx context.Context) error {
 		g.Go(func() error { return a.statusNotifier.RunStatusNotifier(ctx) })
 	}
 
+	return a.wait(g)
+}
+
+// wait blocks until every worker stopped, then shuts the health server down.
+func (a *App) wait(g *errgroup.Group) error {
 	err := g.Wait()
 
 	// Graceful shutdown

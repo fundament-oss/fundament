@@ -239,6 +239,8 @@ func (m *MockClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) (bo
 				LabelClusterID:      cluster.ID.String(),
 				LabelOrganizationID: cluster.OrganizationID.String(),
 			},
+			UID:     uuid.NewString(),
+			Created: now,
 		},
 		CreatedAt: now,
 		Cluster:   *cluster,
@@ -303,9 +305,23 @@ func (m *MockClient) ListShoots(ctx context.Context) ([]ShootInfo, error) {
 		}
 		info := s.Info
 		info.Deleting = s.DeletedAt != nil
+		// Version and region follow the latest apply, as a real Shoot's spec does.
+		info.KubernetesVersion = s.Cluster.KubernetesVersion
+		info.Region = mockRegion(&s.Cluster)
 		result = append(result, info)
 	}
 	return result, nil
+}
+
+// mockRegion mirrors RealClient.region with the local provider's default.
+func mockRegion(cluster *ClusterToSync) string {
+	if cluster.CloudProfileRegion != "" {
+		return cluster.CloudProfileRegion
+	}
+	if cluster.Region != "" {
+		return cluster.Region
+	}
+	return NewProviderConfig().Region
 }
 
 // GetShootStatus returns the status of a shoot with realistic progression.

@@ -1,0 +1,149 @@
+<nldd-page>
+  <!-- Only the ribbon, as on the login page: this page belongs to no
+       organization, so there is no navigation to carry. -->
+  <nldd-top-navigation-bar slot="header"></nldd-top-navigation-bar>
+  <nldd-simple-section>
+    <nldd-title size="2">
+      <h1>Fundament platform</h1>
+      <!-- The way in for someone who has an account. Signing in is a page of
+           its own, so a link rather than a form here. -->
+      <nldd-button
+        slot="end"
+        href="/login"
+        text="Sign in"
+        variant="secondary"
+      ></nldd-button>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <nldd-rich-text spacing="flat">
+      <p>
+        The organizations on Fundament that chose to be listed, with the clusters, projects and
+        namespaces they run.
+      </p>
+    </nldd-rich-text>
+    <nldd-spacer size="24"></nldd-spacer>
+    @if (unavailable()) {
+      <nldd-banner
+        variant="accent"
+        text="Overview unavailable"
+        supporting-text="This environment does not publish the platform overview."
+      ></nldd-banner>
+    } @else if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading the platform overview..."
+      ></nldd-activity-indicator>
+    } @else if (error(); as message) {
+      <nldd-banner
+        variant="critical"
+        text="Overview not loaded"
+        [attr.supporting-text]="message"
+      ></nldd-banner>
+    } @else {
+      <nldd-container
+        layout="stack"
+        gap="24"
+        sm-gap="16"
+      >
+        <nldd-collection
+          layout="grid"
+          item-width="200px"
+          gap="16"
+        >
+          @for (tile of tiles(); track tile.label) {
+            <nldd-card background="base">
+              <nldd-container padding="16">
+                <nldd-title size="5">
+                  <h2>{{ tile.label }}</h2>
+                </nldd-title>
+                <nldd-spacer size="8"></nldd-spacer>
+                <nldd-title size="2">
+                  <p>{{ tile.value }}</p>
+                </nldd-title>
+              </nldd-container>
+            </nldd-card>
+          }
+        </nldd-collection>
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-toolbar label="Organizations">
+              <nldd-toolbar-item slot="start">
+                <nldd-rich-text spacing="flat">
+                  <p>As of {{ asOf() }}</p>
+                </nldd-rich-text>
+              </nldd-toolbar-item>
+              <nldd-toolbar-item
+                slot="end"
+                priority="2"
+                width="280px"
+                min-width="180px"
+              >
+                <nldd-search-field
+                  placeholder="Filter organizations"
+                  accessible-label="Filter organizations"
+                  [attr.value]="query()"
+                  (input)="query.set($any($event.target).value)"
+                ></nldd-search-field>
+              </nldd-toolbar-item>
+            </nldd-toolbar>
+            <nldd-spacer size="16"></nldd-spacer>
+            <nldd-table
+              accessible-label="Organizations"
+              columns="minmax(200px, 1fr) 110px 110px 120px"
+              sm-columns="minmax(140px, 1fr) 80px 80px 100px"
+            >
+              <nldd-table-row slot="header">
+                <nldd-text-cell text="Organization"></nldd-text-cell>
+                <nldd-text-cell
+                  text="Clusters"
+                  horizontal-alignment="end"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  text="Projects"
+                  horizontal-alignment="end"
+                ></nldd-text-cell>
+                <nldd-text-cell
+                  text="Namespaces"
+                  horizontal-alignment="end"
+                ></nldd-text-cell>
+              </nldd-table-row>
+              @for (organization of matching(); track organization.name) {
+                <nldd-table-row>
+                  <nldd-text-cell
+                    [attr.text]="organization.alias"
+                    [attr.supporting-text]="organization.name"
+                    [attr.query]="query()"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="end"
+                    [attr.text]="organization.clusters"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="end"
+                    [attr.text]="organization.projects"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    horizontal-alignment="end"
+                    [attr.text]="organization.namespaces"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+              }
+              @if (organizations().length === 0) {
+                <nldd-inline-dialog
+                  slot="empty"
+                  text="No organization listed yet"
+                  supporting-text="Organizations appear here once they choose to be listed."
+                ></nldd-inline-dialog>
+              } @else {
+                <nldd-inline-dialog
+                  slot="empty"
+                  text="No organization matches"
+                ></nldd-inline-dialog>
+              }
+            </nldd-table>
+          </nldd-container>
+        </nldd-box>
+      </nldd-container>
+    }
+  </nldd-simple-section>
+</nldd-page>

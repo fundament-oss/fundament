@@ -128,6 +128,17 @@ const (
 	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
+// DriftFindingKind represents valid values for tenant.drift_findings.kind.
+type DriftFindingKind string
+
+const (
+	DriftFindingKind_ShootWithoutCluster       DriftFindingKind = "shoot_without_cluster"
+	DriftFindingKind_ShootOfDeletedCluster     DriftFindingKind = "shoot_of_deleted_cluster"
+	DriftFindingKind_ClusterWithoutShoot       DriftFindingKind = "cluster_without_shoot"
+	DriftFindingKind_KubernetesVersionMismatch DriftFindingKind = "kubernetes_version_mismatch"
+	DriftFindingKind_ShootInvalidClusterId     DriftFindingKind = "shoot_invalid_cluster_id"
+)
+
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
 type LogicalConnectionConnectionType string
 
@@ -365,4 +376,12 @@ const (
 	TaskStatus_Todo  TaskStatus = "todo"
 	TaskStatus_Doing TaskStatus = "doing"
 	TaskStatus_Done  TaskStatus = "done"
+)
+
+// WorkerHeartbeatWorker represents valid values for tenant.worker_heartbeats.worker.
+type WorkerHeartbeatWorker string
+
+const (
+	WorkerHeartbeatWorker_Reconcile WorkerHeartbeatWorker = "reconcile"
+	WorkerHeartbeatWorker_Inventory WorkerHeartbeatWorker = "inventory"
 )

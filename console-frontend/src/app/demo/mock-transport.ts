@@ -50,6 +50,10 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
 import {
+  OverviewService,
+  GetPlatformOverviewResponseSchema,
+} from '../../generated/platform/v1/overview_pb';
+import {
   CatalogService,
   ListPluginsResponseSchema as CatalogListPluginsResponseSchema,
   PluginSummarySchema as CatalogPluginSummarySchema,
@@ -767,6 +771,25 @@ export default function createDemoTransport(): Transport {
       listAPIKeys: async () => {
         await delay(80);
         return create(ListAPIKeysResponseSchema, { apiKeys: [] });
+      },
+    });
+
+    router.service(OverviewService, {
+      getPlatformOverview: async () => {
+        await delay();
+        const organizations = fx.platformOrganizations;
+        const sum = (pick: (o: (typeof organizations)[number]) => number) =>
+          organizations.reduce((total, o) => total + pick(o), 0);
+        return create(GetPlatformOverviewResponseSchema, {
+          organizations,
+          totals: {
+            organizations: organizations.length,
+            clusters: sum((o) => o.clusters),
+            projects: sum((o) => o.projects),
+            namespaces: sum((o) => o.namespaces),
+          },
+          generatedAt: timestampFromDate(new Date()),
+        });
       },
     });
   });

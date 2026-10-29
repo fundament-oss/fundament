@@ -133,6 +133,22 @@ build:
           BUILD_SCRIPT: build:admin
           START_SCRIPT: start:admin
 
+    # One source tree, two binaries (FUN-23): the anonymous overview and the
+    # staff fleet view. Appended last, as the hotreload profile patches by index.
+    - image: platform-public-api
+      context: .
+      docker:
+        dockerfile: platform-api/Dockerfile
+        buildArgs:
+          BINARY: platform-public-api
+
+    - image: platform-admin-api
+      context: .
+      docker:
+        dockerfile: platform-api/Dockerfile
+        buildArgs:
+          BINARY: platform-admin-api
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -165,6 +181,8 @@ deploy:
           images.marketplaceAdminApi: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_api}}"
           images.marketplaceRegistryFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_registry_frontend}}"
           images.marketplaceAdminFrontend: "{{.IMAGE_FULLY_QUALIFIED_marketplace_admin_frontend}}"
+          images.platformPublicApi: "{{.IMAGE_FULLY_QUALIFIED_platform_public_api}}"
+          images.platformAdminApi: "{{.IMAGE_FULLY_QUALIFIED_platform_admin_api}}"
 
 profiles:
   - name: env-local
@@ -325,6 +343,18 @@ profiles:
         value: marketplace-frontend/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/19/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/20/docker/dockerfile
+        value: platform-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/20/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/21/docker/dockerfile
+        value: platform-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/21/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

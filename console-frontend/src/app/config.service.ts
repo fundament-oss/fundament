@@ -5,6 +5,12 @@ export interface AppConfiguration {
   organizationApiUrl: string;
   /** Anonymous storefront API (catalog.v1); plugin browsing reads from here. */
   marketplaceApiUrl: string;
+  /**
+   * Anonymous platform API (platform.v1): the public overview of every
+   * organization reads from here. Optional: the page explains that the
+   * overview is unavailable when this is empty.
+   */
+  platformApiUrl?: string;
   kubeApiProxyUrl: string;
   pluginProxyUrl: string;
   /**

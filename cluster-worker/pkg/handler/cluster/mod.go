@@ -48,6 +48,10 @@ type Config struct {
 	// since that points at a database problem rather than users deleting
 	// clusters. Zero turns off deletions started by reconcile.
 	MaxReconcileDeletions int `env:"MAX_RECONCILE_DELETIONS" envDefault:"3"`
+	// ReconcileInterval is how often the reconcile loop runs, recorded with
+	// every pass so readers can tell a fresh record from a stale one. Set from
+	// the reconcile loop's own config, not from the environment.
+	ReconcileInterval time.Duration
 }
 
 // Handler manages cluster lifecycle in Gardener (sync, status, finishing

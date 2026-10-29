@@ -21,6 +21,17 @@ type Config struct {
 	Interval time.Duration `env:"INTERVAL" envDefault:"5m"`
 }
 
+// Validate rejects an interval the worker cannot run with: time.NewTicker
+// panics on a non-positive one, and the reconcile heartbeat stores it in whole
+// seconds (and requires at least one), so a sub-second interval would fail
+// every pass's observation write.
+func (c Config) Validate() error {
+	if c.Interval < time.Second {
+		return fmt.Errorf("RECONCILE_INTERVAL must be at least 1s, got %s", c.Interval)
+	}
+	return nil
+}
+
 // Worker periodically calls all registered ReconcileHandlers.
 type Worker struct {
 	registry         *handler.Registry

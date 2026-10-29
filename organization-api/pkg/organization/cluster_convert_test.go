@@ -12,57 +12,27 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+// The derivation itself is common/clusterstatus's (TestFromDB); this pins
+// the mapping onto the console's API.
 func TestClusterStatusFromDB(t *testing.T) {
 	t.Parallel()
 
 	shoot := func(status string) pgtype.Text { return pgtype.Text{String: status, Valid: true} }
-	healthy := pgtype.Text{String: "healthy", Valid: true}
 	unhealthy := pgtype.Text{String: "unhealthy", Valid: true}
-	sync := func(status string) pgtype.Text { return pgtype.Text{String: status, Valid: true} }
-	active := pgtype.Timestamptz{}
-	deleted := pgtype.Timestamptz{Time: time.Now(), Valid: true}
-
 	awaiting := pgtype.Text{String: commongardener.MsgShootAwaitingHealth, Valid: true}
+	deleted := pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	none := pgtype.Text{}
 
-	tests := []struct {
-		name     string
-		deleted  pgtype.Timestamptz
-		status   pgtype.Text
-		message  pgtype.Text
-		health   pgtype.Text
-		updating bool
-		sync     pgtype.Text
-		reached  bool
-		want     organizationv1.ClusterStatus
-	}{
-		{name: "not checked yet", deleted: active, want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "sync pending", deleted: active, sync: sync("pending"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "sync retrying", deleted: active, sync: sync("retrying"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "sync failed before the shoot existed", deleted: active, sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
-		{name: "sync failed while the shoot is lost", deleted: active, status: shoot("pending"), sync: sync("failed"), reached: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
-		{name: "update rejected before the first status was recorded", deleted: active, sync: sync("failed"), reached: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "being created", deleted: active, status: shoot("progressing"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "ready", deleted: active, status: shoot("ready"), health: healthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
-		{name: "ready, health unknown", deleted: active, status: shoot("ready"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
-		{name: "ready while an update rolls out", deleted: active, status: shoot("ready"), health: healthy, updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING},
-		{name: "ready but unhealthy", deleted: active, status: shoot("ready"), health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY},
-		{name: "unhealthy wins over updating", deleted: active, status: shoot("ready"), health: unhealthy, updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY},
-		{name: "progressing unaffected by health", deleted: active, status: shoot("progressing"), health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING},
-		{name: "failed", deleted: active, status: shoot("error"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR},
-		{name: "shoot gone from Gardener", deleted: active, status: shoot("lost"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_LOST},
-		{name: "deleted while updating", deleted: deleted, status: shoot("ready"), updating: true, want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
-		{name: "settling after create is starting, not unhealthy", deleted: active, status: shoot("ready"), message: awaiting, health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING},
-		{name: "unhealthy after settling once the message moves on", deleted: active, status: shoot("ready"), message: pgtype.Text{String: "Shoot reconciled but not all conditions healthy", Valid: true}, health: unhealthy, want: organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY},
-		{name: "ready, a later sync failed", deleted: active, status: shoot("ready"), sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING},
-		{name: "deleted after its sync failed", deleted: deleted, sync: sync("failed"), want: organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.want, clusterStatusFromDB(tt.deleted, tt.status, tt.message, tt.health, tt.updating, tt.sync, tt.reached))
-		})
-	}
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_PROVISIONING, clusterStatusFromDB(pgtype.Timestamptz{}, none, none, none, false, none, false))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_STARTING, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("ready"), awaiting, unhealthy, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("ready"), none, none, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("ready"), none, none, true, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_UNHEALTHY, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("ready"), none, unhealthy, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("error"), none, none, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING, clusterStatusFromDB(deleted, none, none, none, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("deleted"), none, none, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_LOST, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("lost"), none, none, false, none, true))
+	assert.Equal(t, organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED, clusterStatusFromDB(pgtype.Timestamptz{}, shoot("odd"), none, none, false, none, true))
 }
 
 // A sync row's status_info is an error only while the row is retrying or

@@ -20,6 +20,7 @@ import { NoteService } from '../generated/v1/note_pb';
 import { PlacementService } from '../generated/v1/placement_pb';
 import { TaskService, TaskStepService } from '../generated/v1/task_pb';
 import { UserService } from '../generated/v1/user_pb';
+import { FleetService } from '../generated/fleet/v1/fleet_pb';
 
 export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
   providedIn: 'root',
@@ -67,3 +68,24 @@ export const PLACEMENT_CLIENT = createClientToken(PlacementService);
 export const TASK_CLIENT = createClientToken(TaskService);
 export const TASK_STEP_CLIENT = createClientToken(TaskStepService);
 export const USER_CLIENT = createClientToken(UserService);
+
+// The staff fleet view (FUN-23) lives in platform-api, not in dcim-api: another
+// host, so another transport. It accepts the same dcim_auth cookie.
+export const PLATFORM_TRANSPORT = new InjectionToken<Transport>('platform-transport', {
+  providedIn: 'root',
+  factory: () => {
+    const config = inject(ConfigService).getConfig();
+    return createConnectTransport({
+      baseUrl: config.platformApiUrl ?? '',
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+    });
+  },
+});
+
+export const FLEET_CLIENT = new InjectionToken<ObservableClient<typeof FleetService>>(
+  'platform-client-fleet',
+  {
+    providedIn: 'root',
+    factory: () => createObservableClient(FleetService, inject(PLATFORM_TRANSPORT)),
+  },
+);

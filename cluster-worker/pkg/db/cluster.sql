@@ -44,11 +44,14 @@ RETURNING
 -- missing Shoot is not one a queued or failing sync has yet to create. "Latest
 -- sync row" is the cluster_sync_state view's row
 -- (TestClusterListActiveAgreesWithClusterSyncState pins the two together).
+-- The version and update flag feed the drift findings reconcile records.
 SELECT
     tenant.clusters.id,
     tenant.clusters.name,
     tenant.clusters.deleted,
     tenant.clusters.shoot_status,
+    tenant.clusters.shoot_updating,
+    tenant.clusters.kubernetes_version,
     tenant.organizations.name AS organization_name,
     COALESCE((
         SELECT tenant.cluster_outbox.status

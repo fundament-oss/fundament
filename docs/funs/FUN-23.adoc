@@ -1,0 +1,207 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 23
+:state: discussion
+
+= FUN-23 Platform overview and fleet inventory
+
+== Introduction
+
+Every API in Fundament is scoped to one organization: row security in the database and OpenFGA in the services see to that. The only way across organizations is `funops`, which connects straight to the database. So nobody can see how the platform is used as a whole.
+
+This FUN adds two views across organizations, for two audiences:
+
+* A *public page* in the console, `/platform`, without login. It lists the organizations that chose to be listed, with their number of clusters, projects and namespaces, plus totals over them. It shows no cluster or namespace names.
+* A *staff section* in DCIM, `/platform`. It shows every organization plus cluster and namespace names, nodes and pods per cluster, status, and drift between the database and Gardener.
+
+The pattern, not the code, comes from https://github.com/gardener/inventory[gardener/inventory]: a periodic collector per cluster upserts what it sees with a `last_seen` time, a Gardener-side inventory makes drift visible, and the views are SQL on top. gardener/inventory does not look inside shoots, so collecting nodes, pods and namespaces is our own.
+
+This FUN is in discussion. Three choices in it need the team's agreement: whether organizations are listed publicly at all (<<Organizations opt in>>), how the numbers are collected (<<Options>>), and where the staff API lives (<<Options>>).
+
+== Two audiences, two deployables
+
+One Go tree, `platform-api/`, builds two binaries with a `BINARY` build argument. Each audience gets its own credential path, database role and host, so the anonymous surface carries no code that could read more than it should.
+
+[cols="2,1,2,2,2"]
+|===
+|Deployable |Package |Caller |Credential |Database role
+
+|`platform-public-api`
+|`platform.v1`
+|Anyone
+|None
+|`fun_platform_public_api`
+
+|`platform-admin-api`
+|`fleet.v1`
+|Fundament staff
+|DCIM token (`dcim_auth` cookie, `dcim-user` audience)
+|`fun_platform_admin_api`
+|===
+
+The public side is its own deployable for the reason link:/funs/fun-20[FUN-20] keeps the catalog role out of `tenant`: an anonymous process should hold nothing but the one function it calls.
+
+The staff side has the same audience and credential as `dcim-api` and `marketplace-admin-api`, so FUN-20's rule of one deployable per caller does not settle it. What keeps it apart is its database role: `fun_platform_admin_api` reads every organization through `USING (true)` policies, and keeping that role out of `dcim-api`'s process keeps DCIM's own handlers from reaching tenant data by accident. The price is two more images, roles, secrets, hostnames, Skaffold artifacts and out-of-repo `flux/core` entries. See <<Options>> for the alternative.
+
+[cols="2,3"]
+|===
+|Role |May
+
+|`fun_platform_public_api`
+|USAGE on `tenant` and EXECUTE on `tenant.platform_overview()`. No table grants.
+
+|`fun_platform_admin_api`
+|SELECT, through `USING (true)` policies, on organizations, clusters, node pools, projects, namespaces, the snapshot and Gardener tables, `drift_findings` and `worker_heartbeats`; SELECT on `cluster_outbox` and the `cluster_sync_state` view, which the cluster status is derived from. No write grants.
+
+|`fun_cluster_worker`
+|SELECT, INSERT and UPDATE on the snapshot and Gardener tables, `drift_findings` and `worker_heartbeats`. No DELETE: the database itself keeps rows from being removed.
+|===
+
+`platform-admin-api` validates the DCIM token as `dcim-api` and `marketplace-admin-api` do, pinned to the `dcim-user` audience: a console token, or any other token signed with the shared secret, is refused. It belongs on the same restricted admin host as the review backoffice. That restriction lives at the gateway, outside this repository.
+
+== The public boundary
+
+`platform-public-api` reads through one function, `tenant.platform_overview()`. It is `SECURITY DEFINER`, owned by `fun_owner`, with `search_path` pinned to `pg_catalog, pg_temp`, and returns per listed organization its name, alias and the number of live clusters, projects and namespaces. It counts along the chain organization, cluster, project, namespace, with every level live.
+
+The function is the whole boundary. The public role has no table grants, so even a compromised handler can learn names and counts and nothing else: no ids, no cluster or namespace names, no member data. The API returns no ids either.
+
+EXECUTE on a new function goes to `PUBLIC` by default. This one bypasses row security, so EXECUTE is revoked from `PUBLIC` and granted to `fun_platform_public_api` alone: a tenant-scoped role such as `fun_fundament_api` cannot use it to read across organizations.
+
+The public API caches one answer for 60 seconds behind singleflight and sends `Cache-Control: public` with a `max-age` of what is left of those 60 seconds, so no copy is older than a minute. While the database answers, visitors cost at most one query a minute per replica; a failed read is not cached, so the next visitor tries again. The shared read has a deadline of its own, so a stalled query cannot hold up every visitor. CORS allows the console origin, without credentials.
+
+An environment that does not run `platform-public-api` leaves `platformApiUrl` empty, and the console's `/platform` page says the overview is unavailable instead of calling anything.
+
+== Organizations opt in
+
+An organization is listed only once `tenant.organizations.listed_publicly` is set. It defaults to false, so a new organization, and every existing one, stays off the page until it opts in. Organizations that are not listed are not in the totals either: the totals add up the rows, so the page cannot be used to count who is hidden.
+
+For now a platform operator sets the column when an organization asks. A setting in the console's organization page is deferred. Relaxing the rule later, to listed by default, takes a new column default, which lists new organizations only. The existing ones keep false, and a false set on purpose cannot be told from one never set, so listing them too means asking them first.
+
+Whether organizations should be public at all, opted in or not, is for legal and the organizations to agree to (link:/adr/0019-data-protection-certification[ADR-0019] is in play). With nobody listed by default, running the public API in a test environment shows an empty page; listing a real organization waits for that sign-off.
+
+The seeded system organization owns the first-party plugins and is no tenant. `tenant.system_organization_id()` names it once, and every cross-organization query, public or staff, leaves it out through that function.
+
+== Snapshots, not history
+
+What runs on a cluster is stored as the latest observation per cluster, node pool and namespace, overwritten on every collection:
+
+* `tenant.cluster_snapshots`: observed, nodes, ready nodes, pods, allocatable pods, CPU and memory, plus the last collection error and when it happened.
+* `tenant.node_pool_snapshots`: observed, nodes, ready nodes.
+* `tenant.namespace_snapshots`: observed, pods.
+
+They are tables of their own rather than columns on `tenant.clusters`: every change to a cluster row queues an authz outbox row, and counts written every few minutes would flood it.
+
+Rows are never deleted, so the soft-delete rule holds. A deleted cluster keeps its last snapshot, and the queries leave deleted parents out. Node, pod and capacity totals count ready clusters only: collection reads nothing else, so a cluster in error or being deleted would otherwise go on contributing its last numbers.
+
+There is no history and so no trends. Fleet-wide aggregation and retention belong to the metrics backend (link:/adr/0025-metrics-observability-backend[ADR-0025]), whose follow-up decides how they are done. Whether collection should come from there already is the first question in <<Options>>.
+
+== Collection and its cost
+
+Collection runs as its own Deployment, `cluster-worker-inventory`: the cluster-worker image with `WORKER_MODE=inventory`. The provisioning worker (`WORKER_MODE=provisioning`) no longer collects at all. The two share the Gardener client configuration but no process, so collection does not compete with provisioning for its database pool or memory (pod lists are fleet-wide), and its throughput can grow toward link:/adr/0002-design-scale-target[ADR-0002]'s target on its own.
+
+The chart renders the Deployment only while `platformAdminApi.enabled`: the staff view is the only reader, and an environment without it mints no kubeconfigs for data nobody reads. It runs one replica with a `Recreate` strategy and no leader election, so every shoot is read once per interval and a rollout never runs two collectors.
+
+Every `INVENTORY_INTERVAL` (15 minutes; 1 minute locally) it queues every ready cluster of a live organization, and `INVENTORY_WORKERS` (4) workers collect them, each bounded by `INVENTORY_TIMEOUT` (30 seconds) for reading and storing together. Per cluster it:
+
+* lists nodes, grouped by Gardener's `worker.gardener.cloud/pool` label;
+* lists the namespaces carrying `fundament.io/namespace-id`;
+* lists the metadata of pods not in the `Succeeded` or `Failed` phase.
+
+All three lists ask for `resourceVersion=0`, so the shoot's API server answers from its watch cache instead of a quorum read from etcd, and pods come back as metadata only. One transaction stores the result. A failed read or a failed store lands in `last_error` and keeps the previous numbers and their `observed` time, so the page shows the age of what it knows and why.
+
+In mock mode the collector reads the database instead: every live node pool runs its autoscaler minimum, and every live namespace holds a pod count derived from its name. The mock Gardener client keeps its shoots in the provisioning worker's memory, which the collector no longer shares.
+
+The cost that remains is credentials. Collection uses the admin access cluster-worker has per shoot, which means minting an admin kubeconfig per ready cluster every interval. That shows up in Gardener's audit logs and is the wrong credential for a read-only job. A read-only `viewerkubeconfig` would fit; it needs an RBAC check in the garden first.
+
+== Freshness
+
+Each of cluster-worker's periodic loops records in `tenant.worker_heartbeats` when it last completed a pass and how often it runs: reconcile after every successful `ListShoots`, the collector every time it queues a round. The staff view reads freshness from there, so no setting in another Deployment has to match the loops' intervals.
+
+A snapshot is stale once it is older than three inventory intervals, as the collector last recorded its interval. A cluster that turned ready less than that ago gets time for its first collection. Before the collector has ever run, nothing is called stale. Staleness is a filter on the cluster list and a count in the summary, not a drift finding: it is about the collector, not a disagreement between the database and Gardener.
+
+== Status
+
+Staff and the tenant see the same status for a cluster. Both organization-api and `platform-admin-api` derive it with `common/clusterstatus` from the cluster row, the cluster's own latest sync (`cluster_sync_state`) and whether a sync of it ever completed. Each maps the result onto its own API; `fleet.v1.ClusterStatus` mirrors the console's values, starting, upgrading, unhealthy and lost included. Clusters that are unhealthy, in error or lost are what the staff view counts and filters as needing attention.
+
+== Drift
+
+The reconcile loop already compares every cluster with Gardener every 5 minutes: it reports a synced cluster whose shoot is missing, deletes the shoots of deleted clusters, and leaves alone shoots it cannot trace to any cluster. It now records what it observed instead of the staff view deriving it again from a copy, so there is one definition of drift.
+
+After every successful `ListShoots`, one transaction stores:
+
+* the shoots it listed in `tenant.gardener_shoots` (uid, name, namespace, cluster id, Kubernetes version, region, created, first and last seen), soft-deleting those no longer listed;
+* the disagreements it found in `tenant.drift_findings`, one row per kind and subject. A finding keeps its `first_detected` while every pass sees it again, moves its `last_detected`, and is resolved, never deleted, by the first pass that no longer does;
+* its heartbeat.
+
+A failed list records nothing: it says nothing about what is gone, and the heartbeat shows how old the last good pass is.
+
+[cols="2,4"]
+|===
+|Kind |Recorded when
+
+|`SHOOT_WITHOUT_CLUSTER`
+|A shoot's cluster id matches no cluster row at all.
+
+|`SHOOT_OF_DELETED_CLUSTER`
+|A shoot belongs to a deleted cluster. Usually short-lived: reconcile deletes the shoot.
+
+|`CLUSTER_WITHOUT_SHOOT`
+|A live cluster whose latest sync completed has no shoot.
+
+|`KUBERNETES_VERSION_MISMATCH`
+|A ready cluster that is not updating, whose latest sync completed, runs another minor version than the database holds. Patch versions are not compared: Gardener's maintenance moves them on its own.
+
+|`SHOOT_INVALID_CLUSTER_ID`
+|A shoot's `fundament.io/cluster-id` label is no id.
+|===
+
+`platform-admin-api` reads the open findings and adds the names of the cluster and organization they concern. Findings are only as current as reconcile's last pass, which the summary shows.
+
+One blind spot remains: a shoot in Fundament's garden projects without a `fundament.io/cluster-id` label at all is not listed, so it can never be reported.
+
+== Paging
+
+`ListOrganizations`, `ListClusters` and `ListDriftFindings` are paged from the first version, so a fleet at ADR-0002's scale needs no contract change later: `page_size` is capped at 500 and defaults to 100, and `next_page_token` is set while more may follow. The token is the sort key of the last item, so pages stay consistent while rows are added. The DCIM pages read every page for now. `GetCluster` returns one cluster with all its node pools, projects and namespaces; those are bounded per cluster and not paged.
+
+== Options
+
+=== How the numbers are collected
+
+*Read each shoot's API server (this FUN).* The collector lists nodes, namespaces and pod metadata per ready shoot and stores the counts.
+
+* Pros: exact per-namespace counts keyed by Fundament's namespace id; one query per view; no dependency on the monitoring stack being up per shoot; works in mock mode.
+* Cons: a second pipeline next to Gardener's Prometheus, which ADR-0025 makes the source of truth for platform metrics; an admin kubeconfig per shoot per interval; sets a fleet-aggregation direction that ADR-0025 deferred to its own ADR.
+
+*Reuse ADR-0026's per-shoot Prometheus resolver.* organization-api already resolves each shoot's Prometheus (URL, credentials, per-shoot CA), and kube-state-metrics there exports what the view shows: `kube_node_status_condition`, `kube_node_status_allocatable` and `kube_pod_status_phase` by namespace. The collector would run those queries per shoot instead of listing objects.
+
+* Pros: one source of truth for metrics, as ADR-0025 intends; no admin kubeconfig, since the monitoring credential is read-only; history is a later step on the same data.
+* Cons: the resolver lives in organization-api and would have to move to `common/` or be called; per-namespace counts map by namespace name, not id; a shoot whose monitoring stack is down has no numbers.
+
+*Make `viewerkubeconfig` a prerequisite.* Keep reading the API servers, but only with Gardener's read-only credential.
+
+* Pros: removes the wrong-credential cost; small change to the collector.
+* Cons: still a second pipeline; needs the garden RBAC check first.
+
+Open. The snapshot tables and the API do not depend on which collector fills them, so switching to the resolver later changes the collector only.
+
+=== Persisted or computed drift
+
+*Computed* in SQL from a mirror of Gardener's shoots, as the first version of this FUN did, gives two definitions of drift that can disagree (a freshness guard there, the outbox state in reconcile) and no history, and it has to guess when a disagreement started. *Persisted* by reconcile, as now, has one definition, real `first_detected` times, and a read cost that does not grow with the fleet. Decided: persisted.
+
+=== Where the staff API lives
+
+*Its own deployable, `platform-admin-api` (this FUN).* Keeps the cross-organization role out of `dcim-api`.
+
+*A `FleetService` in `dcim-api`* with a second pool connected as `fun_platform_admin_api`. One image, role and host fewer, and no out-of-repo `flux/core` entries; the cross-organization role then lives in a process with other handlers, kept apart by which pool each handler uses.
+
+Open. Either way the code layout should be picked on purpose: marketplace has one top-level directory per deployable, `platform-api/` is one tree built twice.
+
+== Deferred
+
+* *Viewer kubeconfig.* Collect with Gardener's read-only `viewerkubeconfig` instead of admin credentials; see <<Options>>.
+* *Trends.* History of the snapshots, once the metrics follow-up to ADR-0025 settles where fleet-wide data lives.
+* *Opt-in setting in the console.* Let an organization's admins set `listed_publicly` themselves.
+* *Finding history in the view.* Resolved findings are kept; the staff view shows open ones only.
+* *Unlabeled shoots.* List shoots in Fundament's garden projects without the cluster id label, to report shoots nobody can trace back to a cluster.

@@ -7,7 +7,8 @@ import AppTitleStrategy from '../shell/page-title';
 import { ConfigService } from '../config.service';
 import AuthService from '../auth.service';
 import provideStaleChunkReload from '../reload-on-stale-chunk';
-import { DCIM_TRANSPORT } from '../../connect/tokens';
+import { DCIM_TRANSPORT, PLATFORM_TRANSPORT } from '../../connect/tokens';
+import createFleetDemoTransport from './fleet-transport';
 import createDemoTransport from './mock-transport';
 import DemoConfigService from './demo-config.service';
 import DemoAuthService from './demo-auth.service';
@@ -26,6 +27,7 @@ const demoAppConfig: ApplicationConfig = {
     { provide: AuthService, useClass: DemoAuthService },
     { provide: RackHistoryService, useClass: DemoRackHistoryService },
     { provide: DCIM_TRANSPORT, useFactory: createDemoTransport },
+    { provide: PLATFORM_TRANSPORT, useFactory: createFleetDemoTransport },
   ],
 };
 

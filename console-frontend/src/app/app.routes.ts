@@ -96,6 +96,14 @@ const routes: Routes = [
     loadComponent: () => import('./login/login.component').then((m) => m.default),
   },
   {
+    // The public platform overview (FUN-23). Anyone may read it, signed in or
+    // not, so there is no guard; it sits above the organization's addresses and
+    // the catch-all, both of which send an anonymous visitor to the login page.
+    path: 'platform',
+    loadComponent: () =>
+      import('./platform-overview/platform-overview.component').then((m) => m.default),
+  },
+  {
     // Everything below is read inside one organization, and says so. The pages
     // that are about the organization itself sit here as well, next to the
     // clusters and the projects rather than under a second word for the same
