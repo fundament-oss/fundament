@@ -1,16 +1,23 @@
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
+/* Hazards:
+ - HAS_UNTRACKABLE_DEPENDENCIES: Dependencies, i.e. other functions used in the function body, of non-sql functions cannot be tracked. As a result, we cannot guarantee that function dependencies are ordered properly relative to this statement. For adds, this means you need to ensure that all functions this function depends on are created/altered before this statement.
+*/
 CREATE OR REPLACE FUNCTION tenant.platform_overview()
  RETURNS TABLE(organization_name text, organization_alias text, clusters bigint, projects bigint, namespaces bigint)
- LANGUAGE sql
+ LANGUAGE plpgsql
  STABLE PARALLEL SAFE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'pg_temp'
 AS $function$
 -- The public platform page (FUN-23) reads through here only: its role has no
 -- table grants, so names and counts are all it can ever see. Counts follow the
 -- chain organization -> cluster -> project -> namespace with every level live.
--- The seeded system organization owns first-party plugins and is no tenant.
+-- Only organizations that opted in are named; the system organization never.
+-- plpgsql, not sql: a sql body is checked at CREATE, and trek's diff creates
+-- functions before the columns they read, so a sql body here cannot migrate.
+BEGIN
+RETURN QUERY
 SELECT
     tenant.organizations.name,
     tenant.organizations.alias,
@@ -28,11 +35,30 @@ LEFT JOIN tenant.namespaces
     ON tenant.namespaces.project_id = tenant.projects.id
     AND tenant.namespaces.deleted IS NULL
 WHERE tenant.organizations.deleted IS NULL
-    AND tenant.organizations.id <> '019b4000-0000-7000-8000-000000000000'::uuid
+    AND tenant.organizations.listed_publicly
+    AND tenant.organizations.id <> tenant.system_organization_id()
 GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
-ORDER BY tenant.organizations.alias, tenant.organizations.name
+ORDER BY tenant.organizations.alias, tenant.organizations.name;
+END;
 $function$
 ;
+
+CREATE OR REPLACE FUNCTION tenant.system_organization_id()
+ RETURNS uuid
+ LANGUAGE sql
+ IMMUTABLE PARALLEL SAFE COST 1
+AS $function$
+-- The seeded system organization (db/seed/0100-system-org.sql) owns the
+-- first-party plugins and is no tenant. Every cross-organization read leaves
+-- it out through here rather than repeating the literal.
+SELECT '019b4000-0000-7000-8000-000000000000'::uuid
+$function$
+;
+
+/* Hazards:
+ - AUTHZ_UPDATE: Granting privileges could allow unauthorized access to data.
+*/
+GRANT SELECT ON "tenant"."cluster_outbox" TO "fun_platform_admin_api";
 
 CREATE TABLE "tenant"."cluster_snapshots" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
@@ -100,6 +126,56 @@ GRANT SELECT ON "tenant"."clusters" TO "fun_platform_admin_api";
 ALTER TABLE "tenant"."cluster_snapshots" ADD CONSTRAINT "cluster_snapshots_fk_cluster" FOREIGN KEY (cluster_id) REFERENCES tenant.clusters(id) NOT VALID;
 
 ALTER TABLE "tenant"."cluster_snapshots" VALIDATE CONSTRAINT "cluster_snapshots_fk_cluster";
+
+CREATE TABLE "tenant"."drift_findings" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"kind" text COLLATE "pg_catalog"."default" NOT NULL,
+	"cluster_id" uuid,
+	"shoot_uid" text COLLATE "pg_catalog"."default",
+	"shoot_name" text COLLATE "pg_catalog"."default",
+	"shoot_namespace" text COLLATE "pg_catalog"."default",
+	"expected" text COLLATE "pg_catalog"."default",
+	"observed" text COLLATE "pg_catalog"."default",
+	"first_detected" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_detected" timestamp with time zone DEFAULT now() NOT NULL,
+	"resolved" timestamp with time zone
+);
+
+ALTER TABLE "tenant"."drift_findings" ADD CONSTRAINT "drift_findings_ck_kind" CHECK((kind = ANY (ARRAY['shoot_without_cluster'::text, 'shoot_of_deleted_cluster'::text, 'cluster_without_shoot'::text, 'kubernetes_version_mismatch'::text, 'shoot_invalid_cluster_id'::text])));
+
+ALTER TABLE "tenant"."drift_findings" ADD CONSTRAINT "drift_findings_ck_subject" CHECK(((cluster_id IS NOT NULL) OR (shoot_uid IS NOT NULL)));
+
+CREATE POLICY "drift_findings_cluster_worker_policy" ON "tenant"."drift_findings"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+
+CREATE POLICY "drift_findings_select_platform_admin" ON "tenant"."drift_findings"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+
+ALTER TABLE "tenant"."drift_findings" ENABLE ROW LEVEL SECURITY;
+
+GRANT INSERT ON "tenant"."drift_findings" TO "fun_cluster_worker";
+
+GRANT SELECT ON "tenant"."drift_findings" TO "fun_cluster_worker";
+
+GRANT UPDATE ON "tenant"."drift_findings" TO "fun_cluster_worker";
+
+GRANT SELECT ON "tenant"."drift_findings" TO "fun_platform_admin_api";
+
+CREATE UNIQUE INDEX drift_findings_pk ON tenant.drift_findings USING btree (id);
+
+ALTER TABLE "tenant"."drift_findings" ADD CONSTRAINT "drift_findings_pk" PRIMARY KEY USING INDEX "drift_findings_pk";
+
+CREATE UNIQUE INDEX drift_findings_uq_subject ON tenant.drift_findings USING btree (kind, cluster_id, shoot_uid, resolved) NULLS NOT DISTINCT;
+
+ALTER TABLE "tenant"."drift_findings" ADD CONSTRAINT "drift_findings_uq_subject" UNIQUE USING INDEX "drift_findings_uq_subject";
+
+CREATE INDEX drift_findings_idx_open ON tenant.drift_findings USING btree (kind, first_detected, id) WHERE (resolved IS NULL);
 
 CREATE TABLE "tenant"."gardener_shoots" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
@@ -264,6 +340,8 @@ ALTER TABLE "tenant"."node_pool_snapshots" ADD CONSTRAINT "node_pool_snapshots_f
 
 ALTER TABLE "tenant"."node_pool_snapshots" VALIDATE CONSTRAINT "node_pool_snapshots_fk_node_pool";
 
+ALTER TABLE "tenant"."organizations" ADD COLUMN "listed_publicly" boolean DEFAULT false NOT NULL;
+
 /* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
 */
@@ -292,13 +370,58 @@ CREATE POLICY "projects_select_platform_admin" ON "tenant"."projects"
 */
 GRANT SELECT ON "tenant"."projects" TO "fun_platform_admin_api";
 
+CREATE TABLE "tenant"."worker_heartbeats" (
+	"id" uuid DEFAULT uuidv7() NOT NULL,
+	"worker" text COLLATE "pg_catalog"."default" NOT NULL,
+	"interval_seconds" integer NOT NULL,
+	"last_pass" timestamp with time zone NOT NULL,
+	"created" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "tenant"."worker_heartbeats" ADD CONSTRAINT "worker_heartbeats_ck_interval_seconds" CHECK((interval_seconds > 0));
+
+ALTER TABLE "tenant"."worker_heartbeats" ADD CONSTRAINT "worker_heartbeats_ck_worker" CHECK((worker = ANY (ARRAY['reconcile'::text, 'inventory'::text])));
+
+CREATE POLICY "worker_heartbeats_cluster_worker_policy" ON "tenant"."worker_heartbeats"
+	AS PERMISSIVE
+	FOR ALL
+	TO fun_cluster_worker
+	USING (true);
+
+CREATE POLICY "worker_heartbeats_select_platform_admin" ON "tenant"."worker_heartbeats"
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_platform_admin_api
+	USING (true);
+
+ALTER TABLE "tenant"."worker_heartbeats" ENABLE ROW LEVEL SECURITY;
+
+GRANT INSERT ON "tenant"."worker_heartbeats" TO "fun_cluster_worker";
+
+GRANT SELECT ON "tenant"."worker_heartbeats" TO "fun_cluster_worker";
+
+GRANT UPDATE ON "tenant"."worker_heartbeats" TO "fun_cluster_worker";
+
+GRANT SELECT ON "tenant"."worker_heartbeats" TO "fun_platform_admin_api";
+
+CREATE UNIQUE INDEX worker_heartbeats_pk ON tenant.worker_heartbeats USING btree (id);
+
+ALTER TABLE "tenant"."worker_heartbeats" ADD CONSTRAINT "worker_heartbeats_pk" PRIMARY KEY USING INDEX "worker_heartbeats_pk";
+
+CREATE UNIQUE INDEX worker_heartbeats_uq_worker ON tenant.worker_heartbeats USING btree (worker);
+
+ALTER TABLE "tenant"."worker_heartbeats" ADD CONSTRAINT "worker_heartbeats_uq_worker" UNIQUE USING INDEX "worker_heartbeats_uq_worker";
+
 
 -- Statements generated automatically, please review:
 ALTER FUNCTION tenant.platform_overview() OWNER TO fun_owner;
+ALTER FUNCTION tenant.system_organization_id() OWNER TO fun_owner;
 ALTER TABLE tenant.cluster_snapshots OWNER TO fun_owner;
+ALTER TABLE tenant.drift_findings OWNER TO fun_owner;
 ALTER TABLE tenant.gardener_shoots OWNER TO fun_owner;
 ALTER TABLE tenant.namespace_snapshots OWNER TO fun_owner;
 ALTER TABLE tenant.node_pool_snapshots OWNER TO fun_owner;
+ALTER TABLE tenant.worker_heartbeats OWNER TO fun_owner;
 
 -- Hand-added statements. trek's diff emits table-wide grants but not
 -- schema-, function- or view-level ones, even when they are modelled in the
@@ -307,10 +430,12 @@ ALTER TABLE tenant.node_pool_snapshots OWNER TO fun_owner;
 --
 -- tenant USAGE for both platform roles (FUN-23): the public role reaches no
 -- table and needs the schema only to call platform_overview(); the admin role
--- reads the tenant tables its policies above open up. EXECUTE is PUBLIC by
--- default; the explicit grant records that the public role depends on it.
+-- reads the tenant tables its policies above open up. platform_overview() is
+-- SECURITY DEFINER and reads across organizations, so EXECUTE is taken from
+-- PUBLIC and given to the public role alone.
 GRANT USAGE ON SCHEMA "tenant" TO "fun_platform_public_api";
 GRANT USAGE ON SCHEMA "tenant" TO "fun_platform_admin_api";
+REVOKE EXECUTE ON FUNCTION tenant.platform_overview() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION tenant.platform_overview() TO "fun_platform_public_api";
 -- The drift query reads whether a cluster's own latest sync completed from
 -- cluster_sync_state; the view runs as its owner, so this grant is all it needs.

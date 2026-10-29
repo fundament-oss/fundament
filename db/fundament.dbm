@@ -4486,7 +4486,7 @@ SELECT '019b4000-0000-7000-8000-000000000000'::uuid]]> </definition>
 		row-amount="1000">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<language name="sql"/>
+	<language name="plpgsql"/>
 	<return-type>
 	<parameter name="organization_name">
 		<type name="text" length="0"/>
@@ -4509,6 +4509,10 @@ SELECT '019b4000-0000-7000-8000-000000000000'::uuid]]> </definition>
 -- table grants, so names and counts are all it can ever see. Counts follow the
 -- chain organization -> cluster -> project -> namespace with every level live.
 -- Only organizations that opted in are named; the system organization never.
+-- plpgsql, not sql: a sql body is checked at CREATE, and trek's diff creates
+-- functions before the columns they read, so a sql body here cannot migrate.
+BEGIN
+RETURN QUERY
 SELECT
     tenant.organizations.name,
     tenant.organizations.alias,
@@ -4529,7 +4533,8 @@ WHERE tenant.organizations.deleted IS NULL
     AND tenant.organizations.listed_publicly
     AND tenant.organizations.id <> tenant.system_organization_id()
 GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
-ORDER BY tenant.organizations.alias, tenant.organizations.name]]> </definition>
+ORDER BY tenant.organizations.alias, tenant.organizations.name;
+END;]]> </definition>
 </function>
 
 <constraint name="projects_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"

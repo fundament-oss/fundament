@@ -3870,7 +3870,7 @@ ALTER FUNCTION tenant.system_organization_id() OWNER TO fun_owner;
 -- DROP FUNCTION IF EXISTS tenant.platform_overview() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.platform_overview ()
 	RETURNS TABLE (organization_name text, organization_alias text, clusters bigint, projects bigint, namespaces bigint)
-	LANGUAGE sql
+	LANGUAGE plpgsql
 	STABLE 
 	CALLED ON NULL INPUT
 	SECURITY DEFINER
@@ -3883,6 +3883,10 @@ $function$
 -- table grants, so names and counts are all it can ever see. Counts follow the
 -- chain organization -> cluster -> project -> namespace with every level live.
 -- Only organizations that opted in are named; the system organization never.
+-- plpgsql, not sql: a sql body is checked at CREATE, and trek's diff creates
+-- functions before the columns they read, so a sql body here cannot migrate.
+BEGIN
+RETURN QUERY
 SELECT
     tenant.organizations.name,
     tenant.organizations.alias,
@@ -3903,7 +3907,8 @@ WHERE tenant.organizations.deleted IS NULL
     AND tenant.organizations.listed_publicly
     AND tenant.organizations.id <> tenant.system_organization_id()
 GROUP BY tenant.organizations.id, tenant.organizations.name, tenant.organizations.alias
-ORDER BY tenant.organizations.alias, tenant.organizations.name
+ORDER BY tenant.organizations.alias, tenant.organizations.name;
+END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.platform_overview() OWNER TO fun_owner;
